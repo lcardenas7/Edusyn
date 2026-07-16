@@ -9,6 +9,7 @@ import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '.
 import { Stage } from './lesson/Stage'
 import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete, requiresSubmission } from './lesson/InteractiveBlocks'
 import { SpeakButton, stripHtml } from './lesson/SpeakButton'
+import { SmartImg, SmartVideo, SmartAudio } from './media/SmartMedia'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -761,8 +762,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               transition={{ delay: 0.2 }}
               className={`${layout === 'text-left-image-right' ? 'sm:w-2/5' : 'w-full mt-4'}`}
             >
-              <img
-                src={slide.imageUrl!}
+              <SmartImg
+                src={slide.imageUrl}
                 alt={slide.title || 'Imagen'}
                 className="w-full rounded-2xl border border-hairline shadow-sm object-contain max-h-64 sm:max-h-80"
               />
@@ -786,7 +787,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               />
             ) : (
-              <video src={slide.videoUrl!} controls className="w-full rounded-2xl max-h-80" />
+              <SmartVideo src={slide.videoUrl} className="w-full rounded-2xl max-h-80" />
             )}
           </motion.div>
         )}
@@ -799,7 +800,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             transition={{ delay: 0.3 }}
             className="mt-4"
           >
-            <audio src={slide.audioUrl} controls className="w-full" />
+            <SmartAudio src={slide.audioUrl} className="w-full" />
           </motion.div>
         )}
       </div>

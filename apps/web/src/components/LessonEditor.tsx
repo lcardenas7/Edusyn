@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import RichTextEditor from './RichTextEditor'
+import { MediaInput, SmartImg } from './media/SmartMedia'
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Eye,
   Flag, GripVertical, Loader2, Pencil, Play, Plus, Save, Sparkles,
@@ -1302,20 +1303,12 @@ export default function LessonEditor({
               }
               return (
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1 block">Imagen (URL)</label>
-                    <input
-                      value={slide.activityData.imageUrl}
-                      onChange={e => updateActivityData(index, { imageUrl: e.target.value })}
-                      placeholder="https://… (célula, mapa, cuerpo humano…)"
-                      className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
-                    />
-                  </div>
+                  <MediaInput kind="image" label="Imagen (célula, mapa, cuerpo humano…)" value={slide.activityData.imageUrl} onChange={v => updateActivityData(index, { imageUrl: v })} />
                   {slide.activityData.imageUrl ? (
                     <>
                       <p className="text-xs text-slate-400">Haz clic sobre la imagen para marcar cada punto; luego escribe su etiqueta abajo.</p>
                       <div className="relative inline-block border border-slate-200 rounded-lg overflow-hidden cursor-crosshair" onClick={addAt}>
-                        <img src={slide.activityData.imageUrl} alt="" className="block max-w-full max-h-72" draggable={false} />
+                        <SmartImg src={slide.activityData.imageUrl} alt="" className="block max-w-full max-h-72" />
                         {hotspots.map((h, i) => (
                           <span key={i} style={{ left: `${h.x}%`, top: `${h.y}%` }} className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white shadow pointer-events-none">{i + 1}</span>
                         ))}
@@ -1487,41 +1480,11 @@ export default function LessonEditor({
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
-                  <Image className="w-3 h-3" /> URL imagen
-                </label>
-                <input
-                  value={slide.imageUrl}
-                  onChange={e => updateSlide(index, { imageUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
-                  <Video className="w-3 h-3" /> URL video
-                </label>
-                <input
-                  value={slide.videoUrl}
-                  onChange={e => updateSlide(index, { videoUrl: e.target.value })}
-                  placeholder="https://youtube.com/..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
+              <MediaInput kind="image" label="Imagen" value={slide.imageUrl} onChange={v => updateSlide(index, { imageUrl: v })} />
+              <MediaInput kind="video" label="Video" value={slide.videoUrl} onChange={v => updateSlide(index, { videoUrl: v })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
-                  <Music className="w-3 h-3" /> URL audio
-                </label>
-                <input
-                  value={slide.audioUrl}
-                  onChange={e => updateSlide(index, { audioUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
+              <MediaInput kind="audio" label="Audio" value={slide.audioUrl} onChange={v => updateSlide(index, { audioUrl: v })} />
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Layout</label>
                 <select

@@ -3,6 +3,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { CheckCircle2, GripVertical, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
 import { type ActivityData, norm, parsePairs, parseHotspots, gradeAnswer, isAnswerComplete } from './grading'
 import { type WSCell, wsBuild, wsLine, wsMatch } from './wordsearch'
+import { useResolvedMediaUrl } from '../media/SmartMedia'
 import { cwBuild, cwSolved } from './crossword'
 import { SpeakButton } from './SpeakButton'
 
@@ -745,6 +746,7 @@ function LabelImageBlock({ act, value, onChange, showResult }: BlockProps) {
   const labels = useMemo(() => shuffle(spots.map(s => s.label)), [act.options]) // eslint-disable-line react-hooks/exhaustive-deps
   const [assigned, setAssigned] = useState<string[]>(() => (Array.isArray(value) ? [...value] : spots.map(() => '')))
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
+  const imgUrl = useResolvedMediaUrl(act.imageUrl)
 
   if (!act.imageUrl) return <p className="text-ink-muted text-sm">Añade una imagen y marca los puntos a etiquetar.</p>
   if (spots.length === 0) return <p className="text-ink-muted text-sm">Marca al menos un punto en la imagen.</p>
@@ -762,7 +764,7 @@ function LabelImageBlock({ act, value, onChange, showResult }: BlockProps) {
   return (
     <div>
       <div className="relative inline-block max-w-full rounded-xl overflow-hidden border border-hairline bg-surface-2">
-        <img src={act.imageUrl} alt="" className="block max-w-full select-none" draggable={false} />
+        <img src={imgUrl} alt="" className="block max-w-full select-none" draggable={false} />
         {spots.map((s, i) => {
           const lbl = showResult ? s.label : assigned[i]
           const ok = showResult && norm(assigned[i]) === norm(s.label)
@@ -828,6 +830,7 @@ function PuzzleBlock({ act, value, onChange, showResult }: BlockProps) {
     return a
   })
   const [sel, setSel] = useState<number | null>(null)
+  const imgUrl = useResolvedMediaUrl(act.imageUrl)
 
   if (!act.imageUrl) return <p className="text-ink-muted text-sm">Añade una imagen para armar el rompecabezas.</p>
 
@@ -858,7 +861,7 @@ function PuzzleBlock({ act, value, onChange, showResult }: BlockProps) {
               disabled={showResult}
               className={`aspect-square transition-all ${sel === pos ? 'ring-4 ring-accent ring-inset z-10' : ''} ${!showResult && !solved ? 'hover:brightness-110' : ''}`}
               style={{
-                backgroundImage: `url(${act.imageUrl})`,
+                backgroundImage: imgUrl ? `url(${imgUrl})` : undefined,
                 backgroundSize: `${n * 100}% ${n * 100}%`,
                 backgroundPosition: `${n > 1 ? (c / (n - 1)) * 100 : 0}% ${n > 1 ? (r / (n - 1)) * 100 : 0}%`,
               }}
