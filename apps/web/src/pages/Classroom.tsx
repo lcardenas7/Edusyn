@@ -18,6 +18,7 @@ import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
 import { FilterChip, FilterStrip } from '../components/ui/FilterChip'
 import { ClassroomPicker } from '../components/ui/ClassroomPicker'
 import { SectionPicker } from '../components/ui/SectionPicker'
+import { confirmDialog, alertDialog } from '../components/ui/confirm'
 import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
@@ -279,7 +280,7 @@ export default function Classroom() {
       setShowCopyModal(false)
       setSelectedCopyTargets([])
       loadClassrooms()
-      alert(`Aula copiada a ${data.copied} grupo(s) exitosamente`)
+      alertDialog(`Aula copiada a ${data.copied} grupo(s) exitosamente`)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al copiar aula')
     } finally {
@@ -936,7 +937,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este anuncio?')) return
+    if (!(await confirmDialog('¿Eliminar este anuncio?', { danger: true }))) return
     try { await classroomApi.deleteAnnouncement(id); onReload() } catch {}
   }
 
@@ -1186,7 +1187,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
       const res = await classroomApi.deleteSection(sectionId, false)
       if (res.data.requiresConfirmation) {
         // Hay actividades con entregas - pedir confirmación especial
-        const confirmed = confirm(res.data.message)
+        const confirmed = await confirmDialog(res.data.message, { danger: true })
         if (confirmed) {
           await classroomApi.deleteSection(sectionId, true)
           onReload()
@@ -1243,7 +1244,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
     setCopyingSection(true)
     try {
       const result = await classroomApi.copySectionToClassroom(copySectionModal.sectionId, targetClassroomId)
-      alert(`Sección copiada exitosamente.\nMateriales: ${result.data.materialsCopied}\nActividades: ${result.data.activitiesCopied}`)
+      alertDialog(`Sección copiada exitosamente.\nMateriales: ${result.data.materialsCopied}\nActividades: ${result.data.activitiesCopied}`)
       setCopySectionModal(null)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al copiar sección')
@@ -2338,11 +2339,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta actividad?')) return
+    if (!(await confirmDialog('¿Eliminar esta actividad?', { danger: true }))) return
     try {
       const { data } = await classroomApi.deleteActivity(id)
       if (data.requiresConfirmation) {
-        if (!confirm(`⚠️ ${data.message}\n\nEsta acción NO se puede deshacer.`)) return
+        if (!(await confirmDialog(`${data.message}\n\nEsta acción NO se puede deshacer.`, { danger: true, title: 'Confirmar eliminación' }))) return
         await classroomApi.deleteActivity(id, true)
       }
       loadActivities(); setSelectedActivity(null)
@@ -2438,7 +2439,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         academicTermId: selectedTermId || undefined,
       })
       setShowSyncPreview(false)
-      alert(`✅ Sincronización completada:\n• ${data.synced} notas escritas\n• ${data.skipped} omitidas\n${data.errors?.length ? '• ' + data.errors.length + ' errores' : ''}`)
+      alertDialog(`✅ Sincronización completada:\n• ${data.synced} notas escritas\n• ${data.skipped} omitidas\n${data.errors?.length ? '• ' + data.errors.length + ' errores' : ''}`)
       // Refresh activity
       const res = await classroomApi.getActivity(selectedActivity.id)
       setSelectedActivity(res.data)
@@ -2674,7 +2675,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     const studentName = sub.studentEnrollment?.student
       ? `${sub.studentEnrollment.student.firstName} ${sub.studentEnrollment.student.lastName}`
       : 'este estudiante'
-    if (!confirm(`¿Eliminar el intento de ${studentName}?\n\nEsto permitirá al estudiante volver a intentar la actividad.`)) return
+    if (!(await confirmDialog(`¿Eliminar el intento de ${studentName}?\n\nEsto permitirá al estudiante volver a intentar la actividad.`, { danger: true }))) return
     try {
       await classroomApi.deleteSubmission(sub.id)
       // Reload submissions
@@ -2789,7 +2790,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const handleDeleteContext = async (ctxId: string) => {
-    if (!confirm('¿Eliminar este contexto? Las preguntas asociadas se desvinculan pero no se eliminan.')) return
+    if (!(await confirmDialog('¿Eliminar este contexto? Las preguntas asociadas se desvinculan pero no se eliminan.', { danger: true }))) return
     try {
       await classroomApi.deleteContext(ctxId)
       if (selectedActivity) loadQuestions(selectedActivity.id)
@@ -2844,7 +2845,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const handleDeleteQuestion = async (qId: string) => {
-    if (!confirm('¿Eliminar esta pregunta?')) return
+    if (!(await confirmDialog('¿Eliminar esta pregunta?', { danger: true }))) return
     try {
       await classroomApi.deleteQuestion(qId)
       if (selectedActivity) loadQuestions(selectedActivity.id)
@@ -2986,7 +2987,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const handleSubmitQuiz = async () => {
-    if (!quizSubmission || !confirm('¿Enviar el quiz? No podrás cambiar tus respuestas.')) return
+    if (!quizSubmission) return
+    if (!(await confirmDialog('¿Enviar el quiz? No podrás cambiar tus respuestas.', { confirmLabel: 'Enviar' }))) return
     try {
       setQuizSubmitting(true)
       const { data } = await classroomApi.submitQuiz(quizSubmission.id)
@@ -3689,12 +3691,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                             } else {
                               console.error('Upload response structure:', JSON.stringify(response.data))
                               setQForm(prev => ({ ...prev, imageUrl: '' }))
-                              alert('No se pudo obtener la URL de la imagen subida')
+                              alertDialog('No se pudo obtener la URL de la imagen subida')
                             }
                           } catch (err: any) {
                             console.error('Error uploading image:', err?.response?.data || err)
                             setQForm(prev => ({ ...prev, imageUrl: '' }))
-                            alert('Error al subir imagen: ' + (err?.response?.data?.message || err?.message || 'Intenta de nuevo'))
+                            alertDialog('Error al subir imagen: ' + (err?.response?.data?.message || err?.message || 'Intenta de nuevo'))
                           }
                         }
                         input.click()
@@ -5912,7 +5914,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   }
 
   const handleDeletePost = async (postId: string) => {
-    if (!confirm('¿Eliminar esta publicación?')) return
+    if (!(await confirmDialog('¿Eliminar esta publicación?', { danger: true }))) return
     try {
       await classroomApi.deleteForumPost(postId)
       if (selectedPost?.id === postId) setSelectedPost(null)
