@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Eye,
   Flag, GripVertical, Loader2, Pencil, Play, Plus, Save, Sparkles,
-  Trash2, Trophy, Type, X, Image, Video, Music, Wand2
+  Trash2, Trophy, Type, X, Image, Video, Music, Wand2, Clock, AlertTriangle, Check
 } from 'lucide-react'
 import { lessonApi, type Lesson, type LessonSlide } from '../lib/api'
 import { valeriaAssistantBridge } from '../contexts/ValeriaContext'
@@ -97,6 +97,13 @@ const LAYOUT_OPTIONS = [
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Indicador de autoguardado (idle/guardando/guardado). */
+function AutosaveBadge({ state }: { state: 'idle' | 'saving' | 'saved' }) {
+  if (state === 'saving') return <span className="hidden sm:flex items-center gap-1 text-xs text-slate-400"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Guardando…</span>
+  if (state === 'saved') return <span className="hidden sm:flex items-center gap-1 text-xs text-emerald-500"><Check className="w-3.5 h-3.5" /> Guardado</span>
+  return null
+}
+
 export default function LessonEditor({
   activityId, activityTitle, classroomTitle, gradeName, subjectName, initialGameType, onClose, onPreview,
 }: LessonEditorProps) {
@@ -118,6 +125,14 @@ export default function LessonEditor({
   const [slides, setSlides] = useState<SlideForm[]>([])
   const [selectedSlideIndex, setSelectedSlideIndex] = useState(0)
   const [showMetadata, setShowMetadata] = useState(false)
+
+  // Seguridad del editor: autoguardado · recuperación · historial (docs/MOTOR_LECCIONES.md)
+  const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [recovery, setRecovery] = useState<{ id: string; snapshot: any; createdAt: string } | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [versions, setVersions] = useState<{ id: string; kind: string; label: string | null; createdAt: string }[]>([])
+  const lastSavedSnap = useRef<string>('')
+  const dirtyRef = useRef(false)
 
   // AI generation
   const [showAIModal, setShowAIModal] = useState(false)
@@ -164,6 +179,74 @@ export default function LessonEditor({
   }, [activityId, initialGameType])
 
   useEffect(() => { loadLesson() }, [loadLesson])
+
+  // ── Seguridad del editor ───────────────────────────────────────────────────
+  const buildSnapshot = useCallback(() => ({
+    title, description, badgeEmoji, badgeTitle, badgeColor, estimatedMinutes, slides,
+  }), [title, description, badgeEmoji, badgeTitle, badgeColor, estimatedMinutes, slides])
+
+  const applySnapshot = useCallback((snap: any) => {
+    if (!snap) return
+    setTitle(snap.title ?? '')
+    setDescription(snap.description ?? '')
+    setBadgeEmoji(snap.badgeEmoji ?? '🏆')
+    setBadgeTitle(snap.badgeTitle ?? 'Lección completada')
+    setBadgeColor(snap.badgeColor ?? '#8B5CF6')
+    setEstimatedMinutes(snap.estimatedMinutes ?? '')
+    if (Array.isArray(snap.slides)) setSlides(snap.slides)
+    setSelectedSlideIndex(0)
+  }, [])
+
+  // Tras cargar, marca el snapshot base y comprueba si hay un borrador sin guardar.
+  useEffect(() => {
+    if (loading) return
+    lastSavedSnap.current = JSON.stringify(buildSnapshot())
+    dirtyRef.current = false
+    if (lesson?.id) {
+      lessonApi.getRecovery(lesson.id).then(({ data }) => { if (data.hasRecovery) setRecovery(data.version) }).catch(() => { })
+    }
+    // Solo al terminar la carga inicial.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, lesson?.id])
+
+  // Autoguardado con debounce (solo si la lección ya existe en el servidor).
+  useEffect(() => {
+    if (loading || !lesson?.id) return
+    const serialized = JSON.stringify(buildSnapshot())
+    if (serialized === lastSavedSnap.current) { dirtyRef.current = false; return }
+    dirtyRef.current = true
+    const t = setTimeout(async () => {
+      try {
+        setAutosaveState('saving')
+        await lessonApi.saveVersion(lesson.id, { kind: 'AUTOSAVE', snapshot: buildSnapshot() })
+        lastSavedSnap.current = serialized
+        dirtyRef.current = false
+        setAutosaveState('saved')
+      } catch { setAutosaveState('idle') }
+    }, 2500)
+    return () => clearTimeout(t)
+  }, [buildSnapshot, lesson?.id, loading])
+
+  // Aviso antes de abandonar con cambios sin guardar.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => { if (dirtyRef.current) { e.preventDefault(); e.returnValue = '' } }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [])
+
+  const openHistory = async () => {
+    if (!lesson?.id) return
+    setShowHistory(true)
+    try { const { data } = await lessonApi.listVersions(lesson.id); setVersions(data) } catch { setVersions([]) }
+  }
+  const restoreVersion = async (versionId: string) => {
+    try {
+      const { data } = await lessonApi.getVersion(versionId)
+      applySnapshot(data.snapshot)
+      setShowHistory(false)
+      setSuccess('Versión cargada en el editor. Revisa y pulsa Guardar para conservarla.')
+    } catch { setError('No se pudo cargar la versión') }
+  }
 
   // ─────────────────────────────────────────────────────────────────
   // HELPERS
@@ -333,6 +416,17 @@ export default function LessonEditor({
         setSlides(created.slides.map(slideToForm))
       }
 
+      // Marca el estado como "guardado" (para autosave/beforeunload) y deja un
+      // punto de restauración manual en el historial.
+      lastSavedSnap.current = JSON.stringify(buildSnapshot())
+      dirtyRef.current = false
+      setAutosaveState('idle')
+      setRecovery(null)
+      const savedLessonId = lesson?.id
+      if (savedLessonId) {
+        lessonApi.saveVersion(savedLessonId, { kind: 'MANUAL', snapshot: buildSnapshot() }).catch(() => { })
+      }
+
       setSuccess('Lección guardada correctamente')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
@@ -447,6 +541,12 @@ export default function LessonEditor({
             <p className="text-xs text-slate-400 truncate">{classroomTitle}</p>
           </div>
           <div className="flex items-center gap-2">
+            <AutosaveBadge state={autosaveState} />
+            {lesson?.id && (
+              <button onClick={openHistory} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200" title="Historial de versiones">
+                <Clock className="w-4 h-4" /> Historial
+              </button>
+            )}
             <button onClick={onPreview} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200">
               <Eye className="w-4 h-4" /> Vista previa
             </button>
@@ -455,6 +555,42 @@ export default function LessonEditor({
             </button>
           </div>
         </div>
+
+        {/* Banner de recuperación de borrador sin guardar */}
+        {recovery && (
+          <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+            <p className="flex-1 text-sm text-amber-800">Se encontró un <b>borrador sin guardar</b> del {new Date(recovery.createdAt).toLocaleString()}. ¿Recuperarlo?</p>
+            <button onClick={() => { applySnapshot(recovery.snapshot); setRecovery(null); setSuccess('Borrador recuperado. Revisa y pulsa Guardar.') }} className="px-3 py-1.5 bg-amber-500 text-white text-sm font-bold rounded-lg hover:bg-amber-600 shrink-0">Recuperar</button>
+            <button onClick={() => setRecovery(null)} className="text-amber-500 hover:text-amber-700 shrink-0" title="Descartar"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+
+        {/* Historial de versiones */}
+        {showHistory && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40" onClick={() => setShowHistory(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800">Historial de versiones</h3>
+                <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-3 overflow-y-auto">
+                {versions.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">Sin versiones todavía.</p> : (
+                  <div className="space-y-1.5">
+                    {versions.map(v => (
+                      <button key={v.id} onClick={() => restoreVersion(v.id)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 text-left">
+                        <span className={`text-[10px] font-bold uppercase rounded px-1.5 py-0.5 ${v.kind === 'MANUAL' ? 'bg-violet-100 text-violet-700' : v.kind === 'PUBLISH' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{v.kind === 'AUTOSAVE' ? 'Auto' : v.kind === 'MANUAL' ? 'Guardado' : 'Publicado'}</span>
+                        <span className="flex-1 text-sm text-slate-700">{new Date(v.createdAt).toLocaleString()}</span>
+                        <span className="text-xs font-semibold text-violet-600">Restaurar</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-400 mt-2 px-1">Restaurar carga la versión en el editor; revísala y pulsa Guardar para conservarla.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Body — reutiliza el mismo panel de autoría del editor de lección */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">

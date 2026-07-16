@@ -874,6 +874,31 @@ export class ClassroomController {
     return this.lessonService.deleteLesson(lessonId);
   }
 
+  // ─── Seguridad del editor: autoguardado, recuperación e historial ──────────
+  @Post('lessons/:lessonId/versions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async saveLessonVersion(@Param('lessonId') lessonId: string, @Request() req: any, @Body() body: { kind?: string; label?: string; snapshot: any }) {
+    return this.lessonService.saveVersion(lessonId, req.user?.id, body);
+  }
+
+  @Get('lessons/:lessonId/versions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async listLessonVersions(@Param('lessonId') lessonId: string) {
+    return this.lessonService.listVersions(lessonId);
+  }
+
+  @Get('lessons/:lessonId/recovery')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getLessonRecovery(@Param('lessonId') lessonId: string) {
+    return this.lessonService.getRecovery(lessonId);
+  }
+
+  @Get('lesson-versions/:versionId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getLessonVersion(@Param('versionId') versionId: string) {
+    return this.lessonService.getVersion(versionId);
+  }
+
   // Slides CRUD
   @Post('lessons/:lessonId/slides')
   @Roles('DOCENTE', 'COORDINADOR')

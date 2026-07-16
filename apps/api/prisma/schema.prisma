@@ -6226,8 +6226,32 @@ model Lesson {
   slides       LessonSlide[]
   progress     LessonProgress[]
   liveSessions LiveLessonSession[]
+  versions     LessonVersion[]
 
   @@index([activityId])
+}
+
+// Snapshots de la lección para autoguardado, recuperación e historial (Prioridad 1
+// del Motor de Lecciones). Sin institutionId: se scopea vía Lesson→activity→classroom,
+// igual que Lesson/LessonSlide. docs/MOTOR_LECCIONES.md
+model LessonVersion {
+  id          String            @id @default(cuid())
+  lessonId    String
+  kind        LessonVersionKind @default(AUTOSAVE)
+  label       String?
+  snapshot    Json // { title, description, meta…, slides: [...] } tal como lo edita el docente
+  createdById String? // usuario que disparó el guardado
+  createdAt   DateTime          @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, createdAt])
+}
+
+enum LessonVersionKind {
+  AUTOSAVE // borrador automático (se poda)
+  MANUAL // el docente pulsó "Guardar"
+  PUBLISH // hito al publicar/generar
 }
 
 model LessonSlide {

@@ -132,6 +132,70 @@ export class LessonService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SEGURIDAD DEL EDITOR: autoguardado · recuperación · historial de versiones
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private static readonly MAX_AUTOSAVES = 15;
+
+  /** Guarda un snapshot de la lección (autoguardado o manual). Poda autosaves viejos. */
+  async saveVersion(lessonId: string, userId: string | undefined, dto: { kind?: string; label?: string; snapshot: any }) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, select: { id: true } });
+    if (!lesson) throw new NotFoundException('Lección no encontrada');
+    if (!dto?.snapshot || typeof dto.snapshot !== 'object') throw new BadRequestException('Snapshot inválido');
+    const kind = ['AUTOSAVE', 'MANUAL', 'PUBLISH'].includes(dto.kind || '') ? dto.kind : 'AUTOSAVE';
+
+    const version = await this.prisma.lessonVersion.create({
+      data: { lessonId, kind: kind as any, label: dto.label?.slice(0, 120) || null, snapshot: dto.snapshot, createdById: userId || null },
+      select: { id: true, kind: true, label: true, createdAt: true },
+    });
+
+    // Poda: conserva los últimos N autosaves (los manuales/publish no se podan).
+    if (kind === 'AUTOSAVE') {
+      const autos = await this.prisma.lessonVersion.findMany({
+        where: { lessonId, kind: 'AUTOSAVE' },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+        skip: LessonService.MAX_AUTOSAVES,
+      });
+      if (autos.length) {
+        await this.prisma.lessonVersion.deleteMany({ where: { id: { in: autos.map(a => a.id) } } });
+      }
+    }
+    return version;
+  }
+
+  /** Lista el historial (metadatos, sin el snapshot completo) — recientes primero. */
+  async listVersions(lessonId: string) {
+    return this.prisma.lessonVersion.findMany({
+      where: { lessonId },
+      orderBy: { createdAt: 'desc' },
+      take: 40,
+      select: { id: true, kind: true, label: true, createdAt: true },
+    });
+  }
+
+  /** El snapshot completo de una versión (para previsualizar/restaurar en el editor). */
+  async getVersion(versionId: string) {
+    const v = await this.prisma.lessonVersion.findUnique({ where: { id: versionId } });
+    if (!v) throw new NotFoundException('Versión no encontrada');
+    return v;
+  }
+
+  /** ¿Hay un autoguardado más nuevo que el último guardado de la lección?
+   * (para ofrecer "recuperar borrador" al abrir el editor tras un cierre inesperado). */
+  async getRecovery(lessonId: string) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, select: { updatedAt: true } });
+    if (!lesson) throw new NotFoundException('Lección no encontrada');
+    const latest = await this.prisma.lessonVersion.findFirst({
+      where: { lessonId, kind: 'AUTOSAVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Margen de 5s para no ofrecer recuperación por el autosave inmediato tras guardar.
+    const hasNewer = !!latest && latest.createdAt.getTime() > lesson.updatedAt.getTime() + 5000;
+    return { hasRecovery: hasNewer, version: hasNewer ? latest : null };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // TEACHER: SLIDES CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 

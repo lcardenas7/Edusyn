@@ -2406,6 +2406,15 @@ export const lessonApi = {
     api.put<Lesson>(`/classrooms/lessons/${lessonId}`, data),
   delete: (lessonId: string) =>
     api.delete(`/classrooms/lessons/${lessonId}`),
+  // Seguridad del editor: autoguardado, recuperación e historial de versiones
+  saveVersion: (lessonId: string, data: { kind?: 'AUTOSAVE' | 'MANUAL' | 'PUBLISH'; label?: string; snapshot: any }) =>
+    api.post<{ id: string; kind: string; label: string | null; createdAt: string }>(`/classrooms/lessons/${lessonId}/versions`, data),
+  listVersions: (lessonId: string) =>
+    api.get<{ id: string; kind: string; label: string | null; createdAt: string }[]>(`/classrooms/lessons/${lessonId}/versions`),
+  getRecovery: (lessonId: string) =>
+    api.get<{ hasRecovery: boolean; version: { id: string; snapshot: any; createdAt: string } | null }>(`/classrooms/lessons/${lessonId}/recovery`),
+  getVersion: (versionId: string) =>
+    api.get<{ id: string; snapshot: any; createdAt: string; kind: string }>(`/classrooms/lesson-versions/${versionId}`),
 
   // Slides
   addSlide: (lessonId: string, data: Partial<LessonSlide>) =>
