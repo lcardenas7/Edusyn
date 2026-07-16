@@ -1104,6 +1104,7 @@ model AcademicTerm {
   updatedAt                    DateTime           @updatedAt
 
   academicYear            AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  classroomSections       ClassroomSection[]
   evaluationPlans         EvaluationPlan[]
   evaluativeActivities    EvaluativeActivity[]
   preventiveCutConfig     PreventiveCutConfig?
@@ -5642,13 +5643,18 @@ model ClassroomSection {
   description String?  @db.Text
   sortOrder   Int      @default(0)
   isVisible   Boolean  @default(true)
+  // Período académico OPCIONAL: permite categorizar el contenido por período.
+  // Null = la sección no pertenece a ningún período (el docente que no lo use, no lo ve).
+  academicTermId String?
   createdAt   DateTime @default(now())
 
-  classroom  Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  materials  ClassroomMaterial[]
-  activities ClassroomActivity[]
+  classroom    Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  academicTerm AcademicTerm?       @relation(fields: [academicTermId], references: [id], onDelete: SetNull)
+  materials    ClassroomMaterial[]
+  activities   ClassroomActivity[]
 
   @@index([classroomId])
+  @@index([academicTermId])
 }
 
 model ClassroomMaterial {
