@@ -1154,7 +1154,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   useEffect(() => {
     if (!isTeacher || !yearId) return
     academicTermsApi.getByAcademicYear(yearId)
-      .then(({ data }) => setTerms(Array.isArray(data) ? [...data].sort((a: any, b: any) => a.order - b.order) : []))
+      .then(({ data }) => setTerms(Array.isArray(data) ? (data as any[]).filter(t => t.type === 'PERIOD').sort((a, b) => a.order - b.order) : []))
       .catch(() => { })
   }, [yearId, isTeacher])
 
@@ -1989,7 +1989,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   useEffect(() => {
     if (!isTeacher || !activityYearId) return
     academicTermsApi.getByAcademicYear(activityYearId)
-      .then(({ data }) => setActivityTerms(Array.isArray(data) ? [...data].sort((a: any, b: any) => a.order - b.order) : []))
+      .then(({ data }) => {
+        // Solo PERIODOS reales; se ocultan los tipos especiales (SEMESTER_EXAM/"Examen semestral").
+        const list = Array.isArray(data) ? (data as any[]).filter(t => t.type === 'PERIOD').sort((a, b) => a.order - b.order) : []
+        setActivityTerms(list)
+        // Sin "Todos": arranca en el primer período.
+        setPeriodFilter(prev => (prev === 'ALL' && list.length) ? list[0].id : prev)
+      })
       .catch(() => { })
   }, [activityYearId, isTeacher])
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -5287,20 +5293,33 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
       </div>
 
-      {/* ORGANIZADOR PRIMARIO por período — barra horizontal superior con los períodos
-          de la INSTITUCIÓN (existan o no secciones/actividades). Crear actividad hereda
-          el período activo. */}
+      {/* ORGANIZADOR PRIMARIO por período — pestañas de los períodos reales de la
+          institución (SEMESTER_EXAM ocultos; sin "Todos"). Crear actividad hereda el
+          período activo. */}
       {showPeriodBar && (
-        <div className="bg-surface-1 rounded-xl border border-hairline p-1.5">
-          <FilterStrip>
-            <FilterChip label="Todos los períodos" active={periodFilter === 'ALL'} onClick={() => setPeriodFilter('ALL')} count={activities.length} />
-            {activityTerms.map(p => (
-              <FilterChip key={p.id} label={p.name} active={periodFilter === p.id} onClick={() => setPeriodFilter(p.id)} count={activities.filter(a => periodOf(a) === p.id).length} />
-            ))}
-            {someWithoutPeriod && (
-              <FilterChip label="Sin período" active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} count={activities.filter(a => periodOf(a) === 'NONE').length} />
-            )}
-          </FilterStrip>
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {activityTerms.map(p => {
+            const count = activities.filter(a => periodOf(a) === p.id).length
+            const active = periodFilter === p.id
+            return (
+              <button key={p.id} onClick={() => setPeriodFilter(p.id)}
+                className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
+                  ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-500/25'
+                  : 'bg-surface-1 border border-hairline text-ink-secondary hover:border-violet-200 hover:text-violet-700'}`}>
+                {p.name}
+                <span className={`text-xs px-1.5 rounded-full font-bold tabular-nums ${active ? 'bg-white/25 text-white' : 'bg-surface-3 text-ink-muted'}`}>{count}</span>
+              </button>
+            )
+          })}
+          {someWithoutPeriod && (
+            <button onClick={() => setPeriodFilter('NONE')}
+              className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${periodFilter === 'NONE'
+                ? 'bg-slate-700 text-white shadow-md'
+                : 'bg-surface-1 border border-dashed border-hairline text-ink-muted hover:text-ink-secondary'}`}>
+              Sin período
+              <span className={`text-xs px-1.5 rounded-full font-bold tabular-nums ${periodFilter === 'NONE' ? 'bg-white/25 text-white' : 'bg-surface-3 text-ink-muted'}`}>{activities.filter(a => periodOf(a) === 'NONE').length}</span>
+            </button>
+          )}
         </div>
       )}
 

@@ -27,10 +27,10 @@ export function FilterChip({ label, count, active, onClick, icon, dot }: FilterC
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+      className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
         active
-          ? 'bg-violet-600 border-violet-600 text-white'
-          : 'bg-surface-1 border-hairline text-ink-secondary hover:border-ink-muted'
+          ? 'bg-violet-600 border-violet-600 text-white shadow-sm shadow-violet-500/25'
+          : 'bg-surface-1 border-hairline text-ink-secondary hover:border-violet-200 hover:text-violet-700'
       }`}
     >
       {dot && !active && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
