@@ -10,6 +10,7 @@ import { Stage } from './lesson/Stage'
 import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete, requiresSubmission } from './lesson/InteractiveBlocks'
 import { SpeakButton, stripHtml } from './lesson/SpeakButton'
 import { SmartImg, SmartVideo, SmartAudio } from './media/SmartMedia'
+import { BlockStackView, blocksToPlainText } from './lesson/blocks'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -722,6 +723,22 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const layout = slide.layout || 'text-left-image-right'
     const hasImage = !!slide.imageUrl
     const hasVideo = !!slide.videoUrl
+    // Motor de bloques: si la slide tiene bloques, se renderizan (y se ignora el
+    // render legacy). Compat: las slides viejas sin bloques usan el camino de abajo.
+    const blocks = Array.isArray((slide as any).blocks) ? (slide as any).blocks : null
+
+    if (blocks && blocks.length) {
+      const speak = blocksToPlainText(blocks)
+      return (
+        <div>
+          {slide.title && (
+            <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-ink-primary mb-4">{slide.title}</motion.h2>
+          )}
+          {speak && <div className="mb-4"><SpeakButton text={speak} label="Escuchar la lectura" /></div>}
+          <BlockStackView blocks={blocks} />
+        </div>
+      )
+    }
 
     return (
       <div>

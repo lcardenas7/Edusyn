@@ -6272,6 +6272,11 @@ model LessonSlide {
   activityData Json?
   // { questionType, question, options[], correctAnswer, explanation, points, hint }
 
+  // Motor de bloques (docs/MOTOR_LECCIONES.md): array ordenado de bloques tipados
+  // [{ id, type, ...content }] para las slides CONTENT. Si está vacío, se usa el
+  // render legacy (body/imageUrl/…). Compat total, sin migrar filas viejas.
+  blocks Json?
+
   // BADGE_REVEAL data
   badgeEmoji String?
   badgeTitle String?

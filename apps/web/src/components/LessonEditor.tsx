@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import RichTextEditor from './RichTextEditor'
 import { MediaInput, SmartImg } from './media/SmartMedia'
+import { BlockStackEditor, legacyToBlocks, newBlock, type LessonBlock } from './lesson/blocks'
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Eye,
   Flag, GripVertical, Loader2, Pencil, Play, Plus, Save, Sparkles,
@@ -51,6 +52,7 @@ interface SlideForm {
   }
   badgeEmoji: string
   badgeTitle: string
+  blocks?: LessonBlock[] // motor de bloques (slides CONTENT)
 }
 
 const EMPTY_ACTIVITY_DATA = {
@@ -279,6 +281,10 @@ export default function LessonEditor({
       } : { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: s.badgeEmoji || '',
       badgeTitle: s.badgeTitle || '',
+      // Bloques: los del servidor, o adaptados de los campos legacy (solo CONTENT).
+      blocks: s.type === 'CONTENT'
+        ? (Array.isArray((s as any).blocks) && (s as any).blocks.length ? (s as any).blocks : legacyToBlocks(s))
+        : undefined,
     }
   }
 
@@ -295,6 +301,7 @@ export default function LessonEditor({
       activityData: { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: type === 'BADGE_REVEAL' ? '🏆' : '',
       badgeTitle: type === 'BADGE_REVEAL' ? 'Lección completada' : '',
+      blocks: type === 'CONTENT' ? [newBlock('TEXT')] : undefined,
     }
   }
 
@@ -384,6 +391,7 @@ export default function LessonEditor({
           feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
           imageUrl: s.activityData.imageUrl || undefined,
         } : undefined,
+        blocks: s.type === 'CONTENT' ? (s.blocks || undefined) : undefined,
         badgeEmoji: s.type === 'BADGE_REVEAL' ? (s.badgeEmoji || badgeEmoji) : undefined,
         badgeTitle: s.type === 'BADGE_REVEAL' ? (s.badgeTitle || badgeTitle) : undefined,
       }))
@@ -1456,7 +1464,9 @@ export default function LessonEditor({
           </div>
         </div>
 
-        {/* CONTENT slide fields */}
+        {/* CONTENT slide — motor de bloques (docs/MOTOR_LECCIONES.md P2 corte 2):
+            título + pila de bloques (texto/imagen/video/audio/tabla) que el docente
+            combina y reordena arrastrando. Reemplaza los campos fijos. */}
         {slide.type === 'CONTENT' && (
           <div className="space-y-3 bg-white rounded-xl border border-slate-200 p-4">
             <div>
@@ -1468,36 +1478,10 @@ export default function LessonEditor({
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Contenido</label>
-              {/* Editor visual (WYSIWYG) — mata la dependencia de HTML. El docente
-                  escribe con formato; se guarda como HTML que el player ya renderiza.
-                  docs/MOTOR_LECCIONES.md (Prioridad 2, corte 1). */}
-              <RichTextEditor
-                value={slide.body}
-                onChange={v => updateSlide(index, { body: v })}
-                placeholder="Escribe el contenido de la diapositiva…"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <MediaInput kind="image" label="Imagen" value={slide.imageUrl} onChange={v => updateSlide(index, { imageUrl: v })} />
-              <MediaInput kind="video" label="Video" value={slide.videoUrl} onChange={v => updateSlide(index, { videoUrl: v })} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <MediaInput kind="audio" label="Audio" value={slide.audioUrl} onChange={v => updateSlide(index, { audioUrl: v })} />
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Layout</label>
-                <select
-                  value={slide.layout}
-                  onChange={e => updateSlide(index, { layout: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                >
-                  {LAYOUT_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <BlockStackEditor
+              blocks={slide.blocks || legacyToBlocks(slide)}
+              onChange={b => updateSlide(index, { blocks: b })}
+            />
           </div>
         )}
 

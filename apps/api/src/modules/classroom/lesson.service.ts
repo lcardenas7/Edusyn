@@ -78,6 +78,7 @@ export class LessonService {
             audioUrl: s.audioUrl,
             layout: s.layout,
             activityData: s.activityData || undefined,
+            blocks: (s as any).blocks ?? undefined,
             badgeEmoji: s.badgeEmoji,
             badgeTitle: s.badgeTitle,
           })),
@@ -289,6 +290,7 @@ export class LessonService {
     audioUrl?: string;
     layout?: string;
     activityData?: any;
+    blocks?: any;
     badgeEmoji?: string;
     badgeTitle?: string;
   }>) {
@@ -313,6 +315,7 @@ export class LessonService {
             audioUrl: slide.audioUrl,
             layout: slide.layout,
             activityData: slide.activityData || undefined,
+            blocks: slide.blocks ?? undefined,
             badgeEmoji: slide.badgeEmoji,
             badgeTitle: slide.badgeTitle,
           },
@@ -330,6 +333,7 @@ export class LessonService {
             audioUrl: slide.audioUrl,
             layout: slide.layout,
             activityData: slide.activityData || undefined,
+            blocks: slide.blocks ?? undefined,
             badgeEmoji: slide.badgeEmoji,
             badgeTitle: slide.badgeTitle,
           },
