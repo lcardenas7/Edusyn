@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import RichTextEditor from './RichTextEditor'
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Eye,
   Flag, GripVertical, Loader2, Pencil, Play, Plus, Save, Sparkles,
@@ -1475,13 +1476,14 @@ export default function LessonEditor({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Contenido (HTML)</label>
-              <textarea
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Contenido</label>
+              {/* Editor visual (WYSIWYG) — mata la dependencia de HTML. El docente
+                  escribe con formato; se guarda como HTML que el player ya renderiza.
+                  docs/MOTOR_LECCIONES.md (Prioridad 2, corte 1). */}
+              <RichTextEditor
                 value={slide.body}
-                onChange={e => updateSlide(index, { body: e.target.value })}
-                placeholder="<p>Escribe el contenido aquí...</p>"
-                rows={6}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono resize-none"
+                onChange={v => updateSlide(index, { body: v })}
+                placeholder="Escribe el contenido de la diapositiva…"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
