@@ -1948,10 +1948,23 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
 // Control segmentado: UNA barra dividida (no chips sueltos). Estilo limpio — activo
 // = pastilla blanca con sombra sobre pista gris (sin morado). Responsive: en móvil
 // scrollea horizontal sin cortar el texto (whitespace-nowrap).
-function SegTrack({ children }: { children: ReactNode }) {
+function SegTrack({ children, variant = 'default' }: { children: ReactNode; variant?: 'default' | 'primary' }) {
+  if (variant === 'primary') {
+    return <div className="flex bg-slate-800 rounded-2xl p-1.5 gap-1.5 overflow-x-auto shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
+  }
   return <div className="flex bg-slate-100/80 rounded-2xl p-1.5 gap-1.5 overflow-x-auto ring-1 ring-slate-900/5 shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
 }
-function SegItem({ label, count, active, onClick, dot, full }: { label: string; count?: number; active: boolean; onClick: () => void; dot?: string; full?: boolean }) {
+function SegItem({ label, count, active, onClick, dot, full, variant = 'default' }: { label: string; count?: number; active: boolean; onClick: () => void; dot?: string; full?: boolean; variant?: 'default' | 'primary' }) {
+  if (variant === 'primary') {
+    return (
+      <button onClick={onClick} aria-pressed={active}
+        className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${active ? 'bg-white text-slate-900 shadow-md ring-1 ring-black/5 scale-[1.02]' : 'text-slate-300 hover:text-white hover:bg-slate-700/60'}`}>
+        {dot && <span className={`w-2 h-2 rounded-full shrink-0 shadow-sm ${dot}`} />}
+        <span>{label}</span>
+        {count !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full font-bold tabular-nums shrink-0 transition-colors ${active ? 'bg-slate-100 text-slate-800' : 'bg-slate-700 text-slate-300'}`}>{count}</span>}
+      </button>
+    )
+  }
   return (
     <button onClick={onClick} aria-pressed={active}
       className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${active ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/60'}`}>
@@ -5314,12 +5327,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           institución (SEMESTER_EXAM ocultos; sin "Todos"). Crear actividad hereda el
           período activo. */}
       {showPeriodBar && (
-        <SegTrack>
+        <SegTrack variant="primary">
           {activityTerms.map(p => (
-            <SegItem key={p.id} full label={p.name} count={activities.filter(a => periodOf(a) === p.id).length} active={periodFilter === p.id} onClick={() => setPeriodFilter(p.id)} />
+            <SegItem variant="primary" key={p.id} full label={p.name} count={activities.filter(a => periodOf(a) === p.id).length} active={periodFilter === p.id} onClick={() => setPeriodFilter(p.id)} />
           ))}
           {someWithoutPeriod && (
-            <SegItem full label="Sin período" count={activities.filter(a => periodOf(a) === 'NONE').length} active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} />
+            <SegItem variant="primary" full label="Sin período" count={activities.filter(a => periodOf(a) === 'NONE').length} active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} />
           )}
         </SegTrack>
       )}
