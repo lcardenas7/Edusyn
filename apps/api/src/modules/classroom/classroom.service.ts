@@ -488,7 +488,7 @@ export class ClassroomService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createActivity(classroomId: string, teacherId: string, dto: {
-    sectionId: string;
+    sectionId?: string | null;
     type: string;
     title: string;
     description?: string;
@@ -506,11 +506,13 @@ export class ClassroomService {
     gameType?: string; // juego suelto (WORDSEARCH/CROSSWORD): marca para rotular sin abrir la lección
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
-    // Validate section belongs to this classroom
-    const section = await this.prisma.classroomSection.findFirst({
-      where: { id: dto.sectionId, classroom: { id: classroomId } },
-    });
-    if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
+    // Sección OPCIONAL: si se pasa, debe pertenecer al aula; si no, actividad sin sección.
+    if (dto.sectionId) {
+      const section = await this.prisma.classroomSection.findFirst({
+        where: { id: dto.sectionId, classroom: { id: classroomId } },
+      });
+      if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
+    }
 
     // Build metadata
     let metadata: any = undefined;
@@ -524,7 +526,7 @@ export class ClassroomService {
     return this.prisma.classroomActivity.create({
       data: {
         classroomId,
-        sectionId: dto.sectionId,
+        sectionId: dto.sectionId || null,
         type: dto.type as any,
         title: dto.title,
         description: dto.description,

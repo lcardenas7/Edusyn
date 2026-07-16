@@ -2064,7 +2064,7 @@ export const classroomApi = {
 
   // Activities
   createActivity: (classroomId: string, data: {
-    sectionId: string; type: string; title: string; description?: string;
+    sectionId?: string | null; type: string; title: string; description?: string;
     maxScore?: number; dueDate?: string; openDate?: string; allowLateSubmit?: boolean;
     attachmentUrl?: string; attachmentName?: string; rubricId?: string;
   }) => api.post(`/classrooms/${classroomId}/activities`, data),

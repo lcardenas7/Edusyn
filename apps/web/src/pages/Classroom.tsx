@@ -1982,6 +1982,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
   const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL')
   const [workFilter, setWorkFilter] = useState<string>('ALL') // filtro por estado de trabajo (pendiente/por calificar/etc.)
+  const [periodFilter, setPeriodFilter] = useState<string>('ALL') // organizador primario: por período académico
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
 
@@ -2312,7 +2313,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }, [classroom.id])
 
   const handleCreate = async () => {
-    if (!form.title.trim() || !form.sectionId) return
+    if (!form.title.trim()) return // la sección es OPCIONAL (§brief arquitectura)
     try {
       setCreating(true)
       let attachmentUrl: string | undefined
@@ -5073,9 +5074,36 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // ── ACTIVITIES LIST VIEW ──
-  const typeFilteredActivities = activityTypeFilter === 'ALL'
+  // ── Organización por período (barra horizontal superior) ──────────────────
+  // La actividad hereda el período de su sección (Actividad→Sección→Período).
+  const classroomSections: any[] = classroom.sections || []
+  const sectionPeriod = new Map<string, { id: string; name: string; order: number } | null>(
+    classroomSections.map(s => [s.id, s.academicTerm || null])
+  )
+  const periodOf = (a: any): string => {
+    const term = a.section?.id ? sectionPeriod.get(a.section.id) : null
+    return term?.id || 'NONE'
+  }
+  // Períodos presentes entre las actividades (con nombre/orden), para la barra.
+  const periodsInUse = (() => {
+    const map = new Map<string, { id: string; name: string; order: number }>()
+    let hasNone = false
+    activities.forEach(a => {
+      const term = a.section?.id ? sectionPeriod.get(a.section.id) : null
+      if (term) map.set(term.id, term); else hasNone = true
+    })
+    const list = [...map.values()].sort((x, y) => x.order - y.order)
+    return { list, hasNone }
+  })()
+  const showPeriodBar = isTeacher && periodsInUse.list.length > 0
+
+  const periodFilteredActivities = !showPeriodBar || periodFilter === 'ALL'
     ? activities
-    : activities.filter(a => a.type === activityTypeFilter)
+    : activities.filter(a => periodOf(a) === periodFilter)
+
+  const typeFilteredActivities = activityTypeFilter === 'ALL'
+    ? periodFilteredActivities
+    : periodFilteredActivities.filter(a => a.type === activityTypeFilter)
 
   // Estado de trabajo: clasificación usada para filtrar, ordenar y dar jerarquía visual.
   // Se permite solapamiento (una actividad puede pertenecer a varios estados: p.ej. "vence hoy" + "por calificar").
@@ -5249,21 +5277,37 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
       </div>
 
+      {/* Organizador PRIMARIO por período (barra horizontal superior). Solo aparece si
+          el docente ya categorizó secciones por período. El de tipo queda secundario. */}
+      {showPeriodBar && (
+        <div className="bg-surface-1 rounded-xl border border-hairline p-1.5">
+          <FilterStrip>
+            <FilterChip label="Todos los períodos" active={periodFilter === 'ALL'} onClick={() => setPeriodFilter('ALL')} count={activities.length} />
+            {periodsInUse.list.map(p => (
+              <FilterChip key={p.id} label={p.name} active={periodFilter === p.id} onClick={() => setPeriodFilter(p.id)} count={activities.filter(a => periodOf(a) === p.id).length} />
+            ))}
+            {periodsInUse.hasNone && (
+              <FilterChip label="Sin período" active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} count={activities.filter(a => periodOf(a) === 'NONE').length} />
+            )}
+          </FilterStrip>
+        </div>
+      )}
+
       {/* Filtros del docente (§AUDITORIA_VISUAL_AULA H1). Una sola tira que scrollea en
           móvil; chips neutros del DS y color solo en el activo. El alumno se organiza
-          por misiones (§Fase 1). */}
+          por misiones (§Fase 1). Los conteos se acotan al período seleccionado. */}
       {isTeacher && activities.length > 0 && (
         <FilterStrip>
           {([
-            { value: 'ALL', label: 'Todas', count: activities.length },
-            { value: 'TASK', label: 'Tareas', count: activities.filter(a => a.type === 'TASK').length },
-            { value: 'QUIZ', label: 'Quiz', count: activities.filter(a => a.type === 'QUIZ').length },
-            { value: 'EXAM', label: 'Examen', count: activities.filter(a => a.type === 'EXAM').length },
-            { value: 'LIVE_QUIZ', label: 'En Línea', count: activities.filter(a => a.type === 'LIVE_QUIZ').length },
-            { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length },
-            { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length },
-            { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length },
-            { value: 'GAME', label: 'Interactivas', count: activities.filter(a => a.type === 'GAME').length },
+            { value: 'ALL', label: 'Todas', count: periodFilteredActivities.length },
+            { value: 'TASK', label: 'Tareas', count: periodFilteredActivities.filter(a => a.type === 'TASK').length },
+            { value: 'QUIZ', label: 'Quiz', count: periodFilteredActivities.filter(a => a.type === 'QUIZ').length },
+            { value: 'EXAM', label: 'Examen', count: periodFilteredActivities.filter(a => a.type === 'EXAM').length },
+            { value: 'LIVE_QUIZ', label: 'En Línea', count: periodFilteredActivities.filter(a => a.type === 'LIVE_QUIZ').length },
+            { value: 'HOME_QUIZ', label: 'En Casa', count: periodFilteredActivities.filter(a => a.type === 'HOME_QUIZ').length },
+            { value: 'ICFES_SIMULATOR', label: 'ICFES', count: periodFilteredActivities.filter(a => a.type === 'ICFES_SIMULATOR').length },
+            { value: 'LESSON', label: 'Lecciones', count: periodFilteredActivities.filter(a => a.type === 'LESSON').length },
+            { value: 'GAME', label: 'Interactivas', count: periodFilteredActivities.filter(a => a.type === 'GAME').length },
           ] as { value: string; label: string; count: number }[])
             .filter(t => t.value === 'ALL' || t.count > 0)
             .map(tab => (
@@ -5554,7 +5598,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-slate-700">Sección</label>
+                <label className="block text-sm font-medium text-slate-700">Sección <span className="text-slate-400 font-normal">(opcional)</span></label>
                 <button type="button" onClick={quickCreateSection} className="text-xs font-semibold text-blue-600 hover:text-blue-700">+ Nueva</button>
               </div>
               <select
@@ -5562,7 +5606,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 onChange={e => { if (e.target.value === '__new__') { quickCreateSection(); return } setForm({ ...form, sectionId: e.target.value }) }}
                 className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base"
               >
-                <option value="">{sections.length ? 'Seleccionar sección...' : 'Aún no hay secciones'}</option>
+                <option value="">Sin sección</option>
                 {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                 <option value="__new__">➕ Crear sección nueva…</option>
               </select>
@@ -5632,7 +5676,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             )}
             <div className="flex gap-3">
               <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-              <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
+              <button onClick={handleCreate} disabled={!form.title.trim() || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type.startsWith('BLOCK_') ? (INTERACTIVE_BLOCK_LABELS[form.type.slice(6)] || 'Actividad') : 'Actividad'}`}
               </button>
