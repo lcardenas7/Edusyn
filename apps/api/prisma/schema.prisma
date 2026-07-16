@@ -1105,6 +1105,7 @@ model AcademicTerm {
 
   academicYear            AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   classroomSections       ClassroomSection[]
+  classroomActivities     ClassroomActivity[]      @relation("ActivityAcademicTerm")
   evaluationPlans         EvaluationPlan[]
   evaluativeActivities    EvaluativeActivity[]
   preventiveCutConfig     PreventiveCutConfig?
@@ -5693,6 +5694,9 @@ model ClassroomAnnouncement {
 model ClassroomActivity {
   id          String                @id @default(cuid())
   sectionId   String? // Nullable para permitir actividades huérfanas al borrar sección
+  // Período académico OPCIONAL y DIRECTO: la actividad puede vivir en un período sin
+  // sección (el período es el organizador primario). Si null, hereda el de su sección.
+  academicTermId String?
   classroomId String
   type        ClassroomActivityType
   title       String
@@ -5724,6 +5728,7 @@ model ClassroomActivity {
   updatedAt          DateTime  @updatedAt
 
   section          ClassroomSection?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  academicTerm     AcademicTerm?        @relation("ActivityAcademicTerm", fields: [academicTermId], references: [id], onDelete: SetNull)
   classroom        Classroom            @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   questions        ActivityQuestion[]
   contexts         QuestionContext[]
@@ -5752,6 +5757,7 @@ model ClassroomActivity {
 
   @@index([classroomId])
   @@index([sectionId])
+  @@index([academicTermId])
   @@index([dueDate])
 }
 

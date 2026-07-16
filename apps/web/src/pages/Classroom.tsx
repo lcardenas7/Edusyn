@@ -26,7 +26,7 @@ import {
   GraduationCap, Layers, ClipboardList, BookOpen, Download,
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
-  BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
+  BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, Calendar, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
   Puzzle, Rocket,
 } from 'lucide-react'
@@ -1952,7 +1952,8 @@ interface Activity {
   isVisible: boolean; isPublished: boolean; scheduledPublishAt?: string | null; publishedAt?: string | null; metadata?: any;
   syncToGradebook?: boolean; gradebookComponent?: string; gradebookIndex?: number;
   createdAt: string; updatedAt: string;
-  section?: { id: string; title: string };
+  academicTermId?: string | null; // período DIRECTO de la actividad (opcional)
+  section?: { id: string; title: string; academicTermId?: string | null };
   gradingPending?: number; // entregas SUBMITTED/LATE por calificar (solo payload docente)
   _count?: { submissions: number };
   submissions?: { id: string; status: string; score?: number; submittedAt?: string; feedback?: string; attemptNumber: number }[];
@@ -1983,11 +1984,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL')
   const [workFilter, setWorkFilter] = useState<string>('ALL') // filtro por estado de trabajo (pendiente/por calificar/etc.)
   const [periodFilter, setPeriodFilter] = useState<string>('ALL') // organizador primario: por período académico
+  const [activityTerms, setActivityTerms] = useState<{ id: string; name: string; order: number }[]>([])
+  const activityYearId = classroom?.teacherAssignment?.academicYearId
+  useEffect(() => {
+    if (!isTeacher || !activityYearId) return
+    academicTermsApi.getByAcademicYear(activityYearId)
+      .then(({ data }) => setActivityTerms(Array.isArray(data) ? [...data].sort((a: any, b: any) => a.order - b.order) : []))
+      .catch(() => { })
+  }, [activityYearId, isTeacher])
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
 
   // Create form
-  const [form, setForm] = useState({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK' as string, shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
+  const [form, setForm] = useState({ title: '', description: '', sectionId: '', academicTermId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK' as string, shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
   // Creación por intención: 'aprender'|'evaluar'|'practicar'|'proyecto' o null (paso 1).
   const [intention, setIntention] = useState<string | null>(null)
   const [attachFile, setAttachFile] = useState<File | null>(null)
@@ -2329,7 +2338,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       const gameType = form.type.startsWith('BLOCK_') ? form.type.slice(6) : undefined
       const realType = gameType ? 'GAME' : form.type
       const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
-        sectionId: form.sectionId, type: realType, title: form.title,
+        sectionId: form.sectionId || undefined, academicTermId: form.academicTermId || undefined, type: realType, title: form.title,
         ...(gameType ? { gameType } : {}),
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
@@ -2345,7 +2354,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       if (isQuizDraft && generatedQuestions.length > 0) {
         await createValeriaQuestions(createdActivity.id, generatedQuestions)
       }
-      setForm({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK', shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
+      setForm({ title: '', description: '', sectionId: '', academicTermId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK', shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
       setAttachFile(null)
       setPendingValeriaQuestions([])
       setShowCreate(false)
@@ -5074,28 +5083,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // ── ACTIVITIES LIST VIEW ──
-  // ── Organización por período (barra horizontal superior) ──────────────────
-  // La actividad hereda el período de su sección (Actividad→Sección→Período).
-  const classroomSections: any[] = classroom.sections || []
-  const sectionPeriod = new Map<string, { id: string; name: string; order: number } | null>(
-    classroomSections.map(s => [s.id, s.academicTerm || null])
-  )
-  const periodOf = (a: any): string => {
-    const term = a.section?.id ? sectionPeriod.get(a.section.id) : null
-    return term?.id || 'NONE'
-  }
-  // Períodos presentes entre las actividades (con nombre/orden), para la barra.
-  const periodsInUse = (() => {
-    const map = new Map<string, { id: string; name: string; order: number }>()
-    let hasNone = false
-    activities.forEach(a => {
-      const term = a.section?.id ? sectionPeriod.get(a.section.id) : null
-      if (term) map.set(term.id, term); else hasNone = true
-    })
-    const list = [...map.values()].sort((x, y) => x.order - y.order)
-    return { list, hasNone }
-  })()
-  const showPeriodBar = isTeacher && periodsInUse.list.length > 0
+  // ── Organización por período (barra horizontal superior, primaria) ─────────
+  // El período es DIRECTO en la actividad; si no lo tiene, hereda el de su sección.
+  const periodOf = (a: Activity): string => a.academicTermId || a.section?.academicTermId || 'NONE'
+  const showPeriodBar = isTeacher && activityTerms.length > 0
+  const someWithoutPeriod = activities.some(a => periodOf(a) === 'NONE')
 
   const periodFilteredActivities = !showPeriodBar || periodFilter === 'ALL'
     ? activities
@@ -5140,6 +5132,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const filteredActivities = typeFilteredActivities
     .filter(a => workFilter === 'ALL' || getWorkInfo(a).keys.has(workFilter))
     .sort((a, b) => getWorkInfo(a).rank - getWorkInfo(b).rank)
+
+  // Al elegir un período, se agrupan por sección (los "temas" del período).
+  const teacherSectionGroups = (() => {
+    if (!isTeacher || !showPeriodBar || periodFilter === 'ALL') return null
+    const groups = new Map<string, { key: string; title: string; list: Activity[] }>()
+    const order: string[] = []
+    filteredActivities.forEach(a => {
+      const key = a.section?.id || '__none__'
+      if (!groups.has(key)) { groups.set(key, { key, title: a.section?.title || 'Sin sección', list: [] }); order.push(key) }
+      groups.get(key)!.list.push(a)
+    })
+    return order.map(k => groups.get(k)!)
+  })()
 
   // Conteos por estado de trabajo (sobre el filtro de tipo, no del de estado) para chips y centro de control.
   const workCount = (key: string) => typeFilteredActivities.filter(a => getWorkInfo(a).keys.has(key)).length
@@ -5226,10 +5231,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )}
             </div>
             <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
-            <div className="flex items-center gap-4 mt-2 text-sm">
+            <div className="flex items-center gap-x-4 gap-y-1 mt-2 text-sm flex-wrap">
+              {isTeacher && (
+                <span className="flex items-center gap-1 text-slate-400">
+                  <Calendar className="w-4 h-4" /> {act.isPublished ? `Publicada ${formatDate(act.publishedAt || act.createdAt)}` : `Creada ${formatDate(act.createdAt)}`}
+                </span>
+              )}
               {act.dueDate && (
                 <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
-                  <Clock className="w-4 h-4" /> {formatDate(act.dueDate)}
+                  <Clock className="w-4 h-4" /> Vence {formatDate(act.dueDate)}
                 </span>
               )}
               {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
@@ -5270,84 +5280,59 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
-            <button onClick={() => { setShowCreate(true); setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => { setShowCreate(true); setIntention(null); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
         )}
       </div>
 
-      {/* Organizador PRIMARIO por período (barra horizontal superior). Solo aparece si
-          el docente ya categorizó secciones por período. El de tipo queda secundario. */}
+      {/* ORGANIZADOR PRIMARIO por período — barra horizontal superior con los períodos
+          de la INSTITUCIÓN (existan o no secciones/actividades). Crear actividad hereda
+          el período activo. */}
       {showPeriodBar && (
         <div className="bg-surface-1 rounded-xl border border-hairline p-1.5">
           <FilterStrip>
             <FilterChip label="Todos los períodos" active={periodFilter === 'ALL'} onClick={() => setPeriodFilter('ALL')} count={activities.length} />
-            {periodsInUse.list.map(p => (
+            {activityTerms.map(p => (
               <FilterChip key={p.id} label={p.name} active={periodFilter === p.id} onClick={() => setPeriodFilter(p.id)} count={activities.filter(a => periodOf(a) === p.id).length} />
             ))}
-            {periodsInUse.hasNone && (
+            {someWithoutPeriod && (
               <FilterChip label="Sin período" active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} count={activities.filter(a => periodOf(a) === 'NONE').length} />
             )}
           </FilterStrip>
         </div>
       )}
 
-      {/* Filtros del docente (§AUDITORIA_VISUAL_AULA H1). Una sola tira que scrollea en
-          móvil; chips neutros del DS y color solo en el activo. El alumno se organiza
-          por misiones (§Fase 1). Los conteos se acotan al período seleccionado. */}
-      {isTeacher && activities.length > 0 && (
-        <FilterStrip>
-          {([
-            { value: 'ALL', label: 'Todas', count: periodFilteredActivities.length },
-            { value: 'TASK', label: 'Tareas', count: periodFilteredActivities.filter(a => a.type === 'TASK').length },
-            { value: 'QUIZ', label: 'Quiz', count: periodFilteredActivities.filter(a => a.type === 'QUIZ').length },
-            { value: 'EXAM', label: 'Examen', count: periodFilteredActivities.filter(a => a.type === 'EXAM').length },
-            { value: 'LIVE_QUIZ', label: 'En Línea', count: periodFilteredActivities.filter(a => a.type === 'LIVE_QUIZ').length },
-            { value: 'HOME_QUIZ', label: 'En Casa', count: periodFilteredActivities.filter(a => a.type === 'HOME_QUIZ').length },
-            { value: 'ICFES_SIMULATOR', label: 'ICFES', count: periodFilteredActivities.filter(a => a.type === 'ICFES_SIMULATOR').length },
-            { value: 'LESSON', label: 'Lecciones', count: periodFilteredActivities.filter(a => a.type === 'LESSON').length },
-            { value: 'GAME', label: 'Interactivas', count: periodFilteredActivities.filter(a => a.type === 'GAME').length },
-          ] as { value: string; label: string; count: number }[])
-            .filter(t => t.value === 'ALL' || t.count > 0)
-            .map(tab => (
-              <FilterChip
-                key={tab.value}
-                label={tab.label}
-                count={tab.count}
-                active={activityTypeFilter === tab.value}
-                onClick={() => setActivityTypeFilter(tab.value)}
-              />
-            ))}
-        </FilterStrip>
-      )}
-
-      {/* Centro de control — solo lo accionable: los estados en cero no ocupan sitio.
-          La urgencia va en un punto de color, no tiñendo el chip entero. */}
+      {/* Filtros SECUNDARIOS en UNA sola fila compacta: tipo + estado accionable.
+          (§AUDITORIA_VISUAL_AULA H1: una fila, chips pequeños, scroll en móvil). */}
       {isTeacher && activities.length > 0 && (() => {
+        const types = ([
+          { value: 'ALL', label: 'Todas', count: periodFilteredActivities.length },
+          { value: 'TASK', label: 'Tareas', count: periodFilteredActivities.filter(a => a.type === 'TASK').length },
+          { value: 'QUIZ', label: 'Quiz', count: periodFilteredActivities.filter(a => a.type === 'QUIZ').length },
+          { value: 'EXAM', label: 'Examen', count: periodFilteredActivities.filter(a => a.type === 'EXAM').length },
+          { value: 'LIVE_QUIZ', label: 'En Línea', count: periodFilteredActivities.filter(a => a.type === 'LIVE_QUIZ').length },
+          { value: 'HOME_QUIZ', label: 'En Casa', count: periodFilteredActivities.filter(a => a.type === 'HOME_QUIZ').length },
+          { value: 'ICFES_SIMULATOR', label: 'ICFES', count: periodFilteredActivities.filter(a => a.type === 'ICFES_SIMULATOR').length },
+          { value: 'LESSON', label: 'Lecciones', count: periodFilteredActivities.filter(a => a.type === 'LESSON').length },
+          { value: 'GAME', label: 'Interactivas', count: periodFilteredActivities.filter(a => a.type === 'GAME').length },
+        ] as { value: string; label: string; count: number }[]).filter(t => t.value === 'ALL' || t.count > 0)
         const widgets = ([
           { key: 'GRADING', label: 'Por calificar', dot: 'bg-orange-500' },
           { key: 'DUE_TODAY', label: 'Vence hoy', dot: 'bg-amber-500' },
           { key: 'NO_SUBMISSIONS', label: 'Sin entregas', dot: 'bg-slate-400' },
           { key: 'DRAFT', label: 'Borradores', dot: 'bg-slate-400' },
-        ] as { key: string; label: string; dot: string }[])
-          .filter(w => workCount(w.key) > 0 || workFilter === w.key)
-        if (widgets.length === 0) return null
+        ] as { key: string; label: string; dot: string }[]).filter(w => workCount(w.key) > 0 || workFilter === w.key)
         return (
           <FilterStrip>
-            {widgets.map(w => (
-              <FilterChip
-                key={w.key}
-                label={w.label}
-                count={workCount(w.key)}
-                dot={w.dot}
-                active={workFilter === w.key}
-                onClick={() => setWorkFilter(workFilter === w.key ? 'ALL' : w.key)}
-              />
+            {types.map(tab => (
+              <FilterChip key={tab.value} label={tab.label} count={tab.count} active={activityTypeFilter === tab.value} onClick={() => setActivityTypeFilter(tab.value)} />
             ))}
-            {workFilter !== 'ALL' && (
-              <button onClick={() => setWorkFilter('ALL')} className="shrink-0 px-2 text-sm text-ink-muted hover:text-ink-primary">Ver todas</button>
-            )}
+            {widgets.length > 0 && <span className="shrink-0 self-center w-px h-5 bg-hairline mx-0.5" />}
+            {widgets.map(w => (
+              <FilterChip key={w.key} label={w.label} count={workCount(w.key)} dot={w.dot} active={workFilter === w.key} onClick={() => setWorkFilter(workFilter === w.key ? 'ALL' : w.key)} />
+            ))}
           </FilterStrip>
         )
       })()}
@@ -5595,6 +5580,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
             <RichTextEditor value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={isQuizEditorType(form.type) ? 'Instrucciones, reglas y modo de juego...' : 'Instrucciones y descripción...'} />
           </Suspense>
+          {activityTerms.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Período</label>
+              <select value={form.academicTermId} onChange={e => setForm({ ...form, academicTermId: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                <option value="">Sin período</option>
+                {activityTerms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -5832,6 +5826,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{g.label}</h3>
                   <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold tabular-nums">{g.list.length}</span>
                   <span className="text-xs text-slate-400 hidden sm:inline">· {g.hint}</span>
+                </div>
+                {g.list.map(renderActivityCard)}
+              </div>
+            ))
+          ) : teacherSectionGroups ? (
+            teacherSectionGroups.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-10">No hay actividades en este período todavía. Crea una con “+ Nueva Actividad”.</p>
+            ) : teacherSectionGroups.map(g => (
+              <div key={g.key} className="space-y-3">
+                <div className="flex items-center gap-2 pt-1">
+                  <FolderOpen className="w-4 h-4 text-slate-400 shrink-0" />
+                  <h3 className="text-sm font-bold text-slate-700">{g.title}</h3>
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold tabular-nums">{g.list.length}</span>
                 </div>
                 {g.list.map(renderActivityCard)}
               </div>

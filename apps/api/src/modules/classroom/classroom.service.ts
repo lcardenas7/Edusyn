@@ -489,6 +489,7 @@ export class ClassroomService {
 
   async createActivity(classroomId: string, teacherId: string, dto: {
     sectionId?: string | null;
+    academicTermId?: string | null;
     type: string;
     title: string;
     description?: string;
@@ -527,6 +528,7 @@ export class ClassroomService {
       data: {
         classroomId,
         sectionId: dto.sectionId || null,
+        academicTermId: dto.academicTermId || null,
         type: dto.type as any,
         title: dto.title,
         description: dto.description,
@@ -556,7 +558,7 @@ export class ClassroomService {
       const activities = await this.prisma.classroomActivity.findMany({
         where: { classroomId, isRouteScoped: false },
         include: {
-          section: { select: { id: true, title: true } },
+          section: { select: { id: true, title: true, academicTermId: true } },
           _count: { select: { submissions: true } },
         },
         orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
@@ -579,7 +581,7 @@ export class ClassroomService {
     return this.prisma.classroomActivity.findMany({
       where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false },
       include: {
-        section: { select: { id: true, title: true } },
+        section: { select: { id: true, title: true, academicTermId: true } },
         submissions: {
           where: {
             studentEnrollment: { student: { userId } },

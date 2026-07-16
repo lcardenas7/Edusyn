@@ -209,6 +209,7 @@ export class ClassroomController {
   @Roles('DOCENTE', 'COORDINADOR')
   async createActivity(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
     sectionId?: string | null;
+    academicTermId?: string | null;
     type: string;
     title: string;
     description?: string;
