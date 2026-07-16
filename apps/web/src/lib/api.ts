@@ -2040,9 +2040,9 @@ export const classroomApi = {
   getStudents: (id: string) => api.get(`/classrooms/${id}/students`),
 
   // Sections
-  createSection: (classroomId: string, data: { title: string; description?: string }) =>
+  createSection: (classroomId: string, data: { title: string; description?: string; academicTermId?: string | null }) =>
     api.post(`/classrooms/${classroomId}/sections`, data),
-  updateSection: (sectionId: string, data: { title?: string; description?: string; isVisible?: boolean; sortOrder?: number }) =>
+  updateSection: (sectionId: string, data: { title?: string; description?: string; isVisible?: boolean; sortOrder?: number; academicTermId?: string | null }) =>
     api.put(`/classrooms/sections/${sectionId}`, data),
   deleteSection: (sectionId: string, force = false) => api.delete(`/classrooms/sections/${sectionId}?force=${force}`),
 

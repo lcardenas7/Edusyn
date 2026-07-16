@@ -179,6 +179,7 @@ export class ClassroomService {
           orderBy: { sortOrder: 'asc' },
           include: {
             materials: { orderBy: { sortOrder: 'asc' } },
+            academicTerm: { select: { id: true, name: true, order: true } },
             activities: {
               where: { isPublished: true },
               orderBy: { sortOrder: 'asc' },
@@ -263,6 +264,7 @@ export class ClassroomService {
   async createSection(classroomId: string, teacherId: string, dto: {
     title: string;
     description?: string;
+    academicTermId?: string | null;
   }) {
     await this.validateClassroomOwnership(classroomId, teacherId);
     const maxSort = await this.prisma.classroomSection.aggregate({
@@ -274,6 +276,7 @@ export class ClassroomService {
         classroomId,
         title: dto.title,
         description: dto.description,
+        academicTermId: dto.academicTermId || null,
         sortOrder: (maxSort._max.sortOrder ?? 0) + 100,
       },
       include: { materials: true },
@@ -285,6 +288,7 @@ export class ClassroomService {
     description?: string;
     isVisible?: boolean;
     sortOrder?: number;
+    academicTermId?: string | null;
   }) {
     await this.validateSectionOwnership(sectionId, teacherId);
     return this.prisma.classroomSection.update({
@@ -294,6 +298,7 @@ export class ClassroomService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.isVisible !== undefined && { isVisible: dto.isVisible }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        ...(dto.academicTermId !== undefined && { academicTermId: dto.academicTermId || null }),
       },
     });
   }

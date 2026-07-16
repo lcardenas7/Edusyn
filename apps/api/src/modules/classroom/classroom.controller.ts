@@ -95,6 +95,7 @@ export class ClassroomController {
   async createSection(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
     title: string;
     description?: string;
+    academicTermId?: string | null;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.createSection(classroomId, userId, body);
@@ -107,6 +108,7 @@ export class ClassroomController {
     description?: string;
     isVisible?: boolean;
     sortOrder?: number;
+    academicTermId?: string | null;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.updateSection(sectionId, userId, body);

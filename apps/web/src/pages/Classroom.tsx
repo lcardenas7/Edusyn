@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
-import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi } from '../lib/api'
+import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi, academicTermsApi } from '../lib/api'
 import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
@@ -58,6 +58,8 @@ interface Section {
   description?: string
   sortOrder: number
   isVisible: boolean
+  academicTermId?: string | null
+  academicTerm?: { id: string; name: string; order: number } | null
   materials: Material[]
   activities?: { id: string; type: string; title: string; dueDate?: string; maxScore?: number }[]
 }
@@ -1141,8 +1143,25 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
   const [showAddSection, setShowAddSection] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
+  const [newSectionTermId, setNewSectionTermId] = useState('')
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [editingSectionTitle, setEditingSectionTitle] = useState('')
+
+  // Categorización opcional por período (§AUDITORIA_VISUAL_AULA H3b / V5).
+  const [terms, setTerms] = useState<{ id: string; name: string; order: number }[]>([])
+  const [periodFilter, setPeriodFilter] = useState<string>('ALL')
+  const yearId = classroom?.teacherAssignment?.academicYearId
+  useEffect(() => {
+    if (!isTeacher || !yearId) return
+    academicTermsApi.getByAcademicYear(yearId)
+      .then(({ data }) => setTerms(Array.isArray(data) ? [...data].sort((a: any, b: any) => a.order - b.order) : []))
+      .catch(() => { })
+  }, [yearId, isTeacher])
+
+  const changeSectionPeriod = async (sectionId: string, termId: string) => {
+    try { await classroomApi.updateSection(sectionId, { academicTermId: termId || null }); onReload() }
+    catch (err: any) { setError(err.response?.data?.message || 'No se pudo cambiar el período') }
+  }
 
   // Material modal
   const [materialModal, setMaterialModal] = useState<{ sectionId: string; type: string } | null>(null)
@@ -1165,8 +1184,9 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   const handleAddSection = async () => {
     if (!newSectionTitle.trim()) return
     try {
-      await classroomApi.createSection(classroom.id, { title: newSectionTitle.trim() })
+      await classroomApi.createSection(classroom.id, { title: newSectionTitle.trim(), academicTermId: newSectionTermId || null })
       setNewSectionTitle('')
+      setNewSectionTermId('')
       setShowAddSection(false)
       onReload()
     } catch (err: any) { setError(err.response?.data?.message || 'Error al crear sección') }
@@ -1345,18 +1365,37 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* New section form */}
       {showAddSection && (
-        <div className="bg-surface-1 border border-blue-200 rounded-xl p-4 flex gap-2">
+        <div className="bg-surface-1 border border-blue-200 rounded-xl p-4 flex gap-2 flex-wrap">
           <input
             value={newSectionTitle}
             onChange={e => setNewSectionTitle(e.target.value)}
             placeholder="Nombre de la sección (ej: Semana 1, Unidad: Fracciones)"
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="flex-1 min-w-[200px] border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             autoFocus
             onKeyDown={e => e.key === 'Enter' && handleAddSection()}
           />
-          <button onClick={() => setShowAddSection(false)} className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          {terms.length > 0 && (
+            <select value={newSectionTermId} onChange={e => setNewSectionTermId(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2.5 text-sm" title="Período (opcional)">
+              <option value="">Sin período</option>
+              {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          )}
+          <button onClick={() => setShowAddSection(false)} className="px-3 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
           <button onClick={handleAddSection} disabled={!newSectionTitle.trim()} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Crear</button>
         </div>
+      )}
+
+      {/* Filtro por período — solo si el docente ya usó períodos en alguna sección */}
+      {isTeacher && terms.length > 0 && sections.some(s => s.academicTermId) && (
+        <FilterStrip>
+          <FilterChip label="Todos" active={periodFilter === 'ALL'} onClick={() => setPeriodFilter('ALL')} count={sections.length} />
+          {terms.filter(t => sections.some(s => s.academicTermId === t.id)).map(t => (
+            <FilterChip key={t.id} label={t.name} active={periodFilter === t.id} onClick={() => setPeriodFilter(t.id)} count={sections.filter(s => s.academicTermId === t.id).length} />
+          ))}
+          {sections.some(s => !s.academicTermId) && (
+            <FilterChip label="Sin período" active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} count={sections.filter(s => !s.academicTermId).length} />
+          )}
+        </FilterStrip>
       )}
 
       {/* Sections */}
@@ -1374,7 +1413,10 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
           )}
         </div>
       ) : (
-        sections.filter(s => isTeacher || s.isVisible).map(section => (
+        sections
+          .filter(s => isTeacher || s.isVisible)
+          .filter(s => periodFilter === 'ALL' || (periodFilter === 'NONE' ? !s.academicTermId : s.academicTermId === periodFilter))
+          .map(section => (
           <div key={section.id} className={`bg-surface-1 rounded-xl border ${section.isVisible ? 'border-hairline' : 'border-dashed border-slate-300 opacity-70'}`}>
             {/* Section header */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-hairline bg-slate-50/50 rounded-t-xl">
@@ -1393,6 +1435,19 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                   <h4 className="font-semibold text-slate-800 text-sm">{section.title}</h4>
                 )}
                 {!section.isVisible && <span className="text-xs bg-slate-200 text-slate-500 px-2 py-0.5 rounded shrink-0">Oculta</span>}
+                {terms.length > 0 && isTeacher ? (
+                  <select
+                    value={section.academicTermId || ''}
+                    onChange={e => changeSectionPeriod(section.id, e.target.value)}
+                    className="text-xs border border-hairline rounded-md px-1.5 py-0.5 bg-surface-1 text-ink-muted shrink-0"
+                    title="Período de esta sección"
+                  >
+                    <option value="">Sin período</option>
+                    {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                ) : section.academicTerm ? (
+                  <span className="text-[11px] font-medium bg-blue-50 text-blue-600 rounded-md px-2 py-0.5 shrink-0">{section.academicTerm.name}</span>
+                ) : null}
               </div>
               {isTeacher && (
                 <div className="flex items-center gap-0.5 ml-2 shrink-0">
