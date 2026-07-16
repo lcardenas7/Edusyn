@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
@@ -1944,6 +1944,23 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: ACTIVIDADES (Tareas funcionales)
 // ═══════════════════════════════════════════════════════════════════════════
+
+// Control segmentado: UNA barra dividida (no chips sueltos). Estilo limpio — activo
+// = pastilla blanca con sombra sobre pista gris (sin morado). Responsive: en móvil
+// scrollea horizontal sin cortar el texto (whitespace-nowrap).
+function SegTrack({ children }: { children: ReactNode }) {
+  return <div className="flex bg-surface-2 rounded-2xl p-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
+}
+function SegItem({ label, count, active, onClick, dot, full }: { label: string; count?: number; active: boolean; onClick: () => void; dot?: string; full?: boolean }) {
+  return (
+    <button onClick={onClick} aria-pressed={active}
+      className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${active ? 'bg-surface-1 text-ink-primary shadow-sm' : 'text-ink-secondary hover:text-ink-primary'}`}>
+      {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />}
+      <span>{label}</span>
+      {count !== undefined && <span className={`text-xs px-1.5 rounded-full font-bold tabular-nums shrink-0 ${active ? 'bg-surface-3 text-ink-secondary' : 'bg-surface-3/70 text-ink-muted'}`}>{count}</span>}
+    </button>
+  )
+}
 
 interface Activity {
   id: string; sectionId: string; classroomId: string; type: string;
@@ -5297,34 +5314,17 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           institución (SEMESTER_EXAM ocultos; sin "Todos"). Crear actividad hereda el
           período activo. */}
       {showPeriodBar && (
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {activityTerms.map(p => {
-            const count = activities.filter(a => periodOf(a) === p.id).length
-            const active = periodFilter === p.id
-            return (
-              <button key={p.id} onClick={() => setPeriodFilter(p.id)}
-                className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
-                  ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-500/25'
-                  : 'bg-surface-1 border border-hairline text-ink-secondary hover:border-violet-200 hover:text-violet-700'}`}>
-                {p.name}
-                <span className={`text-xs px-1.5 rounded-full font-bold tabular-nums ${active ? 'bg-white/25 text-white' : 'bg-surface-3 text-ink-muted'}`}>{count}</span>
-              </button>
-            )
-          })}
+        <SegTrack>
+          {activityTerms.map(p => (
+            <SegItem key={p.id} full label={p.name} count={activities.filter(a => periodOf(a) === p.id).length} active={periodFilter === p.id} onClick={() => setPeriodFilter(p.id)} />
+          ))}
           {someWithoutPeriod && (
-            <button onClick={() => setPeriodFilter('NONE')}
-              className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${periodFilter === 'NONE'
-                ? 'bg-slate-700 text-white shadow-md'
-                : 'bg-surface-1 border border-dashed border-hairline text-ink-muted hover:text-ink-secondary'}`}>
-              Sin período
-              <span className={`text-xs px-1.5 rounded-full font-bold tabular-nums ${periodFilter === 'NONE' ? 'bg-white/25 text-white' : 'bg-surface-3 text-ink-muted'}`}>{activities.filter(a => periodOf(a) === 'NONE').length}</span>
-            </button>
+            <SegItem full label="Sin período" count={activities.filter(a => periodOf(a) === 'NONE').length} active={periodFilter === 'NONE'} onClick={() => setPeriodFilter('NONE')} />
           )}
-        </div>
+        </SegTrack>
       )}
 
-      {/* Filtros SECUNDARIOS en UNA sola fila compacta: tipo + estado accionable.
-          (§AUDITORIA_VISUAL_AULA H1: una fila, chips pequeños, scroll en móvil). */}
+      {/* Filtros SECUNDARIOS — mismo control segmentado limpio: tipo + estado. */}
       {isTeacher && activities.length > 0 && (() => {
         const types = ([
           { value: 'ALL', label: 'Todas', count: periodFilteredActivities.length },
@@ -5344,15 +5344,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           { key: 'DRAFT', label: 'Borradores', dot: 'bg-slate-400' },
         ] as { key: string; label: string; dot: string }[]).filter(w => workCount(w.key) > 0 || workFilter === w.key)
         return (
-          <FilterStrip>
+          <SegTrack>
             {types.map(tab => (
-              <FilterChip key={tab.value} label={tab.label} count={tab.count} active={activityTypeFilter === tab.value} onClick={() => setActivityTypeFilter(tab.value)} />
+              <SegItem key={tab.value} label={tab.label} count={tab.count} active={activityTypeFilter === tab.value} onClick={() => setActivityTypeFilter(tab.value)} />
             ))}
             {widgets.length > 0 && <span className="shrink-0 self-center w-px h-5 bg-hairline mx-0.5" />}
             {widgets.map(w => (
-              <FilterChip key={w.key} label={w.label} count={workCount(w.key)} dot={w.dot} active={workFilter === w.key} onClick={() => setWorkFilter(workFilter === w.key ? 'ALL' : w.key)} />
+              <SegItem key={w.key} label={w.label} count={workCount(w.key)} dot={w.dot} active={workFilter === w.key} onClick={() => setWorkFilter(workFilter === w.key ? 'ALL' : w.key)} />
             ))}
-          </FilterStrip>
+          </SegTrack>
         )
       })()}
 
