@@ -396,7 +396,7 @@ export default function Classroom() {
                       <button
                         key={c.id}
                         onClick={() => loadClassroom(c.id)}
-                        className="text-left bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group"
+                        className="text-left bg-surface-1 rounded-xl border border-hairline overflow-hidden hover:shadow-lg transition-all group"
                       >
                         <div className="h-2" style={{ backgroundColor: c.color || '#3B82F6' }} />
                         <div className="p-4">
@@ -431,7 +431,7 @@ export default function Classroom() {
         {/* Create Modal */}
         {showCreate && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-md p-6">
               <h2 className="text-lg font-bold text-slate-800 mb-4">Crear Aula Virtual</h2>
               {availableAssignments.length === 0 ? (
                 <p className="text-sm text-slate-500 py-4">No tienes asignaciones disponibles para crear aulas. Todas tus asignaturas ya tienen aula o no tienes carga académica activa.</p>
@@ -502,18 +502,18 @@ export default function Classroom() {
             <div className="flex items-center gap-2">
               {isTeacher && (
                 <>
-                  <button onClick={openColorModal} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors" title="Cambiar color">
+                  <button onClick={openColorModal} className="flex items-center gap-1.5 bg-surface-1/20 hover:bg-surface-1/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors" title="Cambiar color">
                     <div className="w-3.5 h-3.5 rounded-full border border-white/70" style={{ backgroundColor: activeClassroom.color || '#3B82F6' }} />
                     <span className="hidden sm:inline">Color</span>
                   </button>
-                  <button onClick={() => { setShowCopyModal(true); loadCopyTargets() }} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors">
+                  <button onClick={() => { setShowCopyModal(true); loadCopyTargets() }} className="flex items-center gap-1.5 bg-surface-1/20 hover:bg-surface-1/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors">
                     <Copy className="w-4 h-4" />
                     <span className="hidden sm:inline">Copiar aula</span>
                   </button>
                 </>
               )}
               {activeClassroom.studentCount !== undefined && (
-                <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2">
+                <div className="hidden sm:flex items-center gap-2 bg-surface-1/20 rounded-xl px-4 py-2">
                   <Users className="w-5 h-5 text-white" />
                   <span className="text-white font-semibold text-lg">{activeClassroom.studentCount || (activeClassroom as any)._count?.sections || '—'}</span>
                   <span className="text-white/70 text-sm">estudiantes</span>
@@ -525,7 +525,7 @@ export default function Classroom() {
       </div>
 
       {/* ── HORIZONTAL TAB NAVIGATION ── */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-surface-1 border-b border-hairline sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-2 sm:px-6">
           <nav className="flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide -mb-px">
             {tabs.map(tab => (
@@ -575,7 +575,7 @@ export default function Classroom() {
       {/* Copy Classroom Modal */}
       {showCopyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">Copiar aula a otros grupos</h3>
               <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="p-1.5 hover:bg-slate-100 rounded-lg">
@@ -596,7 +596,7 @@ export default function Classroom() {
                 {copyTargets.map((a: any) => {
                   const isSelected = selectedCopyTargets.includes(a.id)
                   return (
-                    <label key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                    <label key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-hairline hover:border-slate-300'}`}>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -638,7 +638,7 @@ export default function Classroom() {
 
       {showColorModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-800">Cambiar color del aula</h3>
               <button onClick={() => setShowColorModal(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
@@ -688,7 +688,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
     return (
       <div className="space-y-6">
         {/* Welcome */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-6">
           <h2 className="text-2xl font-bold text-slate-800">Bienvenido, {firstName}</h2>
           <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
         </div>
@@ -699,7 +699,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         {/* Dashboard cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Actividades pendientes */}
-          <div className="bg-white rounded-2xl border-2 border-orange-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('activities')}>
+          <div className="bg-surface-1 rounded-2xl border-2 border-orange-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('activities')}>
             <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-5 py-3 flex items-center gap-2.5">
               <ClipboardList className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Actividades ({allActivities.length})</h3>
@@ -731,7 +731,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
 
           {/* Anuncios recientes */}
-          <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('announcements')}>
+          <div className="bg-surface-1 rounded-2xl border-2 border-blue-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('announcements')}>
             <div className="bg-gradient-to-r from-blue-500 to-blue-400 px-5 py-3 flex items-center gap-2.5">
               <Megaphone className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Anuncios Recientes</h3>
@@ -753,7 +753,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
 
           {/* Mis Calificaciones */}
-          <div className="bg-white rounded-2xl border-2 border-green-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('grades')}>
+          <div className="bg-surface-1 rounded-2xl border-2 border-green-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('grades')}>
             <div className="bg-gradient-to-r from-green-500 to-green-400 px-5 py-3 flex items-center gap-2.5">
               <BarChart3 className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Mis Calificaciones</h3>
@@ -764,7 +764,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
 
           {/* Contenidos del Curso */}
-          <div className="bg-white rounded-2xl border-2 border-purple-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('content')}>
+          <div className="bg-surface-1 rounded-2xl border-2 border-purple-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('content')}>
             <div className="bg-gradient-to-r from-purple-500 to-purple-400 px-5 py-3 flex items-center gap-2.5">
               <BookOpen className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Contenidos del Curso</h3>
@@ -794,7 +794,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
     <div className="space-y-6">
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
               <Layers className="w-5 h-5 text-blue-600" />
@@ -803,7 +803,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
           <p className="text-sm text-slate-500">Secciones</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-green-600" />
@@ -812,7 +812,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
           <p className="text-sm text-slate-500">Recursos</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
               <Megaphone className="w-5 h-5 text-amber-600" />
@@ -821,7 +821,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
           <p className="text-sm text-slate-500">Anuncios</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
               <ClipboardList className="w-5 h-5 text-purple-600" />
@@ -835,8 +835,8 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Recent announcements */}
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
+          <div className="px-5 py-4 border-b border-hairline flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Megaphone className="w-5 h-5 text-amber-500" /> Anuncios recientes
             </h3>
@@ -862,8 +862,8 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         </div>
 
         {/* Activity feed placeholder */}
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
+        <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
+          <div className="px-5 py-4 border-b border-hairline">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-500" /> Actividad reciente
             </h3>
@@ -985,7 +985,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
       </div>
 
       {showForm && (
-        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
+        <div className="bg-surface-1 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
           <input
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
@@ -998,14 +998,14 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
           </Suspense>
           <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
           {attachmentFile && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
               <Paperclip className="w-5 h-5 text-slate-400" />
               <span className="text-base text-slate-700 flex-1 truncate">{attachmentFile.name}</span>
               <button onClick={() => setAttachmentFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4 text-slate-400" /></button>
             </div>
           )}
           <div className="flex items-center justify-between pt-1">
-            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
               <Paperclip className="w-5 h-5" /> Adjuntar archivo
             </button>
             <div className="flex gap-3">
@@ -1020,7 +1020,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
       )}
 
       {announcements.length === 0 && !showForm ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+        <div className="text-center py-20 bg-surface-1 rounded-2xl border border-hairline">
           <Megaphone className="w-16 h-16 mx-auto mb-4 text-slate-300" />
           <p className="text-lg font-medium text-slate-500">No hay anuncios aún</p>
           {isTeacher && <p className="text-base mt-1 text-slate-400">Publica un anuncio para comunicarte con tus estudiantes</p>}
@@ -1028,7 +1028,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
       ) : (
         <div className="space-y-4">
           {announcements.map(a => (
-            <div key={a.id} className={`bg-white rounded-2xl border-2 p-6 ${a.isPinned ? 'border-yellow-300' : 'border-slate-200'}`}>
+            <div key={a.id} className={`bg-surface-1 rounded-2xl border-2 p-6 ${a.isPinned ? 'border-yellow-300' : 'border-hairline'}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5">
@@ -1042,7 +1042,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
                         <ImagePreview url={a.attachmentUrl} name={a.attachmentName} onExpand={() => openImagePreview(a.attachmentUrl!)} />
                       </div>
                     ) : (
-                      <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
+                      <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-hairline transition-colors group w-full sm:w-auto">
                         <File className="w-5 h-5 text-blue-500" />
                         <span className="text-base text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
                         <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
@@ -1075,7 +1075,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
       {/* Copy announcement modal */}
       {copyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-surface-1 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-slate-800 mb-1">Copiar anuncio</h3>
             <p className="text-sm text-slate-500 mb-4 truncate">"{copyModal.title}"</p>
             {loadingClassrooms ? (
@@ -1085,7 +1085,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
             ) : (
               <div className="space-y-2">
                 {availableClassrooms.map(c => (
-                  <button key={c.id} onClick={() => handleCopyToClassroom(c.id)} disabled={copying} className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50">
+                  <button key={c.id} onClick={() => handleCopyToClassroom(c.id)} disabled={copying} className="w-full text-left px-4 py-3 rounded-xl border border-hairline hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50">
                     <p className="font-medium text-slate-800">{c.title}</p>
                     <p className="text-xs text-slate-400">{c.teacherAssignment?.group?.grade?.name} {c.teacherAssignment?.group?.name}</p>
                   </button>
@@ -1122,7 +1122,7 @@ function ImagePreview({ url, name, onExpand }: { url: string; name?: string; onE
   if (!resolvedUrl) return <div className="w-full h-48 bg-slate-100 rounded-xl animate-pulse" />
   return (
     <div className="relative group">
-      <img src={resolvedUrl} alt={name || 'Imagen'} className="max-w-full max-h-64 rounded-xl border border-slate-200 cursor-pointer" onClick={onExpand} />
+      <img src={resolvedUrl} alt={name || 'Imagen'} className="max-w-full max-h-64 rounded-xl border border-hairline cursor-pointer" onClick={onExpand} />
       <button onClick={onExpand} className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors rounded-xl">
         <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
@@ -1345,7 +1345,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* New section form */}
       {showAddSection && (
-        <div className="bg-white border border-blue-200 rounded-xl p-4 flex gap-2">
+        <div className="bg-surface-1 border border-blue-200 rounded-xl p-4 flex gap-2">
           <input
             value={newSectionTitle}
             onChange={e => setNewSectionTitle(e.target.value)}
@@ -1361,7 +1361,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* Sections */}
       {sections.length === 0 && !showAddSection ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+        <div className="text-center py-16 bg-surface-1 rounded-xl border border-hairline">
           <FolderOpen className="w-14 h-14 mx-auto mb-3 text-slate-300" />
           <p className="text-sm font-medium text-ink-secondary">No hay secciones de contenido aún</p>
           {isTeacher && (
@@ -1375,9 +1375,9 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
         </div>
       ) : (
         sections.filter(s => isTeacher || s.isVisible).map(section => (
-          <div key={section.id} className={`bg-white rounded-xl border ${section.isVisible ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-70'}`}>
+          <div key={section.id} className={`bg-surface-1 rounded-xl border ${section.isVisible ? 'border-hairline' : 'border-dashed border-slate-300 opacity-70'}`}>
             {/* Section header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-hairline bg-slate-50/50 rounded-t-xl">
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <FolderOpen className="w-5 h-5 text-blue-500 shrink-0" />
                 {editingSection === section.id ? (
@@ -1424,7 +1424,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
               {/* Add resource buttons (teacher only) */}
               {isTeacher && (
-                <div className="pt-3 border-t border-slate-100 mt-3">
+                <div className="pt-3 border-t border-hairline mt-3">
                   <p className="text-xs text-slate-400 mb-2.5 font-medium">Agregar recurso:</p>
                   <div className="flex flex-wrap gap-2">
                     {[
@@ -1454,8 +1454,8 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
       {/* ── MATERIAL CREATION MODAL ── */}
       {materialModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-hairline flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {getMaterialIcon(materialModal.type, 'w-5 h-5')}
                 <h3 className="font-bold text-slate-800">
@@ -1506,7 +1506,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                     />
                   </div>
                   {materialContent && extractYoutubeId(materialContent) && (
-                    <div className="mt-3 aspect-video max-w-sm rounded-lg overflow-hidden border border-slate-200">
+                    <div className="mt-3 aspect-video max-w-sm rounded-lg overflow-hidden border border-hairline">
                       <iframe src={`https://www.youtube-nocookie.com/embed/${extractYoutubeId(materialContent)}`} className="w-full h-full" allowFullScreen />
                     </div>
                   )}
@@ -1571,7 +1571,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                   </button>
                   {materialFile && (
                     <div className="mt-2">
-                      <img src={URL.createObjectURL(materialFile)} alt="Preview" className="max-h-40 rounded-lg border border-slate-200" />
+                      <img src={URL.createObjectURL(materialFile)} alt="Preview" className="max-h-40 rounded-lg border border-hairline" />
                     </div>
                   )}
                 </div>
@@ -1594,7 +1594,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
               )}
             </div>
 
-            <div className="p-5 border-t border-slate-200 flex justify-end gap-2">
+            <div className="p-5 border-t border-hairline flex justify-end gap-2">
               <button onClick={() => setMaterialModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
               <button
                 onClick={handleSaveMaterial}
@@ -1612,8 +1612,8 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
       {/* ── DUPLICATE MATERIAL MODAL ── */}
       {duplicateMaterialModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-md">
+            <div className="p-5 border-b border-hairline flex items-center justify-between">
               <h3 className="font-bold text-slate-800">Duplicar recurso a otra sección</h3>
               <button onClick={() => setDuplicateMaterialModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-400" />
@@ -1638,8 +1638,8 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
       {/* ── COPY SECTION MODAL ── */}
       {copySectionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-lg">
+            <div className="p-5 border-b border-hairline flex items-center justify-between">
               <h3 className="font-bold text-slate-800">Copiar sección a otra aula</h3>
               <button onClick={() => setCopySectionModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-400" />
@@ -1722,7 +1722,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
   }
 
   return (
-    <div className={`rounded-xl border border-slate-200 border-l-4 ${typeColors[material.type] || 'border-l-slate-300'} ${material.isVisible ? 'bg-white' : 'bg-slate-50/50 opacity-60'} group transition-all hover:shadow-sm`}>
+    <div className={`rounded-xl border border-hairline border-l-4 ${typeColors[material.type] || 'border-l-slate-300'} ${material.isVisible ? 'bg-surface-1' : 'bg-slate-50/50 opacity-60'} group transition-all hover:shadow-sm`}>
       <div className="p-4">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
@@ -1790,7 +1790,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
         {material.type === 'VIDEO_YOUTUBE' && material.content && (() => {
           const vid = extractYoutubeId(material.content)
           return vid ? (
-            <div className="mt-3 aspect-video rounded-lg overflow-hidden border border-slate-200">
+            <div className="mt-3 aspect-video rounded-lg overflow-hidden border border-hairline">
               <iframe src={`https://www.youtube-nocookie.com/embed/${vid}`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             </div>
           ) : null
@@ -1806,7 +1806,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
         {material.type === 'IMAGE' && material.fileUrl && (
           <div className="mt-3">
             {imageUrl ? (
-              <img src={imageUrl} alt={material.title} className="max-h-72 rounded-lg border border-slate-200 object-contain" />
+              <img src={imageUrl} alt={material.title} className="max-h-72 rounded-lg border border-hairline object-contain" />
             ) : (
               <div className="h-32 bg-slate-100 rounded-lg flex items-center justify-center">
                 <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
@@ -1831,7 +1831,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
               </button>
               <button 
                 onClick={() => onDownload(material)} 
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors text-sm text-slate-600"
+                className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-hairline transition-colors text-sm text-slate-600"
               >
                 <Download className="w-4 h-4" />
                 Descargar
@@ -1844,8 +1844,8 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
       {/* Document Preview Modal */}
       {showPreview && docUrl && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowPreview(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-hairline flex items-center justify-between shrink-0">
               <h3 className="font-bold text-slate-800 truncate">{material.title}</h3>
               <div className="flex items-center gap-2">
                 <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
@@ -3045,7 +3045,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         </button>
 
         {/* Activity header card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-6">
           {editingActivity ? (
             /* ── INLINE EDIT FORM ── */
             <div className="space-y-4">
@@ -3105,7 +3105,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                   {act.description && <RichContent html={act.description} className="mt-3 text-sm sm:text-base text-slate-600" />}
                   {meta?.attachmentUrl && (
-                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
+                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-hairline transition-colors group w-full sm:w-auto">
                       <File className="w-5 h-5 text-blue-500 shrink-0" />
                       <span className="text-sm sm:text-base text-slate-700 group-hover:text-blue-600 truncate">{meta.attachmentName || 'Archivo adjunto'}</span>
                       <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
@@ -3139,7 +3139,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
 
               {/* Meta info */}
-              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-hairline">
                 <div className="flex items-center gap-2 text-sm">
                   <BarChart3 className="w-4 h-4 text-slate-400" />
                   <span className="text-slate-600">Nota máx: <strong>{act.maxScore ? Number(act.maxScore) : '—'}</strong></span>
@@ -3156,7 +3156,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
               {/* Gradebook sync status (teacher only) */}
               {isTeacher && (
-                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-hairline">
                   {act.syncToGradebook ? (
                     <>
                       <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 flex items-center gap-1">
@@ -3182,8 +3182,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* TEACHER: Submissions list (not for self-assessment, handled by SelfAssessmentResults) */}
         {isTeacher && !isSelfAssessment(act.type) && (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
+            <div className="px-6 py-4 border-b border-hairline flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">Entregas ({submissions.length})</h3>
               {submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length > 0 && (
                 <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">
@@ -3208,7 +3208,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   return (
                     <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 hover:bg-slate-50 cursor-pointer group" onClick={() => openReviewPanel(sub)}>
                       {st?.photo ? (
-                        <img src={st.photo} alt={name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                        <img src={st.photo} alt={name} className="w-10 h-10 rounded-full object-cover border border-hairline" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{initials}</div>
                       )}
@@ -3265,13 +3265,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col">
               {/* Header */}
-              <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
+              <div className="bg-surface-1 border-b border-hairline px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setReviewingSubmission(null)} className="p-2 rounded-xl hover:bg-slate-100">
                     <X className="w-5 h-5 text-slate-500" />
                   </button>
                   {revSt?.photo ? (
-                    <img src={revSt.photo} alt={revName} className="w-9 h-9 rounded-full object-cover border border-slate-200" />
+                    <img src={revSt.photo} alt={revName} className="w-9 h-9 rounded-full object-cover border border-hairline" />
                   ) : (
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{revInitials}</div>
                   )}
@@ -3313,7 +3313,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   ) : reviewFileUrl ? (
                     <div className="h-full flex flex-col">
                       {/* File preview toolbar */}
-                      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between shrink-0">
+                      <div className="bg-surface-1 border-b border-hairline px-4 py-2 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
                           <File className="w-4 h-4 text-slate-400" />
                           <span className="text-xs text-slate-600 font-medium truncate max-w-[200px]">
@@ -3370,7 +3370,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <h4 className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
                         <FileText className="w-4 h-4" /> Contenido de la entrega
                       </h4>
-                      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      <div className="bg-surface-1 rounded-2xl p-6 shadow-sm border border-hairline text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                         {reviewingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
                           part.match(/^https?:\/\//) ? (
                             <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all inline-flex items-center gap-1">
@@ -3389,13 +3389,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
 
                 {/* Right: Grading sidebar */}
-                <div className="w-full lg:w-96 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shrink-0 overflow-auto">
+                <div className="w-full lg:w-96 bg-surface-1 border-t lg:border-t-0 lg:border-l border-hairline flex flex-col shrink-0 overflow-auto">
                   <div className="p-5 space-y-5 flex-1">
                     {/* Student content (if both file + text exist) */}
                     {reviewingSubmission.content && reviewFileUrl && (
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Texto del estudiante</label>
-                        <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-32 overflow-y-auto whitespace-pre-wrap border border-slate-100">
+                        <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-32 overflow-y-auto whitespace-pre-wrap border border-hairline">
                           {reviewingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
                             part.match(/^https?:\/\//) ? (
                               <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{part}</a>
@@ -3454,7 +3454,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
 
                   {/* Action buttons */}
-                  <div className="p-5 border-t border-slate-100 space-y-3 bg-slate-50 shrink-0">
+                  <div className="p-5 border-t border-hairline space-y-3 bg-slate-50 shrink-0">
                     <button
                       onClick={handleReviewGrade}
                       disabled={!gradeScore || grading}
@@ -3472,7 +3472,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       </button>
                       <button
                         onClick={() => setReviewingSubmission(null)}
-                        className="flex-1 px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                        className="flex-1 px-4 py-2.5 bg-surface-1 text-slate-600 border border-hairline rounded-xl text-sm font-medium hover:bg-slate-50 flex items-center justify-center gap-1.5"
                       >
                         Cerrar
                       </button>
@@ -3490,8 +3490,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* TEACHER: Question Editor for QUIZ/EXAM */}
         {isTeacher && isQuizEditorType(act.type) && (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
+          <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
+            <div className="px-4 sm:px-6 py-4 border-b border-hairline">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
                 <div className="flex flex-wrap gap-2">
@@ -3517,7 +3517,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
             {/* Context form (create/edit) */}
             {showContextForm && (
-              <div className="p-4 sm:p-6 border-b border-slate-100 bg-amber-50/40 space-y-3">
+              <div className="p-4 sm:p-6 border-b border-hairline bg-amber-50/40 space-y-3">
                 <h4 className="text-base font-bold text-slate-800">{editingContextId ? 'Editar contexto' : 'Nuevo contexto de lectura'}</h4>
                 <p className="text-xs text-slate-500">Un contexto es un texto o imagen compartido por varias preguntas (ej: lectura comprensiva, enunciado, gráfico).</p>
                 <div>
@@ -3553,7 +3553,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
             {/* Existing contexts list */}
             {contexts.length > 0 && (
-              <div className="px-6 py-3 border-b border-slate-100 bg-amber-50/20">
+              <div className="px-6 py-3 border-b border-hairline bg-amber-50/20">
                 <p className="text-xs font-medium text-amber-700 mb-2">Contextos de lectura ({contexts.length})</p>
                 <div className="space-y-2">
                   {contexts.map(ctx => {
@@ -3574,7 +3574,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                             <p className="text-[10px] text-amber-600 font-semibold mb-1">PREGUNTAS VINCULADAS ({linkedQuestions.length})</p>
                             <div className="flex flex-wrap gap-1">
                               {linkedQuestions.map((q, i) => (
-                                <span key={q.id} className="px-2 py-0.5 bg-white border border-amber-200 rounded text-xs text-slate-600">
+                                <span key={q.id} className="px-2 py-0.5 bg-surface-1 border border-amber-200 rounded text-xs text-slate-600">
                                   P{questions.findIndex(qq => qq.id === q.id) + 1}: {q.text.slice(0, 30)}{q.text.length > 30 ? '...' : ''}
                                 </span>
                               ))}
@@ -3594,7 +3594,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
             {/* Add/Edit question form */}
             {showAddQuestion && (
-              <div ref={questionFormRef} className="p-4 sm:p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
+              <div ref={questionFormRef} className="p-4 sm:p-6 border-b border-hairline bg-purple-50/30 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
                   <button
@@ -3708,7 +3708,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                   {qForm.imageUrl && qForm.imageUrl !== '⏳ Subiendo imagen...' && (
                     <div className="mt-2 relative inline-block">
-                      <img src={qForm.imageUrl} alt="Preview" className="max-h-32 rounded-lg border border-slate-200" />
+                      <img src={qForm.imageUrl} alt="Preview" className="max-h-32 rounded-lg border border-hairline" />
                       <button 
                         onClick={() => setQForm(prev => ({ ...prev, imageUrl: '' }))}
                         className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
@@ -3946,7 +3946,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                                 ? (() => { try { return JSON.parse(q.correctAnswer || '[]').includes(opt) } catch { return false } })()
                                 : opt === q.correctAnswer
                               return (
-                                <span key={j} className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                <span key={j} className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-surface-1 border-hairline text-slate-600'}`}>
                                   {String.fromCharCode(65 + j)}. {opt.length > 15 ? opt.slice(0, 15) + '...' : opt}
                                 </span>
                               )
@@ -3968,8 +3968,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* TEACHER: ICFES Results Dashboard */}
         {isTeacher && isIcfes(act.type) && icfesClassResults.length > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+          <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
+            <div className="px-6 py-4 border-b border-hairline">
               <h3 className="text-lg font-bold text-slate-800">Resultados del Simulacro ({icfesClassResults.length} estudiantes)</h3>
             </div>
 
@@ -3984,7 +3984,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               const areaAvgs = Object.entries(areaAgg).map(([name, d]) => ({ name, avg: Math.round(d.sumPct / d.count) }))
               const avgGlobal = icfesClassResults.length > 0 ? Math.round(icfesClassResults.reduce((s: number, r: any) => s + r.icfesGlobalScore, 0) / icfesClassResults.length) : 0
               return (
-                <div className="p-6 border-b border-slate-100 bg-emerald-50/30">
+                <div className="p-6 border-b border-hairline bg-emerald-50/30">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="bg-emerald-100 rounded-xl px-4 py-2 text-center">
                       <p className="text-xs text-emerald-600 font-medium">Promedio Global</p>
@@ -3993,7 +3993,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {areaAvgs.map(a => (
-                      <div key={a.name} className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+                      <div key={a.name} className="bg-surface-1 rounded-xl border border-hairline p-3 text-center">
                         <span className={`inline-block w-2.5 h-2.5 rounded-full mb-1 ${AREA_COLORS[a.name] || 'bg-slate-500'}`} />
                         <p className="text-xs text-slate-500 truncate">{a.name}</p>
                         <p className={`text-lg font-bold ${a.avg >= 70 ? 'text-green-600' : a.avg >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{a.avg}%</p>
@@ -4008,7 +4008,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50">
+                  <tr className="border-b border-hairline bg-slate-50">
                     <th className="text-left px-4 py-3 font-medium text-slate-600">#</th>
                     <th className="text-left px-4 py-3 font-medium text-slate-600">Estudiante</th>
                     <th className="text-center px-4 py-3 font-medium text-slate-600">Puntaje</th>
@@ -4045,7 +4045,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* STUDENT: Quiz-taking UI for quiz family */}
         {isStudent && isStandardQuizType(act.type) && quizMode === 'taking' && (
-          <div className="bg-white rounded-2xl border-2 border-purple-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
+          <div className="bg-surface-1 rounded-2xl border-2 border-purple-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="text-base sm:text-lg font-bold text-slate-800">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
               <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
@@ -4078,7 +4078,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     </button>
                   )}
                   {onceAlreadyViewed && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-400">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-hairline rounded-xl text-sm text-slate-400">
                       <FileText className="w-4 h-4" />
                       <span>{qCtx.title || 'Contexto de lectura'} — ya fue mostrado</span>
                     </div>
@@ -4087,7 +4087,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   {q.type === 'MULTIPLE_CHOICE' && q.options && (
                     <div className="space-y-2">
                       {(q.options as string[]).map((opt: string, i: number) => (
-                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-hairline hover:border-purple-300 text-slate-700'}`}>
                           <span className="font-bold mr-3">{String.fromCharCode(65 + i)}.</span>{opt}
                         </button>
                       ))}
@@ -4096,7 +4096,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   {q.type === 'TRUE_FALSE' && (
                     <div className="flex gap-2 sm:gap-4">
                       {['Verdadero', 'Falso'].map(v => (
-                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-hairline hover:border-purple-300 text-slate-700'}`}>
                           {v}
                         </button>
                       ))}
@@ -4108,7 +4108,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       {(q.options as string[]).map((opt: string, i: number) => {
                         const selected = (quizMultiAnswers[q.id] || []).includes(opt)
                         return (
-                          <button key={i} onClick={() => handleQuizMultiAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all flex items-center gap-3 ${selected ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                          <button key={i} onClick={() => handleQuizMultiAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all flex items-center gap-3 ${selected ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-hairline hover:border-purple-300 text-slate-700'}`}>
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selected ? 'border-purple-500 bg-purple-500' : 'border-slate-300'}`}>
                               {selected && <CheckCircle2 className="w-4 h-4 text-white" />}
                             </div>
@@ -4119,7 +4119,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     </div>
                   )}
                   {q.type === 'SHORT_ANSWER' && (
-                    <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-slate-200 rounded-xl px-3 sm:px-5 py-3 sm:py-3.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
+                    <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-hairline rounded-xl px-3 sm:px-5 py-3 sm:py-3.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
                   )}
                   {q.type === 'FILL_BLANK' && (() => {
                     const parts = q.text.split('___')
@@ -4193,13 +4193,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         {leftItems.length === 0 ? (
                           <p className="text-sm text-red-500">Error: No hay elementos para emparejar</p>
                         ) : leftItems.map((left, i) => (
-                          <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-slate-50 rounded-xl border border-hairline">
                             <div className="flex-1 p-2.5 sm:p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-sm sm:text-base text-slate-700 font-medium">{left}</div>
                             <span className="text-slate-400 text-center hidden sm:block">→</span>
                             <select 
                               value={matches[left] || ''} 
                               onChange={e => handleQuizMatchAnswer(q.id, left, e.target.value)}
-                              className="flex-1 p-2.5 sm:p-3 border-2 border-slate-200 rounded-xl text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
+                              className="flex-1 p-2.5 sm:p-3 border-2 border-hairline rounded-xl text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-surface-1"
                               style={{ minHeight: '44px' }}
                             >
                               <option value="">Seleccionar respuesta...</option>
@@ -4216,7 +4216,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )
             })()}
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 sm:pt-2 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 sm:pt-2 border-t border-hairline">
               <div className="flex items-center justify-between w-full sm:w-auto gap-2">
                 <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-3 sm:px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
                   ← Anterior
@@ -4241,7 +4241,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* STUDENT: Quiz result view (non-ICFES) */}
         {isStudent && isStandardQuizType(act.type) && !isIcfes(act.type) && quizMode === 'result' && quizResult && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border-2 border-green-200 p-6 text-center space-y-3">
+            <div className="bg-surface-1 rounded-2xl border-2 border-green-200 p-6 text-center space-y-3">
               <Award className="w-14 h-14 mx-auto text-green-500" />
               <h3 className="text-2xl font-bold text-slate-800">Resultado</h3>
               <p className="text-4xl font-bold text-green-700">{quizResult.score !== null ? Number(quizResult.score) : '—'}<span className="text-xl text-slate-400">/{act.maxScore ? Number(act.maxScore) : '?'}</span></p>
@@ -4265,7 +4265,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
 
             {quizResult.activity?.showResults && quizResult.answers?.map((a: any, i: number) => (
-              <div key={a.id} className={`bg-white rounded-2xl border-2 p-5 ${a.isCorrect ? 'border-green-200' : 'border-red-200'}`}>
+              <div key={a.id} className={`bg-surface-1 rounded-2xl border-2 p-5 ${a.isCorrect ? 'border-green-200' : 'border-red-200'}`}>
                 <div className="flex items-start gap-3">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${a.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {a.isCorrect ? <CircleCheck className="w-4 h-4" /> : <CircleX className="w-4 h-4" />}
@@ -4304,8 +4304,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
 
             {/* Area breakdown */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
+            <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
+              <div className="px-6 py-4 border-b border-hairline">
                 <h3 className="text-lg font-bold text-slate-800">Resultados por Área</h3>
               </div>
               <div className="divide-y divide-slate-100">
@@ -4335,7 +4335,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* STUDENT: Quiz idle state (start or view result) */}
         {isStudent && isStandardQuizType(act.type) && quizMode === 'idle' && (
-          <div className={`bg-white rounded-2xl border p-6 space-y-4 ${isIcfes(act.type) ? 'border-emerald-200' : 'border-slate-200'}`}>
+          <div className={`bg-surface-1 rounded-2xl border p-6 space-y-4 ${isIcfes(act.type) ? 'border-emerald-200' : 'border-hairline'}`}>
             <h3 className="text-lg font-bold text-slate-800">{isIcfes(act.type) ? 'Simulacro ICFES' : getQuizTypeLabel(act.type)}</h3>
             {mySubmission && (mySubmission.status === 'AUTO_GRADED' || mySubmission.status === 'GRADED') ? (
               <div className="space-y-3">
@@ -4374,7 +4374,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* STUDENT: Live Quiz / Quiz en Casa info panel */}
         {isStudent && isLiveQuizType(act.type) && (
-          <div className="bg-white rounded-2xl border border-rose-200 p-6 space-y-4">
+          <div className="bg-surface-1 rounded-2xl border border-rose-200 p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
                 <Zap className="w-5 h-5 text-rose-600" />
@@ -4422,7 +4422,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* LESSON: Teacher controls */}
         {isTeacher && isLessonOrGame(act.type) && (
-          <div className="bg-white rounded-2xl border-2 border-violet-200 p-6 space-y-4">
+          <div className="bg-surface-1 rounded-2xl border-2 border-violet-200 p-6 space-y-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-violet-600" />
@@ -4451,7 +4451,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* LESSON: Student play button */}
         {isStudent && isLessonOrGame(act.type) && (
-          <div className="bg-white rounded-2xl border-2 border-violet-200 p-6 text-center space-y-4">
+          <div className="bg-surface-1 rounded-2xl border-2 border-violet-200 p-6 text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto">
               <BookOpen className="w-8 h-8 text-violet-600" />
             </div>
@@ -4472,7 +4472,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* STUDENT: My submission / submit form (TASK only) */}
         {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && !isLessonOrGame(act.type) && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <div className="bg-surface-1 rounded-2xl border border-hairline p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
             {mySubmission && !editingSubmission ? (
               <div className="space-y-3">
@@ -4539,21 +4539,21 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
                 <input ref={submitFileRef} type="file" className="hidden" onChange={e => setSubmitFile(e.target.files?.[0] || null)} />
                 {submitFile ? (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
                     <Paperclip className="w-5 h-5 text-slate-400" />
                     <span className="text-base text-slate-700 flex-1 truncate">{submitFile.name}</span>
                     <button onClick={() => setSubmitFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
                   </div>
                 ) : null}
                 <div className="flex items-center justify-between gap-3">
-                  <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+                  <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
                     <Upload className="w-5 h-5" /> Subir archivo
                   </button>
                   <div className="flex items-center gap-2">
                     {editingSubmission && (
                       <button 
                         onClick={() => { setEditingSubmission(false); setSubmitContent(''); setSubmitFile(null); setSubmitLink('') }} 
-                        className="px-4 py-2.5 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-100 border border-slate-200" 
+                        className="px-4 py-2.5 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-100 border border-hairline" 
                         style={{ minHeight: '44px' }}
                       >
                         Cancelar
@@ -4573,8 +4573,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* ── DUPLICATE ACTIVITY MODAL (in detail view) ── */}
         {duplicateActivityModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-slate-800">Duplicar actividad</h3>
                 <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                   <X className="w-5 h-5 text-slate-400" />
@@ -4652,8 +4652,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* Context viewing modal (student) */}
         {contextModalData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setContextModalData(null)}>
-            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-amber-50">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-6 py-4 border-b border-hairline flex items-center justify-between shrink-0 bg-amber-50">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-amber-600" />
                   <h3 className="font-bold text-slate-800">{contextModalData.title || 'Contexto de lectura'}</h3>
@@ -4664,13 +4664,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 {contextModalData.imageUrl && (
-                  <img src={contextModalData.imageUrl} alt="Contexto" className="max-w-full rounded-xl border border-slate-200" />
+                  <img src={contextModalData.imageUrl} alt="Contexto" className="max-w-full rounded-xl border border-hairline" />
                 )}
                 {contextModalData.text && (
                   <RichContent html={contextModalData.text} className="text-base text-slate-700" />
                 )}
               </div>
-              <div className="px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
+              <div className="px-6 py-3 border-t border-hairline flex justify-end shrink-0">
                 <button onClick={() => setContextModalData(null)} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600">Cerrar</button>
               </div>
             </div>
@@ -4680,8 +4680,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* ── SCHEDULE PUBLISH MODAL ── */}
         {showScheduleModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowScheduleModal(null)}>
-            <div className="bg-white rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-hairline flex items-center justify-between">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500" /> Programar publicación</h3>
                 <button onClick={() => setShowScheduleModal(null)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
               </div>
@@ -4710,8 +4710,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* ── GRADEBOOK LINK MODAL ── */}
         {showGradebookLink && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowGradebookLink(false)}>
-            <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-hairline flex items-center justify-between">
                 <h3 className="font-bold text-slate-800">Vincular a planilla de notas</h3>
                 <button onClick={() => setShowGradebookLink(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
               </div>
@@ -4772,7 +4772,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </>
                 )}
               </div>
-              <div className="p-5 border-t border-slate-200 flex justify-end gap-3">
+              <div className="p-5 border-t border-hairline flex justify-end gap-3">
                 <button onClick={() => setShowGradebookLink(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
                 <button onClick={handleSaveGradebookLink} disabled={savingLink || !gradebookConfig?.academicTermId || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                   {savingLink && <Loader2 className="w-4 h-4 animate-spin" />} Guardar
@@ -4785,8 +4785,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* ── SYNC PREVIEW MODAL ── */}
         {showSyncPreview && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSyncPreview(false)}>
-            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0 gap-4">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0 gap-4">
                 <div>
                   <h3 className="font-bold text-slate-800">Preview de sincronización</h3>
                   {gradebookConfig?.availableTerms?.length > 1 && (
@@ -4827,7 +4827,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     </div>
 
                     {/* Table */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="border border-hairline rounded-xl overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50">
                           <tr>
@@ -4874,7 +4874,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                 ) : null}
               </div>
-              <div className="p-5 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+              <div className="p-5 border-t border-hairline flex justify-end gap-3 shrink-0">
                 <button onClick={() => setShowSyncPreview(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
                 <button onClick={handleSync} disabled={syncing || !syncPreview || (syncPreview?.summary.toCreate === 0 && syncPreview?.summary.toUpdate === 0 && !syncIncludeConflicts && !syncIncludeNoSubmission)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                   {syncing && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar sincronización
@@ -4901,8 +4901,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* ── ASSIGN STUDENTS MODAL (in detail view) ── */}
         {assignStudentsModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+            <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-slate-800">Asignar estudiantes</h3>
                 <button onClick={() => setAssignStudentsModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                   <X className="w-5 h-5 text-slate-400" />
@@ -4951,7 +4951,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         <button
                           key={s.enrollmentId}
                           onClick={() => toggleStudentSelection(s.enrollmentId)}
-                          className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-colors text-left ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-300 bg-violet-50' : 'border-slate-200 hover:border-slate-300'}`}
+                          className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-colors text-left ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-300 bg-violet-50' : 'border-hairline hover:border-slate-300'}`}
                         >
                           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-500 bg-violet-500' : 'border-slate-300'}`}>
                             {selectedStudentIds.includes(s.enrollmentId) && <Check className="w-3 h-3 text-white" />}
@@ -4970,7 +4970,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </>
                 )}
               </div>
-              <div className="p-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+              <div className="p-4 border-t border-hairline flex justify-end gap-3 shrink-0">
                 <button onClick={() => setAssignStudentsModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
                   Cancelar
                 </button>
@@ -5000,8 +5000,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* Lesson Editor overlay (inside detail view) */}
         {showLessonEditor && lessonActivityId && (
-          <Suspense fallback={<div className="fixed inset-0 z-[100] bg-white flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-violet-600" /></div>}>
-            <div className="fixed inset-0 z-[100] bg-white">
+          <Suspense fallback={<div className="fixed inset-0 z-[100] bg-surface-1 flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-violet-600" /></div>}>
+            <div className="fixed inset-0 z-[100] bg-surface-1">
               <LessonEditor
                 activityId={lessonActivityId}
                 activityTitle={act.title}
@@ -5119,7 +5119,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     const studentSub = isStudent ? act.submissions?.[0] : null
     const workInfo = getWorkInfo(act)
     return (
-      <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
+      <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
         <div className="flex items-start gap-4">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
             {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
@@ -5269,9 +5269,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               const isOn = workFilter === c.key
               return (
                 <button key={c.key} onClick={() => setWorkFilter(c.key)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${isOn ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-500 hover:border-slate-400'}`}>
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${isOn ? 'border-slate-800 bg-slate-800 text-white' : 'border-hairline text-slate-500 hover:border-slate-400'}`}>
                   {c.label}
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isOn ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{c.count}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isOn ? 'bg-surface-1/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{c.count}</span>
                 </button>
               )
             })}
@@ -5280,8 +5280,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
       {showValeriaModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowValeriaModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-violet-600" /> Valeria
@@ -5350,7 +5350,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
 
                 <div className="space-y-3">
-                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 min-h-[220px]">
+                  <div className="p-4 rounded-2xl border border-hairline bg-slate-50 min-h-[220px]">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Respuesta</p>
                     {valeriaResponse ? (
                       <div className="space-y-3">
@@ -5402,7 +5402,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           </div>
                         )}
                         <div className="flex flex-wrap gap-2 pt-1">
-                          <button onClick={copyValeriaAnswer} className="px-3 py-2 text-xs rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                          <button onClick={copyValeriaAnswer} className="px-3 py-2 text-xs rounded-lg bg-surface-1 border border-hairline text-slate-700 hover:bg-slate-50 flex items-center gap-2">
                             <Copy className="w-3.5 h-3.5" /> Copiar
                           </button>
                           {valeriaResponse.visualSuggestion?.kind === 'SVG' && valeriaResponse.visualSuggestion?.svg && (
@@ -5424,9 +5424,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           <p className="text-xs font-semibold uppercase tracking-wide text-violet-500">Sugerencia visual</p>
                           <p className="text-sm text-violet-900">{valeriaResponse.visualSuggestion.altText || 'SVG sugerido por Valeria'}</p>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-white text-violet-700 border border-violet-200">{valeriaResponse.visualSuggestion.placement || valeriaVisualPlacement}</span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-surface-1 text-violet-700 border border-violet-200">{valeriaResponse.visualSuggestion.placement || valeriaVisualPlacement}</span>
                       </div>
-                      <img src={svgToDataUrl(valeriaResponse.visualSuggestion.svg)} alt={valeriaResponse.visualSuggestion.altText || 'Valeria SVG'} className="w-full max-h-56 object-contain rounded-xl border border-violet-100 bg-white" />
+                      <img src={svgToDataUrl(valeriaResponse.visualSuggestion.svg)} alt={valeriaResponse.visualSuggestion.altText || 'Valeria SVG'} className="w-full max-h-56 object-contain rounded-xl border border-violet-100 bg-surface-1" />
                     </div>
                   )}
                 </div>
@@ -5438,7 +5438,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
       {/* Create form */}
       {showCreate && (
-        <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
+        <div className={`bg-surface-1 border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
           <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
 
           {/* Creación por INTENCIÓN — paso 1 (intención) / paso 2 (mecánica), o cabecera si ya se eligió */}
@@ -5449,7 +5449,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {INTENTIONS.map(it => (
                     <button key={it.key} onClick={() => { setIntention(it.key); if (it.mechanics.length === 1) setForm(f => ({ ...f, type: it.mechanics[0].type })) }}
-                      className="flex flex-col items-start gap-0.5 p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left">
+                      className="flex flex-col items-start gap-0.5 p-4 rounded-2xl border-2 border-hairline hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left">
                       <span className="text-2xl mb-0.5">{it.emoji}</span>
                       <span className="font-bold text-slate-800">{it.label}</span>
                       <span className="text-xs text-slate-400">{it.hint}</span>
@@ -5468,7 +5468,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <div className="flex gap-2 flex-wrap">
                   {INTENTIONS.find(i => i.key === intention)?.mechanics.map(m => (
                     <button key={m.type} onClick={() => setForm({ ...form, type: m.type })}
-                      className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === m.type ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-blue-300'}`} style={{ minHeight: '44px' }}>
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === m.type ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-hairline text-slate-500 hover:border-blue-300'}`} style={{ minHeight: '44px' }}>
                       {m.label}
                     </button>
                   ))}
@@ -5559,7 +5559,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <>
               <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachFile(e.target.files?.[0] || null)} />
               {attachFile && (
-                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
                   <Paperclip className="w-5 h-5 text-slate-400" />
                   <span className="text-base text-slate-700 flex-1 truncate">{attachFile.name}</span>
                   <button onClick={() => setAttachFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
@@ -5569,7 +5569,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           )}
           <div className="flex items-center justify-between pt-2">
             {!isQuizEditorType(form.type) ? (
-              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
                 <Paperclip className="w-5 h-5" /> Adjuntar archivo
               </button>
             ) : (
@@ -5599,7 +5599,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <p className="font-bold text-lg flex items-center gap-2 flex-wrap">
               ¡Live Quiz en curso!
               {((activeLiveSession?.deliveryMode || activeLiveSession?.config?.deliveryMode) === 'ASYNC_HOME') && (
-                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wide">
+                <span className="px-2 py-0.5 rounded-full bg-surface-1/20 text-white text-xs font-black uppercase tracking-wide">
                   En casa
                 </span>
               )}
@@ -5629,7 +5629,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="flex-1 text-left">
             <p className="font-bold text-lg flex items-center gap-2 flex-wrap">
               🏠 Quiz En Casa Activo
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wide">
+              <span className="px-2 py-0.5 rounded-full bg-surface-1/20 text-white text-xs font-black uppercase tracking-wide">
                 {activeLiveSession.activity?.title || 'En curso'}
               </span>
             </p>
@@ -5668,8 +5668,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
       {/* Lesson Editor overlay */}
       {showLessonEditor && lessonActivityId && (
-        <Suspense fallback={<div className="fixed inset-0 z-[100] bg-white flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-violet-600" /></div>}>
-          <div className="fixed inset-0 z-[100] bg-white">
+        <Suspense fallback={<div className="fixed inset-0 z-[100] bg-surface-1 flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-violet-600" /></div>}>
+          <div className="fixed inset-0 z-[100] bg-surface-1">
             <LessonEditor
               activityId={lessonActivityId}
               activityTitle={activities.find(a => a.id === lessonActivityId)?.title}
@@ -5684,13 +5684,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
       {/* Activities list */}
       {activities.length === 0 && !showCreate ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+        <div className="text-center py-20 bg-surface-1 rounded-2xl border border-hairline">
           <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
           <p className="text-lg font-medium text-slate-500">{isTeacher ? 'No has creado actividades aún' : 'No hay actividades publicadas'}</p>
           {isTeacher && <p className="text-base mt-1 text-slate-400">Crea tu primera tarea para que los estudiantes puedan entregar</p>}
         </div>
       ) : filteredActivities.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+        <div className="text-center py-12 bg-surface-1 rounded-2xl border border-hairline">
           <ClipboardList className="w-12 h-12 mx-auto text-slate-300 mb-3" />
           <p className="text-base font-medium text-slate-500">{workFilter !== 'ALL' || activityTypeFilter !== 'ALL' ? 'Nada en este filtro' : 'Sin actividades'}</p>
           <button onClick={() => { setActivityTypeFilter('ALL'); setWorkFilter('ALL') }} className="mt-2 text-sm text-blue-600 hover:underline">Ver todas</button>
@@ -5699,7 +5699,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         <div className="space-y-3">
           {/* Student summary bar */}
           {studentStats && (
-            <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-hairline">
               {newActivityCount > 0 && (
                 <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
                   🆕 {newActivityCount} nueva{newActivityCount !== 1 ? 's' : ''}
@@ -5746,8 +5746,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       {/* ── DUPLICATE ACTIVITY MODAL ── */}
       {duplicateActivityModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+          <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
               <h3 className="font-bold text-slate-800">Duplicar actividad</h3>
               <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-400" />
@@ -5957,7 +5957,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
         ) : (
           <>
             {/* Main post */}
-            <div className={`bg-white rounded-2xl border-2 p-6 overflow-hidden ${post.isPinned ? 'border-yellow-300' : 'border-slate-200'}`}>
+            <div className={`bg-surface-1 rounded-2xl border-2 p-6 overflow-hidden ${post.isPinned ? 'border-yellow-300' : 'border-hairline'}`}>
               {editingPostId === post.id ? (
                 <div className="space-y-3">
                   <input value={editPostForm.title} onChange={e => setEditPostForm(f => ({ ...f, title: e.target.value }))} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base font-semibold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Título del tema" />
@@ -6006,7 +6006,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
             <div className="space-y-3">
               <h3 className="text-base font-bold text-slate-700">{post.replies?.length || 0} Respuesta(s)</h3>
               {post.replies?.map(reply => (
-                <div key={reply.id} className="bg-white rounded-2xl border border-slate-200 p-5 ml-4 overflow-hidden">
+                <div key={reply.id} className="bg-surface-1 rounded-2xl border border-hairline p-5 ml-4 overflow-hidden">
                   {editingPostId === reply.id ? (
                     <div className="space-y-3">
                       <Suspense fallback={<div className="h-24 bg-slate-50 rounded-xl animate-pulse" />}>
@@ -6038,7 +6038,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                   )}
                   {/* Nested replies (level 2) */}
                   {reply.replies && reply.replies.length > 0 && (
-                    <div className="mt-3 ml-4 space-y-2 border-l-2 border-slate-100 pl-4">
+                    <div className="mt-3 ml-4 space-y-2 border-l-2 border-hairline pl-4">
                       {reply.replies.map((nested: any) => (
                         <div key={nested.id} className="py-2">
                           {editingPostId === nested.id ? (
@@ -6076,7 +6076,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
             </div>
 
             {/* Reply form */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+            <div className="bg-surface-1 rounded-2xl border border-hairline p-5 space-y-3">
               {replyToId && (
                 <div className="flex items-center gap-2 text-sm text-blue-600">
                   <span>Respondiendo a un comentario</span>
@@ -6111,7 +6111,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
 
       {/* Create form */}
       {showCreate && (
-        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
+        <div className="bg-surface-1 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
           <h3 className="text-lg font-bold text-slate-800">Nuevo Tema de Discusión</h3>
           <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título del tema" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
           <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
@@ -6129,7 +6129,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
 
       {/* Posts list */}
       {posts.length === 0 && !showCreate ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+        <div className="text-center py-20 bg-surface-1 rounded-2xl border border-hairline">
           <MessageSquare className="w-16 h-16 mx-auto text-slate-300 mb-4" />
           <p className="text-lg font-medium text-slate-500">No hay temas de discusión</p>
           <p className="text-base mt-1 text-slate-400">Crea el primer tema para iniciar la conversación</p>
@@ -6137,7 +6137,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
       ) : (
         <div className="space-y-3">
           {posts.map(post => (
-            <button key={post.id} onClick={() => openThread(post)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
+            <button key={post.id} onClick={() => openThread(post)} className="w-full text-left bg-surface-1 rounded-2xl border-2 border-hairline hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
                   {post.author.firstName?.[0] || ''}{post.author.lastName?.[0] || ''}
@@ -6217,34 +6217,34 @@ function GradesTab({ classroomId }: { classroomId: string }) {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-surface-1 rounded-xl border border-hairline p-4">
           <p className="text-2xl font-bold text-slate-800">{totalActivities}</p>
           <p className="text-sm text-slate-500">Actividades</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-surface-1 rounded-xl border border-hairline p-4">
           <p className="text-2xl font-bold text-green-600">{gradedCount}</p>
           <p className="text-sm text-slate-500">Calificadas</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-surface-1 rounded-xl border border-hairline p-4">
           <p className="text-2xl font-bold text-amber-600">{pending.length}</p>
           <p className="text-sm text-slate-500">Pendientes</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-surface-1 rounded-xl border border-hairline p-4">
           <p className="text-2xl font-bold text-blue-600">{avgPercent != null ? `${avgPercent}%` : '—'}</p>
           <p className="text-sm text-slate-500">Promedio</p>
         </div>
       </div>
 
       {totalActivities === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-8 text-center">
           <BarChart3 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
           <p className="text-lg font-medium text-slate-500">No hay actividades publicadas aún</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
+              <tr className="border-b border-hairline bg-slate-50">
                 <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Actividad</th>
                 <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Tipo</th>
                 <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Fecha límite</th>
@@ -6358,13 +6358,13 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar estudiante..."
-              className="pl-10 pr-4 py-2.5 text-base border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-64"
+              className="pl-10 pr-4 py-2.5 text-base border border-hairline rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-64"
             />
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
         <div className="divide-y divide-slate-100">
           {filtered.length === 0 && students.length > 0 && (
             <div className="text-center py-12 text-slate-400 text-base">No se encontraron estudiantes</div>
@@ -6384,7 +6384,7 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
               <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
                 <span className="text-sm text-slate-400 w-8 text-right font-mono">{i + 1}</span>
                 {photo ? (
-                  <img src={photo} alt={displayName} className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" />
+                  <img src={photo} alt={displayName} className="w-10 h-10 rounded-full object-cover border border-hairline shrink-0" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
                     {initials || '?'}
