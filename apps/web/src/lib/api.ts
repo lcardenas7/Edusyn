@@ -2072,6 +2072,9 @@ export const classroomApi = {
     api.get(`/classrooms/${classroomId}/activities`, { params: { role } }),
   getActivity: (activityId: string, role?: string) =>
     api.get(`/classrooms/activities/${activityId}`, { params: { role } }),
+  // Dependencias/prerrequisitos (Fase 4): reemplaza el conjunto de prerrequisitos.
+  setActivityDependencies: (activityId: string, prerequisites: { prerequisiteId: string; condition?: string; minScore?: number | null }[]) =>
+    api.put(`/classrooms/activities/${activityId}/dependencies`, { prerequisites }),
   updateActivity: (activityId: string, data: {
     title?: string; description?: string; maxScore?: number; dueDate?: string;
     openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
