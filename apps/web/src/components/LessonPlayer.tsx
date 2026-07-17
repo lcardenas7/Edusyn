@@ -753,8 +753,12 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         </button>
       </div>
 
-      {/* SLIDE CONTENT */}
-      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-6 pb-28 overflow-y-auto">
+      {/* SLIDE CONTENT
+          `items-start` + `my-auto` en el hijo: centra verticalmente cuando el contenido
+          cabe, pero cuando es más alto que el viewport lo alinea arriba y deja llegar con
+          scroll a la parte superior. Con `items-center` el tope quedaba fuera del área
+          scrolleable (encabezado de memory/relacionar y slides largos, inalcanzable). */}
+      <div className="flex-1 flex items-start justify-center px-4 py-6 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide?.id || currentIndex}
@@ -762,7 +766,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
             transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-            className="w-full max-w-[720px]"
+            className="w-full max-w-[720px] my-auto"
           >
             {currentSlide?.type === 'CONTENT' && renderContentSlide(currentSlide)}
             {currentSlide?.type === 'ACTIVITY' && renderActivitySlide(currentSlide)}
@@ -997,13 +1001,20 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className={`mt-6 p-4 rounded-2xl border ${
-              (slideResult?.isCorrect ?? previousAnswer?.isCorrect)
-                ? 'bg-feedback-correct/10 border-feedback-correct/30'
-                : 'bg-feedback-error/10 border-feedback-error/30'
+              act.openAnswer
+                ? 'bg-accent/5 border-accent/30'
+                : (slideResult?.isCorrect ?? previousAnswer?.isCorrect)
+                  ? 'bg-feedback-correct/10 border-feedback-correct/30'
+                  : 'bg-feedback-error/10 border-feedback-error/30'
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              {(slideResult?.isCorrect ?? previousAnswer?.isCorrect) ? (
+              {act.openAnswer ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-accent" />
+                  <span className="text-accent font-bold">Respuesta registrada</span>
+                </>
+              ) : (slideResult?.isCorrect ?? previousAnswer?.isCorrect) ? (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-feedback-correct" />
                   <span className="text-feedback-correct font-bold">¡Correcto!</span>

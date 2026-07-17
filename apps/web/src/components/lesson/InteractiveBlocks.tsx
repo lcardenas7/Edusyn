@@ -903,8 +903,14 @@ export function BlockRenderer(props: BlockProps) {
       return <LabelImageBlock {...props} />
     case 'PUZZLE':
       return <PuzzleBlock {...props} />
+    case 'TRUE_FALSE': {
+      // V/F: el editor guardaba solo `correctAnswer` y dejaba `options` vacío, así que
+      // el player no pintaba botones. Se inyecta el par por defecto si faltan.
+      const hasOptions = Array.isArray(props.act.options) && props.act.options.filter(o => (o || '').trim()).length >= 2
+      const act = hasOptions ? props.act : { ...props.act, options: ['Verdadero', 'Falso'] }
+      return <ChoiceBlock {...props} act={act} />
+    }
     case 'MULTIPLE_CHOICE':
-    case 'TRUE_FALSE':
     default:
       return <ChoiceBlock {...props} />
   }

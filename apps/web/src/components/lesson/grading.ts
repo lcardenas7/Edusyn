@@ -16,6 +16,9 @@ export interface ActivityData {
   points?: number
   hint?: string
   imageUrl?: string // LABEL_IMAGE: imagen de fondo sobre la que se etiqueta
+  // SHORT_ANSWER abierta: no hay respuesta exacta; se acepta cualquier texto (reflexión,
+  // opinión…). No marca error ni baja XP. Lo decide el docente.
+  openAnswer?: boolean
 }
 
 // Punto a etiquetar (LABEL_IMAGE): vive en `options` como "etiqueta::x::y" (x,y en %).
@@ -111,6 +114,11 @@ export function gradeAnswer(act: ActivityData, value: any): boolean {
       const n = parseInt(act.options?.[0] || '3') || 3
       return Array.isArray(value) && value.length === n * n && value.every((v: number, i: number) => v === i)
     }
+    case 'SHORT_ANSWER':
+      // Abierta: se acepta cualquier respuesta no vacía (sin respuesta exacta) → no
+      // marca error ni penaliza. Si no es abierta, exige coincidencia exacta.
+      if (act.openAnswer) return norm(value) !== ''
+      return norm(value) === norm(act.correctAnswer)
     default:
       return norm(value) === norm(act.correctAnswer)
   }

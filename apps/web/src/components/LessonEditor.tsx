@@ -49,6 +49,7 @@ interface SlideForm {
     feedbackCorrect: string
     feedbackIncorrect: string
     imageUrl: string
+    openAnswer?: boolean // SHORT_ANSWER abierta: sin respuesta exacta (no penaliza)
     // Comportamiento configurable (P4): obligatoria/gating/intentos con XP decreciente.
     behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number; timerSeconds?: number; askValeria?: boolean }
     // TTS opcional en slides de CONTENIDO: el docente activa "Escuchar" y elige idioma.
@@ -295,6 +296,7 @@ export default function LessonEditor({
         feedbackCorrect: (s.activityData as any).feedbackCorrect || '',
         feedbackIncorrect: (s.activityData as any).feedbackIncorrect || '',
         imageUrl: (s.activityData as any).imageUrl || '',
+        openAnswer: (s.activityData as any).openAnswer || false,
         behavior: (s.activityData as any).behavior || {},
         tts: (s.activityData as any).tts || undefined,
       } : { ...EMPTY_ACTIVITY_DATA },
@@ -409,6 +411,7 @@ export default function LessonEditor({
           feedbackCorrect: s.activityData.feedbackCorrect || undefined,
           feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
           imageUrl: s.activityData.imageUrl || undefined,
+          openAnswer: s.activityData.openAnswer || undefined,
           behavior: s.activityData.behavior && Object.keys(s.activityData.behavior).length ? s.activityData.behavior : undefined,
         } : s.type === 'CONTENT' && s.activityData?.tts?.enabled
           ? { tts: { enabled: true, lang: s.activityData.tts.lang || 'es-ES' } }
@@ -1067,8 +1070,19 @@ export default function LessonEditor({
               </div>
             )}
 
-            {/* Correct answer for SHORT_ANSWER / FILL_BLANK */}
-            {(slide.activityData.questionType === 'SHORT_ANSWER' || slide.activityData.questionType === 'FILL_BLANK') && (
+            {/* Respuesta abierta (solo SHORT_ANSWER): sin respuesta exacta, no penaliza. */}
+            {slide.activityData.questionType === 'SHORT_ANSWER' && (
+              <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 cursor-pointer">
+                <input type="checkbox" checked={!!slide.activityData.openAnswer} onChange={e => updateActivityData(index, { openAnswer: e.target.checked })} className="w-4 h-4 accent-violet-600 mt-0.5" />
+                <span className="text-sm text-slate-700">
+                  <span className="font-semibold text-slate-700">Respuesta abierta</span>
+                  <span className="block text-slate-500">Sin respuesta exacta: se acepta cualquier respuesta (reflexión, opinión). No marca error ni baja XP.</span>
+                </span>
+              </label>
+            )}
+
+            {/* Correct answer for SHORT_ANSWER (si NO es abierta) / FILL_BLANK */}
+            {((slide.activityData.questionType === 'SHORT_ANSWER' && !slide.activityData.openAnswer) || slide.activityData.questionType === 'FILL_BLANK') && (
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">
                   {slide.activityData.questionType === 'FILL_BLANK' ? 'Palabra del hueco' : 'Respuesta correcta'}

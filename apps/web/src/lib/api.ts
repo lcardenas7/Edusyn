@@ -2344,6 +2344,7 @@ export interface LessonSlide {
     feedbackCorrect?: string
     feedbackIncorrect?: string
     imageUrl?: string
+    openAnswer?: boolean // SHORT_ANSWER abierta: sin respuesta exacta
   }
   badgeEmoji?: string
   badgeTitle?: string

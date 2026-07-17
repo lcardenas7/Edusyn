@@ -529,6 +529,31 @@ export class LessonService {
       },
     });
 
+    // Nota al COMPLETAR la lección (como un quiz): se crea una entrega AUTO_GRADED en la
+    // actividad-lección con el desempeño del estudiante normalizado a la maxScore de la
+    // actividad (misma base que los quizzes). El docente luego la vincula al libro de
+    // calificaciones como cualquier otra actividad. Solo si hay actividades puntuables.
+    // Nunca rompe el cierre de la lección.
+    if (isComplete && totalMaxScore > 0 && lesson.activityId) {
+      try {
+        const activity = await this.prisma.classroomActivity.findUnique({
+          where: { id: lesson.activityId },
+          select: { maxScore: true },
+        });
+        const activityMax = activity?.maxScore ? Number(activity.maxScore) : 5;
+        const finalScore = Math.round(((Number(updatedProgress.score) / totalMaxScore) * activityMax) * 10) / 10;
+        const now = new Date();
+        await this.prisma.activitySubmission.upsert({
+          where: { activityId_studentEnrollmentId_attemptNumber: { activityId: lesson.activityId, studentEnrollmentId, attemptNumber: 1 } },
+          create: {
+            activityId: lesson.activityId, studentEnrollmentId, attemptNumber: 1,
+            status: 'AUTO_GRADED', score: finalScore, submittedAt: now, gradedAt: now,
+          },
+          update: { status: 'AUTO_GRADED', score: finalScore, gradedAt: now },
+        });
+      } catch { /* la nota es best-effort; nunca rompe el cierre de la lección */ }
+    }
+
     // Gamificación: XP por DOMINIO (acertar) y por completar la lección. Idempotente
     // por slide/lección para que reintentos no dupliquen XP. Nunca rompe el flujo.
     const xp = await this.awardLessonXp({
