@@ -174,10 +174,21 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const behavior = (currentSlide?.activityData as any)?.behavior || {}
   const isOptionalAct = behavior.required === false
   const isGated = !!behavior.gateOnCorrect
-  const maxAttempts = Number(behavior.maxAttempts) || 0 // 0 = ilimitado
+  // Intentos por defecto: si el docente no configura nada, una actividad normal da
+  // 2 intentos (1 reintento) antes de revelar; una actividad con "no avanzar hasta
+  // acertar" queda ilimitada (debe acertar). Explícito: N intentos; 0 = ilimitado.
+  const rawMaxAttempts = behavior.maxAttempts
+  const maxAttempts = (rawMaxAttempts === undefined || rawMaxAttempts === null || rawMaxAttempts === '')
+    ? (isGated ? 0 : 2)
+    : (Number(rawMaxAttempts) || 0)
   const attemptsExhausted = maxAttempts > 0 && attempts >= maxAttempts
   const answeredCorrect = slideResult?.isCorrect === true
-  const canRetry = isGated && answerSubmitted && !answeredCorrect && !attemptsExhausted
+  // Reintentar por defecto (no solo en modo gated): mientras la respuesta esté mal
+  // y queden intentos.
+  const canRetry = answerSubmitted && !answeredCorrect && !attemptsExhausted
+  // Revelar la respuesta correcta SOLO cuando el alumno terminó con la pregunta:
+  // acertó, agotó los intentos, o ya la había respondido en una sesión previa.
+  const revealAnswer = hasAnswered || answeredCorrect || attemptsExhausted
 
   // ─────────────────────────────────────────────────────────────────
   // START
@@ -960,7 +971,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             act={act}
             value={selectedAnswer ?? previousAnswer?.answer ?? ''}
             onChange={setSelectedAnswer}
-            showResult={answerSubmitted || alreadyAnswered}
+            showResult={revealAnswer}
           />
         </Stage>
 
@@ -977,8 +988,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           </motion.button>
         )}
 
-        {/* Result feedback */}
-        {(answerSubmitted || alreadyAnswered) && (
+        {/* Result feedback — solo cuando se revela (acertó, agotó intentos o ya la había respondido) */}
+        {revealAnswer && (answerSubmitted || alreadyAnswered) && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1015,17 +1026,24 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           </motion.div>
         )}
 
-        {/* Gating P4: reintentar (no avanzar sin acertar) o aviso de intentos agotados */}
+        {/* Reintento (P4): mientras queden intentos NO se revela la respuesta;
+            se invita a intentarlo de nuevo. Al agotar intentos se revela arriba. */}
         {answerSubmitted && !answeredCorrect && !alreadyAnswered && (
           canRetry ? (
-            <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
-              <span className="text-sm text-ink-secondary">
-                {maxAttempts > 0 ? `Te queda${maxAttempts - attempts === 1 ? '' : 'n'} ${maxAttempts - attempts} intento${maxAttempts - attempts === 1 ? '' : 's'}` : 'Inténtalo de nuevo'}
-                {behavior.xpDecrement > 0 ? ' · el próximo acierto valdrá menos XP' : ''}
-              </span>
-              <motion.button onClick={handleRetry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl shadow-lg">🔄 Reintentar</motion.button>
+            <div className="mt-6 p-4 rounded-2xl border bg-feedback-error/10 border-feedback-error/30">
+              <div className="flex items-center gap-2 mb-1">
+                <X className="w-5 h-5 text-feedback-error" />
+                <span className="text-feedback-error font-bold">Incorrecto</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3 flex-wrap">
+                <span className="text-sm text-ink-secondary">
+                  {maxAttempts > 0 ? `Te queda${maxAttempts - attempts === 1 ? '' : 'n'} ${maxAttempts - attempts} intento${maxAttempts - attempts === 1 ? '' : 's'} · inténtalo de nuevo` : 'Inténtalo de nuevo'}
+                  {behavior.xpDecrement !== 0 ? ' · el próximo acierto valdrá menos XP' : ''}
+                </span>
+                <motion.button onClick={handleRetry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl shadow-lg">🔄 Reintentar</motion.button>
+              </div>
             </div>
-          ) : (isGated && attemptsExhausted) ? (
+          ) : attemptsExhausted ? (
             <p className="mt-3 text-sm text-ink-muted">Se agotaron los intentos. Revisa la explicación y continúa.</p>
           ) : null
         )}

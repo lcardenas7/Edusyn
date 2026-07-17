@@ -1499,21 +1499,22 @@ export default function LessonEditor({
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Intentos máx. <span className="text-slate-400">(0=∞)</span></label>
-                      <input type="number" min="0" value={b.maxAttempts ?? 0} onChange={e => setB({ maxAttempts: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Intentos <span className="text-slate-400">(0=∞)</span></label>
+                      <input type="number" min="0" value={b.maxAttempts ?? ''} placeholder={b.gateOnCorrect ? '∞' : '2'} onChange={e => setB({ maxAttempts: e.target.value === '' ? undefined : (parseInt(e.target.value) || 0) })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                     </div>
                     <div>
                       <label className="text-xs font-medium text-slate-500 mb-1 block">Resta XP/intento</label>
-                      <input type="number" min="0" value={b.xpDecrement ?? 0} onChange={e => setB({ xpDecrement: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                      <input type="number" min="0" value={b.xpDecrement ?? ''} placeholder={String(Math.ceil((slide.activityData.points || 10) * 0.25))} onChange={e => setB({ xpDecrement: e.target.value === '' ? undefined : (parseInt(e.target.value) || 0) })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                     </div>
                     <div>
                       <label className="text-xs font-medium text-slate-500 mb-1 block">Tiempo (s) <span className="text-slate-400">(0=∞)</span></label>
                       <input type="number" min="0" value={b.timerSeconds ?? 0} onChange={e => setB({ timerSeconds: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                     </div>
                   </div>
-                  {(b.xpDecrement || 0) > 0 && (
-                    <p className="text-[11px] text-slate-400">Ej.: {slide.activityData.points || 10} XP al 1er intento, {Math.max(Math.ceil((slide.activityData.points || 10) * 0.25), (slide.activityData.points || 10) - (b.xpDecrement || 0))} al 2º…</p>
-                  )}
+                  <p className="text-[11px] text-slate-400 leading-snug">
+                    Por defecto el alumno tiene <b>2 intentos</b> {b.gateOnCorrect ? '(ilimitados con "no avanzar hasta acertar")' : ''} y la respuesta correcta <b>no se revela</b> hasta acertar o agotar intentos.
+                    {b.xpDecrement !== 0 && <> El acierto en un intento posterior vale menos XP: {slide.activityData.points || 10} al 1er intento, {Math.max(Math.ceil((slide.activityData.points || 10) * 0.25), (slide.activityData.points || 10) - (b.xpDecrement ?? Math.ceil((slide.activityData.points || 10) * 0.25)))} al 2º…</>}
+                  </p>
                 </div>
               )
             })()}
