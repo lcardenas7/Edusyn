@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAiService } from '../apd/ai/apd-ai.service';
 import { LearningIdentityService, GrantXpResult } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
+import { ActivityGatingService } from './gating/activity-gating.service';
 
 @Injectable()
 export class LessonService {
@@ -16,6 +17,7 @@ export class LessonService {
     private readonly apdAi: ApdAiService,
     private readonly identity: LearningIdentityService,
     private readonly evidence: CompetencyEvidenceService,
+    private readonly gating: ActivityGatingService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -396,10 +398,15 @@ export class LessonService {
     // Verify lesson exists and is published
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
-      include: { activity: { select: { isPublished: true } } },
+      include: { activity: { select: { isPublished: true, classroomId: true } } },
     });
     if (!lesson) throw new NotFoundException('Lección no encontrada');
     if (!lesson.activity.isPublished) throw new ForbiddenException('Esta lección no está publicada');
+
+    // Enforcement de dependencias (Fase 3): no se inicia una lección bloqueada.
+    if (!(await this.gating.isUnlockedForStudent(lesson.activityId, lesson.activity.classroomId, studentEnrollmentId))) {
+      throw new ForbiddenException('Esta lección está bloqueada: primero completa las actividades requeridas');
+    }
 
     return this.prisma.lessonProgress.upsert({
       where: { lessonId_studentEnrollmentId: { lessonId, studentEnrollmentId } },

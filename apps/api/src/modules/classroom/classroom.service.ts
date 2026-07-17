@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
+import { ActivityGatingService } from './gating/activity-gating.service';
+import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 
 @Injectable()
 export class ClassroomService {
@@ -11,6 +13,7 @@ export class ClassroomService {
     private readonly prisma: PrismaService,
     private readonly identity: LearningIdentityService,
     private readonly evidence: CompetencyEvidenceService,
+    private readonly gating: ActivityGatingService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -592,12 +595,19 @@ export class ClassroomService {
       });
       const pendingMap = new Map(pendingGroups.map((g) => [g.activityId, g._count._all]));
 
-      return activities.map((a) => ({ ...a, gradingPending: pendingMap.get(a.id) || 0 }));
+      // Prerrequisitos configurados por actividad (Fase 4), para que el docente los edite.
+      const prereqMap = await this.getDependencyMapForClassroom(classroomId);
+
+      return activities.map((a) => ({
+        ...a,
+        gradingPending: pendingMap.get(a.id) || 0,
+        prerequisites: prereqMap.get(a.id) || [],
+      }));
     }
 
     // Students see only published activities — ordered by publication date (newest first).
     // Las propias de una ruta se hacen desde el mapa de la ruta, no en esta lista.
-    return this.prisma.classroomActivity.findMany({
+    const activities = await this.prisma.classroomActivity.findMany({
       where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false },
       include: {
         section: { select: { id: true, title: true, academicTermId: true } },
@@ -614,6 +624,108 @@ export class ClassroomService {
       },
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     });
+
+    // Estado de candado por dependencias (Fase 4). Backend autoritativo; la UI solo pinta.
+    // Sin reglas o sin matrícula → todo libre (retrocompatible).
+    let gate = new Map<string, { locked: boolean; requirements: any[] }>();
+    const enr = await this.resolveStudentEnrollment(classroomId, userId);
+    if (enr) gate = await this.gating.evaluateForStudent(classroomId, enr);
+
+    return activities.map((a) => {
+      const g = gate.get(a.id);
+      return { ...a, locked: g?.locked ?? false, requirements: g?.requirements ?? [] };
+    });
+  }
+
+  /** Enrollment ACTIVO del estudiante en el aula (por grupo/año del teacherAssignment). */
+  private async resolveStudentEnrollment(classroomId: string, userId: string): Promise<string | null> {
+    const cr = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!cr) return null;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: cr.teacherAssignment.groupId,
+        academicYearId: cr.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+    return enrollment?.id ?? null;
+  }
+
+  /** Mapa activityId → prerrequisitos configurados (con título/condición) del aula. */
+  private async getDependencyMapForClassroom(classroomId: string) {
+    const rows = await this.prisma.activityDependency.findMany({
+      where: { activity: { classroomId } },
+      select: {
+        id: true, activityId: true, prerequisiteId: true, condition: true, minScore: true,
+        prerequisite: { select: { title: true, type: true } },
+      },
+    });
+    const map = new Map<string, any[]>();
+    for (const r of rows) {
+      const list = map.get(r.activityId) || [];
+      list.push({
+        id: r.id,
+        prerequisiteId: r.prerequisiteId,
+        title: r.prerequisite?.title || 'Actividad',
+        type: r.prerequisite?.type,
+        condition: r.condition,
+        minScore: r.minScore != null ? Number(r.minScore) : null,
+      });
+      map.set(r.activityId, list);
+    }
+    return map;
+  }
+
+  /** Reemplaza el conjunto de prerrequisitos de una actividad (Fase 4). */
+  async setActivityDependencies(
+    activityId: string,
+    teacherId: string,
+    prerequisites: { prerequisiteId: string; condition?: string; minScore?: number | null }[],
+  ) {
+    const activity = await this.validateActivityOwnership(activityId, teacherId);
+    const classroomId = activity.classroomId;
+
+    const validIds = new Set(
+      (await this.prisma.classroomActivity.findMany({ where: { classroomId }, select: { id: true } })).map((a) => a.id),
+    );
+
+    // Grafo actual SIN las aristas de esta actividad (se reemplazan).
+    const otherEdges = (await this.gating.getClassroomEdges(classroomId)).filter((e) => e.activityId !== activityId);
+    const accepted: DependencyEdge[] = [...otherEdges];
+
+    const valid = ['SUBMITTED', 'GRADED', 'MIN_SCORE', 'COMPLETED'];
+    const clean: { prerequisiteId: string; condition: string; minScore: number | null }[] = [];
+    const seen = new Set<string>();
+    for (const p of prerequisites || []) {
+      const prerequisiteId = p?.prerequisiteId;
+      if (!prerequisiteId || seen.has(prerequisiteId)) continue;
+      seen.add(prerequisiteId);
+      if (prerequisiteId === activityId) throw new BadRequestException('Una actividad no puede depender de sí misma');
+      if (!validIds.has(prerequisiteId)) throw new BadRequestException('El prerrequisito debe pertenecer a la misma aula');
+      if (validateNewDependency(accepted, activityId, prerequisiteId) === 'CYCLE') {
+        throw new BadRequestException('Esa configuración crearía un ciclo de dependencias');
+      }
+      const condition = valid.includes(p.condition || '') ? (p.condition as string) : 'SUBMITTED';
+      const minScore = condition === 'MIN_SCORE' && p.minScore != null ? p.minScore : null;
+      accepted.push({ activityId, prerequisiteId });
+      clean.push({ prerequisiteId, condition, minScore });
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.activityDependency.deleteMany({ where: { activityId } }),
+      ...clean.map((c) =>
+        this.prisma.activityDependency.create({
+          data: { activityId, prerequisiteId: c.prerequisiteId, condition: c.condition as any, minScore: c.minScore },
+        }),
+      ),
+    ]);
+
+    return (await this.getDependencyMapForClassroom(classroomId)).get(activityId) || [];
   }
 
   async getActivity(activityId: string, userId: string, role: 'teacher' | 'student') {
@@ -880,6 +992,12 @@ export class ClassroomService {
       },
     });
     if (!enrollment) throw new ForbiddenException('No estás matriculado en este grupo');
+
+    // Enforcement de dependencias (Fase 3): no se entrega una actividad bloqueada.
+    // Fail-open: si no tiene reglas, pasa. Sticky: si ya la había iniciado/entregado, pasa.
+    if (!(await this.gating.isUnlockedForStudent(activityId, activity.classroomId, enrollment.id))) {
+      throw new ForbiddenException('Esta actividad está bloqueada: primero completa las actividades requeridas');
+    }
 
     // Check due date
     const now = new Date();
@@ -1382,6 +1500,11 @@ export class ClassroomService {
       },
     });
     if (!enrollment) throw new ForbiddenException('No está matriculado');
+
+    // Enforcement de dependencias (Fase 3): no se inicia un quiz bloqueado.
+    if (!(await this.gating.isUnlockedForStudent(activityId, activity.classroomId, enrollment.id))) {
+      throw new ForbiddenException('Este quiz está bloqueado: primero completa las actividades requeridas');
+    }
 
     // Check max attempts
     const existingCount = await this.prisma.activitySubmission.count({

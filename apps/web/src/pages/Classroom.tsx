@@ -28,9 +28,10 @@ import {
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, Calendar, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
-  Puzzle, Rocket, Music, Mic,
+  Puzzle, Rocket, Music, Mic, Lock,
 } from 'lucide-react'
 import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
+import { PrerequisitesEditor, type PrereqRule } from '../components/classroom/PrerequisitesEditor'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -87,6 +88,17 @@ interface Announcement {
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
+
+// Frase corta de la condición de un prerrequisito, para el estudiante.
+const reqConditionLabel = (condition: string, minScore?: number | null): string => {
+  switch (condition) {
+    case 'COMPLETED': return 'completarla'
+    case 'GRADED': return 'que esté calificada'
+    case 'MIN_SCORE': return `nota ≥ ${minScore ?? ''}`
+    case 'SUBMITTED':
+    default: return 'entregarla'
+  }
+}
 
 // ¿La entrega es un audio? (por extensión de la key/URL) — para reproducirlo en línea.
 const isAudioFileName = (nameOrUrl?: string | null) => {
@@ -2155,6 +2167,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   // Edit activity
   const [editingActivity, setEditingActivity] = useState(false)
   const [editForm, setEditForm] = useState({ title: '', description: '', maxScore: '', dueDate: '', allowLateSubmit: false })
+  const [editPrereqs, setEditPrereqs] = useState<PrereqRule[]>([]) // prerrequisitos en edición (Fase 5)
+  const [createPrereqs, setCreatePrereqs] = useState<PrereqRule[]>([]) // prerrequisitos al crear (Fase 5)
   const [savingEdit, setSavingEdit] = useState(false)
 
   // Live Quiz
@@ -2475,6 +2489,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         timeLimitMinutes: form.timeLimitMinutes ? parseInt(form.timeLimitMinutes) : undefined,
         audioResponse: realType === 'TASK' ? form.audioResponse : undefined,
       } as any)
+      // Prerrequisitos elegidos al crear (Fase 5): se aplican una vez existe la actividad.
+      if (createPrereqs.length > 0) {
+        try { await classroomApi.setActivityDependencies(createdActivity.id, createPrereqs) } catch { /* no bloquea la creación */ }
+      }
       const isQuizDraft = isQuizEditorType(form.type)
       if (isQuizDraft && generatedQuestions.length > 0) {
         await createValeriaQuestions(createdActivity.id, generatedQuestions)
@@ -2482,6 +2500,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setForm({ title: '', description: '', sectionId: '', academicTermId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK', shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '', audioResponse: false })
       setAttachFile(null)
       setPendingValeriaQuestions([])
+      setCreatePrereqs([])
       setShowCreate(false)
       loadActivities()
       // Con el formulario ya cerrado es seguro recargar el aula para que las
@@ -2548,6 +2567,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       dueDate: act.dueDate ? new Date(act.dueDate).toISOString().slice(0, 16) : '',
       allowLateSubmit: act.allowLateSubmit || false,
     })
+    // Prerrequisitos actuales (Fase 4 los incluye en la lista del docente).
+    setEditPrereqs(((act as any).prerequisites || []).map((p: any) => ({ prerequisiteId: p.prerequisiteId, condition: p.condition, minScore: p.minScore ?? null })))
     setEditingActivity(true)
   }
 
@@ -2562,6 +2583,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         dueDate: editForm.dueDate || undefined,
         allowLateSubmit: editForm.allowLateSubmit,
       })
+      // Prerrequisitos (Fase 5): el backend valida misma aula + sin ciclo.
+      await classroomApi.setActivityDependencies(selectedActivity.id, editPrereqs)
       setEditingActivity(false)
       // Refresh activity detail
       const { data } = await classroomApi.getActivity(selectedActivity.id)
@@ -3266,6 +3289,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <input type="checkbox" checked={editForm.allowLateSubmit} onChange={e => setEditForm(f => ({ ...f, allowLateSubmit: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
                 Permitir entrega tardía
               </label>
+              <PrerequisitesEditor selfId={selectedActivity.id} activities={activities as any} value={editPrereqs} onChange={setEditPrereqs} />
               <div className="flex gap-3 pt-2">
                 <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                   {savingEdit && <Loader2 className="w-4 h-4 animate-spin" />} Guardar cambios
@@ -5363,16 +5387,20 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     const studentStatus = isStudent ? getStudentTaskStatus(act) : null
     const studentSub = isStudent ? act.submissions?.[0] : null
     const workInfo = getWorkInfo(act)
+    // Candado por dependencias (Fase 6): backend autoritativo, la UI solo pinta.
+    const locked = isStudent && !!(act as any).locked
+    const requirements: { prerequisiteId: string; title: string; condition: string; minScore: number | null; satisfied: boolean }[] = (act as any).requirements || []
     return (
-      <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
+      <button key={act.id} onClick={() => { if (locked) return; openActivity(act) }} disabled={locked} style={{ borderLeftColor: locked ? '#cbd5e1' : workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all group ${locked ? 'opacity-60 cursor-not-allowed border-hairline' : `hover:shadow-sm ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}`}>
         <div className="flex items-start gap-4">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
             {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
-              {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
+              <h3 className={`text-base font-bold ${locked ? 'text-slate-500' : 'text-slate-800 group-hover:text-blue-700'}`}>{act.title}</h3>
+              {locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-slate-200 text-slate-600 inline-flex items-center gap-1"><Lock className="w-3 h-3" /> Bloqueada</span>}
+              {isNew && !locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
               {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
               {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
               {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
@@ -5406,8 +5434,28 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
               )}
             </div>
+
+            {/* Faltantes para desbloquear (Fase 6): lista completa con ✔/⏳ */}
+            {locked && requirements.length > 0 && (
+              <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+                <p className="text-xs font-semibold text-slate-500 mb-1.5">Requiere completar primero:</p>
+                <ul className="space-y-1">
+                  {requirements.map(r => (
+                    <li key={r.prerequisiteId} className="flex items-center gap-2 text-sm">
+                      {r.satisfied
+                        ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        : <Clock className="w-4 h-4 text-amber-500 shrink-0" />}
+                      <span className={r.satisfied ? 'text-slate-500 line-through' : 'text-slate-700'}>{r.title}</span>
+                      <span className="text-[11px] text-slate-400">· {reqConditionLabel(r.condition, r.minScore)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+          {locked
+            ? <Lock className="w-5 h-5 text-slate-300 shrink-0 mt-1" />
+            : <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />}
         </div>
       </button>
     )
@@ -5442,7 +5490,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
-            <button onClick={() => { setShowCreate(true); setIntention(null); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => { setShowCreate(true); setIntention(null); setCreatePrereqs([]); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
@@ -5827,6 +5875,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )}
             </>
           )}
+          {activities.length > 0 && (
+            <PrerequisitesEditor activities={activities as any} value={createPrereqs} onChange={setCreatePrereqs} />
+          )}
           <div className="flex items-center justify-between pt-2">
             {!isQuizEditorType(form.type) ? (
               <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
@@ -5836,7 +5887,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <p className="text-sm text-purple-500">Las preguntas se agregan después de crear el quiz</p>
             )}
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]); setCreatePrereqs([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type.startsWith('BLOCK_') ? (INTERACTIVE_BLOCK_LABELS[form.type.slice(6)] || 'Actividad') : 'Actividad'}`}

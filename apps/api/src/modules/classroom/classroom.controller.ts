@@ -258,6 +258,19 @@ export class ClassroomController {
     return this.service.updateActivity(activityId, userId, body);
   }
 
+  // Dependencias/prerrequisitos (Fase 4): reemplaza el conjunto de prerrequisitos de la
+  // actividad. Valida misma aula + sin ciclo/duplicado/auto-dependencia.
+  @Put('activities/:activityId/dependencies')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async setActivityDependencies(
+    @Param('activityId') activityId: string,
+    @Request() req: any,
+    @Body() body: { prerequisites?: { prerequisiteId: string; condition?: string; minScore?: number | null }[] },
+  ) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.setActivityDependencies(activityId, userId, body.prerequisites || []);
+  }
+
   @Put('activities/:activityId/publish')
   @Roles('DOCENTE', 'COORDINADOR')
   async publishActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body?: { scheduledPublishAt?: string }) {
