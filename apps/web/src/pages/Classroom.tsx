@@ -2357,6 +2357,35 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }).catch(() => {})
   }, [classroom.id])
 
+  // Importar una lección desde un archivo .json exportado (misma institución: incluye
+  // multimedia; entre instituciones, la multimedia subida no resuelve).
+  const [importing, setImporting] = useState(false)
+  const importFileRef = useRef<HTMLInputElement>(null)
+  const handleImportLesson = async (file: File) => {
+    setImporting(true)
+    try {
+      const parsed = JSON.parse(await file.text())
+      const snap = parsed?.lesson || (parsed?.slides ? parsed : null)
+      if (!snap || !Array.isArray(snap.slides)) { setError('El archivo no es una lección de Edusyn válida.'); return }
+      const { data: act } = await classroomApi.createActivity(classroom.id, {
+        type: 'LESSON',
+        title: snap.title || 'Lección importada',
+        academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : undefined,
+      } as any)
+      await lessonApi.create(act.id, {
+        title: snap.title || 'Lección importada',
+        description: snap.description || undefined,
+        badgeEmoji: snap.badgeEmoji, badgeTitle: snap.badgeTitle, badgeColor: snap.badgeColor,
+        estimatedMinutes: snap.estimatedMinutes ? parseInt(snap.estimatedMinutes) : undefined,
+        slides: snap.slides.map((s: any, i: number) => ({ ...s, id: undefined, sortOrder: i })),
+      } as any)
+      loadActivities()
+      onReload()
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudo importar la lección.')
+    } finally { setImporting(false) }
+  }
+
   const handleCreate = async () => {
     if (!form.title.trim()) return // la sección es OPCIONAL (§brief arquitectura)
     try {
@@ -5313,6 +5342,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
         {isTeacher && (
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <input ref={importFileRef} type="file" accept=".json,application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImportLesson(f); e.currentTarget.value = '' }} />
+            <button onClick={() => importFileRef.current?.click()} disabled={importing} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50" style={{ minHeight: '44px' }} title="Importar una lección desde archivo">
+              {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />} Importar
+            </button>
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
