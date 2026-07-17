@@ -31,6 +31,7 @@ import {
   Puzzle, Rocket, Music, Mic,
 } from 'lucide-react'
 import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
+import { PrerequisitesEditor, type PrereqRule } from '../components/classroom/PrerequisitesEditor'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -2155,6 +2156,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   // Edit activity
   const [editingActivity, setEditingActivity] = useState(false)
   const [editForm, setEditForm] = useState({ title: '', description: '', maxScore: '', dueDate: '', allowLateSubmit: false })
+  const [editPrereqs, setEditPrereqs] = useState<PrereqRule[]>([]) // prerrequisitos en edición (Fase 5)
+  const [createPrereqs, setCreatePrereqs] = useState<PrereqRule[]>([]) // prerrequisitos al crear (Fase 5)
   const [savingEdit, setSavingEdit] = useState(false)
 
   // Live Quiz
@@ -2475,6 +2478,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         timeLimitMinutes: form.timeLimitMinutes ? parseInt(form.timeLimitMinutes) : undefined,
         audioResponse: realType === 'TASK' ? form.audioResponse : undefined,
       } as any)
+      // Prerrequisitos elegidos al crear (Fase 5): se aplican una vez existe la actividad.
+      if (createPrereqs.length > 0) {
+        try { await classroomApi.setActivityDependencies(createdActivity.id, createPrereqs) } catch { /* no bloquea la creación */ }
+      }
       const isQuizDraft = isQuizEditorType(form.type)
       if (isQuizDraft && generatedQuestions.length > 0) {
         await createValeriaQuestions(createdActivity.id, generatedQuestions)
@@ -2482,6 +2489,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setForm({ title: '', description: '', sectionId: '', academicTermId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK', shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '', audioResponse: false })
       setAttachFile(null)
       setPendingValeriaQuestions([])
+      setCreatePrereqs([])
       setShowCreate(false)
       loadActivities()
       // Con el formulario ya cerrado es seguro recargar el aula para que las
@@ -2548,6 +2556,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       dueDate: act.dueDate ? new Date(act.dueDate).toISOString().slice(0, 16) : '',
       allowLateSubmit: act.allowLateSubmit || false,
     })
+    // Prerrequisitos actuales (Fase 4 los incluye en la lista del docente).
+    setEditPrereqs(((act as any).prerequisites || []).map((p: any) => ({ prerequisiteId: p.prerequisiteId, condition: p.condition, minScore: p.minScore ?? null })))
     setEditingActivity(true)
   }
 
@@ -2562,6 +2572,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         dueDate: editForm.dueDate || undefined,
         allowLateSubmit: editForm.allowLateSubmit,
       })
+      // Prerrequisitos (Fase 5): el backend valida misma aula + sin ciclo.
+      await classroomApi.setActivityDependencies(selectedActivity.id, editPrereqs)
       setEditingActivity(false)
       // Refresh activity detail
       const { data } = await classroomApi.getActivity(selectedActivity.id)
@@ -3266,6 +3278,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <input type="checkbox" checked={editForm.allowLateSubmit} onChange={e => setEditForm(f => ({ ...f, allowLateSubmit: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
                 Permitir entrega tardía
               </label>
+              <PrerequisitesEditor selfId={selectedActivity.id} activities={activities as any} value={editPrereqs} onChange={setEditPrereqs} />
               <div className="flex gap-3 pt-2">
                 <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                   {savingEdit && <Loader2 className="w-4 h-4 animate-spin" />} Guardar cambios
@@ -5442,7 +5455,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
-            <button onClick={() => { setShowCreate(true); setIntention(null); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => { setShowCreate(true); setIntention(null); setCreatePrereqs([]); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
@@ -5827,6 +5840,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )}
             </>
           )}
+          {activities.length > 0 && (
+            <PrerequisitesEditor activities={activities as any} value={createPrereqs} onChange={setCreatePrereqs} />
+          )}
           <div className="flex items-center justify-between pt-2">
             {!isQuizEditorType(form.type) ? (
               <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
@@ -5836,7 +5852,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <p className="text-sm text-purple-500">Las preguntas se agregan después de crear el quiz</p>
             )}
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]); setCreatePrereqs([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type.startsWith('BLOCK_') ? (INTERACTIVE_BLOCK_LABELS[form.type.slice(6)] || 'Actividad') : 'Actividad'}`}

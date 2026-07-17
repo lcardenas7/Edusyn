@@ -57,8 +57,11 @@ export class CompletionService {
     const result = new Map<string, CompletionState>();
     if (!activities.length) return result;
 
-    const lessonActs = activities.filter(a => a.type === 'LESSON');
-    const submissionActs = activities.filter(a => a.type !== 'LESSON');
+    // LESSON y GAME se completan vía LessonProgress (el juego suelto también es una
+    // lección de una diapositiva). El resto (TASK/QUIZ/EXAM…) vía ActivitySubmission.
+    const isLessonBacked = (t: string) => t === 'LESSON' || t === 'GAME';
+    const lessonActs = activities.filter(a => isLessonBacked(a.type));
+    const submissionActs = activities.filter(a => !isLessonBacked(a.type));
 
     // ── Actividades con entrega ────────────────────────────────────────────
     if (submissionActs.length) {
