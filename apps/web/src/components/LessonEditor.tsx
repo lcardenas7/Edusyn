@@ -6,7 +6,7 @@ import { BlockStackEditor, legacyToBlocks, newBlock, type LessonBlock } from './
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Eye,
   Flag, GripVertical, Loader2, Pencil, Play, Plus, Save, Sparkles,
-  Trash2, Trophy, Type, X, Image, Video, Music, Wand2, Clock, AlertTriangle, Check
+  Trash2, Trophy, Type, X, Image, Video, Music, Wand2, Clock, AlertTriangle, Check, Download
 } from 'lucide-react'
 import { lessonApi, type Lesson, type LessonSlide } from '../lib/api'
 import { valeriaAssistantBridge } from '../contexts/ValeriaContext'
@@ -190,6 +190,19 @@ export default function LessonEditor({
   const buildSnapshot = useCallback(() => ({
     title, description, badgeEmoji, badgeTitle, badgeColor, estimatedMinutes, slides,
   }), [title, description, badgeEmoji, badgeTitle, badgeColor, estimatedMinutes, slides])
+
+  // Exportar la lección a un archivo .json portable (importable en otra aula/entorno).
+  const handleExport = () => {
+    const payload = { __edusyn: 'lesson', version: 1, exportedAt: new Date().toISOString(), lesson: buildSnapshot() }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const name = (title || 'leccion').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'leccion'
+    a.href = url
+    a.download = `${name}.edusynlesson.json`
+    document.body.appendChild(a); a.click(); a.remove()
+    URL.revokeObjectURL(url)
+  }
 
   const applySnapshot = useCallback((snap: any) => {
     if (!snap) return
@@ -561,6 +574,9 @@ export default function LessonEditor({
                 <Clock className="w-4 h-4" /> Historial
               </button>
             )}
+            <button onClick={handleExport} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200" title="Descargar como archivo">
+              <Download className="w-4 h-4" /> Descargar
+            </button>
             <button onClick={onPreview} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200">
               <Eye className="w-4 h-4" /> Vista previa
             </button>
