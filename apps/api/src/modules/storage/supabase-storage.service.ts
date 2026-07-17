@@ -137,6 +137,18 @@ export class SupabaseStorageService {
     'image/avif',
     'image/heic',
     'image/heif',
+    // Audio (grabaciones de estudiantes: MediaRecorder produce webm/mp4; móviles m4a/aac/3gp)
+    'audio/webm',
+    'audio/ogg',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/mp4',
+    'audio/x-m4a',
+    'audio/aac',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/3gpp',
+    'audio/3gpp2',
   ];
   static readonly CLASSROOM_MAX_SIZE_MB = 10;
 
@@ -573,6 +585,11 @@ export class SupabaseStorageService {
     const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg', 'tiff', 'avif', 'heic', 'heif'];
     const isImageByExtension = imageExtensions.includes(ext);
     const allowsImages = allowedMimeTypes.some(t => t.startsWith('image/'));
+    // Algunos móviles envían el audio con mimetype genérico (application/octet-stream);
+    // si la extensión es de audio y el destino permite audio, se acepta y se corrige.
+    const audioMimeByExt: Record<string, string> = { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', oga: 'audio/ogg', wav: 'audio/wav', weba: 'audio/webm', webm: 'audio/webm', '3gp': 'audio/3gpp', '3gpp': 'audio/3gpp' };
+    const isAudioByExtension = ext in audioMimeByExt;
+    const allowsAudio = allowedMimeTypes.some(t => t.startsWith('audio/'));
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       // If the file has an image extension and images are allowed, accept it
@@ -580,6 +597,8 @@ export class SupabaseStorageService {
         // Override mimetype for downstream usage
         const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp', svg: 'image/svg+xml', tiff: 'image/tiff', avif: 'image/avif', heic: 'image/heic', heif: 'image/heif' };
         if (mimeMap[ext]) file.mimetype = mimeMap[ext];
+      } else if (isAudioByExtension && allowsAudio) {
+        file.mimetype = audioMimeByExt[ext];
       } else {
         throw new BadRequestException(
           `Tipo de archivo no permitido (${file.mimetype}). Permitidos: ${allowedMimeTypes.join(', ')}`,
