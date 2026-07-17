@@ -1104,6 +1104,8 @@ model AcademicTerm {
   updatedAt                    DateTime           @updatedAt
 
   academicYear            AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  classroomSections       ClassroomSection[]
+  classroomActivities     ClassroomActivity[]      @relation("ActivityAcademicTerm")
   evaluationPlans         EvaluationPlan[]
   evaluativeActivities    EvaluativeActivity[]
   preventiveCutConfig     PreventiveCutConfig?
@@ -5642,13 +5644,18 @@ model ClassroomSection {
   description String?  @db.Text
   sortOrder   Int      @default(0)
   isVisible   Boolean  @default(true)
+  // Período académico OPCIONAL: permite categorizar el contenido por período.
+  // Null = la sección no pertenece a ningún período (el docente que no lo use, no lo ve).
+  academicTermId String?
   createdAt   DateTime @default(now())
 
-  classroom  Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  materials  ClassroomMaterial[]
-  activities ClassroomActivity[]
+  classroom    Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  academicTerm AcademicTerm?       @relation(fields: [academicTermId], references: [id], onDelete: SetNull)
+  materials    ClassroomMaterial[]
+  activities   ClassroomActivity[]
 
   @@index([classroomId])
+  @@index([academicTermId])
 }
 
 model ClassroomMaterial {
@@ -5687,6 +5694,9 @@ model ClassroomAnnouncement {
 model ClassroomActivity {
   id          String                @id @default(cuid())
   sectionId   String? // Nullable para permitir actividades huérfanas al borrar sección
+  // Período académico OPCIONAL y DIRECTO: la actividad puede vivir en un período sin
+  // sección (el período es el organizador primario). Si null, hereda el de su sección.
+  academicTermId String?
   classroomId String
   type        ClassroomActivityType
   title       String
@@ -5718,6 +5728,7 @@ model ClassroomActivity {
   updatedAt          DateTime  @updatedAt
 
   section          ClassroomSection?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  academicTerm     AcademicTerm?        @relation("ActivityAcademicTerm", fields: [academicTermId], references: [id], onDelete: SetNull)
   classroom        Classroom            @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   questions        ActivityQuestion[]
   contexts         QuestionContext[]
@@ -5738,11 +5749,15 @@ model ClassroomActivity {
   // Lección interactiva
   lesson Lesson?
 
+  // Actividades de misión ABP que usan esta actividad como lección/juego jugable
+  abpMissionActivities AbpMissionActivity[] @relation("AbpMissionActivityLesson")
+
   // Pasos de ruta que referencian esta actividad
   routeSteps LearningRouteStep[] @relation("ActivityRouteSteps")
 
   @@index([classroomId])
   @@index([sectionId])
+  @@index([academicTermId])
   @@index([dueDate])
 }
 
@@ -6217,8 +6232,32 @@ model Lesson {
   slides       LessonSlide[]
   progress     LessonProgress[]
   liveSessions LiveLessonSession[]
+  versions     LessonVersion[]
 
   @@index([activityId])
+}
+
+// Snapshots de la lección para autoguardado, recuperación e historial (Prioridad 1
+// del Motor de Lecciones). Sin institutionId: se scopea vía Lesson→activity→classroom,
+// igual que Lesson/LessonSlide. docs/MOTOR_LECCIONES.md
+model LessonVersion {
+  id          String            @id @default(cuid())
+  lessonId    String
+  kind        LessonVersionKind @default(AUTOSAVE)
+  label       String?
+  snapshot    Json // { title, description, meta…, slides: [...] } tal como lo edita el docente
+  createdById String? // usuario que disparó el guardado
+  createdAt   DateTime          @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, createdAt])
+}
+
+enum LessonVersionKind {
+  AUTOSAVE // borrador automático (se poda)
+  MANUAL // el docente pulsó "Guardar"
+  PUBLISH // hito al publicar/generar
 }
 
 model LessonSlide {
@@ -6238,6 +6277,11 @@ model LessonSlide {
   // ACTIVITY slide data (JSON con pregunta embebida)
   activityData Json?
   // { questionType, question, options[], correctAnswer, explanation, points, hint }
+
+  // Motor de bloques (docs/MOTOR_LECCIONES.md): array ordenado de bloques tipados
+  // [{ id, type, ...content }] para las slides CONTENT. Si está vacío, se usa el
+  // render legacy (body/imageUrl/…). Compat total, sin migrar filas viejas.
+  blocks Json?
 
   // BADGE_REVEAL data
   badgeEmoji String?
@@ -6431,6 +6475,10 @@ model LearningRoute {
   description        String?  @db.Text
   targetCompetencyId String? // competencia CEFR objetivo (grafo global)
   targetLevel        String? // "A2" (denormalizado para mostrar)
+  // Indicaciones del docente y material base: Valeria los usa al armar la ruta
+  // Y los REUSA al generar la lección de cada paso (coherencia en toda la ruta).
+  instructions       String?  @db.Text // "cómo" quiere el docente que se genere
+  sourceMaterial     String?  @db.Text // documento/guía base pegada por el docente
   isPublished        Boolean  @default(false)
   sortOrder          Int      @default(0)
   createdAt          DateTime @default(now())
@@ -6902,15 +6950,18 @@ model AbpMissionActivity {
   sortOrder               Int                    @default(0)
   completed               Boolean                @default(false)
   completedByEnrollmentId String? // quién la completó (participación)
+  classroomActivityId     String? // si es una lección/juego jugable, apunta a la ClassroomActivity
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
-  institution Institution        @relation("RlsInstitutionABPMA", fields: [institutionId], references: [id])
-  mission     AbpMission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
-  completedBy StudentEnrollment? @relation("AbpActivityCompletedBy", fields: [completedByEnrollmentId], references: [id], onDelete: SetNull)
+  institution       Institution        @relation("RlsInstitutionABPMA", fields: [institutionId], references: [id])
+  mission           AbpMission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  completedBy       StudentEnrollment? @relation("AbpActivityCompletedBy", fields: [completedByEnrollmentId], references: [id], onDelete: SetNull)
+  classroomActivity ClassroomActivity? @relation("AbpMissionActivityLesson", fields: [classroomActivityId], references: [id], onDelete: SetNull)
 
   @@index([institutionId])
   @@index([missionId, sortOrder])
+  @@index([classroomActivityId])
 }
 
 model AbpDiscovery {

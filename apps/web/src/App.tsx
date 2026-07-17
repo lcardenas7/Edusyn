@@ -93,6 +93,7 @@ import InstitutionalPortfolio from './pages/InstitutionalPortfolio'
 // Módulo Financiero
 import Timetabling from './pages/Timetabling'
 import CapabilitiesConfig from './pages/CapabilitiesConfig'
+import { DialogHost } from './components/ui/confirm'
 import {
   FinanceHub,
   FinanceDashboard,
@@ -214,6 +215,7 @@ function App() {
           style: { fontFamily: 'inherit' },
         }}
       />
+      <DialogHost />
       <InstitutionProvider>
       <AcademicProvider>
       <Routes>

@@ -9,6 +9,8 @@ import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '.
 import { Stage } from './lesson/Stage'
 import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete, requiresSubmission } from './lesson/InteractiveBlocks'
 import { SpeakButton, stripHtml } from './lesson/SpeakButton'
+import { SmartImg, SmartVideo, SmartAudio } from './media/SmartMedia'
+import { BlockStackView, blocksToPlainText } from './lesson/blocks'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -721,6 +723,22 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const layout = slide.layout || 'text-left-image-right'
     const hasImage = !!slide.imageUrl
     const hasVideo = !!slide.videoUrl
+    // Motor de bloques: si la slide tiene bloques, se renderizan (y se ignora el
+    // render legacy). Compat: las slides viejas sin bloques usan el camino de abajo.
+    const blocks = Array.isArray((slide as any).blocks) ? (slide as any).blocks : null
+
+    if (blocks && blocks.length) {
+      const speak = blocksToPlainText(blocks)
+      return (
+        <div>
+          {slide.title && (
+            <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-ink-primary mb-4">{slide.title}</motion.h2>
+          )}
+          {speak && <div className="mb-4"><SpeakButton text={speak} label="Escuchar la lectura" /></div>}
+          <BlockStackView blocks={blocks} />
+        </div>
+      )
+    }
 
     return (
       <div>
@@ -761,8 +779,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               transition={{ delay: 0.2 }}
               className={`${layout === 'text-left-image-right' ? 'sm:w-2/5' : 'w-full mt-4'}`}
             >
-              <img
-                src={slide.imageUrl!}
+              <SmartImg
+                src={slide.imageUrl}
                 alt={slide.title || 'Imagen'}
                 className="w-full rounded-2xl border border-hairline shadow-sm object-contain max-h-64 sm:max-h-80"
               />
@@ -786,7 +804,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               />
             ) : (
-              <video src={slide.videoUrl!} controls className="w-full rounded-2xl max-h-80" />
+              <SmartVideo src={slide.videoUrl} className="w-full rounded-2xl max-h-80" />
             )}
           </motion.div>
         )}
@@ -799,7 +817,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             transition={{ delay: 0.3 }}
             className="mt-4"
           >
-            <audio src={slide.audioUrl} controls className="w-full" />
+            <SmartAudio src={slide.audioUrl} className="w-full" />
           </motion.div>
         )}
       </div>

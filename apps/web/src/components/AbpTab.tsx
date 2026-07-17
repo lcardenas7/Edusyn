@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
-import { abpApi, classroomApi } from '../lib/api'
+import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
+import LessonEditor from './LessonEditor'
+import LessonPlayer from './LessonPlayer'
 
 // Metadatos de las 6 fases (nombre + icono). El motor real vive en el backend.
 const PHASES = [
@@ -294,7 +296,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
           {evidences.map((e: any) => (
             <div key={e.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
               <span>{e.kind === 'FILE' ? '📎' : '🔗'}</span>
-              <a href={e.url} target="_blank" rel="noreferrer" className="flex-1 text-sm text-violet-600 hover:underline truncate">{e.label}</a>
+              <button onClick={() => openStoredFile(e.url)} className="flex-1 text-left text-sm text-violet-600 hover:underline truncate">{e.label}</button>
               <span className="text-xs text-slate-400">{e.byName}</span>
               {editable && <button onClick={() => remove(e.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
             </div>
@@ -399,6 +401,7 @@ function AddActivityForm({ mission, onSaved }: { mission: any; onSaved: () => vo
 
 function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
   const tool = toolAct?.content?.tool
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
@@ -416,30 +419,42 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
           </div>
           {mission.description && <p className="text-xs text-slate-500 mt-0.5">{mission.description}</p>}
 
-          {tool ? (
+          {tool && (
             <div className="mt-3">
               <PhaseTool tool={tool} team={team} onSaved={onSaved} />
             </div>
-          ) : (
-            <div className="mt-2 space-y-1.5">
-              {acts.map((a: any) => (
-                <div key={a.id} className="flex items-center gap-2 group">
-                  <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
-                  <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
-                  <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                </div>
-              ))}
-              {acts.length === 0 && (
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
-                  Marcar como completada
-                </label>
-              )}
-              <AddActivityForm mission={mission} onSaved={onSaved} />
-            </div>
           )}
+
+          <div className="mt-2 space-y-1.5">
+            {acts.map((a: any) => a.classroomActivityId ? (
+              <div key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                <span className="text-base">{a.completed ? '✅' : '🎮'}</span>
+                <span className={`text-sm ${a.completed ? 'text-slate-400' : 'text-slate-700'}`}>{a.title}</span>
+                <button onClick={() => setPlaying(a.classroomActivityId)} className="ml-auto text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 hover:bg-violet-700">▶ {a.completed ? 'Repetir' : 'Jugar'}</button>
+              </div>
+            ) : (
+              <div key={a.id} className="flex items-center gap-2 group">
+                <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            ))}
+            {!tool && acts.length === 0 && (
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                Marcar como completada
+              </label>
+            )}
+            <AddActivityForm mission={mission} onSaved={onSaved} />
+          </div>
         </div>
       </div>
+
+      {playing && (
+        <div className="fixed inset-0 z-[120]">
+          <LessonPlayer activityId={playing} onClose={() => { setPlaying(null); onSaved() }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -488,6 +503,58 @@ function videoEmbed(url: string): string | null {
   return null
 }
 
+// ─── Apertura y visualización de archivos de storage ───────────────────────────
+const isHttp = (v: string) => /^https?:\/\//i.test(v || '')
+const isImageUrl = (v: string) => /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/i.test(v || '')
+const isPdfUrl = (v: string) => /\.pdf(\?|$)/i.test(v || '')
+
+/** Resuelve una key de storage a URL firmada (si hace falta) y la abre en pestaña nueva. */
+async function openStoredFile(value: string) {
+  if (!value) return
+  if (isHttp(value)) { window.open(value, '_blank', 'noopener'); return }
+  try { const { data } = await storageApi.resolveUrl(value); window.open(data.url, '_blank', 'noopener') }
+  catch { window.open(value, '_blank', 'noopener') }
+}
+
+/** Modal visor: resuelve la URL y muestra PDF/imagen/video en línea; el resto, botón de abrir. */
+function FileViewerModal({ file, onClose }: { file: { title: string; url: string; type?: string }; onClose: () => void }) {
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const v = file.url
+    if (isHttp(v)) { setUrl(v); setLoading(false) }
+    else storageApi.resolveUrl(v).then(({ data }) => setUrl(data.url)).catch(() => setUrl(v)).finally(() => setLoading(false))
+  }, [file])
+  const embed = videoEmbed(url)
+  const img = file.type === 'IMAGE' || isImageUrl(url) || isImageUrl(file.url)
+  // PDF explícito, o un archivo subido a storage (key sin http) que no es imagen/video:
+  // lo intentamos en iframe (el navegador renderiza PDF; otros formatos ofrecen descarga).
+  const pdf = !img && !embed && (file.type === 'PDF' || isPdfUrl(url) || isPdfUrl(file.url) || !isHttp(file.url))
+  return (
+    <div className="fixed inset-0 z-[110] flex flex-col bg-slate-900/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 py-3 bg-white/95 border-b border-slate-200" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-slate-800 text-sm truncate">{file.title}</h3>
+        <div className="flex items-center gap-2 shrink-0">
+          {url && <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">Abrir en pestaña ↗</button>}
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+        </div>
+      </div>
+      <div className="flex-1 p-3 sm:p-6 overflow-auto flex items-center justify-center" onClick={e => e.stopPropagation()}>
+        {loading ? <Loader2 className="w-8 h-8 animate-spin text-white" />
+          : embed ? <iframe src={embed} className="w-full max-w-4xl aspect-video rounded-xl bg-black" allowFullScreen title={file.title} />
+          : img ? <img src={url} alt={file.title} className="max-w-full max-h-full rounded-xl bg-white" />
+          : pdf ? <iframe src={url} className="w-full h-full min-h-[70vh] max-w-5xl rounded-xl bg-white" title={file.title} />
+          : (
+            <div className="bg-white rounded-2xl p-8 text-center max-w-sm">
+              <p className="text-slate-600 text-sm mb-4">Este tipo de archivo no se puede previsualizar aquí.</p>
+              <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold">Abrir / descargar</button>
+            </div>
+          )}
+      </div>
+    </div>
+  )
+}
+
 function PresentationView({ project }: { project: any }) {
   const p = project?.presentation || {}
   const embed = videoEmbed(p.videoUrl || '')
@@ -522,6 +589,18 @@ function PresentationView({ project }: { project: any }) {
           <div className="text-xs font-bold uppercase tracking-wide opacity-80 mb-1">🎯 El gran reto</div>
           <p className="text-lg font-bold">{project.challenge}</p>
           <p className="text-sm opacity-80 mt-2">Cada equipo encontrará SU propia problemática dentro de este reto.</p>
+        </div>
+      )}
+
+      {p.instructions?.length > 0 && (
+        <div className="bg-white rounded-2xl border-2 border-violet-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📋 ¿Qué deben hacer?</h4>
+          <ol className="space-y-2">{p.instructions.map((s: string, i: number) => (
+            <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
+              <span className="w-6 h-6 shrink-0 rounded-full bg-violet-100 text-violet-700 font-bold flex items-center justify-center text-xs">{i + 1}</span>
+              <span className="pt-0.5">{s}</span>
+            </li>
+          ))}</ol>
         </div>
       )}
 
@@ -605,6 +684,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
   const [teacherMessage, setTeacherMessage] = useState(init.teacherMessage || '')
   const [context, setContext] = useState(init.context || '')
   const [why, setWhy] = useState(init.why || '')
+  const [instructions, setInstructions] = useState<string[]>(init.instructions || [])
   const [skills, setSkills] = useState<string[]>(init.skills || [])
   const [rules, setRules] = useState<string[]>(init.rules || [])
   const [timeline, setTimeline] = useState<{ label: string; detail: string }[]>(init.timeline || [])
@@ -625,82 +705,143 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
     try {
       await abpApi.updatePresentation(project.id, {
         challenge,
-        presentation: { banner, videoUrl, teacherMessage, context, why, skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
+        presentation: { banner, videoUrl, teacherMessage, context, why, instructions: instructions.filter(Boolean), skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
       })
       onSaved()
     } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
   }
 
-  return (
-    <div className="space-y-4">
-      <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
-      <h3 className="text-xl font-bold text-slate-800">✏️ Editar portada</h3>
+  // Acordeón: una sección abierta a la vez; punto violeta = sección con contenido.
+  const [openSection, setOpenSection] = useState<string>('reto')
+  const sections: { key: string; icon: string; title: string; hint: string; filled: boolean }[] = [
+    { key: 'reto', icon: '🎯', title: 'El reto y su propósito', hint: 'El gran reto, contexto y por qué importa', filled: !!(challenge.trim() || context.trim() || why.trim()) },
+    { key: 'instrucciones', icon: '📋', title: 'Qué deben hacer los estudiantes', hint: 'Los pasos o tareas concretas de esta expedición', filled: instructions.some(s => s.trim()) },
+    { key: 'portada', icon: '🖼️', title: 'Portada y bienvenida', hint: 'Banner, video y tu mensaje', filled: !!(banner.trim() || videoUrl.trim() || teacherMessage.trim()) },
+    { key: 'aprendizajes', icon: '📚', title: 'Aprendizajes y reglas', hint: 'Qué aprenderán y las reglas del juego', filled: skills.some(s => s.trim()) || rules.some(r => r.trim()) },
+    { key: 'cronograma', icon: '📅', title: 'Cronograma', hint: 'La línea de tiempo de la expedición', filled: timeline.some(t => t.label || t.detail) },
+    { key: 'faq', icon: '❓', title: 'Preguntas frecuentes', hint: 'Respuestas a lo que siempre preguntan', filled: faq.some(f => f.q || f.a) },
+  ]
+  const inputCls = 'w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400'
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Reto general</label>
-          <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Banner (URL de imagen o subir)</label>
-          <div className="flex gap-2 mt-1">
-            <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm" />
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
-            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Subir</button>
-          </div>
-          {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo, opcional)</label>
-          <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm mt-1" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Mensaje del docente</label>
-          <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-        </div>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-slate-500">Contexto</label>
-            <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
-            <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-          </div>
-        </div>
-        <LineListInput label="Lo que aprenderán" value={skills} onChange={setSkills} placeholder={'Investigación\nTrabajo colaborativo\nPython'} />
-        <LineListInput label="Reglas del proyecto" value={rules} onChange={setRules} placeholder={'Todos participan.\nLa bitácora se mantiene actualizada.'} />
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Cronograma</label>
-          <div className="space-y-2 mt-1">
-            {timeline.map((t, i) => (
-              <div key={i} className="flex gap-2">
-                <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            ))}
-            <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Preguntas frecuentes</label>
-          <div className="space-y-2 mt-1">
-            {faq.map((f, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <div className="flex-1 space-y-1">
-                  <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                  <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+  return (
+    <div className="pb-20">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+        <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
+        <span className="text-xs text-slate-400">{sections.filter(s => s.filled).length}/{sections.length} secciones con contenido</span>
+      </div>
+      <h3 className="text-xl font-bold text-slate-800 mb-1">✏️ Portada de la expedición</h3>
+      <p className="text-sm text-slate-400 mb-4">Esto es lo primero que verán tus estudiantes. Completa las secciones que quieras — todas son opcionales.</p>
+
+      <div className="space-y-2">
+        {sections.map(s => (
+          <div key={s.key} className={`bg-white rounded-2xl border transition-colors ${openSection === s.key ? 'border-violet-300 shadow-sm' : 'border-slate-200'}`}>
+            <button onClick={() => setOpenSection(openSection === s.key ? '' : s.key)} className="w-full flex items-center gap-3 p-4 text-left">
+              <span className="text-xl">{s.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800 text-sm">{s.title}</span>
+                  <span className={`w-2 h-2 rounded-full ${s.filled ? 'bg-violet-500' : 'bg-slate-200'}`} />
                 </div>
-                <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+                <p className="text-xs text-slate-400 truncate">{s.hint}</p>
               </div>
-            ))}
-            <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+              <ChevronLeft className={`w-4 h-4 text-slate-300 transition-transform ${openSection === s.key ? 'rotate-90' : '-rotate-90'}`} />
+            </button>
+
+            {openSection === s.key && (
+              <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-4">
+                {s.key === 'reto' && (
+                  <>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">El gran reto (lo ven todos los equipos)</label>
+                      <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className={`${inputCls} resize-none mt-1`} />
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">Contexto</label>
+                        <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} placeholder="De dónde nace este reto…" className={`${inputCls} resize-none mt-1`} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
+                        <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} placeholder="Qué cambia si lo resuelven…" className={`${inputCls} resize-none mt-1`} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {s.key === 'instrucciones' && (
+                  <>
+                    <p className="text-xs text-slate-400 -mt-1">Escribe en pasos lo que cada equipo debe hacer en esta expedición. Aparecerá numerado en la portada del estudiante.</p>
+                    <LineListInput label="Pasos / tareas" value={instructions} onChange={setInstructions} placeholder={'Formen su equipo y elijan un nombre.\nInvestiguen un problema real de la institución.\nDiseñen y construyan un prototipo.\nPreparen la presentación final.'} />
+                  </>
+                )}
+
+                {s.key === 'portada' && (
+                  <>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">Banner</label>
+                      <div className="flex gap-2 mt-1">
+                        <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="Pega la URL de una imagen…" className={inputCls} />
+                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
+                        <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"><Paperclip className="w-4 h-4" /> Subir</button>
+                      </div>
+                      {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo)</label>
+                      <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className={`${inputCls} mt-1`} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">Tu mensaje para los estudiantes</label>
+                      <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} placeholder="¡Bienvenidos a la expedición! …" className={`${inputCls} resize-none mt-1`} />
+                    </div>
+                  </>
+                )}
+
+                {s.key === 'aprendizajes' && (
+                  <>
+                    <LineListInput label="Lo que aprenderán" value={skills} onChange={setSkills} placeholder={'Investigación\nTrabajo colaborativo\nPython'} />
+                    <LineListInput label="Reglas del proyecto" value={rules} onChange={setRules} placeholder={'Todos participan.\nLa bitácora se mantiene actualizada.'} />
+                  </>
+                )}
+
+                {s.key === 'cronograma' && (
+                  <div className="space-y-2">
+                    {timeline.map((t, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                        <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Encontrar el problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                        <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                    <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
+                  </div>
+                )}
+
+                {s.key === 'faq' && (
+                  <div className="space-y-2">
+                    {faq.map((f, i) => (
+                      <div key={i} className="flex gap-2 items-start">
+                        <div className="flex-1 space-y-1">
+                          <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                          <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+                        </div>
+                        <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                    <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
+        ))}
+      </div>
+
+      {/* Barra de guardado fija */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-          <button onClick={save} disabled={busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
+          <button onClick={save} disabled={busy} className="px-6 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 hover:bg-violet-700">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
         </div>
       </div>
     </div>
@@ -709,38 +850,56 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
 
 // ─── Recursos + Anuncios (Nivel 1) — compartidos alumno/docente ────────────────
 const RES_ICON: Record<string, string> = { PDF: '📄', VIDEO: '🎬', LINK: '🔗', DOC: '📝', OTHER: '📎' }
-const RES_TYPES = ['LINK', 'PDF', 'VIDEO', 'DOC', 'OTHER']
+
+/** Deduce el tipo del recurso a partir del nombre de archivo o la URL. */
+function inferResourceType(nameOrUrl: string): string {
+  const s = (nameOrUrl || '').toLowerCase()
+  if (videoEmbed(s) || /youtube|youtu\.be|vimeo/.test(s) || /\.(mp4|mov|webm|mkv|avi)(\?|$)/.test(s)) return 'VIDEO'
+  if (/\.pdf(\?|$)/.test(s)) return 'PDF'
+  if (/\.(docx?|pptx?|xlsx?|txt|odt|pages|csv)(\?|$)/.test(s)) return 'DOC'
+  if (/\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(s)) return 'OTHER'
+  if (/^https?:\/\//.test(s)) return 'LINK'
+  return 'OTHER'
+}
+const stripExt = (name: string) => name.replace(/\.[^.]+$/, '')
 
 function ResourcesView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [type, setType] = useState('LINK')
+  const [viewer, setViewer] = useState<{ title: string; url: string; type?: string } | null>(null)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const load = useCallback(() => { abpApi.listResources(projectId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [projectId])
   useEffect(() => { load() }, [load])
   const add = async () => {
-    if (!title.trim() || !url.trim()) return
+    if (!url.trim()) return
     setBusy(true)
-    try { await abpApi.addResource(projectId, { type, title: title.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
+    try { await abpApi.addResource(projectId, { type: inferResourceType(url), title: title.trim() || url.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
     catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
+  // Enlace externo "normal" (no video/pdf/imagen) → pestaña nueva; el resto → visor.
+  const open = (r: any) => {
+    const viewable = r.type === 'PDF' || r.type === 'VIDEO' || !isHttp(r.url) || isPdfUrl(r.url) || isImageUrl(r.url) || videoEmbed(r.url)
+    if (viewable) setViewer({ title: r.title, url: r.url, type: r.type })
+    else openStoredFile(r.url)
+  }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
+      {viewer && <FileViewerModal file={viewer} onClose={() => setViewer(null)} />}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
         <h4 className="font-bold text-slate-800 mb-3">📚 Recursos del proyecto</h4>
         {items.length === 0 ? <p className="text-sm text-slate-400">Aún no hay recursos.</p> : (
           <div className="space-y-2">{items.map(r => (
-            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3 hover:border-violet-200 transition-colors">
               <span className="text-lg">{RES_ICON[r.type] || '📎'}</span>
-              <div className="flex-1 min-w-0">
-                <a href={r.url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</a>
+              <button onClick={() => open(r)} className="flex-1 min-w-0 text-left">
+                <span className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</span>
                 {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
-              </div>
-              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+              </button>
+              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
             </div>
           ))}</div>
         )}
@@ -748,13 +907,21 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
       {canManage && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
           <h5 className="font-bold text-slate-700 text-sm">Añadir recurso</h5>
+          <p className="text-xs text-slate-400">Pega un enlace (o video de YouTube) y pulsa Añadir, o sube un archivo. El tipo se detecta solo.</p>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título (opcional para archivos)" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
           <div className="flex gap-2 flex-wrap">
-            <select value={type} onChange={e => setType(e.target.value)} className="border border-slate-300 rounded-lg px-2 py-2 text-sm">{RES_TYPES.map(t => <option key={t} value={t}>{RES_ICON[t]} {t}</option>)}</select>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título" className="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div className="flex gap-2">
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={add} disabled={busy || !title.trim() || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Añadir</button>
+            <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="https://…" className="flex-1 min-w-[160px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <button onClick={add} disabled={busy || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Añadir</button>
+            <input type="file" id={`res-file-${projectId}`} className="hidden" onChange={async (e) => {
+              const f = e.target.files?.[0]; if (!f) return;
+              setBusy(true);
+              try {
+                const { data } = await classroomApi.uploadMaterial(f);
+                const fileUrl = data?.data?.path || data?.data?.url;
+                if (fileUrl) { await abpApi.addResource(projectId, { type: inferResourceType(f.name), title: title.trim() || stripExt(f.name), url: fileUrl }); setTitle(''); setUrl(''); load(); }
+              } catch { alert('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
+            }} />
+            <button onClick={() => document.getElementById(`res-file-${projectId}`)?.click()} disabled={busy} className="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
           </div>
         </div>
       )}
@@ -803,13 +970,122 @@ function AnnouncementsView({ projectId, canManage }: { projectId: string; canMan
   )
 }
 
+// ─── Bitácora + Descubrimientos (Nivel 2) — compartidos alumno/preview docente ──
+function LogbookView({ teamId, currentPhase, readOnly }: { teamId: string; currentPhase?: number; readOnly?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [content, setContent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { abpApi.listLog(teamId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [teamId])
+  useEffect(() => { load() }, [load])
+  const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addLog(teamId, { content: content.trim(), phase: currentPhase }); setContent(''); load() } finally { setBusy(false) } }
+  const del = async (id: string) => { if (!confirm('¿Eliminar entrada?')) return; await abpApi.deleteLog(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      {!readOnly && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="¿Qué pasó hoy en la expedición? (una nota corta)" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none" />
+          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">📔 Anotar en bitácora</button></div>
+        </div>
+      )}
+      {items.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">La bitácora está vacía. Anoten su primer paso.</p> : (
+        <div className="space-y-2">{items.map(e => (
+          <div key={e.id} className="bg-white rounded-xl border border-slate-200 p-3">
+            <p className="text-sm text-slate-700 whitespace-pre-line">{e.content}</p>
+            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+              <span className="font-semibold">{e.authorName}</span>
+              {e.phase && <span>· Fase {e.phase}</span>}
+              <span>· {new Date(e.createdAt).toLocaleDateString()}</span>
+              {!readOnly && <button onClick={() => del(e.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+            </div>
+          </div>
+        ))}</div>
+      )}
+    </div>
+  )
+}
+
+const IMPACT_META: Record<string, [string, string]> = { LOW: ['Bajo', 'bg-slate-100 text-slate-500'], MEDIUM: ['Medio', 'bg-sky-100 text-sky-700'], HIGH: ['Alto', 'bg-emerald-100 text-emerald-700'] }
+function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; currentPhase?: number; readOnly?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [impact, setImpact] = useState('MEDIUM')
+  const [evUrl, setEvUrl] = useState('')
+  const [evKind, setEvKind] = useState('LINK')
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const load = useCallback(() => { abpApi.listDiscoveries(teamId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [teamId])
+  useEffect(() => { load() }, [load])
+  const uploadEv = async (file: File) => {
+    setBusy(true)
+    try { const { data } = await classroomApi.uploadMaterial(file); const url = data?.data?.path || data?.data?.url; if (url) { setEvUrl(url); setEvKind('FILE') } }
+    catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+  }
+  const reset = () => { setTitle(''); setDescription(''); setImpact('MEDIUM'); setEvUrl(''); setEvKind('LINK'); setOpen(false) }
+  const add = async () => {
+    if (!title.trim() || !description.trim()) return
+    setBusy(true)
+    try { await abpApi.addDiscovery(teamId, { phase: currentPhase || 1, title: title.trim(), description: description.trim(), impact, evidenceUrl: evUrl.trim() || undefined, evidenceKind: evUrl.trim() ? evKind : undefined }); reset(); load() }
+    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const del = async (id: string) => { if (!confirm('¿Eliminar descubrimiento?')) return; await abpApi.deleteDiscovery(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      {!readOnly && (open ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="¿Qué descubrieron? (título)" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Descríbanlo: qué aprendieron y por qué importa." className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none" />
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-xs font-semibold text-slate-500">Impacto:</span>
+            {['LOW', 'MEDIUM', 'HIGH'].map(v => <button key={v} onClick={() => setImpact(v)} className={`text-xs font-semibold rounded-full px-2.5 py-1 ${impact === v ? IMPACT_META[v][1] + ' ring-2 ring-offset-1 ring-violet-300' : 'bg-slate-100 text-slate-400'}`}>{IMPACT_META[v][0]}</button>)}
+          </div>
+          <div className="flex gap-2">
+            <input value={evUrl} onChange={e => { setEvUrl(e.target.value); setEvKind('LINK') }} placeholder="Evidencia: enlace (opcional)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadEv(f); e.currentTarget.value = '' }} />
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
+          </div>
+          {evUrl && <p className="text-xs text-slate-400 truncate">Evidencia: {evUrl}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={reset} className="px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
+            <button onClick={add} disabled={busy || !title.trim() || !description.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Guardar descubrimiento</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Registrar un descubrimiento</button>
+      ))}
+      {items.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">Aún no hay descubrimientos. Registren lo que van aprendiendo.</p> : (
+        <div className="grid sm:grid-cols-2 gap-3">{items.map(d => (
+          <div key={d.id} className="bg-white rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <h5 className="font-bold text-slate-800">💡 {d.title}</h5>
+              <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0 ${IMPACT_META[d.impact]?.[1] || ''}`}>Impacto {IMPACT_META[d.impact]?.[0] || d.impact}</span>
+            </div>
+            <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{d.description}</p>
+            {d.evidenceUrl && <button onClick={() => openStoredFile(d.evidenceUrl)} className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline mt-2">{d.evidenceKind === 'FILE' ? '📎' : '🔗'} Ver evidencia</button>}
+            <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-400">
+              <span className="font-semibold">{d.authorName}</span><span>· Fase {d.phase}</span>
+              {!readOnly && <button onClick={() => del(d.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+            </div>
+          </div>
+        ))}</div>
+      )}
+    </div>
+  )
+}
+
 function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
   const [pres, setPres] = useState<any>(null)
-  const [view, setView] = useState<'home' | 'resources' | 'announcements' | 'expedition'>('home')
+  const [expTab, setExpTab] = useState<'phases' | 'log' | 'discoveries'>('phases')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [showManual, setShowManual] = useState(false)
 
   const load = useCallback(() => {
     if (!projectId) { setLoading(false); return }
@@ -830,31 +1106,16 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   if (projects.length === 0) return <Empty msg="Tu docente aún no ha creado una Expedición ABP en esta aula." />
   if (loading) return <Loading />
 
-  // Sub-navegación estilo expedición: Presentación (todos) + Mi Expedición (si hay equipo).
-  const nav = (
-    <div className="flex items-center gap-2 flex-wrap">
-      {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
-      <div className="ml-auto flex bg-slate-100 rounded-xl p-1 flex-wrap">
-        <button onClick={() => setView('home')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'home' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🏠 Presentación</button>
-        <button onClick={() => setView('resources')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'resources' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📚 Recursos</button>
-        <button onClick={() => setView('announcements')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'announcements' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📢 Anuncios</button>
-        <button onClick={() => setView('expedition')} disabled={!team} className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 ${view === 'expedition' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Mi Expedición</button>
+  // Si no tiene equipo
+  if (!team) {
+    return (
+      <div className="space-y-4">
+        {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800 font-medium">Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno para empezar tu expedición.</div>
+        {pres && <PresentationView project={pres} />}
       </div>
-    </div>
-  )
-
-  if (view === 'resources') return <div className="space-y-4">{nav}<ResourcesView projectId={projectId} /></div>
-  if (view === 'announcements') return <div className="space-y-4">{nav}<AnnouncementsView projectId={projectId} /></div>
-
-  if (view === 'home' || !team) return (
-    <div className="space-y-4">
-      {nav}
-      {pres && <PresentationView project={pres} />}
-      {!team
-        ? <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno para empezar tu expedición.</div>
-        : <button onClick={() => setView('expedition')} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700">🚀 Ir a mi expedición →</button>}
-    </div>
-  )
+    )
+  }
 
   const cur = team.currentPhase
   const curState = stateOf(team, cur)
@@ -866,7 +1127,13 @@ function StudentExpedition({ projects }: { projects: any[] }) {
 
   return (
     <div className="space-y-4">
-      {nav}
+      {/* HEADER ESTÁTICO ESTUDIANTE */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
+        {projects.length > 1 ? <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} /> : <h3 className="font-bold text-slate-800">🚀 Expedición Activa</h3>}
+        <button onClick={() => setShowManual(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">
+          📖 Ver Manual de Expedición
+        </button>
+      </div>
 
       {/* Cabecera del equipo */}
       <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
@@ -892,7 +1159,18 @@ function StudentExpedition({ projects }: { projects: any[] }) {
         <Trail team={team} />
       </div>
 
+      {/* Sub-nav interna del Nivel 2 */}
+      <div className="flex bg-slate-100 rounded-xl p-1 w-fit flex-wrap">
+        <button onClick={() => setExpTab('phases')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'phases' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Fases</button>
+        <button onClick={() => setExpTab('log')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'log' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📔 Bitácora</button>
+        <button onClick={() => setExpTab('discoveries')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'discoveries' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>💡 Descubrimientos</button>
+      </div>
+
+      {expTab === 'log' && <LogbookView teamId={team.id} currentPhase={cur} />}
+      {expTab === 'discoveries' && <DiscoveriesView teamId={team.id} currentPhase={cur} />}
+
       {/* Panel de la fase actual */}
+      {expTab === 'phases' && (
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Fase {cur} de 6</div>
         <h3 className="text-lg font-bold text-slate-800 mb-3">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
@@ -922,6 +1200,29 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           </>
         )}
       </div>
+      )}
+
+      {/* Anuncios y Recursos (al fondo, igual que el docente) */}
+      <div className="mt-8 grid sm:grid-cols-2 gap-4 border-t border-slate-200 pt-8">
+        <AnnouncementsView projectId={projectId} />
+        <ResourcesView projectId={projectId} />
+      </div>
+
+      {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
+      {showManual && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
+          <div className="relative w-full max-w-md bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="font-black text-slate-800 text-lg">Manual de Expedición</h3>
+              <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+            </div>
+            <div className="p-6">
+              <PresentationView project={pres} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -982,16 +1283,7 @@ function CreateProject({ classroomId, onCreated }: { classroomId: string; onCrea
   )
 }
 
-// ─── Centro de Operaciones: panel + preview de equipo (lectura) ────────────────
-function Stat({ n, label, accent, warn }: { n: number; label: string; accent?: boolean; warn?: boolean }) {
-  return (
-    <div className={`rounded-xl p-3 text-center ${warn ? 'bg-rose-50' : accent ? 'bg-violet-50' : 'bg-slate-50'}`}>
-      <div className={`text-2xl font-black ${warn ? 'text-rose-600' : accent ? 'text-violet-600' : 'text-slate-700'}`}>{n}</div>
-      <div className="text-xs text-slate-400 font-semibold">{label}</div>
-    </div>
-  )
-}
-
+// ─── Centro de Operaciones: preview de equipo (lectura) ────────────────────────
 function StatusChip({ status }: { status: string }) {
   const map: Record<string, [string, string]> = {
     IN_PROGRESS: ['En curso', 'bg-sky-100 text-sky-700'],
@@ -1058,10 +1350,131 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
   return null
 }
 
+/** Editor de una misión para el docente: actividades + Valeria sugiere (Ticket 1 del arco). */
+function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; teamId: string; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestions, setSuggestions] = useState<{ type: string; title: string; description: string }[] | null>(null)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [notConfigured, setNotConfigured] = useState(false)
+  const [editing, setEditing] = useState<{ activityId: string; title: string } | null>(null)
+  const [genActId, setGenActId] = useState<string | null>(null)
+  const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
+  const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onChanged() } finally { setBusy(false) } }
+  const addLesson = async () => {
+    const title = window.prompt('Título de la lección o juego:')?.trim()
+    if (!title) return
+    setBusy(true)
+    try { const { data } = await abpApi.addLessonActivity(mission.id, title); onChanged(); setEditing({ activityId: data.classroomActivityId, title }) }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
+  }
+  // Valeria escribe el contenido jugable, anclado a la problemática del equipo.
+  const genLesson = async (a: any) => {
+    const instructions = window.prompt('¿Alguna indicación para Valeria? (opcional)\nEj: enfócate en el reciclaje de plásticos y usa ejemplos del barrio.')
+    if (instructions === null) return
+    setGenActId(a.id)
+    try {
+      const { data } = await abpApi.generateLessonContent(a.id, instructions.trim() || undefined)
+      onChanged()
+      setEditing({ activityId: a.classroomActivityId, title: data.title || a.title })
+    } catch (e: any) { alert(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
+    finally { setGenActId(null) }
+  }
+  const suggest = async () => {
+    setSuggesting(true); setSuggestions(null); setNotConfigured(false); setPicked(new Set())
+    try {
+      const { data } = await abpApi.suggestActivities(teamId, mission.id)
+      if (!data.configured) { setNotConfigured(true); return }
+      setSuggestions(data.activities || [])
+      setPicked(new Set((data.activities || []).map((_, i) => i)))
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo generar con Valeria') } finally { setSuggesting(false) }
+  }
+  const apply = async () => {
+    if (!suggestions) return
+    const items = suggestions.filter((_, i) => picked.has(i)).map(s => ({ type: s.type, title: s.title }))
+    if (!items.length) return
+    setBusy(true)
+    try { await abpApi.addActivitiesBulk(mission.id, items); setSuggestions(null); onChanged() } finally { setBusy(false) }
+  }
+  return (
+    <div className={`rounded-xl border p-3 ${mission.complete ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={mission.complete ? 'text-emerald-500' : 'text-slate-300'}>{mission.complete ? '✔' : '○'}</span>
+        <span className={`text-sm font-semibold ${mission.complete ? 'text-slate-500' : 'text-slate-700'}`}>{mission.title}</span>
+        {mission.required && <span className="text-[10px] font-bold text-violet-600 uppercase">obligatoria</span>}
+      </div>
+
+      {acts.length > 0 && (
+        <div className="mt-2 space-y-1 pl-6">
+          {acts.map((a: any) => a.classroomActivityId ? (
+            <div key={a.id} className="flex items-center gap-2 group">
+              <span className={`text-xs ${a.completed ? 'text-emerald-500' : 'text-slate-400'}`}>🎮</span>
+              <span className={`text-xs ${a.completed ? 'text-slate-400' : 'text-slate-600'}`}>{a.title}</span>
+              <span className="text-[10px] font-semibold text-violet-500">lección/juego{a.completed ? ' · hecha' : ''}</span>
+              <div className="ml-auto flex items-center gap-2 shrink-0">
+                <button onClick={() => genLesson(a)} disabled={genActId === a.id} className="text-[11px] font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+                  {genActId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✨'} Generar
+                </button>
+                <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
+                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+          ) : (
+            <div key={a.id} className="flex items-center gap-2 group">
+              <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-3.5 h-3.5 accent-violet-600" />
+              <span className={`text-xs ${a.completed ? 'line-through text-slate-400' : 'text-slate-600'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+              <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-2 pl-6 flex items-center gap-3 flex-wrap">
+        <AddActivityForm mission={mission} onSaved={onChanged} />
+        <button onClick={addLesson} disabled={busy} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1 disabled:opacity-50"><Plus className="w-3.5 h-3.5" /> 🎮 Lección/Juego</button>
+        <button onClick={suggest} disabled={suggesting} className="text-xs font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+          {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '✨'} Sugerir con Valeria
+        </button>
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-[120] bg-white overflow-auto">
+          <LessonEditor activityId={editing.activityId} activityTitle={editing.title} onClose={() => { setEditing(null); onChanged() }} onPreview={() => { /* sin preview aquí */ }} />
+        </div>
+      )}
+
+      {notConfigured && <p className="mt-2 pl-6 text-xs text-amber-600">Valeria no está configurada (falta la API key de IA). Puedes añadir actividades manualmente.</p>}
+
+      {suggestions && (
+        <div className="mt-2 ml-6 rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3">
+          {suggestions.length === 0 ? <p className="text-xs text-slate-500">Valeria no devolvió sugerencias. Intenta de nuevo.</p> : (
+            <>
+              <p className="text-xs font-bold text-fuchsia-700 mb-2">✨ Sugerencias de Valeria (revisa y elige)</p>
+              <div className="space-y-1.5">
+                {suggestions.map((s, i) => (
+                  <label key={i} className="flex items-start gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={picked.has(i)} onChange={() => setPicked(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })} className="w-3.5 h-3.5 accent-fuchsia-600 mt-0.5" />
+                    <span><b className="text-slate-700">{ACT_LABEL[s.type] || s.type} · {s.title}</b>{s.description ? <span className="text-slate-500"> — {s.description}</span> : null}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button onClick={() => setSuggestions(null)} className="text-xs text-slate-500 hover:text-slate-700">Descartar</button>
+                <button onClick={apply} disabled={busy || picked.size === 0} className="text-xs font-bold bg-fuchsia-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">Añadir {picked.size} a la misión</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void }) {
   const [team, setTeam] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  useEffect(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
+  const load = useCallback(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
+  useEffect(() => { load() }, [load])
   if (loading) return <Loading />
   if (!team) return <Empty msg="No se pudo cargar el equipo." />
   const phases = team.phaseStates || []
@@ -1087,19 +1500,90 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
           </div>
           {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
           {(ps.missions || []).length > 0 && (
-            <div className="mb-3 space-y-1">
+            <div className="mb-3 space-y-2">
               {ps.missions.map((m: any) => (
-                <div key={m.id} className="flex items-center gap-2 text-sm">
-                  <span className={m.complete ? 'text-emerald-500' : 'text-slate-300'}>{m.complete ? '✔' : '○'}</span>
-                  <span className={m.complete ? 'text-slate-500' : 'text-slate-700'}>{m.title}</span>
-                  {m.required && <span className="text-[10px] text-violet-600 font-semibold">obligatoria</span>}
-                </div>
+                <TeacherMissionEditor key={m.id} mission={m} teamId={team.id} onChanged={load} />
               ))}
             </div>
           )}
           <PhaseWorkRO phase={ps.phase} data={ps.data} />
         </div>
       ))}
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">📔 Bitácora</h4>
+        <LogbookView teamId={team.id} readOnly />
+      </div>
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">💡 Descubrimientos</h4>
+        <DiscoveriesView teamId={team.id} readOnly />
+      </div>
+    </div>
+  )
+}
+
+function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: string; onClose: () => void; onDone: (count: number) => void }) {
+  const [phase, setPhase] = useState(1)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [required, setRequired] = useState(true)
+  const [activities, setActivities] = useState<{ type: string; title: string }[]>([])
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try {
+      const { data } = await abpApi.broadcastMission(projectId, { phase, title: title.trim(), description: description.trim() || undefined, required, activities: activities.filter(a => a.title.trim()) })
+      onDone(data.count)
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
+  }
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+          <h3 className="font-bold text-slate-800">🎖️ Liberar misión a todos los equipos</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+        </div>
+        <div className="p-5 space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Fase</label>
+            <select value={phase} onChange={e => setPhase(Number(e.target.value))} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1">
+              {PHASES.map(p => <option key={p.n} value={p.n}>{p.icon} Fase {p.n}: {p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Título de la misión</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Entrevistar a un experto" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" autoFocus />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Descripción (opcional)</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Qué deben lograr…" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none mt-1" />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-4 h-4 accent-violet-600" />
+            Obligatoria para validar la fase
+          </label>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Actividades (opcional)</label>
+            <div className="space-y-2 mt-1">
+              {activities.map((a, i) => (
+                <div key={i} className="flex gap-2">
+                  <select value={a.type} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, type: e.target.value } : x))} className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                    {ACT_TYPES.map(t => <option key={t} value={t}>{ACT_LABEL[t]}</option>)}
+                  </select>
+                  <input value={a.title} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Describe la actividad…" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                  <button onClick={() => setActivities(as => as.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+              <button onClick={() => setActivities(as => [...as, { type: 'READING', title: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
+            </div>
+          </div>
+        </div>
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-3 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+          <button onClick={submit} disabled={busy || !title.trim()} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 hover:bg-violet-700">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Liberar a todos</button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1112,6 +1596,9 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
   const [editingPres, setEditingPres] = useState(false)
+  const [showManual, setShowManual] = useState(false)
+  const [broadcasting, setBroadcasting] = useState(false)
+  const [tab, setTab] = useState<'panel' | 'map' | 'teams' | 'announcements' | 'resources'>('panel')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -1127,94 +1614,225 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   if (loading) return <Loading />
 
   const teams = project?.teams || []
+
+  // Agrupamos equipos por fase para el Mapa
+  const teamsByPhase: Record<number, any[]> = {}
+  PHASES.forEach(p => teamsByPhase[p.n] = [])
+  ;(dash?.teams || []).forEach((t: any) => {
+    if (teamsByPhase[t.currentPhase]) teamsByPhase[t.currentPhase].push(t)
+  })
+
+  const pendingValidations = queue.length
+  const behindTeams = dash?.summary?.behind || 0
+  const everythingOk = pendingValidations === 0 && behindTeams === 0
+
+  const TABS: { key: typeof tab; label: string; badge?: number }[] = [
+    { key: 'panel', label: '📊 Panel', badge: pendingValidations || undefined },
+    { key: 'map', label: '🗺️ Mapa' },
+    { key: 'teams', label: '👥 Equipos' },
+    { key: 'announcements', label: '📢 Anuncios' },
+    { key: 'resources', label: '📚 Recursos' },
+  ]
+
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Todas las expediciones</button>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="text-xl font-bold text-slate-800">🧭 {project?.title || projectTitle}</h3>
-        <button onClick={() => setEditingPres(true)} className="text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg px-3 py-1.5">✏️ Editar portada</button>
-      </div>
-      {project?.challenge && <div className="bg-violet-50 border-l-4 border-violet-400 rounded-r-xl p-3 text-sm text-violet-900">🎯 <b>El reto:</b> {project.challenge}</div>}
+      {/* ── Cabecera compacta ─────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+        <div className="p-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold text-slate-400 hover:text-slate-600">
+              <ChevronLeft className="w-4 h-4" /> Todas las expediciones
+            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setBroadcasting(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">🎖️ Liberar misión</button>
+              <button onClick={() => setShowManual(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">👁️ Vista del alumno</button>
+              <button onClick={() => setEditingPres(true)} className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg text-sm font-semibold transition-colors">✏️ Editar portada</button>
+            </div>
+          </div>
 
-      {/* Cola de validaciones */}
-      {queue.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">🔔 Validaciones pendientes ({queue.length})</h4>
-          <div className="space-y-3">{queue.map(q => <QueueItem key={q.id} q={q} onReview={setReviewingId} />)}</div>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight mt-3">🧭 {project?.title || projectTitle}</h3>
+          {project?.challenge && <p className="text-sm text-slate-500 mt-1 max-w-3xl">🎯 {project.challenge}</p>}
+
+          {dash && (
+            <div className="flex items-center gap-2 mt-4 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full px-3 py-1.5"><Users className="w-3.5 h-3.5" /> {dash.summary.teams} equipos</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full px-3 py-1.5">🎓 {dash.summary.students} estudiantes</span>
+              <button onClick={() => setTab('panel')} className={`inline-flex items-center gap-1.5 text-xs font-bold rounded-full px-3 py-1.5 ${pendingValidations > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>🔔 {pendingValidations} por validar</button>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-bold rounded-full px-3 py-1.5 ${behindTeams > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'}`}>⏳ {behindTeams} atrasados</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Pestañas (mismo patrón pill que ve el alumno) ─────────────────── */}
+      <div className="flex bg-slate-100 rounded-xl p-1 w-fit flex-wrap">
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-3 py-1.5 rounded-lg text-sm font-semibold ${tab === t.key ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            {t.label}
+            {t.badge ? <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">{t.badge}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 📊 PANEL: triaje + progreso por equipo ────────────────────────── */}
+      {tab === 'panel' && (
+        <div className="space-y-4">
+          {everythingOk ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center shrink-0"><Check className="w-5 h-5 text-emerald-600" /></div>
+              <p className="text-sm text-emerald-800"><b>Todo fluye.</b> Sin validaciones pendientes ni equipos atrasados — tus estudiantes trabajan de forma autónoma.</p>
+            </div>
+          ) : (
+            <>
+              {pendingValidations > 0 && (
+                <div className="bg-white border-l-4 border-amber-400 border border-slate-200 rounded-2xl p-4">
+                  <h5 className="font-bold text-slate-800 text-sm mb-2">🔔 Esperando tu validación</h5>
+                  <div className="space-y-2">
+                    {queue.map(q => (
+                      <div key={q.id} className="flex items-center justify-between gap-3 bg-amber-50/60 rounded-xl px-3 py-2">
+                        <span className="text-sm text-slate-700 truncate"><b>{q.team?.emoji} {q.team?.name}</b> · Fase {q.phase}: {phaseName(q.phase)}</span>
+                        <button onClick={() => setReviewingId(q.id)} className="px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 shrink-0">Revisar →</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {behindTeams > 0 && (
+                <div className="bg-white border-l-4 border-rose-400 border border-slate-200 rounded-2xl p-4 flex items-center gap-3">
+                  <p className="text-sm text-slate-700">⏳ <b>{behindTeams} equipo(s)</b> van por debajo del pelotón — mira su barra abajo y entra a su expedición para apoyarlos.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <h4 className="font-bold text-slate-800 mb-3">Progreso por equipo</h4>
+            {(dash?.teams || []).length === 0 ? (
+              <p className="text-sm text-slate-400">Aún no hay equipos. Créalos en la pestaña 👥 Equipos.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {(dash?.teams || []).map((t: any) => (
+                  <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors group">
+                    <span className="text-xl shrink-0">{t.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-violet-700 truncate">{t.name}</span>
+                        {t.done ? <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">🏆 Completa</span>
+                          : t.awaitingValidation ? <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">Espera validación F{t.currentPhase}</span>
+                          : t.currentStatus === 'RETURNED' ? <span className="text-[10px] font-bold bg-rose-100 text-rose-700 rounded-full px-2 py-0.5">Devuelta</span>
+                          : null}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(t.progress, 4)}%`, background: t.color }} /></div>
+                        <span className="text-[11px] font-bold text-slate-400 w-20 text-right shrink-0">Fase {t.currentPhase}/6 · {t.progress}%</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-black text-violet-600">⭐ {t.xp}</div>
+                      <div className="text-[10px] text-slate-400">{t.members} integrantes</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Panel de progreso (Centro de Operaciones) */}
-      {dash && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">📊 Panel de progreso</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <Stat n={dash.summary.teams} label="Equipos" />
-            <Stat n={dash.summary.students} label="Estudiantes" />
-            <Stat n={dash.summary.pendingValidations} label="Validaciones" accent={dash.summary.pendingValidations > 0} />
-            <Stat n={dash.summary.behind} label="Atrasados" warn={dash.summary.behind > 0} />
-          </div>
-          {dash.teams.length === 0 ? (
-            <p className="text-sm text-slate-400">Aún no hay equipos. Arma el primero abajo.</p>
-          ) : (
-            <div className="space-y-1">
-              {dash.teams.map((t: any) => (
-                <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-left">
-                  <span className="text-lg">{t.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-700 truncate">{t.name}</span>
-                      {t.done && <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1.5">🏆 completa</span>}
-                      {t.awaitingValidation && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-1.5">valida F{t.currentPhase}</span>}
+      {/* ── 🗺️ MAPA: dónde está cada equipo en el sendero ─────────────────── */}
+      {tab === 'map' && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 overflow-x-auto">
+          <div className="flex gap-4 min-w-[760px]">
+            {PHASES.map((ph, idx) => {
+              const pts = teamsByPhase[ph.n] || []
+              return (
+                <div key={ph.n} className="flex-1 relative">
+                  {idx < PHASES.length - 1 && <div className="absolute top-5 left-1/2 w-full h-0.5 bg-slate-100 -z-10" />}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base border-2 bg-white ${pts.length > 0 ? 'border-violet-500' : 'border-slate-200 grayscale opacity-60'}`}>{ph.icon}</div>
+                    <span className="text-[11px] font-bold text-slate-500 mt-2 text-center leading-tight h-8">{ph.name}</span>
+                    <div className="w-full mt-2 space-y-2">
+                      {pts.map(t => (
+                        <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full bg-slate-50 hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-lg p-2 text-left transition-colors group" style={{ borderLeftColor: t.color, borderLeftWidth: 3 }}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{t.emoji}</span>
+                            <span className="text-xs font-semibold text-slate-700 group-hover:text-violet-700 truncate">{t.name}</span>
+                          </div>
+                          {t.awaitingValidation && <div className="text-[9px] font-bold text-amber-600 mt-0.5">🔔 espera validación</div>}
+                          {t.done && <div className="text-[9px] font-bold text-emerald-600 mt-0.5">🏆 completa</div>}
+                        </button>
+                      ))}
                     </div>
-                    <div className="mt-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.progress}%`, background: t.color }} /></div>
                   </div>
-                  <div className="text-xs text-slate-400 w-24 text-right shrink-0">Fase {t.currentPhase}/6 · {t.progress}%</div>
-                </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── 👥 EQUIPOS: gestión ───────────────────────────────────────────── */}
+      {tab === 'teams' && (
+        <div className="space-y-4">
+          <CreateTeam classroomId={classroomId} projectId={projectId} onCreated={load} />
+          {teams.length === 0 ? <Empty msg="Aún no hay equipos. Arma el primero." /> : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {teams.map((t: any) => (
+                <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
+                  <div className="flex items-start justify-between">
+                    <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
+                    <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
+                  <div className="my-2"><Trail team={t} mini /></div>
+                  <div className="text-xs text-slate-500 line-clamp-1">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
+                  <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Anuncios + Recursos (Centro de Operaciones) */}
-      <AnnouncementsView projectId={projectId} canManage />
-      <ResourcesView projectId={projectId} canManage />
+      {/* ── 📢 / 📚 ───────────────────────────────────────────────────────── */}
+      {tab === 'announcements' && <AnnouncementsView projectId={projectId} canManage />}
+      {tab === 'resources' && <ResourcesView projectId={projectId} canManage />}
 
-      {/* Equipos (gestión) */}
-      <div className="flex items-center justify-between">
-        <h4 className="font-bold text-slate-700">Equipos ({teams.length})</h4>
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        {teams.map((t: any) => (
-          <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
-            <div className="flex items-start justify-between">
-              <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
-              <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+      {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); alert(`Misión liberada a ${count} equipo(s).`); load() }} />}
+
+      {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
+      {showManual && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
+          <div className="relative w-full max-w-lg bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-200 px-5 py-3 flex items-center justify-between z-10">
+              <div>
+                <h3 className="font-black text-slate-800">👁️ Así lo ven tus estudiantes</h3>
+                <p className="text-xs text-slate-400">Vista previa de la portada de la expedición</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700">✏️ Editar</button>
+                <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
-            <div className="my-2"><Trail team={t} mini /></div>
-            <div className="text-xs text-slate-500">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
-            <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
+            <div className="p-5">
+              {project?.presentation || project?.challenge
+                ? <PresentationView project={project} />
+                : (
+                  <div className="text-center py-12">
+                    <p className="text-slate-500 text-sm mb-4">Aún no has creado la portada de esta expedición. Tus estudiantes verán una pantalla vacía.</p>
+                    <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold">Crear portada ahora</button>
+                  </div>
+                )}
+            </div>
           </div>
-        ))}
-      </div>
-
-      <CreateTeam classroomId={classroomId} projectId={projectId} onCreated={load} />
+        </div>
+      )}
     </div>
   )
 }
 
-function QueueItem({ q, onReview }: { q: any; onReview: (id: string) => void }) {
-  return (
-    <div className="border-2 border-slate-200 rounded-xl p-4 flex items-center gap-3 flex-wrap">
-      <div className="flex-1 min-w-[200px]">
-        <p className="text-sm text-slate-700"><b>{q.team?.emoji} {q.team?.name}</b> solicita validar la <b>Fase {q.phase}: {phaseName(q.phase)}</b></p>
-      </div>
-      <button onClick={() => onReview(q.id)} className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-lg hover:bg-violet-700">Revisar y decidir →</button>
-    </div>
-  )
-}
 
 function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string; projectId: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false)

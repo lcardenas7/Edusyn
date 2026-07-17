@@ -2040,9 +2040,9 @@ export const classroomApi = {
   getStudents: (id: string) => api.get(`/classrooms/${id}/students`),
 
   // Sections
-  createSection: (classroomId: string, data: { title: string; description?: string }) =>
+  createSection: (classroomId: string, data: { title: string; description?: string; academicTermId?: string | null }) =>
     api.post(`/classrooms/${classroomId}/sections`, data),
-  updateSection: (sectionId: string, data: { title?: string; description?: string; isVisible?: boolean; sortOrder?: number }) =>
+  updateSection: (sectionId: string, data: { title?: string; description?: string; isVisible?: boolean; sortOrder?: number; academicTermId?: string | null }) =>
     api.put(`/classrooms/sections/${sectionId}`, data),
   deleteSection: (sectionId: string, force = false) => api.delete(`/classrooms/sections/${sectionId}?force=${force}`),
 
@@ -2064,7 +2064,7 @@ export const classroomApi = {
 
   // Activities
   createActivity: (classroomId: string, data: {
-    sectionId: string; type: string; title: string; description?: string;
+    sectionId?: string | null; academicTermId?: string | null; type: string; title: string; description?: string;
     maxScore?: number; dueDate?: string; openDate?: string; allowLateSubmit?: boolean;
     attachmentUrl?: string; attachmentName?: string; rubricId?: string;
   }) => api.post(`/classrooms/${classroomId}/activities`, data),
@@ -2406,6 +2406,15 @@ export const lessonApi = {
     api.put<Lesson>(`/classrooms/lessons/${lessonId}`, data),
   delete: (lessonId: string) =>
     api.delete(`/classrooms/lessons/${lessonId}`),
+  // Seguridad del editor: autoguardado, recuperación e historial de versiones
+  saveVersion: (lessonId: string, data: { kind?: 'AUTOSAVE' | 'MANUAL' | 'PUBLISH'; label?: string; snapshot: any }) =>
+    api.post<{ id: string; kind: string; label: string | null; createdAt: string }>(`/classrooms/lessons/${lessonId}/versions`, data),
+  listVersions: (lessonId: string) =>
+    api.get<{ id: string; kind: string; label: string | null; createdAt: string }[]>(`/classrooms/lessons/${lessonId}/versions`),
+  getRecovery: (lessonId: string) =>
+    api.get<{ hasRecovery: boolean; version: { id: string; snapshot: any; createdAt: string } | null }>(`/classrooms/lessons/${lessonId}/recovery`),
+  getVersion: (versionId: string) =>
+    api.get<{ id: string; snapshot: any; createdAt: string; kind: string }>(`/classrooms/lesson-versions/${versionId}`),
 
   // Slides
   addSlide: (lessonId: string, data: Partial<LessonSlide>) =>
@@ -2500,6 +2509,8 @@ export interface RouteView {
   description?: string | null
   isPublished: boolean
   targetLevel?: string | null
+  hasInstructions?: boolean
+  hasSourceMaterial?: boolean
   targetCompetency?: { code: string; statement: string; level: string | null; skill: string | null } | null
   steps: RouteStepView[]
 }
@@ -2569,11 +2580,23 @@ export const abpApi = {
   // Misiones (Opción A: herramienta = misión por defecto de la fase)
   listMissions: (teamId: string, phase: number) => api.get<any[]>(`/abp/teams/${teamId}/phases/${phase}/missions`),
   addMission: (teamId: string, phase: number, data: { title: string; description?: string; required?: boolean }) => api.post<any>(`/abp/teams/${teamId}/phases/${phase}/missions`, data),
+  broadcastMission: (projectId: string, data: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) => api.post<{ ok: boolean; count: number }>(`/abp/projects/${projectId}/broadcast-mission`, data),
+  suggestActivities: (teamId: string, missionId: string, count?: number) => api.post<{ configured: boolean; model?: string; activities: { type: string; title: string; description: string }[] }>(`/abp/teams/${teamId}/missions/${missionId}/suggest`, { count }),
+  addActivitiesBulk: (missionId: string, items: { type: string; title: string }[]) => api.post<any[]>(`/abp/missions/${missionId}/activities/bulk`, { items }),
+  addLessonActivity: (missionId: string, title: string) => api.post<any>(`/abp/missions/${missionId}/lesson-activity`, { title }),
+  generateLessonContent: (activityId: string, instructions?: string) => api.post<{ ok: boolean; title: string; slides: number; model?: string }>(`/abp/activities/${activityId}/generate-lesson`, { instructions }),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
   setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
   addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),
   completeActivity: (activityId: string, completed: boolean) => api.post<any>(`/abp/activities/${activityId}/complete`, { completed }),
   deleteActivity: (activityId: string) => api.delete(`/abp/activities/${activityId}`),
+  // Bitácora + Descubrimientos (Nivel 2)
+  listLog: (teamId: string) => api.get<any[]>(`/abp/teams/${teamId}/log`),
+  addLog: (teamId: string, data: { content: string; phase?: number }) => api.post<any>(`/abp/teams/${teamId}/log`, data),
+  deleteLog: (entryId: string) => api.delete(`/abp/log/${entryId}`),
+  listDiscoveries: (teamId: string) => api.get<any[]>(`/abp/teams/${teamId}/discoveries`),
+  addDiscovery: (teamId: string, data: { phase: number; title: string; description: string; evidenceKind?: string; evidenceUrl?: string; impact?: string }) => api.post<any>(`/abp/teams/${teamId}/discoveries`, data),
+  deleteDiscovery: (discoveryId: string) => api.delete(`/abp/discoveries/${discoveryId}`),
 }
 
 export const learningRouteApi = {
@@ -2585,9 +2608,9 @@ export const learningRouteApi = {
   progress: (routeId: string) => api.get<RouteProgress>(`/learning-routes/${routeId}/progress`),
   create: (data: { classroomId: string; title: string; description?: string; targetCompetencyId?: string }) =>
     api.post<RouteView>(`/learning-routes`, data),
-  generate: (data: { objective: string; gradeName?: string; targetLevel?: string }) =>
+  generate: (data: { objective: string; gradeName?: string; targetLevel?: string; instructions?: string; sourceMaterial?: string }) =>
     api.post<RoutePlan>(`/learning-routes/generate`, data),
-  fromPlan: (data: { classroomId: string; plan: RoutePlan }) =>
+  fromPlan: (data: { classroomId: string; plan: RoutePlan; instructions?: string; sourceMaterial?: string }) =>
     api.post<RouteView>(`/learning-routes/from-plan`, data),
   update: (routeId: string, data: { title?: string; description?: string; isPublished?: boolean; targetCompetencyId?: string | null }) =>
     api.put(`/learning-routes/${routeId}`, data),
@@ -2596,7 +2619,8 @@ export const learningRouteApi = {
     api.post(`/learning-routes/${routeId}/steps`, data),
   addStepWithActivity: (routeId: string, data: { title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number }) =>
     api.post(`/learning-routes/${routeId}/steps/new-activity`, data),
-  generateStepLesson: (stepId: string) => api.post<{ activityId: string; slides: number }>(`/learning-routes/steps/${stepId}/generate-lesson`, {}),
+  generateStepLesson: (stepId: string, data?: { instructions?: string }) =>
+    api.post<{ activityId: string; slides: number }>(`/learning-routes/steps/${stepId}/generate-lesson`, data || {}),
   updateStep: (stepId: string, data: { title?: string; activityId?: string | null; competencyId?: string | null }) =>
     api.put(`/learning-routes/steps/${stepId}`, data),
   createStepActivity: (stepId: string, data: { activityType?: string; description?: string; maxScore?: number }) =>

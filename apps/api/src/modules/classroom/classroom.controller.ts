@@ -95,6 +95,7 @@ export class ClassroomController {
   async createSection(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
     title: string;
     description?: string;
+    academicTermId?: string | null;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.createSection(classroomId, userId, body);
@@ -107,6 +108,7 @@ export class ClassroomController {
     description?: string;
     isVisible?: boolean;
     sortOrder?: number;
+    academicTermId?: string | null;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.updateSection(sectionId, userId, body);
@@ -206,7 +208,8 @@ export class ClassroomController {
   @Post(':id/activities')
   @Roles('DOCENTE', 'COORDINADOR')
   async createActivity(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
-    sectionId: string;
+    sectionId?: string | null;
+    academicTermId?: string | null;
     type: string;
     title: string;
     description?: string;
@@ -870,6 +873,31 @@ export class ClassroomController {
   @Roles('DOCENTE', 'COORDINADOR')
   async deleteLesson(@Param('lessonId') lessonId: string) {
     return this.lessonService.deleteLesson(lessonId);
+  }
+
+  // ─── Seguridad del editor: autoguardado, recuperación e historial ──────────
+  @Post('lessons/:lessonId/versions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async saveLessonVersion(@Param('lessonId') lessonId: string, @Request() req: any, @Body() body: { kind?: string; label?: string; snapshot: any }) {
+    return this.lessonService.saveVersion(lessonId, req.user?.id, body);
+  }
+
+  @Get('lessons/:lessonId/versions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async listLessonVersions(@Param('lessonId') lessonId: string) {
+    return this.lessonService.listVersions(lessonId);
+  }
+
+  @Get('lessons/:lessonId/recovery')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getLessonRecovery(@Param('lessonId') lessonId: string) {
+    return this.lessonService.getRecovery(lessonId);
+  }
+
+  @Get('lesson-versions/:versionId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getLessonVersion(@Param('versionId') versionId: string) {
+    return this.lessonService.getVersion(versionId);
   }
 
   // Slides CRUD

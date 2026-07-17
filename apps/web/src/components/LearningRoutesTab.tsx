@@ -103,6 +103,8 @@ export default function LearningRoutesTab({ classroomId, isTeacher }: { classroo
 // ─── Armar ruta con Valeria (IA) ─────────────────────────────────────────────
 function ValeriaRouteModal({ classroomId, onClose, onCreated }: { classroomId: string; onClose: () => void; onCreated: (r: RouteView) => void }) {
   const [objective, setObjective] = useState('')
+  const [instructions, setInstructions] = useState('')
+  const [sourceMaterial, setSourceMaterial] = useState('')
   const [plan, setPlan] = useState<RoutePlan | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -110,21 +112,48 @@ function ValeriaRouteModal({ classroomId, onClose, onCreated }: { classroomId: s
 
   const generate = async () => {
     if (!objective.trim()) { setErr('Escribe qué quieres que logren'); return }
-    try { setErr(''); setLoading(true); const { data } = await learningRouteApi.generate({ objective: objective.trim() }); setPlan(data) }
-    catch { setErr('Valeria no pudo generar la ruta. Intenta de nuevo.') } finally { setLoading(false) }
+    try {
+      setErr(''); setLoading(true)
+      const { data } = await learningRouteApi.generate({
+        objective: objective.trim(),
+        instructions: instructions.trim() || undefined,
+        sourceMaterial: sourceMaterial.trim() || undefined,
+      })
+      setPlan(data)
+    } catch { setErr('Valeria no pudo generar la ruta. Intenta de nuevo.') } finally { setLoading(false) }
   }
   const accept = async () => {
     if (!plan) return
-    try { setSaving(true); const { data } = await learningRouteApi.fromPlan({ classroomId, plan }); onCreated(data) }
-    catch { setErr('No se pudo crear la ruta'); setSaving(false) }
+    try {
+      setSaving(true)
+      const { data } = await learningRouteApi.fromPlan({
+        classroomId, plan,
+        instructions: instructions.trim() || undefined,
+        sourceMaterial: sourceMaterial.trim() || undefined,
+      })
+      onCreated(data)
+    } catch { setErr('No se pudo crear la ruta'); setSaving(false) }
   }
 
   return (
     <ModalShell title="Armar ruta con Valeria" onClose={onClose}>
       {!plan ? (
         <div className="space-y-3">
-          <p className="text-sm text-slate-500">Describe qué quieres que logren tus estudiantes y Valeria propondrá una ruta alineada al CEFR.</p>
-          <textarea value={objective} onChange={e => setObjective(e.target.value)} rows={3} placeholder="Ej. Que puedan describir su familia y su rutina diaria en inglés" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          <p className="text-sm text-slate-500">Dile a Valeria qué quieres lograr y <strong>cómo</strong>. Puedes pegar tu guía o documento base: la ruta y los ejercicios de cada paso se derivarán de él.</p>
+          <div>
+            <label className="text-sm font-medium text-slate-600 mb-1 block">¿Qué quieres que logren? *</label>
+            <textarea value={objective} onChange={e => setObjective(e.target.value)} rows={2} placeholder="Ej. Que puedan describir su familia y su rutina diaria en inglés" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-600 mb-1 block">Indicaciones para Valeria (opcional)</label>
+            <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3} placeholder="Ej. Usa vocabulario de la unidad 3, empieza por escucha, ejercicios cortos, incluye ejemplos de Colombia, nada de pasado simple aún…" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+            <p className="text-[11px] text-slate-400 mt-1">Tienen prioridad sobre los valores por defecto y se aplican también a cada paso.</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-600 mb-1 block">Material base / documento (opcional)</label>
+            <textarea value={sourceMaterial} onChange={e => setSourceMaterial(e.target.value)} rows={4} placeholder="Pega aquí tu guía, taller o documento. Valeria derivará la ruta y las actividades de este material." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-xs" />
+            {sourceMaterial.trim() && <p className="text-[11px] text-emerald-600 mt-1">✓ {sourceMaterial.trim().length.toLocaleString()} caracteres — se usará como base de la ruta y de cada paso.</p>}
+          </div>
           {err && <p className="text-sm text-red-600">{err}</p>}
           <button onClick={generate} disabled={loading} className="w-full bg-violet-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-60 flex items-center justify-center gap-2">
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Valeria está diseñando…</> : <><Sparkles className="w-4 h-4" /> Generar ruta</>}
@@ -167,6 +196,7 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
   const [doing, setDoing] = useState<{ id: string; type: string } | null>(null)
   const [generatingStep, setGeneratingStep] = useState<string | null>(null)
   const [attachingStep, setAttachingStep] = useState<string | null>(null)
+  const [genStep, setGenStep] = useState<{ id: string; title: string; hasLesson: boolean } | null>(null)
   const [editingLesson, setEditingLesson] = useState<string | null>(null)
 
   // Estudiante: cargar su progreso (% dominado + estado por paso)
@@ -181,9 +211,12 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
   const publish = async () => { await learningRouteApi.update(route.id, { isPublished: !route.isPublished }); onReload() }
   const removeRoute = async () => { if (confirm('¿Eliminar esta ruta y sus pasos?')) { await learningRouteApi.remove(route.id); onBack() } }
   const removeStep = async (stepId: string) => { await learningRouteApi.removeStep(stepId); onReload() }
-  const generateLesson = async (stepId: string) => {
-    try { setGeneratingStep(stepId); await learningRouteApi.generateStepLesson(stepId); onReload() }
-    catch { /* noop */ } finally { setGeneratingStep(null) }
+  const generateLesson = async (stepId: string, instructions?: string) => {
+    try {
+      setGenStep(null); setGeneratingStep(stepId)
+      await learningRouteApi.generateStepLesson(stepId, instructions ? { instructions } : undefined)
+      onReload()
+    } catch { /* noop */ } finally { setGeneratingStep(null) }
   }
 
   return (
@@ -287,7 +320,7 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
                             <Pencil className="w-3.5 h-3.5" /> Editar
                           </button>
                         )}
-                        <button onClick={() => generateLesson(s.id)} disabled={generatingStep === s.id} title="Generar ejercicios interactivos con Valeria"
+                        <button onClick={() => setGenStep({ id: s.id, title: s.title, hasLesson: s.activity?.type === 'LESSON' })} disabled={generatingStep === s.id} title="Generar ejercicios interactivos con Valeria (con indicaciones)"
                           className="text-xs font-medium px-2 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-60 flex items-center gap-1">
                           {generatingStep === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                           {s.activity?.type === 'LESSON' ? 'Regenerar' : 'Valeria'}
@@ -333,7 +366,46 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
           />
         </div>
       )}
+      {genStep && (
+        <GenerateStepModal step={genStep} hasRouteMaterial={!!route.hasSourceMaterial} hasRouteInstructions={!!route.hasInstructions}
+          onClose={() => setGenStep(null)} onGenerate={(instr) => generateLesson(genStep.id, instr)} />
+      )}
     </div>
+  )
+}
+
+// ─── Generar los ejercicios de un paso con indicaciones (docente) ─────────────
+function GenerateStepModal({ step, hasRouteMaterial, hasRouteInstructions, onClose, onGenerate }: {
+  step: { id: string; title: string; hasLesson: boolean }
+  hasRouteMaterial: boolean; hasRouteInstructions: boolean
+  onClose: () => void; onGenerate: (instructions?: string) => void
+}) {
+  const [instructions, setInstructions] = useState('')
+  return (
+    <ModalShell title={step.hasLesson ? 'Regenerar ejercicios' : 'Generar ejercicios con Valeria'} onClose={onClose}>
+      <div className="space-y-3">
+        <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+          <p className="text-xs text-slate-600"><strong>Paso:</strong> {step.title}</p>
+          {(hasRouteMaterial || hasRouteInstructions) && (
+            <p className="text-[11px] text-emerald-600 mt-1">
+              ✓ Valeria usará {hasRouteMaterial && 'el material base'}{hasRouteMaterial && hasRouteInstructions && ' y '}{hasRouteInstructions && 'las indicaciones'} de la ruta.
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="text-sm font-medium text-slate-600 mb-1 block">Indicaciones para este paso (opcional)</label>
+          <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={4}
+            placeholder="Ej. Céntrate en el vocabulario de la familia, 4 ejercicios, incluye un texto corto, evita el pasado…"
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          <p className="text-[11px] text-slate-400 mt-1">Se suman a las de la ruta. Déjalo vacío para usar solo las de la ruta.</p>
+        </div>
+        {step.hasLesson && <p className="text-xs text-amber-600">⚠ Regenerar reemplaza los ejercicios actuales de este paso.</p>}
+        <button onClick={() => onGenerate(instructions.trim() || undefined)}
+          className="w-full bg-violet-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-700 flex items-center justify-center gap-2">
+          <Sparkles className="w-4 h-4" /> {step.hasLesson ? 'Regenerar' : 'Generar'} ejercicios
+        </button>
+      </div>
+    </ModalShell>
   )
 }
 

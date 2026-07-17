@@ -60,17 +60,25 @@ export class LearningRouteController {
   // Valeria arma la ruta: genera un plan (preview, no persiste)
   @Post('generate')
   @Roles('DOCENTE', 'COORDINADOR')
-  async generate(@Body() body: { objective: string; gradeName?: string; targetLevel?: string }) {
-    return this.service.generatePlan(body.objective, body.gradeName, body.targetLevel);
+  async generate(@Body() body: {
+    objective: string; gradeName?: string; targetLevel?: string;
+    instructions?: string; sourceMaterial?: string;
+  }) {
+    return this.service.generatePlan(body.objective, body.gradeName, body.targetLevel, body.instructions, body.sourceMaterial);
   }
 
-  // Crea la ruta a partir de un plan de Valeria (que el docente confirmó)
+  // Crea la ruta a partir de un plan de Valeria (que el docente confirmó).
+  // Persiste indicaciones/material para que cada paso los reuse.
   @Post('from-plan')
   @Roles('DOCENTE', 'COORDINADOR')
-  async fromPlan(@Request() req: any, @Body() body: { classroomId: string; plan: any }) {
+  async fromPlan(@Request() req: any, @Body() body: {
+    classroomId: string; plan: any; instructions?: string; sourceMaterial?: string;
+  }) {
     const institutionId = await resolveInstitutionId(this.prisma as any, req);
     if (!institutionId) throw new Error('No se pudo resolver la institución');
-    return this.service.createFromPlan(institutionId, body.classroomId, body.plan);
+    return this.service.createFromPlan(institutionId, body.classroomId, body.plan, {
+      instructions: body.instructions, sourceMaterial: body.sourceMaterial,
+    });
   }
 
   @Put(':routeId')
@@ -111,8 +119,8 @@ export class LearningRouteController {
   // Valeria genera la lección interactiva (ejercicios) del paso
   @Post('steps/:stepId/generate-lesson')
   @Roles('DOCENTE', 'COORDINADOR')
-  async generateStepLesson(@Param('stepId') stepId: string) {
-    return this.service.generateStepLesson(stepId);
+  async generateStepLesson(@Param('stepId') stepId: string, @Body() body?: { instructions?: string }) {
+    return this.service.generateStepLesson(stepId, body?.instructions);
   }
 
   // Actualizar un paso (enlazar/quitar actividad, competencia, título)

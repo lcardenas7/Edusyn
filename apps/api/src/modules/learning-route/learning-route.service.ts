@@ -12,8 +12,11 @@ export class LearningRouteService {
 
   // ─── Valeria arma la ruta ───────────────────────────────────────────────────
   /** Genera un plan de ruta con IA (no persiste). El docente lo revisa y confirma. */
-  async generatePlan(objective: string, gradeName?: string, targetLevel?: string): Promise<ApdAiRoutePlan> {
-    return this.apdAi.generateRoutePlan({ objective, gradeName, targetLevel });
+  async generatePlan(
+    objective: string, gradeName?: string, targetLevel?: string,
+    instructions?: string, sourceMaterial?: string,
+  ): Promise<ApdAiRoutePlan> {
+    return this.apdAi.generateRoutePlan({ objective, gradeName, targetLevel, instructions, sourceMaterial });
   }
 
   /** Resuelve la primera competencia del grafo para (nivel, habilidad). */
@@ -25,8 +28,15 @@ export class LearningRouteService {
     return c?.id;
   }
 
-  /** Crea una ruta completa (con pasos) a partir de un plan de Valeria. */
-  async createFromPlan(institutionId: string, classroomId: string, plan: ApdAiRoutePlan) {
+  /**
+   * Crea una ruta completa (con pasos) a partir de un plan de Valeria.
+   * Persiste las indicaciones y el material base del docente en la ruta para que
+   * la generación de CADA paso los reuse (coherencia en todo el recorrido).
+   */
+  async createFromPlan(
+    institutionId: string, classroomId: string, plan: ApdAiRoutePlan,
+    opts?: { instructions?: string; sourceMaterial?: string },
+  ) {
     const classroom = await this.prisma.classroom.findFirst({ where: { id: classroomId, institutionId }, select: { id: true } });
     if (!classroom) throw new NotFoundException('Aula no encontrada');
 
@@ -35,6 +45,12 @@ export class LearningRouteService {
       classroomId, title: plan.title, description: plan.description,
       targetCompetencyId, targetLevel: plan.targetLevel,
     });
+    if (opts?.instructions || opts?.sourceMaterial) {
+      await this.prisma.learningRoute.update({
+        where: { id: route.id },
+        data: { instructions: opts.instructions, sourceMaterial: opts.sourceMaterial },
+      });
+    }
     for (const step of plan.steps) {
       const competencyId = await this.resolveCompetencyId(plan.targetLevel, step.skill);
       await this.addStep(route.id, { title: step.title, competencyId });
@@ -129,7 +145,14 @@ export class LearningRouteService {
       },
     });
     if (!route) throw new NotFoundException('Ruta no encontrada');
-    return route;
+    // No exponer el material base ni las indicaciones en el payload (pesados y de
+    // uso interno del docente): basta con saber si existen.
+    const { sourceMaterial, instructions, ...rest } = route;
+    return {
+      ...rest,
+      hasSourceMaterial: !!sourceMaterial,
+      hasInstructions: !!instructions,
+    };
   }
 
   async updateRoute(routeId: string, dto: {
@@ -212,15 +235,19 @@ export class LearningRouteService {
    * propia de la ruta y guarda las slides. El estudiante la hace desde el mapa;
    * al completarla fluyen XP y evidencia (ya cableados).
    */
-  async generateStepLesson(stepId: string) {
+  async generateStepLesson(stepId: string, extraInstructions?: string) {
     const step = await this.prisma.learningRouteStep.findUnique({
       where: { id: stepId },
       include: {
-        route: { select: { classroomId: true, title: true } },
+        route: { select: { classroomId: true, title: true, instructions: true, sourceMaterial: true } },
         competency: { select: { skill: true, level: true } },
       },
     });
     if (!step) throw new NotFoundException('Paso no encontrado');
+
+    // Indicaciones: las de la ruta + las específicas de este paso (si las hay).
+    const instructions = [step.route.instructions, extraInstructions]
+      .filter(Boolean).join('\n').trim() || undefined;
 
     const skill = (step.competency?.skill as any) || 'READING';
     const level = step.competency?.level || 'A2';
@@ -251,6 +278,7 @@ export class LearningRouteService {
     // Generar los ejercicios con Valeria.
     const draft = await this.apdAi.generateEnglishLessonSlides({
       skill, level, objective: step.route.title, title: step.title, gradeName,
+      instructions, sourceMaterial: step.route.sourceMaterial ?? undefined,
     });
 
     // Reemplazar la lección (regenerable).

@@ -302,6 +302,38 @@ export class AbpController {
     return this.service.addMission(teamId, institutionId, userId, parseInt(phase, 10), body);
   }
 
+  // El docente libera una misión a todos los equipos del proyecto (en una fase).
+  @Post('projects/:projectId/broadcast-mission')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async broadcastMission(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.broadcastMission(projectId, institutionId, userId, body);
+  }
+
+  // Valeria sugiere actividades para una misión (docente).
+  @Post('teams/:teamId/missions/:missionId/suggest')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async suggestActivities(@Param('teamId') teamId: string, @Param('missionId') missionId: string, @Request() req: any, @Body() body: { count?: number }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.suggestActivities(teamId, missionId, institutionId, userId, body?.count);
+  }
+
+  // Añade una actividad jugable (lección/juego) enlazada a una ClassroomActivity.
+  @Post('missions/:missionId/lesson-activity')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addLessonActivity(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { title: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addLessonActivity(missionId, institutionId, userId, body);
+  }
+
+  // Alta en lote de actividades (aplicar sugerencias de Valeria).
+  @Post('missions/:missionId/activities/bulk')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addActivitiesBulk(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { items: { type: string; title: string }[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addActivitiesBulk(missionId, institutionId, userId, body?.items || []);
+  }
+
   @Delete('missions/:missionId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async deleteMission(@Param('missionId') missionId: string, @Request() req: any) {
@@ -330,11 +362,63 @@ export class AbpController {
     return this.service.completeActivity(activityId, institutionId, userId, !!body.completed);
   }
 
+  // Valeria genera el contenido jugable de una actividad-lección (docente).
+  @Post('activities/:activityId/generate-lesson')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async generateLessonContent(@Param('activityId') activityId: string, @Request() req: any, @Body() body: { instructions?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.generateLessonContent(activityId, institutionId, userId, body?.instructions);
+  }
+
   @Delete('activities/:activityId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.deleteActivity(activityId, institutionId, userId);
+  }
+
+  // ─── Bitácora (Nivel 2) ────────────────────────────────────────────────────
+  @Get('teams/:teamId/log')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listLog(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listLog(teamId, institutionId, userId);
+  }
+
+  @Post('teams/:teamId/log')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addLog(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { content: string; phase?: number }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addLogEntry(teamId, institutionId, userId, body);
+  }
+
+  @Delete('log/:entryId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteLog(@Param('entryId') entryId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteLogEntry(entryId, institutionId, userId);
+  }
+
+  // ─── Descubrimientos (Nivel 2) ──────────────────────────────────────────────
+  @Get('teams/:teamId/discoveries')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listDiscoveries(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listDiscoveries(teamId, institutionId, userId);
+  }
+
+  @Post('teams/:teamId/discoveries')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addDiscovery(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { phase: number; title: string; description: string; evidenceKind?: string; evidenceUrl?: string; impact?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addDiscovery(teamId, institutionId, userId, body);
+  }
+
+  @Delete('discoveries/:discoveryId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteDiscovery(@Param('discoveryId') discoveryId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteDiscovery(discoveryId, institutionId, userId);
   }
 
   // ─── Comentarios en línea ──────────────────────────────────────────────────

@@ -871,6 +871,116 @@ export class ApdAiService implements IApdAiService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // EXPEDICIÓN ABP — Valeria sugiere actividades de misión (ligadas al problema)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async generateAbpActivities(
+    input: {
+      challenge?: string; teamName?: string; problem?: string;
+      phase: number; phaseName: string; canvas?: string[]; smart?: string; count?: number;
+    },
+    route?: { provider?: string; model?: string },
+  ): Promise<{ activities: { type: string; title: string; description: string }[] }> {
+    if (!this.isEnabled()) return { activities: [] };
+    const count = Math.min(Math.max(input.count ?? 4, 1), 6);
+    const system = [
+      'Eres Valeria, asistente pedagógica de Edusyn.',
+      'Diseñas actividades para estudiantes (adolescentes) dentro de un proyecto ABP por equipos.',
+      'Responde SOLO con JSON válido: {"activities":[{"type","title","description"}]}.',
+      'type debe ser uno de: READING, VIDEO, INTERVIEW, UPLOAD, LINK, CUSTOM.',
+      'Las actividades deben ser concretas, accionables y ESTAR LIGADAS a la problemática del equipo.',
+      'title: máximo 8 palabras. description: 1-2 frases con lo que el equipo debe hacer.',
+      'Escribe en español neutro.',
+    ].join('\n');
+    const canvasTxt = (input.canvas || []).filter(Boolean).map(c => `  - ${c}`).join('\n');
+    const user = [
+      `Reto general del proyecto: ${input.challenge || '(no definido)'}`,
+      input.teamName ? `Equipo: ${input.teamName}` : '',
+      `Problemática del equipo: ${input.problem || '(aún no especificada)'}`,
+      canvasTxt ? `Canvas del problema:\n${canvasTxt}` : '',
+      input.smart ? `Objetivo SMART: ${input.smart}` : '',
+      `Fase actual: ${input.phase} — ${input.phaseName}`,
+      `Genera ${count} actividades apropiadas para ESTA fase que ayuden al equipo a avanzar, ligadas a su problemática.`,
+    ].filter(Boolean).join('\n');
+
+    const raw = await this.callLlmJson<{ activities?: any[] }>(system, user, 1200, route);
+    const valid = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM'];
+    const activities = (Array.isArray(raw?.activities) ? raw.activities : [])
+      .map((a: any) => ({
+        type: valid.includes(String(a?.type || '').toUpperCase()) ? String(a.type).toUpperCase() : 'CUSTOM',
+        title: String(a?.title || '').trim().slice(0, 120),
+        description: String(a?.description || '').trim().slice(0, 400),
+      }))
+      .filter((a: any) => a.title)
+      .slice(0, count);
+    return { activities };
+  }
+
+  /** Valeria diseña la LECCIÓN INTERACTIVA jugable de una misión ABP, anclada a la
+   * problemática real del equipo. Mismo esquema de slides que el resto del aula. */
+  async generateAbpLessonSlides(
+    params: {
+      title: string; challenge?: string; problem?: string; canvas?: string[]; smart?: string;
+      phase: number; phaseName: string; gradeName?: string; instructions?: string;
+    },
+    route?: { provider?: string; model?: string },
+  ): Promise<ApdAiLessonDraft> {
+    if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
+    const canvasTxt = (params.canvas || []).filter(Boolean).map(c => `  - ${c}`).join('\n');
+
+    const systemInstruction = [
+      'Eres Valeria, docente experta, diseñando una lección interactiva estilo Duolingo/Nearpod EN ESPAÑOL.',
+      'La lección es parte de un proyecto ABP (Aprendizaje Basado en Proyectos) y DEBE girar en torno a la problemática real del equipo.',
+      params.gradeName ? `Grado escolar: ${params.gradeName} — ajusta el tema, los ejemplos y el registro a esa edad.` : '',
+      `Fase del proyecto: ${params.phase} — ${params.phaseName}. Los ejercicios deben ayudar al equipo a avanzar en ESTA fase.`,
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin markdown, sin backticks.',
+      '',
+      'Diseño en FASES, en este orden exacto:',
+      '  FASE 1 · Presentación: 1-2 CONTENT que explican el concepto clave aplicado a la problemática del equipo.',
+      '  FASE 2 · Práctica guiada: 2-3 ACTIVITY CON "hint" y explicación, con tipos VARIADOS.',
+      '  FASE 3 · Mini-quiz final: una CONTENT breve titulada "🎯 Mini-quiz" y luego 3 ACTIVITY SIN "hint".',
+      '  CIERRE: CHECKPOINT y luego BADGE_REVEAL.',
+      '- Entre 8 y 12 slides en total. Bloques cortos y feedback inmediato.',
+      '- NUNCA uses "Opción A/B/C/D": las opciones deben ser reales y plausibles.',
+      '',
+      'Tipos de ACTIVITY permitidos (SOLO estos tres): MULTIPLE_CHOICE (4 opciones), TRUE_FALSE, FILL_BLANK (el estudiante escribe UNA palabra; marca el hueco con ___ en "question" y la palabra exacta en "correctAnswer").',
+      'PROHIBIDO usar ORDERING u otros tipos.',
+      '',
+      'Esquema JSON exacto:',
+      '{',
+      '  "title": "Título de la lección",',
+      '  "description": "1 frase",',
+      '  "slides": [',
+      '    { "type": "CONTENT", "title": "…", "body": "<p>…</p>" },',
+      '    { "type": "ACTIVITY", "title": "…", "activityData": { "questionType": "MULTIPLE_CHOICE", "question": "…", "options": ["…"], "correctAnswer": "…", "explanation": "…", "hint": "…", "points": 10 } },',
+      '    { "type": "CHECKPOINT", "title": "…" },',
+      '    { "type": "BADGE_REVEAL" }',
+      '  ]',
+      '}',
+      params.instructions ? `\nINDICACIONES DEL DOCENTE (tienen PRIORIDAD; respétalas al pie de la letra):\n${params.instructions.trim()}` : '',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = [
+      `Título de la lección: ${params.title}`,
+      `Reto general del proyecto: ${params.challenge || '(no definido)'}`,
+      `Problemática del equipo: ${params.problem || '(aún no especificada)'}`,
+      canvasTxt ? `Canvas del problema:\n${canvasTxt}` : '',
+      params.smart ? `Objetivo SMART del equipo: ${params.smart}` : '',
+      '',
+      'Diseña la lección interactiva siguiendo el esquema JSON. TODO el contenido debe estar anclado a la problemática del equipo. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.',
+    ].filter(Boolean).join('\n');
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<any>(systemInstruction, userPrompt, 8000, route);
+    } catch (err: any) {
+      this.logger.error(`generateAbpLessonSlides LLM error: ${err?.message || err}`);
+      throw new Error(`El proveedor de IA no respondió: ${err?.message || 'error'}`);
+    }
+    return this.parseLessonDraftPayload(raw, params.title, params.title);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // GENERAR ESTRATEGIA DE APOYO
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1774,6 +1884,8 @@ export class ApdAiService implements IApdAiService {
     objective: string;
     gradeName?: string;
     targetLevel?: string;
+    instructions?: string; // "cómo" lo quiere el docente (manda sobre el default)
+    sourceMaterial?: string; // documento/guía base del docente
   }): Promise<ApdAiRoutePlan> {
     if (!this.isEnabled()) {
       throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
@@ -1805,9 +1917,18 @@ export class ApdAiService implements IApdAiService {
       '}',
       params.gradeName ? `Nivel escolar: ${params.gradeName}.` : '',
       params.targetLevel ? `Usa como nivel objetivo: ${params.targetLevel}.` : '',
+      params.instructions
+        ? `\nINDICACIONES DEL DOCENTE (tienen PRIORIDAD sobre los valores por defecto; respétalas al pie de la letra):\n${params.instructions.trim()}`
+        : '',
+      params.sourceMaterial
+        ? '\nHAY MATERIAL BASE del docente: la ruta debe derivarse de ese material (usa sus temas, vocabulario y ejemplos). No lo contradigas ni inventes contenido ajeno a él.'
+        : '',
     ].filter(Boolean).join('\n');
 
-    const userPrompt = `Objetivo del docente: ${objective}\n\nDiseña la ruta siguiendo el esquema JSON.`;
+    const materialBlock = params.sourceMaterial
+      ? `\n\nMATERIAL BASE DEL DOCENTE (fundamenta la ruta en esto):\n"""\n${params.sourceMaterial.trim().slice(0, 8000)}\n"""`
+      : '';
+    const userPrompt = `Objetivo del docente: ${objective}\n\nDiseña la ruta siguiendo el esquema JSON.${materialBlock}`;
 
     let raw: any;
     try {
@@ -1905,6 +2026,8 @@ export class ApdAiService implements IApdAiService {
     objective: string; // objetivo de la ruta
     title: string; // título del paso
     gradeName?: string; // grado escolar, para ajustar tema/registro
+    instructions?: string; // indicaciones del docente (de la ruta + extra del paso)
+    sourceMaterial?: string; // material base del docente (heredado de la ruta)
   }): Promise<ApdAiLessonDraft> {
     if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
     const skill = params.skill;
@@ -1953,9 +2076,18 @@ export class ApdAiService implements IApdAiService {
       '    { "type": "BADGE_REVEAL" }',
       '  ]',
       '}',
+      params.instructions
+        ? `\nINDICACIONES DEL DOCENTE (tienen PRIORIDAD; respétalas al pie de la letra):\n${params.instructions.trim()}`
+        : '',
+      params.sourceMaterial
+        ? '\nHAY MATERIAL BASE del docente: la lección debe derivarse de ese material (usa sus temas, vocabulario y ejemplos). No lo contradigas ni inventes contenido ajeno a él.'
+        : '',
     ].filter(Boolean).join('\n');
 
-    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}${params.gradeName ? ', grado ' + params.gradeName : ''}) siguiendo el esquema JSON. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.`;
+    const materialBlock = params.sourceMaterial
+      ? `\n\nMATERIAL BASE DEL DOCENTE (fundamenta la lección en esto):\n"""\n${params.sourceMaterial.trim().slice(0, 8000)}\n"""`
+      : '';
+    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}${params.gradeName ? ', grado ' + params.gradeName : ''}) siguiendo el esquema JSON. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.${materialBlock}`;
 
     let raw: any;
     try {

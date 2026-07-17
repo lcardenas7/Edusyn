@@ -179,6 +179,7 @@ export class ClassroomService {
           orderBy: { sortOrder: 'asc' },
           include: {
             materials: { orderBy: { sortOrder: 'asc' } },
+            academicTerm: { select: { id: true, name: true, order: true } },
             activities: {
               where: { isPublished: true },
               orderBy: { sortOrder: 'asc' },
@@ -263,6 +264,7 @@ export class ClassroomService {
   async createSection(classroomId: string, teacherId: string, dto: {
     title: string;
     description?: string;
+    academicTermId?: string | null;
   }) {
     await this.validateClassroomOwnership(classroomId, teacherId);
     const maxSort = await this.prisma.classroomSection.aggregate({
@@ -274,6 +276,7 @@ export class ClassroomService {
         classroomId,
         title: dto.title,
         description: dto.description,
+        academicTermId: dto.academicTermId || null,
         sortOrder: (maxSort._max.sortOrder ?? 0) + 100,
       },
       include: { materials: true },
@@ -285,6 +288,7 @@ export class ClassroomService {
     description?: string;
     isVisible?: boolean;
     sortOrder?: number;
+    academicTermId?: string | null;
   }) {
     await this.validateSectionOwnership(sectionId, teacherId);
     return this.prisma.classroomSection.update({
@@ -294,6 +298,7 @@ export class ClassroomService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.isVisible !== undefined && { isVisible: dto.isVisible }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        ...(dto.academicTermId !== undefined && { academicTermId: dto.academicTermId || null }),
       },
     });
   }
@@ -483,7 +488,8 @@ export class ClassroomService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createActivity(classroomId: string, teacherId: string, dto: {
-    sectionId: string;
+    sectionId?: string | null;
+    academicTermId?: string | null;
     type: string;
     title: string;
     description?: string;
@@ -501,11 +507,13 @@ export class ClassroomService {
     gameType?: string; // juego suelto (WORDSEARCH/CROSSWORD): marca para rotular sin abrir la lección
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
-    // Validate section belongs to this classroom
-    const section = await this.prisma.classroomSection.findFirst({
-      where: { id: dto.sectionId, classroom: { id: classroomId } },
-    });
-    if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
+    // Sección OPCIONAL: si se pasa, debe pertenecer al aula; si no, actividad sin sección.
+    if (dto.sectionId) {
+      const section = await this.prisma.classroomSection.findFirst({
+        where: { id: dto.sectionId, classroom: { id: classroomId } },
+      });
+      if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
+    }
 
     // Build metadata
     let metadata: any = undefined;
@@ -519,7 +527,8 @@ export class ClassroomService {
     return this.prisma.classroomActivity.create({
       data: {
         classroomId,
-        sectionId: dto.sectionId,
+        sectionId: dto.sectionId || null,
+        academicTermId: dto.academicTermId || null,
         type: dto.type as any,
         title: dto.title,
         description: dto.description,
@@ -549,7 +558,7 @@ export class ClassroomService {
       const activities = await this.prisma.classroomActivity.findMany({
         where: { classroomId, isRouteScoped: false },
         include: {
-          section: { select: { id: true, title: true } },
+          section: { select: { id: true, title: true, academicTermId: true } },
           _count: { select: { submissions: true } },
         },
         orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
@@ -572,7 +581,7 @@ export class ClassroomService {
     return this.prisma.classroomActivity.findMany({
       where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false },
       include: {
-        section: { select: { id: true, title: true } },
+        section: { select: { id: true, title: true, academicTermId: true } },
         submissions: {
           where: {
             studentEnrollment: { student: { userId } },
