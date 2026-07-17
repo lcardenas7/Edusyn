@@ -98,6 +98,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const [answerSubmitted, setAnswerSubmitted] = useState(false)
   const [slideResult, setSlideResult] = useState<SlideResult | null>(null)
   const [showExplanation, setShowExplanation] = useState(false)
+  const [attempts, setAttempts] = useState(0) // intentos en la actividad actual (P4)
 
   // Loading states
   const [advancing, setAdvancing] = useState(false)
@@ -164,6 +165,16 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const isSlideCompleted = currentSlide ? completedSlides.includes(currentSlide.id) : false
   const hasAnswered = currentSlide ? !!answers[currentSlide.id] : false
 
+  // Comportamiento configurable de la actividad (P4): obligatoria/opcional, gating
+  // (no avanzar hasta acertar) e intentos.
+  const behavior = (currentSlide?.activityData as any)?.behavior || {}
+  const isOptionalAct = behavior.required === false
+  const isGated = !!behavior.gateOnCorrect
+  const maxAttempts = Number(behavior.maxAttempts) || 0 // 0 = ilimitado
+  const attemptsExhausted = maxAttempts > 0 && attempts >= maxAttempts
+  const answeredCorrect = slideResult?.isCorrect === true
+  const canRetry = isGated && answerSubmitted && !answeredCorrect && !attemptsExhausted
+
   // ─────────────────────────────────────────────────────────────────
   // START
   // ─────────────────────────────────────────────────────────────────
@@ -190,13 +201,17 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
     const timeSpent = Math.round((Date.now() - slideStartTime) / 1000)
 
-    // For ACTIVITY slides que requieren envío, hay que responder primero.
-    // Las flashcards (estudio) no requieren envío → se puede avanzar.
+    // Gating (P4): las flashcards no requieren envío; las opcionales se pueden
+    // saltar; las obligatorias exigen responder; y si "no avanzar hasta acertar"
+    // está activo, se exige acierto (o agotar los intentos).
     if (
       currentSlide.type === 'ACTIVITY' &&
       requiresSubmission(currentSlide.activityData?.questionType) &&
-      !answerSubmitted && !hasAnswered && !isTeacher
-    ) return
+      !isTeacher && !isOptionalAct
+    ) {
+      if (!answerSubmitted && !hasAnswered) return
+      if (isGated && !hasAnswered && !answeredCorrect && !attemptsExhausted) return
+    }
 
     if (!isTeacher) {
       try {
@@ -207,6 +222,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           answer: currentSlide.type === 'ACTIVITY' && requiresSubmission(currentSlide.activityData?.questionType)
             ? selectedAnswer
             : undefined,
+          attempt: attempts || 1,
           timeSpentDelta: timeSpent,
         })
         // Update local progress
@@ -266,6 +282,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       setAnswerSubmitted(false)
       setSlideResult(null)
       setShowExplanation(false)
+      setAttempts(0)
       setSlideStartTime(Date.now())
     } else if (isTeacher) {
       // Teacher preview finished
@@ -283,6 +300,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         setAnswerSubmitted(false)
         setSlideResult(null)
         setShowExplanation(false)
+        setAttempts(0)
         setSlideStartTime(Date.now())
       }
     }
@@ -309,12 +327,21 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       maxPoints: points,
     }
 
+    setAttempts(a => a + 1)
     setSlideResult(result)
     setAnswerSubmitted(true)
     if (soundEnabled) playSound(isCorrect ? 'correct' : 'wrong')
     if (isCorrect) {
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } })
     }
+  }
+
+  // Reintentar la actividad actual (mantiene el contador de intentos, P4).
+  const handleRetry = () => {
+    setSelectedAnswer(null)
+    setAnswerSubmitted(false)
+    setSlideResult(null)
+    setShowExplanation(false)
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -572,7 +599,10 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     if (currentSlide.type === 'BADGE_REVEAL') return true
     if (currentSlide.type === 'ACTIVITY') {
       if (!requiresSubmission(currentSlide.activityData?.questionType)) return true // flashcards
-      return answerSubmitted || hasAnswered
+      if (isOptionalAct) return true // opcional: se puede saltar
+      if (!(answerSubmitted || hasAnswered)) return false
+      if (isGated && !hasAnswered) return answeredCorrect || attemptsExhausted // no avanzar sin acertar
+      return true
     }
     return false
   })()
@@ -912,6 +942,21 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               <p className="text-ink-secondary text-sm mt-2">{act.explanation}</p>
             )}
           </motion.div>
+        )}
+
+        {/* Gating P4: reintentar (no avanzar sin acertar) o aviso de intentos agotados */}
+        {answerSubmitted && !answeredCorrect && !alreadyAnswered && (
+          canRetry ? (
+            <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-sm text-ink-secondary">
+                {maxAttempts > 0 ? `Te queda${maxAttempts - attempts === 1 ? '' : 'n'} ${maxAttempts - attempts} intento${maxAttempts - attempts === 1 ? '' : 's'}` : 'Inténtalo de nuevo'}
+                {behavior.xpDecrement > 0 ? ' · el próximo acierto valdrá menos XP' : ''}
+              </span>
+              <motion.button onClick={handleRetry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl shadow-lg">🔄 Reintentar</motion.button>
+            </div>
+          ) : (isGated && attemptsExhausted) ? (
+            <p className="mt-3 text-sm text-ink-muted">Se agotaron los intentos. Revisa la explicación y continúa.</p>
+          ) : null
         )}
       </div>
     )

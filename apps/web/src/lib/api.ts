@@ -2433,7 +2433,7 @@ export const lessonApi = {
     api.get<LessonProgress>(`/classrooms/lessons/${lessonId}/my-progress`),
   start: (lessonId: string) =>
     api.post<LessonProgress>(`/classrooms/lessons/${lessonId}/start`),
-  advance: (lessonId: string, data: { slideIndex: number; slideId: string; answer?: any; timeSpentDelta?: number }) =>
+  advance: (lessonId: string, data: { slideIndex: number; slideId: string; answer?: any; attempt?: number; timeSpentDelta?: number }) =>
     api.post<LessonProgress & {
       isComplete?: boolean
       slideResult?: { answer: any; isCorrect: boolean; points: number; maxPoints: number } | null

@@ -49,6 +49,8 @@ interface SlideForm {
     feedbackCorrect: string
     feedbackIncorrect: string
     imageUrl: string
+    // Comportamiento configurable (P4): obligatoria/gating/intentos con XP decreciente.
+    behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number }
   }
   badgeEmoji: string
   badgeTitle: string
@@ -278,6 +280,7 @@ export default function LessonEditor({
         feedbackCorrect: (s.activityData as any).feedbackCorrect || '',
         feedbackIncorrect: (s.activityData as any).feedbackIncorrect || '',
         imageUrl: (s.activityData as any).imageUrl || '',
+        behavior: (s.activityData as any).behavior || {},
       } : { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: s.badgeEmoji || '',
       badgeTitle: s.badgeTitle || '',
@@ -390,6 +393,7 @@ export default function LessonEditor({
           feedbackCorrect: s.activityData.feedbackCorrect || undefined,
           feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
           imageUrl: s.activityData.imageUrl || undefined,
+          behavior: s.activityData.behavior && Object.keys(s.activityData.behavior).length ? s.activityData.behavior : undefined,
         } : undefined,
         blocks: s.type === 'CONTENT' ? (s.blocks || undefined) : undefined,
         badgeEmoji: s.type === 'BADGE_REVEAL' ? (s.badgeEmoji || badgeEmoji) : undefined,
@@ -1412,6 +1416,38 @@ export default function LessonEditor({
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
               />
             </div>
+
+            {/* Comportamiento (P4): obligatoria/gating/intentos con XP decreciente */}
+            {slide.activityData.questionType !== 'FLASHCARDS' && (() => {
+              const b = slide.activityData.behavior || {}
+              const setB = (patch: any) => updateActivityData(index, { behavior: { ...b, ...patch } })
+              return (
+                <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3 space-y-2.5">
+                  <p className="text-xs font-bold text-violet-700 uppercase tracking-wide">⚙️ Comportamiento</p>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    <input type="checkbox" checked={b.required !== false} onChange={e => setB({ required: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                    Obligatoria para avanzar
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    <input type="checkbox" checked={!!b.gateOnCorrect} onChange={e => setB({ gateOnCorrect: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                    No avanzar hasta acertar
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Intentos máx. <span className="text-slate-400">(0 = sin límite)</span></label>
+                      <input type="number" min="0" value={b.maxAttempts ?? 0} onChange={e => setB({ maxAttempts: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Resta de XP por intento</label>
+                      <input type="number" min="0" value={b.xpDecrement ?? 0} onChange={e => setB({ xpDecrement: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                  </div>
+                  {(b.xpDecrement || 0) > 0 && (
+                    <p className="text-[11px] text-slate-400">Ej.: {slide.activityData.points || 10} XP al 1er intento, {Math.max(Math.ceil((slide.activityData.points || 10) * 0.25), (slide.activityData.points || 10) - (b.xpDecrement || 0))} al 2º…</p>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Retroalimentación predefinida por resultado (setpoints del docente §7) */}
             {slide.activityData.questionType !== 'FLASHCARDS' && (

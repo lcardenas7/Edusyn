@@ -1001,6 +1001,7 @@ export class ClassroomController {
     slideIndex: number;
     slideId: string;
     answer?: any;
+    attempt?: number;
     timeSpentDelta?: number;
   }) {
     const userId = req.user.id;
