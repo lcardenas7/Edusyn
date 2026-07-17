@@ -52,7 +52,17 @@ export function SpeakButton({ text, lang = 'en-US', label = 'Escuchar', classNam
   )
 }
 
-// Quita etiquetas HTML para leer texto plano con TTS.
+// Convierte HTML a texto plano legible por TTS. Usa el DOM para DECODIFICAR entidades
+// (&nbsp; &amp; &#39;…): antes se dejaba el literal "&nbsp;" y el sintetizador leía
+// "nbsp" en cada espacio ("welcome an-be-space and…"), volviéndolo inentendible.
 export function stripHtml(html?: string): string {
-  return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const raw = html || ''
+  if (!raw) return ''
+  if (typeof document !== 'undefined') {
+    const el = document.createElement('div')
+    el.innerHTML = raw
+    // \s incluye el NBSP ( ) que resulta de &nbsp;, así que se colapsa a espacio normal.
+    return (el.textContent || '').replace(/\s+/g, ' ').trim()
+  }
+  return raw.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim()
 }

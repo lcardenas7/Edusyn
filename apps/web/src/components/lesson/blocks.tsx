@@ -40,10 +40,20 @@ export function legacyToBlocks(s: { body?: string; imageUrl?: string; videoUrl?:
   return out
 }
 
+// Decodifica HTML a texto (entidades incluidas: &nbsp; &amp;…) para TTS.
+function htmlToText(html: string): string {
+  if (typeof document !== 'undefined') {
+    const el = document.createElement('div')
+    el.innerHTML = html
+    return el.textContent || ''
+  }
+  return html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ')
+}
+
 /** Texto plano de los bloques (para "Escuchar" / lectura por voz en el player). */
 export function blocksToPlainText(blocks: LessonBlock[]): string {
   return (blocks || [])
-    .map(b => b.type === 'TEXT' ? (b.html || '').replace(/<[^>]+>/g, ' ') : b.type === 'TABLE' ? (b.rows || []).flat().join(' ') : '')
+    .map(b => b.type === 'TEXT' ? htmlToText(b.html || '') : b.type === 'TABLE' ? (b.rows || []).flat().join(' ') : '')
     .join(' ').replace(/\s+/g, ' ').trim()
 }
 

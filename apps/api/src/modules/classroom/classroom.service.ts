@@ -227,10 +227,10 @@ export class ClassroomService {
         },
         select: { id: true },
       });
-      return { ...classroom, studentEnrollmentId: enrollment?.id, currentPeriod };
+      return { ...classroom, studentEnrollmentId: enrollment?.id, currentPeriod, academicPeriods: periods };
     }
 
-    return { ...classroom, currentPeriod };
+    return { ...classroom, currentPeriod, academicPeriods: periods };
   }
 
   async update(classroomId: string, teacherId: string, dto: {
@@ -520,6 +520,7 @@ export class ClassroomService {
     timeLimitMinutes?: number;
     rubricId?: string;
     gameType?: string; // juego suelto (WORDSEARCH/CROSSWORD): marca para rotular sin abrir la lección
+    audioResponse?: boolean; // TASK con respuesta en audio: el alumno graba/sube un audio
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
     // Sección OPCIONAL: si se pasa, debe pertenecer al aula; si no, actividad sin sección.
@@ -537,6 +538,9 @@ export class ClassroomService {
     }
     if (dto.gameType) {
       metadata = { ...(metadata || {}), gameType: dto.gameType };
+    }
+    if (dto.audioResponse) {
+      metadata = { ...(metadata || {}), audioResponse: true };
     }
 
     return this.prisma.classroomActivity.create({

@@ -818,13 +818,16 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const blocks = Array.isArray((slide as any).blocks) ? (slide as any).blocks : null
 
     if (blocks && blocks.length) {
-      const speak = blocksToPlainText(blocks)
+      // TTS opcional: el docente decide por diapositiva (activityData.tts.enabled) y el
+      // idioma de lectura (tts.lang: es-ES / en-US), para no leer español con voz inglesa.
+      const tts = (slide as any).activityData?.tts
+      const speak = tts?.enabled ? blocksToPlainText(blocks) : ''
       return (
         <div>
           {slide.title && (
             <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-ink-primary mb-4">{slide.title}</motion.h2>
           )}
-          {speak && <div className="mb-4"><SpeakButton text={speak} label="Escuchar la lectura" /></div>}
+          {speak && <div className="mb-4"><SpeakButton text={speak} lang={tts?.lang || 'es-ES'} label="Escuchar la lectura" /></div>}
           <BlockStackView blocks={blocks} />
         </div>
       )
@@ -842,10 +845,10 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           </motion.h2>
         )}
 
-        {/* Oír la lectura con TTS (§3.1 vocabulario/pronunciación) */}
-        {slide.body && (
+        {/* Oír la lectura con TTS — opcional y por idioma, según lo decida el docente. */}
+        {slide.body && (slide as any).activityData?.tts?.enabled && (
           <div className="mb-4">
-            <SpeakButton text={stripHtml(slide.body)} label="Escuchar la lectura" />
+            <SpeakButton text={stripHtml(slide.body)} lang={(slide as any).activityData?.tts?.lang || 'es-ES'} label="Escuchar la lectura" />
           </div>
         )}
 

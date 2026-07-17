@@ -6,7 +6,7 @@ import { BlockStackEditor, legacyToBlocks, newBlock, type LessonBlock } from './
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Eye,
   Flag, GripVertical, Loader2, Pencil, Play, Plus, Save, Sparkles,
-  Trash2, Trophy, Type, X, Image, Video, Music, Wand2, Clock, AlertTriangle, Check, Download
+  Trash2, Trophy, Type, X, Image, Video, Music, Wand2, Clock, AlertTriangle, Check, Download, Volume2
 } from 'lucide-react'
 import { lessonApi, type Lesson, type LessonSlide } from '../lib/api'
 import { valeriaAssistantBridge } from '../contexts/ValeriaContext'
@@ -51,6 +51,8 @@ interface SlideForm {
     imageUrl: string
     // Comportamiento configurable (P4): obligatoria/gating/intentos con XP decreciente.
     behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number; timerSeconds?: number; askValeria?: boolean }
+    // TTS opcional en slides de CONTENIDO: el docente activa "Escuchar" y elige idioma.
+    tts?: { enabled?: boolean; lang?: string }
   }
   badgeEmoji: string
   badgeTitle: string
@@ -294,6 +296,7 @@ export default function LessonEditor({
         feedbackIncorrect: (s.activityData as any).feedbackIncorrect || '',
         imageUrl: (s.activityData as any).imageUrl || '',
         behavior: (s.activityData as any).behavior || {},
+        tts: (s.activityData as any).tts || undefined,
       } : { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: s.badgeEmoji || '',
       badgeTitle: s.badgeTitle || '',
@@ -407,7 +410,9 @@ export default function LessonEditor({
           feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
           imageUrl: s.activityData.imageUrl || undefined,
           behavior: s.activityData.behavior && Object.keys(s.activityData.behavior).length ? s.activityData.behavior : undefined,
-        } : undefined,
+        } : s.type === 'CONTENT' && s.activityData?.tts?.enabled
+          ? { tts: { enabled: true, lang: s.activityData.tts.lang || 'es-ES' } }
+          : undefined,
         blocks: s.type === 'CONTENT' ? (s.blocks || undefined) : undefined,
         badgeEmoji: s.type === 'BADGE_REVEAL' ? (s.badgeEmoji || badgeEmoji) : undefined,
         badgeTitle: s.type === 'BADGE_REVEAL' ? (s.badgeTitle || badgeTitle) : undefined,
@@ -1588,6 +1593,28 @@ export default function LessonEditor({
               blocks={slide.blocks || legacyToBlocks(slide)}
               onChange={b => updateSlide(index, { blocks: b })}
             />
+            {/* TTS opcional por diapositiva: el docente decide si aparece "Escuchar" y en qué idioma. */}
+            {(() => {
+              const tts = slide.activityData?.tts || {}
+              return (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                    <input type="checkbox" checked={!!tts.enabled} onChange={e => updateActivityData(index, { tts: { ...tts, enabled: e.target.checked, lang: tts.lang || 'es-ES' } })} className="w-4 h-4 accent-violet-600" />
+                    <span className="inline-flex items-center gap-1.5"><Volume2 className="w-4 h-4" /> Botón “Escuchar” (lectura por voz)</span>
+                  </label>
+                  {tts.enabled && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Idioma:</span>
+                      <select value={tts.lang || 'es-ES'} onChange={e => updateActivityData(index, { tts: { ...tts, enabled: true, lang: e.target.value } })} className="border border-slate-200 rounded-lg px-2 py-1 text-sm">
+                        <option value="es-ES">Español</option>
+                        <option value="en-US">Inglés</option>
+                      </select>
+                      <span className="text-[11px] text-slate-400">Si mezcla idiomas, elige el predominante.</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         )}
 

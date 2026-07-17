@@ -221,6 +221,7 @@ export class ClassroomController {
     attachmentName?: string;
     rubricId?: string;
     gameType?: string;
+    audioResponse?: boolean;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.createActivity(classroomId, userId, body);
