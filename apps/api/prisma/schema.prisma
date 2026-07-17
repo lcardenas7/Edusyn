@@ -5607,6 +5607,18 @@ enum SubmissionStatus {
   AUTO_GRADED
 }
 
+// Condición que debe cumplirse en la actividad previa para desbloquear la siguiente.
+// SUBMITTED: Basta con haber entregado (comportamiento actual).
+// GRADED:    Debe haber sido calificada.
+// MIN_SCORE: Debe haber obtenido un puntaje mínimo (ver minScore en ActivityUnlockRule).
+// COMPLETED: Completó la interacción (lecciones interactivas; futuro).
+enum ActivityUnlockCondition {
+  SUBMITTED
+  GRADED
+  MIN_SCORE
+  COMPLETED
+}
+
 model Classroom {
   id                  String   @id @default(cuid())
   institutionId       String
@@ -5755,10 +5767,52 @@ model ClassroomActivity {
   // Pasos de ruta que referencian esta actividad
   routeSteps LearningRouteStep[] @relation("ActivityRouteSteps")
 
+  // Sistema de dependencias: reglas que bloquean ESTA actividad hasta cumplir sus prerequisitos
+  dependencies    ActivityDependency[] @relation("ActivityDeps")
+  // Relación inversa: reglas donde ESTA actividad es el prerrequisito de otras
+  prerequisiteFor ActivityDependency[] @relation("ActivityPrereqFor")
+
   @@index([classroomId])
   @@index([sectionId])
   @@index([academicTermId])
   @@index([dueDate])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SISTEMA DE DEPENDENCIAS DE ACTIVIDADES (grafo dirigido acíclico de prerrequisitos)
+// Una actividad puede requerir que otras se completen antes de abrirse. El docente
+// configura estas reglas; si no configura ninguna, el aula funciona igual que hoy
+// (retrocompatible 100%). El candado NO se persiste: se deriva en lectura de estas
+// reglas + el progreso del estudiante (ver CompletionService).
+//
+// Futuro (NO ahora, migración aditiva trivial cuando se necesite):
+//  - OR / "N de M": columna nullable `groupKey` (edges con igual groupKey = OR).
+//  - Prerrequisito "blando" (informativo, no bloquea): columna `isOptional`.
+// ─────────────────────────────────────────────────────────────────────────────
+model ActivityDependency {
+  id             String @id @default(cuid())
+
+  // Actividad que queda BLOQUEADA hasta que se cumpla la condición sobre el prerrequisito
+  activityId     String
+  // Actividad previa que DEBE cumplir la condición para desbloquear a `activityId`
+  prerequisiteId String
+
+  // Cuándo se considera "cumplido" el prerrequisito. Hoy se usa SUBMITTED (entregas) y
+  // COMPLETED (lecciones); GRADED/MIN_SCORE quedan listos sin rediseño.
+  condition ActivityUnlockCondition @default(SUBMITTED)
+
+  // Puntaje mínimo requerido (solo relevante si condition = MIN_SCORE)
+  minScore  Decimal? @db.Decimal(7, 2)
+
+  createdAt DateTime @default(now())
+
+  activity     ClassroomActivity @relation("ActivityDeps",     fields: [activityId],     references: [id], onDelete: Cascade)
+  prerequisite ClassroomActivity @relation("ActivityPrereqFor", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  // Un prerrequisito no puede repetirse para la misma actividad
+  @@unique([activityId, prerequisiteId])
+  @@index([activityId])
+  @@index([prerequisiteId])
 }
 
 // Asignación de actividades a estudiantes específicos (recuperación, refuerzo, etc.)
