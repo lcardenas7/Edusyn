@@ -1595,6 +1595,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [loading, setLoading] = useState(true)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
+  const [editTeamId, setEditTeamId] = useState<string | null>(null)
   const [editingPres, setEditingPres] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [broadcasting, setBroadcasting] = useState(false)
@@ -1782,7 +1783,10 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                 <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
                   <div className="flex items-start justify-between">
                     <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
-                    <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setEditTeamId(t.id)} title="Editar integrantes" className="text-slate-300 hover:text-violet-600"><Users className="w-4 h-4" /></button>
+                      <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                    </div>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
                   <div className="my-2"><Trail team={t} mini /></div>
@@ -1800,6 +1804,8 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {tab === 'resources' && <ResourcesView projectId={projectId} canManage />}
 
       {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); alert(`Misión liberada a ${count} equipo(s).`); load() }} />}
+
+      {editTeamId && <EditTeamMembers team={teams.find((t: any) => t.id === editTeamId)} classroomId={classroomId} projectId={projectId} onClose={() => setEditTeamId(null)} onChanged={load} />}
 
       {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
       {showManual && (
@@ -1882,6 +1888,70 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
       <div className="flex justify-end gap-2">
         <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
         <button onClick={create} disabled={!name.trim() || sel.size === 0 || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear equipo</button>
+      </div>
+    </div>
+  )
+}
+
+// Editar integrantes de un equipo YA creado: sacar/meter estudiantes.
+function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: { team: any; classroomId: string; projectId: string; onClose: () => void; onChanged: () => void }) {
+  const [roster, setRoster] = useState<{ enrollmentId: string; name: string; assignedTeamName: string | null }[]>([])
+  const [busy, setBusy] = useState(false)
+
+  const reloadRoster = () => abpApi.roster(classroomId, projectId).then(({ data }) => setRoster(data))
+  useEffect(() => { reloadRoster() }, [classroomId, projectId])
+
+  if (!team) return null
+  const members = teamMembers(team)
+  const available = roster.filter(r => !r.assignedTeamName)
+
+  const add = async (enrollmentId: string) => {
+    setBusy(true)
+    try { await abpApi.addTeamMember(team.id, enrollmentId); await reloadRoster(); onChanged() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo añadir') }
+    finally { setBusy(false) }
+  }
+  const remove = async (enrollmentId: string) => {
+    if (members.length <= 1) { alert('El equipo debe tener al menos un integrante.'); return }
+    setBusy(true)
+    try { await abpApi.removeTeamMember(team.id, enrollmentId); await reloadRoster(); onChanged() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo sacar') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
+        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+          <h3 className="font-bold text-slate-800">{team.emoji} {team.name} · Integrantes</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+        </div>
+        <div className="p-5 space-y-4 overflow-y-auto">
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-1.5">En el equipo ({members.length})</p>
+            <div className="space-y-1">
+              {members.map(m => (
+                <div key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-violet-50 text-violet-800 text-sm">
+                  <span className="truncate">{m.name}</span>
+                  <button onClick={() => remove(m.id)} disabled={busy || members.length <= 1} title={members.length <= 1 ? 'El equipo no puede quedar vacío' : 'Sacar del equipo'} className="text-violet-300 hover:text-rose-500 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-1.5">Disponibles para añadir ({available.length})</p>
+            <div className="space-y-1 max-h-52 overflow-y-auto">
+              {available.map(r => (
+                <div key={r.enrollmentId} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 text-sm">
+                  <span className="truncate">{r.name}</span>
+                  <button onClick={() => add(r.enrollmentId)} disabled={busy} className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700 disabled:opacity-40 shrink-0"><Plus className="w-4 h-4" /> Añadir</button>
+                </div>
+              ))}
+              {available.length === 0 && <p className="text-xs text-slate-400 p-2">No hay estudiantes sin equipo en este proyecto.</p>}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

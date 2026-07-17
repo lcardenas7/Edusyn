@@ -372,6 +372,42 @@ export class AbpService {
     return { ok: true };
   }
 
+  /** Añade un integrante a un equipo ya creado (docente dueño). */
+  async addTeamMember(teamId: string, institutionId: string, userId: string, enrollmentId: string) {
+    if (!enrollmentId) throw new BadRequestException('Estudiante inválido');
+    const team = await this.prisma.abpTeam.findFirst({ where: { id: teamId, institutionId }, select: { projectId: true } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+
+    // Un alumno no puede estar en dos equipos del mismo proyecto.
+    const taken = await this.prisma.abpTeamMember.findFirst({
+      where: { studentEnrollmentId: enrollmentId, team: { projectId: team.projectId } },
+      select: { teamId: true },
+    });
+    if (taken) {
+      throw new BadRequestException(taken.teamId === teamId ? 'El estudiante ya está en este equipo' : 'El estudiante ya está en otro equipo de este proyecto');
+    }
+
+    await this.prisma.abpTeamMember.create({ data: { institutionId, teamId, studentEnrollmentId: enrollmentId } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** Saca a un integrante de un equipo (docente dueño). No borra sus aportes ya hechos. */
+  async removeTeamMember(teamId: string, institutionId: string, userId: string, enrollmentId: string) {
+    const team = await this.prisma.abpTeam.findFirst({
+      where: { id: teamId, institutionId },
+      select: { projectId: true, _count: { select: { members: true } } },
+    });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+    if (team._count.members <= 1) throw new BadRequestException('El equipo debe tener al menos un integrante. Elimínalo si quieres deshacerlo.');
+
+    const member = await this.prisma.abpTeamMember.findUnique({ where: { teamId_studentEnrollmentId: { teamId, studentEnrollmentId: enrollmentId } } });
+    if (!member) throw new NotFoundException('El estudiante no pertenece a este equipo');
+    await this.prisma.abpTeamMember.delete({ where: { id: member.id } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
   // ─── ESTUDIANTE: su equipo ─────────────────────────────────────────────────
 
   /** El equipo del estudiante autenticado en un proyecto (enriquecido con su config

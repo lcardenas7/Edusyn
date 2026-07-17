@@ -176,6 +176,22 @@ export class AbpController {
     return this.service.deleteTeam(teamId, institutionId, userId);
   }
 
+  // Añadir integrante a un equipo — docente.
+  @Post('teams/:teamId/members')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addTeamMember(@Param('teamId') teamId: string, @Body() body: { enrollmentId: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addTeamMember(teamId, institutionId, userId, body?.enrollmentId);
+  }
+
+  // Sacar integrante de un equipo — docente.
+  @Delete('teams/:teamId/members/:enrollmentId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async removeTeamMember(@Param('teamId') teamId: string, @Param('enrollmentId') enrollmentId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.removeTeamMember(teamId, institutionId, userId, enrollmentId);
+  }
+
   // ─── Sendero + validaciones (Ticket 2) ─────────────────────────────────────
 
   // El equipo del estudiante en un proyecto (su expedición).
