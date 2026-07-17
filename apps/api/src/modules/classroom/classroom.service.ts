@@ -627,13 +627,13 @@ export class ClassroomService {
 
     // Estado de candado por dependencias (Fase 4). Backend autoritativo; la UI solo pinta.
     // Sin reglas o sin matrícula → todo libre (retrocompatible).
-    let gate = new Map<string, { locked: boolean; missing: any[] }>();
+    let gate = new Map<string, { locked: boolean; requirements: any[] }>();
     const enr = await this.resolveStudentEnrollment(classroomId, userId);
     if (enr) gate = await this.gating.evaluateForStudent(classroomId, enr);
 
     return activities.map((a) => {
       const g = gate.get(a.id);
-      return { ...a, locked: g?.locked ?? false, missing: g?.missing ?? [] };
+      return { ...a, locked: g?.locked ?? false, requirements: g?.requirements ?? [] };
     });
   }
 

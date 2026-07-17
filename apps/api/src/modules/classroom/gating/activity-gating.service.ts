@@ -3,8 +3,8 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { CompletionService, satisfiesCondition } from './completion.service';
 import { DependencyEdge, validateNewDependency } from './activity-graph.util';
 
-// Un prerrequisito faltante mostrado al estudiante en la actividad bloqueada.
-export interface MissingPrerequisite {
+// Estado de UN prerrequisito para mostrarlo al estudiante (✔ cumplido / ⏳ pendiente).
+export interface PrerequisiteStatus {
   prerequisiteId: string;
   title: string;
   condition: string;
@@ -14,7 +14,7 @@ export interface MissingPrerequisite {
 
 export interface GateState {
   locked: boolean;
-  missing: MissingPrerequisite[];
+  requirements: PrerequisiteStatus[]; // TODOS los prerrequisitos, con su estado
 }
 
 @Injectable()
@@ -98,24 +98,24 @@ export class ActivityGatingService {
     for (const [activityId, rules] of byActivity) {
       // Sticky: si ya la inició/entregó, permanece desbloqueada.
       if (completion.get(activityId)?.started) {
-        result.set(activityId, { locked: false, missing: [] });
+        result.set(activityId, { locked: false, requirements: [] });
         continue;
       }
-      const missing: MissingPrerequisite[] = [];
+      const requirements: PrerequisiteStatus[] = [];
+      let anyPending = false;
       for (const r of rules) {
         const minScore = r.minScore != null ? Number(r.minScore) : null;
-        const ok = satisfiesCondition(completion.get(r.prerequisiteId), r.condition, minScore);
-        if (!ok) {
-          missing.push({
-            prerequisiteId: r.prerequisiteId,
-            title: titleById.get(r.prerequisiteId) || 'Actividad',
-            condition: r.condition,
-            minScore,
-            satisfied: false,
-          });
-        }
+        const satisfied = satisfiesCondition(completion.get(r.prerequisiteId), r.condition, minScore);
+        if (!satisfied) anyPending = true;
+        requirements.push({
+          prerequisiteId: r.prerequisiteId,
+          title: titleById.get(r.prerequisiteId) || 'Actividad',
+          condition: r.condition,
+          minScore,
+          satisfied,
+        });
       }
-      result.set(activityId, { locked: missing.length > 0, missing });
+      result.set(activityId, { locked: anyPending, requirements });
     }
 
     return result;

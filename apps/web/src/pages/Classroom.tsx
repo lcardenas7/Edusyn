@@ -28,7 +28,7 @@ import {
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, Calendar, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
-  Puzzle, Rocket, Music, Mic,
+  Puzzle, Rocket, Music, Mic, Lock,
 } from 'lucide-react'
 import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
 import { PrerequisitesEditor, type PrereqRule } from '../components/classroom/PrerequisitesEditor'
@@ -88,6 +88,17 @@ interface Announcement {
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
+
+// Frase corta de la condición de un prerrequisito, para el estudiante.
+const reqConditionLabel = (condition: string, minScore?: number | null): string => {
+  switch (condition) {
+    case 'COMPLETED': return 'completarla'
+    case 'GRADED': return 'que esté calificada'
+    case 'MIN_SCORE': return `nota ≥ ${minScore ?? ''}`
+    case 'SUBMITTED':
+    default: return 'entregarla'
+  }
+}
 
 // ¿La entrega es un audio? (por extensión de la key/URL) — para reproducirlo en línea.
 const isAudioFileName = (nameOrUrl?: string | null) => {
@@ -5376,16 +5387,20 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     const studentStatus = isStudent ? getStudentTaskStatus(act) : null
     const studentSub = isStudent ? act.submissions?.[0] : null
     const workInfo = getWorkInfo(act)
+    // Candado por dependencias (Fase 6): backend autoritativo, la UI solo pinta.
+    const locked = isStudent && !!(act as any).locked
+    const requirements: { prerequisiteId: string; title: string; condition: string; minScore: number | null; satisfied: boolean }[] = (act as any).requirements || []
     return (
-      <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
+      <button key={act.id} onClick={() => { if (locked) return; openActivity(act) }} disabled={locked} style={{ borderLeftColor: locked ? '#cbd5e1' : workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all group ${locked ? 'opacity-60 cursor-not-allowed border-hairline' : `hover:shadow-sm ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}`}>
         <div className="flex items-start gap-4">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
             {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
-              {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
+              <h3 className={`text-base font-bold ${locked ? 'text-slate-500' : 'text-slate-800 group-hover:text-blue-700'}`}>{act.title}</h3>
+              {locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-slate-200 text-slate-600 inline-flex items-center gap-1"><Lock className="w-3 h-3" /> Bloqueada</span>}
+              {isNew && !locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
               {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
               {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
               {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
@@ -5419,8 +5434,28 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
               )}
             </div>
+
+            {/* Faltantes para desbloquear (Fase 6): lista completa con ✔/⏳ */}
+            {locked && requirements.length > 0 && (
+              <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+                <p className="text-xs font-semibold text-slate-500 mb-1.5">Requiere completar primero:</p>
+                <ul className="space-y-1">
+                  {requirements.map(r => (
+                    <li key={r.prerequisiteId} className="flex items-center gap-2 text-sm">
+                      {r.satisfied
+                        ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        : <Clock className="w-4 h-4 text-amber-500 shrink-0" />}
+                      <span className={r.satisfied ? 'text-slate-500 line-through' : 'text-slate-700'}>{r.title}</span>
+                      <span className="text-[11px] text-slate-400">· {reqConditionLabel(r.condition, r.minScore)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+          {locked
+            ? <Lock className="w-5 h-5 text-slate-300 shrink-0 mt-1" />
+            : <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />}
         </div>
       </button>
     )
