@@ -474,10 +474,14 @@ export class LessonService {
         scoreIncrement = points; // el puntaje académico es el total al acertar
         activityCorrect = true;
         // XP decreciente por intento (P4): 1er intento = points; cada intento resta
-        // `xpDecrement`, con piso `xpMin` (por defecto 25% del valor).
+        // `xpDecrement`, con piso `xpMin` (por defecto 25% del valor). Si el docente
+        // no configura descuento, por defecto el acierto en un intento posterior vale
+        // menos XP (25% del valor por intento); poner xpDecrement=0 lo desactiva.
         const behavior = (actData.behavior || {}) as any;
         const attempt = Math.max(1, Number(data.attempt) || 1);
-        const dec = Math.max(0, Number(behavior.xpDecrement) || 0);
+        const dec = behavior.xpDecrement != null
+          ? Math.max(0, Number(behavior.xpDecrement) || 0)
+          : Math.ceil(points * 0.25);
         const floor = behavior.xpMin != null ? Math.max(0, Number(behavior.xpMin)) : Math.ceil(points * 0.25);
         activityXp = Math.max(floor, points - dec * (attempt - 1));
       }
