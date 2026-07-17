@@ -99,6 +99,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const [slideResult, setSlideResult] = useState<SlideResult | null>(null)
   const [showExplanation, setShowExplanation] = useState(false)
   const [attempts, setAttempts] = useState(0) // intentos en la actividad actual (P4)
+  const [timeLeft, setTimeLeft] = useState<number | null>(null) // temporizador (P4)
+  const [showHint, setShowHint] = useState(false) // pista bajo demanda (P4)
 
   // Loading states
   const [advancing, setAdvancing] = useState(false)
@@ -283,6 +285,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       setSlideResult(null)
       setShowExplanation(false)
       setAttempts(0)
+      setShowHint(false)
       setSlideStartTime(Date.now())
     } else if (isTeacher) {
       // Teacher preview finished
@@ -301,6 +304,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         setSlideResult(null)
         setShowExplanation(false)
         setAttempts(0)
+        setShowHint(false)
         setSlideStartTime(Date.now())
       }
     }
@@ -343,6 +347,35 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     setSlideResult(null)
     setShowExplanation(false)
   }
+
+  // Se acabó el tiempo (P4): auto-envía si hay respuesta completa; si no, cuenta como
+  // intento fallido por tiempo.
+  const timeUpRef = useRef<() => void>(() => { })
+  timeUpRef.current = () => {
+    if (answerSubmitted || hasAnswered) return
+    const actData = currentSlide?.activityData
+    if (actData && isAnswerComplete(actData, selectedAnswer)) { handleSubmitAnswer(); return }
+    setAttempts(a => a + 1)
+    setSlideResult({ answer: selectedAnswer, isCorrect: false, points: 0, maxPoints: (actData as any)?.points || 10 })
+    setAnswerSubmitted(true)
+    if (soundEnabled) playSound('wrong')
+  }
+
+  // Cuenta regresiva mientras la actividad temporizada esté sin responder.
+  useEffect(() => {
+    const secs = Number((currentSlide?.activityData as any)?.behavior?.timerSeconds) || 0
+    if (isTeacher || currentSlide?.type !== 'ACTIVITY' || secs <= 0 || answerSubmitted || hasAnswered) { setTimeLeft(null); return }
+    setTimeLeft(secs)
+    const iv = setInterval(() => {
+      setTimeLeft(t => {
+        if (t === null) return null
+        if (t <= 1) { clearInterval(iv); timeUpRef.current(); return 0 }
+        return t - 1
+      })
+    }, 1000)
+    return () => clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, answerSubmitted, hasAnswered, isTeacher])
 
   // ─────────────────────────────────────────────────────────────────
   // PREVENT EXIT (beforeunload)
@@ -870,6 +903,12 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <span className="text-ink-muted text-sm font-medium">
             {act.questionType === 'FLASHCARDS' ? 'Tarjetas de estudio' : `Actividad • ${act.points || 10} pts`}
           </span>
+          {/* Temporizador (P4) */}
+          {timeLeft !== null && !answerSubmitted && !alreadyAnswered && (
+            <span className={`ml-auto flex items-center gap-1 text-sm font-bold tabular-nums rounded-full px-2.5 py-0.5 ${timeLeft <= 10 ? 'bg-feedback-error/15 text-feedback-error animate-pulse' : 'bg-surface-2 text-ink-secondary'}`}>
+              <Clock className="w-4 h-4" /> {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+            </span>
+          )}
         </div>
 
         {/* El enunciado se muestra arriba salvo cuando el bloque lo aloja
@@ -878,9 +917,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <h3 className="text-xl sm:text-2xl font-bold text-ink-primary mb-6">{act.question}</h3>
         )}
 
-        {/* Hint */}
+        {/* Pista bajo demanda (P4): el alumno la revela cuando la necesita */}
         {act.hint && !answerSubmitted && !alreadyAnswered && (
-          <p className="text-ink-secondary text-sm mb-4 italic">💡 {act.hint}</p>
+          showHint ? (
+            <p className="text-ink-secondary text-sm mb-4 italic bg-surface-2 rounded-xl px-3 py-2">💡 {act.hint}</p>
+          ) : (
+            <button onClick={() => setShowHint(true)} className="text-sm font-semibold text-accent hover:opacity-80 mb-4 flex items-center gap-1">💡 Ver pista</button>
+          )
         )}
 
         {/* Interacción — Stage + BlockRenderer (arquitectura de bloques DS-1) */}

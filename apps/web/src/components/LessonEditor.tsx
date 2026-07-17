@@ -50,7 +50,7 @@ interface SlideForm {
     feedbackIncorrect: string
     imageUrl: string
     // Comportamiento configurable (P4): obligatoria/gating/intentos con XP decreciente.
-    behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number }
+    behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number; timerSeconds?: number }
   }
   badgeEmoji: string
   badgeTitle: string
@@ -1432,14 +1432,18 @@ export default function LessonEditor({
                     <input type="checkbox" checked={!!b.gateOnCorrect} onChange={e => setB({ gateOnCorrect: e.target.checked })} className="w-4 h-4 accent-violet-600" />
                     No avanzar hasta acertar
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Intentos máx. <span className="text-slate-400">(0 = sin límite)</span></label>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Intentos máx. <span className="text-slate-400">(0=∞)</span></label>
                       <input type="number" min="0" value={b.maxAttempts ?? 0} onChange={e => setB({ maxAttempts: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Resta de XP por intento</label>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Resta XP/intento</label>
                       <input type="number" min="0" value={b.xpDecrement ?? 0} onChange={e => setB({ xpDecrement: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Tiempo (s) <span className="text-slate-400">(0=∞)</span></label>
+                      <input type="number" min="0" value={b.timerSeconds ?? 0} onChange={e => setB({ timerSeconds: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                     </div>
                   </div>
                   {(b.xpDecrement || 0) > 0 && (
