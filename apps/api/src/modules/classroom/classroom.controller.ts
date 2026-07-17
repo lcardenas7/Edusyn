@@ -900,6 +900,13 @@ export class ClassroomController {
     return this.lessonService.getVersion(versionId);
   }
 
+  // Pista de Valeria para una actividad (P4) — orienta sin revelar la respuesta.
+  @Post('lessons/:lessonId/slides/:slideId/hint')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async activityHint(@Param('lessonId') lessonId: string, @Param('slideId') slideId: string) {
+    return this.lessonService.activityHint(lessonId, slideId);
+  }
+
   // Slides CRUD
   @Post('lessons/:lessonId/slides')
   @Roles('DOCENTE', 'COORDINADOR')
@@ -1001,6 +1008,7 @@ export class ClassroomController {
     slideIndex: number;
     slideId: string;
     answer?: any;
+    attempt?: number;
     timeSpentDelta?: number;
   }) {
     const userId = req.user.id;

@@ -182,6 +182,22 @@ export class LessonService {
     return v;
   }
 
+  /** Pista de Valeria para una actividad (P4): orienta sin revelar la respuesta. */
+  async activityHint(lessonId: string, slideId: string) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: {
+        slides: { where: { id: slideId }, select: { activityData: true, type: true } },
+        activity: { select: { classroom: { select: { teacherAssignment: { select: { group: { select: { grade: { select: { name: true } } } } } } } } } },
+      },
+    });
+    const slide = lesson?.slides?.[0];
+    const act = slide?.activityData as any;
+    if (!act?.question) return { hint: '' };
+    const gradeName = lesson?.activity?.classroom?.teacherAssignment?.group?.grade?.name || undefined;
+    return this.apdAi.generateActivityHint({ question: act.question, options: Array.isArray(act.options) ? act.options : undefined, gradeName });
+  }
+
   /** ¿Hay un autoguardado más nuevo que el último guardado de la lección?
    * (para ofrecer "recuperar borrador" al abrir el editor tras un cierre inesperado). */
   async getRecovery(lessonId: string) {
@@ -409,6 +425,7 @@ export class LessonService {
     slideIndex: number;
     slideId: string;
     answer?: any; // For ACTIVITY slides
+    attempt?: number; // Nº de intento con el que acertó (para XP decreciente, P4)
     timeSpentDelta?: number; // Seconds spent on this slide
   }) {
     const lesson = await this.prisma.lesson.findUnique({
@@ -437,7 +454,8 @@ export class LessonService {
     let scoreIncrement = 0;
     let maxScoreIncrement = 0;
     let activityCorrect = false; // para XP por dominio (solo si acertó)
-    let activityPoints = 0;
+    let activityPoints = 0; // puntaje académico (no decrece)
+    let activityXp = 0; // XP de gamificación (decrece por intento, P4)
 
     // If ACTIVITY slide, grade the answer (las flashcards son estudio, no se puntúan)
     if (
@@ -453,8 +471,15 @@ export class LessonService {
 
       const isCorrect = this.gradeAnswer(actData, data.answer);
       if (isCorrect) {
-        scoreIncrement = points;
+        scoreIncrement = points; // el puntaje académico es el total al acertar
         activityCorrect = true;
+        // XP decreciente por intento (P4): 1er intento = points; cada intento resta
+        // `xpDecrement`, con piso `xpMin` (por defecto 25% del valor).
+        const behavior = (actData.behavior || {}) as any;
+        const attempt = Math.max(1, Number(data.attempt) || 1);
+        const dec = Math.max(0, Number(behavior.xpDecrement) || 0);
+        const floor = behavior.xpMin != null ? Math.max(0, Number(behavior.xpMin)) : Math.ceil(points * 0.25);
+        activityXp = Math.max(floor, points - dec * (attempt - 1));
       }
 
       answers[data.slideId] = {
@@ -462,6 +487,7 @@ export class LessonService {
         isCorrect,
         points: isCorrect ? points : 0,
         maxPoints: points,
+        attempt: Math.max(1, Number(data.attempt) || 1),
       };
     }
 
@@ -503,7 +529,7 @@ export class LessonService {
     // por slide/lección para que reintentos no dupliquen XP. Nunca rompe el flujo.
     const xp = await this.awardLessonXp({
       studentEnrollmentId, lessonId, lessonTitle: lesson.title,
-      slideId: data.slideId, activityCorrect, activityPoints, isComplete,
+      slideId: data.slideId, activityCorrect, activityPoints, activityXp, isComplete,
       activityId: lesson.activityId,
       scorePercent: totalMaxScore > 0 ? Math.min(Number(updatedProgress.score) / totalMaxScore, 1) * 100 : 100,
     });
@@ -528,6 +554,7 @@ export class LessonService {
     slideId: string;
     activityCorrect: boolean;
     activityPoints: number;
+    activityXp?: number;
     isComplete: boolean;
     activityId: string;
     scorePercent: number;
@@ -570,7 +597,7 @@ export class LessonService {
           studentId: enrollment.studentId,
           studentEnrollmentId: p.studentEnrollmentId,
           source: 'LESSON_ACTIVITY',
-          amount: p.activityPoints,
+          amount: p.activityXp ?? p.activityPoints,
           skill,
           reason: `Acierto en lección: ${p.lessonTitle}`,
           idempotencyKey: `lesson:${p.lessonId}:slide:${p.slideId}:correct:${p.studentEnrollmentId}`,

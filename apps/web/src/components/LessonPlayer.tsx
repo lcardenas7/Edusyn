@@ -98,6 +98,11 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const [answerSubmitted, setAnswerSubmitted] = useState(false)
   const [slideResult, setSlideResult] = useState<SlideResult | null>(null)
   const [showExplanation, setShowExplanation] = useState(false)
+  const [attempts, setAttempts] = useState(0) // intentos en la actividad actual (P4)
+  const [timeLeft, setTimeLeft] = useState<number | null>(null) // temporizador (P4)
+  const [showHint, setShowHint] = useState(false) // pista bajo demanda (P4)
+  const [valeriaHint, setValeriaHint] = useState<string | null>(null) // pista de Valeria (P4)
+  const [valeriaLoading, setValeriaLoading] = useState(false)
 
   // Loading states
   const [advancing, setAdvancing] = useState(false)
@@ -164,6 +169,16 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const isSlideCompleted = currentSlide ? completedSlides.includes(currentSlide.id) : false
   const hasAnswered = currentSlide ? !!answers[currentSlide.id] : false
 
+  // Comportamiento configurable de la actividad (P4): obligatoria/opcional, gating
+  // (no avanzar hasta acertar) e intentos.
+  const behavior = (currentSlide?.activityData as any)?.behavior || {}
+  const isOptionalAct = behavior.required === false
+  const isGated = !!behavior.gateOnCorrect
+  const maxAttempts = Number(behavior.maxAttempts) || 0 // 0 = ilimitado
+  const attemptsExhausted = maxAttempts > 0 && attempts >= maxAttempts
+  const answeredCorrect = slideResult?.isCorrect === true
+  const canRetry = isGated && answerSubmitted && !answeredCorrect && !attemptsExhausted
+
   // ─────────────────────────────────────────────────────────────────
   // START
   // ─────────────────────────────────────────────────────────────────
@@ -190,13 +205,17 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
     const timeSpent = Math.round((Date.now() - slideStartTime) / 1000)
 
-    // For ACTIVITY slides que requieren envío, hay que responder primero.
-    // Las flashcards (estudio) no requieren envío → se puede avanzar.
+    // Gating (P4): las flashcards no requieren envío; las opcionales se pueden
+    // saltar; las obligatorias exigen responder; y si "no avanzar hasta acertar"
+    // está activo, se exige acierto (o agotar los intentos).
     if (
       currentSlide.type === 'ACTIVITY' &&
       requiresSubmission(currentSlide.activityData?.questionType) &&
-      !answerSubmitted && !hasAnswered && !isTeacher
-    ) return
+      !isTeacher && !isOptionalAct
+    ) {
+      if (!answerSubmitted && !hasAnswered) return
+      if (isGated && !hasAnswered && !answeredCorrect && !attemptsExhausted) return
+    }
 
     if (!isTeacher) {
       try {
@@ -207,6 +226,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           answer: currentSlide.type === 'ACTIVITY' && requiresSubmission(currentSlide.activityData?.questionType)
             ? selectedAnswer
             : undefined,
+          attempt: attempts || 1,
           timeSpentDelta: timeSpent,
         })
         // Update local progress
@@ -266,6 +286,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       setAnswerSubmitted(false)
       setSlideResult(null)
       setShowExplanation(false)
+      setAttempts(0)
+      setShowHint(false)
+      setValeriaHint(null)
       setSlideStartTime(Date.now())
     } else if (isTeacher) {
       // Teacher preview finished
@@ -283,6 +306,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         setAnswerSubmitted(false)
         setSlideResult(null)
         setShowExplanation(false)
+        setAttempts(0)
+        setShowHint(false)
+        setValeriaHint(null)
         setSlideStartTime(Date.now())
       }
     }
@@ -309,6 +335,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       maxPoints: points,
     }
 
+    setAttempts(a => a + 1)
     setSlideResult(result)
     setAnswerSubmitted(true)
     if (soundEnabled) playSound(isCorrect ? 'correct' : 'wrong')
@@ -316,6 +343,55 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } })
     }
   }
+
+  // Pedir una pista a Valeria (P4): tutora IA, no revela la respuesta.
+  const askValeria = async () => {
+    if (!lesson || !currentSlide || valeriaLoading) return
+    setValeriaLoading(true)
+    try {
+      const { data } = await lessonApi.activityHint(lesson.id, currentSlide.id)
+      setValeriaHint(data.hint || 'Valeria no está disponible ahora. Intenta razonarlo con lo que ya sabes.')
+    } catch {
+      setValeriaHint('No se pudo pedir la pista. Intenta razonarlo con lo que ya sabes.')
+    } finally { setValeriaLoading(false) }
+  }
+
+  // Reintentar la actividad actual (mantiene el contador de intentos, P4).
+  const handleRetry = () => {
+    setSelectedAnswer(null)
+    setAnswerSubmitted(false)
+    setSlideResult(null)
+    setShowExplanation(false)
+  }
+
+  // Se acabó el tiempo (P4): auto-envía si hay respuesta completa; si no, cuenta como
+  // intento fallido por tiempo.
+  const timeUpRef = useRef<() => void>(() => { })
+  timeUpRef.current = () => {
+    if (answerSubmitted || hasAnswered) return
+    const actData = currentSlide?.activityData
+    if (actData && isAnswerComplete(actData, selectedAnswer)) { handleSubmitAnswer(); return }
+    setAttempts(a => a + 1)
+    setSlideResult({ answer: selectedAnswer, isCorrect: false, points: 0, maxPoints: (actData as any)?.points || 10 })
+    setAnswerSubmitted(true)
+    if (soundEnabled) playSound('wrong')
+  }
+
+  // Cuenta regresiva mientras la actividad temporizada esté sin responder.
+  useEffect(() => {
+    const secs = Number((currentSlide?.activityData as any)?.behavior?.timerSeconds) || 0
+    if (isTeacher || currentSlide?.type !== 'ACTIVITY' || secs <= 0 || answerSubmitted || hasAnswered) { setTimeLeft(null); return }
+    setTimeLeft(secs)
+    const iv = setInterval(() => {
+      setTimeLeft(t => {
+        if (t === null) return null
+        if (t <= 1) { clearInterval(iv); timeUpRef.current(); return 0 }
+        return t - 1
+      })
+    }, 1000)
+    return () => clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, answerSubmitted, hasAnswered, isTeacher])
 
   // ─────────────────────────────────────────────────────────────────
   // PREVENT EXIT (beforeunload)
@@ -572,7 +648,10 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     if (currentSlide.type === 'BADGE_REVEAL') return true
     if (currentSlide.type === 'ACTIVITY') {
       if (!requiresSubmission(currentSlide.activityData?.questionType)) return true // flashcards
-      return answerSubmitted || hasAnswered
+      if (isOptionalAct) return true // opcional: se puede saltar
+      if (!(answerSubmitted || hasAnswered)) return false
+      if (isGated && !hasAnswered) return answeredCorrect || attemptsExhausted // no avanzar sin acertar
+      return true
     }
     return false
   })()
@@ -840,6 +919,12 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <span className="text-ink-muted text-sm font-medium">
             {act.questionType === 'FLASHCARDS' ? 'Tarjetas de estudio' : `Actividad • ${act.points || 10} pts`}
           </span>
+          {/* Temporizador (P4) */}
+          {timeLeft !== null && !answerSubmitted && !alreadyAnswered && (
+            <span className={`ml-auto flex items-center gap-1 text-sm font-bold tabular-nums rounded-full px-2.5 py-0.5 ${timeLeft <= 10 ? 'bg-feedback-error/15 text-feedback-error animate-pulse' : 'bg-surface-2 text-ink-secondary'}`}>
+              <Clock className="w-4 h-4" /> {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+            </span>
+          )}
         </div>
 
         {/* El enunciado se muestra arriba salvo cuando el bloque lo aloja
@@ -848,9 +933,25 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <h3 className="text-xl sm:text-2xl font-bold text-ink-primary mb-6">{act.question}</h3>
         )}
 
-        {/* Hint */}
-        {act.hint && !answerSubmitted && !alreadyAnswered && (
-          <p className="text-ink-secondary text-sm mb-4 italic">💡 {act.hint}</p>
+        {/* Ayudas (P4): pista del docente bajo demanda + pista de Valeria (IA) */}
+        {!answerSubmitted && !alreadyAnswered && (act.hint || (act as any).behavior?.askValeria) && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            {act.hint && (
+              showHint
+                ? <p className="text-ink-secondary text-sm italic bg-surface-2 rounded-xl px-3 py-2 w-full">💡 {act.hint}</p>
+                : <button onClick={() => setShowHint(true)} className="text-sm font-semibold text-accent hover:opacity-80 flex items-center gap-1">💡 Ver pista</button>
+            )}
+            {(act as any).behavior?.askValeria && !valeriaHint && (
+              <button onClick={askValeria} disabled={valeriaLoading} className="text-sm font-semibold text-skill-speaking hover:opacity-80 flex items-center gap-1 disabled:opacity-50">
+                {valeriaLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '🤖'} Pídele una pista a Valeria
+              </button>
+            )}
+          </div>
+        )}
+        {valeriaHint && !answerSubmitted && !alreadyAnswered && (
+          <div className="mb-4 rounded-xl border border-skill-speaking/30 bg-skill-speaking/5 px-3 py-2">
+            <p className="text-sm text-ink-primary"><span className="font-bold text-skill-speaking">🤖 Valeria:</span> {valeriaHint}</p>
+          </div>
         )}
 
         {/* Interacción — Stage + BlockRenderer (arquitectura de bloques DS-1) */}
@@ -912,6 +1013,21 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               <p className="text-ink-secondary text-sm mt-2">{act.explanation}</p>
             )}
           </motion.div>
+        )}
+
+        {/* Gating P4: reintentar (no avanzar sin acertar) o aviso de intentos agotados */}
+        {answerSubmitted && !answeredCorrect && !alreadyAnswered && (
+          canRetry ? (
+            <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-sm text-ink-secondary">
+                {maxAttempts > 0 ? `Te queda${maxAttempts - attempts === 1 ? '' : 'n'} ${maxAttempts - attempts} intento${maxAttempts - attempts === 1 ? '' : 's'}` : 'Inténtalo de nuevo'}
+                {behavior.xpDecrement > 0 ? ' · el próximo acierto valdrá menos XP' : ''}
+              </span>
+              <motion.button onClick={handleRetry} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl shadow-lg">🔄 Reintentar</motion.button>
+            </div>
+          ) : (isGated && attemptsExhausted) ? (
+            <p className="mt-3 text-sm text-ink-muted">Se agotaron los intentos. Revisa la explicación y continúa.</p>
+          ) : null
         )}
       </div>
     )

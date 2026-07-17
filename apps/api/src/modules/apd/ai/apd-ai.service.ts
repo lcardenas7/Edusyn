@@ -980,6 +980,31 @@ export class ApdAiService implements IApdAiService {
     return this.parseLessonDraftPayload(raw, params.title, params.title);
   }
 
+  /** Pista de tutora para una actividad de lección (P4). Orienta SIN revelar la
+   * respuesta. Segura para el estudiante. Devuelve {hint} vacío si la IA no está. */
+  async generateActivityHint(input: { question: string; options?: string[]; gradeName?: string }): Promise<{ hint: string }> {
+    if (!this.isEnabled() || !input.question?.trim()) return { hint: '' };
+    const system = [
+      'Eres Valeria, tutora paciente. Da UNA pista breve que oriente al estudiante a pensar,',
+      'SIN revelar la respuesta correcta ni señalar cuál de las opciones lo es.',
+      'Máximo 2 frases, en español, tono cercano y motivador.',
+      'Responde SOLO con JSON válido: {"hint":"…"}.',
+    ].join('\n');
+    const user = [
+      input.gradeName ? `Grado del estudiante: ${input.gradeName}` : '',
+      `Pregunta: ${input.question}`,
+      input.options?.length ? `Opciones: ${input.options.filter(Boolean).join(' · ')}` : '',
+      'Da una pista que ayude a razonar, nunca la respuesta.',
+    ].filter(Boolean).join('\n');
+    try {
+      const raw = await this.callLlmJson<{ hint?: string }>(system, user, 300);
+      return { hint: String(raw?.hint || '').trim().slice(0, 400) };
+    } catch (err: any) {
+      this.logger.warn(`generateActivityHint error: ${err?.message || err}`);
+      return { hint: '' };
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // GENERAR ESTRATEGIA DE APOYO
   // ═══════════════════════════════════════════════════════════════════════════
