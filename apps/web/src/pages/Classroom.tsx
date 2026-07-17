@@ -28,8 +28,9 @@ import {
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, Calendar, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
-  Puzzle, Rocket,
+  Puzzle, Rocket, Music,
 } from 'lucide-react'
+import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -86,6 +87,13 @@ interface Announcement {
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
+
+// ¿La entrega es un audio? (por extensión de la key/URL) — para reproducirlo en línea.
+const isAudioFileName = (nameOrUrl?: string | null) => {
+  if (!nameOrUrl) return false
+  const ext = nameOrUrl.toLowerCase().split('?')[0].split('.').pop()
+  return ['webm', 'ogg', 'oga', 'mp3', 'm4a', 'aac', 'wav', 'weba', '3gp'].includes(ext || '')
+}
 
 // Bloques interactivos. `standalone` = puede crearse como actividad SUELTA (tipo GAME).
 // Los tipos de PREGUNTA (MCQ, V/F, respuesta corta, completar, ordenar, emparejar, escuchar)
@@ -2081,6 +2089,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   // Student submit (TASK)
   const [submitContent, setSubmitContent] = useState('')
   const [submitFile, setSubmitFile] = useState<File | null>(null)
+  const [recordedName, setRecordedName] = useState<string | null>(null) // nombre del audio grabado en la app (se muestra en el grabador, no en el chip genérico)
   const [submitLink, setSubmitLink] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [mySubmission, setMySubmission] = useState<any>(null)
@@ -2818,6 +2827,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       }
       setSubmitContent('')
       setSubmitFile(null)
+      setRecordedName(null)
       setSubmitLink('')
       const { data } = await classroomApi.getMySubmission(selectedActivity.id)
       setMySubmission(data)
@@ -2914,11 +2924,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     } finally { setGrading(false) }
   }
 
-  const getFilePreviewType = (url: string): 'image' | 'pdf' | 'office' | 'unknown' => {
+  const getFilePreviewType = (url: string): 'image' | 'pdf' | 'office' | 'audio' | 'unknown' => {
     const lower = url.toLowerCase()
     if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)/.test(lower)) return 'image'
     if (/\.pdf/.test(lower)) return 'pdf'
     if (/\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp)/.test(lower)) return 'office'
+    if (/\.(webm|ogg|oga|mp3|m4a|aac|wav|weba|3gp)/.test(lower)) return 'audio'
     return 'unknown'
   }
 
@@ -3429,7 +3440,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           const hasPrev = revIdx > 0
           const hasNext = revIdx < submissions.length - 1
           const pendingCount = submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length
-          const fileType = reviewFileUrl ? getFilePreviewType(reviewFileUrl) : null
+          // Tipo por la key cruda (siempre conserva la extensión); si no, por la URL firmada.
+          const fileType = reviewFileUrl ? getFilePreviewType(reviewingSubmission.fileUrl || reviewFileUrl) : null
 
           return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col">
@@ -3491,6 +3503,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           {fileType === 'image' && <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full">Imagen</span>}
                           {fileType === 'pdf' && <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full">PDF</span>}
                           {fileType === 'office' && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">Documento</span>}
+                          {fileType === 'audio' && <span className="text-xs px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full">Audio</span>}
                         </div>
                         <div className="flex items-center gap-1">
                           <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-1">
@@ -3517,6 +3530,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                             className="w-full h-full border-0"
                             title="Preview documento"
                           />
+                        )}
+                        {fileType === 'audio' && (
+                          <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
+                            <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center">
+                              <Music className="w-8 h-8 text-rose-500" />
+                            </div>
+                            <p className="text-sm text-slate-500">Grabación de audio del estudiante</p>
+                            <audio src={reviewFileUrl} controls autoPlay={false} className="w-full max-w-md" />
+                          </div>
                         )}
                         {fileType === 'unknown' && (
                           <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
@@ -4670,9 +4692,16 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
                 {mySubmission.content && <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 whitespace-pre-wrap">{mySubmission.content}</div>}
                 {mySubmission.fileUrl && (
-                  <button onClick={() => openFile(mySubmission.fileUrl)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-sm text-blue-700">
-                    <Download className="w-4 h-4" /> Ver archivo entregado
-                  </button>
+                  isAudioFileName(mySubmission.fileUrl) ? (
+                    <div className="flex items-center gap-3 px-4 py-3 bg-rose-50 rounded-xl border border-rose-200">
+                      <Music className="w-5 h-5 text-rose-500 shrink-0" />
+                      <SmartAudio src={mySubmission.fileUrl} className="w-full" />
+                    </div>
+                  ) : (
+                    <button onClick={() => openFile(mySubmission.fileUrl)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-sm text-blue-700">
+                      <Download className="w-4 h-4" /> Ver archivo entregado
+                    </button>
+                  )
                 )}
                 {mySubmission.feedback && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -4706,14 +4735,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                 )}
 
-                <input ref={submitFileRef} type="file" className="hidden" onChange={e => setSubmitFile(e.target.files?.[0] || null)} />
-                {submitFile ? (
+                <input ref={submitFileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0] || null; setSubmitFile(f); setRecordedName(null) }} />
+                {submitFile && submitFile.name !== recordedName ? (
                   <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
                     <Paperclip className="w-5 h-5 text-slate-400" />
                     <span className="text-base text-slate-700 flex-1 truncate">{submitFile.name}</span>
                     <button onClick={() => setSubmitFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
                   </div>
                 ) : null}
+
+                {/* Grabar audio en la app (para respuestas orales: lectura, pronunciación, etc.) */}
+                <AudioRecorder disabled={submitting} onRecorded={f => { setSubmitFile(f); setRecordedName(f?.name ?? null) }} />
+
                 <div className="flex items-center justify-between gap-3">
                   <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
                     <Upload className="w-5 h-5" /> Subir archivo
@@ -4721,7 +4754,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <div className="flex items-center gap-2">
                     {editingSubmission && (
                       <button 
-                        onClick={() => { setEditingSubmission(false); setSubmitContent(''); setSubmitFile(null); setSubmitLink('') }} 
+                        onClick={() => { setEditingSubmission(false); setSubmitContent(''); setSubmitFile(null); setRecordedName(null); setSubmitLink('') }}
                         className="px-4 py-2.5 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-100 border border-hairline" 
                         style={{ minHeight: '44px' }}
                       >

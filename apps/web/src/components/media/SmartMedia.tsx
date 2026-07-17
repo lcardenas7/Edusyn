@@ -12,7 +12,7 @@
  *    (que expira).
  */
 import { useEffect, useRef, useState } from 'react'
-import { Loader2, Upload, X, Image as ImageIcon, Video as VideoIcon, Music } from 'lucide-react'
+import { Loader2, Upload, X, Image as ImageIcon, Video as VideoIcon, Music, Mic, Square, Trash2 } from 'lucide-react'
 import { storageApi, classroomApi } from '../../lib/api'
 
 const isDirect = (v: string) => /^(https?:|data:|blob:)/i.test(v)
@@ -46,6 +46,118 @@ export function SmartAudio({ src, className = '' }: { src?: string | null; class
   const url = useResolvedMediaUrl(src)
   if (!url) return null
   return <audio src={url} controls className={className} />
+}
+
+/**
+ * Grabador de audio en la app (MediaRecorder). El estudiante graba, escucha y decide
+ * si adjunta. Al terminar entrega un File listo para subir por el flujo normal; al
+ * borrar, entrega null. No sube nada por su cuenta — es el formulario quien sube.
+ */
+export function AudioRecorder({ onRecorded, disabled }: { onRecorded: (file: File | null) => void; disabled?: boolean }) {
+  const [state, setState] = useState<'idle' | 'recording' | 'recorded'>('idle')
+  const [seconds, setSeconds] = useState(0)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [error, setError] = useState('')
+  const recRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<BlobPart[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
+  const timerRef = useRef<number | null>(null)
+
+  const MAX_SECONDS = 300 // 5 min (el backend limita a 10MB)
+
+  const cleanupStream = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+  }
+
+  useEffect(() => () => { cleanupStream(); if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
+
+  const pickMime = () => {
+    const cands = ['audio/webm', 'audio/mp4', 'audio/ogg']
+    for (const m of cands) { if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(m)) return m }
+    return ''
+  }
+
+  const start = async () => {
+    setError('')
+    if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setError('Tu navegador no permite grabar audio. Puedes adjuntar un archivo de audio.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      const mime = pickMime()
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
+      chunksRef.current = []
+      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      rec.onstop = () => {
+        const type = rec.mimeType || mime || 'audio/webm'
+        const blob = new Blob(chunksRef.current, { type })
+        const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm'
+        const file = new File([blob], `grabacion_${Date.now()}.${ext}`, { type })
+        const url = URL.createObjectURL(blob)
+        setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+        setState('recorded')
+        onRecorded(file)
+        cleanupStream()
+      }
+      recRef.current = rec
+      rec.start()
+      setSeconds(0)
+      setState('recording')
+      timerRef.current = window.setInterval(() => setSeconds(s => {
+        if (s + 1 >= MAX_SECONDS) { try { rec.stop() } catch {} }
+        return s + 1
+      }), 1000)
+    } catch {
+      setError('No se pudo acceder al micrófono. Revisa los permisos del navegador.')
+      cleanupStream()
+    }
+  }
+
+  const stop = () => { try { recRef.current?.stop() } catch {} }
+  const discard = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(''); setSeconds(0); setState('idle'); onRecorded(null)
+  }
+
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+  return (
+    <div className="rounded-xl border border-hairline p-3">
+      {state === 'idle' && (
+        <button type="button" onClick={start} disabled={disabled}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 hover:border-rose-300 transition-colors disabled:opacity-50" style={{ minHeight: '44px' }}>
+          <Mic className="w-4 h-4" /> Grabar audio
+        </button>
+      )}
+      {state === 'recording' && (
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-rose-600">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" /> Grabando… {mmss(seconds)}
+          </span>
+          <button type="button" onClick={stop} className="ml-auto flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl" style={{ minHeight: '44px' }}>
+            <Square className="w-4 h-4" /> Detener
+          </button>
+        </div>
+      )}
+      {state === 'recorded' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Music className="w-4 h-4 text-slate-400 shrink-0" />
+            <span className="text-sm text-slate-600">Grabación ({mmss(seconds)})</span>
+            <button type="button" onClick={discard} className="ml-auto text-slate-400 hover:text-rose-500 flex items-center gap-1 text-xs" title="Borrar y volver a grabar">
+              <Trash2 className="w-4 h-4" /> Borrar
+            </button>
+          </div>
+          {previewUrl && <audio src={previewUrl} controls className="w-full" />}
+        </div>
+      )}
+      {error && <p className="text-xs text-rose-500 mt-2">{error}</p>}
+    </div>
+  )
 }
 
 type MediaKind = 'image' | 'video' | 'audio'
