@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
+import { ActivityGatingService } from './gating/activity-gating.service';
 
 @Injectable()
 export class ClassroomService {
@@ -11,6 +12,7 @@ export class ClassroomService {
     private readonly prisma: PrismaService,
     private readonly identity: LearningIdentityService,
     private readonly evidence: CompetencyEvidenceService,
+    private readonly gating: ActivityGatingService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -881,6 +883,12 @@ export class ClassroomService {
     });
     if (!enrollment) throw new ForbiddenException('No estás matriculado en este grupo');
 
+    // Enforcement de dependencias (Fase 3): no se entrega una actividad bloqueada.
+    // Fail-open: si no tiene reglas, pasa. Sticky: si ya la había iniciado/entregado, pasa.
+    if (!(await this.gating.isUnlockedForStudent(activityId, activity.classroomId, enrollment.id))) {
+      throw new ForbiddenException('Esta actividad está bloqueada: primero completa las actividades requeridas');
+    }
+
     // Check due date
     const now = new Date();
     const isLate = activity.dueDate && now > activity.dueDate;
@@ -1382,6 +1390,11 @@ export class ClassroomService {
       },
     });
     if (!enrollment) throw new ForbiddenException('No está matriculado');
+
+    // Enforcement de dependencias (Fase 3): no se inicia un quiz bloqueado.
+    if (!(await this.gating.isUnlockedForStudent(activityId, activity.classroomId, enrollment.id))) {
+      throw new ForbiddenException('Este quiz está bloqueado: primero completa las actividades requeridas');
+    }
 
     // Check max attempts
     const existingCount = await this.prisma.activitySubmission.count({
