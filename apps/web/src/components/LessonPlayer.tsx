@@ -101,6 +101,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const [attempts, setAttempts] = useState(0) // intentos en la actividad actual (P4)
   const [timeLeft, setTimeLeft] = useState<number | null>(null) // temporizador (P4)
   const [showHint, setShowHint] = useState(false) // pista bajo demanda (P4)
+  const [valeriaHint, setValeriaHint] = useState<string | null>(null) // pista de Valeria (P4)
+  const [valeriaLoading, setValeriaLoading] = useState(false)
 
   // Loading states
   const [advancing, setAdvancing] = useState(false)
@@ -286,6 +288,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       setShowExplanation(false)
       setAttempts(0)
       setShowHint(false)
+      setValeriaHint(null)
       setSlideStartTime(Date.now())
     } else if (isTeacher) {
       // Teacher preview finished
@@ -305,6 +308,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         setShowExplanation(false)
         setAttempts(0)
         setShowHint(false)
+        setValeriaHint(null)
         setSlideStartTime(Date.now())
       }
     }
@@ -338,6 +342,18 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     if (isCorrect) {
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } })
     }
+  }
+
+  // Pedir una pista a Valeria (P4): tutora IA, no revela la respuesta.
+  const askValeria = async () => {
+    if (!lesson || !currentSlide || valeriaLoading) return
+    setValeriaLoading(true)
+    try {
+      const { data } = await lessonApi.activityHint(lesson.id, currentSlide.id)
+      setValeriaHint(data.hint || 'Valeria no está disponible ahora. Intenta razonarlo con lo que ya sabes.')
+    } catch {
+      setValeriaHint('No se pudo pedir la pista. Intenta razonarlo con lo que ya sabes.')
+    } finally { setValeriaLoading(false) }
   }
 
   // Reintentar la actividad actual (mantiene el contador de intentos, P4).
@@ -917,13 +933,25 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <h3 className="text-xl sm:text-2xl font-bold text-ink-primary mb-6">{act.question}</h3>
         )}
 
-        {/* Pista bajo demanda (P4): el alumno la revela cuando la necesita */}
-        {act.hint && !answerSubmitted && !alreadyAnswered && (
-          showHint ? (
-            <p className="text-ink-secondary text-sm mb-4 italic bg-surface-2 rounded-xl px-3 py-2">💡 {act.hint}</p>
-          ) : (
-            <button onClick={() => setShowHint(true)} className="text-sm font-semibold text-accent hover:opacity-80 mb-4 flex items-center gap-1">💡 Ver pista</button>
-          )
+        {/* Ayudas (P4): pista del docente bajo demanda + pista de Valeria (IA) */}
+        {!answerSubmitted && !alreadyAnswered && (act.hint || (act as any).behavior?.askValeria) && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            {act.hint && (
+              showHint
+                ? <p className="text-ink-secondary text-sm italic bg-surface-2 rounded-xl px-3 py-2 w-full">💡 {act.hint}</p>
+                : <button onClick={() => setShowHint(true)} className="text-sm font-semibold text-accent hover:opacity-80 flex items-center gap-1">💡 Ver pista</button>
+            )}
+            {(act as any).behavior?.askValeria && !valeriaHint && (
+              <button onClick={askValeria} disabled={valeriaLoading} className="text-sm font-semibold text-skill-speaking hover:opacity-80 flex items-center gap-1 disabled:opacity-50">
+                {valeriaLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '🤖'} Pídele una pista a Valeria
+              </button>
+            )}
+          </div>
+        )}
+        {valeriaHint && !answerSubmitted && !alreadyAnswered && (
+          <div className="mb-4 rounded-xl border border-skill-speaking/30 bg-skill-speaking/5 px-3 py-2">
+            <p className="text-sm text-ink-primary"><span className="font-bold text-skill-speaking">🤖 Valeria:</span> {valeriaHint}</p>
+          </div>
         )}
 
         {/* Interacción — Stage + BlockRenderer (arquitectura de bloques DS-1) */}

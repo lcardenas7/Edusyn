@@ -50,7 +50,7 @@ interface SlideForm {
     feedbackIncorrect: string
     imageUrl: string
     // Comportamiento configurable (P4): obligatoria/gating/intentos con XP decreciente.
-    behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number; timerSeconds?: number }
+    behavior?: { required?: boolean; gateOnCorrect?: boolean; maxAttempts?: number; xpDecrement?: number; timerSeconds?: number; askValeria?: boolean }
   }
   badgeEmoji: string
   badgeTitle: string
@@ -1431,6 +1431,10 @@ export default function LessonEditor({
                   <label className="flex items-center gap-2 text-sm text-slate-600">
                     <input type="checkbox" checked={!!b.gateOnCorrect} onChange={e => setB({ gateOnCorrect: e.target.checked })} className="w-4 h-4 accent-violet-600" />
                     No avanzar hasta acertar
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    <input type="checkbox" checked={!!b.askValeria} onChange={e => setB({ askValeria: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                    Permitir pedir una pista a Valeria 🤖
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     <div>

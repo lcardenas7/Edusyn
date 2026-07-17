@@ -182,6 +182,22 @@ export class LessonService {
     return v;
   }
 
+  /** Pista de Valeria para una actividad (P4): orienta sin revelar la respuesta. */
+  async activityHint(lessonId: string, slideId: string) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: {
+        slides: { where: { id: slideId }, select: { activityData: true, type: true } },
+        activity: { select: { classroom: { select: { teacherAssignment: { select: { group: { select: { grade: { select: { name: true } } } } } } } } } },
+      },
+    });
+    const slide = lesson?.slides?.[0];
+    const act = slide?.activityData as any;
+    if (!act?.question) return { hint: '' };
+    const gradeName = lesson?.activity?.classroom?.teacherAssignment?.group?.grade?.name || undefined;
+    return this.apdAi.generateActivityHint({ question: act.question, options: Array.isArray(act.options) ? act.options : undefined, gradeName });
+  }
+
   /** ¿Hay un autoguardado más nuevo que el último guardado de la lección?
    * (para ofrecer "recuperar borrador" al abrir el editor tras un cierre inesperado). */
   async getRecovery(lessonId: string) {

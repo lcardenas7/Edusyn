@@ -2415,6 +2415,8 @@ export const lessonApi = {
     api.get<{ hasRecovery: boolean; version: { id: string; snapshot: any; createdAt: string } | null }>(`/classrooms/lessons/${lessonId}/recovery`),
   getVersion: (versionId: string) =>
     api.get<{ id: string; snapshot: any; createdAt: string; kind: string }>(`/classrooms/lesson-versions/${versionId}`),
+  activityHint: (lessonId: string, slideId: string) =>
+    api.post<{ hint: string }>(`/classrooms/lessons/${lessonId}/slides/${slideId}/hint`, {}),
 
   // Slides
   addSlide: (lessonId: string, data: Partial<LessonSlide>) =>
