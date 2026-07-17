@@ -52,9 +52,9 @@ export class AbpController {
   // Matriculados del aula (para armar equipos) — docente.
   @Get('classroom/:classroomId/roster')
   @Roles('DOCENTE', 'COORDINADOR')
-  async roster(@Param('classroomId') classroomId: string, @Request() req: any) {
+  async roster(@Param('classroomId') classroomId: string, @Query('projectId') projectId: string | undefined, @Request() req: any) {
     const { institutionId, userId } = await this.ctx(req);
-    return this.service.getRoster(classroomId, institutionId, userId);
+    return this.service.getRoster(classroomId, institutionId, userId, projectId);
   }
 
   // Detalle de un proyecto con sus equipos — docente.

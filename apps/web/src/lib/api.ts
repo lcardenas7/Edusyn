@@ -2550,7 +2550,7 @@ export interface RouteProgress {
 export const abpApi = {
   phases: () => api.get<any[]>(`/abp/phases`),
   listByClassroom: (classroomId: string) => api.get<any[]>(`/abp/classroom/${classroomId}/projects`),
-  roster: (classroomId: string) => api.get<{ enrollmentId: string; studentId: string; name: string }[]>(`/abp/classroom/${classroomId}/roster`),
+  roster: (classroomId: string, projectId?: string) => api.get<{ enrollmentId: string; studentId: string; name: string; assignedTeamName: string | null }[]>(`/abp/classroom/${classroomId}/roster${projectId ? `?projectId=${projectId}` : ''}`),
   getProject: (projectId: string) => api.get<any>(`/abp/projects/${projectId}`),
   dashboard: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/dashboard`),
   projectPresentation: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/presentation`),

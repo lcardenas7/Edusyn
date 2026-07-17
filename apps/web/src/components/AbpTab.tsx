@@ -1836,13 +1836,16 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
 
 function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string; projectId: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false)
-  const [roster, setRoster] = useState<{ enrollmentId: string; name: string }[]>([])
+  const [roster, setRoster] = useState<{ enrollmentId: string; name: string; assignedTeamName: string | null }[]>([])
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState('🚀')
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { if (open && roster.length === 0) abpApi.roster(classroomId).then(({ data }) => setRoster(data)) }, [open, classroomId, roster.length])
+  // Recarga el roster cada vez que se abre el panel (y al cambiar de proyecto),
+  // para que los alumnos ya asignados a un equipo salgan marcados y no se puedan
+  // volver a seleccionar.
+  useEffect(() => { if (open) abpApi.roster(classroomId, projectId).then(({ data }) => setRoster(data)) }, [open, classroomId, projectId])
 
   const create = async () => {
     if (!name.trim() || sel.size === 0) return
@@ -1863,12 +1866,16 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
       <div>
         <p className="text-xs font-medium text-slate-500 mb-1.5">Integrantes ({sel.size})</p>
         <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-2 grid sm:grid-cols-2 gap-1">
-          {roster.map(r => (
-            <label key={r.enrollmentId} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm cursor-pointer ${sel.has(r.enrollmentId) ? 'bg-violet-50 text-violet-700' : 'hover:bg-slate-50 text-slate-600'}`}>
-              <input type="checkbox" checked={sel.has(r.enrollmentId)} onChange={() => setSel(s => { const n = new Set(s); n.has(r.enrollmentId) ? n.delete(r.enrollmentId) : n.add(r.enrollmentId); return n })} className="accent-violet-600" />
-              {r.name}
-            </label>
-          ))}
+          {roster.map(r => {
+            const taken = !!r.assignedTeamName
+            return (
+              <label key={r.enrollmentId} title={taken ? `Ya está en ${r.assignedTeamName}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm ${taken ? 'opacity-50 cursor-not-allowed text-slate-400' : sel.has(r.enrollmentId) ? 'bg-violet-50 text-violet-700 cursor-pointer' : 'hover:bg-slate-50 text-slate-600 cursor-pointer'}`}>
+                <input type="checkbox" disabled={taken} checked={sel.has(r.enrollmentId)} onChange={() => { if (taken) return; setSel(s => { const n = new Set(s); n.has(r.enrollmentId) ? n.delete(r.enrollmentId) : n.add(r.enrollmentId); return n }) }} className="accent-violet-600 disabled:cursor-not-allowed" />
+                <span className="flex-1 truncate">{r.name}</span>
+                {taken && <span className="text-[10px] font-medium text-slate-400 shrink-0">{r.assignedTeamName}</span>}
+              </label>
+            )
+          })}
           {roster.length === 0 && <p className="text-xs text-slate-400 p-2">Cargando matriculados…</p>}
         </div>
       </div>

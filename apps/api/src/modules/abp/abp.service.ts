@@ -272,7 +272,7 @@ export class AbpService {
 
   // ─── ROSTER (matriculados del aula, para armar equipos) ─────────────────────
 
-  async getRoster(classroomId: string, institutionId: string, userId: string) {
+  async getRoster(classroomId: string, institutionId: string, userId: string, projectId?: string) {
     const classroom = await this.assertClassroomOwner(classroomId, institutionId, userId);
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
@@ -283,10 +283,26 @@ export class AbpService {
       include: { student: { include: { user: { select: { id: true, firstName: true, lastName: true } } } } },
       orderBy: { student: { user: { lastName: 'asc' } } },
     });
+
+    // Alumnos ya asignados a un equipo de ESTE proyecto: se marcan para que el
+    // docente no los pueda seleccionar en otro equipo (createTeam ya lo rechaza,
+    // pero aquí evitamos el error mostrándolos deshabilitados con su equipo).
+    const assigned = new Map<string, string>();
+    if (projectId) {
+      const members = await this.prisma.abpTeamMember.findMany({
+        where: { institutionId, team: { projectId } },
+        select: { studentEnrollmentId: true, team: { select: { name: true, emoji: true } } },
+      });
+      for (const m of members) {
+        assigned.set(m.studentEnrollmentId, `${m.team.emoji ?? ''} ${m.team.name}`.trim());
+      }
+    }
+
     return enrollments.map(e => ({
       enrollmentId: e.id,
       studentId: e.studentId,
       name: `${e.student.user?.firstName ?? ''} ${e.student.user?.lastName ?? ''}`.trim() || 'Estudiante',
+      assignedTeamName: assigned.get(e.id) ?? null,
     }));
   }
 
