@@ -654,7 +654,8 @@ export default function LessonEditor({
           <p className="text-xs text-slate-400 truncate">{classroomTitle}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <AutosaveBadge state={autosaveState} />
           <button
             onClick={() => setShowAIModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 text-sm font-medium hover:bg-violet-100"
@@ -663,9 +664,17 @@ export default function LessonEditor({
           </button>
           <button
             onClick={openValeriaForLesson}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 text-sm font-medium hover:bg-violet-100"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 text-sm font-medium hover:bg-violet-100"
           >
             <Sparkles className="w-4 h-4" /> Valeria
+          </button>
+          {lesson?.id && (
+            <button onClick={openHistory} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200" title="Historial de versiones">
+              <Clock className="w-4 h-4" /> Historial
+            </button>
+          )}
+          <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200" title="Descargar como archivo">
+            <Download className="w-4 h-4" /> Descargar
           </button>
           <button
             onClick={onPreview}
@@ -693,6 +702,42 @@ export default function LessonEditor({
       {success && (
         <div className="mx-4 mt-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg px-3 py-2 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> {success}
+        </div>
+      )}
+
+      {/* Banner de recuperación de borrador sin guardar */}
+      {recovery && (
+        <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+          <p className="flex-1 text-sm text-amber-800">Se encontró un <b>borrador sin guardar</b> del {new Date(recovery.createdAt).toLocaleString()}. ¿Recuperarlo?</p>
+          <button onClick={() => { applySnapshot(recovery.snapshot); setRecovery(null); setSuccess('Borrador recuperado. Revisa y pulsa Guardar.') }} className="px-3 py-1.5 bg-amber-500 text-white text-sm font-bold rounded-lg hover:bg-amber-600 shrink-0">Recuperar</button>
+          <button onClick={() => setRecovery(null)} className="text-amber-500 hover:text-amber-700 shrink-0" title="Descartar"><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      {/* Historial de versiones */}
+      {showHistory && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40" onClick={() => setShowHistory(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800">Historial de versiones</h3>
+              <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-3 overflow-y-auto">
+              {versions.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">Sin versiones todavía.</p> : (
+                <div className="space-y-1.5">
+                  {versions.map(v => (
+                    <button key={v.id} onClick={() => restoreVersion(v.id)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 text-left">
+                      <span className={`text-[10px] font-bold uppercase rounded px-1.5 py-0.5 ${v.kind === 'MANUAL' ? 'bg-violet-100 text-violet-700' : v.kind === 'PUBLISH' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{v.kind === 'AUTOSAVE' ? 'Auto' : v.kind === 'MANUAL' ? 'Guardado' : 'Publicado'}</span>
+                      <span className="flex-1 text-sm text-slate-700">{new Date(v.createdAt).toLocaleString()}</span>
+                      <span className="text-xs font-semibold text-violet-600">Restaurar</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-slate-400 mt-2 px-1">Restaurar carga la versión en el editor; revísala y pulsa Guardar para conservarla.</p>
+            </div>
+          </div>
         </div>
       )}
 
