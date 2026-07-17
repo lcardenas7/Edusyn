@@ -183,7 +183,7 @@ export class ClassroomService {
             activities: {
               where: { isPublished: true },
               orderBy: { sortOrder: 'asc' },
-              select: { id: true, type: true, title: true, dueDate: true, isPublished: true, maxScore: true },
+              select: { id: true, type: true, title: true, dueDate: true, isPublished: true, maxScore: true, academicTermId: true, publishedAt: true, createdAt: true },
             },
           },
         },
@@ -200,6 +200,21 @@ export class ClassroomService {
 
     if (!classroom) throw new NotFoundException('Aula no encontrada');
 
+    // Período académico actual del año del aula (para mostrarlo a docente y estudiante
+    // sin exponer el endpoint de términos, restringido a personal). Se prioriza el
+    // período cuyo rango de fechas contiene hoy; si no, el primer período ABIERTO.
+    const periods = await this.prisma.academicTerm.findMany({
+      where: { academicYearId: classroom.teacherAssignment.academicYearId, type: 'PERIOD' },
+      orderBy: { order: 'asc' },
+      select: { id: true, name: true, order: true, startDate: true, endDate: true, status: true },
+    });
+    const now = new Date();
+    const currentPeriod =
+      periods.find(p => p.startDate && p.endDate && now >= p.startDate && now <= p.endDate) ||
+      periods.find(p => p.status === 'OPEN') ||
+      periods[periods.length - 1] ||
+      null;
+
     // Add studentEnrollmentId for students (needed for Live Quiz tracking)
     const student = await this.prisma.student.findUnique({ where: { userId } });
     if (student) {
@@ -212,10 +227,10 @@ export class ClassroomService {
         },
         select: { id: true },
       });
-      return { ...classroom, studentEnrollmentId: enrollment?.id };
+      return { ...classroom, studentEnrollmentId: enrollment?.id, currentPeriod };
     }
 
-    return classroom;
+    return { ...classroom, currentPeriod };
   }
 
   async update(classroomId: string, teacherId: string, dto: {

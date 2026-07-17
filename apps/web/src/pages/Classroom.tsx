@@ -61,7 +61,7 @@ interface Section {
   academicTermId?: string | null
   academicTerm?: { id: string; name: string; order: number } | null
   materials: Material[]
-  activities?: { id: string; type: string; title: string; dueDate?: string; maxScore?: number }[]
+  activities?: { id: string; type: string; title: string; dueDate?: string; maxScore?: number; academicTermId?: string | null; publishedAt?: string | null; createdAt?: string }[]
 }
 
 interface Material {
@@ -200,6 +200,14 @@ export default function Classroom() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<TabKey>('home')
+
+  // Al entrar el estudiante a la pestaña de Actividades, se marcan como vistas
+  // (limpia el aviso "Nuevo" al volver al inicio). Por dispositivo, en localStorage.
+  useEffect(() => {
+    if (isStudent && activeTab === 'activities' && activeClassroom?.id) {
+      try { localStorage.setItem(`edusyn:seenActs:${activeClassroom.id}`, String(Date.now())) } catch {}
+    }
+  }, [activeTab, isStudent, activeClassroom?.id])
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
@@ -687,12 +695,35 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
     const allActivities = sections.flatMap(s => (s as any).activities || [])
     const formatShortDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : null
     const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', LIVE_QUIZ: 'Live Quiz', HOME_QUIZ: 'Quiz en Casa', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
+
+    // Período académico actual (lo calcula el backend según las fechas del año lectivo).
+    const currentPeriod = (classroom as any).currentPeriod as { id: string; name: string } | null
+
+    // Actividades nuevas desde la última vez que el alumno abrió la lista. Se guarda por
+    // dispositivo en localStorage; si nunca la ha visto, se consideran nuevas las de los
+    // últimos 7 días para no marcar todo el histórico.
+    const seenKey = `edusyn:seenActs:${classroom.id}`
+    const lastSeen = (() => { try { return Number(localStorage.getItem(seenKey)) || 0 } catch { return 0 } })()
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const actTime = (a: any) => +new Date(a.publishedAt || a.createdAt || 0)
+    const isNew = (a: any) => { const t = actTime(a); if (!t) return false; return lastSeen ? t > lastSeen : t > sevenDaysAgo }
+    const newCount = allActivities.filter(isNew).length
+    // En la vista de inicio, las nuevas suben primero (luego por fecha más reciente).
+    const previewActs = [...allActivities].sort((a, b) => (isNew(b) ? 1 : 0) - (isNew(a) ? 1 : 0) || actTime(b) - actTime(a))
+    const markActivitiesSeen = () => { try { localStorage.setItem(seenKey, String(Date.now())) } catch {} }
     return (
       <div className="space-y-6">
         {/* Welcome */}
-        <div className="bg-surface-1 rounded-2xl border border-hairline p-6">
-          <h2 className="text-2xl font-bold text-slate-800">Bienvenido, {firstName}</h2>
-          <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
+        <div className="bg-surface-1 rounded-2xl border border-hairline p-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Bienvenido, {firstName}</h2>
+            <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
+          </div>
+          {currentPeriod && (
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-violet-50 text-violet-700 text-sm font-bold border border-violet-100 shrink-0">
+              <Calendar className="w-4 h-4" /> {currentPeriod.name}
+            </span>
+          )}
         </div>
 
         {/* Identidad de aprendizaje (XP / nivel / racha) también dentro del aula */}
@@ -701,21 +732,29 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         {/* Dashboard cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Actividades pendientes */}
-          <div className="bg-surface-1 rounded-2xl border-2 border-orange-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('activities')}>
+          <div className="bg-surface-1 rounded-2xl border-2 border-orange-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => { markActivitiesSeen(); setActiveTab('activities') }}>
             <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-5 py-3 flex items-center gap-2.5">
               <ClipboardList className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Actividades ({allActivities.length})</h3>
+              {newCount > 0 && (
+                <span className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-orange-600 text-xs font-bold shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5" /> {newCount} nueva{newCount === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
             <div className="p-5">
               {allActivities.length === 0 ? (
                 <p className="text-base text-slate-500">No hay actividades publicadas aún</p>
               ) : (
                 <div className="space-y-2.5">
-                  {allActivities.slice(0, 4).map((a: any) => (
+                  {previewActs.slice(0, 4).map((a: any) => (
                     <div key={a.id} className="flex items-center gap-2.5">
                       <ClipboardList className="w-5 h-5 text-orange-500 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate">{a.title}</p>
+                        <p className="text-sm font-medium text-slate-700 truncate flex items-center gap-1.5">
+                          {a.title}
+                          {isNew(a) && <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">Nuevo</span>}
+                        </p>
                         <div className="flex items-center gap-2 text-xs text-slate-400">
                           <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded font-medium">{TYPE_LABELS[a.type] || a.type}</span>
                           {a.dueDate && <span className={new Date(a.dueDate) < new Date() ? 'text-red-500 font-medium' : ''}>
