@@ -26,34 +26,49 @@ const CANVAS_CARDS = [
   { q: '¿Qué pasa si nadie lo resuelve?', icon: '⚠️' },
 ]
 
-function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void | Promise<void> }) {
   const data = phaseData(team, 1)
   const canvas: any[] = data.canvas || []
   const editable = stateOf(team, 1) === 'IN_PROGRESS'
-  const [local, setLocal] = useState<string[]>(() => CANVAS_CARDS.map((_, i) => canvas[i]?.value || ''))
+  const serverVals = CANVAS_CARDS.map((_, i) => canvas[i]?.value || '')
+  const [local, setLocal] = useState<string[]>(() => [...serverVals])
+  const [focused, setFocused] = useState<number | null>(null) // tarjeta que YO edito ahora
+  const [saving, setSaving] = useState<number | null>(null)    // tarjeta en guardado (sin confirmar)
+
+  // Capa 2: sincroniza desde el servidor las tarjetas que este usuario NO está
+  // editando ni guardando, para ver en vivo lo que escriben los demás integrantes.
+  useEffect(() => {
+    setLocal(prev => prev.map((v, i) => (i === focused || i === saving ? v : serverVals[i])))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverVals.join(''), focused, saving])
 
   const save = async (i: number) => {
+    setFocused(null)
     if (local[i] === (canvas[i]?.value || '')) return
-    try { await abpApi.saveCanvas(team.id, i, local[i]); onSaved() } catch {}
+    setSaving(i)
+    // Mantiene el texto propio visible hasta que el servidor lo confirma (sin parpadeo).
+    try { await abpApi.saveCanvas(team.id, i, local[i]); await onSaved() } catch {} finally { setSaving(null) }
   }
 
   return (
     <div className="grid sm:grid-cols-2 gap-3">
       {CANVAS_CARDS.map((c, i) => {
         const filled = !!local[i].trim()
+        const busyCard = saving === i
         return (
           <div key={i} className={`rounded-xl border-2 p-3 ${filled ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
             <h5 className="font-bold text-sm text-slate-700 flex items-center gap-1.5 mb-2">{c.icon} {c.q}</h5>
             <textarea
               value={local[i]}
               disabled={!editable}
+              onFocus={() => setFocused(i)}
               onChange={e => setLocal(v => { const n = [...v]; n[i] = e.target.value; return n })}
               onBlur={() => editable && save(i)}
               rows={3}
               placeholder="Escribe aquí…"
               className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm resize-none disabled:opacity-70"
             />
-            <p className="text-xs text-slate-400 mt-1">{filled ? `✍️ ${canvas[i]?.byName || 'Aportó'}` : 'Tarjeta pendiente'}</p>
+            <p className="text-xs text-slate-400 mt-1">{busyCard ? '💾 Guardando…' : filled ? `✍️ ${canvas[i]?.byName || 'Aportó'}` : 'Tarjeta pendiente'}</p>
           </div>
         )
       })}
@@ -164,22 +179,32 @@ const SMART_CRITERIA = [
   { k: 'R', t: 'Relevante: responde a la problemática' },
   { k: 'T', t: 'con Tiempo: tiene un plazo definido' },
 ]
-function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void | Promise<void> }) {
   const smart = phaseData(team, 3).smart || {}
   const editable = stateOf(team, 3) === 'IN_PROGRESS'
   const [text, setText] = useState<string>(smart.text || '')
   const [checks, setChecks] = useState<boolean[]>(() => SMART_CRITERIA.map((_, i) => !!smart.checks?.[i]))
   const [busy, setBusy] = useState(false)
+  const [tFocused, setTFocused] = useState(false)
+
+  // Capa 2: sincroniza el objetivo (cuando no lo estoy escribiendo) y los criterios
+  // (cuando no estoy guardando) desde el servidor → trabajo en vivo del equipo.
+  useEffect(() => {
+    if (!tFocused) setText(smart.text || '')
+    if (!busy) setChecks(SMART_CRITERIA.map((_, i) => !!smart.checks?.[i]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [smart.text, (smart.checks || []).join(''), tFocused, busy])
 
   const save = async (nt: string, nc: boolean[]) => {
     setBusy(true)
-    try { await abpApi.saveSmart(team.id, nt, nc); onSaved() } finally { setBusy(false) }
+    try { await abpApi.saveSmart(team.id, nt, nc); await onSaved() } finally { setBusy(false) }
   }
   const toggle = (i: number) => { const nc = [...checks]; nc[i] = !nc[i]; setChecks(nc); if (editable) save(text, nc) }
 
   return (
     <div>
-      <textarea value={text} onChange={e => setText(e.target.value)} onBlur={() => editable && text !== (smart.text || '') && save(text, checks)}
+      <textarea value={text} onChange={e => setText(e.target.value)} onFocus={() => setTFocused(true)}
+        onBlur={() => { setTFocused(false); if (editable && text !== (smart.text || '')) save(text, checks) }}
         disabled={!editable} rows={3} placeholder="Nuestro objetivo es… (específico, medible, con plazo)"
         className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm mb-3 disabled:opacity-70" />
       <div className="grid sm:grid-cols-2 gap-2">
@@ -1087,15 +1112,24 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
 
-  const load = useCallback(() => {
-    if (!projectId) { setLoading(false); return }
-    setLoading(true)
-    Promise.all([
+  const load = useCallback((silent = false) => {
+    if (!projectId) { setLoading(false); return Promise.resolve() }
+    if (!silent) setLoading(true)
+    return Promise.all([
       abpApi.myTeam(projectId).catch(() => ({ data: null })),
       abpApi.projectPresentation(projectId).catch(() => ({ data: null })),
-    ]).then(([t, p]) => { setTeam(t.data); setPres(p.data) }).finally(() => setLoading(false))
+    ]).then(([t, p]) => { setTeam(t.data); setPres(p.data) }).finally(() => { if (!silent) setLoading(false) })
   }, [projectId])
   useEffect(() => { load() }, [load])
+
+  // Capa 2: refresco en vivo (polling) mientras se trabaja la fase actual, para ver
+  // el trabajo de los demás integrantes casi en tiempo real, sin websockets.
+  const phaseInProgress = !!team && stateOf(team, team.currentPhase) === 'IN_PROGRESS'
+  useEffect(() => {
+    if (expTab !== 'phases' || !phaseInProgress) return
+    const id = setInterval(() => load(true), 5000)
+    return () => clearInterval(id)
+  }, [expTab, phaseInProgress, load])
 
   const requestValidation = async () => {
     if (!team) return
@@ -1189,7 +1223,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           <div className="text-center py-6">🏆<p className="font-bold text-slate-800 mt-2">¡Llegaron a la cima de la expedición!</p></div>
         ) : (
           <>
-            <MissionsPanel team={team} onSaved={load} />
+            <MissionsPanel team={team} onSaved={() => load(true)} />
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               {reqMissions.length > 0 && <span className="text-sm text-slate-500">Misiones obligatorias: <b className="text-slate-700">{reqDone}/{reqMissions.length}</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
