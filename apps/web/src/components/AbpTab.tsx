@@ -1119,16 +1119,18 @@ function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
     catch (e: any) { alert(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
   }
   return (
-    <div className="max-w-lg mx-auto bg-white rounded-2xl border-2 border-violet-200 p-6 text-center shadow-sm">
-      <div className="text-5xl">{emoji}</div>
-      <h3 className="text-xl font-black text-slate-800 mt-2">¡Funden su equipo!</h3>
-      <p className="text-sm text-slate-500 mb-4">Elijan juntos un nombre y un emblema. Es su primer acuerdo como equipo.</p>
-      <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') found() }} placeholder="Nombre del equipo…" className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm text-center mb-4" autoFocus />
-      <div className="text-xs font-semibold text-slate-500 mb-1.5">Emblema del equipo</div>
-      <div className="grid grid-cols-10 gap-1.5 mb-5">
-        {TEAM_EMBLEMS.map(e => <button key={e} onClick={() => setEmoji(e)} className={`text-xl rounded-lg py-1.5 transition ${emoji === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'hover:bg-slate-50'}`}>{e}</button>)}
+    <div className="taller">
+      <div className="taller-card taller-mission max-w-lg mx-auto p-7 text-center">
+        <div className="taller-crest w-16 h-16 rounded-2xl grid place-items-center text-3xl mx-auto shadow-sm">{emoji}</div>
+        <h3 className="text-xl font-black taller-ink mt-3">¡Funden su equipo!</h3>
+        <p className="text-sm taller-soft mb-4">Elijan juntos un nombre y un emblema. Es su primer acuerdo como equipo.</p>
+        <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') found() }} placeholder="Nombre del equipo…" className="w-full rounded-xl px-4 py-2.5 text-sm text-center mb-4 taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} autoFocus />
+        <div className="text-xs font-semibold taller-muted mb-1.5">Emblema del equipo</div>
+        <div className="grid grid-cols-10 gap-1.5 mb-5">
+          {TEAM_EMBLEMS.map(e => <button key={e} onClick={() => setEmoji(e)} className="text-xl rounded-lg py-1.5 transition hover:bg-amber-50" style={emoji === e ? { outline: '2px solid var(--t-marigold)', background: 'color-mix(in srgb, var(--t-marigold) 14%, transparent)' } : undefined}>{e}</button>)}
+        </div>
+        <button onClick={found} disabled={!name.trim() || busy} className="taller-cta w-full py-3 font-bold rounded-xl hover:opacity-95 disabled:opacity-40 flex items-center justify-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Fundar equipo 🎉</button>
       </div>
-      <button onClick={found} disabled={!name.trim() || busy} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 flex items-center justify-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Fundar equipo 🎉</button>
     </div>
   )
 }
@@ -1213,50 +1215,53 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const canRequest = !!team.readyForValidation
 
   return (
-    <div className="space-y-4">
-      {/* HEADER ESTÁTICO ESTUDIANTE */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
-        {projects.length > 1 ? <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} /> : <h3 className="font-bold text-slate-800">🚀 Expedición Activa</h3>}
-        <button onClick={() => setShowManual(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">
-          📖 Ver Manual de Expedición
+    <div className="space-y-4 taller">
+      {/* HEADER ESTUDIANTE — El Taller */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        {projects.length > 1 ? <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} /> : <h3 className="font-black text-lg taller-ink tracking-tight">🚀 Expedición Activa</h3>}
+        <button onClick={() => setShowManual(true)} className="taller-card flex items-center gap-2 px-4 py-2 text-sm font-bold taller-soft hover:shadow-md transition-shadow">
+          📖 Manual de Expedición
         </button>
       </div>
 
-      {/* Cabecera del equipo */}
-      <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
+      {/* Cabecera del equipo — Cuartel */}
+      <div className="taller-card taller-mission p-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xl font-bold text-slate-800">{team.emoji} {team.name}</h3>
-              {team.identityState === 'RENAME_PENDING'
-                ? <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">✏️ “{team.proposedName}” — esperando al docente</span>
-                : <button onClick={requestRename} className="text-[11px] font-semibold text-violet-500 hover:text-violet-700">✏️ cambiar nombre</button>}
-            </div>
-            {team.problem && <p className="text-sm text-slate-500 mt-0.5">Reto: {team.problem}</p>}
-            {/* Integrantes con su avatar + elegir el mío */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {(team.members || []).map((m: any) => {
-                const nm = `${m.studentEnrollment?.student?.user?.firstName ?? ''}`.trim() || 'Integrante'
-                return <span key={m.id} title={nm} className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-sm">{m.avatarId || nm[0]?.toUpperCase()}</span>
-              })}
-              {team.myEnrollmentId && <button onClick={() => setAvatarOpen(v => !v)} className="text-[11px] font-semibold text-violet-500 hover:text-violet-700 ml-1">🎭 mi avatar</button>}
-            </div>
-            {avatarOpen && (
-              <div className="mt-2 p-2 bg-white border border-slate-200 rounded-xl shadow-sm inline-block">
-                <div className="grid grid-cols-10 gap-1">
-                  {AVATARS.map(a => <button key={a} onClick={() => pickAvatar(a)} className="text-lg rounded-lg px-1.5 py-1 hover:bg-violet-50">{a}</button>)}
+          <div className="flex items-start gap-3.5">
+            <div className="taller-crest w-14 h-14 rounded-2xl grid place-items-center text-2xl shadow-sm shrink-0">{team.emoji}</div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xl font-black taller-ink tracking-tight">{team.name}</h3>
+                {team.identityState === 'RENAME_PENDING'
+                  ? <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">✏️ “{team.proposedName}” — esperando al docente</span>
+                  : <button onClick={requestRename} className="text-[11px] font-semibold taller-mari hover:opacity-70">✏️ cambiar nombre</button>}
+              </div>
+              {team.problem && <p className="text-sm taller-soft mt-0.5">Reto: {team.problem}</p>}
+              {/* Integrantes con su avatar + elegir el mío */}
+              <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                {(team.members || []).map((m: any) => {
+                  const nm = `${m.studentEnrollment?.student?.user?.firstName ?? ''}`.trim() || 'Integrante'
+                  return <span key={m.id} title={nm} className="taller-avatar w-8 h-8 rounded-full grid place-items-center text-sm shadow-sm">{m.avatarId || nm[0]?.toUpperCase()}</span>
+                })}
+                {team.myEnrollmentId && <button onClick={() => setAvatarOpen(v => !v)} className="text-[11px] font-semibold taller-mari hover:opacity-70 ml-1">🎭 mi avatar</button>}
+              </div>
+              {avatarOpen && (
+                <div className="taller-card mt-2 p-2 inline-block">
+                  <div className="grid grid-cols-10 gap-1">
+                    {AVATARS.map(a => <button key={a} onClick={() => pickAvatar(a)} className="text-lg rounded-lg px-1.5 py-1 hover:bg-amber-50">{a}</button>)}
+                  </div>
                 </div>
-              </div>
-            )}
-            {team.badges?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {team.badges.map((b: string) => <span key={b} className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-2.5 py-0.5">{b}</span>)}
-              </div>
-            )}
+              )}
+              {team.badges?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {team.badges.map((b: string) => <span key={b} className="text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2.5 py-0.5">{b}</span>)}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-black text-violet-600">⭐ {team.xp}</div>
-            <div className="text-xs text-slate-400 font-semibold">XP de expedición</div>
+          <div className="text-right shrink-0">
+            <div className="text-2xl font-black taller-mari">⭐ {team.xp}</div>
+            <div className="text-xs taller-muted font-semibold">Chispas del equipo</div>
           </div>
         </div>
       </div>
