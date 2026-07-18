@@ -342,6 +342,22 @@ export class AbpController {
     return this.service.addLessonActivity(missionId, institutionId, userId, body);
   }
 
+  // Actividades/juegos existentes del curso reutilizables en esta misión.
+  @Get('missions/:missionId/reusable-activities')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async reusableActivities(@Param('missionId') missionId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listReusableActivities(missionId, institutionId, userId);
+  }
+
+  // Reutiliza (enlaza) una actividad/juego existente a la misión.
+  @Post('missions/:missionId/attach-activity')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async attachActivity(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { classroomActivityId: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.attachActivity(missionId, institutionId, userId, body?.classroomActivityId);
+  }
+
   // Alta en lote de actividades (aplicar sugerencias de Valeria).
   @Post('missions/:missionId/activities/bulk')
   @Roles('DOCENTE', 'COORDINADOR')

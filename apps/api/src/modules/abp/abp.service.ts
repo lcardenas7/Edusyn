@@ -935,6 +935,49 @@ export class AbpService {
     });
   }
 
+  /** Actividades/juegos YA existentes del curso que se pueden REUTILIZAR en esta misión.
+   * Solo las jugables (con lección) y de la pestaña Actividades (no las de Rutas/ABP),
+   * excluyendo las que ya están adjuntas a la misión. */
+  async listReusableActivities(missionId: string, institutionId: string, userId: string) {
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { classroomId: true } });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+
+    const attached = await this.prisma.abpMissionActivity.findMany({ where: { missionId, classroomActivityId: { not: null } }, select: { classroomActivityId: true } });
+    const attachedIds = attached.map(a => a.classroomActivityId!).filter(Boolean);
+
+    return this.prisma.classroomActivity.findMany({
+      where: { classroomId: project.classroomId, isRouteScoped: false, lesson: { isNot: null }, id: { notIn: attachedIds } },
+      select: { id: true, title: true, type: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  /** Reutiliza una actividad/juego existente del curso enlazándola a la misión.
+   * linkedActivity=true → NO se borra su ClassroomActivity al quitarla (es compartida). */
+  async attachActivity(missionId: string, institutionId: string, userId: string, classroomActivityId: string) {
+    if (!classroomActivityId) throw new BadRequestException('Actividad inválida');
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { classroomId: true } });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+
+    // La actividad debe pertenecer al MISMO curso (seguridad multi-tenant).
+    const ca = await this.prisma.classroomActivity.findFirst({ where: { id: classroomActivityId, classroomId: project.classroomId }, select: { id: true, title: true } });
+    if (!ca) throw new BadRequestException('La actividad no pertenece a este curso');
+    const dup = await this.prisma.abpMissionActivity.findFirst({ where: { missionId, classroomActivityId } });
+    if (dup) throw new BadRequestException('Esa actividad ya está en la misión');
+
+    const max = await this.prisma.abpMissionActivity.aggregate({ where: { missionId }, _max: { sortOrder: true } });
+    return this.prisma.abpMissionActivity.create({
+      data: { institutionId, missionId, type: 'CUSTOM' as any, title: ca.title, classroomActivityId: ca.id, linkedActivity: true, sortOrder: (max._max.sortOrder ?? 0) + 100 },
+    });
+  }
+
   /** Valeria genera el CONTENIDO jugable de una actividad-lección, anclado a la
    * problemática del equipo. Reemplaza la lección (es regenerable). */
   async generateLessonContent(activityId: string, institutionId: string, userId: string, instructions?: string) {
@@ -1044,8 +1087,9 @@ export class AbpService {
     if (!a) throw new NotFoundException('Actividad no encontrada');
     await this.loadTeamForUser(a.mission.phaseState.teamId, institutionId, userId);
     await this.prisma.abpMissionActivity.delete({ where: { id: activityId } });
-    // Si era una lección/juego, elimina también su ClassroomActivity (cascada limpia lección/submissions).
-    if (a.classroomActivityId) {
+    // Solo si era una lección/juego PROPIA (creada inline) se borra su ClassroomActivity.
+    // Una actividad REUTILIZADA (linkedActivity) es compartida: solo se desvincula.
+    if (a.classroomActivityId && !a.linkedActivity) {
       await this.prisma.classroomActivity.delete({ where: { id: a.classroomActivityId } }).catch(() => { /* ya no existe */ });
     }
     return { ok: true };

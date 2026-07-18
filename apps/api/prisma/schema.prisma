@@ -7005,6 +7005,7 @@ model AbpMissionActivity {
   completed               Boolean                @default(false)
   completedByEnrollmentId String? // quién la completó (participación)
   classroomActivityId     String? // si es una lección/juego jugable, apunta a la ClassroomActivity
+  linkedActivity          Boolean                @default(false) // true = actividad REUTILIZADA (enlazada, no se borra al quitar); false = propia (creada inline)
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 

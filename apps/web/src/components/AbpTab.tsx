@@ -1393,6 +1393,8 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
   const [notConfigured, setNotConfigured] = useState(false)
   const [editing, setEditing] = useState<{ activityId: string; title: string } | null>(null)
   const [genActId, setGenActId] = useState<string | null>(null)
+  const [picker, setPicker] = useState<{ id: string; title: string; type: string }[] | null>(null)
+  const [pickerLoading, setPickerLoading] = useState(false)
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
   const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onChanged() } finally { setBusy(false) } }
   const addLesson = async () => {
@@ -1413,6 +1415,19 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       setEditing({ activityId: a.classroomActivityId, title: data.title || a.title })
     } catch (e: any) { alert(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
     finally { setGenActId(null) }
+  }
+  // Reutilizar una actividad/juego que ya existe en el curso (pestaña Actividades).
+  const openPicker = async () => {
+    setPickerLoading(true); setPicker([])
+    try { const { data } = await abpApi.reusableActivities(mission.id); setPicker(data) }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudieron cargar las actividades'); setPicker(null) }
+    finally { setPickerLoading(false) }
+  }
+  const attach = async (classroomActivityId: string) => {
+    setBusy(true)
+    try { await abpApi.attachActivity(mission.id, classroomActivityId); setPicker(null); onChanged() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
+    finally { setBusy(false) }
   }
   const suggest = async () => {
     setSuggesting(true); setSuggestions(null); setNotConfigured(false); setPicked(new Set())
@@ -1444,13 +1459,17 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
             <div key={a.id} className="flex items-center gap-2 group">
               <span className={`text-xs ${a.completed ? 'text-emerald-500' : 'text-slate-400'}`}>🎮</span>
               <span className={`text-xs ${a.completed ? 'text-slate-400' : 'text-slate-600'}`}>{a.title}</span>
-              <span className="text-[10px] font-semibold text-violet-500">lección/juego{a.completed ? ' · hecha' : ''}</span>
+              <span className="text-[10px] font-semibold text-violet-500">{a.linkedActivity ? 'reutilizada' : 'lección/juego'}{a.completed ? ' · hecha' : ''}</span>
               <div className="ml-auto flex items-center gap-2 shrink-0">
-                <button onClick={() => genLesson(a)} disabled={genActId === a.id} className="text-[11px] font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
-                  {genActId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✨'} Generar
-                </button>
-                <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
-                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                {!a.linkedActivity && (
+                  <>
+                    <button onClick={() => genLesson(a)} disabled={genActId === a.id} className="text-[11px] font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+                      {genActId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✨'} Generar
+                    </button>
+                    <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
+                  </>
+                )}
+                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} title={a.linkedActivity ? 'Quitar de la misión (no borra el original)' : 'Eliminar'} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
           ) : (
@@ -1466,6 +1485,7 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       <div className="mt-2 pl-6 flex items-center gap-3 flex-wrap">
         <AddActivityForm mission={mission} onSaved={onChanged} />
         <button onClick={addLesson} disabled={busy} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1 disabled:opacity-50"><Plus className="w-3.5 h-3.5" /> 🎮 Lección/Juego</button>
+        <button onClick={openPicker} disabled={busy || pickerLoading} className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1 disabled:opacity-50">{pickerLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '♻️'} Reutilizar existente</button>
         <button onClick={suggest} disabled={suggesting} className="text-xs font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
           {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '✨'} Sugerir con Valeria
         </button>
@@ -1474,6 +1494,30 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       {editing && (
         <div className="fixed inset-0 z-[120] bg-white overflow-auto">
           <LessonEditor activityId={editing.activityId} activityTitle={editing.title} onClose={() => { setEditing(null); onChanged() }} onPreview={() => { /* sin preview aquí */ }} />
+        </div>
+      )}
+
+      {picker && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setPicker(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-[80vh] flex flex-col">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-sm">♻️ Reutilizar una actividad del curso</h3>
+              <button onClick={() => setPicker(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+            </div>
+            <div className="p-3 overflow-y-auto">
+              {picker.length === 0 ? (
+                <p className="text-xs text-slate-400 p-3 text-center">No hay actividades jugables disponibles en este curso (o ya están todas en la misión).</p>
+              ) : picker.map(a => (
+                <button key={a.id} onClick={() => attach(a.id)} disabled={busy} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-teal-50 text-left disabled:opacity-50">
+                  <span>🎮</span>
+                  <span className="flex-1 text-sm text-slate-700 truncate">{a.title}</span>
+                  <span className="text-[10px] font-mono text-slate-400">{a.type}</span>
+                  <span className="text-xs font-semibold text-teal-600 shrink-0">Añadir</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
