@@ -1329,6 +1329,22 @@ export class ClassroomService {
   }
 
   /**
+   * El docente reinicia una lección para un estudiante puntual, aunque ya no exista
+   * la entrega (p. ej. intentos borrados con el bug antiguo, que dejaban el progreso
+   * en "completado" sin entrega). Borra la entrega si existe, resetea el progreso y
+   * revierte XP/insignias → el estudiante puede volver a hacerla.
+   */
+  async resetLessonForStudent(activityId: string, teacherId: string, studentEnrollmentId: string) {
+    const activity = await this.validateActivityOwnership(activityId, teacherId);
+    if (activity.type !== 'LESSON' && activity.type !== 'GAME') {
+      throw new BadRequestException('Solo aplica a lecciones interactivas');
+    }
+    await this.prisma.activitySubmission.deleteMany({ where: { activityId, studentEnrollmentId } });
+    await this.resetLessonAttempt({ id: activity.id, type: activity.type }, studentEnrollmentId, true);
+    return { success: true };
+  }
+
+  /**
    * Al borrar/devolver el intento de una lección interactiva (o juego), resetea su
    * LessonProgress para que el estudiante pueda volver a hacerla. Si `revokeXp`,
    * revierte además el XP y reevalúa las insignias. No-op para otros tipos.

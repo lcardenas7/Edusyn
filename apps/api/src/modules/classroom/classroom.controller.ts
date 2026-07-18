@@ -387,6 +387,18 @@ export class ClassroomController {
     return this.service.deleteSubmission(submissionId, userId);
   }
 
+  // Reiniciar una lección para un estudiante puntual (aunque ya no haya entrega).
+  @Post('activities/:activityId/lesson/reset')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async resetLessonForStudent(
+    @Param('activityId') activityId: string,
+    @Request() req: any,
+    @Body() body: { studentEnrollmentId: string },
+  ) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.resetLessonForStudent(activityId, userId, body.studentEnrollmentId);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // QUIZ / EXAM – Question Contexts
   // ═══════════════════════════════════════════════════════════════════════════

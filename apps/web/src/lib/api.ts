@@ -2075,6 +2075,9 @@ export const classroomApi = {
   // Dependencias/prerrequisitos (Fase 4): reemplaza el conjunto de prerrequisitos.
   setActivityDependencies: (activityId: string, prerequisites: { prerequisiteId: string; condition?: string; minScore?: number | null }[]) =>
     api.put(`/classrooms/activities/${activityId}/dependencies`, { prerequisites }),
+  // Reiniciar una lección para un estudiante puntual (docente).
+  resetLessonForStudent: (activityId: string, studentEnrollmentId: string) =>
+    api.post(`/classrooms/activities/${activityId}/lesson/reset`, { studentEnrollmentId }),
   updateActivity: (activityId: string, data: {
     title?: string; description?: string; maxScore?: number; dueDate?: string;
     openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
