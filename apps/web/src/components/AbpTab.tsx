@@ -56,8 +56,8 @@ function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void | Promi
         const filled = !!local[i].trim()
         const busyCard = saving === i
         return (
-          <div key={i} className={`rounded-xl border-2 p-3 ${filled ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
-            <h5 className="font-bold text-sm text-slate-700 flex items-center gap-1.5 mb-2">{c.icon} {c.q}</h5>
+          <div key={i} className="rounded-2xl p-3.5" style={{ border: `1.5px solid ${filled ? 'color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' : 'var(--t-line)'}`, background: filled ? 'color-mix(in srgb, var(--t-teal) 7%, var(--t-surface))' : 'var(--t-surface)' }}>
+            <h5 className="font-bold text-sm taller-soft flex items-center gap-1.5 mb-2">{c.icon} {c.q}</h5>
             <textarea
               value={local[i]}
               disabled={!editable}
@@ -66,9 +66,10 @@ function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void | Promi
               onBlur={() => editable && save(i)}
               rows={3}
               placeholder="Escribe aquí…"
-              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm resize-none disabled:opacity-70"
+              className="w-full rounded-lg px-2.5 py-2 text-sm resize-none disabled:opacity-70 taller-ink"
+              style={{ border: '1px solid var(--t-line)', background: 'var(--t-raised)' }}
             />
-            <p className="text-xs text-slate-400 mt-1">{busyCard ? '💾 Guardando…' : filled ? `✍️ ${canvas[i]?.byName || 'Aportó'}` : 'Tarjeta pendiente'}</p>
+            <p className="text-xs taller-muted mt-1">{busyCard ? '💾 Guardando…' : filled ? `✍️ ${canvas[i]?.byName || 'Aportó'}` : 'Tarjeta pendiente'}</p>
           </div>
         )
       })}
@@ -114,7 +115,7 @@ function Trail({ team, mini = false }: { team: any; mini?: boolean }) {
 }
 
 // Fase 2 — Tormenta de Ideas (muro de notas + votación).
-const STICKY_COLORS = ['#FEF3C7', '#D1FAE5', '#FCE7F3', '#DBEAFE', '#EDE9FE']
+const STICKY_COLORS = ['#FBE7A6', '#CFE6BE', '#C4DBF3', '#F6D3CE', '#DDD2F2']
 function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   const ideas: any[] = phaseData(team, 2).ideas || []
   const editable = stateOf(team, 2) === 'IN_PROGRESS'
@@ -140,25 +141,27 @@ function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
     <div>
       <div className="flex gap-2 mb-4 flex-wrap">
         <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} disabled={!editable}
-          placeholder="Escribe tu idea y presiona Enter…" className="flex-1 min-w-[200px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
-        <span className="flex items-center gap-1.5 font-bold text-violet-700 bg-amber-50 rounded-xl px-4 text-sm">🗳️ {votesLeft} votos</span>
+          placeholder="Escribe tu idea y presiona Enter…" className="flex-1 min-w-[200px] rounded-xl px-4 py-2.5 text-sm taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} />
+        <span className="flex items-center gap-1.5 font-bold rounded-xl px-4 text-sm" style={{ color: 'var(--t-teal)', background: 'color-mix(in srgb, var(--t-teal) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--t-teal) 28%, transparent)' }}>🗳️ {votesLeft} votos</span>
       </div>
       {ideas.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-6">Aún no hay ideas. ¡Sé el primero!</p>
+        <p className="text-sm taller-muted text-center py-6">Aún no hay ideas. ¡Sé el primero!</p>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {ideas.map((i: any, ix: number) => {
             const mine = i.by === myEnrollment
             const voted = votedIds.has(i.id)
             const top = (i.votes || 0) === maxVotes && maxVotes > 0
+            const rot = [-1.6, 1.2, -0.6, 1.5, -1][ix % 5]
             return (
-              <div key={i.id} className={`rounded-lg p-3 shadow-sm relative flex flex-col gap-2 min-h-[100px] ${top ? 'ring-2 ring-amber-400' : ''}`} style={{ background: STICKY_COLORS[ix % STICKY_COLORS.length] }}>
-                {top && <span className="absolute -top-2 right-2 bg-amber-400 text-white text-[10px] font-bold rounded-full px-2 py-0.5">⭐ favorita</span>}
-                <div className="text-sm text-slate-800">{i.text}</div>
-                <div className="mt-auto flex items-center justify-between text-xs text-slate-500 font-medium">
+              <div key={i.id} className="taller-sticky rounded-xl p-3.5 relative flex flex-col gap-2 min-h-[112px]"
+                style={{ background: STICKY_COLORS[ix % STICKY_COLORS.length], color: '#2a2412', boxShadow: 'var(--t-shadow-sm)', transform: `rotate(${rot}deg)`, border: '1px solid rgba(0,0,0,.05)', ...(top ? { outline: '2px solid var(--t-marigold)', outlineOffset: '2px' } : {}) }}>
+                {top && <span className="absolute -top-2.5 right-2 text-white text-[10px] font-bold rounded-full px-2 py-0.5 shadow" style={{ background: 'var(--t-marigold)', transform: 'rotate(6deg)' }}>★ favorita</span>}
+                <div className="text-sm font-medium">{i.text}</div>
+                <div className="mt-auto flex items-center justify-between text-xs" style={{ color: '#5b5033' }}>
                   <span>— {i.byName}</span>
                   <button onClick={() => vote(i.id)} disabled={mine || voted || votesLeft <= 0 || !editable || !myEnrollment || busy}
-                    className="bg-white/70 rounded-full px-3 py-1 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                    className="rounded-full px-3 py-1 font-bold font-mono disabled:opacity-40 disabled:cursor-not-allowed" style={{ background: 'rgba(0,0,0,.07)', color: '#3a3212' }}>
                     👍 {i.votes || 0}
                   </button>
                 </div>
@@ -433,16 +436,16 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
   const complete = !!mission.complete
   const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onSaved() } finally { setBusy(false) } }
   return (
-    <div className={`rounded-xl border p-4 ${complete ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-white'}`}>
+    <div className="rounded-2xl p-4" style={{ border: `1px solid ${complete ? 'color-mix(in srgb, var(--t-teal) 40%, var(--t-line))' : 'var(--t-line)'}`, background: complete ? 'color-mix(in srgb, var(--t-teal) 6%, var(--t-surface))' : 'var(--t-raised)', boxShadow: 'var(--t-shadow-sm)' }}>
       <div className="flex items-start gap-2.5">
-        <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs shrink-0 ${complete ? 'bg-emerald-500' : 'bg-slate-300'}`}>{complete ? <Check className="w-3.5 h-3.5" /> : '○'}</div>
+        <div className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: complete ? 'var(--t-teal)' : 'color-mix(in srgb, var(--t-ink) 25%, transparent)' }}>{complete ? <Check className="w-3.5 h-3.5" /> : '○'}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="font-bold text-slate-800 text-sm">{mission.title}</h4>
-            {mission.required && <span className="text-[10px] font-bold uppercase tracking-wide bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">Obligatoria</span>}
+            <h4 className="font-bold taller-ink text-sm">{mission.title}</h4>
+            {mission.required && <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-1.5 py-0.5" style={{ background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)' }}>Obligatoria</span>}
             {!tool && <button onClick={() => run(() => abpApi.deleteMission(mission.id))} disabled={busy} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
           </div>
-          {mission.description && <p className="text-xs text-slate-500 mt-0.5">{mission.description}</p>}
+          {mission.description && <p className="text-xs taller-soft mt-0.5">{mission.description}</p>}
 
           {tool && (
             <div className="mt-3">
