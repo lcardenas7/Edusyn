@@ -1267,46 +1267,52 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       </div>
 
       {/* Sendero */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+      <div className="taller-card p-4">
+        <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2">Sendero de la expedición</div>
         <Trail team={team} />
       </div>
 
       {/* Sub-nav interna del Nivel 2 */}
-      <div className="flex bg-slate-100 rounded-xl p-1 w-fit flex-wrap">
-        <button onClick={() => setExpTab('phases')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'phases' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Fases</button>
-        <button onClick={() => setExpTab('log')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'log' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📔 Bitácora</button>
-        <button onClick={() => setExpTab('discoveries')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'discoveries' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>💡 Descubrimientos</button>
+      <div className="flex rounded-xl p-1 w-fit flex-wrap gap-0.5" style={{ background: 'color-mix(in srgb, var(--t-marigold) 8%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
+        {(['phases', 'log', 'discoveries'] as const).map(k => (
+          <button key={k} onClick={() => setExpTab(k)} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition"
+            style={expTab === k ? { background: 'var(--t-raised)', color: 'var(--t-marigold)', boxShadow: 'var(--t-shadow-sm)' } : { color: 'var(--t-muted)' }}>
+            {k === 'phases' ? '🚀 Fases' : k === 'log' ? '📔 Bitácora' : '💡 Descubrimientos'}
+          </button>
+        ))}
       </div>
 
       {expTab === 'log' && <LogbookView teamId={team.id} currentPhase={cur} />}
       {expTab === 'discoveries' && <DiscoveriesView teamId={team.id} currentPhase={cur} />}
 
-      {/* Panel de la fase actual */}
+      {/* Panel de la fase actual — Estación */}
       {expTab === 'phases' && (
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Fase {cur} de 6</div>
-        <h3 className="text-lg font-bold text-slate-800 mb-3">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
+      <div className="taller-card p-6">
+        <div className="text-[11px] font-mono uppercase tracking-[0.15em] taller-mari mb-1">Estación {cur} de 6</div>
+        <h3 className="text-xl font-black taller-ink mb-3 tracking-tight">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
 
         {curPs?.feedback && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 border-l-4 border-rose-400 text-sm text-rose-800">
+          <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'color-mix(in srgb, #CB4E42 10%, transparent)', borderLeft: '4px solid #CB4E42', color: '#7a2b22' }}>
             🧑‍🏫 <b>Retroalimentación del docente:</b> {curPs.feedback}
           </div>
         )}
 
         {curState === 'AWAITING' ? (
-          <div className="p-4 rounded-xl bg-amber-50 text-amber-800 font-semibold flex items-center gap-2">
-            <Clock className="w-5 h-5" /> Esperando validación del docente…
+          <div className="p-4 rounded-xl font-semibold flex items-center gap-2" style={{ background: 'color-mix(in srgb, var(--t-marigold) 12%, transparent)', color: '#8a5a10' }}>
+            <Clock className="w-5 h-5" /> En revisión — esperando al docente…
           </div>
         ) : cur === 6 && curState === 'VALIDATED' ? (
-          <div className="text-center py-6">🏆<p className="font-bold text-slate-800 mt-2">¡Llegaron a la cima de la expedición!</p></div>
+          <div className="text-center py-6">🏆<p className="font-black taller-ink mt-2">¡Llegaron a la cima de la expedición!</p></div>
         ) : (
           <>
             <MissionsPanel team={team} onSaved={() => load(true)} />
-            <div className="mt-4 flex items-center gap-3 flex-wrap">
-              {reqMissions.length > 0 && <span className="text-sm text-slate-500">Misiones obligatorias: <b className="text-slate-700">{reqDone}/{reqMissions.length}</b></span>}
+            {/* Compuerta de validación */}
+            <div className="mt-5 flex items-center gap-3 flex-wrap pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
+              {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
-                className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa las misiones'}
+                className={`ml-auto py-3 px-6 font-bold rounded-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed transition ${canRequest ? 'taller-cta hover:opacity-95' : ''}`}
+                style={!canRequest ? { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' } : undefined}>
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : canRequest ? <Send className="w-5 h-5" /> : '🔒'} {canRequest ? 'Presentar a validación' : 'Completa las misiones'}
               </button>
             </div>
           </>
