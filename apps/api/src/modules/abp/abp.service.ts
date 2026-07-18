@@ -336,9 +336,10 @@ export class AbpService {
   /** Docente arma un equipo: nombre/identidad + miembros (matriculados del aula). */
   async createTeam(institutionId: string, userId: string, dto: {
     projectId: string; name: string; emoji?: string; color?: string;
-    problem?: string; memberEnrollmentIds: string[];
+    problem?: string; memberEnrollmentIds: string[]; letStudentsName?: boolean;
   }) {
-    if (!dto.name?.trim()) throw new BadRequestException('El nombre del equipo es obligatorio');
+    // Si el docente deja que el equipo elija su nombre, no es obligatorio ahora (DRAFT).
+    if (!dto.letStudentsName && !dto.name?.trim()) throw new BadRequestException('El nombre del equipo es obligatorio');
     await this.assertProjectOwner(dto.projectId, institutionId, userId);
 
     const memberIds = [...new Set(dto.memberEnrollmentIds || [])];
@@ -357,7 +358,8 @@ export class AbpService {
       data: {
         institutionId,
         projectId: dto.projectId,
-        name: dto.name.trim(),
+        name: dto.letStudentsName ? (dto.name?.trim() || 'Equipo sin nombre') : dto.name.trim(),
+        identityState: dto.letStudentsName ? ('DRAFT' as const) : ('CONFIRMED' as const),
         emoji: dto.emoji || '🚀',
         color: dto.color || '#0E4A5A',
         problem: dto.problem?.trim() || null,
@@ -430,6 +432,55 @@ export class AbpService {
     const member = await this.prisma.abpTeamMember.findUnique({ where: { teamId_studentEnrollmentId: { teamId, studentEnrollmentId: enrollmentId } } });
     if (!member) throw new NotFoundException('El estudiante no pertenece a este equipo');
     await this.prisma.abpTeamMember.delete({ where: { id: member.id } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  // ─── IDENTIDAD DEL EQUIPO (la crean los estudiantes; §14.3) ─────────────────
+
+  /** Ritual de fundación: los estudiantes eligen nombre + emblema cuando el equipo
+   * está en DRAFT → pasa a CONFIRMED. Solo integrantes del equipo. */
+  async foundTeamIdentity(teamId: string, institutionId: string, userId: string, dto: { name: string; emoji?: string }) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    if ((team as any).identityState !== 'DRAFT') throw new BadRequestException('La identidad del equipo ya está definida');
+    const name = (dto.name || '').trim();
+    if (!name) throw new BadRequestException('Elijan un nombre para el equipo');
+    await this.prisma.abpTeam.update({
+      where: { id: teamId },
+      data: { name, emoji: (dto.emoji || '').trim() || '🚀', identityState: 'CONFIRMED' },
+    });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** El equipo solicita cambiar su nombre → queda RENAME_PENDING a la espera del docente. */
+  async requestTeamRename(teamId: string, institutionId: string, userId: string, proposedName: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const name = (proposedName || '').trim();
+    if (!name) throw new BadRequestException('Escriban el nuevo nombre');
+    if (name === team.name) throw new BadRequestException('El nombre propuesto es igual al actual');
+    await this.prisma.abpTeam.update({ where: { id: teamId }, data: { proposedName: name, identityState: 'RENAME_PENDING' } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** El docente aprueba o rechaza el cambio de nombre solicitado. */
+  async resolveTeamRename(teamId: string, institutionId: string, userId: string, approve: boolean) {
+    const team = await this.prisma.abpTeam.findFirst({ where: { id: teamId, institutionId }, select: { projectId: true, proposedName: true, identityState: true } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+    if (team.identityState !== 'RENAME_PENDING') throw new BadRequestException('No hay un cambio de nombre pendiente');
+    const data = approve && team.proposedName
+      ? { name: team.proposedName, proposedName: null, identityState: 'CONFIRMED' as const }
+      : { proposedName: null, identityState: 'CONFIRMED' as const };
+    await this.prisma.abpTeam.update({ where: { id: teamId }, data });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** Cada estudiante elige su propio avatar (de un set curado en el front). */
+  async setMyAvatar(teamId: string, institutionId: string, userId: string, avatarId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const me = this.memberOf(team, userId);
+    if (!me?.enrollmentId) throw new ForbiddenException('Solo los integrantes del equipo eligen avatar');
+    const avatar = (avatarId || '').trim().slice(0, 16) || null;
+    await this.prisma.abpTeamMember.updateMany({ where: { teamId, studentEnrollmentId: me.enrollmentId }, data: { avatarId: avatar } });
     return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
   }
 

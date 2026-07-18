@@ -1103,6 +1103,36 @@ function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; c
   )
 }
 
+// Sets curados (§14.3): emblemas de equipo y avatares de estudiante.
+const TEAM_EMBLEMS = ['🚀', '🦊', '🐼', '🦁', '🐯', '🦉', '🐺', '🐢', '🦅', '🐙', '🦄', '🐝', '🦋', '🐬', '🐸', '⚡', '🔥', '🌟', '🌊', '🏔️']
+const AVATARS = ['🦊', '🐼', '🦁', '🐯', '🦉', '🐺', '🐢', '🦅', '🐙', '🦄', '🐝', '🦋', '🐬', '🐸', '🐵', '🐨', '🐷', '🐰', '🐧', '🦩']
+
+// Ritual de fundación: el equipo (DRAFT) elige nombre + emblema como primer acuerdo.
+function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
+  const [name, setName] = useState('')
+  const [emoji, setEmoji] = useState('🚀')
+  const [busy, setBusy] = useState(false)
+  const found = async () => {
+    if (!name.trim() || busy) return
+    setBusy(true)
+    try { await abpApi.foundTeamIdentity(team.id, name.trim(), emoji); onDone() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
+  }
+  return (
+    <div className="max-w-lg mx-auto bg-white rounded-2xl border-2 border-violet-200 p-6 text-center shadow-sm">
+      <div className="text-5xl">{emoji}</div>
+      <h3 className="text-xl font-black text-slate-800 mt-2">¡Funden su equipo!</h3>
+      <p className="text-sm text-slate-500 mb-4">Elijan juntos un nombre y un emblema. Es su primer acuerdo como equipo.</p>
+      <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') found() }} placeholder="Nombre del equipo…" className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm text-center mb-4" autoFocus />
+      <div className="text-xs font-semibold text-slate-500 mb-1.5">Emblema del equipo</div>
+      <div className="grid grid-cols-10 gap-1.5 mb-5">
+        {TEAM_EMBLEMS.map(e => <button key={e} onClick={() => setEmoji(e)} className={`text-xl rounded-lg py-1.5 transition ${emoji === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'hover:bg-slate-50'}`}>{e}</button>)}
+      </div>
+      <button onClick={found} disabled={!name.trim() || busy} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 flex items-center justify-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Fundar equipo 🎉</button>
+    </div>
+  )
+}
+
 function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
@@ -1111,6 +1141,19 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
+  const [avatarOpen, setAvatarOpen] = useState(false)
+
+  const requestRename = async () => {
+    if (!team) return
+    const n = window.prompt('Nuevo nombre del equipo (lo tendrá que aprobar el docente):', team.name)?.trim()
+    if (!n) return
+    try { await abpApi.requestTeamRename(team.id, n); load() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo solicitar el cambio') }
+  }
+  const pickAvatar = async (a: string) => {
+    if (!team) return
+    setAvatarOpen(false)
+    try { await abpApi.setMyAvatar(team.id, a); load(true) } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar el avatar') }
+  }
 
   const load = useCallback((silent = false) => {
     if (!projectId) { setLoading(false); return Promise.resolve() }
@@ -1151,6 +1194,16 @@ function StudentExpedition({ projects }: { projects: any[] }) {
     )
   }
 
+  // Ritual de fundación: hasta que el equipo elija nombre + emblema, no se trabaja.
+  if (team.identityState === 'DRAFT') {
+    return (
+      <div className="space-y-4">
+        {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+        <FoundTeam team={team} onDone={load} />
+      </div>
+    )
+  }
+
   const cur = team.currentPhase
   const curState = stateOf(team, cur)
   const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
@@ -1173,8 +1226,28 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="text-xl font-bold text-slate-800">{team.emoji} {team.name}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-bold text-slate-800">{team.emoji} {team.name}</h3>
+              {team.identityState === 'RENAME_PENDING'
+                ? <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">✏️ “{team.proposedName}” — esperando al docente</span>
+                : <button onClick={requestRename} className="text-[11px] font-semibold text-violet-500 hover:text-violet-700">✏️ cambiar nombre</button>}
+            </div>
             {team.problem && <p className="text-sm text-slate-500 mt-0.5">Reto: {team.problem}</p>}
+            {/* Integrantes con su avatar + elegir el mío */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {(team.members || []).map((m: any) => {
+                const nm = `${m.studentEnrollment?.student?.user?.firstName ?? ''}`.trim() || 'Integrante'
+                return <span key={m.id} title={nm} className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-sm">{m.avatarId || nm[0]?.toUpperCase()}</span>
+              })}
+              {team.myEnrollmentId && <button onClick={() => setAvatarOpen(v => !v)} className="text-[11px] font-semibold text-violet-500 hover:text-violet-700 ml-1">🎭 mi avatar</button>}
+            </div>
+            {avatarOpen && (
+              <div className="mt-2 p-2 bg-white border border-slate-200 rounded-xl shadow-sm inline-block">
+                <div className="grid grid-cols-10 gap-1">
+                  {AVATARS.map(a => <button key={a} onClick={() => pickAvatar(a)} className="text-lg rounded-lg px-1.5 py-1 hover:bg-violet-50">{a}</button>)}
+                </div>
+              </div>
+            )}
             {team.badges?.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {team.badges.map((b: string) => <span key={b} className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-2.5 py-0.5">{b}</span>)}
@@ -1867,6 +1940,15 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                     </div>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
+                  {t.identityState === 'RENAME_PENDING' && (
+                    <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs">
+                      <div className="text-amber-800">✏️ El equipo pide llamarse <b>“{t.proposedName}”</b></div>
+                      <div className="flex gap-2 mt-1.5">
+                        <button onClick={async () => { await abpApi.resolveTeamRename(t.id, true); load() }} className="font-semibold text-emerald-600 hover:text-emerald-700">✓ Aprobar</button>
+                        <button onClick={async () => { await abpApi.resolveTeamRename(t.id, false); load() }} className="font-semibold text-rose-500 hover:text-rose-600">✕ Rechazar</button>
+                      </div>
+                    </div>
+                  )}
                   <div className="my-2"><Trail team={t} mini /></div>
                   <div className="text-xs text-slate-500 line-clamp-1">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
                   <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
@@ -1925,6 +2007,7 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
   const [emoji, setEmoji] = useState('🚀')
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
+  const [letStudents, setLetStudents] = useState(false)
 
   // Recarga el roster cada vez que se abre el panel (y al cambiar de proyecto),
   // para que los alumnos ya asignados a un equipo salgan marcados y no se puedan
@@ -1932,9 +2015,9 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
   useEffect(() => { if (open) abpApi.roster(classroomId, projectId).then(({ data }) => setRoster(data)) }, [open, classroomId, projectId])
 
   const create = async () => {
-    if (!name.trim() || sel.size === 0) return
+    if ((!name.trim() && !letStudents) || sel.size === 0) return
     setBusy(true)
-    try { await abpApi.createTeam({ projectId, name: name.trim(), emoji, memberEnrollmentIds: [...sel] }); setName(''); setSel(new Set()); setOpen(false); onCreated() }
+    try { await abpApi.createTeam({ projectId, name: name.trim(), emoji, memberEnrollmentIds: [...sel], letStudentsName: letStudents }); setName(''); setSel(new Set()); setLetStudents(false); setOpen(false); onCreated() }
     catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear el equipo') }
     finally { setBusy(false) }
   }
@@ -1944,9 +2027,13 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
     <div className="bg-white rounded-2xl border-2 border-violet-200 p-5 space-y-3">
       <h4 className="font-bold text-slate-800">Nuevo equipo</h4>
       <div className="flex gap-2">
-        <input value={emoji} onChange={e => setEmoji(e.target.value)} className="w-14 border border-slate-300 rounded-xl px-2 py-2.5 text-center text-lg" maxLength={2} />
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del equipo" className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm" autoFocus />
+        <input value={emoji} onChange={e => setEmoji(e.target.value)} disabled={letStudents} className="w-14 border border-slate-300 rounded-xl px-2 py-2.5 text-center text-lg disabled:opacity-50" maxLength={2} />
+        <input value={name} onChange={e => setName(e.target.value)} disabled={letStudents} placeholder={letStudents ? 'Lo elegirán los estudiantes' : 'Nombre del equipo'} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm disabled:opacity-50" autoFocus />
       </div>
+      <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+        <input type="checkbox" checked={letStudents} onChange={e => setLetStudents(e.target.checked)} className="accent-violet-600" />
+        Dejar que el equipo elija su nombre y emblema (ritual de fundación)
+      </label>
       <div>
         <p className="text-xs font-medium text-slate-500 mb-1.5">Integrantes ({sel.size})</p>
         <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-2 grid sm:grid-cols-2 gap-1">
@@ -1965,7 +2052,7 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
       </div>
       <div className="flex justify-end gap-2">
         <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-        <button onClick={create} disabled={!name.trim() || sel.size === 0 || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear equipo</button>
+        <button onClick={create} disabled={(!name.trim() && !letStudents) || sel.size === 0 || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear equipo</button>
       </div>
     </div>
   )

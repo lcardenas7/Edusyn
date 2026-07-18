@@ -192,6 +192,39 @@ export class AbpController {
     return this.service.removeTeamMember(teamId, institutionId, userId, enrollmentId);
   }
 
+  // ─── Identidad del equipo (estudiantes eligen; docente aprueba el rename) ────
+  // Fundación: el equipo elige nombre + emblema (DRAFT → CONFIRMED).
+  @Post('teams/:teamId/identity')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async foundIdentity(@Param('teamId') teamId: string, @Body() body: { name: string; emoji?: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.foundTeamIdentity(teamId, institutionId, userId, body);
+  }
+
+  // El equipo solicita cambiar el nombre (→ al docente).
+  @Post('teams/:teamId/rename-request')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async requestRename(@Param('teamId') teamId: string, @Body() body: { proposedName: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.requestTeamRename(teamId, institutionId, userId, body?.proposedName);
+  }
+
+  // El docente aprueba/rechaza el cambio de nombre.
+  @Post('teams/:teamId/rename-resolve')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async resolveRename(@Param('teamId') teamId: string, @Body() body: { approve: boolean }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.resolveTeamRename(teamId, institutionId, userId, !!body?.approve);
+  }
+
+  // El estudiante elige su avatar.
+  @Post('teams/:teamId/my-avatar')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async setMyAvatar(@Param('teamId') teamId: string, @Body() body: { avatarId: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setMyAvatar(teamId, institutionId, userId, body?.avatarId);
+  }
+
   // ─── Sendero + validaciones (Ticket 2) ─────────────────────────────────────
 
   // El equipo del estudiante en un proyecto (su expedición).

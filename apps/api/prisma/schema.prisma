@@ -6710,6 +6710,12 @@ enum AbpValidationStatus {
   RETURNED
 }
 
+enum AbpTeamIdentityState {
+  DRAFT // los estudiantes aún deben elegir nombre + emblema (ritual de fundación)
+  CONFIRMED // identidad establecida
+  RENAME_PENDING // hay un cambio de nombre solicitado, a la espera del docente
+}
+
 enum AbpContributionType {
   CANVAS_CARD
   IDEA
@@ -6795,6 +6801,8 @@ model AbpTeam {
   name          String
   emoji         String   @default("🚀")
   color         String   @default("#0E4A5A")
+  identityState AbpTeamIdentityState @default(CONFIRMED) // DRAFT = los estudiantes deben fundar (nombre+emblema); RENAME_PENDING = cambio en revisión
+  proposedName  String? // nombre propuesto por el equipo, a la espera de que el docente lo apruebe
   currentPhase  Int      @default(1) // 1–6
   xp            Int      @default(0) // XP de equipo (barra denormalizada)
   problem       String?  @db.Text // el reto propio del equipo
@@ -6821,6 +6829,7 @@ model AbpTeamMember {
   institutionId       String
   teamId              String
   studentEnrollmentId String
+  avatarId            String? // avatar elegido por el estudiante (de un set curado)
   createdAt           DateTime @default(now())
 
   institution       Institution       @relation("RlsInstitutionABPM", fields: [institutionId], references: [id])
