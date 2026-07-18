@@ -209,12 +209,13 @@ function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void | Promis
       <textarea value={text} onChange={e => setText(e.target.value)} onFocus={() => setTFocused(true)}
         onBlur={() => { setTFocused(false); if (editable && text !== (smart.text || '')) save(text, checks) }}
         disabled={!editable} rows={3} placeholder="Nuestro objetivo es… (específico, medible, con plazo)"
-        className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm mb-3 disabled:opacity-70" />
+        className="w-full rounded-xl px-3 py-2.5 text-sm mb-3 disabled:opacity-70 taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} />
       <div className="grid sm:grid-cols-2 gap-2">
         {SMART_CRITERIA.map((c, i) => (
-          <label key={c.k} className={`flex items-start gap-2.5 border-2 rounded-xl p-3 text-sm cursor-pointer ${checks[i] ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'} ${busy ? 'opacity-70' : ''}`}>
-            <input type="checkbox" checked={checks[i]} onChange={() => toggle(i)} disabled={!editable} className="mt-0.5 accent-emerald-600" />
-            <span><b>{c.k}</b> · {c.t}</span>
+          <label key={c.k} className={`flex items-start gap-2.5 rounded-xl p-3 text-sm cursor-pointer ${busy ? 'opacity-70' : ''}`}
+            style={{ border: `1.5px solid ${checks[i] ? 'color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' : 'var(--t-line)'}`, background: checks[i] ? 'color-mix(in srgb, var(--t-teal) 8%, var(--t-surface))' : 'var(--t-surface)' }}>
+            <input type="checkbox" checked={checks[i]} onChange={() => toggle(i)} disabled={!editable} className="mt-0.5" style={{ accentColor: 'var(--t-teal)' }} />
+            <span className="taller-soft"><b className="taller-ink">{c.k}</b> · {c.t}</span>
           </label>
         ))}
       </div>
@@ -249,31 +250,31 @@ function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
     <div>
       {editable && (
         <div className="flex gap-2 mb-4 flex-wrap">
-          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="Nueva tarea…" className="flex-1 min-w-[160px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
-          <select value={owner} onChange={e => setOwner(e.target.value)} className="border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="Nueva tarea…" className="flex-1 min-w-[160px] rounded-xl px-4 py-2.5 text-sm taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} />
+          <select value={owner} onChange={e => setOwner(e.target.value)} className="rounded-xl px-3 py-2.5 text-sm taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }}>
             {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
-          <button onClick={add} disabled={!text.trim() || !owner || busy} className="px-4 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50">Agregar</button>
+          <button onClick={add} disabled={!text.trim() || !owner || busy} className="taller-cta px-4 rounded-xl text-sm font-semibold disabled:opacity-50">Agregar</button>
         </div>
       )}
       <div className="grid sm:grid-cols-3 gap-3">
         {KANBAN_COLS.map((c, ci) => {
           const list = tasks.filter(t => t.col === ci)
           return (
-            <div key={ci} className="bg-slate-50 rounded-xl p-3">
-              <h5 className="font-bold text-sm text-slate-700 flex justify-between mb-2">{c}<span className="text-slate-400">{list.length}</span></h5>
+            <div key={ci} className="rounded-xl p-3" style={{ background: 'color-mix(in srgb, var(--t-marigold) 6%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
+              <h5 className="font-bold text-sm taller-soft flex justify-between mb-2">{c}<span className="taller-muted font-mono">{list.length}</span></h5>
               <div className="space-y-2">
                 {list.map(t => (
-                  <div key={t.id} className="bg-white rounded-lg p-2.5 text-sm shadow-sm">
-                    <div className={ci === 2 ? 'line-through text-slate-400' : 'text-slate-700'}>{t.text}</div>
-                    <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+                  <div key={t.id} className="rounded-lg p-2.5 text-sm" style={{ background: 'var(--t-raised)', border: '1px solid var(--t-line)', boxShadow: 'var(--t-shadow-sm)' }}>
+                    <div className={ci === 2 ? 'line-through taller-muted' : 'taller-ink'}>{t.text}</div>
+                    <div className="text-xs taller-muted mt-1 flex items-center justify-between">
                       <span>👤 {t.ownerName}</span>
                       {editable && <button onClick={() => act(abpApi.removeTask(team.id, t.id))} className="text-slate-300 hover:text-rose-500">✕</button>}
                     </div>
-                    {editable && ci < 2 && <button onClick={() => act(abpApi.moveTask(team.id, t.id))} className="mt-1.5 text-xs bg-violet-600 text-white rounded px-2 py-1 font-medium">{ci === 0 ? 'Iniciar →' : 'Terminar ✔'}</button>}
+                    {editable && ci < 2 && <button onClick={() => act(abpApi.moveTask(team.id, t.id))} className="mt-1.5 text-xs rounded px-2 py-1 font-medium" style={{ background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)' }}>{ci === 0 ? 'Iniciar →' : 'Terminar ✔'}</button>}
                   </div>
                 ))}
-                {list.length === 0 && <p className="text-xs text-slate-300 text-center py-2">Vacío</p>}
+                {list.length === 0 && <p className="text-xs taller-muted text-center py-2 opacity-60">Vacío</p>}
               </div>
             </div>
           )
@@ -311,21 +312,21 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
     <div>
       {editable && (
         <div className="flex gap-2 mb-4 flex-wrap">
-          <input value={link} onChange={e => setLink(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addLink() }} placeholder="Pega un enlace (Canva, MakeCode, video…)" className="flex-1 min-w-[200px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
-          <button onClick={addLink} disabled={!link.trim() || busy} className="px-4 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Enlace</button>
+          <input value={link} onChange={e => setLink(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addLink() }} placeholder="Pega un enlace (Canva, MakeCode, video…)" className="flex-1 min-w-[200px] rounded-xl px-4 py-2.5 text-sm taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} />
+          <button onClick={addLink} disabled={!link.trim() || busy} className="taller-cta px-4 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Enlace</button>
           <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = '' }} />
-          <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-4 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
+          <button onClick={() => fileRef.current?.click()} disabled={busy} className="taller-card px-4 rounded-xl text-sm font-semibold taller-soft disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
         </div>
       )}
       {evidences.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-6">Aún no hay evidencias. Sube fotos, videos o enlaces del prototipo.</p>
+        <p className="text-sm taller-muted text-center py-6">Aún no hay evidencias. Sube fotos, videos o enlaces del prototipo.</p>
       ) : (
         <div className="space-y-2">
           {evidences.map((e: any) => (
-            <div key={e.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+            <div key={e.id} className="flex items-center gap-3 rounded-xl p-3" style={{ border: '1px solid var(--t-line)', background: 'var(--t-raised)' }}>
               <span>{e.kind === 'FILE' ? '📎' : '🔗'}</span>
-              <button onClick={() => openStoredFile(e.url)} className="flex-1 text-left text-sm text-violet-600 hover:underline truncate">{e.label}</button>
-              <span className="text-xs text-slate-400">{e.byName}</span>
+              <button onClick={() => openStoredFile(e.url)} className="flex-1 text-left text-sm taller-mari hover:underline truncate">{e.label}</button>
+              <span className="text-xs taller-muted">{e.byName}</span>
               {editable && <button onClick={() => remove(e.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
             </div>
           ))}
@@ -348,25 +349,25 @@ function CoevalCard({ team, sibling, existing, editable, onSaved }: { team: any;
     try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   return (
-    <div className={`border-2 rounded-xl p-4 ${done ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
+    <div className="rounded-xl p-4" style={{ border: `1.5px solid ${done ? 'color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' : 'var(--t-line)'}`, background: done ? 'color-mix(in srgb, var(--t-teal) 7%, var(--t-surface))' : 'var(--t-surface)' }}>
       <div className="flex justify-between items-center mb-2">
-        <h5 className="font-bold text-slate-800">{sibling.emoji} {sibling.name}</h5>
-        {done && <span className="text-xs text-emerald-600 font-semibold">✓ Evaluado</span>}
+        <h5 className="font-bold taller-ink">{sibling.emoji} {sibling.name}</h5>
+        {done && <span className="text-xs font-semibold" style={{ color: 'var(--t-teal)' }}>✓ Evaluado</span>}
       </div>
       <div className="space-y-2">
         {COEVAL_CRITERIA.map((c, i) => (
           <div key={i} className="flex items-center justify-between gap-2">
-            <span className="text-sm text-slate-600">{c}</span>
+            <span className="text-sm taller-soft">{c}</span>
             <div className="flex gap-1">
               {[1, 2, 3, 4].map(n => (
                 <button key={n} onClick={() => editable && setScores(s => { const x = [...s]; x[i] = n; return x })} disabled={!editable}
-                  className={`w-8 h-8 rounded-lg text-sm font-bold ${scores[i] === n ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
+                  className="w-8 h-8 rounded-lg text-sm font-bold" style={scores[i] === n ? { background: 'var(--t-marigold)', color: '#241703' } : { background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-muted)' }}>{n}</button>
               ))}
             </div>
           </div>
         ))}
       </div>
-      {editable && <button onClick={submit} disabled={!complete || busy} className="mt-3 w-full py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{done ? 'Actualizar' : 'Enviar evaluación'}</button>}
+      {editable && <button onClick={submit} disabled={!complete || busy} className="taller-cta mt-3 w-full py-2 rounded-lg text-sm font-semibold disabled:opacity-50">{done ? 'Actualizar' : 'Enviar evaluación'}</button>}
     </div>
   )
 }
@@ -374,7 +375,7 @@ function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   const siblings = team.siblings || []
   const coevals = phaseData(team, 6).coevals || {}
   const editable = stateOf(team, 6) === 'IN_PROGRESS'
-  if (siblings.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Son el único equipo del proyecto: no hay coevaluación. Presenten su solución y soliciten la validación para cerrar la expedición.</p>
+  if (siblings.length === 0) return <p className="text-sm taller-muted text-center py-6">Son el único equipo del proyecto: no hay coevaluación. Presenten su solución y soliciten la validación para cerrar la expedición.</p>
   return (
     <div className="grid sm:grid-cols-2 gap-3">
       {siblings.map((s: any) => <CoevalCard key={s.id} team={team} sibling={s} existing={coevals[s.id]} editable={editable} onSaved={onSaved} />)}
