@@ -2728,6 +2728,34 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }
   }
 
+  const openResetLessonModal = async (activityId: string, activityTitle: string) => {
+    setResetLessonModal({ activityId, activityTitle })
+    setLoadingStudents(true)
+    try {
+      const studentsRes = await classroomApi.getStudentsForAssignment(classroom.id)
+      setClassroomStudents(studentsRes.data || [])
+    } catch {
+      setClassroomStudents([])
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
+  const handleResetLesson = async (studentEnrollmentId: string, studentName: string) => {
+    if (!resetLessonModal) return
+    setResettingStudentId(studentEnrollmentId)
+    try {
+      await classroomApi.resetLessonForStudent(resetLessonModal.activityId, studentEnrollmentId)
+      setResetLessonModal(null)
+      alertDialog(`Lección reiniciada para ${studentName}. Ya puede hacerla de nuevo.`)
+      loadActivities()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'No se pudo reiniciar la lección')
+    } finally {
+      setResettingStudentId(null)
+    }
+  }
+
   const handleSaveAssignments = async () => {
     if (!assignStudentsModal) return
     setSavingAssignments(true)
@@ -2797,6 +2825,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   // Assign students modal
   const [assignStudentsModal, setAssignStudentsModal] = useState<{ activityId: string; activityTitle: string } | null>(null)
+  const [resetLessonModal, setResetLessonModal] = useState<{ activityId: string; activityTitle: string } | null>(null)
+  const [resettingStudentId, setResettingStudentId] = useState<string | null>(null)
   const [classroomStudents, setClassroomStudents] = useState<any[]>([])
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
   const [isRestrictedToAssigned, setIsRestrictedToAssigned] = useState(false)
@@ -4672,6 +4702,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               >
                 <Eye className="w-4 h-4" /> {'Vista previa'}
               </button>
+              <button
+                onClick={() => openResetLessonModal(act.id, act.title)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                title="Permitir que un estudiante vuelva a hacer la lección"
+              >
+                <RotateCcw className="w-4 h-4" /> Reiniciar para un estudiante
+              </button>
             </div>
           </div>
         )}
@@ -5225,6 +5262,54 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   {savingAssignments && <Loader2 className="w-4 h-4 animate-spin" />}
                   Guardar asignación
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reiniciar lección para un estudiante */}
+        {resetLessonModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40" onClick={() => setResetLessonModal(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-3 border-b border-hairline flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="font-bold text-slate-800">Reiniciar lección</h3>
+                  <p className="text-xs text-slate-500 truncate max-w-[300px]">{resetLessonModal.activityTitle}</p>
+                </div>
+                <button onClick={() => setResetLessonModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="px-5 py-3 border-b border-hairline shrink-0">
+                <p className="text-sm text-slate-600">Elige al estudiante que podrá <b>volver a hacer</b> la lección. Se borra su intento (progreso, nota y XP de esta lección).</p>
+              </div>
+              <div className="p-3 overflow-y-auto">
+                {loadingStudents ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-violet-500" /></div>
+                ) : classroomStudents.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">No hay estudiantes.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {classroomStudents.map((s: any) => {
+                      const name = `${s.lastName}${s.secondLastName ? ` ${s.secondLastName}` : ''}, ${s.firstName}`
+                      const busy = resettingStudentId === s.enrollmentId
+                      return (
+                        <button
+                          key={s.enrollmentId}
+                          disabled={!!resettingStudentId}
+                          onClick={() => handleResetLesson(s.enrollmentId, name)}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-hairline hover:border-violet-300 hover:bg-violet-50 text-left disabled:opacity-50"
+                        >
+                          {s.photo ? (
+                            <img src={s.photo} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">{s.firstName?.[0]}{s.lastName?.[0]}</div>
+                          )}
+                          <span className="flex-1 text-sm text-slate-700">{name}</span>
+                          {busy ? <Loader2 className="w-4 h-4 animate-spin text-violet-500" /> : <RotateCcw className="w-4 h-4 text-slate-400" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
