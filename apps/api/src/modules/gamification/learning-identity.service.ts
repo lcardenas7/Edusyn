@@ -188,6 +188,72 @@ export class LearningIdentityService {
     }
   }
 
+  /**
+   * Revierte el XP de una lección para un estudiante y reevalúa sus insignias.
+   * Se usa cuando el docente BORRA el intento de la lección: elimina los XpEvents de
+   * esa lección (`lesson:<lessonId>:…`), ajusta totalXp/level/skillXp y revoca las
+   * insignias que ya no correspondan. Nota: aunque las insignias son "permanentes" en
+   * el flujo normal, un borrado administrativo del intento sí las revierte para dejar
+   * el estado consistente. Nunca lanza (la gamificación no rompe el flujo académico).
+   */
+  async revokeLessonRewards(studentEnrollmentId: string, lessonId: string): Promise<void> {
+    try {
+      const events = await this.prisma.xpEvent.findMany({
+        where: { studentEnrollmentId, idempotencyKey: { startsWith: `lesson:${lessonId}:` } },
+        select: { id: true, amount: true, skill: true, identityId: true, studentId: true },
+      });
+      if (!events.length) return;
+      const identityId = events[0].identityId;
+      const studentId = events[0].studentId;
+
+      await this.prisma.$transaction(async (tx) => {
+        const identity = await tx.learningIdentity.findUnique({ where: { id: identityId } });
+        if (!identity) return;
+        let total = 0;
+        let skillXp: any = identity.skillXp;
+        for (const e of events) {
+          total += e.amount;
+          if (e.skill) skillXp = this.addSkillXp(skillXp, e.skill, -e.amount);
+        }
+        const newTotalXp = Math.max(0, identity.totalXp - total);
+        await tx.learningIdentity.update({
+          where: { id: identityId },
+          data: { totalXp: newTotalXp, level: LearningIdentityService.levelForXp(newTotalXp), skillXp },
+        });
+        await tx.xpEvent.deleteMany({ where: { id: { in: events.map(e => e.id) } } });
+      });
+
+      await this.revokeBadgesNoLongerEarned(identityId, studentId);
+    } catch (err: any) {
+      this.logger.warn(`revokeLessonRewards falló (no crítico): ${err?.message || err}`);
+    }
+  }
+
+  /** Tras revertir XP, revoca las insignias del estudiante que ya no cumple. */
+  private async revokeBadgesNoLongerEarned(identityId: string, studentId: string): Promise<void> {
+    const identity = await this.prisma.learningIdentity.findUnique({
+      where: { id: identityId },
+      select: { totalXp: true, level: true, currentStreak: true, longestStreak: true },
+    });
+    if (!identity) return;
+    const [lessonsCompleted, quizzesGraded, awarded] = await Promise.all([
+      this.prisma.xpEvent.count({ where: { identityId, source: 'LESSON_COMPLETE' } }),
+      this.prisma.xpEvent.count({ where: { identityId, source: 'QUIZ_GRADED' } }),
+      this.prisma.learningBadgeAward.findMany({ where: { studentId }, select: { badgeCode: true } }),
+    ]);
+    const stats: BadgeStats = {
+      totalXp: identity.totalXp, level: identity.level,
+      currentStreak: identity.currentStreak, longestStreak: identity.longestStreak,
+      lessonsCompleted, quizzesGraded,
+    };
+    const toRevoke = awarded
+      .map(a => a.badgeCode)
+      .filter(code => { const def = BADGE_CATALOG.find(b => b.code === code); return def ? !def.earned(stats) : false; });
+    if (toRevoke.length) {
+      await this.prisma.learningBadgeAward.deleteMany({ where: { studentId, badgeCode: { in: toRevoke } } });
+    }
+  }
+
   /** Catálogo completo con estado ganado/bloqueado para el estudiante (progreso privado). */
   async getBadges(studentId: string) {
     const identity = await this.prisma.learningIdentity.findUnique({ where: { studentId }, select: { id: true } });

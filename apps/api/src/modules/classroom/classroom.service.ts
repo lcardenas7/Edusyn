@@ -1148,13 +1148,19 @@ export class ClassroomService {
       throw new ForbiddenException('Entrega no encontrada o no tiene permisos');
     }
 
-    return this.prisma.activitySubmission.update({
+    const updated = await this.prisma.activitySubmission.update({
       where: { id: submissionId },
       data: {
         status: 'RETURNED',
         feedback: dto.feedback,
       },
     });
+
+    // Devolver una lección/juego = que el alumno la rehaga: se resetea su progreso.
+    // El XP ya ganado se conserva (devolver es una corrección más suave que borrar).
+    await this.resetLessonAttempt(submission.activity, submission.studentEnrollmentId, false);
+
+    return updated;
   }
 
   async updateSubmission(submissionId: string, studentUserId: string, dto: {
@@ -1312,10 +1318,31 @@ export class ClassroomService {
       where: { id: submissionId },
     });
 
+    // Si era una lección/juego: resetea el progreso para que el alumno la rehaga y
+    // revierte el XP + insignias de ese intento (borrado administrativo).
+    await this.resetLessonAttempt(submission.activity, submission.studentEnrollmentId, true);
+
     return {
       success: true,
       message: `Intento eliminado para ${submission.studentEnrollment.student.firstName} ${submission.studentEnrollment.student.lastName}`,
     };
+  }
+
+  /**
+   * Al borrar/devolver el intento de una lección interactiva (o juego), resetea su
+   * LessonProgress para que el estudiante pueda volver a hacerla. Si `revokeXp`,
+   * revierte además el XP y reevalúa las insignias. No-op para otros tipos.
+   */
+  private async resetLessonAttempt(
+    activity: { id: string; type: string },
+    studentEnrollmentId: string,
+    revokeXp: boolean,
+  ) {
+    if (activity.type !== 'LESSON' && activity.type !== 'GAME') return;
+    const lesson = await this.prisma.lesson.findFirst({ where: { activityId: activity.id }, select: { id: true } });
+    if (!lesson) return;
+    await this.prisma.lessonProgress.deleteMany({ where: { lessonId: lesson.id, studentEnrollmentId } });
+    if (revokeXp) await this.identity.revokeLessonRewards(studentEnrollmentId, lesson.id);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
