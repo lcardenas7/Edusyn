@@ -1314,6 +1314,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   // Gating desde las misiones: todas las misiones obligatorias completas (lo calcula el backend).
   const reqMissions = (team.currentMissions || []).filter((m: any) => m.required)
   const reqDone = reqMissions.filter((m: any) => m.complete).length
+  const reqInstr: { key: string; used: boolean }[] = team.requiredInstruments || []
+  const reqInstrUsed = reqInstr.filter(s => s.used).length
   const canRequest = !!team.readyForValidation
 
   return (
@@ -1466,10 +1468,12 @@ function StudentExpedition({ projects }: { projects: any[] }) {
             {/* Compuerta de validación */}
             <div className="mt-5 flex items-center gap-3 flex-wrap pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
               {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
+              {reqInstr.length > 0 && <span className="text-sm taller-soft">Instrumentos obligatorios: <b className="taller-ink">{reqInstrUsed}/{reqInstr.length}</b></span>}
               <button onClick={() => canRequest && setRitualOpen(true)} disabled={busy || !canRequest}
                 className={`ml-auto py-3 px-6 font-bold rounded-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed transition ${canRequest ? 'taller-cta hover:opacity-95' : ''}`}
                 style={!canRequest ? { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' } : undefined}>
-                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : canRequest ? <Send className="w-5 h-5" /> : '🔒'} {canRequest ? 'Presentar a validación' : 'Completa las misiones'}
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : canRequest ? <Send className="w-5 h-5" /> : '🔒'}
+                {canRequest ? 'Presentar a validación' : (reqDone < reqMissions.length ? 'Completa las misiones' : reqInstrUsed < reqInstr.length ? 'Usen los instrumentos obligatorios' : 'Completa las misiones')}
               </button>
             </div>
           </>

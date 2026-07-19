@@ -53,6 +53,7 @@ export function StationInstruments({ team, phase }: { team: any; phase: number }
         {assigned.map(a => {
           const def = defOf(a.key)
           const active = open === a.key
+          const usage = (team?.requiredInstruments || []).find((s: any) => s.key === a.key)
           return (
             <button key={a.key} onClick={() => setOpen(active ? null : a.key)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition"
@@ -61,7 +62,9 @@ export function StationInstruments({ team, phase }: { team: any; phase: number }
                 : { background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-soft)' }}>
               <span className="text-base">{def?.emoji ?? '🧩'}</span>
               {def?.name ?? a.key}
-              {a.required && <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md" style={{ background: 'color-mix(in srgb, var(--t-marigold) 18%, transparent)', color: '#8a5a10' }}>obligatorio</span>}
+              {a.required && (usage?.used
+                ? <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md" style={{ background: 'color-mix(in srgb, #7BA05B 22%, transparent)', color: '#4a6b34' }}>✓ usado</span>
+                : <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md" style={{ background: 'color-mix(in srgb, var(--t-marigold) 18%, transparent)', color: '#8a5a10' }}>obligatorio</span>)}
             </button>
           )
         })}

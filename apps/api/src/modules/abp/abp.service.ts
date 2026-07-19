@@ -554,9 +554,13 @@ export class AbpService {
     });
     await this.markLessonCompletion((curPs?.missions as any[]) || [], memberIds);
     const currentMissions = ((curPs?.missions as any[]) || []).map(m => ({ ...m, complete: this.missionComplete(m, team.currentPhase, curPs!.data, config, memberIds) }));
-    const readyForValidation = currentMissions.length > 0
+    const missionsOk = currentMissions.length > 0
       ? currentMissions.filter(m => m.required).every(m => m.complete)
       : phaseCriteriaMet(team.currentPhase, curPs?.data, config, memberIds);
+    // Compuerta de instrumentos: los OBLIGATORIOS de la estación deben haberse USADO
+    // (hechos, no promesas: ≥1 objeto vivo del equipo en la instancia de la estación).
+    const requiredInstruments = await this.requiredInstrumentsStatus(team.id, team.currentPhase, config);
+    const readyForValidation = missionsOk && requiredInstruments.every(s => s.used);
     return {
       ...team,
       config,
@@ -565,8 +569,29 @@ export class AbpService {
       myVotedIds,
       siblings,
       currentMissions,
+      requiredInstruments,
       readyForValidation,
     };
+  }
+
+  /** Estado de uso de los instrumentos OBLIGATORIOS de una estación: usado = el
+   * equipo tiene ≥1 objeto vivo (sin contar votos/comentarios) en su instancia
+   * (stationId = "phase:N"). El Taller provee; el ABP solo consulta. */
+  private async requiredInstrumentsStatus(teamId: string, phase: number, config: any): Promise<{ key: string; used: boolean; objects: number }[]> {
+    const required: { key: string }[] = ((config?.instruments?.[phase] ?? []) as any[]).filter(i => i?.required);
+    if (required.length === 0) return [];
+    const out: { key: string; used: boolean; objects: number }[] = [];
+    for (const item of required) {
+      const [motor, dynamic] = String(item.key).split(':');
+      const inst = await this.prisma.tallerInstrument.findFirst({
+        where: { teamId, motor, dynamic: dynamic || null, stationId: `phase:${phase}` }, select: { id: true },
+      });
+      const objects = inst ? await this.prisma.tallerObject.count({
+        where: { instrumentId: inst.id, deletedAt: null, type: { notIn: ['Vote', 'Comment'] } },
+      }) : 0;
+      out.push({ key: item.key, used: objects > 0, objects });
+    }
+    return out;
   }
 
   private async loadTeamForUser(teamId: string, institutionId: string, userId: string) {
@@ -1233,6 +1258,14 @@ export class AbpService {
     }
     if (!(await this.isPhaseReady(teamId, institutionId, phase))) {
       throw new BadRequestException('Aún faltan misiones por completar en esta fase');
+    }
+    // Compuerta de instrumentos: los obligatorios de la estación deben haberse usado.
+    const proj = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
+    const config = resolvePhaseConfig(proj?.phaseConfig);
+    const reqInstruments = await this.requiredInstrumentsStatus(teamId, phase, config);
+    const missing = reqInstruments.filter(s => !s.used);
+    if (missing.length > 0) {
+      throw new BadRequestException('Aún no han usado los instrumentos obligatorios de esta estación');
     }
     // Fase 6: debe haber coevaluado a todos los demás equipos del proyecto.
     if (phase === 6) {
