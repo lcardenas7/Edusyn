@@ -581,20 +581,49 @@ export class AbpService {
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
     const me = this.memberOf(team, userId);
 
-    // Escritura atómica: solo se toca la tarjeta editada; las demás no se pisan aunque
-    // otro integrante guarde a la vez (lock pesimista de la fila de la fase).
-    const wasFilled = await this.withPhaseDataLock(teamId, 1, (data, ps) => {
-      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 1 no está en curso');
-      const canvas: any[] = Array.isArray(data.canvas) ? [...data.canvas] : [];
-      while (canvas.length < CANVAS_CARDS.length) canvas.push(null);
-      const prev = canvas[cardIndex];
-      const filled = !!(prev && String(prev.value || '').trim());
-      canvas[cardIndex] = filled
-        ? { value, by: prev.by ?? null, byName: prev.byName ?? null } // conserva el autor original
-        : { value, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
-      data.canvas = canvas;
-      return filled;
+    // Lee el estado actual solo para saber si la tarjeta YA estaba llena (decide XP la
+    // primera vez). No es una transacción: la idempotencia de XP la garantizan el
+    // @@unique de la contribución y la idempotencyKey de grantXp, no este read.
+    const ps = await this.prisma.abpPhaseState.findUnique({
+      where: { teamId_phase: { teamId, phase: 1 } }, select: { status: true, data: true },
     });
+    if (!ps) throw new BadRequestException('Fase no encontrada');
+    if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 1 no está en curso');
+    const prevCard = Array.isArray((ps.data as any)?.canvas) ? (ps.data as any).canvas[cardIndex] : null;
+    const wasFilled = !!(prevCard && String(prevCard.value || '').trim());
+
+    const byId = me?.enrollmentId ?? null;
+    const byName = me?.name ?? 'Docente';
+    const n = CANVAS_CARDS.length;
+    // Escritura ATÓMICA por tarjeta con un ÚNICO `UPDATE … jsonb_set` (autocommit): sin
+    // transacción interactiva ni lock pesimista → elimina la contención sobre la fila de
+    // la fase que, bajo guardados concurrentes, dejaba la conexión del pool en
+    // "transaction aborted" (25P02) y hacía fallar el guardado (el texto "se borraba").
+    // Reconstruye el arreglo de n tarjetas tomando las existentes salvo en cardIndex;
+    // como cada guardado toca solo su ruta, dos integrantes en tarjetas distintas no se
+    // pisan. Conserva el autor original si la tarjeta ya tenía texto.
+    await this.prisma.$executeRaw`
+      UPDATE "AbpPhaseState" AS p
+      SET "data" = jsonb_set(
+        COALESCE(p."data", '{}'::jsonb),
+        '{canvas}',
+        (
+          SELECT jsonb_agg(
+            CASE WHEN gs = ${cardIndex}::int THEN jsonb_build_object(
+              'value', ${value}::text,
+              'by', CASE WHEN COALESCE(p."data"->'canvas'->(${cardIndex}::int)->>'value','') <> ''
+                         THEN p."data"->'canvas'->(${cardIndex}::int)->'by' ELSE to_jsonb(${byId}::text) END,
+              'byName', CASE WHEN COALESCE(p."data"->'canvas'->(${cardIndex}::int)->>'value','') <> ''
+                            THEN p."data"->'canvas'->(${cardIndex}::int)->'byName' ELSE to_jsonb(${byName}::text) END
+            )
+            ELSE COALESCE(p."data"->'canvas'->gs, 'null'::jsonb) END
+            ORDER BY gs
+          )
+          FROM generate_series(0, ${n - 1}::int) AS gs
+        )
+      )
+      WHERE p."teamId" = ${teamId} AND p."phase" = 1 AND p."status" = 'IN_PROGRESS'
+    `;
 
     // Primera vez que se llena, con autor estudiante → contribución + XP de equipo.
     if (!wasFilled && value.trim() && me?.enrollmentId) {
