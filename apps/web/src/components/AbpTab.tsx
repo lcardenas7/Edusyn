@@ -391,6 +391,26 @@ function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
 // MISIONES — el trabajo real dentro de cada fase-hito (Opción A: herramienta = misión).
 // ═══════════════════════════════════════════════════════════════════════════
 const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
+
+// Espacios de Trabajo (nivel de la Biblia): agrupan instrumentos por intención dentro
+// de una estación. Se deriva de la herramienta de cada misión (sin tocar el modelo).
+const ESPACIOS: Record<string, { label: string; icon: string; color: string }> = {
+  EXPLORAR: { label: 'Exploración', icon: '🔭', color: 'var(--t-marigold)' },
+  ANALIZAR: { label: 'Análisis', icon: '🧭', color: '#2E76BE' },
+  DECIDIR: { label: 'Decisión', icon: '✅', color: '#5A54C8' },
+  CONSTRUIR: { label: 'Construcción', icon: '🛠️', color: '#C1622E' },
+  DOCUMENTAR: { label: 'Documentación', icon: '📚', color: '#7B7466' },
+  VALIDAR: { label: 'Validación', icon: '🏆', color: 'var(--t-teal)' },
+  PRACTICAR: { label: 'Práctica', icon: '🎮', color: '#B24578' },
+}
+const ESPACIO_ORDER = ['EXPLORAR', 'ANALIZAR', 'DECIDIR', 'CONSTRUIR', 'DOCUMENTAR', 'VALIDAR', 'PRACTICAR']
+const TOOL_SPACE: Record<string, string> = { CANVAS: 'EXPLORAR', IDEAS: 'EXPLORAR', SMART: 'DECIDIR', KANBAN: 'CONSTRUIR', EVIDENCE: 'DOCUMENTAR', COEVAL: 'VALIDAR' }
+function missionSpace(m: any): string {
+  const toolAct = (m.activities || []).find((a: any) => a.content?.tool)
+  const tool = toolAct?.content?.tool
+  if (tool && TOOL_SPACE[tool]) return TOOL_SPACE[tool]
+  return 'PRACTICAR' // misiones sin herramienta (actividades/juegos reutilizados)
+}
 const ACT_LABEL: Record<string, string> = { READING: '📖 Lectura', VIDEO: '🎬 Video', QUIZ: '❓ Quiz', INTERVIEW: '🎤 Entrevista', UPLOAD: '📤 Evidencia', LINK: '🔗 Enlace', CUSTOM: '✅ Tarea' }
 const ACT_TYPES = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM']
 
@@ -513,9 +533,32 @@ function MissionsPanel({ team, onSaved }: { team: any; onSaved: () => void }) {
   const missions = team.currentMissions || []
   // Equipos previos (sin misiones sembradas): renderiza la herramienta directamente.
   if (missions.length === 0) return <PhaseTool tool={PHASE_TOOL_UI[cur]} team={team} onSaved={onSaved} />
+  // Agrupar por Espacio de Trabajo (nivel de la propuesta). Solo se muestran las zonas
+  // cuando hay más de un Espacio (p. ej. instrumento principal + juego reutilizado).
+  const groups: Record<string, any[]> = {}
+  for (const m of missions) { const s = missionSpace(m); (groups[s] ||= []).push(m) }
+  const spaces = ESPACIO_ORDER.filter(s => groups[s])
+  const multi = spaces.length > 1
   return (
-    <div className="space-y-3">
-      {missions.map((m: any) => <MissionCard key={m.id} mission={m} team={team} onSaved={onSaved} />)}
+    <div className="space-y-4">
+      {spaces.map(s => {
+        const esp = ESPACIOS[s]
+        return (
+          <div key={s}>
+            {multi && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-6 h-6 rounded-lg grid place-items-center text-xs shrink-0" style={{ background: `color-mix(in srgb, ${esp.color} 16%, transparent)`, color: esp.color }}>{esp.icon}</span>
+                <span className="text-[11px] font-mono uppercase tracking-widest font-semibold" style={{ color: esp.color }}>{esp.label}</span>
+                <span className="text-[10px] font-mono taller-muted">{groups[s].length}</span>
+                <span className="flex-1 h-px" style={{ background: 'var(--t-line)' }} />
+              </div>
+            )}
+            <div className="space-y-3">
+              {groups[s].map((m: any) => <MissionCard key={m.id} mission={m} team={team} onSaved={onSaved} />)}
+            </div>
+          </div>
+        )
+      })}
       <AddMissionForm team={team} phase={cur} onSaved={onSaved} />
     </div>
   )
