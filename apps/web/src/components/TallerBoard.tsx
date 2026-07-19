@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, Trash2, MessageCircle, Plus, X } from 'lucide-react'
+import { Loader2, Trash2, MessageCircle, Pencil, Plus, X } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -221,6 +221,11 @@ export default function TallerBoard({ teamId }: { teamId: string }) {
                   <button onClick={() => { setCommentsFor(o.id); setCommentText('') }} className="text-xs px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(255,255,255,.5)' }} title="Comentarios">
                     <MessageCircle className="w-3.5 h-3.5 inline" />
                   </button>
+                  {mine && editing !== o.id && (
+                    <button onClick={() => startEdit(o)} className="text-xs px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(255,255,255,.5)' }} title="Editar mi nota">
+                      <Pencil className="w-3.5 h-3.5 inline" />
+                    </button>
+                  )}
                   {(mine || me?.role === 'teacher') && (
                     <button onClick={() => remove(o)} className="ml-auto text-xs px-1.5 py-0.5 rounded-md opacity-60 hover:opacity-100" title="Quitar (borrado suave)">
                       <Trash2 className="w-3.5 h-3.5 inline" />
@@ -235,7 +240,7 @@ export default function TallerBoard({ teamId }: { teamId: string }) {
 
       {/* pie: leyenda del núcleo */}
       <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2" style={{ borderTop: '1px solid var(--t-line)' }}>
-        <span>⭐ la nota más votada lidera</span><span>·</span><span>doble clic = editar tu nota</span><span>·</span><span>arrastra para organizar</span>
+        <span>⭐ la nota más votada lidera</span><span>·</span><span>✏️ o doble clic = editar tu nota</span><span>·</span><span>arrastra para organizar</span>
         <span className="ml-auto">núcleo: objetos + grafo + eventos</span>
       </div>
 
