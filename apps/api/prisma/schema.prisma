@@ -6900,7 +6900,10 @@ model AbpContribution {
   team              AbpTeam           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
 
-  @@unique([studentEnrollmentId, type, refId]) // idempotencia: 1 voto por idea, 1 tarjeta, etc.
+  // Idempotencia POR EQUIPO: 1 voto por idea, 1 tarjeta, etc. — DEBE incluir teamId:
+  // sin él, la tarjeta '0' de un equipo anterior del mismo estudiante colisionaba con
+  // la del equipo nuevo y el INSERT abortaba la tx por-request (canvas "se borraba").
+  @@unique([teamId, studentEnrollmentId, type, refId])
   @@index([institutionId])
   @@index([teamId, phase])
   @@index([studentEnrollmentId])

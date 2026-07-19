@@ -103,13 +103,15 @@ export class LearningIdentityService {
       // del canvas ABP). La gamificación no amerita ese riesgo: cada paso de abajo es
       // autocommit y atómico o idempotente por sí mismo.
 
-      // 1) Identidad (idempotente): upsert; si aun así hay carrera, releer.
-      let base = await this.prisma.learningIdentity.upsert({
-        where: { studentId },
-        create: { institutionId, studentId },
-        update: {},
-      }).catch(() => null);
-      if (!base) base = await this.prisma.learningIdentity.findUnique({ where: { studentId } });
+      // 1) Identidad (idempotente y a prueba de aborto): findUnique → createMany +
+      //    skipDuplicates → releer. NUNCA upsert/create dentro de este flujo: los
+      //    requests corren dentro de la tx por-request del TenantContextInterceptor y
+      //    una violación de @unique la abortaría (25P02 en cascada + rollback total).
+      let base = await this.prisma.learningIdentity.findUnique({ where: { studentId } });
+      if (!base) {
+        await this.prisma.learningIdentity.createMany({ data: [{ institutionId, studentId }], skipDuplicates: true });
+        base = await this.prisma.learningIdentity.findUnique({ where: { studentId } });
+      }
       if (!base) return { granted: false, awarded: 0, leveledUp: false, identity: null, newBadges: [] };
 
       // 2) Reclamar la idempotencyKey: createMany + skipDuplicates es un INSERT atómico

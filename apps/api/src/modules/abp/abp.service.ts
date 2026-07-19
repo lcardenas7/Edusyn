@@ -628,23 +628,21 @@ export class AbpService {
     `;
 
     // Primera vez que se llena, con autor estudiante → contribución + XP de equipo.
+    // CRÍTICO: createMany+skipDuplicates, NUNCA create(): todo el request corre dentro
+    // de la transacción por-request del TenantContextInterceptor, y un create() que
+    // viole el @@unique la deja ABORTADA (25P02 en toda query posterior → 500 →
+    // rollback del guardado: el texto del canvas "se borraba"). count=0 = ya contó.
     if (!wasFilled && value.trim() && me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 1, type: 'CANVAS_CARD', refId: String(cardIndex), detail: `Completó: ${CANVAS_CARDS[cardIndex].q}` },
-        });
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 1, type: 'CANVAS_CARD', refId: String(cardIndex), detail: `Completó: ${CANVAS_CARDS[cardIndex].q}` }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.CANVAS_CARD } } });
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.CANVAS_CARD, 'ABP · tarjeta del reto', `abp:canvas:${teamId}:${cardIndex}:${me.enrollmentId}`);
-      } catch { /* @@unique → ya contó, idempotente */ }
+      }
     }
-    // Lectura final con UN reintento: si el pool entrega una conexión envenenada por una
-    // transacción abortada de otro request (25P02), el segundo intento toma otra conexión.
-    // El guardado (UPDATE de arriba) YA está aplicado: esta lectura no puede perderlo.
-    try {
-      return await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
-    } catch {
-      return await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
-    }
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
   }
 
   // ─── FASE 2: Tormenta de Ideas ─────────────────────────────────────────────
@@ -666,13 +664,15 @@ export class AbpService {
     });
 
     if (me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'IDEA', refId: idea.id, detail: t.slice(0, 80) },
-        });
+      // createMany+skipDuplicates: un create() duplicado abortaría la tx por-request (25P02).
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'IDEA', refId: idea.id, detail: t.slice(0, 80) }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.IDEA } } });
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.IDEA, 'ABP · idea publicada', `abp:idea:${idea.id}`);
-      } catch { /* idempotente */ }
+      }
     }
     return this.getMyTeam(team.projectId, institutionId, userId);
   }
@@ -697,14 +697,13 @@ export class AbpService {
     const used = await this.prisma.abpContribution.count({ where: { teamId, phase: 2, type: 'VOTE', studentEnrollmentId: me.enrollmentId } });
     if (used >= config.votesPerStudent) throw new BadRequestException('Ya usaste todos tus votos');
 
-    // Guard de doble voto: el @@unique(studentEnrollmentId,type,refId) lo impide.
-    try {
-      await this.prisma.abpContribution.create({
-        data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'VOTE', refId: ideaId, detail: `Votó: ${String(idea0.text).slice(0, 60)}` },
-      });
-    } catch {
-      throw new BadRequestException('Ya votaste esta idea');
-    }
+    // Guard de doble voto vía @@unique, SIN abortar la tx por-request: createMany +
+    // skipDuplicates no lanza; count=0 significa que ya existía el voto.
+    const claim = await this.prisma.abpContribution.createMany({
+      data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'VOTE', refId: ideaId, detail: `Votó: ${String(idea0.text).slice(0, 60)}` }],
+      skipDuplicates: true,
+    });
+    if (claim.count === 0) throw new BadRequestException('Ya votaste esta idea');
     // Incremento atómico del contador de votos (no se pierde con votos concurrentes).
     await this.withPhaseDataLock(teamId, 2, (data) => {
       const ideas: any[] = Array.isArray(data.ideas) ? data.ideas : [];
@@ -770,14 +769,16 @@ export class AbpService {
       return task.col === 2 && task.owner ? { owner: task.owner, text: task.text } : null;
     });
     if (done?.owner) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: done.owner, phase: 4, type: 'TASK_DONE', refId: taskId, detail: `Terminó: ${String(done.text).slice(0, 60)}` },
-        });
+      // createMany+skipDuplicates: un create() duplicado abortaría la tx por-request (25P02).
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: done.owner, phase: 4, type: 'TASK_DONE', refId: taskId, detail: `Terminó: ${String(done.text).slice(0, 60)}` }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.TASK_DONE } } });
         const ownerStudentId = (team.members as any[]).find(m => m.studentEnrollmentId === done.owner)?.studentEnrollment.student.id;
         await this.awardStudentXp(institutionId, ownerStudentId, done.owner, ABP_XP.TASK_DONE, 'ABP · tarea terminada', `abp:task:${taskId}`);
-      } catch { /* idempotente */ }
+      }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
   }
@@ -811,13 +812,15 @@ export class AbpService {
     });
 
     if (me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 5, type: 'EVIDENCE', refId: ev.id, detail: ev.label.slice(0, 80) },
-        });
+      // createMany+skipDuplicates: un create() duplicado abortaría la tx por-request (25P02).
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 5, type: 'EVIDENCE', refId: ev.id, detail: ev.label.slice(0, 80) }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.EVIDENCE } } });
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.EVIDENCE, 'ABP · evidencia subida', `abp:evidence:${ev.id}`);
-      } catch { /* idempotente */ }
+      }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
   }
@@ -854,11 +857,12 @@ export class AbpService {
     });
 
     if (me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 6, type: 'COEVAL', refId: targetTeamId, detail: `Coevaluó a un equipo (${clean.join('/')})` },
-        });
-      } catch { /* idempotente: ya coevaluó a ese equipo */ }
+      // createMany+skipDuplicates: además permite REEDITAR la coevaluación sin que el
+      // duplicado aborte la tx por-request y revierta la edición (25P02).
+      await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 6, type: 'COEVAL', refId: targetTeamId, detail: `Coevaluó a un equipo (${clean.join('/')})` }],
+        skipDuplicates: true,
+      });
     }
     return this.getMyTeam(team.projectId, institutionId, userId);
   }
