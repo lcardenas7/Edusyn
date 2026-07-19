@@ -1110,6 +1110,7 @@ function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; c
 // Sets curados (§14.3): emblemas de equipo y avatares de estudiante.
 const TEAM_EMBLEMS = ['🚀', '🦊', '🐼', '🦁', '🐯', '🦉', '🐺', '🐢', '🦅', '🐙', '🦄', '🐝', '🦋', '🐬', '🐸', '⚡', '🔥', '🌟', '🌊', '🏔️']
 const AVATARS = ['🦊', '🐼', '🦁', '🐯', '🦉', '🐺', '🐢', '🦅', '🐙', '🦄', '🐝', '🦋', '🐬', '🐸', '🐵', '🐨', '🐷', '🐰', '🐧', '🦩']
+const STATION_PURPOSE: Record<number, string> = { 1: 'Comprender el reto', 2: 'Generar y elegir ideas', 3: 'Fijar el objetivo', 4: 'Planear el trabajo', 5: 'Construir y evidenciar', 6: 'Presentar y coevaluar' }
 
 // Ritual de fundación: el equipo (DRAFT) elige nombre + emblema como primer acuerdo.
 function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
@@ -1148,6 +1149,10 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
+  const [inTaller, setInTaller] = useState(false)
+  const [cuartelLog, setCuartelLog] = useState<any[]>([])
+
+  useEffect(() => { if (team?.id) abpApi.listLog(team.id).then(({ data }) => setCuartelLog((data || []).slice(0, 4))).catch(() => { }) }, [team?.id])
 
   const requestRename = async () => {
     if (!team) return
@@ -1270,6 +1275,57 @@ function StudentExpedition({ projects }: { projects: any[] }) {
         </div>
       </div>
 
+      {/* ═══ CUARTEL GENERAL (sala de situación) ═══ */}
+      {!inTaller && (
+        <>
+          <div className="taller-card taller-mission p-5">
+            <div className="text-[11px] font-mono uppercase tracking-widest taller-mari mb-1">Misión actual</div>
+            <h2 className="text-2xl font-black taller-ink tracking-tight">Están en <span className="taller-mari">{phaseName(cur)}</span></h2>
+            <p className="text-sm taller-soft mt-1">{STATION_PURPOSE[cur]}{reqMissions.length > 0 ? ` · ${reqDone}/${reqMissions.length} misiones obligatorias` : ''}</p>
+            <button onClick={() => setInTaller(true)} className="taller-cta mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[15px]">Entrar al Taller →</button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Mapa de la expedición */}
+            <div className="taller-card p-5">
+              <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-3">Mapa de la expedición</div>
+              {PHASES.map(p => {
+                const st = stateOf(team, p.n)
+                const done = st === 'VALIDATED'
+                const now = p.n === cur
+                return (
+                  <div key={p.n} className="flex items-center gap-3 py-1.5">
+                    <div className="w-8 h-8 rounded-lg grid place-items-center text-sm shrink-0" style={done ? { background: 'color-mix(in srgb, var(--t-teal) 16%, transparent)', color: 'var(--t-teal)', border: '2px solid color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' } : now ? { background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)', border: '2px solid var(--t-marigold)' } : { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '2px solid var(--t-line)' }}>{done ? '✓' : now ? p.icon : '🔒'}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold" style={now ? { color: 'var(--t-marigold)' } : done ? { color: 'var(--t-ink)' } : { color: 'var(--t-muted)' }}>{p.name}</div>
+                      <div className="text-[10px] font-mono taller-muted">{done ? 'validada' : now ? 'en curso' : 'bloqueada'}</div>
+                    </div>
+                    {done && <span className="text-base">🏅</span>}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Bitácora reciente (pulso del equipo) */}
+            <div className="taller-card p-5">
+              <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-3">Bitácora reciente</div>
+              {cuartelLog.length === 0 ? (
+                <p className="text-sm taller-muted">Aún no hay notas. Anótenlas dentro del Taller (📔 Bitácora).</p>
+              ) : cuartelLog.map((e: any) => (
+                <div key={e.id} className="py-2" style={{ borderTop: '1px solid var(--t-line)' }}>
+                  <p className="text-sm taller-soft whitespace-pre-line line-clamp-2">{e.content}</p>
+                  <div className="text-[10px] font-mono taller-muted mt-0.5">{e.authorName} · {new Date(e.createdAt).toLocaleDateString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══ EL TALLER (trabajo de la estación) ═══ */}
+      {inTaller && (<>
+      <button onClick={() => setInTaller(false)} className="flex items-center gap-1 text-sm font-semibold taller-muted hover:opacity-70"><ChevronLeft className="w-4 h-4" /> Cuartel General</button>
+
       {/* Sendero */}
       <div className="taller-card p-4">
         <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2">Sendero de la expedición</div>
@@ -1325,10 +1381,11 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       )}
 
       {/* Anuncios y Recursos (al fondo, igual que el docente) */}
-      <div className="mt-8 grid sm:grid-cols-2 gap-4 border-t border-slate-200 pt-8">
+      <div className="mt-8 grid sm:grid-cols-2 gap-4 pt-8" style={{ borderTop: '1px solid var(--t-line)' }}>
         <AnnouncementsView projectId={projectId} />
         <ResourcesView projectId={projectId} />
       </div>
+      </>)}
 
       {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
       {showManual && (
