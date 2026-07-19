@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-staging-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "apps/web"],
+      "port": 5173,
+      "env": { "VITE_API_URL": "https://edusyn-api-staging-production.up.railway.app/api" }
+    }
+  ]
+}
