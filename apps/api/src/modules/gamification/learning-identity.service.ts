@@ -98,16 +98,36 @@ export class LearningIdentityService {
     }
     try {
       const tx = await this.prisma.$transaction(async (tx) => {
-        const existing = await tx.xpEvent.findUnique({ where: { idempotencyKey }, select: { id: true } });
-        const current = await tx.learningIdentity.findUnique({ where: { studentId } });
-        if (existing) {
+        // Identidad idempotente: upsert (nunca lanza por carrera en studentId @unique).
+        const base = await tx.learningIdentity.upsert({
+          where: { studentId },
+          create: { institutionId, studentId },
+          update: {},
+        });
+
+        // Reclamar la idempotencyKey SIN lanzar dentro de la transacción: createMany +
+        // skipDuplicates devuelve count=0 si la key ya existía. CRÍTICO: antes usábamos
+        // create(), y su violación de @unique bajo escrituras concurrentes (dos guardados
+        // con la misma key) abortaba la transacción de Postgres → la conexión del pool
+        // quedaba "current transaction is aborted" (25P02) y la SIGUIENTE query fallaba
+        // con 500 (p.ej. el findUnique final de saveCanvasCard → el texto "se borraba").
+        const claim = await tx.xpEvent.createMany({
+          data: [{
+            institutionId, identityId: base.id, studentId,
+            studentEnrollmentId: params.studentEnrollmentId,
+            source, skill: params.skill ?? null, amount, reason: params.reason, idempotencyKey,
+          }],
+          skipDuplicates: true,
+        });
+        if (claim.count === 0) {
+          // El XP ya se concedió antes (misma key) → no repetir.
           return {
-            granted: false, identityId: current?.id ?? null, awarded: 0, leveledUp: false,
-            identity: current && { totalXp: current.totalXp, level: current.level, currentStreak: current.currentStreak, longestStreak: current.longestStreak },
+            granted: false, identityId: base.id, awarded: 0, leveledUp: false,
+            identity: { totalXp: base.totalXp, level: base.level, currentStreak: base.currentStreak, longestStreak: base.longestStreak },
           };
         }
 
-        const base = current ?? await tx.learningIdentity.create({ data: { institutionId, studentId } });
+        // Primera vez → aplicar XP, racha, nivel y skill.
         const streak = this.computeStreak(base, new Date());
         const totalXp = base.totalXp + amount;
         const level = LearningIdentityService.levelForXp(totalXp);
@@ -121,13 +141,6 @@ export class LearningIdentityService {
             currentStreak: streak.currentStreak,
             longestStreak: streak.longestStreak,
             lastActivityDate: streak.lastActivityDate,
-          },
-        });
-        await tx.xpEvent.create({
-          data: {
-            institutionId, identityId: updated.id, studentId,
-            studentEnrollmentId: params.studentEnrollmentId,
-            source, skill: params.skill ?? null, amount, reason: params.reason, idempotencyKey,
           },
         });
         return {
