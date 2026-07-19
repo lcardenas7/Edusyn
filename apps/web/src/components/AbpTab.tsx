@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
 import LessonEditor from './LessonEditor'
@@ -1170,8 +1171,23 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [avatarOpen, setAvatarOpen] = useState(false)
   const [inTaller, setInTaller] = useState(false)
   const [cuartelLog, setCuartelLog] = useState<any[]>([])
+  const [celebrate, setCelebrate] = useState<{ name: string; icon: string } | null>(null)
+  const prevValidatedRef = useRef<number | null>(null)
 
   useEffect(() => { if (team?.id) abpApi.listLog(team.id).then(({ data }) => setCuartelLog((data || []).slice(0, 4))).catch(() => { }) }, [team?.id])
+
+  // Momento del HITO: al validarse una estación nueva, se celebra (sello + confeti).
+  useEffect(() => {
+    if (!team) return
+    const validated = (team.phaseStates || []).filter((s: any) => s.status === 'VALIDATED').length
+    if (prevValidatedRef.current !== null && validated > prevValidatedRef.current) {
+      const top = (team.phaseStates || []).filter((s: any) => s.status === 'VALIDATED').reduce((m: number, s: any) => Math.max(m, s.phase), 0)
+      const st = PHASES.find(p => p.n === top)
+      setCelebrate({ name: st?.name || 'Estación', icon: st?.icon || '🏅' })
+      try { confetti({ particleCount: 90, spread: 72, origin: { y: 0.6 }, colors: ['#E19325', '#C9791A', '#0F8074', '#D65C8A'] }) } catch { }
+    }
+    prevValidatedRef.current = validated
+  }, [team])
 
   const requestRename = async () => {
     if (!team) return
@@ -1405,6 +1421,24 @@ function StudentExpedition({ projects }: { projects: any[] }) {
         <ResourcesView projectId={projectId} />
       </div>
       </>)}
+
+      {/* HITO — celebración al conquistar una estación */}
+      {celebrate && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4" onClick={() => setCelebrate(null)}>
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+          <div className="taller-card taller-mission relative max-w-sm w-full p-7 text-center" onClick={e => e.stopPropagation()}>
+            <div className="text-6xl">{celebrate.icon}</div>
+            <div className="text-[11px] font-mono uppercase tracking-widest taller-mari mt-3">Hito conquistado</div>
+            <h3 className="text-2xl font-black taller-ink mt-1">¡{celebrate.name} conquistada!</h3>
+            <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+              <span className="taller-chip inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5" style={{ color: 'var(--t-teal)' }}>{celebrate.icon} Sello obtenido</span>
+              <span className="taller-chip inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 taller-mari">⭐ Chispas ganadas</span>
+            </div>
+            <p className="text-sm taller-soft mt-3">Su artefacto queda en la bitácora del equipo. ¡A por la siguiente estación!</p>
+            <button onClick={() => setCelebrate(null)} className="taller-cta mt-5 w-full py-3 rounded-xl font-bold">¡Seguir! →</button>
+          </div>
+        </div>
+      )}
 
       {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
       {showManual && (
