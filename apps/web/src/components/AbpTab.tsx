@@ -411,6 +411,19 @@ function missionSpace(m: any): string {
   if (tool && TOOL_SPACE[tool]) return TOOL_SPACE[tool]
   return 'PRACTICAR' // misiones sin herramienta (actividades/juegos reutilizados)
 }
+
+// Resumen del Artefacto Vivo de la fase actual (para el Ritual de Validación).
+function artifactSummary(team: any, phase: number): string[] {
+  const d = phaseData(team, phase) || {}
+  const out: string[] = []
+  if (phase === 1) { const c = (d.canvas || []).filter((x: any) => x && String(x.value || '').trim()).length; out.push(`Canvas del reto · ${c} de 4 tarjetas`) }
+  else if (phase === 2) { const ideas = d.ideas || []; const votes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0); out.push(`${ideas.length} ideas · ${votes} votos`) }
+  else if (phase === 3) { const sm = d.smart || {}; const ch = (sm.checks || []).filter(Boolean).length; out.push(`Objetivo SMART · ${ch}/5 criterios`) }
+  else if (phase === 4) { const t = d.tasks || []; const done = t.filter((x: any) => x.col === 2).length; out.push(`${t.length} tareas · ${done} hechas`) }
+  else if (phase === 5) { out.push(`${(d.evidences || []).length} evidencia(s) del prototipo`) }
+  else if (phase === 6) { out.push(`${Object.keys(d.coevals || {}).length} equipo(s) coevaluado(s)`) }
+  return out
+}
 const ACT_LABEL: Record<string, string> = { READING: '📖 Lectura', VIDEO: '🎬 Video', QUIZ: '❓ Quiz', INTERVIEW: '🎤 Entrevista', UPLOAD: '📤 Evidencia', LINK: '🔗 Enlace', CUSTOM: '✅ Tarea' }
 const ACT_TYPES = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM']
 
@@ -1215,6 +1228,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [inTaller, setInTaller] = useState(false)
   const [cuartelLog, setCuartelLog] = useState<any[]>([])
   const [celebrate, setCelebrate] = useState<{ name: string; icon: string } | null>(null)
+  const [ritualOpen, setRitualOpen] = useState(false)
   const prevValidatedRef = useRef<number | null>(null)
 
   useEffect(() => { if (team?.id) abpApi.listLog(team.id).then(({ data }) => setCuartelLog((data || []).slice(0, 4))).catch(() => { }) }, [team?.id])
@@ -1447,7 +1461,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
             {/* Compuerta de validación */}
             <div className="mt-5 flex items-center gap-3 flex-wrap pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
               {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
-              <button onClick={requestValidation} disabled={busy || !canRequest}
+              <button onClick={() => canRequest && setRitualOpen(true)} disabled={busy || !canRequest}
                 className={`ml-auto py-3 px-6 font-bold rounded-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed transition ${canRequest ? 'taller-cta hover:opacity-95' : ''}`}
                 style={!canRequest ? { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' } : undefined}>
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : canRequest ? <Send className="w-5 h-5" /> : '🔒'} {canRequest ? 'Presentar a validación' : 'Completa las misiones'}
@@ -1464,6 +1478,30 @@ function StudentExpedition({ projects }: { projects: any[] }) {
         <ResourcesView projectId={projectId} />
       </div>
       </>)}
+
+      {/* RITUAL DE VALIDACIÓN — gesto ceremonial con resumen del artefacto */}
+      {ritualOpen && (
+        <div className="fixed inset-0 z-[125] flex items-center justify-center p-4" onClick={() => setRitualOpen(false)}>
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+          <div className="taller-card taller-mission relative max-w-sm w-full p-7 text-center" onClick={e => e.stopPropagation()}>
+            <div className="text-4xl">{PHASES.find(p => p.n === cur)?.icon}</div>
+            <div className="text-[11px] font-mono uppercase tracking-widest taller-mari mt-3">Ritual de validación</div>
+            <h3 className="text-xl font-black taller-ink mt-1">¿Presentar {phaseName(cur)} al docente?</h3>
+            <p className="text-sm taller-soft mt-2">Su artefacto queda en revisión. Podrán seguir puliéndolo mientras el docente lo mira.</p>
+            <div className="taller-card mt-4 p-3 text-left">
+              <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-1.5">Resumen del artefacto</div>
+              <ul className="text-sm taller-soft space-y-1">
+                {artifactSummary(team, cur).map((s, i) => <li key={i} className="flex gap-2"><span className="taller-mari">•</span>{s}</li>)}
+                {reqMissions.length > 0 && <li className="flex gap-2"><span className="taller-mari">•</span>{reqDone}/{reqMissions.length} misiones obligatorias</li>}
+              </ul>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setRitualOpen(false)} className="flex-1 py-3 rounded-xl font-semibold" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-soft)' }}>Todavía no</button>
+              <button onClick={async () => { setRitualOpen(false); await requestValidation() }} disabled={busy} className="taller-cta flex-1 py-3 rounded-xl font-bold disabled:opacity-50">Presentar al docente ✦</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* HITO — celebración al conquistar una estación */}
       {celebrate && (
