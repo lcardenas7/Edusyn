@@ -7067,3 +7067,128 @@ model AbpLogEntry {
   @@index([institutionId])
   @@index([teamId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL TALLER — NÚCLEO (Sistema Operativo de Colaboración)
+// Capa-plataforma NUEVA e independiente del ABP legacy (Abp*). Implementa el
+// contrato de docs/OBJECT_SCHEMA_BIBLE.md + docs/EVENT_BIBLE.md. El núcleo guarda
+// REFERENCIAS al Aula (courseId/teamId/authorId como String, sin FKs) siguiendo la
+// regla "Identidad = del Aula; el objeto guarda referencias, no copias". Nada se
+// borra de verdad (borrado suave). El ABP actual sigue vivo sin tocarse.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tipos de Objeto Universal (Object Schema Bible §1). Se amplía por configuración.
+enum TallerObjectType {
+  PostIt
+  Idea
+  Vote
+  Comment
+  Task
+  Evidence
+  Decision
+  Note
+  Question
+  Link
+  Attachment
+}
+
+// Instancia de un Instrumento (Motor + Dinámica) donde viven los objetos.
+// Ej.: un Board con dinámica Brainstorm dentro de una estación de un equipo.
+model TallerInstrument {
+  id            String   @id @default(cuid())
+  institutionId String
+  courseId      String?  // classroomId (referencia)
+  expeditionId  String?  // abpProjectId u otra experiencia (referencia)
+  teamId        String?  // equipo dueño del lienzo (referencia)
+  stationId     String?  // estación/fase (referencia)
+  motor         String   // BOARD | GRAPH | CARDS | MATRIX | POLL | FLOW | TIMELINE | FRAME | MEDIA | DOC | BUILDER
+  dynamic       String?  // BRAINSTORM | CRAZY8 | SCAMPER | AFINIDAD | ...
+  title         String
+  config        Json     @default("{}") // reglas de la dinámica (guía, límites, colores…)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  objects       TallerObject[]
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([expeditionId])
+}
+
+// Objeto Universal: base + capacidades (mixins) en `data`. Escritura atómica por
+// `version` (anti lost-update). `state` = ciclo de vida propio del tipo.
+model TallerObject {
+  id            String            @id @default(cuid())
+  institutionId String
+  // scope (referencias, no FKs)
+  courseId      String?
+  expeditionId  String?
+  teamId        String?
+  stationId     String?
+  instrumentId  String?           // dónde vive (Board/Brainstorm…)
+  type          TallerObjectType
+  authorId      String?           // studentEnrollmentId (null = docente/sistema)
+  authorName    String?           // nombre denormalizado (pintar autoría sin join)
+  state         String?           // p.ej. Task: TODO|DOING|DONE
+  data          Json              @default("{}") // text, colorId, x, y, votos, …
+  version       Int               @default(0)    // capacidad Historial + CAS atómico
+  deletedAt     DateTime?         // borrado suave (nada desaparece)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  instrument    TallerInstrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([instrumentId])
+  @@index([teamId])
+  @@index([expeditionId])
+  @@index([type])
+}
+
+// Relación = arista tipada del grafo (el "cerebro"). fromId/toId → TallerObject.id.
+model TallerRelation {
+  id            String   @id @default(cuid())
+  institutionId String
+  teamId        String?
+  relType       String   // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a
+  fromId        String
+  toId          String
+  createdAt     DateTime @default(now())
+
+  @@unique([fromId, toId, relType])
+  @@index([institutionId])
+  @@index([fromId])
+  @@index([toId])
+  @@index([teamId])
+}
+
+// Evento inmutable (Event Bible §2). Fuente de verdad de Timeline, Analíticas,
+// Gamificación, Estado de Colaboración y Valeria. Append-only.
+model TallerEvent {
+  id            String   @id @default(cuid())
+  institutionId String
+  type          String   // dominio.PasadoSimple: object.Created, abp.IdeaCreated, team.TeamNamed…
+  occurredAt    DateTime @default(now())
+  // actor
+  actorUserId   String?
+  actorRole     String?  // student | teacher | valeria | system
+  // scope
+  courseId      String?
+  expeditionId  String?
+  teamId        String?
+  stationId     String?
+  instrumentId  String?
+  // subject
+  objectType    String?
+  objectId      String?
+  payload       Json     @default("{}")
+  causationId   String?
+  correlationId String?
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([expeditionId])
+  @@index([instrumentId])
+  @@index([type])
+  @@index([occurredAt])
+}
