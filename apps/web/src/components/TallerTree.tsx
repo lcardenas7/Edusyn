@@ -22,11 +22,16 @@ const LEAF_BG = [
 const LEAF_EDGE = ['#9DBF77', '#AECB8A', '#C0D69E', '#D3CD8F', '#DEC69B']
 const NODE_W = 168
 const NODE_H = 84
+// Separación mínima entre centros de tarjetas vecinas: la DIAGONAL de la tarjeta
+// (las tarjetas son rectángulos alineados al eje; usar solo el ancho dejaba que
+// vecinas en ángulos diagonales se sobrepusieran).
+const RECT_GAP = Math.ceil(Math.hypot(NODE_W, NODE_H)) + 26
 const R_BASE = 210      // radio de la primera generación
-const R_STEP = 175      // separación radial entre generaciones
+const R_STEP = 205      // separación radial entre generaciones (≥ diagonal + margen)
+const STAGGER = 38      // escalonado radial alterno de las hojas (evita choques y da vida)
 const SPAN_DEG = 150    // apertura total de la copa (grados)
 
-type TreeNode = { obj: any; children: TreeNode[]; angle: number; depth: number; x: number; y: number }
+type TreeNode = { obj: any; children: TreeNode[]; angle: number; depth: number; x: number; y: number; leafIdx: number }
 
 export default function TallerTree({ teamId }: { teamId: string }) {
   const [inst, setInst] = useState<any>(null)
@@ -99,21 +104,28 @@ export default function TallerTree({ teamId }: { teamId: string }) {
     maxDepth = Math.max(maxDepth, depth)
     const kids = (childrenOf.get(o.id) || []).map(k => build(k, depth + 1))
     let angle: number
-    if (kids.length === 0) { angle = Math.PI / 2 + spanRad / 2 - (leafCursor + 0.5) * dTheta; leafCursor += 1 }
+    let leafIdx = -1
+    if (kids.length === 0) { angle = Math.PI / 2 + spanRad / 2 - (leafCursor + 0.5) * dTheta; leafIdx = leafCursor; leafCursor += 1 }
     else angle = (kids[0].angle + kids[kids.length - 1].angle) / 2
-    return { obj: o, children: kids, angle, depth, x: 0, y: 0 }
+    return { obj: o, children: kids, angle, depth, x: 0, y: 0, leafIdx }
   }
   const forest = roots.map(r => build(r, 0))
-  // radio por generación: el mínimo para que las tarjetas no se solapen en el arco
-  const rOf = (depth: number) => Math.max(R_BASE + depth * R_STEP, (NODE_W + 26) / Math.max(dTheta, 0.001) * 0.92)
-  const maxR = rOf(maxDepth)
+  // Anillo base: el mínimo para que dos tarjetas vecinas del anillo más interno
+  // queden separadas al menos una diagonal a lo largo del arco (los anillos externos
+  // se separan solos: a mayor radio, mayor cuerda). Cada generación SIEMPRE suma
+  // R_STEP desde la base — si no, padre e hija caían en el mismo anillo y se encimaban.
+  const ringBase = Math.max(R_BASE, RECT_GAP / Math.max(dTheta, 0.001))
+  const rOf = (depth: number) => ringBase + depth * R_STEP
+  const maxR = rOf(maxDepth) + STAGGER
   const CX = maxR + NODE_W / 2 + 40
   const trunkBaseY = maxR + NODE_H + 190
   const trunkTopY = trunkBaseY - 120
   const W = CX * 2
   const H = trunkBaseY + 60
   const place = (n: TreeNode) => {
-    const r = rOf(n.depth)
+    // hojas alternas ligeramente más afuera: rompe los choques entre vecinas y
+    // da el desorden natural del follaje
+    const r = rOf(n.depth) + (n.leafIdx >= 0 && n.leafIdx % 2 === 1 ? STAGGER : 0)
     n.x = CX + r * Math.cos(n.angle)
     n.y = trunkTopY - r * Math.sin(n.angle)
     n.children.forEach(place)
