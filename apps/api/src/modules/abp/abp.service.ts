@@ -5,6 +5,7 @@ import { LearningIdentityService } from '../gamification/learning-identity.servi
 import { ApdAiService } from '../apd/ai/apd-ai.service';
 import { AiOrchestratorService } from '../apd/ai/ai-orchestrator.service';
 import { ABP_PHASE_COUNT, ABP_PHASES, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor, MISSION_TEMPLATES, toolCriterionMet } from './abp.constants';
+import { instrumentByKey } from '../taller/taller.catalog';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -210,6 +211,28 @@ export class AbpService {
     if (dto.challenge !== undefined) data.challenge = dto.challenge?.trim() || null;
     if (dto.presentation !== undefined) data.presentation = this.normalizePresentation(dto.presentation);
     const p = await this.prisma.abpProject.update({ where: { id: projectId }, data });
+    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+  }
+
+  /** Docente configura los INSTRUMENTOS de una estación (Biblioteca de Instrumentos).
+   * Se guarda en phaseConfig.instruments[phase] = [{ key, required }] — sin migración:
+   * resolvePhaseConfig conserva las claves extra. Los equipos resuelven su instancia
+   * propia del instrumento vía /taller (stationId = "phase:N"). */
+  async setPhaseInstruments(projectId: string, institutionId: string, userId: string, phase: number, items: { key: string; required?: boolean }[]) {
+    if (!Number.isInteger(phase) || phase < 1 || phase > ABP_PHASE_COUNT) throw new BadRequestException('Fase inválida');
+    const project = await this.assertProjectOwner(projectId, institutionId, userId);
+    const clean = (Array.isArray(items) ? items : [])
+      .map(i => ({ key: String(i?.key || ''), required: !!i?.required }))
+      .filter(i => {
+        const def = instrumentByKey(i.key);
+        return !!def && def.available;
+      });
+    // dedupe conservando el primero
+    const seen = new Set<string>();
+    const unique = clean.filter(i => (seen.has(i.key) ? false : (seen.add(i.key), true)));
+    const cfg: any = (project.phaseConfig && typeof project.phaseConfig === 'object') ? { ...(project.phaseConfig as any) } : {};
+    cfg.instruments = { ...(cfg.instruments || {}), [phase]: unique };
+    const p = await this.prisma.abpProject.update({ where: { id: projectId }, data: { phaseConfig: cfg } });
     return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
   }
 

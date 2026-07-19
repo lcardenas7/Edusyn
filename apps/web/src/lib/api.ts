@@ -2558,6 +2558,7 @@ export const abpApi = {
   dashboard: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/dashboard`),
   projectPresentation: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/presentation`),
   updatePresentation: (projectId: string, data: { challenge?: string; presentation?: any }) => api.post<any>(`/abp/projects/${projectId}/presentation`, data),
+  setPhaseInstruments: (projectId: string, phase: number, items: { key: string; required?: boolean }[]) => api.post<any>(`/abp/projects/${projectId}/instruments`, { phase, items }),
   listResources: (projectId: string) => api.get<any[]>(`/abp/projects/${projectId}/resources`),
   addResource: (projectId: string, data: { type?: string; title: string; url: string; description?: string }) => api.post<any>(`/abp/projects/${projectId}/resources`, data),
   deleteResource: (resourceId: string) => api.delete(`/abp/resources/${resourceId}`),
@@ -2619,6 +2620,7 @@ export const abpApi = {
 // ═══ EL TALLER — núcleo del Sistema Operativo de Colaboración ═══
 // Objetos Universales + Grafo + Eventos + Motores (Board·Brainstorm primero).
 export const tallerApi = {
+  catalog: () => api.get<{ intents: { id: string; name: string }[]; instruments: { key: string; motor: string; dynamic: string; name: string; emoji: string; intent: string; description: string; available: boolean }[] }>(`/taller/catalog`),
   resolveInstrument: (data: { teamId: string; motor: string; dynamic?: string; stationId?: string; title?: string }) =>
     api.post<any>(`/taller/instruments/resolve`, data),
   instrumentState: (instrumentId: string) => api.get<any>(`/taller/instruments/${instrumentId}`),

@@ -81,6 +81,14 @@ export class AbpController {
     return this.service.updatePresentation(projectId, institutionId, userId, body);
   }
 
+  // Docente configura los instrumentos de una estación (Biblioteca de Instrumentos).
+  @Post('projects/:projectId/instruments')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async setPhaseInstruments(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { phase: number; items: { key: string; required?: boolean }[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setPhaseInstruments(projectId, institutionId, userId, Number(body?.phase), body?.items ?? []);
+  }
+
   // ─── Recursos ──────────────────────────────────────────────────────────────
   @Get('projects/:projectId/resources')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')

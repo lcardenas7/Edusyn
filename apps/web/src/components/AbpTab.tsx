@@ -5,6 +5,7 @@ import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
 import TallerBoard from './TallerBoard'
 import TallerTree from './TallerTree'
+import { StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -1460,6 +1461,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
         ) : (
           <>
             <MissionsPanel team={team} onSaved={() => load(true)} />
+            {/* Espacio de trabajo: instrumentos asignados por el docente a esta estación */}
+            <StationInstruments team={team} phase={cur} />
             {/* Compuerta de validación */}
             <div className="mt-5 flex items-center gap-3 flex-wrap pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
               {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
@@ -1958,7 +1961,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [editingPres, setEditingPres] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [broadcasting, setBroadcasting] = useState(false)
-  const [tab, setTab] = useState<'panel' | 'map' | 'teams' | 'announcements' | 'resources'>('panel')
+  const [tab, setTab] = useState<'panel' | 'map' | 'teams' | 'instruments' | 'announcements' | 'resources'>('panel')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -1989,6 +1992,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
     { key: 'panel', label: '📊 Panel', badge: pendingValidations || undefined },
     { key: 'map', label: '🗺️ Mapa' },
     { key: 'teams', label: '👥 Equipos' },
+    { key: 'instruments', label: '🧰 Instrumentos' },
     { key: 'announcements', label: '📢 Anuncios' },
     { key: 'resources', label: '📚 Recursos' },
   ]
@@ -2140,6 +2144,11 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
             })}
           </div>
         </div>
+      )}
+
+      {/* ── 🧰 INSTRUMENTOS: Biblioteca por estación ──────────────────────── */}
+      {tab === 'instruments' && project && (
+        <TeacherInstrumentsConfig project={project} phases={PHASES} onSaved={load} />
       )}
 
       {/* ── 👥 EQUIPOS: gestión ───────────────────────────────────────────── */}

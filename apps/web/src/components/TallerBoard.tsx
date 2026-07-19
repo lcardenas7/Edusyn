@@ -14,7 +14,9 @@ const STICKY = ['#FBE7A6', '#CFE6BE', '#C4DBF3', '#F6D3CE', '#DDD2F2']
 const BOARD_W = 1600
 const BOARD_H = 1000
 
-export default function TallerBoard({ teamId }: { teamId: string }) {
+export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId, title = 'Tormenta de ideas', heading = '🧪 Muro de ideas del equipo' }: {
+  teamId: string; dynamic?: string; stationId?: string; title?: string; heading?: string
+}) {
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [me, setMe] = useState<any>(null)
@@ -37,7 +39,7 @@ export default function TallerBoard({ teamId }: { teamId: string }) {
     try {
       let instrument = inst
       if (!instrument) {
-        instrument = (await tallerApi.resolveInstrument({ teamId, motor: 'BOARD', dynamic: 'BRAINSTORM', title: 'Tormenta de ideas' })).data
+        instrument = (await tallerApi.resolveInstrument({ teamId, motor: 'BOARD', dynamic, stationId, title })).data
         setInst(instrument)
       }
       const { data: st } = await tallerApi.instrumentState(instrument.id)
@@ -154,8 +156,8 @@ export default function TallerBoard({ teamId }: { teamId: string }) {
       {/* barra del instrumento */}
       <div className="p-4 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid var(--t-line)' }}>
         <div>
-          <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Motor Board · Brainstorm</div>
-          <div className="font-black taller-ink">🧪 Muro de ideas del equipo</div>
+          <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Motor Board · {dynamic.toLowerCase()}</div>
+          <div className="font-black taller-ink">{heading}</div>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           {STICKY.map((c, i) => (

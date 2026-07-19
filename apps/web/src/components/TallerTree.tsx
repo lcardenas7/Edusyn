@@ -33,7 +33,25 @@ const SPAN_DEG = 150    // apertura total de la copa (grados)
 
 type TreeNode = { obj: any; children: TreeNode[]; angle: number; depth: number; x: number; y: number; leafIdx: number }
 
-export default function TallerTree({ teamId }: { teamId: string }) {
+// Textos por dinámica: el MISMO motor Graph sirve para ideas, problemas, actores…
+// (instrumento nuevo = configuración, no desarrollo).
+const TREE_VARIANTS: Record<string, { heading: string; motorLabel: string; newRoot: string; rootPlaceholder: string; branchPlaceholder: string; emptyMsg: string; branchLabel: string }> = {
+  ARBOL_IDEAS: {
+    heading: '🌳 El árbol del equipo', motorLabel: 'Motor Graph · Árbol de Ideas',
+    newRoot: 'Nueva rama', rootPlaceholder: 'Escribe la idea principal…',
+    branchPlaceholder: '¿Qué idea se desprende de esta?',
+    emptyMsg: 'El árbol está recién sembrado. Agreguen la primera rama 🌱', branchLabel: 'Ramificar',
+  },
+  ARBOL_PROBLEMAS: {
+    heading: '🌲 Árbol de problemas', motorLabel: 'Motor Graph · Árbol de Problemas',
+    newRoot: 'Nueva causa', rootPlaceholder: '¿Qué causa directa provoca el problema?',
+    branchPlaceholder: '¿Y esta causa por qué ocurre? (causa más profunda)',
+    emptyMsg: 'Empiecen por las causas directas del problema 🌱', branchLabel: 'Profundizar',
+  },
+}
+
+export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId }: { teamId: string; dynamic?: string; stationId?: string }) {
+  const V = TREE_VARIANTS[dynamic] ?? TREE_VARIANTS.ARBOL_IDEAS
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [edges, setEdges] = useState<any[]>([])
@@ -56,7 +74,7 @@ export default function TallerTree({ teamId }: { teamId: string }) {
     try {
       let instrument = inst
       if (!instrument) {
-        instrument = (await tallerApi.resolveInstrument({ teamId, motor: 'GRAPH', dynamic: 'ARBOL_IDEAS', title: 'Árbol de ideas' })).data
+        instrument = (await tallerApi.resolveInstrument({ teamId, motor: 'GRAPH', dynamic, stationId, title: V.heading })).data
         setInst(instrument)
       }
       const { data: st } = await tallerApi.instrumentState(instrument.id)
@@ -205,12 +223,12 @@ export default function TallerTree({ teamId }: { teamId: string }) {
       {/* barra del instrumento */}
       <div className="p-4 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid var(--t-line)' }}>
         <div>
-          <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Motor Graph · Árbol de Ideas</div>
-          <div className="font-black taller-ink">🌳 El árbol del equipo</div>
+          <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">{V.motorLabel}</div>
+          <div className="font-black taller-ink">{V.heading}</div>
         </div>
         <button onClick={() => { setComposer({ parentId: null }); setComposerText(''); setSelected(null) }}
           className="taller-cta ml-auto px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-1">
-          <Plus className="w-4 h-4" /> Nueva rama
+          <Plus className="w-4 h-4" /> {V.newRoot}
         </button>
       </div>
 
@@ -262,7 +280,7 @@ export default function TallerTree({ teamId }: { teamId: string }) {
 
           {objects.length === 0 && (
             <div className="absolute inset-x-0 text-center taller-muted text-sm" style={{ top: trunkTopY - 90 }}>
-              El árbol está recién sembrado. Agreguen la primera rama 🌱
+              {V.emptyMsg}
             </div>
           )}
 
@@ -317,7 +335,7 @@ export default function TallerTree({ teamId }: { teamId: string }) {
               <span className="text-xs font-bold taller-ink max-w-[140px] truncate">{sel.data?.text}</span>
               <span className="w-px h-5 mx-1" style={{ background: 'var(--t-line)' }} />
               <button onClick={() => { setComposer({ parentId: sel.id }); setComposerText('') }} className="taller-cta text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
-                <GitBranch className="w-3.5 h-3.5" /> Ramificar
+                <GitBranch className="w-3.5 h-3.5" /> {V.branchLabel}
               </button>
               {me?.role === 'student' && sel.authorId !== me?.enrollmentId && (
                 <button onClick={() => vote(sel.id)} className="text-xs font-bold px-2.5 py-1.5 rounded-lg" style={{ background: sel.iVoted ? 'color-mix(in srgb, var(--t-marigold) 25%, transparent)' : 'var(--t-surface)', border: '1px solid var(--t-line)' }}>
@@ -355,7 +373,7 @@ export default function TallerTree({ teamId }: { teamId: string }) {
           <div className="taller-card relative max-w-md w-full p-5" onClick={e => e.stopPropagation()}>
             <button onClick={() => setComposer(null)} className="absolute top-3 right-3 taller-muted hover:opacity-70"><X className="w-4 h-4" /></button>
             <div className="text-[10px] font-mono uppercase tracking-widest taller-mari mb-1">
-              {composer.parentId ? 'Ramificar idea' : 'Nueva rama del árbol'}
+              {composer.parentId ? V.branchLabel : V.newRoot}
             </div>
             {composer.parentId && (
               <div className="rounded-lg p-2.5 text-xs font-semibold mb-2" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-soft)' }}>
@@ -364,7 +382,7 @@ export default function TallerTree({ teamId }: { teamId: string }) {
             )}
             <textarea autoFocus value={composerText} onChange={e => setComposerText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-              placeholder={composer.parentId ? '¿Qué idea se desprende de esta?' : 'Escribe la idea principal…'} maxLength={500} rows={3}
+              placeholder={composer.parentId ? V.branchPlaceholder : V.rootPlaceholder} maxLength={500} rows={3}
               className="w-full px-3 py-2 rounded-xl text-sm resize-none" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
             <div className="flex justify-end mt-3">
               <button onClick={send} disabled={sending || !composerText.trim()} className="taller-cta px-5 py-2 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center gap-1">

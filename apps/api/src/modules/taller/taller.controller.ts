@@ -5,6 +5,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 import { TallerService } from './taller.service';
+import { INSTRUMENT_CATALOG, INSTRUMENT_INTENTS } from './taller.catalog';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — API del núcleo (Objetos + Grafo + Eventos) y del Motor Board.
@@ -23,6 +24,13 @@ export class TallerController {
     const institutionId = await resolveInstitutionId(this.prisma as any, req);
     if (!institutionId) throw new Error('No se pudo resolver la institución');
     return { userId, institutionId };
+  }
+
+  // Biblioteca de Instrumentos: catálogo declarativo agrupable por intención.
+  @Get('catalog')
+  @Roles('ESTUDIANTE', 'DOCENTE', 'COORDINADOR')
+  catalog() {
+    return { intents: INSTRUMENT_INTENTS, instruments: INSTRUMENT_CATALOG };
   }
 
   // Resuelve (o crea) el instrumento de un equipo: motor + dinámica + estación.
