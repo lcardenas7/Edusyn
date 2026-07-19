@@ -1133,6 +1133,7 @@ function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
   const [busy, setBusy] = useState(false)
   const found = async () => {
     if (!name.trim() || busy) return
+    if (!window.confirm(`¿"${emoji} ${name.trim()}" es el nombre acordado por TODO el equipo?\n\nUna vez fundado, cambiarlo requerirá el permiso del docente.`)) return
     setBusy(true)
     try { await abpApi.foundTeamIdentity(team.id, name.trim(), emoji); onDone() }
     catch (e: any) { alert(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
@@ -1142,8 +1143,12 @@ function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
       <div className="taller-card taller-mission max-w-lg mx-auto p-7 text-center">
         <div className="taller-crest w-16 h-16 rounded-2xl grid place-items-center text-3xl mx-auto shadow-sm">{emoji}</div>
         <h3 className="text-xl font-black taller-ink mt-3">¡Funden su equipo!</h3>
-        <p className="text-sm taller-soft mb-4">Elijan juntos un nombre y un emblema. Es su primer acuerdo como equipo.</p>
-        <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') found() }} placeholder="Nombre del equipo…" className="w-full rounded-xl px-4 py-2.5 text-sm text-center mb-4 taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} autoFocus />
+        <p className="text-sm taller-soft mb-3">Elijan juntos un nombre y un emblema. Es su primer acuerdo como equipo.</p>
+        <div className="text-left text-xs rounded-xl p-3 mb-4 flex gap-2" style={{ background: 'color-mix(in srgb, var(--t-marigold) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--t-marigold) 28%, var(--t-line))' }}>
+          <span>🤝</span>
+          <span className="taller-soft"><b className="taller-ink">Pónganse de acuerdo entre TODOS antes de escribirlo.</b> Cualquier integrante puede fijarlo, y una vez fijado queda para el equipo: cambiarlo después necesitará el permiso del docente.</span>
+        </div>
+        <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') found() }} placeholder="Nombre acordado por el equipo…" className="w-full rounded-xl px-4 py-2.5 text-sm text-center mb-4 taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} autoFocus />
         <div className="text-xs font-semibold taller-muted mb-1.5">Emblema del equipo</div>
         <div className="grid grid-cols-10 gap-1.5 mb-5">
           {TEAM_EMBLEMS.map(e => <button key={e} onClick={() => setEmoji(e)} className="text-xl rounded-lg py-1.5 transition hover:bg-amber-50" style={emoji === e ? { outline: '2px solid var(--t-marigold)', background: 'color-mix(in srgb, var(--t-marigold) 14%, transparent)' } : undefined}>{e}</button>)}
