@@ -44,11 +44,12 @@ function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void | Promi
   }, [serverVals.join(''), focused, saving])
 
   const save = async (i: number) => {
-    setFocused(null)
-    if (local[i] === (canvas[i]?.value || '')) return
+    // No limpiar 'focused' antes de tiempo: la tarjeta debe seguir protegida
+    // (focused o saving) durante TODO el guardado, o la sincronización la borra.
+    if (local[i] === (canvas[i]?.value || '')) { setFocused(null); return }
     setSaving(i)
     // Mantiene el texto propio visible hasta que el servidor lo confirma (sin parpadeo).
-    try { await abpApi.saveCanvas(team.id, i, local[i]); await onSaved() } catch {} finally { setSaving(null) }
+    try { await abpApi.saveCanvas(team.id, i, local[i]); await onSaved() } catch { } finally { setSaving(null); setFocused(null) }
   }
 
   return (
@@ -194,21 +195,21 @@ function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void | Promis
   // Capa 2: sincroniza el objetivo (cuando no lo estoy escribiendo) y los criterios
   // (cuando no estoy guardando) desde el servidor → trabajo en vivo del equipo.
   useEffect(() => {
-    if (!tFocused) setText(smart.text || '')
+    if (!tFocused && !busy) setText(smart.text || '')
     if (!busy) setChecks(SMART_CRITERIA.map((_, i) => !!smart.checks?.[i]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [smart.text, (smart.checks || []).join(''), tFocused, busy])
 
   const save = async (nt: string, nc: boolean[]) => {
     setBusy(true)
-    try { await abpApi.saveSmart(team.id, nt, nc); await onSaved() } finally { setBusy(false) }
+    try { await abpApi.saveSmart(team.id, nt, nc); await onSaved() } finally { setBusy(false); setTFocused(false) }
   }
   const toggle = (i: number) => { const nc = [...checks]; nc[i] = !nc[i]; setChecks(nc); if (editable) save(text, nc) }
 
   return (
     <div>
       <textarea value={text} onChange={e => setText(e.target.value)} onFocus={() => setTFocused(true)}
-        onBlur={() => { setTFocused(false); if (editable && text !== (smart.text || '')) save(text, checks) }}
+        onBlur={() => { if (editable && text !== (smart.text || '')) save(text, checks); else setTFocused(false) }}
         disabled={!editable} rows={3} placeholder="Nuestro objetivo es… (específico, medible, con plazo)"
         className="w-full rounded-xl px-3 py-2.5 text-sm mb-3 disabled:opacity-70 taller-ink" style={{ border: '1.5px solid var(--t-line)', background: 'var(--t-raised)' }} />
       <div className="grid sm:grid-cols-2 gap-2">
@@ -496,19 +497,17 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
                 <button onClick={() => setPlaying(a.classroomActivityId)} className="ml-auto text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 hover:bg-violet-700">▶ {a.completed ? 'Repetir' : 'Jugar'}</button>
               </div>
             ) : (
-              <div key={a.id} className="flex items-center gap-2 group">
-                <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
-                <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
-                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              <div key={a.id} className="flex items-center gap-2">
+                <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4" style={{ accentColor: 'var(--t-teal)' }} />
+                <span className={`text-sm ${a.completed ? 'line-through taller-muted' : 'taller-soft'}`}><span className="taller-muted mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
               </div>
             ))}
             {!tool && acts.length === 0 && (
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+              <label className="flex items-center gap-2 text-sm taller-soft">
+                <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4" style={{ accentColor: 'var(--t-teal)' }} />
                 Marcar como completada
               </label>
             )}
-            <AddActivityForm mission={mission} onSaved={onSaved} />
           </div>
         </div>
       </div>
@@ -572,7 +571,6 @@ function MissionsPanel({ team, onSaved }: { team: any; onSaved: () => void }) {
           </div>
         )
       })}
-      <AddMissionForm team={team} phase={cur} onSaved={onSaved} />
     </div>
   )
 }
