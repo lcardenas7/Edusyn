@@ -1112,6 +1112,20 @@ const TEAM_EMBLEMS = ['🚀', '🦊', '🐼', '🦁', '🐯', '🦉', '🐺', '�
 const AVATARS = ['🦊', '🐼', '🦁', '🐯', '🦉', '🐺', '🐢', '🦅', '🐙', '🦄', '🐝', '🦋', '🐬', '🐸', '🐵', '🐨', '🐷', '🐰', '🐧', '🦩']
 const STATION_PURPOSE: Record<number, string> = { 1: 'Comprender el reto', 2: 'Generar y elegir ideas', 3: 'Fijar el objetivo', 4: 'Planear el trabajo', 5: 'Construir y evidenciar', 6: 'Presentar y coevaluar' }
 
+// Estado de Colaboración OBJETIVO (por hechos: última actividad), nunca emocional.
+type CollabKey = 'alto' | 'activo' | 'idle' | 'aten' | 'done' | 'nuevo'
+const COLLAB_COLOR: Record<CollabKey, string> = { alto: 'var(--t-teal)', activo: '#2E76BE', idle: 'var(--t-marigold)', aten: '#CB4E42', done: 'var(--t-teal)', nuevo: 'var(--t-muted)' }
+function collabState(t: any): { label: string; key: CollabKey } {
+  if (t.done) return { label: 'Completa', key: 'done' }
+  const last = t.lastActivityAt ? new Date(t.lastActivityAt).getTime() : 0
+  if (!last) return { label: 'Sin empezar', key: 'nuevo' }
+  const days = Math.floor((Date.now() - last) / 86400000)
+  if (days <= 1) return { label: 'Muy activo', key: 'alto' }
+  if (days <= 3) return { label: 'Activo', key: 'activo' }
+  if (days <= 7) return { label: `Sin actividad · ${days}d`, key: 'idle' }
+  return { label: `Necesita atención · ${days}d`, key: 'aten' }
+}
+
 // Ritual de fundación: el equipo (DRAFT) elige nombre + emblema como primer acuerdo.
 function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
   const [name, setName] = useState('')
@@ -1915,40 +1929,59 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
               </div>
             </div>
           )}
-          {behindTeams > 0 && (
-            <div className="taller-card p-4 flex items-center gap-3" style={{ borderLeft: '4px solid #CB4E42' }}>
-              <p className="text-sm taller-soft">⏳ <b className="taller-ink">{behindTeams} equipo(s)</b> van por debajo del pelotón — mira su barra abajo y entra a su expedición para apoyarlos.</p>
-            </div>
-          )}
+          {/* Alertas: equipos que necesitan atención (objetivo, por hechos) */}
+          {(() => {
+            const alerts = (dash?.teams || []).filter((t: any) => { const k = collabState(t).key; return k === 'idle' || k === 'aten' })
+            if (alerts.length === 0) return null
+            return (
+              <div className="taller-card p-4" style={{ borderLeft: '4px solid #CB4E42' }}>
+                <h5 className="font-bold taller-ink text-sm mb-2">⚠️ Necesitan atención</h5>
+                <div className="flex flex-wrap gap-2">
+                  {alerts.map((t: any) => (
+                    <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="taller-chip inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 hover:shadow-sm">{t.emoji} {t.name} · {collabState(t).label}</button>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
+          {/* Radar · salud de los equipos */}
           <div className="taller-card p-5">
-            <h4 className="font-bold taller-ink mb-3">Progreso por equipo</h4>
+            <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
+              <h4 className="font-bold taller-ink">Radar · salud de los equipos</h4>
+              <span className="text-[10px] font-mono taller-muted uppercase tracking-wide">Estado de Colaboración = hechos, no emociones</span>
+            </div>
             {(dash?.teams || []).length === 0 ? (
               <p className="text-sm taller-muted">Aún no hay equipos. Créalos en la pestaña 👥 Equipos.</p>
             ) : (
-              <div className="flex flex-col">
-                {(dash?.teams || []).map((t: any) => (
-                  <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 py-3 text-left rounded-xl px-2 -mx-2 transition-colors group hover:bg-amber-50" style={{ borderTop: '1px solid var(--t-line)' }}>
-                    <span className="text-xl shrink-0">{t.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold taller-ink truncate">{t.name}</span>
-                        {t.done ? <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: 'color-mix(in srgb, var(--t-teal) 16%, transparent)', color: 'var(--t-teal)' }}>🏆 Completa</span>
-                          : t.awaitingValidation ? <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)' }}>Espera validación F{t.currentPhase}</span>
-                          : t.currentStatus === 'RETURNED' ? <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: 'color-mix(in srgb, #CB4E42 14%, transparent)', color: '#b0483c' }}>Devuelta</span>
-                          : null}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(dash?.teams || []).map((t: any) => {
+                  const cs = collabState(t); const col = COLLAB_COLOR[cs.key]
+                  return (
+                    <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="taller-card p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: `3px solid ${col}` }}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{t.emoji}</span>
+                        <span className="font-bold taller-ink text-sm truncate flex-1">{t.name}</span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--t-line)' }}><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(t.progress, 4)}%`, background: t.color }} /></div>
-                        <span className="text-[11px] font-bold taller-muted w-20 text-right shrink-0 font-mono">Fase {t.currentPhase}/6 · {t.progress}%</span>
+                      <div className="text-[10px] font-mono taller-muted mt-0.5">Fase {t.currentPhase}/6</div>
+                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1" style={{ color: col, background: `color-mix(in srgb, ${col} 13%, transparent)`, border: `1px solid color-mix(in srgb, ${col} 30%, transparent)` }}>
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: col }}></span>{cs.label}
+                        </span>
+                        {t.awaitingValidation && <span className="text-[10px] font-bold" style={{ color: 'var(--t-marigold)' }}>🔔 por validar</span>}
+                        {t.currentStatus === 'RETURNED' && <span className="text-[10px] font-bold" style={{ color: '#b0483c' }}>devuelta</span>}
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-black taller-mari">⭐ {t.xp}</div>
-                      <div className="text-[10px] taller-muted">{t.members} integrantes</div>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex items-center gap-2 mt-2.5">
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--t-line)' }}><div className="h-full rounded-full" style={{ width: `${Math.max(t.progress, 4)}%`, background: t.color }} /></div>
+                        <span className="text-[10px] font-mono taller-muted">{t.progress}%</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[10px] taller-muted">{t.members} integrantes</span>
+                        <span className="text-[11px] font-black taller-mari">⭐ {t.xp}</span>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>

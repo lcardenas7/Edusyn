@@ -238,6 +238,14 @@ export class AbpService {
     });
     const pendingTeamIds = new Set(pending.map(p => p.teamId));
 
+    // Última actividad por equipo (para el Estado de Colaboración objetivo, no emocional).
+    const activity = await this.prisma.abpContribution.groupBy({
+      by: ['teamId'],
+      where: { institutionId, team: { projectId } },
+      _max: { createdAt: true },
+    });
+    const lastByTeam = new Map(activity.map(a => [a.teamId, a._max.createdAt]));
+
     const rows = teams.map(t => {
       const states = t.phaseStates as any[];
       const validated = states.filter(s => s.status === 'VALIDATED').length;
@@ -249,6 +257,7 @@ export class AbpService {
         validatedPhases: validated, progress: Math.round((validated / ABP_PHASE_COUNT) * 100),
         xp: t.xp, members: t._count.members,
         awaitingValidation: pendingTeamIds.has(t.id), done,
+        lastActivityAt: lastByTeam.get(t.id) ?? null,
       };
     });
     // "Atrasados": equipos con fase actual por debajo del líder del pelotón.
