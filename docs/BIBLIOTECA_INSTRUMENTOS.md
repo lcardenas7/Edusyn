@@ -54,6 +54,8 @@ Leyenda: **Hoy** = ya existe · **Nuevo** = por construir · **⭐** = diferenci
 | 🌍 Mapa del Lugar (pines sobre plano) | Media/Board | Pin, Evidencia | Nuevo |
 | 🎤 Entrevistas (audio/video/respuestas) | Media | Evidencia (audio/video) | Nuevo |
 | 📚 Repositorio de Investigación (links/PDF, calificables) | Cards | Archivo, Voto | Nuevo |
+| 📑 Gestor de Referencias / Bibliografía (tipo, título, autor, año, editorial/URL, fecha de consulta, cita) | Cards/Doc | Referencia | Nuevo ⭐ |
+| 🔬 Tarea de Investigación asignada por el docente (con fuentes obligatorias + síntesis propia) | Frame + Media | Nota, Evidencia, Referencia | Nuevo ⭐ |
 
 ### 📊 Analizar
 | Instrumento | Motor | Objeto | Estado |
@@ -141,6 +143,36 @@ Estos **no existen en Moodle/Classroom/Miro** porque dependen del **grafo + IA (
 
 ---
 
+## 2.5 Referencias e investigación con fuentes (petición explícita)
+Requisito: que exista **un lugar para agregar referencias** (nombre, autor, año, editorial/URL,
+fecha de consulta, cita…) "como en Word pero dinámico", que **se van guardando**, y **tareas de
+investigación** que el docente asigna sobre la problemática — con un manejo que evite que **todo
+lo hagan con IA**, que **lean e investiguen** de verdad.
+
+**Gestor de Referencias (motor Cards/Doc) — objeto `Referencia`:**
+- Campos por tipo de fuente (Libro / Artículo / Web / Video / Entrevista): título, autor(es), año,
+  editorial o sitio, URL, fecha de consulta, nota/cita textual. Formato de cita auto (APA simple).
+- **Vive en la Biblioteca del Proyecto** → una referencia se registra una vez y se **reutiliza**.
+- **Se adjunta a objetos concretos** (una tarjeta "¿Qué está pasando?", una idea, una evidencia),
+  NO a todo. El docente marca **qué objetos exigen fuente** y cuáles no (obligatorio/opcional por
+  objeto). Así "no todo necesita referencia, solo lo que se considere necesario".
+- Chip visible "📑 fuente" en el objeto respaldado; sin fuente donde es obligatoria → la compuerta
+  lo señala (no bloquea el pensar, sí exige respaldo donde importa).
+
+**Tarea de Investigación asignada por el docente (Frame + Media):**
+- El docente crea la tarea sobre la problemática (pregunta guía + entregable + nº mínimo de fuentes).
+- El estudiante debe **registrar fuentes reales** y escribir una **síntesis propia** (no pegar).
+- **Diseño anti-"todo con IA"** (leer e investigar de verdad):
+  - exige **≥N referencias** con datos completos antes de dar por hecha la tarea;
+  - pide **cita textual + en tus palabras** (obliga a procesar, no copiar);
+  - Valeria para el estudiante **solo guía el USO** (cómo registrar una fuente), **nunca redacta la
+    investigación** ni resume las fuentes por él (coherente con la Biblia §18.2);
+  - opcional: preguntas de comprensión rápidas sobre lo que dijo haber leído.
+
+Esto convierte "investigar" en un acto trazable: fuente → síntesis → respalda una idea → sostiene una
+decisión (queda en el Grafo y en la Biblioteca). Es un instrumento **relativamente autocontenido**
+(motor Cards + un objeto nuevo `Referencia`), buen candidato a construirse temprano.
+
 ## 3. La Biblioteca de Instrumentos (cómo la elige el docente)
 En vez de una lista de 40, un **selector estilo bloque de Notion**, agrupado por intención:
 ```
@@ -173,11 +205,14 @@ Hoy en staging los instrumentos están **sembrados por fase**; para llegar a la 
    cuelgan de ramas) — y de paso Árbol de Problemas, Mapa de Actores, 5 Porqués (mismo motor).
 2. **Biblioteca de Instrumentos + configuración del docente** (Espacios + obligatorio/opcional) —
    la infraestructura que hace todo lo demás "solo configuración".
-3. **Dinámicas del motor Board** (Crazy 8, SCAMPER, Afinidad) — baratas, reutilizan Board.
-4. **Motor Matrix** (Impacto/Esfuerzo, Decisión) y **Poll** enriquecido (Consenso, ponderado).
-5. **Grafo de Objetos + Relaciones** → desbloquea los ⭐ (Grafo del Conocimiento, Detector de
+3. **Gestor de Referencias + Tarea de Investigación con fuentes** (motor Cards + objeto `Referencia`)
+   — autocontenido y de alto valor pedagógico; responde a la petición de "leer e investigar, no todo
+   con IA". Se puede adelantar incluso antes de 1–2 por ser independiente.
+4. **Dinámicas del motor Board** (Crazy 8, SCAMPER, Afinidad) — baratas, reutilizan Board.
+5. **Motor Matrix** (Impacto/Esfuerzo, Decisión) y **Poll** enriquecido (Consenso, ponderado).
+6. **Grafo de Objetos + Relaciones** → desbloquea los ⭐ (Grafo del Conocimiento, Detector de
    Patrones, Mapa de Relaciones, Evolución del Pensamiento).
-6. Media/Timeline/Builder/Doc para el resto (Entrevistas, Línea de Tiempo, Prototipos, Informe).
+7. Media/Timeline/Builder/Doc para el resto (Entrevistas, Línea de Tiempo, Prototipos, Informe).
 
 > Con 1+2 ya se **siente** la simulación completa (docente arma el recorrido con instrumentos de la
 > biblioteca, estudiantes construyen en un árbol/grafo). El resto es ampliar el catálogo por
