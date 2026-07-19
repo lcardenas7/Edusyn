@@ -151,13 +151,21 @@ export class TallerService {
           .sort((a: any, b: any) => a.createdAt.getTime() - b.createdAt.getTime()),
       }));
 
-    return { instrument: inst, objects: items, me: { enrollmentId: actor.enrollmentId, name: actor.name, role: actor.role } };
+    // Aristas del grafo entre objetos visibles (deriva-de, genera…), sin votos/comentarios.
+    const itemIds = new Set(items.map(o => o.id));
+    const edges = relations
+      .filter(r => r.relType !== 'vota' && r.relType !== 'responde-a' && itemIds.has(r.fromId) && itemIds.has(r.toId))
+      .map(r => ({ fromId: r.fromId, toId: r.toId, relType: r.relType }));
+
+    return { instrument: inst, objects: items, edges, me: { enrollmentId: actor.enrollmentId, name: actor.name, role: actor.role } };
   }
 
   // ─── Objetos Universales ───────────────────────────────────────────────────
 
-  /** Crea un objeto en un instrumento (post-it, idea, nota…). Emite object.Created. */
-  async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number }) {
+  /** Crea un objeto en un instrumento (post-it, idea, nota…). Si trae `parentId`,
+   * lo cuelga del padre con la arista 'deriva-de' (Árbol de Ideas / motor Graph).
+   * Emite object.Created. */
+  async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string }) {
     const inst = await this.prisma.tallerInstrument.findFirst({ where: { id: instrumentId, institutionId: ctx.institutionId } });
     if (!inst) throw new NotFoundException('Instrumento no encontrado');
     if (!inst.teamId) throw new BadRequestException('Instrumento sin equipo');
@@ -165,12 +173,22 @@ export class TallerService {
     const text = String(dto.text || '').trim();
     if (!text) throw new BadRequestException('El texto no puede estar vacío');
 
+    // padre (opcional): debe ser un objeto vivo del MISMO instrumento
+    let parent: { id: string } | null = null;
+    if (dto.parentId) {
+      parent = await this.prisma.tallerObject.findFirst({
+        where: { id: dto.parentId, instrumentId, institutionId: ctx.institutionId, deletedAt: null }, select: { id: true },
+      });
+      if (!parent) throw new BadRequestException('La rama de la que cuelga ya no existe');
+    }
+
+    const validTypes = ['PostIt', 'Idea', 'Note', 'Question'];
     const obj = await this.prisma.tallerObject.create({
       data: {
         institutionId: ctx.institutionId,
         courseId: inst.courseId, expeditionId: inst.expeditionId, teamId: inst.teamId, stationId: inst.stationId,
         instrumentId,
-        type: (dto.type === 'Idea' ? 'Idea' : 'PostIt') as any,
+        type: (validTypes.includes(dto.type || '') ? dto.type : 'PostIt') as any,
         authorId: actor.enrollmentId,
         authorName: actor.name,
         data: {
@@ -180,10 +198,11 @@ export class TallerService {
         },
       },
     });
+    if (parent) await this.link(ctx, inst.teamId, obj.id, parent.id, 'deriva-de');
     await this.emit(ctx, {
       type: 'object.Created', actorRole: actor.role,
       teamId: inst.teamId, expeditionId: inst.expeditionId, instrumentId,
-      objectType: obj.type, objectId: obj.id, payload: { text: text.slice(0, 120) },
+      objectType: obj.type, objectId: obj.id, payload: { text: text.slice(0, 120), parentId: parent?.id ?? null },
     });
     return obj;
   }

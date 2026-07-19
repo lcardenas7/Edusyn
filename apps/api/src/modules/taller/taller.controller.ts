@@ -39,10 +39,10 @@ export class TallerController {
     return this.service.getInstrumentState(await this.ctx(req), id);
   }
 
-  // Crear objeto (post-it / idea) en el instrumento.
+  // Crear objeto (post-it / idea) en el instrumento; con parentId cuelga del padre (Graph).
   @Post('instruments/:id/objects')
   @Roles('ESTUDIANTE', 'DOCENTE')
-  async createObject(@Param('id') id: string, @Request() req: any, @Body() body: { type?: string; text?: string; colorId?: number; x?: number; y?: number }) {
+  async createObject(@Param('id') id: string, @Request() req: any, @Body() body: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string }) {
     return this.service.createObject(await this.ctx(req), id, body);
   }
 

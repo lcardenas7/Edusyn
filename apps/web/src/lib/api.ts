@@ -2622,7 +2622,7 @@ export const tallerApi = {
   resolveInstrument: (data: { teamId: string; motor: string; dynamic?: string; stationId?: string; title?: string }) =>
     api.post<any>(`/taller/instruments/resolve`, data),
   instrumentState: (instrumentId: string) => api.get<any>(`/taller/instruments/${instrumentId}`),
-  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number }) =>
+  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string }) =>
     api.post<any>(`/taller/instruments/${instrumentId}/objects`, data),
   updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number }) =>
     api.patch<any>(`/taller/objects/${objectId}`, data),

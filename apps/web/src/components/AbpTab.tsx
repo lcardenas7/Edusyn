@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
 import TallerBoard from './TallerBoard'
+import TallerTree from './TallerTree'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -1219,7 +1220,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
   const [pres, setPres] = useState<any>(null)
-  const [expTab, setExpTab] = useState<'phases' | 'board' | 'log' | 'discoveries'>('phases')
+  const [expTab, setExpTab] = useState<'phases' | 'board' | 'tree' | 'log' | 'discoveries'>('phases')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
@@ -1425,15 +1426,16 @@ function StudentExpedition({ projects }: { projects: any[] }) {
 
       {/* Sub-nav interna del Nivel 2 */}
       <div className="flex rounded-xl p-1 w-fit flex-wrap gap-0.5" style={{ background: 'color-mix(in srgb, var(--t-marigold) 8%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
-        {(['phases', 'board', 'log', 'discoveries'] as const).map(k => (
+        {(['phases', 'board', 'tree', 'log', 'discoveries'] as const).map(k => (
           <button key={k} onClick={() => setExpTab(k)} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition"
             style={expTab === k ? { background: 'var(--t-raised)', color: 'var(--t-marigold)', boxShadow: 'var(--t-shadow-sm)' } : { color: 'var(--t-muted)' }}>
-            {k === 'phases' ? '🚀 Fases' : k === 'board' ? '🧪 Muro' : k === 'log' ? '📔 Bitácora' : '💡 Descubrimientos'}
+            {k === 'phases' ? '🚀 Fases' : k === 'board' ? '🧪 Muro' : k === 'tree' ? '🌳 Árbol' : k === 'log' ? '📔 Bitácora' : '💡 Descubrimientos'}
           </button>
         ))}
       </div>
 
       {expTab === 'board' && <TallerBoard teamId={team.id} />}
+      {expTab === 'tree' && <TallerTree teamId={team.id} />}
       {expTab === 'log' && <LogbookView teamId={team.id} currentPhase={cur} />}
       {expTab === 'discoveries' && <DiscoveriesView teamId={team.id} currentPhase={cur} />}
 
