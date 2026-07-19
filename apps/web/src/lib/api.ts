@@ -2616,6 +2616,22 @@ export const abpApi = {
   deleteDiscovery: (discoveryId: string) => api.delete(`/abp/discoveries/${discoveryId}`),
 }
 
+// ═══ EL TALLER — núcleo del Sistema Operativo de Colaboración ═══
+// Objetos Universales + Grafo + Eventos + Motores (Board·Brainstorm primero).
+export const tallerApi = {
+  resolveInstrument: (data: { teamId: string; motor: string; dynamic?: string; stationId?: string; title?: string }) =>
+    api.post<any>(`/taller/instruments/resolve`, data),
+  instrumentState: (instrumentId: string) => api.get<any>(`/taller/instruments/${instrumentId}`),
+  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number }) =>
+    api.post<any>(`/taller/instruments/${instrumentId}/objects`, data),
+  updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number }) =>
+    api.patch<any>(`/taller/objects/${objectId}`, data),
+  deleteObject: (objectId: string) => api.delete(`/taller/objects/${objectId}`),
+  toggleVote: (objectId: string) => api.post<{ voted: boolean }>(`/taller/objects/${objectId}/vote`),
+  addComment: (objectId: string, text: string) => api.post<any>(`/taller/objects/${objectId}/comments`, { text }),
+  teamTimeline: (teamId: string, limit?: number) => api.get<any[]>(`/taller/teams/${teamId}/timeline`, { params: { limit } }),
+}
+
 export const learningRouteApi = {
   competencies: (level?: string, skill?: string) =>
     api.get<CompetencyView[]>(`/learning-routes/competencies`, { params: { level, skill } }),
