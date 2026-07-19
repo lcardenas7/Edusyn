@@ -1791,7 +1791,6 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
 
   const pendingValidations = queue.length
   const behindTeams = dash?.summary?.behind || 0
-  const everythingOk = pendingValidations === 0 && behindTeams === 0
 
   const TABS: { key: typeof tab; label: string; badge?: number }[] = [
     { key: 'panel', label: '📊 Panel', badge: pendingValidations || undefined },
@@ -1846,32 +1845,23 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {/* ── 📊 PANEL: triaje + progreso por equipo ────────────────────────── */}
       {tab === 'panel' && (
         <div className="space-y-4">
-          {everythingOk ? (
-            <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: 'color-mix(in srgb, var(--t-teal) 8%, var(--t-surface))', border: '1px solid color-mix(in srgb, var(--t-teal) 30%, var(--t-line))' }}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--t-teal) 18%, transparent)' }}><Check className="w-5 h-5" style={{ color: 'var(--t-teal)' }} /></div>
-              <p className="text-sm taller-soft"><b className="taller-ink">Todo fluye.</b> Sin validaciones pendientes ni equipos atrasados — tus estudiantes trabajan de forma autónoma.</p>
-            </div>
-          ) : (
-            <>
-              {pendingValidations > 0 && (
-                <div className="taller-card p-4" style={{ borderLeft: '4px solid var(--t-marigold)' }}>
-                  <h5 className="font-bold taller-ink text-sm mb-2">🔔 Esperando tu validación</h5>
-                  <div className="space-y-2">
-                    {queue.map(q => (
-                      <div key={q.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ background: 'color-mix(in srgb, var(--t-marigold) 9%, transparent)' }}>
-                        <span className="text-sm taller-soft truncate"><b className="taller-ink">{q.team?.emoji} {q.team?.name}</b> · Fase {q.phase}: {phaseName(q.phase)}</span>
-                        <button onClick={() => setReviewingId(q.id)} className="taller-cta px-3 py-1.5 text-xs font-bold rounded-lg shrink-0">Revisar →</button>
-                      </div>
-                    ))}
+          {pendingValidations > 0 && (
+            <div className="taller-card p-4" style={{ borderLeft: '4px solid var(--t-marigold)' }}>
+              <h5 className="font-bold taller-ink text-sm mb-2">🔔 Esperando tu validación</h5>
+              <div className="space-y-2">
+                {queue.map(q => (
+                  <div key={q.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ background: 'color-mix(in srgb, var(--t-marigold) 9%, transparent)' }}>
+                    <span className="text-sm taller-soft truncate"><b className="taller-ink">{q.team?.emoji} {q.team?.name}</b> · Fase {q.phase}: {phaseName(q.phase)}</span>
+                    <button onClick={() => setReviewingId(q.id)} className="taller-cta px-3 py-1.5 text-xs font-bold rounded-lg shrink-0">Revisar →</button>
                   </div>
-                </div>
-              )}
-              {behindTeams > 0 && (
-                <div className="taller-card p-4 flex items-center gap-3" style={{ borderLeft: '4px solid #CB4E42' }}>
-                  <p className="text-sm taller-soft">⏳ <b className="taller-ink">{behindTeams} equipo(s)</b> van por debajo del pelotón — mira su barra abajo y entra a su expedición para apoyarlos.</p>
-                </div>
-              )}
-            </>
+                ))}
+              </div>
+            </div>
+          )}
+          {behindTeams > 0 && (
+            <div className="taller-card p-4 flex items-center gap-3" style={{ borderLeft: '4px solid #CB4E42' }}>
+              <p className="text-sm taller-soft">⏳ <b className="taller-ink">{behindTeams} equipo(s)</b> van por debajo del pelotón — mira su barra abajo y entra a su expedición para apoyarlos.</p>
+            </div>
           )}
 
           <div className="taller-card p-5">
