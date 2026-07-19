@@ -97,64 +97,68 @@ export class LearningIdentityService {
       return { granted: false, awarded: 0, leveledUp: false, identity: null, newBadges: [] };
     }
     try {
-      const tx = await this.prisma.$transaction(async (tx) => {
-        // Identidad idempotente: upsert (nunca lanza por carrera en studentId @unique).
-        const base = await tx.learningIdentity.upsert({
-          where: { studentId },
-          create: { institutionId, studentId },
-          update: {},
-        });
+      // SIN transacción interactiva. Una $transaction que expira o aborta puede devolver
+      // su conexión al pool en estado "current transaction is aborted" (25P02) y hacer
+      // fallar con 500 la siguiente query de CUALQUIER request (así "se borraba" el texto
+      // del canvas ABP). La gamificación no amerita ese riesgo: cada paso de abajo es
+      // autocommit y atómico o idempotente por sí mismo.
 
-        // Reclamar la idempotencyKey SIN lanzar dentro de la transacción: createMany +
-        // skipDuplicates devuelve count=0 si la key ya existía. CRÍTICO: antes usábamos
-        // create(), y su violación de @unique bajo escrituras concurrentes (dos guardados
-        // con la misma key) abortaba la transacción de Postgres → la conexión del pool
-        // quedaba "current transaction is aborted" (25P02) y la SIGUIENTE query fallaba
-        // con 500 (p.ej. el findUnique final de saveCanvasCard → el texto "se borraba").
-        const claim = await tx.xpEvent.createMany({
-          data: [{
-            institutionId, identityId: base.id, studentId,
-            studentEnrollmentId: params.studentEnrollmentId,
-            source, skill: params.skill ?? null, amount, reason: params.reason, idempotencyKey,
-          }],
-          skipDuplicates: true,
-        });
-        if (claim.count === 0) {
-          // El XP ya se concedió antes (misma key) → no repetir.
-          return {
-            granted: false, identityId: base.id, awarded: 0, leveledUp: false,
-            identity: { totalXp: base.totalXp, level: base.level, currentStreak: base.currentStreak, longestStreak: base.longestStreak },
-          };
-        }
+      // 1) Identidad (idempotente): upsert; si aun así hay carrera, releer.
+      let base = await this.prisma.learningIdentity.upsert({
+        where: { studentId },
+        create: { institutionId, studentId },
+        update: {},
+      }).catch(() => null);
+      if (!base) base = await this.prisma.learningIdentity.findUnique({ where: { studentId } });
+      if (!base) return { granted: false, awarded: 0, leveledUp: false, identity: null, newBadges: [] };
 
-        // Primera vez → aplicar XP, racha, nivel y skill.
-        const streak = this.computeStreak(base, new Date());
-        const totalXp = base.totalXp + amount;
-        const level = LearningIdentityService.levelForXp(totalXp);
-        const leveledUp = level > base.level;
-        const skillXp = this.addSkillXp(base.skillXp, params.skill, amount);
-
-        const updated = await tx.learningIdentity.update({
-          where: { id: base.id },
-          data: {
-            totalXp, level, skillXp,
-            currentStreak: streak.currentStreak,
-            longestStreak: streak.longestStreak,
-            lastActivityDate: streak.lastActivityDate,
-          },
-        });
+      // 2) Reclamar la idempotencyKey: createMany + skipDuplicates es un INSERT atómico
+      //    que no lanza por duplicado; count=0 → el XP ya se concedió antes.
+      const claim = await this.prisma.xpEvent.createMany({
+        data: [{
+          institutionId, identityId: base.id, studentId,
+          studentEnrollmentId: params.studentEnrollmentId,
+          source, skill: params.skill ?? null, amount, reason: params.reason, idempotencyKey,
+        }],
+        skipDuplicates: true,
+      });
+      if (claim.count === 0) {
         return {
-          granted: true, identityId: updated.id, awarded: amount, leveledUp,
-          identity: { totalXp: updated.totalXp, level: updated.level, currentStreak: updated.currentStreak, longestStreak: updated.longestStreak },
+          granted: false, awarded: 0, leveledUp: false, newBadges: [],
+          identity: { totalXp: base.totalXp, level: base.level, currentStreak: base.currentStreak, longestStreak: base.longestStreak },
         };
+      }
+
+      // 3) Sumar XP de forma atómica en SQL (increment: sin lost-update entre keys
+      //    distintas del mismo estudiante) y releer el total real.
+      await this.prisma.learningIdentity.update({
+        where: { id: base.id },
+        data: { totalXp: { increment: amount } },
+      });
+      const fresh = await this.prisma.learningIdentity.findUnique({ where: { id: base.id } });
+      const totalXp = fresh?.totalXp ?? base.totalXp + amount;
+
+      // 4) Derivados (nivel, racha, skill): se calculan del total releído. skillXp es un
+      //    read-modify-write con carrera teórica mínima — aceptable en gamificación.
+      const streak = this.computeStreak(fresh ?? base, new Date());
+      const level = LearningIdentityService.levelForXp(totalXp);
+      const leveledUp = level > base.level;
+      const skillXp = this.addSkillXp((fresh ?? base).skillXp, params.skill, amount);
+      const updated = await this.prisma.learningIdentity.update({
+        where: { id: base.id },
+        data: {
+          level, skillXp,
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+          lastActivityDate: streak.lastActivityDate,
+        },
       });
 
-      // Evaluar insignias fuera de la transacción de XP (solo si se concedió algo).
-      let newBadges: EarnedBadge[] = [];
-      if (tx.granted && tx.identityId) {
-        newBadges = await this.evaluateAndAwardBadges(tx.identityId, studentId, institutionId);
-      }
-      return { granted: tx.granted, awarded: tx.awarded, leveledUp: tx.leveledUp, identity: tx.identity ?? null, newBadges };
+      const newBadges = await this.evaluateAndAwardBadges(base.id, studentId, institutionId);
+      return {
+        granted: true, awarded: amount, leveledUp, newBadges,
+        identity: { totalXp: updated.totalXp, level: updated.level, currentStreak: updated.currentStreak, longestStreak: updated.longestStreak },
+      };
     } catch (err: any) {
       // Carrera en idempotencyKey (unique) u otro error: nunca romper el flujo.
       this.logger.warn(`grantXp no concedió (${idempotencyKey}): ${err?.message || err}`);

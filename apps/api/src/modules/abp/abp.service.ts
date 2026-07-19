@@ -51,7 +51,9 @@ export class AbpService {
       const out = await fn(data, ps as any);
       await tx.abpPhaseState.update({ where: { teamId_phase: { teamId, phase } }, data: { data } });
       return out;
-    });
+      // timeout amplio: si la transacción expira a mitad (default 5s), Prisma puede devolver
+      // la conexión al pool abortada (25P02) y envenenar requests ajenos.
+    }, { maxWait: 10000, timeout: 20000 });
   }
 
   /** Valida que el aula exista en la institución y que el docente sea su dueño. */
@@ -635,7 +637,14 @@ export class AbpService {
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.CANVAS_CARD, 'ABP · tarjeta del reto', `abp:canvas:${teamId}:${cardIndex}:${me.enrollmentId}`);
       } catch { /* @@unique → ya contó, idempotente */ }
     }
-    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
+    // Lectura final con UN reintento: si el pool entrega una conexión envenenada por una
+    // transacción abortada de otro request (25P02), el segundo intento toma otra conexión.
+    // El guardado (UPDATE de arriba) YA está aplicado: esta lectura no puede perderlo.
+    try {
+      return await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
+    } catch {
+      return await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
+    }
   }
 
   // ─── FASE 2: Tormenta de Ideas ─────────────────────────────────────────────
