@@ -3,7 +3,7 @@ import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, Chevron
 import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
-import { StationGuide, StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
+import { StationAgenda, StationGuide, StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -1371,12 +1371,16 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       {/* ═══ CUARTEL GENERAL (sala de situación) ═══ */}
       {!inTaller && (
         <>
-          <div className="taller-card taller-mission p-5">
-            <div className="text-[11px] font-mono uppercase tracking-widest taller-mari mb-1">Misión actual</div>
-            <h2 className="text-2xl font-black taller-ink tracking-tight">Están en <span className="taller-mari">{phaseName(cur)}</span></h2>
-            <p className="text-sm taller-soft mt-1">{STATION_PURPOSE[cur]}{reqMissions.length > 0 ? ` · ${reqDone}/${reqMissions.length} misiones obligatorias` : ''}</p>
-            <button onClick={() => setInTaller(true)} className="taller-cta mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[15px]">Entrar al Taller →</button>
-          </div>
+          {/* Agenda "Hoy deberán…": misiones + instrumentos obligatorios + docente + Valeria */}
+          <StationAgenda
+            team={team}
+            phase={cur}
+            stationName={phaseName(cur)}
+            purpose={STATION_PURPOSE[cur]}
+            feedback={curPs?.feedback}
+            awaiting={curState === 'AWAITING'}
+            onEnter={() => setInTaller(true)}
+          />
 
           <div className="grid md:grid-cols-2 gap-4">
             {/* Mapa de la expedición */}

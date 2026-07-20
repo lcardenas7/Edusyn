@@ -73,6 +73,89 @@ export function StationGuide({ team, phase }: { team: any; phase: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ESTUDIANTE — Agenda del Cuartel General ("Hoy deberán…"). Reúne en un solo
+// vistazo lo que el equipo DEBE hacer en la estación actual: misiones e
+// instrumentos obligatorios como checklist (hechos, no promesas), el mensaje del
+// docente y una pista de Valeria basada SOLO en hechos de uso de la plataforma
+// (Biblia §18.2: para el estudiante Valeria guía el USO, nunca el contenido).
+// El principio: el estudiante nunca se pregunta "¿y ahora qué?".
+// ─────────────────────────────────────────────────────────────────────────────
+export function StationAgenda({ team, phase, stationName, purpose, feedback, awaiting, onEnter }: {
+  team: any; phase: number; stationName: string; purpose?: string; feedback?: string; awaiting?: boolean; onEnter: () => void
+}) {
+  const cat = useCatalog()
+  const defOf = (key: string) => cat?.instruments.find(i => i.key === key)
+  const missions = (team?.currentMissions || []).filter((m: any) => m.required)
+  const reqInstr: { key: string; used: boolean }[] = team?.requiredInstruments || []
+
+  type Row = { id: string; done: boolean; icon: string; label: string }
+  const rows: Row[] = [
+    ...missions.map((m: any): Row => ({ id: `m:${m.id}`, done: !!m.complete, icon: '🎯', label: m.title })),
+    ...reqInstr.map((s): Row => ({ id: `i:${s.key}`, done: s.used, icon: defOf(s.key)?.emoji ?? '🧰', label: `Trabajar en: ${defOf(s.key)?.name ?? s.key}` })),
+  ]
+  const total = rows.length
+  const done = rows.filter(r => r.done).length
+  const firstPending = rows.find(r => !r.done)
+
+  // Pista de Valeria — solo hechos de uso, nunca juicio académico.
+  let valeria: string
+  if (awaiting) valeria = 'Presentaron esta estación. Ahora esperen a que el docente la revise.'
+  else if (total === 0) valeria = 'Entren al Taller y empiecen a trabajar en esta estación.'
+  else if (done === total) valeria = '¡Ya completaron todo lo obligatorio! Pueden presentar la estación cuando el equipo se sienta listo.'
+  else if (firstPending?.id.startsWith('i:')) valeria = `Todavía no han trabajado en “${firstPending.label.replace('Trabajar en: ', '')}”. Ábranlo en el Espacio de trabajo.`
+  else valeria = `Lo siguiente pendiente: ${firstPending?.label}.`
+
+  return (
+    <div className="taller-card taller-mission p-5">
+      <div className="text-[11px] font-mono uppercase tracking-widest taller-mari mb-1">Misión actual · Estación {phase} de 6</div>
+      <h2 className="text-2xl font-black taller-ink tracking-tight">Están en <span className="taller-mari">{stationName}</span></h2>
+      {purpose && <p className="text-sm taller-soft mt-1">{purpose}</p>}
+
+      {/* Hoy deberán: checklist */}
+      {total > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[11px] font-mono uppercase tracking-widest taller-muted">Hoy deberán</span>
+            <span className="text-[11px] font-mono font-bold taller-mari">{done}/{total}</span>
+          </div>
+          <div className="space-y-1.5">
+            {rows.map(r => (
+              <div key={r.id} className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-md grid place-items-center text-[11px] shrink-0"
+                  style={r.done
+                    ? { background: 'color-mix(in srgb, #7BA05B 22%, transparent)', color: '#4a6b34', border: '1px solid color-mix(in srgb, #7BA05B 45%, transparent)' }
+                    : { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' }}>
+                  {r.done ? '✓' : ''}
+                </span>
+                <span className="text-base shrink-0">{r.icon}</span>
+                <span className="text-sm font-semibold" style={{ color: r.done ? 'var(--t-muted)' : 'var(--t-ink)', textDecoration: r.done ? 'line-through' : 'none' }}>{r.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Mensaje del docente */}
+      {feedback && (
+        <div className="mt-4 p-3 rounded-xl text-sm" style={{ background: 'color-mix(in srgb, #CB4E42 9%, transparent)', borderLeft: '4px solid #CB4E42', color: '#7a2b22' }}>
+          🧑‍🏫 <b>Docente:</b> {feedback}
+        </div>
+      )}
+
+      {/* Pista de Valeria (uso de la plataforma) */}
+      <div className="mt-3 flex items-start gap-2 text-sm taller-soft">
+        <span className="text-base shrink-0">✨</span>
+        <span><b className="taller-mari">Valeria:</b> {valeria}</span>
+      </div>
+
+      <button onClick={onEnter} className="taller-cta mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[15px]">
+        {awaiting ? 'Ver el Taller →' : done === total && total > 0 ? 'Ir a presentar →' : 'Entrar al Taller →'}
+      </button>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ESTUDIANTE — Espacio de trabajo de la estación: los instrumentos que el
 // docente asignó a esta fase, abribles uno a la vez.
 // ─────────────────────────────────────────────────────────────────────────────
