@@ -89,6 +89,14 @@ export class AbpController {
     return this.service.setPhaseInstruments(projectId, institutionId, userId, Number(body?.phase), body?.items ?? []);
   }
 
+  // Docente escribe las instrucciones de una estación (qué haremos aquí y cómo).
+  @Post('projects/:projectId/station-instructions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async setStationInstructions(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { phase: number; text: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setStationInstructions(projectId, institutionId, userId, Number(body?.phase), body?.text ?? '');
+  }
+
   // ─── Recursos ──────────────────────────────────────────────────────────────
   @Get('projects/:projectId/resources')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')

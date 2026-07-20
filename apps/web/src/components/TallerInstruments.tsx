@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Loader2, Plus, X, Lock } from 'lucide-react'
+import { BookOpen, ChevronDown, Loader2, Plus, X, Lock } from 'lucide-react'
 import { abpApi, tallerApi } from '../lib/api'
 import TallerBoard from './TallerBoard'
 import TallerTree from './TallerTree'
+import TallerTimeline from './TallerTimeline'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Biblioteca de Instrumentos (Fase 5 del plan OS-first).
@@ -31,7 +32,44 @@ export function InstrumentRenderer({ instrumentKey, teamId, phase }: { instrumen
   const stationId = `phase:${phase}`
   if (motor === 'BOARD') return <TallerBoard teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'GRAPH') return <TallerTree teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'TIMELINE') return <TallerTimeline teamId={teamId} dynamic={dynamic} stationId={stationId} />
   return <div className="taller-card p-6 text-sm taller-muted">Este instrumento aún no está disponible.</div>
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ESTUDIANTE — Instrucciones de la estación ("¿qué haremos aquí y cómo?").
+// Colapsable; texto del docente (phaseConfig.stationInstructions[phase]) o el
+// default pedagógico de la fase. El estudiante nunca se pregunta "¿y ahora qué?".
+// ─────────────────────────────────────────────────────────────────────────────
+const DEFAULT_INSTRUCTIONS: Record<number, string> = {
+  1: 'Lean juntos el reto del proyecto y conversen: ¿qué está pasando y a quiénes afecta? Completen las tarjetas del reto entre todos y usen los instrumentos de esta estación para explorar el problema. Cuando el equipo sienta que COMPRENDE el problema, presenten la estación al docente.',
+  2: 'Es momento de abrir la mente: propongan TODAS las ideas que se les ocurran para resolver el problema, sin juzgarlas todavía. Usen los instrumentos para registrarlas y voten las que más les convenzan. Cantidad primero, calidad después.',
+  3: 'Elijan su mejor idea y conviértanla en un objetivo concreto: ¿qué van a lograr, cómo lo van a medir y para cuándo? Revisen los criterios SMART antes de presentar.',
+  4: 'Planifiquen el trabajo: dividan la solución en tareas, asignen un responsable a cada una y muevan las tarjetas a medida que avanzan. Nadie se queda sin tarea.',
+  5: 'Construyan su solución y documenten TODO el proceso: fotos, videos, enlaces. Las evidencias cuentan la historia de lo que hicieron.',
+  6: 'Preparen la presentación de su solución y evalúen con honestidad el trabajo de los otros equipos. Cierren la expedición con orgullo.',
+}
+
+export function StationGuide({ team, phase }: { team: any; phase: number }) {
+  const [open, setOpen] = useState(true)
+  const custom = team?.config?.stationInstructions?.[phase]
+  const text = (custom && String(custom).trim()) || DEFAULT_INSTRUCTIONS[phase] || ''
+  if (!text) return null
+  return (
+    <div className="mb-4 rounded-xl overflow-hidden" style={{ background: 'color-mix(in srgb, var(--t-marigold) 7%, var(--t-surface))', border: '1px solid color-mix(in srgb, var(--t-marigold) 25%, var(--t-line))' }}>
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-2 px-4 py-2.5 text-left">
+        <BookOpen className="w-4 h-4 shrink-0" style={{ color: 'var(--t-marigold)' }} />
+        <span className="text-[11px] font-mono uppercase tracking-widest font-bold" style={{ color: '#8a5a10' }}>Instrucciones · ¿Qué haremos en esta estación?</span>
+        <ChevronDown className="w-4 h-4 ml-auto transition-transform" style={{ color: 'var(--t-muted)', transform: open ? 'rotate(180deg)' : 'none' }} />
+      </button>
+      {open && (
+        <p className="px-4 pb-3.5 text-sm taller-soft leading-relaxed whitespace-pre-line" style={{ marginTop: '-2px' }}>
+          {text}
+          {custom && <span className="block mt-1.5 text-[10px] font-mono taller-muted">— indicaciones de tu docente</span>}
+        </p>
+      )}
+    </div>
+  )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +85,7 @@ export function StationInstruments({ team, phase }: { team: any; phase: number }
   const defOf = (key: string) => cat?.instruments.find(i => i.key === key)
 
   return (
-    <div className="mt-5 pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
+    <div className="mb-5 pb-4" style={{ borderBottom: '1px solid var(--t-line)' }}>
       <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2">🧰 Espacio de trabajo de la estación</div>
       <div className="flex flex-wrap gap-2">
         {assigned.map(a => {
@@ -93,6 +131,16 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
   const [saving, setSaving] = useState(false)
   const assignedByPhase: Record<number, { key: string; required?: boolean }[]> = project?.phaseConfig?.instruments || {}
   const assigned = assignedByPhase[phase] || []
+  const storedInstructions: string = project?.phaseConfig?.stationInstructions?.[phase] || ''
+  const [instrText, setInstrText] = useState(storedInstructions)
+  const [instrDirty, setInstrDirty] = useState(false)
+  useEffect(() => { setInstrText(project?.phaseConfig?.stationInstructions?.[phase] || ''); setInstrDirty(false) }, [phase, project])
+  const saveInstructions = async () => {
+    setSaving(true)
+    try { await abpApi.setStationInstructions(project.id, phase, instrText); setInstrDirty(false); onSaved() }
+    catch { alert('No se pudieron guardar las instrucciones') }
+    finally { setSaving(false) }
+  }
 
   const defOf = (key: string) => cat?.instruments.find(i => i.key === key)
   const save = async (items: { key: string; required?: boolean }[]) => {
@@ -125,6 +173,20 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
             {(assignedByPhase[p.n]?.length ?? 0) > 0 && <span className="ml-1 font-mono">({assignedByPhase[p.n].length})</span>}
           </button>
         ))}
+      </div>
+
+      {/* instrucciones de la estación (lo primero que ve el estudiante) */}
+      <div className="mb-4 p-3 rounded-xl" style={{ background: 'color-mix(in srgb, var(--t-marigold) 6%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
+        <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-1.5">📖 Instrucciones de la estación (lo primero que verá el equipo)</div>
+        <textarea value={instrText} onChange={e => { setInstrText(e.target.value); setInstrDirty(true) }}
+          placeholder="Escribe qué debe hacer el equipo en esta estación y cómo. Si lo dejas vacío, Edusyn muestra una guía por defecto."
+          maxLength={2000} rows={3}
+          className="w-full px-3 py-2 rounded-lg text-sm resize-y" style={{ background: 'var(--t-raised)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
+        {instrDirty && (
+          <button onClick={saveInstructions} disabled={saving} className="taller-cta mt-2 px-4 py-1.5 rounded-lg font-bold text-xs disabled:opacity-50">
+            Guardar instrucciones
+          </button>
+        )}
       </div>
 
       {/* instrumentos asignados a la estación */}

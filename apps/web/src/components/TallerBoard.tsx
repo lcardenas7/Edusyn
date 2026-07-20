@@ -14,9 +14,25 @@ const STICKY = ['#FBE7A6', '#CFE6BE', '#C4DBF3', '#F6D3CE', '#DDD2F2']
 const BOARD_W = 1600
 const BOARD_H = 1000
 
-export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId, title = 'Tormenta de ideas', heading = '🧪 Muro de ideas del equipo' }: {
+// Dinámicas del motor Board: mismo muro, distinta metodología (guía + reglas).
+// Instrumento nuevo = configuración, no desarrollo.
+const BOARD_VARIANTS: Record<string, { heading: string; hint?: string }> = {
+  BRAINSTORM: { heading: '🧪 Muro de ideas del equipo' },
+  CRAZY8: {
+    heading: '⚡ Crazy 8',
+    hint: '8 ideas en 8 minutos: velocidad sobre perfección. Nadie juzga — escriban TODO lo que se les ocurra y luego voten.',
+  },
+  SCAMPER: {
+    heading: '🧩 SCAMPER',
+    hint: 'Transformen una idea existente: Sustituir · Combinar · Adaptar · Modificar · otros Usos · Eliminar · Reordenar. Empiecen cada nota con la letra que usaron (ej: "C: unir campaña + sensores").',
+  },
+}
+
+export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId, title = 'Tormenta de ideas', heading }: {
   teamId: string; dynamic?: string; stationId?: string; title?: string; heading?: string
 }) {
+  const variant = BOARD_VARIANTS[dynamic] ?? BOARD_VARIANTS.BRAINSTORM
+  const headingText = heading ?? variant.heading
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [me, setMe] = useState<any>(null)
@@ -157,7 +173,7 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
       <div className="p-4 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid var(--t-line)' }}>
         <div>
           <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Motor Board · {dynamic.toLowerCase()}</div>
-          <div className="font-black taller-ink">{heading}</div>
+          <div className="font-black taller-ink">{headingText}</div>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           {STICKY.map((c, i) => (
@@ -172,6 +188,13 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
           </button>
         </div>
       </div>
+
+      {/* guía de la dinámica */}
+      {variant.hint && (
+        <div className="px-4 py-2 text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--t-marigold) 8%, var(--t-surface))', color: '#8a5a10', borderBottom: '1px solid var(--t-line)' }}>
+          {variant.hint}
+        </div>
+      )}
 
       {/* lienzo */}
       <div ref={boardRef} className="relative overflow-auto" style={{ height: 520, background: 'radial-gradient(circle, var(--t-line) 1px, transparent 1px) 0 0 / 24px 24px, var(--t-surface)' }}

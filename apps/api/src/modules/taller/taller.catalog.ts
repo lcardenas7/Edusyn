@@ -31,9 +31,9 @@ export const INSTRUMENT_CATALOG: TallerInstrumentDef[] = [
     description: 'Post-its libres en un muro: escribir, arrastrar, votar y conversar. Ideal para abrir la exploración sin filtro.' },
   { key: 'GRAPH:ARBOL_IDEAS', motor: 'GRAPH', dynamic: 'ARBOL_IDEAS', name: 'Árbol de ideas', emoji: '🌳', intent: 'GENERAR', available: true,
     description: 'Las ideas se cuelgan de ramas y se ramifican unas de otras: el equipo VE cómo su pensamiento crece y se conecta.' },
-  { key: 'BOARD:CRAZY8', motor: 'BOARD', dynamic: 'CRAZY8', name: 'Crazy 8', emoji: '⚡', intent: 'GENERAR', available: false,
+  { key: 'BOARD:CRAZY8', motor: 'BOARD', dynamic: 'CRAZY8', name: 'Crazy 8', emoji: '⚡', intent: 'GENERAR', available: true,
     description: '8 ideas en 8 minutos: velocidad sobre perfección para romper el bloqueo creativo.' },
-  { key: 'BOARD:SCAMPER', motor: 'BOARD', dynamic: 'SCAMPER', name: 'SCAMPER', emoji: '🧩', intent: 'GENERAR', available: false,
+  { key: 'BOARD:SCAMPER', motor: 'BOARD', dynamic: 'SCAMPER', name: 'SCAMPER', emoji: '🧩', intent: 'GENERAR', available: true,
     description: 'Transformar ideas existentes: Sustituir, Combinar, Adaptar, Modificar, otros usos, Eliminar, Reordenar.' },
   // ── 🔍 Investigar ──
   { key: 'GRAPH:MAPA_ACTORES', motor: 'GRAPH', dynamic: 'MAPA_ACTORES', name: 'Mapa de actores', emoji: '🗺️', intent: 'INVESTIGAR', available: false,
@@ -57,8 +57,8 @@ export const INSTRUMENT_CATALOG: TallerInstrumentDef[] = [
   // ── 🏗️ Planificar ──
   { key: 'FLOW:KANBAN', motor: 'FLOW', dynamic: 'KANBAN', name: 'Kanban', emoji: '📋', intent: 'PLANIFICAR', available: false,
     description: 'Por hacer → haciendo → hecho: el plan de acción visible para todos.' },
-  { key: 'TIMELINE:LINEA_TIEMPO', motor: 'TIMELINE', dynamic: 'LINEA_TIEMPO', name: 'Línea de tiempo', emoji: '📅', intent: 'PLANIFICAR', available: false,
-    description: 'Tareas y entregas sobre un calendario compartido.' },
+  { key: 'TIMELINE:LINEA_TIEMPO', motor: 'TIMELINE', dynamic: 'LINEA_TIEMPO', name: 'Línea de tiempo', emoji: '📅', intent: 'PLANIFICAR', available: true,
+    description: 'El equipo construye la cronología del proyecto: hechos, hallazgos y entregas ordenados en el tiempo.' },
   // ── 📢 Comunicar ──
   { key: 'DOC:INFORME', motor: 'DOC', dynamic: 'INFORME', name: 'Informe colaborativo', emoji: '📝', intent: 'COMUNICAR', available: false,
     description: 'Redactar juntos el documento final del proyecto.' },

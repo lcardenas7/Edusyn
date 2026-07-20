@@ -165,7 +165,7 @@ export class TallerService {
   /** Crea un objeto en un instrumento (post-it, idea, nota…). Si trae `parentId`,
    * lo cuelga del padre con la arista 'deriva-de' (Árbol de Ideas / motor Graph).
    * Emite object.Created. */
-  async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string }) {
+  async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string }) {
     const inst = await this.prisma.tallerInstrument.findFirst({ where: { id: instrumentId, institutionId: ctx.institutionId } });
     if (!inst) throw new NotFoundException('Instrumento no encontrado');
     if (!inst.teamId) throw new BadRequestException('Instrumento sin equipo');
@@ -195,6 +195,7 @@ export class TallerService {
           text: text.slice(0, 500),
           colorId: Math.abs(Math.trunc(dto.colorId ?? 0)) % STICKY_COLORS,
           x: clampPos(dto.x), y: clampPos(dto.y),
+          ...(cleanDate(dto.date) ? { date: cleanDate(dto.date) } : {}),
         },
       },
     });
@@ -210,7 +211,7 @@ export class TallerService {
   /** Actualiza texto/posición/color con CAS por versión. version=-1 omite el chequeo
    * (drag: la posición del último drop gana). Emite object.Updated (con throttle
    * implícito: el front solo llama al soltar/confirmar, no por pixel). */
-  async updateObject(ctx: Ctx, objectId: string, dto: { text?: string; colorId?: number; x?: number; y?: number; version?: number }) {
+  async updateObject(ctx: Ctx, objectId: string, dto: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string }) {
     const obj = await this.prisma.tallerObject.findFirst({ where: { id: objectId, institutionId: ctx.institutionId, deletedAt: null } });
     if (!obj) throw new NotFoundException('Objeto no encontrado');
     if (!obj.teamId) throw new BadRequestException('Objeto sin equipo');
@@ -230,6 +231,7 @@ export class TallerService {
     if (dto.colorId !== undefined) data.colorId = Math.abs(Math.trunc(dto.colorId)) % STICKY_COLORS;
     if (dto.x !== undefined) data.x = clampPos(dto.x);
     if (dto.y !== undefined) data.y = clampPos(dto.y);
+    if (dto.date !== undefined) { const d = cleanDate(dto.date); if (d) data.date = d; }
 
     const expected = dto.version ?? -1;
     const res = await this.prisma.tallerObject.updateMany({
@@ -356,4 +358,11 @@ function clampPos(v: any): number {
   const n = Number(v);
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(10000, Math.round(n)));
+}
+
+/** Fecha "YYYY-MM-DD" válida o null (para la Línea de Tiempo y afines). */
+function cleanDate(v: any): string | null {
+  const s = String(v ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  return Number.isNaN(new Date(s + 'T00:00:00Z').getTime()) ? null : s;
 }

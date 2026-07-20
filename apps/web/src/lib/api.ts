@@ -2559,6 +2559,7 @@ export const abpApi = {
   projectPresentation: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/presentation`),
   updatePresentation: (projectId: string, data: { challenge?: string; presentation?: any }) => api.post<any>(`/abp/projects/${projectId}/presentation`, data),
   setPhaseInstruments: (projectId: string, phase: number, items: { key: string; required?: boolean }[]) => api.post<any>(`/abp/projects/${projectId}/instruments`, { phase, items }),
+  setStationInstructions: (projectId: string, phase: number, text: string) => api.post<any>(`/abp/projects/${projectId}/station-instructions`, { phase, text }),
   listResources: (projectId: string) => api.get<any[]>(`/abp/projects/${projectId}/resources`),
   addResource: (projectId: string, data: { type?: string; title: string; url: string; description?: string }) => api.post<any>(`/abp/projects/${projectId}/resources`, data),
   deleteResource: (resourceId: string) => api.delete(`/abp/resources/${resourceId}`),
@@ -2624,9 +2625,9 @@ export const tallerApi = {
   resolveInstrument: (data: { teamId: string; motor: string; dynamic?: string; stationId?: string; title?: string }) =>
     api.post<any>(`/taller/instruments/resolve`, data),
   instrumentState: (instrumentId: string) => api.get<any>(`/taller/instruments/${instrumentId}`),
-  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string }) =>
+  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string }) =>
     api.post<any>(`/taller/instruments/${instrumentId}/objects`, data),
-  updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number }) =>
+  updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string }) =>
     api.patch<any>(`/taller/objects/${objectId}`, data),
   deleteObject: (objectId: string) => api.delete(`/taller/objects/${objectId}`),
   toggleVote: (objectId: string) => api.post<{ voted: boolean }>(`/taller/objects/${objectId}/vote`),

@@ -3,7 +3,7 @@ import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, Chevron
 import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
-import { StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
+import { StationGuide, StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -1458,10 +1458,13 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           <div className="text-center py-6">🏆<p className="font-black taller-ink mt-2">¡Llegaron a la cima de la expedición!</p></div>
         ) : (
           <>
-            <MissionsPanel team={team} onSaved={() => load(true)} />
-            {/* Espacio de trabajo: instrumentos asignados por el docente a esta estación */}
+            {/* 1. Instrucciones: qué haremos aquí y cómo (colapsable) */}
+            <StationGuide team={team} phase={cur} />
+            {/* 2. Espacio de trabajo: los instrumentos, a la mano */}
             <StationInstruments team={team} phase={cur} />
-            {/* Compuerta de validación */}
+            {/* 3. Misiones: el detalle del trabajo */}
+            <MissionsPanel team={team} onSaved={() => load(true)} />
+            {/* 4. Compuerta de validación */}
             <div className="mt-5 flex items-center gap-3 flex-wrap pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
               {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
               {reqInstr.length > 0 && <span className="text-sm taller-soft">Instrumentos obligatorios: <b className="taller-ink">{reqInstrUsed}/{reqInstr.length}</b></span>}
@@ -1868,6 +1871,10 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
               ))}
             </div>
           )}
+          {/* Espacio de trabajo del equipo: el docente abre los instrumentos de la estación */}
+          <div className="taller">
+            <StationInstruments team={team} phase={ps.phase} />
+          </div>
           <PhaseWorkRO phase={ps.phase} data={ps.data} />
         </div>
       ))}

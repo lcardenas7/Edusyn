@@ -50,14 +50,14 @@ export class TallerController {
   // Crear objeto (post-it / idea) en el instrumento; con parentId cuelga del padre (Graph).
   @Post('instruments/:id/objects')
   @Roles('ESTUDIANTE', 'DOCENTE')
-  async createObject(@Param('id') id: string, @Request() req: any, @Body() body: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string }) {
+  async createObject(@Param('id') id: string, @Request() req: any, @Body() body: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string }) {
     return this.service.createObject(await this.ctx(req), id, body);
   }
 
   // Editar objeto (texto/color/posición) con CAS opcional por versión.
   @Patch('objects/:id')
   @Roles('ESTUDIANTE', 'DOCENTE')
-  async updateObject(@Param('id') id: string, @Request() req: any, @Body() body: { text?: string; colorId?: number; x?: number; y?: number; version?: number }) {
+  async updateObject(@Param('id') id: string, @Request() req: any, @Body() body: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string }) {
     return this.service.updateObject(await this.ctx(req), id, body);
   }
 

@@ -236,6 +236,17 @@ export class AbpService {
     return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
   }
 
+  /** Docente escribe las INSTRUCCIONES de una estación ("¿qué haremos aquí y cómo?").
+   * Se guarda en phaseConfig.stationInstructions[phase] — sin migración. */
+  async setStationInstructions(projectId: string, institutionId: string, userId: string, phase: number, text: string) {
+    if (!Number.isInteger(phase) || phase < 1 || phase > ABP_PHASE_COUNT) throw new BadRequestException('Fase inválida');
+    const project = await this.assertProjectOwner(projectId, institutionId, userId);
+    const cfg: any = (project.phaseConfig && typeof project.phaseConfig === 'object') ? { ...(project.phaseConfig as any) } : {};
+    cfg.stationInstructions = { ...(cfg.stationInstructions || {}), [phase]: String(text ?? '').trim().slice(0, 2000) };
+    const p = await this.prisma.abpProject.update({ where: { id: projectId }, data: { phaseConfig: cfg } });
+    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+  }
+
   /** Lectura de la portada para el alumno (campos públicos del proyecto). */
   async getProjectForStudent(projectId: string, institutionId: string) {
     const p = await this.prisma.abpProject.findFirst({
