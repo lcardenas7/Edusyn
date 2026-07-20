@@ -1251,10 +1251,18 @@ export class AbpService {
     for (const a of lessonActs) if (done.has(a.classroomActivityId)) a.completed = true;
   }
 
+  /** Solo el DOCENTE dueño puede borrar una misión: las misiones las coloca el
+   * docente y son parte del proyecto (el estudiante entrega, no borra). */
+  private async assertTeamTeacher(teamId: string, institutionId: string, userId: string) {
+    const team = await this.prisma.abpTeam.findFirst({ where: { id: teamId, institutionId }, select: { projectId: true } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+  }
+
   async deleteMission(missionId: string, institutionId: string, userId: string) {
     const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
     if (!m) throw new NotFoundException('Misión no encontrada');
-    await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    await this.assertTeamTeacher(m.phaseState.teamId, institutionId, userId);
     await this.prisma.abpMission.delete({ where: { id: missionId } });
     return { ok: true };
   }
@@ -1287,7 +1295,8 @@ export class AbpService {
   async deleteActivity(activityId: string, institutionId: string, userId: string) {
     const a = await this.prisma.abpMissionActivity.findFirst({ where: { id: activityId, institutionId }, include: { mission: { include: { phaseState: { select: { teamId: true } } } } } });
     if (!a) throw new NotFoundException('Actividad no encontrada');
-    await this.loadTeamForUser(a.mission.phaseState.teamId, institutionId, userId);
+    // Solo el docente: las actividades de una misión son parte del proyecto.
+    await this.assertTeamTeacher(a.mission.phaseState.teamId, institutionId, userId);
     await this.prisma.abpMissionActivity.delete({ where: { id: activityId } });
     // Solo si era una lección/juego PROPIA (creada inline) se borra su ClassroomActivity.
     // Una actividad REUTILIZADA (linkedActivity) es compartida: solo se desvincula.

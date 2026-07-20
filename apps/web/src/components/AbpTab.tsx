@@ -562,7 +562,7 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="font-bold taller-ink text-sm">{mission.title}</h4>
             {mission.required && <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-1.5 py-0.5" style={{ background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)' }}>Obligatoria</span>}
-            {!tool && <button onClick={() => run(() => abpApi.deleteMission(mission.id))} disabled={busy} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+            {/* borrar misiones es del docente (desde su vista de equipo), no del estudiante */}
           </div>
           {mission.description && <p className="text-xs taller-soft mt-0.5">{mission.description}</p>}
 
@@ -607,25 +607,6 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
           <LessonPlayer activityId={playing} onClose={() => { setPlaying(null); onSaved() }} />
         </div>
       )}
-    </div>
-  )
-}
-
-function AddMissionForm({ team, phase, onSaved }: { team: any; phase: number; onSaved: () => void }) {
-  const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState('')
-  const [busy, setBusy] = useState(false)
-  const save = async () => {
-    if (!title.trim()) return
-    setBusy(true)
-    try { await abpApi.addMission(team.id, phase, { title: title.trim(), required: false }); setTitle(''); setOpen(false); onSaved() } finally { setBusy(false) }
-  }
-  if (!open) return <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Añadir una misión propia</button>
-  return (
-    <div className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50">
-      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título de la misión…" className="flex-1 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
-      <button onClick={save} disabled={busy || !title.trim()} className="text-sm font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Crear</button>
-      <button onClick={() => setOpen(false)} className="text-sm text-slate-400">Cancelar</button>
     </div>
   )
 }
