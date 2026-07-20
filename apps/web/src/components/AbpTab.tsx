@@ -553,18 +553,29 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
   const tool = toolAct?.content?.tool
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
   const complete = !!mission.complete
+  // Misión personal: mía (solo yo la entrego) o de un compañero (la veo, no la entrego).
+  const esIndividual = mission.assigneeType === 'INDIVIDUAL'
+  const esMia = esIndividual && mission.assigneeEnrollmentId === team.myEnrollmentId
+  const esDeOtro = esIndividual && !esMia
   const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onSaved() } finally { setBusy(false) } }
   return (
-    <div className="rounded-2xl p-4" style={{ border: `1px solid ${complete ? 'color-mix(in srgb, var(--t-teal) 40%, var(--t-line))' : 'var(--t-line)'}`, background: complete ? 'color-mix(in srgb, var(--t-teal) 6%, var(--t-surface))' : 'var(--t-raised)', boxShadow: 'var(--t-shadow-sm)' }}>
+    <div className="rounded-2xl p-4" style={{
+      border: `1px solid ${complete ? 'color-mix(in srgb, var(--t-teal) 40%, var(--t-line))' : esMia ? '#6366F1' : 'var(--t-line)'}`,
+      background: complete ? 'color-mix(in srgb, var(--t-teal) 6%, var(--t-surface))' : esMia ? 'color-mix(in srgb, #6366F1 5%, var(--t-raised))' : 'var(--t-raised)',
+      boxShadow: 'var(--t-shadow-sm)', opacity: esDeOtro && !complete ? 0.75 : 1,
+    }}>
       <div className="flex items-start gap-2.5">
         <div className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: complete ? 'var(--t-teal)' : 'color-mix(in srgb, var(--t-ink) 25%, transparent)' }}>{complete ? <Check className="w-3.5 h-3.5" /> : '○'}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="font-bold taller-ink text-sm">{mission.title}</h4>
             {mission.required && <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-1.5 py-0.5" style={{ background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)' }}>Obligatoria</span>}
+            {esMia && <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-1.5 py-0.5" style={{ background: 'color-mix(in srgb, #6366F1 16%, transparent)', color: '#4338CA' }}>⭐ Tu misión personal</span>}
+            {esDeOtro && <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-1.5 py-0.5" style={{ background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' }}>👤 {mission.assigneeName}</span>}
             {/* borrar misiones es del docente (desde su vista de equipo), no del estudiante */}
           </div>
           {mission.description && <p className="text-xs taller-soft mt-0.5">{mission.description}</p>}
+          {mission.dueAt && <p className="text-[11px] font-mono mt-0.5" style={{ color: '#8a5a10' }}>📅 Para el {new Date(mission.dueAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}</p>}
 
           {tool && (
             <div className="mt-3">
@@ -572,9 +583,10 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
             </div>
           )}
 
-          {/* Misión de ENTREGA: se cumple entregando un producto, no con checkbox */}
+          {/* Misión de ENTREGA: se cumple entregando un producto, no con checkbox.
+              Si es personal, solo su destinatario puede entregarla. */}
           {mission.deliverableKind && (
-            <MissionDelivery mission={mission} canDeliver={!!team.myEnrollmentId} onSaved={onSaved} />
+            <MissionDelivery mission={mission} canDeliver={!!team.myEnrollmentId && !esDeOtro} onSaved={onSaved} />
           )}
 
           {!mission.deliverableKind && (
@@ -1745,6 +1757,91 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
   return null
 }
 
+/** El docente crea una misión en una estación de ESTE equipo: puede dirigirla a
+ * todo el equipo o a UN integrante ("Juan, tú entrevista al encargado"). */
+function TeacherNewMission({ team, phase, onCreated }: { team: any; phase: number; onCreated: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [required, setRequired] = useState(true)
+  const [kind, setKind] = useState<'NONE' | 'FILE' | 'LINK' | 'TEXT'>('NONE')
+  const [assignee, setAssignee] = useState('')   // '' = todo el equipo
+  const [dueAt, setDueAt] = useState('')
+  const [busy, setBusy] = useState(false)
+  const members = (team.members || []) as any[]
+  const nameOf = (m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''} ${m.studentEnrollment?.student?.user?.lastName ?? ''}`.trim() || 'Integrante'
+
+  const save = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try {
+      await abpApi.addMission(team.id, phase, {
+        title: title.trim(), description: description.trim() || undefined, required,
+        deliverableKind: kind === 'NONE' ? undefined : kind,
+        assigneeEnrollmentId: assignee || undefined,
+        dueAt: dueAt || undefined,
+      })
+      setTitle(''); setDescription(''); setAssignee(''); setDueAt(''); setKind('NONE'); setOpen(false); onCreated()
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la misión') }
+    finally { setBusy(false) }
+  }
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)} className="w-full mt-2 py-2 rounded-xl border-2 border-dashed border-slate-200 text-xs font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5">
+      <Plus className="w-3.5 h-3.5" /> Nueva misión para este equipo
+    </button>
+  )
+  return (
+    <div className="mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+      <input value={title} onChange={e => setTitle(e.target.value)} autoFocus placeholder="Qué deben hacer…" className="w-full text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
+      <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Objetivo: para qué sirve (opcional)" className="w-full text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 resize-none" />
+
+      <div>
+        <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">¿Para quién?</label>
+        <div className="flex flex-wrap gap-1 mt-1">
+          <button onClick={() => setAssignee('')} className="text-xs rounded-lg px-2.5 py-1.5 border transition"
+            style={assignee === '' ? { background: '#EEF2FF', borderColor: '#6366F1', color: '#4338CA', fontWeight: 700 } : { background: 'white', borderColor: '#E2E8F0', color: '#64748B' }}>
+            🚀 Todo el equipo
+          </button>
+          {members.map((m: any) => (
+            <button key={m.id} onClick={() => setAssignee(m.studentEnrollmentId)} className="text-xs rounded-lg px-2.5 py-1.5 border transition"
+              style={assignee === m.studentEnrollmentId ? { background: '#EEF2FF', borderColor: '#6366F1', color: '#4338CA', fontWeight: 700 } : { background: 'white', borderColor: '#E2E8F0', color: '#64748B' }}>
+              👤 {nameOf(m)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">¿Cómo la cumplen?</label>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {([['NONE', '📋 Trabajo libre'], ['FILE', '📎 Entrega archivo'], ['LINK', '🔗 Entrega enlace'], ['TEXT', '📝 Entrega texto']] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setKind(k)} className="text-xs rounded-lg px-2.5 py-1.5 border transition"
+              style={kind === k ? { background: '#EEF2FF', borderColor: '#6366F1', color: '#4338CA', fontWeight: 700 } : { background: 'white', borderColor: '#E2E8F0', color: '#64748B' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="flex items-center gap-1.5 text-xs text-slate-600">
+          <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-3.5 h-3.5 accent-violet-600" /> Obligatoria
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-slate-600">
+          Fecha límite <input type="date" value={dueAt} onChange={e => setDueAt(e.target.value)} className="border border-slate-200 rounded-md px-1.5 py-1 text-xs" />
+        </label>
+      </div>
+      {assignee && required && <p className="text-[11px] text-amber-600">Ojo: al ser obligatoria, el equipo no podrá presentar la estación hasta que {nameOf(members.find((m: any) => m.studentEnrollmentId === assignee))} la cumpla.</p>}
+
+      <div className="flex gap-2">
+        <button onClick={save} disabled={busy || !title.trim()} className="text-sm font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">{busy ? '…' : 'Crear misión'}</button>
+        <button onClick={() => setOpen(false)} className="text-sm text-slate-400">Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
 /** Editor de una misión para el docente: actividades + Valeria sugiere (Ticket 1 del arco). */
 function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; teamId: string; onChanged: () => void }) {
   const [busy, setBusy] = useState(false)
@@ -1957,6 +2054,8 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
               ))}
             </div>
           )}
+          {/* el docente dirige misiones a este equipo o a un integrante */}
+          <TeacherNewMission team={team} phase={ps.phase} onCreated={load} />
           {/* Espacio de trabajo del equipo: el docente abre los instrumentos de la estación */}
           <div className="taller">
             <StationInstruments team={team} phase={ps.phase} />

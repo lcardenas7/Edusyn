@@ -88,9 +88,16 @@ export function StationAgenda({ team, phase, stationName, purpose, feedback, awa
   const missions = (team?.currentMissions || []).filter((m: any) => m.required)
   const reqInstr: { key: string; used: boolean }[] = team?.requiredInstruments || []
 
+  // Mis misiones personales (dirigidas a mí), completas o no — van aparte y destacadas.
+  const mias = (team?.currentMissions || []).filter((m: any) => m.assigneeType === 'INDIVIDUAL' && m.assigneeEnrollmentId === team?.myEnrollmentId)
+
   type Row = { id: string; done: boolean; icon: string; label: string }
   const rows: Row[] = [
-    ...missions.map((m: any): Row => ({ id: `m:${m.id}`, done: !!m.complete, icon: '🎯', label: m.title })),
+    ...missions.map((m: any): Row => ({
+      id: `m:${m.id}`, done: !!m.complete,
+      icon: m.assigneeType === 'INDIVIDUAL' ? '👤' : '🎯',
+      label: m.assigneeType === 'INDIVIDUAL' && m.assigneeEnrollmentId !== team?.myEnrollmentId ? `${m.title} — ${m.assigneeName}` : m.title,
+    })),
     ...reqInstr.map((s): Row => ({ id: `i:${s.key}`, done: s.used, icon: defOf(s.key)?.emoji ?? '🧰', label: `Trabajar en: ${defOf(s.key)?.name ?? s.key}` })),
   ]
   const total = rows.length
@@ -98,8 +105,10 @@ export function StationAgenda({ team, phase, stationName, purpose, feedback, awa
   const firstPending = rows.find(r => !r.done)
 
   // Pista de Valeria — solo hechos de uso, nunca juicio académico.
+  const miaPendiente = mias.find((m: any) => !m.complete)
   let valeria: string
   if (awaiting) valeria = 'Presentaron esta estación. Ahora esperen a que el docente la revise.'
+  else if (miaPendiente) valeria = `El docente te encargó algo a ti: “${miaPendiente.title}”. ${miaPendiente.deliverableKind ? 'Ábrela en el Taller y entrégala.' : 'Ábrela en el Taller.'}`
   else if (total === 0) valeria = 'Entren al Taller y empiecen a trabajar en esta estación.'
   else if (done === total) valeria = '¡Ya completaron todo lo obligatorio! Pueden presentar la estación cuando el equipo se sienta listo.'
   else if (firstPending?.id.startsWith('i:')) valeria = `Todavía no han trabajado en “${firstPending.label.replace('Trabajar en: ', '')}”. Ábranlo en el Espacio de trabajo.`
@@ -141,6 +150,27 @@ export function StationAgenda({ team, phase, stationName, purpose, feedback, awa
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ⭐ MI MISIÓN PERSONAL — lo que el docente me encargó a mí */}
+      {mias.length > 0 && (
+        <div className="mt-3 p-3 rounded-xl" style={{ background: 'color-mix(in srgb, #6366F1 8%, transparent)', border: '1px solid color-mix(in srgb, #6366F1 30%, transparent)' }}>
+          <div className="text-[11px] font-mono uppercase tracking-widest font-bold mb-1.5" style={{ color: '#4338CA' }}>
+            ⭐ {mias.length === 1 ? 'Tu misión personal' : 'Tus misiones personales'}
+          </div>
+          {mias.map((m: any) => (
+            <div key={m.id} className="flex items-start gap-2 py-0.5">
+              <span className="text-sm shrink-0">{m.complete ? '✅' : '○'}</span>
+              <div className="min-w-0">
+                <span className="text-sm font-semibold" style={{ color: m.complete ? 'var(--t-muted)' : 'var(--t-ink)', textDecoration: m.complete ? 'line-through' : 'none' }}>{m.title}</span>
+                <span className="text-xs taller-muted ml-1.5">
+                  {m.complete ? 'entregada' : m.deliverableKind ? 'pendiente de entrega' : 'pendiente'}
+                  {m.dueAt && !m.complete ? ` · para el ${new Date(m.dueAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}` : ''}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

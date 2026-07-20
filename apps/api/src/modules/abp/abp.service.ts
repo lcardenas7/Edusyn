@@ -1008,14 +1008,36 @@ export class AbpService {
     return (ps.missions as any[]).map(m => ({ ...m, complete: this.missionComplete(m, phase, ps.data, config, memberIds) }));
   }
 
-  async addMission(teamId: string, institutionId: string, userId: string, phase: number, dto: { title: string; description?: string; required?: boolean; deliverableKind?: string }) {
+  async addMission(teamId: string, institutionId: string, userId: string, phase: number, dto: { title: string; description?: string; required?: boolean; deliverableKind?: string; assigneeEnrollmentId?: string; dueAt?: string }) {
     if (!dto.title?.trim()) throw new BadRequestException('El título de la misión es obligatorio');
-    await this.loadTeamForUser(teamId, institutionId, userId);
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
     const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } }, select: { id: true } });
     if (!ps) throw new NotFoundException('Fase no encontrada');
     const deliverableKind = ['FILE', 'LINK', 'TEXT'].includes(dto.deliverableKind || '') ? dto.deliverableKind : null;
+
+    // Destinatario: todo el equipo o UN integrante (misión personal).
+    let assigneeType = 'TEAM', assigneeEnrollmentId: string | null = null, assigneeName: string | null = null;
+    if (dto.assigneeEnrollmentId) {
+      const m = (team.members as any[]).find(x => x.studentEnrollmentId === dto.assigneeEnrollmentId);
+      if (!m) throw new BadRequestException('El destinatario no pertenece a este equipo');
+      const u = m.studentEnrollment.student.user;
+      assigneeType = 'INDIVIDUAL';
+      assigneeEnrollmentId = dto.assigneeEnrollmentId;
+      assigneeName = `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Integrante';
+    }
+    const due = dto.dueAt ? new Date(dto.dueAt) : null;
+
     const max = await this.prisma.abpMission.aggregate({ where: { phaseStateId: ps.id }, _max: { sortOrder: true } });
-    return this.prisma.abpMission.create({ data: { institutionId, phaseStateId: ps.id, title: dto.title.trim(), description: dto.description?.trim() || null, required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL', deliverableKind: deliverableKind as any } });
+    return this.prisma.abpMission.create({
+      data: {
+        institutionId, phaseStateId: ps.id,
+        title: dto.title.trim(), description: dto.description?.trim() || null,
+        required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL',
+        deliverableKind: deliverableKind as any,
+        assigneeType, assigneeEnrollmentId, assigneeName,
+        dueAt: due && !Number.isNaN(due.getTime()) ? due : null,
+      },
+    });
   }
 
   /** El docente "libera" una misión a TODOS los equipos del proyecto en una fase.
@@ -1057,6 +1079,11 @@ export class AbpService {
     if (!m.deliverableKind) throw new BadRequestException('Esta misión no es de entrega');
     const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
     const me = this.memberOf(team, userId);
+    // Misión personal: solo la entrega su destinatario (el docente sí puede, para
+    // registrar una entrega presencial).
+    if (m.assigneeType === 'INDIVIDUAL' && me && m.assigneeEnrollmentId !== me.enrollmentId) {
+      throw new ForbiddenException(`Esta es la misión personal de ${m.assigneeName ?? 'otro integrante'}`);
+    }
 
     const data: any = { deliveryState: 'SUBMITTED', deliveryByEnrollmentId: me?.enrollmentId ?? null, deliveredAt: new Date() };
     if (m.deliverableKind === 'TEXT') {

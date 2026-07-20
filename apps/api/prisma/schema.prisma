@@ -6995,6 +6995,14 @@ model AbpMission {
   xp                Int              @default(0)
   generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
   generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  // DESTINATARIO: por defecto todo el equipo. INDIVIDUAL = dirigida a un
+  // integrante ("Juan, tú entrevista al encargado"): solo él la entrega, el
+  // equipo la ve para coordinarse. assigneeName va denormalizado para pintar
+  // la autoría sin joins.
+  assigneeType           String    @default("TEAM") // TEAM | INDIVIDUAL
+  assigneeEnrollmentId   String?
+  assigneeName           String?
+  dueAt                  DateTime? // fecha límite (opcional)
   // Misión de ENTREGA: un "taller" que el equipo cumple ENTREGANDO un producto
   // (no marcando un checkbox). Vive dentro del ABP porque es parte del proyecto.
   deliverableKind        String? // null = trabajo libre · FILE | LINK | TEXT

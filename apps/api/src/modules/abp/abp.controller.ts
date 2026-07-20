@@ -362,7 +362,7 @@ export class AbpController {
 
   @Post('teams/:teamId/phases/:phase/missions')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
-  async addMission(@Param('teamId') teamId: string, @Param('phase') phase: string, @Request() req: any, @Body() body: { title: string; description?: string; required?: boolean }) {
+  async addMission(@Param('teamId') teamId: string, @Param('phase') phase: string, @Request() req: any, @Body() body: { title: string; description?: string; required?: boolean; deliverableKind?: string; assigneeEnrollmentId?: string; dueAt?: string }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.addMission(teamId, institutionId, userId, parseInt(phase, 10), body);
   }
