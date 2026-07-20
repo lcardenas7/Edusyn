@@ -2095,6 +2095,11 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
 
   const pendingValidations = queue.length
   const behindTeams = dash?.summary?.behind || 0
+  // Estaciones donde HAY equipos trabajando pero el docente aún no eligió instrumentos.
+  const instrSource: Record<number, 'teacher' | 'default'> = project?.phaseConfig?.instrumentsSource || {}
+  const stationsToConfigure = [...new Set((dash?.teams || []).map((t: any) => t.currentPhase as number))]
+    .filter((n): n is number => typeof n === 'number' && instrSource[n] === 'default')
+    .sort((a, b) => a - b)
 
   const TABS: { key: typeof tab; label: string; badge?: number }[] = [
     { key: 'panel', label: '📊 Panel', badge: pendingValidations || undefined },
@@ -2150,6 +2155,19 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {/* ── 📊 PANEL: triaje + progreso por equipo ────────────────────────── */}
       {tab === 'panel' && (
         <div className="space-y-4">
+          {/* Aviso: estaciones donde HAY equipos trabajando y aún usan la plantilla sugerida */}
+          {stationsToConfigure.length > 0 && (
+            <div className="taller-card p-4" style={{ borderLeft: '4px solid var(--t-marigold)' }}>
+              <h5 className="font-bold taller-ink text-sm mb-1">✨ Estaciones sin configurar</h5>
+              <p className="text-sm taller-soft">
+                {stationsToConfigure.length === 1
+                  ? <>Hay equipos trabajando en <b className="taller-ink">{phaseName(stationsToConfigure[0])}</b> y aún usa la plantilla sugerida.</>
+                  : <>Hay equipos trabajando en <b className="taller-ink">{stationsToConfigure.map(n => phaseName(n)).join(', ')}</b> y aún usan la plantilla sugerida.</>}
+                {' '}Los equipos no ven un espacio vacío, pero conviene que elijas tú los instrumentos.
+              </p>
+              <button onClick={() => setTab('instruments')} className="taller-cta mt-2.5 px-3 py-1.5 text-xs font-bold rounded-lg">🧰 Configurar instrumentos →</button>
+            </div>
+          )}
           {pendingValidations > 0 && (
             <div className="taller-card p-4" style={{ borderLeft: '4px solid var(--t-marigold)' }}>
               <h5 className="font-bold taller-ink text-sm mb-2">🔔 Esperando tu validación</h5>

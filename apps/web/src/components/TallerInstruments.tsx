@@ -216,6 +216,8 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
   const [saving, setSaving] = useState(false)
   const assignedByPhase: Record<number, { key: string; required?: boolean }[]> = project?.phaseConfig?.instruments || {}
   const assigned = assignedByPhase[phase] || []
+  const sourceByPhase: Record<number, 'teacher' | 'default'> = project?.phaseConfig?.instrumentsSource || {}
+  const isSuggested = sourceByPhase[phase] === 'default'
   const storedInstructions: string = project?.phaseConfig?.stationInstructions?.[phase] || ''
   const [instrText, setInstrText] = useState(storedInstructions)
   const [instrDirty, setInstrDirty] = useState(false)
@@ -256,6 +258,7 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
             style={phase === p.n ? { background: 'var(--t-raised)', color: 'var(--t-marigold)', boxShadow: 'var(--t-shadow-sm)' } : { color: 'var(--t-muted)' }}>
             {p.icon} {p.n}. {p.name}
             {(assignedByPhase[p.n]?.length ?? 0) > 0 && <span className="ml-1 font-mono">({assignedByPhase[p.n].length})</span>}
+            {sourceByPhase[p.n] === 'default' && <span className="ml-1" title="Usa la plantilla sugerida">✨</span>}
           </button>
         ))}
       </div>
@@ -274,9 +277,17 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
         )}
       </div>
 
+      {/* ¿esta estación usa la plantilla sugerida o la configuró el docente? */}
+      {isSuggested && (
+        <div className="mb-3 p-3 rounded-xl text-sm" style={{ background: 'color-mix(in srgb, var(--t-marigold) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--t-marigold) 32%, transparent)', color: '#8a5a10' }}>
+          <b>✨ Plantilla sugerida.</b> Aún no has configurado esta estación, así que el equipo verá estos instrumentos (todos opcionales, no bloquean la validación).
+          Quita, añade o marca obligatorios los que quieras: al primer cambio, esta estación pasa a ser tuya.
+        </div>
+      )}
+
       {/* instrumentos asignados a la estación */}
       {assigned.length === 0 ? (
-        <p className="text-sm taller-muted mb-3">Esta estación aún no tiene instrumentos. Añade el primero desde la biblioteca.</p>
+        <p className="text-sm taller-muted mb-3">Esta estación no tiene instrumentos (la dejaste vacía a propósito). Añade uno desde la biblioteca cuando quieras.</p>
       ) : (
         <div className="space-y-2 mb-3">
           {assigned.map(a => {

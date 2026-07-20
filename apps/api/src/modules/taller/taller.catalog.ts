@@ -65,3 +65,38 @@ export const INSTRUMENT_CATALOG: TallerInstrumentDef[] = [
 ];
 
 export const instrumentByKey = (key: string) => INSTRUMENT_CATALOG.find(i => i.key === key);
+
+/**
+ * PLANTILLA SUGERIDA por estación del ABP: lo que se ofrece cuando el docente
+ * todavía NO configuró esa estación, para que el equipo nunca llegue a un
+ * Espacio de trabajo vacío. Reglas:
+ *  - Es SUGERENCIA, no imposición: en cuanto el docente configura la estación
+ *    (aunque sea dejándola vacía a propósito), manda su configuración.
+ *  - Siempre `required: false` → una plantilla nunca bloquea la compuerta de un
+ *    equipo en curso. Si el docente la quiere obligatoria, la marca él.
+ *  - Solo instrumentos disponibles hoy.
+ */
+export const DEFAULT_STATION_INSTRUMENTS: Record<number, { key: string; required: boolean }[]> = {
+  1: [ // El Reto — comprender el problema
+    { key: 'BOARD:BRAINSTORM', required: false },
+    { key: 'GRAPH:ARBOL_PROBLEMAS', required: false },
+  ],
+  2: [ // Tormenta de Ideas — abrir la mente
+    { key: 'GRAPH:ARBOL_IDEAS', required: false },
+    { key: 'BOARD:BRAINSTORM', required: false },
+    { key: 'BOARD:CRAZY8', required: false },
+  ],
+  3: [ // Objetivos — acordar el objetivo del equipo
+    { key: 'BOARD:BRAINSTORM', required: false },
+  ],
+  4: [ // Plan de Acción — organizar el trabajo en el tiempo
+    { key: 'TIMELINE:LINEA_TIEMPO', required: false },
+  ],
+  5: [ // Prototipo — construir y documentar el proceso
+    { key: 'TIMELINE:LINEA_TIEMPO', required: false },
+    { key: 'BOARD:BRAINSTORM', required: false },
+  ],
+  6: [ // Socialización — contar la historia del proyecto
+    { key: 'TIMELINE:LINEA_TIEMPO', required: false },
+  ],
+};

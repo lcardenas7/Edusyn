@@ -5,7 +5,7 @@ import { LearningIdentityService } from '../gamification/learning-identity.servi
 import { ApdAiService } from '../apd/ai/apd-ai.service';
 import { AiOrchestratorService } from '../apd/ai/ai-orchestrator.service';
 import { ABP_PHASE_COUNT, ABP_PHASES, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor, MISSION_TEMPLATES, toolCriterionMet } from './abp.constants';
-import { instrumentByKey } from '../taller/taller.catalog';
+import { instrumentByKey, DEFAULT_STATION_INSTRUMENTS } from '../taller/taller.catalog';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -115,7 +115,7 @@ export class AbpService {
   async getProject(projectId: string, institutionId: string, userId: string) {
     const project = await this.assertProjectOwner(projectId, institutionId, userId);
     const teams = await this.listTeams(projectId, institutionId);
-    return { ...project, phaseConfig: resolvePhaseConfig(project.phaseConfig), teams };
+    return { ...project, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(project.phaseConfig)), teams };
   }
 
   // ─── PORTADA / PRESENTACIÓN (Nivel 1) ──────────────────────────────────────
@@ -211,7 +211,7 @@ export class AbpService {
     if (dto.challenge !== undefined) data.challenge = dto.challenge?.trim() || null;
     if (dto.presentation !== undefined) data.presentation = this.normalizePresentation(dto.presentation);
     const p = await this.prisma.abpProject.update({ where: { id: projectId }, data });
-    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+    return { ...p, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(p.phaseConfig)) };
   }
 
   /** Docente configura los INSTRUMENTOS de una estación (Biblioteca de Instrumentos).
@@ -233,7 +233,7 @@ export class AbpService {
     const cfg: any = (project.phaseConfig && typeof project.phaseConfig === 'object') ? { ...(project.phaseConfig as any) } : {};
     cfg.instruments = { ...(cfg.instruments || {}), [phase]: unique };
     const p = await this.prisma.abpProject.update({ where: { id: projectId }, data: { phaseConfig: cfg } });
-    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+    return { ...p, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(p.phaseConfig)) };
   }
 
   /** Docente escribe las INSTRUCCIONES de una estación ("¿qué haremos aquí y cómo?").
@@ -244,7 +244,7 @@ export class AbpService {
     const cfg: any = (project.phaseConfig && typeof project.phaseConfig === 'object') ? { ...(project.phaseConfig as any) } : {};
     cfg.stationInstructions = { ...(cfg.stationInstructions || {}), [phase]: String(text ?? '').trim().slice(0, 2000) };
     const p = await this.prisma.abpProject.update({ where: { id: projectId }, data: { phaseConfig: cfg } });
-    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+    return { ...p, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(p.phaseConfig)) };
   }
 
   /** Lectura de la portada para el alumno (campos públicos del proyecto). */
@@ -318,7 +318,7 @@ export class AbpService {
     if (!team) throw new NotFoundException('Equipo no encontrado');
     await this.assertProjectOwner(team.projectId, institutionId, userId);
 
-    const config = resolvePhaseConfig(team.project?.phaseConfig);
+    const config = this.withInstrumentDefaults(resolvePhaseConfig(team.project?.phaseConfig));
     const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
     const phaseStates = await this.prisma.abpPhaseState.findMany({
       where: { teamId, institutionId },
@@ -557,7 +557,7 @@ export class AbpService {
       orderBy: { createdAt: 'asc' },
     });
     // Misiones de la fase actual con su estado de completitud calculado (Opción A).
-    const config = resolvePhaseConfig(team.project?.phaseConfig);
+    const config = this.withInstrumentDefaults(resolvePhaseConfig(team.project?.phaseConfig));
     const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
     const curPs = await this.prisma.abpPhaseState.findUnique({
       where: { teamId_phase: { teamId: team.id, phase: team.currentPhase } },
@@ -583,6 +583,23 @@ export class AbpService {
       requiredInstruments,
       readyForValidation,
     };
+  }
+
+  /** Materializa los instrumentos EFECTIVOS de las 6 estaciones: los que configuró
+   * el docente o, si nunca configuró esa estación, la PLANTILLA SUGERIDA (para que
+   * el equipo no llegue a un espacio vacío). `instrumentsSource[phase]` dice cuál
+   * es: 'teacher' | 'default'. Si el docente la dejó vacía a propósito ([]), manda
+   * su decisión (no se re-inyecta la plantilla). */
+  private withInstrumentDefaults(config: any): any {
+    const explicit = (config?.instruments && typeof config.instruments === 'object') ? config.instruments : {};
+    const instruments: Record<number, any[]> = {};
+    const instrumentsSource: Record<number, 'teacher' | 'default'> = {};
+    for (let phase = 1; phase <= ABP_PHASE_COUNT; phase++) {
+      const set = explicit[phase] ?? explicit[String(phase)];
+      if (Array.isArray(set)) { instruments[phase] = set; instrumentsSource[phase] = 'teacher'; }
+      else { instruments[phase] = DEFAULT_STATION_INSTRUMENTS[phase] ?? []; instrumentsSource[phase] = 'default'; }
+    }
+    return { ...config, instruments, instrumentsSource };
   }
 
   /** Estado de uso de los instrumentos OBLIGATORIOS de una estación: usado = el
