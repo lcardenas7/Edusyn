@@ -1371,7 +1371,7 @@ export class AbpService {
 
   /** Docente resuelve una validación: aprueba (rúbrica OBLIGATORIA → desbloquea siguiente +
    * XP + insignia) o devuelve con retroalimentación (la fase vuelve a en curso). */
-  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string, rubricScores?: number[], rubricComment?: string) {
+  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string, rubricScores?: number[], rubricComment?: string, missions?: { title: string; description?: string; required?: boolean; deliverableKind?: string }[]) {
     const vr = await this.prisma.abpValidationRequest.findFirst({
       where: { id: validationId, institutionId, status: 'PENDING' },
       include: { team: { select: { id: true, projectId: true, currentPhase: true, xp: true, badges: true } } },
@@ -1381,10 +1381,29 @@ export class AbpService {
 
     if (action === 'return') {
       const fb = (feedback || '').trim() || 'Revisen los criterios de la fase y vuelvan a enviar.';
-      await this.prisma.abpPhaseState.update({
+      const ps = await this.prisma.abpPhaseState.update({
         where: { teamId_phase: { teamId: vr.teamId, phase: vr.phase } },
         data: { status: 'IN_PROGRESS', feedback: fb, submittedAt: null },
       });
+      // El docente puede devolver CON misiones: se crean en la misma estación y la
+      // compuerta las exigirá antes de volver a presentar (obligatorias por defecto).
+      const nuevas = (Array.isArray(missions) ? missions : []).filter(m => m?.title?.trim());
+      if (nuevas.length > 0) {
+        const max = await this.prisma.abpMission.aggregate({ where: { phaseStateId: ps.id }, _max: { sortOrder: true } });
+        let order = (max._max.sortOrder ?? 0) + 100;
+        for (const m of nuevas) {
+          const kind = ['FILE', 'LINK', 'TEXT'].includes(m.deliverableKind || '') ? m.deliverableKind : null;
+          await this.prisma.abpMission.create({
+            data: {
+              institutionId, phaseStateId: ps.id,
+              title: m.title.trim(), description: m.description?.trim() || null,
+              required: m.required ?? true, sortOrder: order, generatedBy: 'MANUAL',
+              deliverableKind: kind as any,
+            },
+          });
+          order += 100;
+        }
+      }
       return this.prisma.abpValidationRequest.update({
         where: { id: vr.id }, data: { status: 'RETURNED', feedback: fb, resolvedAt: new Date() },
       });

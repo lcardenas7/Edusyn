@@ -339,9 +339,9 @@ export class AbpController {
   // Docente aprueba (rúbrica obligatoria) o devuelve una validación.
   @Post('validations/:validationId/resolve')
   @Roles('DOCENTE', 'COORDINADOR')
-  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string }) {
+  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string; missions?: { title: string; description?: string; required?: boolean; deliverableKind?: string }[] }) {
     const { institutionId, userId } = await this.ctx(req);
-    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback, body.rubricScores, body.rubricComment);
+    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback, body.rubricScores, body.rubricComment, body.missions);
   }
 
   // Pantalla de revisión del docente (trabajo + criterios + rúbrica + comentarios).

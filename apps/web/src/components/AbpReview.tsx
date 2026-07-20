@@ -72,6 +72,8 @@ export default function AbpReview({ validationId, onClose }: { validationId: str
   const [rubricComment, setRubricComment] = useState('')
   const [returning, setReturning] = useState(false)
   const [feedback, setFeedback] = useState('')
+  // Misiones que el docente adjunta al devolver (se crean en esta estación).
+  const [newMissions, setNewMissions] = useState<{ title: string; kind: 'NONE' | 'FILE' | 'LINK' | 'TEXT' }[]>([])
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -91,7 +93,13 @@ export default function AbpReview({ validationId, onClose }: { validationId: str
   }
   const doReturn = async () => {
     setBusy(true)
-    try { await abpApi.resolve(validationId, { action: 'return', feedback }); onClose(true) } finally { setBusy(false) }
+    const missions = newMissions.filter(m => m.title.trim()).map(m => ({
+      title: m.title.trim(), required: true,
+      deliverableKind: m.kind === 'NONE' ? undefined : m.kind,
+    }))
+    try { await abpApi.resolve(validationId, { action: 'return', feedback, missions }); onClose(true) }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo devolver') }
+    finally { setBusy(false) }
   }
   const addComment = async () => {
     if (!comment.trim() || busy) return
@@ -185,7 +193,35 @@ export default function AbpReview({ validationId, onClose }: { validationId: str
                 {returning && (
                   <div className="space-y-2 pt-1">
                     <textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="Explica qué debe corregir el equipo…" rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none" />
-                    <button onClick={doReturn} disabled={busy} className="w-full py-2.5 bg-rose-600 text-white font-bold rounded-lg text-sm disabled:opacity-50">Devolver al equipo</button>
+
+                    {/* Devolver CON misiones: se crean en esta estación y la compuerta las exigirá */}
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 space-y-2">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Misiones antes de aprobar (opcional)</div>
+                      {newMissions.map((m, i) => (
+                        <div key={i} className="space-y-1.5 rounded-lg bg-white border border-slate-200 p-2">
+                          <div className="flex gap-1.5">
+                            <input value={m.title} onChange={e => setNewMissions(ms => ms.map((x, j) => j === i ? { ...x, title: e.target.value } : x))}
+                              placeholder="Qué deben hacer…" className="flex-1 border border-slate-200 rounded-md px-2 py-1 text-sm" />
+                            <button onClick={() => setNewMissions(ms => ms.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 px-1">✕</button>
+                          </div>
+                          <div className="flex gap-1 flex-wrap">
+                            {([['NONE', 'Trabajo libre'], ['FILE', '📎 Archivo'], ['LINK', '🔗 Enlace'], ['TEXT', '📝 Texto']] as const).map(([k, label]) => (
+                              <button key={k} onClick={() => setNewMissions(ms => ms.map((x, j) => j === i ? { ...x, kind: k } : x))}
+                                className="text-[11px] rounded-md px-2 py-1 border transition"
+                                style={m.kind === k ? { background: '#EEF2FF', borderColor: '#6366F1', color: '#4338CA', fontWeight: 700 } : { background: 'white', borderColor: '#E2E8F0', color: '#64748B' }}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <button onClick={() => setNewMissions(ms => [...ms, { title: '', kind: 'NONE' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700">+ Añadir misión</button>
+                      {newMissions.length > 0 && <p className="text-[11px] text-slate-400">Serán obligatorias: el equipo no podrá volver a presentar sin cumplirlas.</p>}
+                    </div>
+
+                    <button onClick={doReturn} disabled={busy} className="w-full py-2.5 bg-rose-600 text-white font-bold rounded-lg text-sm disabled:opacity-50">
+                      Devolver al equipo{newMissions.filter(m => m.title.trim()).length > 0 ? ` con ${newMissions.filter(m => m.title.trim()).length} misión(es)` : ''}
+                    </button>
                   </div>
                 )}
               </div>

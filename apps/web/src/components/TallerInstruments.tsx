@@ -111,6 +111,15 @@ export function StationAgenda({ team, phase, stationName, purpose, feedback, awa
       <h2 className="text-2xl font-black taller-ink tracking-tight">Están en <span className="taller-mari">{stationName}</span></h2>
       {purpose && <p className="text-sm taller-soft mt-1">{purpose}</p>}
 
+      {/* NOVEDAD: el docente revisó y devolvió la estación con indicaciones */}
+      {feedback && !awaiting && (
+        <div className="mt-3 p-3 rounded-xl" style={{ background: 'color-mix(in srgb, #CB4E42 10%, transparent)', border: '1px solid color-mix(in srgb, #CB4E42 35%, transparent)' }}>
+          <div className="text-[11px] font-mono uppercase tracking-widest font-bold mb-1" style={{ color: '#CB4E42' }}>🔔 El docente revisó esta estación</div>
+          <p className="text-sm" style={{ color: '#7a2b22' }}>{feedback}</p>
+          <p className="text-xs mt-1.5" style={{ color: '#9a4a3e' }}>Cumplan lo que falta abajo y vuelvan a presentarla.</p>
+        </div>
+      )}
+
       {/* Hoy deberán: checklist */}
       {total > 0 && (
         <div className="mt-4">
@@ -132,13 +141,6 @@ export function StationAgenda({ team, phase, stationName, purpose, feedback, awa
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Mensaje del docente */}
-      {feedback && (
-        <div className="mt-4 p-3 rounded-xl text-sm" style={{ background: 'color-mix(in srgb, #CB4E42 9%, transparent)', borderLeft: '4px solid #CB4E42', color: '#7a2b22' }}>
-          🧑‍🏫 <b>Docente:</b> {feedback}
         </div>
       )}
 
