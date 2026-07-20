@@ -423,7 +423,7 @@ export class AbpController {
   }
 
   @Post('missions/:missionId/status')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  @Roles('DOCENTE', 'COORDINADOR')
   async setMissionStatus(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { completed: boolean }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.setMissionStatus(missionId, institutionId, userId, !!body.completed);
@@ -445,7 +445,7 @@ export class AbpController {
   }
 
   @Post('activities/:activityId/complete')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  @Roles('DOCENTE', 'COORDINADOR')
   async completeActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: { completed: boolean }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.completeActivity(activityId, institutionId, userId, !!body.completed);

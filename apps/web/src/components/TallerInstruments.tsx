@@ -274,12 +274,12 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
     <div className="taller-card p-5">
       <div className="flex items-center gap-2 flex-wrap mb-1">
         <div>
-          <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Biblioteca de Instrumentos</div>
-          <h3 className="font-black taller-ink">🧰 Instrumentos por estación</h3>
+          <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Configuración de la expedición</div>
+          <h3 className="font-black taller-ink">🧭 Estaciones</h3>
         </div>
         {saving && <Loader2 className="w-4 h-4 animate-spin ml-auto" style={{ color: 'var(--t-marigold)' }} />}
       </div>
-      <p className="text-xs taller-muted mb-3">Elige qué herramientas de pensamiento tendrá cada estación. Los equipos las encontrarán en su espacio de trabajo.</p>
+      <p className="text-xs taller-muted mb-3">Para cada estación defines dos cosas: <b>qué les dices</b> (instrucciones) y <b>con qué trabajan</b> (instrumentos).</p>
 
       {/* selector de estación */}
       <div className="flex rounded-xl p-1 w-fit flex-wrap gap-0.5 mb-4" style={{ background: 'color-mix(in srgb, var(--t-marigold) 8%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
@@ -293,18 +293,29 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
         ))}
       </div>
 
-      {/* instrucciones de la estación (lo primero que ve el estudiante) */}
-      <div className="mb-4 p-3 rounded-xl" style={{ background: 'color-mix(in srgb, var(--t-marigold) 6%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
-        <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-1.5">📖 Instrucciones de la estación (lo primero que verá el equipo)</div>
+      {/* ── 1 · INSTRUCCIONES de esta estación (lo primero que ve el equipo) ── */}
+      <div className="mb-5">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="w-5 h-5 rounded-md grid place-items-center text-[11px] font-black shrink-0" style={{ background: 'color-mix(in srgb, var(--t-marigold) 20%, transparent)', color: '#8a5a10' }}>1</span>
+          <span className="text-sm font-black taller-ink">📖 Instrucciones para el equipo</span>
+          <span className="text-[11px] taller-muted">— lo primero que verán al entrar</span>
+        </div>
         <textarea value={instrText} onChange={e => { setInstrText(e.target.value); setInstrDirty(true) }}
           placeholder="Escribe qué debe hacer el equipo en esta estación y cómo. Si lo dejas vacío, Edusyn muestra una guía por defecto."
           maxLength={2000} rows={3}
-          className="w-full px-3 py-2 rounded-lg text-sm resize-y" style={{ background: 'var(--t-raised)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
-        {instrDirty && (
-          <button onClick={saveInstructions} disabled={saving} className="taller-cta mt-2 px-4 py-1.5 rounded-lg font-bold text-xs disabled:opacity-50">
-            Guardar instrucciones
-          </button>
-        )}
+          className="w-full px-3 py-2 rounded-lg text-sm resize-y" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
+        <div className="flex items-center gap-2 mt-1.5">
+          {instrDirty
+            ? <button onClick={saveInstructions} disabled={saving} className="taller-cta px-4 py-1.5 rounded-lg font-bold text-xs disabled:opacity-50">Guardar instrucciones</button>
+            : <span className="text-[11px] taller-muted">{storedInstructions ? '✓ Instrucciones propias guardadas' : 'Sin escribir: se mostrará la guía por defecto de esta estación'}</span>}
+        </div>
+      </div>
+
+      {/* ── 2 · INSTRUMENTOS de esta estación ── */}
+      <div className="flex items-center gap-2 mb-2 pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
+        <span className="w-5 h-5 rounded-md grid place-items-center text-[11px] font-black shrink-0" style={{ background: 'color-mix(in srgb, var(--t-marigold) 20%, transparent)', color: '#8a5a10' }}>2</span>
+        <span className="text-sm font-black taller-ink">🧰 Instrumentos de trabajo</span>
+        <span className="text-[11px] taller-muted">— con qué construyen aquí</span>
       </div>
 
       {/* ¿esta estación usa la plantilla sugerida o la configuró el docente? */}

@@ -547,7 +547,6 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
 }
 
 function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
-  const [busy, setBusy] = useState(false)
   const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
   const tool = toolAct?.content?.tool
@@ -557,7 +556,6 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
   const esIndividual = mission.assigneeType === 'INDIVIDUAL'
   const esMia = esIndividual && mission.assigneeEnrollmentId === team.myEnrollmentId
   const esDeOtro = esIndividual && !esMia
-  const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onSaved() } finally { setBusy(false) } }
   return (
     <div className="rounded-2xl p-4" style={{
       border: `1px solid ${complete ? 'color-mix(in srgb, var(--t-teal) 40%, var(--t-line))' : esMia ? '#6366F1' : 'var(--t-line)'}`,
@@ -598,16 +596,20 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
                 <button onClick={() => setPlaying(a.classroomActivityId)} className="ml-auto text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 hover:bg-violet-700">▶ {a.completed ? 'Repetir' : 'Jugar'}</button>
               </div>
             ) : (
-              <div key={a.id} className="flex items-center gap-2">
-                <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4" style={{ accentColor: 'var(--t-teal)' }} />
-                <span className={`text-sm ${a.completed ? 'line-through taller-muted' : 'taller-soft'}`}><span className="taller-muted mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+              // Indicación del docente: no es un checkbox que el equipo pueda marcar.
+              // Lo que se cumple, se cumple con hechos (entrega, herramienta o lección).
+              <div key={a.id} className="flex items-start gap-2">
+                <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.completed ? 'var(--t-teal)' : 'var(--t-muted)' }} />
+                <span className={`text-sm ${a.completed ? 'line-through taller-muted' : 'taller-soft'}`}>
+                  <span className="taller-muted mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}
+                  {a.completed && <span className="text-[10px] font-mono ml-1.5" style={{ color: 'var(--t-teal)' }}>✓ verificado</span>}
+                </span>
               </div>
             ))}
             {!tool && acts.length === 0 && (
-              <label className="flex items-center gap-2 text-sm taller-soft">
-                <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4" style={{ accentColor: 'var(--t-teal)' }} />
-                Marcar como completada
-              </label>
+              <p className="text-xs taller-muted">
+                {complete ? '✓ El docente dio esta misión por cumplida.' : '⏳ El docente verificará esta misión cuando la hayan hecho.'}
+              </p>
             )}
           </div>
           )}
@@ -2204,7 +2206,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
     { key: 'panel', label: '📊 Panel', badge: pendingValidations || undefined },
     { key: 'map', label: '🗺️ Mapa' },
     { key: 'teams', label: '👥 Equipos' },
-    { key: 'instruments', label: '🧰 Instrumentos' },
+    { key: 'instruments', label: '🧭 Estaciones' },
     { key: 'announcements', label: '📢 Anuncios' },
     { key: 'resources', label: '📚 Recursos' },
   ]
@@ -2264,7 +2266,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                   : <>Hay equipos trabajando en <b className="taller-ink">{stationsToConfigure.map(n => phaseName(n)).join(', ')}</b> y aún usan la plantilla sugerida.</>}
                 {' '}Los equipos no ven un espacio vacío, pero conviene que elijas tú los instrumentos.
               </p>
-              <button onClick={() => setTab('instruments')} className="taller-cta mt-2.5 px-3 py-1.5 text-xs font-bold rounded-lg">🧰 Configurar instrumentos →</button>
+              <button onClick={() => setTab('instruments')} className="taller-cta mt-2.5 px-3 py-1.5 text-xs font-bold rounded-lg">🧭 Configurar estaciones →</button>
             </div>
           )}
           {pendingValidations > 0 && (

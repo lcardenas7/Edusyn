@@ -956,6 +956,7 @@ export class AbpService {
           data: {
             institutionId, phaseStateId: ps.id, title: t.title, description: t.description || null,
             sortOrder: i * 100, required: t.required, generatedBy: 'TEMPLATE',
+            deliverableKind: (t.deliverableKind ?? null) as any,
             activities: {
               create: t.tool
                 ? [{ institutionId, type: 'CUSTOM' as any, title: t.title, content: { tool: t.tool } as any, sortOrder: 0 }]
@@ -1311,11 +1312,13 @@ export class AbpService {
     return { ok: true };
   }
 
-  /** Marca/desmarca una misión sin actividades como completada (manual). */
+  /** Marca/desmarca una misión de "trabajo libre" como completada. SOLO EL DOCENTE:
+   * un estudiante no puede declarar hecho lo que nadie verificó. Las demás misiones
+   * se cumplen con hechos (herramienta con criterio, entrega, o lección jugada). */
   async setMissionStatus(missionId: string, institutionId: string, userId: string, completed: boolean) {
     const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
     if (!m) throw new NotFoundException('Misión no encontrada');
-    await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    await this.assertTeamTeacher(m.phaseState.teamId, institutionId, userId);
     return this.prisma.abpMission.update({ where: { id: missionId }, data: { status: completed ? 'COMPLETED' : 'IN_PROGRESS' } });
   }
 
@@ -1328,12 +1331,14 @@ export class AbpService {
     return this.prisma.abpMissionActivity.create({ data: { institutionId, missionId, type: (valid.includes(dto.type) ? dto.type : 'CUSTOM') as any, title: (dto.title || '').trim() || 'Actividad', content: dto.content ?? undefined, sortOrder: (max._max.sortOrder ?? 0) + 100 } });
   }
 
+  /** Marca una actividad como hecha. SOLO EL DOCENTE (verifica lo presencial): las
+   * lecciones y juegos se marcan solas al jugarlas (markLessonCompletion, con
+   * evidencia real de entrega), y el resto del trabajo se cumple entregando. */
   async completeActivity(activityId: string, institutionId: string, userId: string, completed: boolean) {
     const a = await this.prisma.abpMissionActivity.findFirst({ where: { id: activityId, institutionId }, include: { mission: { include: { phaseState: { select: { teamId: true } } } } } });
     if (!a) throw new NotFoundException('Actividad no encontrada');
-    const team = await this.loadTeamForUser(a.mission.phaseState.teamId, institutionId, userId);
-    const me = this.memberOf(team, userId);
-    return this.prisma.abpMissionActivity.update({ where: { id: activityId }, data: { completed, completedByEnrollmentId: completed ? (me?.enrollmentId ?? null) : null } });
+    await this.assertTeamTeacher(a.mission.phaseState.teamId, institutionId, userId);
+    return this.prisma.abpMissionActivity.update({ where: { id: activityId }, data: { completed, completedByEnrollmentId: null } });
   }
 
   async deleteActivity(activityId: string, institutionId: string, userId: string) {
