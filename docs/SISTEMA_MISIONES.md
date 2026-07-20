@@ -131,7 +131,16 @@ La entrega crea un `TallerObject(type: Evidence)` + evento `mission.Delivered` e
 núcleo → aparece en Biblioteca/Timeline/analíticas sin trabajo extra. Las misiones
 GLOBAL viven a nivel proyecto y se materializan por equipo.
 
-## 8. Orden de construcción (tickets)
+## 8. Estado de construcción
+
+> **M1 HECHO (2026-07-20, commit e40ddbe):** misiones individuales con entrega, verificado 15/15
+> end-to-end. **M2 HECHO (commit ba5b997):** devolver validación con misiones + aviso al
+> equipo. **M4 parcial HECHO (commit 6cd0b8d):** misiones de equipo con entregable
+> (completar = ENTREGAR). Pendientes: M3 (agenda ya hecha en commit 34dd6b0),
+> M5 (misiones por rol — requiere instrumento Roles), M6 (misión global + sugerencias
+> de Valeria).
+
+### Orden original (tickets)
 
 1. **M1 — Misión individual + entrega con producto** (el corazón): assigneeType
    INDIVIDUAL, subir producto (storage ya existe), entrega→Evidencia automática,
