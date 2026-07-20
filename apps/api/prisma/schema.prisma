@@ -6995,6 +6995,15 @@ model AbpMission {
   xp                Int              @default(0)
   generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
   generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  // Misión de ENTREGA: un "taller" que el equipo cumple ENTREGANDO un producto
+  // (no marcando un checkbox). Vive dentro del ABP porque es parte del proyecto.
+  deliverableKind        String? // null = trabajo libre · FILE | LINK | TEXT
+  deliveryState          String    @default("PENDING") // PENDING | SUBMITTED
+  deliveryUrl            String? // storage path (FILE) o enlace (LINK)
+  deliveryText           String?   @db.Text // entrega de texto
+  deliveryLabel          String? // nombre del archivo / etiqueta legible
+  deliveryByEnrollmentId String? // quién entregó (participación)
+  deliveredAt            DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 

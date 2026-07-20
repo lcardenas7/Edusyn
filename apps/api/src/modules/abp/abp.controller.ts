@@ -429,6 +429,14 @@ export class AbpController {
     return this.service.setMissionStatus(missionId, institutionId, userId, !!body.completed);
   }
 
+  // El equipo ENTREGA el producto de una misión de entrega (taller dentro del ABP).
+  @Post('missions/:missionId/deliver')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async submitDelivery(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { url?: string; text?: string; label?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.submitMissionDelivery(missionId, institutionId, userId, body || {});
+  }
+
   @Post('missions/:missionId/activities')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async addActivity(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { type: string; title: string; content?: any }) {

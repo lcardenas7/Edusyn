@@ -953,6 +953,8 @@ export class AbpService {
   /** ¿Está completa una misión? Herramienta → criterio de la herramienta; con actividades
    * → todas completas; sin actividades → status COMPLETED (manual). */
   private missionComplete(mission: any, phase: number, data: any, config: any, memberIds: string[]): boolean {
+    // Misión de entrega: completa cuando el equipo entregó el producto (no un checkbox).
+    if (mission.deliverableKind) return mission.deliveryState === 'SUBMITTED';
     const acts = mission.activities || [];
     const tool = acts.find((a: any) => (a.content as any)?.tool);
     if (tool) return toolCriterionMet(phase, data, config, memberIds);
@@ -989,23 +991,26 @@ export class AbpService {
     return (ps.missions as any[]).map(m => ({ ...m, complete: this.missionComplete(m, phase, ps.data, config, memberIds) }));
   }
 
-  async addMission(teamId: string, institutionId: string, userId: string, phase: number, dto: { title: string; description?: string; required?: boolean }) {
+  async addMission(teamId: string, institutionId: string, userId: string, phase: number, dto: { title: string; description?: string; required?: boolean; deliverableKind?: string }) {
     if (!dto.title?.trim()) throw new BadRequestException('El título de la misión es obligatorio');
     await this.loadTeamForUser(teamId, institutionId, userId);
     const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } }, select: { id: true } });
     if (!ps) throw new NotFoundException('Fase no encontrada');
+    const deliverableKind = ['FILE', 'LINK', 'TEXT'].includes(dto.deliverableKind || '') ? dto.deliverableKind : null;
     const max = await this.prisma.abpMission.aggregate({ where: { phaseStateId: ps.id }, _max: { sortOrder: true } });
-    return this.prisma.abpMission.create({ data: { institutionId, phaseStateId: ps.id, title: dto.title.trim(), description: dto.description?.trim() || null, required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL' } });
+    return this.prisma.abpMission.create({ data: { institutionId, phaseStateId: ps.id, title: dto.title.trim(), description: dto.description?.trim() || null, required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL', deliverableKind: deliverableKind as any } });
   }
 
   /** El docente "libera" una misión a TODOS los equipos del proyecto en una fase.
    * Crea la misión (con sus actividades opcionales) en cada phaseState correspondiente. */
-  async broadcastMission(projectId: string, institutionId: string, userId: string, dto: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) {
+  async broadcastMission(projectId: string, institutionId: string, userId: string, dto: { phase: number; title: string; description?: string; required?: boolean; deliverableKind?: string; activities?: { type: string; title: string }[] }) {
     await this.assertProjectOwner(projectId, institutionId, userId);
     if (!dto.title?.trim()) throw new BadRequestException('El título de la misión es obligatorio');
     const phase = dto.phase >= 1 && dto.phase <= 6 ? dto.phase : 1;
     const validTypes = ['READING', 'VIDEO', 'QUIZ', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM'];
-    const acts = (dto.activities || []).filter(a => a?.title?.trim());
+    const deliverableKind = ['FILE', 'LINK', 'TEXT'].includes(dto.deliverableKind || '') ? dto.deliverableKind : null;
+    // Una misión de entrega se cumple entregando: las actividades-checkbox no aplican.
+    const acts = deliverableKind ? [] : (dto.activities || []).filter(a => a?.title?.trim());
     const phaseStates = await this.prisma.abpPhaseState.findMany({
       where: { institutionId, phase, team: { projectId } },
       select: { id: true },
@@ -1018,12 +1023,48 @@ export class AbpService {
           institutionId, phaseStateId: ps.id,
           title: dto.title.trim(), description: dto.description?.trim() || null,
           required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL',
+          deliverableKind: deliverableKind as any,
           activities: { create: acts.map((a, i) => ({ institutionId, type: (validTypes.includes(a.type) ? a.type : 'CUSTOM') as any, title: a.title.trim(), sortOrder: i * 100 })) },
         },
       });
       count++;
     }
     return { ok: true, count };
+  }
+
+  /** El equipo ENTREGA el producto de una misión de entrega (taller). Cualquier
+   * integrante puede entregar/reemplazar; la misión queda completa al entregar. */
+  async submitMissionDelivery(missionId: string, institutionId: string, userId: string, dto: { url?: string; text?: string; label?: string }) {
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true, phase: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    if (!m.deliverableKind) throw new BadRequestException('Esta misión no es de entrega');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const me = this.memberOf(team, userId);
+
+    const data: any = { deliveryState: 'SUBMITTED', deliveryByEnrollmentId: me?.enrollmentId ?? null, deliveredAt: new Date() };
+    if (m.deliverableKind === 'TEXT') {
+      const t = (dto.text || '').trim();
+      if (!t) throw new BadRequestException('Escribe el texto de la entrega');
+      data.deliveryText = t.slice(0, 5000); data.deliveryUrl = null; data.deliveryLabel = null;
+    } else {
+      const u = (dto.url || '').trim();
+      if (!u) throw new BadRequestException(m.deliverableKind === 'FILE' ? 'Sube el archivo de la entrega' : 'Pega el enlace de la entrega');
+      data.deliveryUrl = u; data.deliveryLabel = (dto.label || '').trim() || u; data.deliveryText = null;
+    }
+    const updated = await this.prisma.abpMission.update({ where: { id: missionId }, data });
+
+    // XP + contribución la PRIMERA vez que se entrega (idempotente por misión).
+    if (me?.enrollmentId) {
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId: m.phaseState.teamId, studentEnrollmentId: me.enrollmentId, phase: m.phaseState.phase, type: 'TASK_DONE', refId: `delivery:${missionId}`, detail: `Entregó: ${m.title.slice(0, 60)}` }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
+        await this.prisma.abpTeam.update({ where: { id: m.phaseState.teamId }, data: { xp: { increment: ABP_XP.TASK_DONE } } });
+        await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.TASK_DONE, 'ABP · entrega de misión', `abp:delivery:${missionId}`);
+      }
+    }
+    return updated;
   }
 
   /** Valeria sugiere actividades para una misión, ligadas a la problemática del equipo.

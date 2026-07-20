@@ -464,6 +464,88 @@ function AddActivityForm({ mission, onSaved }: { mission: any; onSaved: () => vo
   )
 }
 
+const DELIVERY_LABEL: Record<string, string> = { FILE: 'Archivo', LINK: 'Enlace', TEXT: 'Texto' }
+
+// Entrega de una misión de entrega (taller): el equipo cumple ENTREGANDO, no marcando.
+function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDeliver: boolean; onSaved: () => void }) {
+  const kind = mission.deliverableKind as 'FILE' | 'LINK' | 'TEXT'
+  const delivered = mission.deliveryState === 'SUBMITTED'
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [link, setLink] = useState('')
+  const [text, setText] = useState(mission.deliveryText || '')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const openFile = async (path: string) => {
+    try { const { data } = await storageApi.resolveUrl(path); window.open(data.url, '_blank', 'noopener') }
+    catch { window.open(path, '_blank', 'noopener') }
+  }
+  const submit = async (payload: { url?: string; text?: string; label?: string }) => {
+    setBusy(true)
+    try { await abpApi.submitDelivery(mission.id, payload); setEditing(false); setLink(''); onSaved() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo entregar') }
+    finally { setBusy(false) }
+  }
+  const uploadFile = async (file: File) => {
+    setBusy(true)
+    try {
+      const { data } = await classroomApi.uploadMaterial(file)
+      const url = data?.data?.path || data?.data?.url
+      if (url) await submit({ url, label: file.name })
+      else { alert('No se pudo subir el archivo'); setBusy(false) }
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
+  }
+
+  return (
+    <div className="mt-2 rounded-xl p-3" style={{ background: delivered ? 'color-mix(in srgb, var(--t-teal) 8%, var(--t-surface))' : 'color-mix(in srgb, var(--t-marigold) 7%, var(--t-surface))', border: '1px solid var(--t-line)' }}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: delivered ? 'var(--t-teal)' : '#8a5a10' }}>
+          {delivered ? '✓ Entregado' : `📎 Entrega requerida · ${DELIVERY_LABEL[kind]}`}
+        </span>
+      </div>
+
+      {delivered && !editing ? (
+        <div className="flex items-center gap-2 flex-wrap">
+          {kind === 'TEXT'
+            ? <p className="text-sm taller-soft whitespace-pre-line flex-1 min-w-0">{mission.deliveryText}</p>
+            : kind === 'FILE'
+              ? <button onClick={() => openFile(mission.deliveryUrl)} className="text-sm font-semibold taller-mari hover:opacity-70 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> {mission.deliveryLabel || 'Ver archivo'}</button>
+              : <a href={mission.deliveryUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold taller-mari hover:opacity-70 flex items-center gap-1.5 break-all"><Link2 className="w-4 h-4 shrink-0" /> {mission.deliveryLabel || mission.deliveryUrl}</a>}
+          {canDeliver && <button onClick={() => { setEditing(true); setText(mission.deliveryText || '') }} className="ml-auto text-xs font-semibold taller-muted hover:opacity-70">Reemplazar</button>}
+        </div>
+      ) : canDeliver ? (
+        <div className="space-y-2">
+          {kind === 'TEXT' && (
+            <>
+              <textarea value={text} onChange={e => setText(e.target.value)} rows={3} maxLength={5000} placeholder="Escribe aquí la entrega…"
+                className="w-full text-sm rounded-lg p-2 resize-y" style={{ background: 'var(--t-raised)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
+              <button onClick={() => text.trim() && submit({ text })} disabled={busy || !text.trim()} className="taller-cta px-4 py-1.5 rounded-lg font-bold text-xs disabled:opacity-50">{busy ? '…' : 'Entregar'}</button>
+            </>
+          )}
+          {kind === 'LINK' && (
+            <div className="flex gap-2">
+              <input value={link} onChange={e => setLink(e.target.value)} placeholder="Pega el enlace (Drive, YouTube, etc.)…"
+                className="flex-1 text-sm rounded-lg px-2.5 py-1.5" style={{ background: 'var(--t-raised)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
+              <button onClick={() => link.trim() && submit({ url: link.trim() })} disabled={busy || !link.trim()} className="taller-cta px-4 rounded-lg font-bold text-xs disabled:opacity-50">{busy ? '…' : 'Entregar'}</button>
+            </div>
+          )}
+          {kind === 'FILE' && (
+            <>
+              <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.currentTarget.value = '' }} />
+              <button onClick={() => fileRef.current?.click()} disabled={busy} className="taller-cta px-4 py-1.5 rounded-lg font-bold text-xs disabled:opacity-50 flex items-center gap-1.5">
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />} Subir archivo
+              </button>
+            </>
+          )}
+          {editing && <button onClick={() => setEditing(false)} className="text-xs taller-muted ml-2">Cancelar</button>}
+        </div>
+      ) : (
+        <p className="text-sm taller-muted">Aún sin entregar.</p>
+      )}
+    </div>
+  )
+}
+
 function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [busy, setBusy] = useState(false)
   const [playing, setPlaying] = useState<string | null>(null)
@@ -490,6 +572,12 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
             </div>
           )}
 
+          {/* Misión de ENTREGA: se cumple entregando un producto, no con checkbox */}
+          {mission.deliverableKind && (
+            <MissionDelivery mission={mission} canDeliver={!!team.myEnrollmentId} onSaved={onSaved} />
+          )}
+
+          {!mission.deliverableKind && (
           <div className="mt-2 space-y-1.5">
             {acts.map((a: any) => a.classroomActivityId ? (
               <div key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
@@ -510,6 +598,7 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
               </label>
             )}
           </div>
+          )}
         </div>
       </div>
 
@@ -1742,7 +1831,19 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
         <span className={mission.complete ? 'text-emerald-500' : 'text-slate-300'}>{mission.complete ? '✔' : '○'}</span>
         <span className={`text-sm font-semibold ${mission.complete ? 'text-slate-500' : 'text-slate-700'}`}>{mission.title}</span>
         {mission.required && <span className="text-[10px] font-bold text-violet-600 uppercase">obligatoria</span>}
+        {mission.deliverableKind && <span className="text-[10px] font-bold uppercase" style={{ color: mission.deliveryState === 'SUBMITTED' ? '#0f9d8c' : '#C8811A' }}>{mission.deliveryState === 'SUBMITTED' ? '✓ entregado' : `📎 entrega · ${DELIVERY_LABEL[mission.deliverableKind]}`}</span>}
       </div>
+
+      {/* Entrega del equipo (solo lectura para el docente) */}
+      {mission.deliverableKind && mission.deliveryState === 'SUBMITTED' && (
+        <div className="mt-2 pl-6 text-xs">
+          {mission.deliverableKind === 'TEXT'
+            ? <p className="text-slate-600 whitespace-pre-line bg-slate-50 rounded-lg p-2">{mission.deliveryText}</p>
+            : mission.deliverableKind === 'FILE'
+              ? <button onClick={async () => { try { const { data } = await storageApi.resolveUrl(mission.deliveryUrl); window.open(data.url, '_blank', 'noopener') } catch { window.open(mission.deliveryUrl, '_blank') } }} className="font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" /> {mission.deliveryLabel || 'Ver archivo'}</button>
+              : <a href={mission.deliveryUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1 break-all"><Link2 className="w-3.5 h-3.5 shrink-0" /> {mission.deliveryLabel || mission.deliveryUrl}</a>}
+        </div>
+      )}
 
       {acts.length > 0 && (
         <div className="mt-2 space-y-1 pl-6">
@@ -1900,13 +2001,14 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [required, setRequired] = useState(true)
+  const [kind, setKind] = useState<'NONE' | 'FILE' | 'LINK' | 'TEXT'>('NONE')
   const [activities, setActivities] = useState<{ type: string; title: string }[]>([])
   const [busy, setBusy] = useState(false)
   const submit = async () => {
     if (!title.trim()) return
     setBusy(true)
     try {
-      const { data } = await abpApi.broadcastMission(projectId, { phase, title: title.trim(), description: description.trim() || undefined, required, activities: activities.filter(a => a.title.trim()) })
+      const { data } = await abpApi.broadcastMission(projectId, { phase, title: title.trim(), description: description.trim() || undefined, required, deliverableKind: kind === 'NONE' ? undefined : kind, activities: kind === 'NONE' ? activities.filter(a => a.title.trim()) : [] })
       onDone(data.count)
     } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
   }
@@ -1937,6 +2039,19 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
             Obligatoria para validar la fase
           </label>
           <div>
+            <label className="text-xs font-semibold text-slate-500">Tipo de misión</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {([['NONE', '📋 Trabajo libre'], ['FILE', '📎 Entrega · Archivo'], ['LINK', '🔗 Entrega · Enlace'], ['TEXT', '📝 Entrega · Texto']] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setKind(k)} className="text-left text-sm rounded-lg px-3 py-2 border transition"
+                  style={kind === k ? { background: 'color-mix(in srgb, #7C3AED 10%, white)', borderColor: '#7C3AED', color: '#5B21B6', fontWeight: 700 } : { background: 'white', borderColor: '#E2E8F0', color: '#475569' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {kind !== 'NONE' && <p className="text-xs text-slate-400 mt-1.5">El equipo cumple esta misión <b>entregando</b> el producto desde el ABP. Se marca completa al entregar.</p>}
+          </div>
+          {kind === 'NONE' && (
+          <div>
             <label className="text-xs font-semibold text-slate-500">Actividades (opcional)</label>
             <div className="space-y-2 mt-1">
               {activities.map((a, i) => (
@@ -1951,6 +2066,7 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
               <button onClick={() => setActivities(as => [...as, { type: 'READING', title: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
             </div>
           </div>
+          )}
         </div>
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-3 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
