@@ -19,6 +19,11 @@ type Ctx = { institutionId: string; userId: string };
 // Colores canónicos de post-it (gramática visual de la Biblia).
 const STICKY_COLORS = 5;
 
+// Campos ORGANIZATIVOS: cualquiera del equipo puede cambiarlos, porque acomodar
+// el trabajo común es colectivo (mover una tarjeta de columna, repartir quién
+// hace qué). El resto de campos son contenido y solo los edita quien los creó.
+const COLLAB_FIELDS = new Set(['col', 'owner']);
+
 @Injectable()
 export class TallerService {
   constructor(private readonly prisma: PrismaService) {}
@@ -217,10 +222,17 @@ export class TallerService {
     if (!obj) throw new NotFoundException('Objeto no encontrado');
     if (!obj.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(obj.teamId, ctx);
-    // permisos: el autor edita su contenido (texto y campos); cualquiera del equipo
-    // puede mover (organizar es colectivo); el docente puede todo.
-    const editingText = dto.text !== undefined || dto.fields !== undefined || dto.date !== undefined;
-    if (editingText && actor.role === 'student' && obj.authorId && obj.authorId !== actor.enrollmentId) {
+    // Permisos, según la naturaleza del cambio:
+    //  · CONTENIDO (texto, fecha, campos propios del objeto) → solo quien lo creó.
+    //  · ORGANIZAR (posición, columna del Kanban, responsable) → cualquiera del
+    //    equipo: acomodar el trabajo común es un acto colectivo.
+    //  · El docente puede todo.
+    const rawFieldKeys = (dto.fields && typeof dto.fields === 'object' && !Array.isArray(dto.fields))
+      ? Object.keys(dto.fields) : [];
+    const soloOrganizativos = rawFieldKeys.length > 0 && rawFieldKeys.every(k => COLLAB_FIELDS.has(k));
+    const editaContenido = dto.text !== undefined || dto.date !== undefined
+      || (rawFieldKeys.length > 0 && !soloOrganizativos);
+    if (editaContenido && actor.role === 'student' && obj.authorId && obj.authorId !== actor.enrollmentId) {
       throw new ForbiddenException('Solo quien la creó puede editarla');
     }
 
@@ -234,7 +246,19 @@ export class TallerService {
     if (dto.x !== undefined) data.x = clampPos(dto.x);
     if (dto.y !== undefined) data.y = clampPos(dto.y);
     if (dto.date !== undefined) { const d = cleanDate(dto.date); if (d) data.date = d; }
-    if (dto.fields !== undefined) { const f = cleanFields(dto.fields); data.fields = { ...(data.fields || {}), ...(f || {}) }; }
+    // Fusión de campos: un valor vacío LIMPIA la clave (p. ej. dejar una tarea sin
+    // responsable); el resto se conserva.
+    if (rawFieldKeys.length > 0) {
+      const merged: Record<string, string> = { ...(data.fields || {}) };
+      for (const k of rawFieldKeys.slice(0, 20)) {
+        const key = String(k).slice(0, 40);
+        if (!/^[a-zA-Z0-9_]+$/.test(key)) continue;
+        const v = (dto.fields as any)[k];
+        const s = v === null || v === undefined ? '' : String(v).trim().slice(0, 1000);
+        if (s) merged[key] = s; else delete merged[key];
+      }
+      data.fields = merged;
+    }
 
     const expected = dto.version ?? -1;
     const res = await this.prisma.tallerObject.updateMany({
@@ -242,7 +266,7 @@ export class TallerService {
       data: { data, version: { increment: 1 } },
     });
     if (res.count === 0) throw new BadRequestException('CONFLICTO: el objeto cambió, recarga');
-    if (editingText) {
+    if (editaContenido) {
       await this.emit(ctx, {
         type: 'object.Updated', actorRole: actor.role,
         teamId: obj.teamId, expeditionId: obj.expeditionId, instrumentId: obj.instrumentId,
