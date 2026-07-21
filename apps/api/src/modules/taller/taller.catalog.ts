@@ -38,21 +38,21 @@ export const INSTRUMENT_CATALOG: TallerInstrumentDef[] = [
   // ── 🔍 Investigar ──
   { key: 'GRAPH:MAPA_ACTORES', motor: 'GRAPH', dynamic: 'MAPA_ACTORES', name: 'Mapa de actores', emoji: '🗺️', intent: 'INVESTIGAR', available: false,
     description: '¿Quiénes están involucrados en el problema y cómo se relacionan entre sí?' },
-  { key: 'MEDIA:GALERIA', motor: 'MEDIA', dynamic: 'GALERIA', name: 'Galería de evidencias', emoji: '📷', intent: 'INVESTIGAR', available: false,
+  { key: 'MEDIA:GALERIA', motor: 'MEDIA', dynamic: 'GALERIA', name: 'Galería de evidencias', emoji: '📷', intent: 'INVESTIGAR', available: true,
     description: 'Fotos, videos y hallazgos del terreno, con autor y fecha.' },
-  { key: 'CARDS:REFERENCIAS', motor: 'CARDS', dynamic: 'REFERENCIAS', name: 'Gestor de referencias', emoji: '📑', intent: 'INVESTIGAR', available: false,
+  { key: 'CARDS:REFERENCIAS', motor: 'CARDS', dynamic: 'REFERENCIAS', name: 'Gestor de referencias', emoji: '📑', intent: 'INVESTIGAR', available: true,
     description: 'Fuentes reales con autor, año y cita — para leer e investigar de verdad, no solo pedirle a la IA.' },
   // ── 📊 Analizar ──
   { key: 'GRAPH:ARBOL_PROBLEMAS', motor: 'GRAPH', dynamic: 'ARBOL_PROBLEMAS', name: 'Árbol de problemas', emoji: '🌲', intent: 'ANALIZAR', available: true,
     description: 'El problema central como tronco: las causas se cuelgan y se ramifican hasta llegar a las raíces de fondo.' },
-  { key: 'GRAPH:CINCO_PORQUES', motor: 'GRAPH', dynamic: 'CINCO_PORQUES', name: '5 Porqués', emoji: '❓', intent: 'ANALIZAR', available: false,
+  { key: 'GRAPH:CINCO_PORQUES', motor: 'GRAPH', dynamic: 'CINCO_PORQUES', name: '5 Porqués', emoji: '❓', intent: 'ANALIZAR', available: true,
     description: 'Preguntar "¿por qué?" en cadena hasta encontrar la causa raíz.' },
   { key: 'MATRIX:IMPACTO_ESFUERZO', motor: 'MATRIX', dynamic: 'IMPACTO_ESFUERZO', name: 'Matriz impacto / esfuerzo', emoji: '📈', intent: 'ANALIZAR', available: false,
     description: 'Ubicar cada idea según cuánto cambia el problema y cuánto cuesta hacerla.' },
   // ── 🎯 Decidir ──
   { key: 'POLL:VOTACION', motor: 'POLL', dynamic: 'VOTACION', name: 'Votación', emoji: '🗳️', intent: 'DECIDIR', available: false,
     description: 'Elegir entre opciones con votos simples, ponderados o por ranking.' },
-  { key: 'CARDS:PROS_CONTRAS', motor: 'CARDS', dynamic: 'PROS_CONTRAS', name: 'Pros y contras', emoji: '⚖️', intent: 'DECIDIR', available: false,
+  { key: 'CARDS:PROS_CONTRAS', motor: 'CARDS', dynamic: 'PROS_CONTRAS', name: 'Pros y contras', emoji: '⚖️', intent: 'DECIDIR', available: true,
     description: 'Dos columnas para pesar una decisión antes de tomarla.' },
   // ── 🏗️ Planificar ──
   { key: 'FLOW:KANBAN', motor: 'FLOW', dynamic: 'KANBAN', name: 'Kanban', emoji: '📋', intent: 'PLANIFICAR', available: false,

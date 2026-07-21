@@ -4,6 +4,8 @@ import { abpApi, tallerApi } from '../lib/api'
 import TallerBoard from './TallerBoard'
 import TallerTree from './TallerTree'
 import TallerTimeline from './TallerTimeline'
+import TallerCards from './TallerCards'
+import TallerGallery from './TallerGallery'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Biblioteca de Instrumentos (Fase 5 del plan OS-first).
@@ -33,6 +35,8 @@ export function InstrumentRenderer({ instrumentKey, teamId, phase }: { instrumen
   if (motor === 'BOARD') return <TallerBoard teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'GRAPH') return <TallerTree teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'TIMELINE') return <TallerTimeline teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'CARDS') return <TallerCards teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'MEDIA') return <TallerGallery teamId={teamId} dynamic={dynamic} stationId={stationId} />
   return <div className="taller-card p-6 text-sm taller-muted">Este instrumento aún no está disponible.</div>
 }
 

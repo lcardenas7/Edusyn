@@ -2626,9 +2626,9 @@ export const tallerApi = {
   resolveInstrument: (data: { teamId: string; motor: string; dynamic?: string; stationId?: string; title?: string }) =>
     api.post<any>(`/taller/instruments/resolve`, data),
   instrumentState: (instrumentId: string) => api.get<any>(`/taller/instruments/${instrumentId}`),
-  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string }) =>
+  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string; fields?: Record<string, string> }) =>
     api.post<any>(`/taller/instruments/${instrumentId}/objects`, data),
-  updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string }) =>
+  updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string; fields?: Record<string, string> }) =>
     api.patch<any>(`/taller/objects/${objectId}`, data),
   deleteObject: (objectId: string) => api.delete(`/taller/objects/${objectId}`),
   toggleVote: (objectId: string) => api.post<{ voted: boolean }>(`/taller/objects/${objectId}/vote`),

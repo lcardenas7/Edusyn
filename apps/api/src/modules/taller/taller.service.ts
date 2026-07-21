@@ -165,7 +165,7 @@ export class TallerService {
   /** Crea un objeto en un instrumento (post-it, idea, nota…). Si trae `parentId`,
    * lo cuelga del padre con la arista 'deriva-de' (Árbol de Ideas / motor Graph).
    * Emite object.Created. */
-  async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string }) {
+  async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string; fields?: Record<string, any> }) {
     const inst = await this.prisma.tallerInstrument.findFirst({ where: { id: instrumentId, institutionId: ctx.institutionId } });
     if (!inst) throw new NotFoundException('Instrumento no encontrado');
     if (!inst.teamId) throw new BadRequestException('Instrumento sin equipo');
@@ -182,7 +182,7 @@ export class TallerService {
       if (!parent) throw new BadRequestException('La rama de la que cuelga ya no existe');
     }
 
-    const validTypes = ['PostIt', 'Idea', 'Note', 'Question'];
+    const validTypes = ['PostIt', 'Idea', 'Note', 'Question', 'Link', 'Evidence', 'Decision', 'Task'];
     const obj = await this.prisma.tallerObject.create({
       data: {
         institutionId: ctx.institutionId,
@@ -196,6 +196,7 @@ export class TallerService {
           colorId: Math.abs(Math.trunc(dto.colorId ?? 0)) % STICKY_COLORS,
           x: clampPos(dto.x), y: clampPos(dto.y),
           ...(cleanDate(dto.date) ? { date: cleanDate(dto.date) } : {}),
+          ...(cleanFields(dto.fields) ? { fields: cleanFields(dto.fields) } : {}),
         },
       },
     });
@@ -211,15 +212,16 @@ export class TallerService {
   /** Actualiza texto/posición/color con CAS por versión. version=-1 omite el chequeo
    * (drag: la posición del último drop gana). Emite object.Updated (con throttle
    * implícito: el front solo llama al soltar/confirmar, no por pixel). */
-  async updateObject(ctx: Ctx, objectId: string, dto: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string }) {
+  async updateObject(ctx: Ctx, objectId: string, dto: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string; fields?: Record<string, any> }) {
     const obj = await this.prisma.tallerObject.findFirst({ where: { id: objectId, institutionId: ctx.institutionId, deletedAt: null } });
     if (!obj) throw new NotFoundException('Objeto no encontrado');
     if (!obj.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(obj.teamId, ctx);
-    // permisos: el autor edita su texto; cualquiera del equipo puede mover; docente todo
-    const editingText = dto.text !== undefined;
+    // permisos: el autor edita su contenido (texto y campos); cualquiera del equipo
+    // puede mover (organizar es colectivo); el docente puede todo.
+    const editingText = dto.text !== undefined || dto.fields !== undefined || dto.date !== undefined;
     if (editingText && actor.role === 'student' && obj.authorId && obj.authorId !== actor.enrollmentId) {
-      throw new ForbiddenException('Solo el autor puede editar el texto');
+      throw new ForbiddenException('Solo quien la creó puede editarla');
     }
 
     const data: any = { ...(obj.data as any) };
@@ -232,6 +234,7 @@ export class TallerService {
     if (dto.x !== undefined) data.x = clampPos(dto.x);
     if (dto.y !== undefined) data.y = clampPos(dto.y);
     if (dto.date !== undefined) { const d = cleanDate(dto.date); if (d) data.date = d; }
+    if (dto.fields !== undefined) { const f = cleanFields(dto.fields); data.fields = { ...(data.fields || {}), ...(f || {}) }; }
 
     const expected = dto.version ?? -1;
     const res = await this.prisma.tallerObject.updateMany({
@@ -365,4 +368,19 @@ function cleanDate(v: any): string | null {
   const s = String(v ?? '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
   return Number.isNaN(new Date(s + 'T00:00:00Z').getTime()) ? null : s;
+}
+
+/** Campos estructurados de una ficha (motor Cards: Referencias, Pros/Contras…).
+ * Se guardan como texto plano acotado: el motor decide qué significa cada clave,
+ * el núcleo solo garantiza que sea dato sano. */
+function cleanFields(v: any): Record<string, string> | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v).slice(0, 20)) {
+    const key = String(k).slice(0, 40);
+    if (!/^[a-zA-Z0-9_]+$/.test(key)) continue;
+    const s = val === null || val === undefined ? '' : String(val).trim().slice(0, 1000);
+    if (s) out[key] = s;
+  }
+  return Object.keys(out).length ? out : null;
 }

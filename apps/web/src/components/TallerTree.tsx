@@ -48,6 +48,12 @@ const TREE_VARIANTS: Record<string, { heading: string; motorLabel: string; newRo
     branchPlaceholder: '¿Y esta causa por qué ocurre? (causa más profunda)',
     emptyMsg: 'Empiecen por las causas directas del problema 🌱', branchLabel: 'Profundizar',
   },
+  CINCO_PORQUES: {
+    heading: '❓ 5 Porqués', motorLabel: 'Motor Graph · 5 Porqués',
+    newRoot: 'Nuevo porqué', rootPlaceholder: 'Escriban el problema y pregúntense: ¿por qué ocurre?',
+    branchPlaceholder: '¿Y eso por qué? (encadenen hasta la causa raíz)',
+    emptyMsg: 'Escriban el problema y pregúntense “¿por qué?” cinco veces seguidas ❓', branchLabel: '¿Por qué?',
+  },
 }
 
 export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId }: { teamId: string; dynamic?: string; stationId?: string }) {
