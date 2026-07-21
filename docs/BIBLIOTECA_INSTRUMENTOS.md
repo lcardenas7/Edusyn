@@ -11,12 +11,16 @@
 
 ---
 
-> **ESTADO (2026-07-20): 10 de 15 instrumentos disponibles.** Motores construidos:
-> **Board · Graph · Timeline · Cards · Media**. Disponibles: Muro de ideas, Crazy 8,
-> SCAMPER, Árbol de Ideas, Árbol de Problemas, 5 Porqués, Gestor de Referencias,
-> Pros y contras, Galería de Evidencias, Línea de Tiempo. Faltan: Mapa de actores
-> (requiere ampliar Graph a conexiones libres), Matriz impacto/esfuerzo, Votación,
-> Kanban e Informe colaborativo.
+> **ESTADO (2026-07-20): 14 de 15 instrumentos disponibles.** Motores construidos:
+> **Board · Graph · Timeline · Cards · Media · Poll · Matrix · Flow (8).** Disponibles:
+> Muro de ideas, Crazy 8, SCAMPER, Árbol de Ideas, Árbol de Problemas, 5 Porqués,
+> Mapa de Actores, Gestor de Referencias, Galería de Evidencias, Pros y contras,
+> Votación, Matriz impacto/esfuerzo, Kanban, Línea de Tiempo. **Falta solo 1:**
+> Informe colaborativo (motor Doc, editor en tiempo real).
+>
+> El motor **Graph** hace ahora dos cosas: **árboles** (parentId → arista deriva-de:
+> Árbol de Ideas/Problemas, 5 Porqués) y **conexiones libres** entre cualquier par
+> con etiqueta propia (Mapa de Actores).
 
 ## 0. La regla (por qué no son "40 herramientas")
 No construimos 40 instrumentos: construimos **~11 Motores** sólidos, y cada instrumento es
