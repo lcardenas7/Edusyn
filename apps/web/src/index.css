@@ -63,6 +63,26 @@
 .taller-soft { color: var(--t-soft); }
 .taller-muted { color: var(--t-muted); }
 .taller-mari { color: var(--t-marigold); }
+/* Utilidades de migración: el módulo ABP hablaba el lenguaje visual anterior
+   (blanco/slate/violeta). Estas clases traducen bordes, superficies y acentos al
+   vocabulario del Taller sin reescribir cada estilo en línea. */
+.taller-line-c { border-color: var(--t-line); }
+.taller-line { border: 1px solid var(--t-line); }
+.taller-surface { background: var(--t-surface); }
+.taller-raised { background: var(--t-raised); }
+.taller-mari-bg { background: color-mix(in srgb, var(--t-marigold) 14%, transparent); }
+.taller-mari-solid { background: var(--t-marigold); }
+.taller-teal-solid { background: var(--t-teal); }
+.taller-line-bg { background: color-mix(in srgb, var(--t-line) 70%, transparent); }
+.taller-raised-95 { background: color-mix(in srgb, var(--t-raised) 95%, transparent); }
+.taller-raised-90 { background: color-mix(in srgb, var(--t-raised) 90%, transparent); }
+.taller-raised-80 { background: color-mix(in srgb, var(--t-raised) 80%, transparent); }
+.taller-accent { accent-color: var(--t-marigold); }
+.taller-cta-inline {
+  background: linear-gradient(180deg, var(--t-marigold-2), var(--t-marigold));
+  color: #241703;
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--t-marigold) 70%, transparent);
+}
 /* Post-it táctil: rotación base por inline-style, se endereza y eleva al pasar. */
 .taller-sticky { transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s; }
 .taller-sticky:hover { transform: rotate(0deg) translateY(-4px) !important; box-shadow: var(--t-shadow-md, 0 12px 30px -10px rgba(40, 34, 22, 0.28)); }

@@ -87,7 +87,7 @@ function Trail({ team, mini = false }: { team: any; mini?: boolean }) {
       <div className="flex gap-1">
         {PHASES.map(p => {
           const st = stateOf(team, p.n)
-          const cls = st === 'VALIDATED' ? 'bg-emerald-500' : st === 'IN_PROGRESS' || st === 'AWAITING' ? 'bg-amber-400' : 'bg-slate-200'
+          const cls = st === 'VALIDATED' ? 'taller-teal-solid' : st === 'IN_PROGRESS' || st === 'AWAITING' ? 'bg-amber-400' : 'taller-line-bg'
           return <div key={p.n} className={`flex-1 h-2 rounded-full ${cls}`} title={`Fase ${p.n}: ${p.name}`} />
         })}
       </div>
@@ -101,13 +101,13 @@ function Trail({ team, mini = false }: { team: any; mini?: boolean }) {
         const current = st === 'IN_PROGRESS' || st === 'AWAITING'
         return (
           <div key={p.n} className="flex flex-col items-center gap-1.5 flex-1 min-w-0 relative">
-            {i < PHASES.length - 1 && <div className={`absolute top-6 left-1/2 w-full h-0.5 ${done ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
+            {i < PHASES.length - 1 && <div className={`absolute top-6 left-1/2 w-full h-0.5 ${done ? 'bg-emerald-300' : 'taller-line-bg'}`} />}
             <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center text-xl border-2 ${
-              done ? 'bg-emerald-50 border-emerald-400' : current ? 'bg-amber-50 border-amber-400 ring-4 ring-amber-100' : 'bg-slate-50 border-slate-200'
+              done ? 'bg-emerald-50 border-emerald-400' : current ? 'bg-amber-50 border-amber-400 ring-4 ring-amber-100' : 'taller-surface taller-line-c'
             }`}>
-              {done ? <Check className="w-6 h-6 text-emerald-600" /> : st === 'LOCKED' ? <Lock className="w-4 h-4 text-slate-300" /> : p.icon}
+              {done ? <Check className="w-6 h-6 taller-ink" /> : st === 'LOCKED' ? <Lock className="w-4 h-4 taller-muted" /> : p.icon}
             </div>
-            <span className={`text-[11px] text-center leading-tight font-medium ${current ? 'text-amber-700' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
+            <span className={`text-[11px] text-center leading-tight font-medium ${current ? 'text-amber-700' : done ? 'text-emerald-700' : 'taller-muted'}`}>
               Fase {p.n}<br />{p.name}
             </span>
           </div>
@@ -272,7 +272,7 @@ function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
                     <div className={ci === 2 ? 'line-through taller-muted' : 'taller-ink'}>{t.text}</div>
                     <div className="text-xs taller-muted mt-1 flex items-center justify-between">
                       <span>👤 {t.ownerName}</span>
-                      {editable && <button onClick={() => act(abpApi.removeTask(team.id, t.id))} className="text-slate-300 hover:text-rose-500">✕</button>}
+                      {editable && <button onClick={() => act(abpApi.removeTask(team.id, t.id))} className="taller-muted hover:text-rose-500">✕</button>}
                     </div>
                     {editable && ci < 2 && <button onClick={() => act(abpApi.moveTask(team.id, t.id))} className="mt-1.5 text-xs rounded px-2 py-1 font-medium" style={{ background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)' }}>{ci === 0 ? 'Iniciar →' : 'Terminar ✔'}</button>}
                   </div>
@@ -330,7 +330,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
               <span>{e.kind === 'FILE' ? '📎' : '🔗'}</span>
               <button onClick={() => openStoredFile(e.url)} className="flex-1 text-left text-sm taller-mari hover:underline truncate">{e.label}</button>
               <span className="text-xs taller-muted">{e.byName}</span>
-              {editable && <button onClick={() => remove(e.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+              {editable && <button onClick={() => remove(e.id)} className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
             </div>
           ))}
         </div>
@@ -451,15 +451,15 @@ function AddActivityForm({ mission, onSaved }: { mission: any; onSaved: () => vo
     setBusy(true)
     try { await abpApi.addActivity(mission.id, { type, title: title.trim() }); setTitle(''); setOpen(false); onSaved() } finally { setBusy(false) }
   }
-  if (!open) return <button onClick={() => setOpen(true)} className="mt-2 text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
+  if (!open) return <button onClick={() => setOpen(true)} className="mt-2 text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
   return (
     <div className="mt-2 flex items-center gap-2 flex-wrap">
-      <select value={type} onChange={e => setType(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5">
+      <select value={type} onChange={e => setType(e.target.value)} className="text-xs rounded-lg taller-line px-2 py-1.5">
         {ACT_TYPES.map(t => <option key={t} value={t}>{ACT_LABEL[t]}</option>)}
       </select>
-      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Describe la actividad…" className="flex-1 min-w-[160px] text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
-      <button onClick={save} disabled={busy || !title.trim()} className="text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Añadir</button>
-      <button onClick={() => setOpen(false)} className="text-xs text-slate-400">Cancelar</button>
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Describe la actividad…" className="flex-1 min-w-[160px] text-sm rounded-lg taller-line px-2.5 py-1.5" />
+      <button onClick={save} disabled={busy || !title.trim()} className="text-xs font-bold taller-cta-inline rounded-lg px-3 py-1.5 disabled:opacity-40">Añadir</button>
+      <button onClick={() => setOpen(false)} className="text-xs taller-muted">Cancelar</button>
     </div>
   )
 }
@@ -590,10 +590,10 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
           {!mission.deliverableKind && (
           <div className="mt-2 space-y-1.5">
             {acts.map((a: any) => a.classroomActivityId ? (
-              <div key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+              <div key={a.id} className="flex items-center gap-2 rounded-lg taller-surface px-2.5 py-1.5">
                 <span className="text-base">{a.completed ? '✅' : '🎮'}</span>
-                <span className={`text-sm ${a.completed ? 'text-slate-400' : 'text-slate-700'}`}>{a.title}</span>
-                <button onClick={() => setPlaying(a.classroomActivityId)} className="ml-auto text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 hover:bg-violet-700">▶ {a.completed ? 'Repetir' : 'Jugar'}</button>
+                <span className={`text-sm ${a.completed ? 'taller-muted' : 'taller-ink'}`}>{a.title}</span>
+                <button onClick={() => setPlaying(a.classroomActivityId)} className="ml-auto text-xs font-bold taller-cta-inline rounded-lg px-3 py-1.5 ">▶ {a.completed ? 'Repetir' : 'Jugar'}</button>
               </div>
             ) : (
               // Indicación del docente: no es un checkbox que el equipo pueda marcar.
@@ -701,22 +701,22 @@ function FileViewerModal({ file, onClose }: { file: { title: string; url: string
   const pdf = !img && !embed && (file.type === 'PDF' || isPdfUrl(url) || isPdfUrl(file.url) || !isHttp(file.url))
   return (
     <div className="fixed inset-0 z-[110] flex flex-col bg-slate-900/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex items-center justify-between px-4 py-3 bg-white/95 border-b border-slate-200" onClick={e => e.stopPropagation()}>
-        <h3 className="font-bold text-slate-800 text-sm truncate">{file.title}</h3>
+      <div className="flex items-center justify-between px-4 py-3 taller-raised-95 border-b taller-line-c" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold taller-ink text-sm truncate">{file.title}</h3>
         <div className="flex items-center gap-2 shrink-0">
-          {url && <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">Abrir en pestaña ↗</button>}
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+          {url && <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-3 py-1.5 text-xs font-semibold taller-surface taller-soft rounded-lg hover:opacity-80">Abrir en pestaña ↗</button>}
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
         </div>
       </div>
       <div className="flex-1 p-3 sm:p-6 overflow-auto flex items-center justify-center" onClick={e => e.stopPropagation()}>
         {loading ? <Loader2 className="w-8 h-8 animate-spin text-white" />
           : embed ? <iframe src={embed} className="w-full max-w-4xl aspect-video rounded-xl bg-black" allowFullScreen title={file.title} />
-          : img ? <img src={url} alt={file.title} className="max-w-full max-h-full rounded-xl bg-white" />
-          : pdf ? <iframe src={url} className="w-full h-full min-h-[70vh] max-w-5xl rounded-xl bg-white" title={file.title} />
+          : img ? <img src={url} alt={file.title} className="max-w-full max-h-full rounded-xl taller-raised" />
+          : pdf ? <iframe src={url} className="w-full h-full min-h-[70vh] max-w-5xl rounded-xl taller-raised" title={file.title} />
           : (
-            <div className="bg-white rounded-2xl p-8 text-center max-w-sm">
-              <p className="text-slate-600 text-sm mb-4">Este tipo de archivo no se puede previsualizar aquí.</p>
-              <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold">Abrir / descargar</button>
+            <div className="taller-card rounded-2xl p-8 text-center max-w-sm">
+              <p className="taller-soft text-sm mb-4">Este tipo de archivo no se puede previsualizar aquí.</p>
+              <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-5 py-2.5 taller-cta-inline rounded-xl text-sm font-bold">Abrir / descargar</button>
             </div>
           )}
       </div>
@@ -733,7 +733,7 @@ function PresentationView({ project }: { project: any }) {
       <div className="relative rounded-2xl overflow-hidden">
         {p.banner
           ? <img src={p.banner} alt="" className="w-full h-44 sm:h-56 object-cover" />
-          : <div className="w-full h-44 sm:h-56 bg-gradient-to-br from-violet-500 to-fuchsia-500" />}
+          : <div className="w-full h-44 sm:h-56 bg-gradient-to-br taller-crest" />}
         <div className="absolute inset-0 bg-black/35 flex items-end p-5">
           <div>
             <div className="text-white/80 text-xs font-bold uppercase tracking-wide">Expedición ABP</div>
@@ -743,18 +743,18 @@ function PresentationView({ project }: { project: any }) {
       </div>
 
       {p.teacherMessage && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Mensaje del docente</div>
-          <p className="text-slate-700 whitespace-pre-line">{p.teacherMessage}</p>
+        <div className="taller-card p-5">
+          <div className="text-xs font-bold uppercase tracking-wide taller-mari mb-1">Mensaje del docente</div>
+          <p className="taller-ink whitespace-pre-line">{p.teacherMessage}</p>
         </div>
       )}
 
       {embed
-        ? <div className="rounded-2xl overflow-hidden border border-slate-200 aspect-video"><iframe src={embed} className="w-full h-full" allowFullScreen title="Video de bienvenida" /></div>
-        : p.videoUrl ? <a href={p.videoUrl} target="_blank" rel="noreferrer" className="block bg-white rounded-2xl border border-slate-200 p-4 font-semibold text-violet-600 hover:bg-violet-50">▶ Ver video de bienvenida</a> : null}
+        ? <div className="rounded-2xl overflow-hidden border taller-line-c aspect-video"><iframe src={embed} className="w-full h-full" allowFullScreen title="Video de bienvenida" /></div>
+        : p.videoUrl ? <a href={p.videoUrl} target="_blank" rel="noreferrer" className="block taller-card p-4 font-semibold taller-mari hover:opacity-90">▶ Ver video de bienvenida</a> : null}
 
       {project.challenge && (
-        <div className="bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-6 text-white">
+        <div className="taller-card taller-mission rounded-2xl p-6">
           <div className="text-xs font-bold uppercase tracking-wide opacity-80 mb-1">🎯 El gran reto</div>
           <p className="text-lg font-bold">{project.challenge}</p>
           <p className="text-sm opacity-80 mt-2">Cada equipo encontrará SU propia problemática dentro de este reto.</p>
@@ -762,11 +762,11 @@ function PresentationView({ project }: { project: any }) {
       )}
 
       {p.instructions?.length > 0 && (
-        <div className="bg-white rounded-2xl border-2 border-violet-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">📋 ¿Qué deben hacer?</h4>
+        <div className="taller-card taller-mission p-5">
+          <h4 className="font-bold taller-ink mb-3">📋 ¿Qué deben hacer?</h4>
           <ol className="space-y-2">{p.instructions.map((s: string, i: number) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
-              <span className="w-6 h-6 shrink-0 rounded-full bg-violet-100 text-violet-700 font-bold flex items-center justify-center text-xs">{i + 1}</span>
+            <li key={i} className="flex items-start gap-3 text-sm taller-ink">
+              <span className="w-6 h-6 shrink-0 rounded-full taller-mari-bg taller-mari font-bold flex items-center justify-center text-xs">{i + 1}</span>
               <span className="pt-0.5">{s}</span>
             </li>
           ))}</ol>
@@ -775,59 +775,59 @@ function PresentationView({ project }: { project: any }) {
 
       {(p.context || p.why) && (
         <div className="grid sm:grid-cols-2 gap-3">
-          {p.context && <div className="bg-white rounded-2xl border border-slate-200 p-5"><div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Contexto</div><p className="text-sm text-slate-700 whitespace-pre-line">{p.context}</p></div>}
-          {p.why && <div className="bg-white rounded-2xl border border-slate-200 p-5"><div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">¿Por qué es importante?</div><p className="text-sm text-slate-700 whitespace-pre-line">{p.why}</p></div>}
+          {p.context && <div className="taller-card p-5"><div className="text-xs font-bold uppercase tracking-wide taller-soft mb-1">Contexto</div><p className="text-sm taller-ink whitespace-pre-line">{p.context}</p></div>}
+          {p.why && <div className="taller-card p-5"><div className="text-xs font-bold uppercase tracking-wide taller-soft mb-1">¿Por qué es importante?</div><p className="text-sm taller-ink whitespace-pre-line">{p.why}</p></div>}
         </div>
       )}
 
       {p.skills?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">📚 Lo que aprenderás</h4>
-          <div className="grid sm:grid-cols-2 gap-2">{p.skills.map((s: string, i: number) => <div key={i} className="flex items-center gap-2 text-sm text-slate-700"><Check className="w-4 h-4 text-emerald-500 shrink-0" />{s}</div>)}</div>
+        <div className="taller-card p-5">
+          <h4 className="font-bold taller-ink mb-3">📚 Lo que aprenderás</h4>
+          <div className="grid sm:grid-cols-2 gap-2">{p.skills.map((s: string, i: number) => <div key={i} className="flex items-center gap-2 text-sm taller-ink"><Check className="w-4 h-4 taller-mari shrink-0" />{s}</div>)}</div>
         </div>
       )}
 
       {/* Cómo funciona — estático desde las 6 fases */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h4 className="font-bold text-slate-800 mb-3">🧭 Cómo funciona la expedición</h4>
+      <div className="taller-card p-5">
+        <h4 className="font-bold taller-ink mb-3">🧭 Cómo funciona la expedición</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {PHASES.map(ph => (
-            <div key={ph.n} className="rounded-xl border border-slate-200 p-3">
+            <div key={ph.n} className="rounded-xl border taller-line-c p-3">
               <div className="text-2xl">{ph.icon}</div>
-              <div className="text-xs font-bold text-violet-600 mt-1">Paso {ph.n}</div>
-              <div className="text-sm font-semibold text-slate-700">{ph.name}</div>
+              <div className="text-xs font-bold taller-mari mt-1">Paso {ph.n}</div>
+              <div className="text-sm font-semibold taller-ink">{ph.name}</div>
             </div>
           ))}
         </div>
       </div>
 
       {p.rules?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">📋 Reglas del proyecto</h4>
-          <ul className="space-y-1.5">{p.rules.map((r: string, i: number) => <li key={i} className="flex items-start gap-2 text-sm text-slate-700"><span className="text-violet-500 mt-0.5">•</span>{r}</li>)}</ul>
+        <div className="taller-card p-5">
+          <h4 className="font-bold taller-ink mb-3">📋 Reglas del proyecto</h4>
+          <ul className="space-y-1.5">{p.rules.map((r: string, i: number) => <li key={i} className="flex items-start gap-2 text-sm taller-ink"><span className="taller-mari mt-0.5">•</span>{r}</li>)}</ul>
         </div>
       )}
 
       {p.timeline?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">📅 Cronograma</h4>
+        <div className="taller-card p-5">
+          <h4 className="font-bold taller-ink mb-3">📅 Cronograma</h4>
           <div className="space-y-2">{p.timeline.map((t: any, i: number) => (
             <div key={i} className="flex items-center gap-3">
-              <div className="w-28 shrink-0 text-xs font-bold text-violet-600">{t.label}</div>
-              <div className="flex-1 h-3 bg-violet-500 rounded-full" />
-              <div className="text-xs text-slate-600 w-40 truncate text-right">{t.detail}</div>
+              <div className="w-28 shrink-0 text-xs font-bold taller-mari">{t.label}</div>
+              <div className="flex-1 h-3 taller-mari-solid rounded-full" />
+              <div className="text-xs taller-soft w-40 truncate text-right">{t.detail}</div>
             </div>
           ))}</div>
         </div>
       )}
 
       {p.faq?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">❓ Preguntas frecuentes</h4>
+        <div className="taller-card p-5">
+          <h4 className="font-bold taller-ink mb-3">❓ Preguntas frecuentes</h4>
           <div className="space-y-3">{p.faq.map((f: any, i: number) => (
             <div key={i}>
-              <p className="text-sm font-semibold text-slate-700">{f.q}</p>
-              <p className="text-sm text-slate-500 whitespace-pre-line">{f.a}</p>
+              <p className="text-sm font-semibold taller-ink">{f.q}</p>
+              <p className="text-sm taller-soft whitespace-pre-line">{f.a}</p>
             </div>
           ))}</div>
         </div>
@@ -839,8 +839,8 @@ function PresentationView({ project }: { project: any }) {
 function LineListInput({ label, value, onChange, placeholder }: { label: string; value: string[]; onChange: (v: string[]) => void; placeholder: string }) {
   return (
     <div>
-      <label className="text-xs font-semibold text-slate-500">{label} <span className="text-slate-300">(uno por línea)</span></label>
-      <textarea value={(value || []).join('\n')} onChange={e => onChange(e.target.value.split('\n'))} rows={4} placeholder={placeholder} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+      <label className="text-xs font-semibold taller-soft">{label} <span className="taller-muted">(uno por línea)</span></label>
+      <textarea value={(value || []).join('\n')} onChange={e => onChange(e.target.value.split('\n'))} rows={4} placeholder={placeholder} className="w-full border taller-line-c rounded-xl px-3 py-2 text-sm resize-none mt-1" />
     </div>
   )
 }
@@ -890,30 +890,30 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
     { key: 'cronograma', icon: '📅', title: 'Cronograma', hint: 'La línea de tiempo de la expedición', filled: timeline.some(t => t.label || t.detail) },
     { key: 'faq', icon: '❓', title: 'Preguntas frecuentes', hint: 'Respuestas a lo que siempre preguntan', filled: faq.some(f => f.q || f.a) },
   ]
-  const inputCls = 'w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400'
+  const inputCls = 'w-full border taller-line-c rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 taller-line-c'
 
   return (
-    <div className="pb-20">
+    <div className="pb-20 taller">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
-        <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
-        <span className="text-xs text-slate-400">{sections.filter(s => s.filled).length}/{sections.length} secciones con contenido</span>
+        <button onClick={onClose} className="flex items-center gap-1 text-sm taller-soft hover:taller-ink"><ChevronLeft className="w-4 h-4" /> Volver</button>
+        <span className="text-xs taller-muted">{sections.filter(s => s.filled).length}/{sections.length} secciones con contenido</span>
       </div>
-      <h3 className="text-xl font-bold text-slate-800 mb-1">✏️ Portada de la expedición</h3>
-      <p className="text-sm text-slate-400 mb-4">Esto es lo primero que verán tus estudiantes. Completa las secciones que quieras — todas son opcionales.</p>
+      <h3 className="text-xl font-bold taller-ink mb-1">✏️ Portada de la expedición</h3>
+      <p className="text-sm taller-muted mb-4">Esto es lo primero que verán tus estudiantes. Completa las secciones que quieras — todas son opcionales.</p>
 
       <div className="space-y-2">
         {sections.map(s => (
-          <div key={s.key} className={`bg-white rounded-2xl border transition-colors ${openSection === s.key ? 'border-violet-300 shadow-sm' : 'border-slate-200'}`}>
+          <div key={s.key} className={`taller-card rounded-2xl border transition-colors ${openSection === s.key ? 'taller-mission' : 'taller-line-c'}`}>
             <button onClick={() => setOpenSection(openSection === s.key ? '' : s.key)} className="w-full flex items-center gap-3 p-4 text-left">
               <span className="text-xl">{s.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-800 text-sm">{s.title}</span>
-                  <span className={`w-2 h-2 rounded-full ${s.filled ? 'bg-violet-500' : 'bg-slate-200'}`} />
+                  <span className="font-bold taller-ink text-sm">{s.title}</span>
+                  <span className={`w-2 h-2 rounded-full ${s.filled ? 'taller-mari-solid' : 'taller-line-bg'}`} />
                 </div>
-                <p className="text-xs text-slate-400 truncate">{s.hint}</p>
+                <p className="text-xs taller-muted truncate">{s.hint}</p>
               </div>
-              <ChevronLeft className={`w-4 h-4 text-slate-300 transition-transform ${openSection === s.key ? 'rotate-90' : '-rotate-90'}`} />
+              <ChevronLeft className={`w-4 h-4 taller-muted transition-transform ${openSection === s.key ? 'rotate-90' : '-rotate-90'}`} />
             </button>
 
             {openSection === s.key && (
@@ -921,16 +921,16 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
                 {s.key === 'reto' && (
                   <>
                     <div>
-                      <label className="text-xs font-semibold text-slate-500">El gran reto (lo ven todos los equipos)</label>
+                      <label className="text-xs font-semibold taller-soft">El gran reto (lo ven todos los equipos)</label>
                       <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className={`${inputCls} resize-none mt-1`} />
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-semibold text-slate-500">Contexto</label>
+                        <label className="text-xs font-semibold taller-soft">Contexto</label>
                         <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} placeholder="De dónde nace este reto…" className={`${inputCls} resize-none mt-1`} />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
+                        <label className="text-xs font-semibold taller-soft">¿Por qué es importante?</label>
                         <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} placeholder="Qué cambia si lo resuelven…" className={`${inputCls} resize-none mt-1`} />
                       </div>
                     </div>
@@ -939,7 +939,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
 
                 {s.key === 'instrucciones' && (
                   <>
-                    <p className="text-xs text-slate-400 -mt-1">Escribe en pasos lo que cada equipo debe hacer en esta expedición. Aparecerá numerado en la portada del estudiante.</p>
+                    <p className="text-xs taller-muted -mt-1">Escribe en pasos lo que cada equipo debe hacer en esta expedición. Aparecerá numerado en la portada del estudiante.</p>
                     <LineListInput label="Pasos / tareas" value={instructions} onChange={setInstructions} placeholder={'Formen su equipo y elijan un nombre.\nInvestiguen un problema real de la institución.\nDiseñen y construyan un prototipo.\nPreparen la presentación final.'} />
                   </>
                 )}
@@ -947,20 +947,20 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
                 {s.key === 'portada' && (
                   <>
                     <div>
-                      <label className="text-xs font-semibold text-slate-500">Banner</label>
+                      <label className="text-xs font-semibold taller-soft">Banner</label>
                       <div className="flex gap-2 mt-1">
                         <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="Pega la URL de una imagen…" className={inputCls} />
                         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
-                        <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"><Paperclip className="w-4 h-4" /> Subir</button>
+                        <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 taller-surface taller-ink rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"><Paperclip className="w-4 h-4" /> Subir</button>
                       </div>
                       {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo)</label>
+                      <label className="text-xs font-semibold taller-soft">Video de bienvenida (YouTube/Vimeo)</label>
                       <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className={`${inputCls} mt-1`} />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-slate-500">Tu mensaje para los estudiantes</label>
+                      <label className="text-xs font-semibold taller-soft">Tu mensaje para los estudiantes</label>
                       <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} placeholder="¡Bienvenidos a la expedición! …" className={`${inputCls} resize-none mt-1`} />
                     </div>
                   </>
@@ -977,12 +977,12 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
                   <div className="space-y-2">
                     {timeline.map((t, i) => (
                       <div key={i} className="flex gap-2">
-                        <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                        <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Encontrar el problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                        <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                        <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border taller-line-c rounded-lg px-2 py-1.5 text-sm" />
+                        <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Encontrar el problema" className="flex-1 border taller-line-c rounded-lg px-2 py-1.5 text-sm" />
+                        <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
-                    <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
+                    <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
                   </div>
                 )}
 
@@ -991,13 +991,13 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
                     {faq.map((f, i) => (
                       <div key={i} className="flex gap-2 items-start">
                         <div className="flex-1 space-y-1">
-                          <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                          <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+                          <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border taller-line-c rounded-lg px-2 py-1.5 text-sm" />
+                          <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border taller-line-c rounded-lg px-2 py-1.5 text-sm resize-none" />
                         </div>
-                        <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="taller-muted hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
-                    <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+                    <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
                   </div>
                 )}
               </div>
@@ -1007,10 +1007,10 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
       </div>
 
       {/* Barra de guardado fija */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 z-50 taller-raised-90 backdrop-blur border-t taller-line-c px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-          <button onClick={save} disabled={busy} className="px-6 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 hover:bg-violet-700">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm taller-soft hover:taller-surface rounded-xl">Cancelar</button>
+          <button onClick={save} disabled={busy} className="px-6 py-2.5 taller-cta-inline rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 ">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
         </div>
       </div>
     </div>
@@ -1058,29 +1058,29 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
   return (
     <div className="space-y-3">
       {viewer && <FileViewerModal file={viewer} onClose={() => setViewer(null)} />}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h4 className="font-bold text-slate-800 mb-3">📚 Recursos del proyecto</h4>
-        {items.length === 0 ? <p className="text-sm text-slate-400">Aún no hay recursos.</p> : (
+      <div className="taller-card p-5">
+        <h4 className="font-bold taller-ink mb-3">📚 Recursos del proyecto</h4>
+        {items.length === 0 ? <p className="text-sm taller-muted">Aún no hay recursos.</p> : (
           <div className="space-y-2">{items.map(r => (
-            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3 hover:border-violet-200 transition-colors">
+            <div key={r.id} className="flex items-center gap-3 rounded-xl taller-line p-3  transition-colors">
               <span className="text-lg">{RES_ICON[r.type] || '📎'}</span>
               <button onClick={() => open(r)} className="flex-1 min-w-0 text-left">
-                <span className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</span>
-                {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
+                <span className="text-sm font-semibold taller-mari hover:underline truncate block">{r.title}</span>
+                {r.description && <p className="text-xs taller-muted truncate">{r.description}</p>}
               </button>
-              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
+              {canManage && <button onClick={() => del(r.id)} className="taller-muted hover:text-rose-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
             </div>
           ))}</div>
         )}
       </div>
       {canManage && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
-          <h5 className="font-bold text-slate-700 text-sm">Añadir recurso</h5>
-          <p className="text-xs text-slate-400">Pega un enlace (o video de YouTube) y pulsa Añadir, o sube un archivo. El tipo se detecta solo.</p>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título (opcional para archivos)" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <div className="taller-card p-5 space-y-2">
+          <h5 className="font-bold taller-ink text-sm">Añadir recurso</h5>
+          <p className="text-xs taller-muted">Pega un enlace (o video de YouTube) y pulsa Añadir, o sube un archivo. El tipo se detecta solo.</p>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título (opcional para archivos)" className="w-full border taller-line-c rounded-lg px-3 py-2 text-sm" />
           <div className="flex gap-2 flex-wrap">
-            <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="https://…" className="flex-1 min-w-[160px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={add} disabled={busy || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Añadir</button>
+            <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="https://…" className="flex-1 min-w-[160px] border taller-line-c rounded-lg px-3 py-2 text-sm" />
+            <button onClick={add} disabled={busy || !url.trim()} className="px-4 taller-cta-inline rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Añadir</button>
             <input type="file" id={`res-file-${projectId}`} className="hidden" onChange={async (e) => {
               const f = e.target.files?.[0]; if (!f) return;
               setBusy(true);
@@ -1090,7 +1090,7 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
                 if (fileUrl) { await abpApi.addResource(projectId, { type: inferResourceType(f.name), title: title.trim() || stripExt(f.name), url: fileUrl }); setTitle(''); setUrl(''); load(); }
               } catch { alert('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
             }} />
-            <button onClick={() => document.getElementById(`res-file-${projectId}`)?.click()} disabled={busy} className="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
+            <button onClick={() => document.getElementById(`res-file-${projectId}`)?.click()} disabled={busy} className="px-4 taller-surface hover:opacity-80 taller-ink rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
           </div>
         </div>
       )}
@@ -1112,26 +1112,26 @@ function AnnouncementsView({ projectId, canManage }: { projectId: string; canMan
   return (
     <div className="space-y-3">
       {canManage && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h5 className="font-bold text-slate-700 text-sm mb-2">📢 Publicar anuncio</h5>
-          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="Recuerden que el viernes se revisa la Fase 2…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none" />
-          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Publicar</button></div>
+        <div className="taller-card p-5">
+          <h5 className="font-bold taller-ink text-sm mb-2">📢 Publicar anuncio</h5>
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="Recuerden que el viernes se revisa la Fase 2…" className="w-full border taller-line-c rounded-xl px-3 py-2 text-sm resize-none" />
+          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 taller-cta-inline rounded-lg text-sm font-semibold disabled:opacity-50">Publicar</button></div>
         </div>
       )}
       {items.length === 0 ? <Empty msg="No hay anuncios todavía." /> : (
         <div className="space-y-2">{items.map(a => (
-          <div key={a.id} className={`rounded-2xl border p-4 ${a.pinned ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'}`}>
+          <div key={a.id} className={`rounded-2xl border p-4 ${a.pinned ? 'border-amber-300 bg-amber-50/50' : 'taller-line-c taller-raised'}`}>
             <div className="flex items-start gap-2">
               {a.pinned && <span className="text-amber-500">📌</span>}
-              <p className="flex-1 text-sm text-slate-700 whitespace-pre-line">{a.content}</p>
+              <p className="flex-1 text-sm taller-ink whitespace-pre-line">{a.content}</p>
               {canManage && (
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => pin(a)} title={a.pinned ? 'Quitar fijado' : 'Fijar'} className={`text-sm ${a.pinned ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'}`}>📌</button>
-                  <button onClick={() => del(a.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => pin(a)} title={a.pinned ? 'Quitar fijado' : 'Fijar'} className={`text-sm ${a.pinned ? 'text-amber-500' : 'taller-muted hover:text-amber-500'}`}>📌</button>
+                  <button onClick={() => del(a.id)} className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </div>
               )}
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">{new Date(a.createdAt).toLocaleDateString()}</div>
+            <div className="text-[11px] taller-muted mt-1">{new Date(a.createdAt).toLocaleDateString()}</div>
           </div>
         ))}</div>
       )}
@@ -1153,20 +1153,20 @@ function LogbookView({ teamId, currentPhase, readOnly }: { teamId: string; curre
   return (
     <div className="space-y-3">
       {!readOnly && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="¿Qué pasó hoy en la expedición? (una nota corta)" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none" />
-          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">📔 Anotar en bitácora</button></div>
+        <div className="taller-card p-4">
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="¿Qué pasó hoy en la expedición? (una nota corta)" className="w-full border taller-line-c rounded-xl px-3 py-2 text-sm resize-none" />
+          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 taller-cta-inline rounded-lg text-sm font-semibold disabled:opacity-50">📔 Anotar en bitácora</button></div>
         </div>
       )}
-      {items.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">La bitácora está vacía. Anoten su primer paso.</p> : (
+      {items.length === 0 ? <p className="text-sm taller-muted text-center py-6">La bitácora está vacía. Anoten su primer paso.</p> : (
         <div className="space-y-2">{items.map(e => (
-          <div key={e.id} className="bg-white rounded-xl border border-slate-200 p-3">
-            <p className="text-sm text-slate-700 whitespace-pre-line">{e.content}</p>
-            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+          <div key={e.id} className="taller-card rounded-xl border taller-line-c p-3">
+            <p className="text-sm taller-ink whitespace-pre-line">{e.content}</p>
+            <div className="flex items-center gap-2 mt-1.5 text-[11px] taller-muted">
               <span className="font-semibold">{e.authorName}</span>
               {e.phase && <span>· Fase {e.phase}</span>}
               <span>· {new Date(e.createdAt).toLocaleDateString()}</span>
-              {!readOnly && <button onClick={() => del(e.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+              {!readOnly && <button onClick={() => del(e.id)} className="ml-auto taller-muted hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
             </div>
           </div>
         ))}</div>
@@ -1175,7 +1175,7 @@ function LogbookView({ teamId, currentPhase, readOnly }: { teamId: string; curre
   )
 }
 
-const IMPACT_META: Record<string, [string, string]> = { LOW: ['Bajo', 'bg-slate-100 text-slate-500'], MEDIUM: ['Medio', 'bg-sky-100 text-sky-700'], HIGH: ['Alto', 'bg-emerald-100 text-emerald-700'] }
+const IMPACT_META: Record<string, [string, string]> = { LOW: ['Bajo', 'taller-surface taller-soft'], MEDIUM: ['Medio', 'bg-sky-100 text-sky-700'], HIGH: ['Alto', 'bg-emerald-100 text-emerald-700'] }
 function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; currentPhase?: number; readOnly?: boolean }) {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -1206,39 +1206,39 @@ function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; c
   return (
     <div className="space-y-3">
       {!readOnly && (open ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="¿Qué descubrieron? (título)" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Descríbanlo: qué aprendieron y por qué importa." className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none" />
+        <div className="taller-card p-4 space-y-2">
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="¿Qué descubrieron? (título)" className="w-full border taller-line-c rounded-lg px-3 py-2 text-sm" />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Descríbanlo: qué aprendieron y por qué importa." className="w-full border taller-line-c rounded-lg px-3 py-2 text-sm resize-none" />
           <div className="flex gap-2 items-center flex-wrap">
-            <span className="text-xs font-semibold text-slate-500">Impacto:</span>
-            {['LOW', 'MEDIUM', 'HIGH'].map(v => <button key={v} onClick={() => setImpact(v)} className={`text-xs font-semibold rounded-full px-2.5 py-1 ${impact === v ? IMPACT_META[v][1] + ' ring-2 ring-offset-1 ring-violet-300' : 'bg-slate-100 text-slate-400'}`}>{IMPACT_META[v][0]}</button>)}
+            <span className="text-xs font-semibold taller-soft">Impacto:</span>
+            {['LOW', 'MEDIUM', 'HIGH'].map(v => <button key={v} onClick={() => setImpact(v)} className={`text-xs font-semibold rounded-full px-2.5 py-1 ${impact === v ? IMPACT_META[v][1] + ' ring-2 ring-offset-1 ring-amber-300' : 'taller-surface taller-muted'}`}>{IMPACT_META[v][0]}</button>)}
           </div>
           <div className="flex gap-2">
-            <input value={evUrl} onChange={e => { setEvUrl(e.target.value); setEvKind('LINK') }} placeholder="Evidencia: enlace (opcional)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <input value={evUrl} onChange={e => { setEvUrl(e.target.value); setEvKind('LINK') }} placeholder="Evidencia: enlace (opcional)" className="flex-1 border taller-line-c rounded-lg px-3 py-2 text-sm" />
             <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadEv(f); e.currentTarget.value = '' }} />
-            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 taller-surface taller-ink rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
           </div>
-          {evUrl && <p className="text-xs text-slate-400 truncate">Evidencia: {evUrl}</p>}
+          {evUrl && <p className="text-xs taller-muted truncate">Evidencia: {evUrl}</p>}
           <div className="flex justify-end gap-2">
-            <button onClick={reset} className="px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
-            <button onClick={add} disabled={busy || !title.trim() || !description.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Guardar descubrimiento</button>
+            <button onClick={reset} className="px-3 py-2 text-sm taller-soft hover:taller-surface rounded-lg">Cancelar</button>
+            <button onClick={add} disabled={busy || !title.trim() || !description.trim()} className="px-4 py-2 taller-cta-inline rounded-lg text-sm font-semibold disabled:opacity-50">Guardar descubrimiento</button>
           </div>
         </div>
       ) : (
-        <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Registrar un descubrimiento</button>
+        <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed taller-line-c text-sm font-semibold taller-muted  hover:opacity-70 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Registrar un descubrimiento</button>
       ))}
-      {items.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">Aún no hay descubrimientos. Registren lo que van aprendiendo.</p> : (
+      {items.length === 0 ? <p className="text-sm taller-muted text-center py-6">Aún no hay descubrimientos. Registren lo que van aprendiendo.</p> : (
         <div className="grid sm:grid-cols-2 gap-3">{items.map(d => (
-          <div key={d.id} className="bg-white rounded-2xl border border-slate-200 p-4">
+          <div key={d.id} className="taller-card p-4">
             <div className="flex items-start justify-between gap-2">
-              <h5 className="font-bold text-slate-800">💡 {d.title}</h5>
+              <h5 className="font-bold taller-ink">💡 {d.title}</h5>
               <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0 ${IMPACT_META[d.impact]?.[1] || ''}`}>Impacto {IMPACT_META[d.impact]?.[0] || d.impact}</span>
             </div>
-            <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{d.description}</p>
-            {d.evidenceUrl && <button onClick={() => openStoredFile(d.evidenceUrl)} className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline mt-2">{d.evidenceKind === 'FILE' ? '📎' : '🔗'} Ver evidencia</button>}
-            <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-400">
+            <p className="text-sm taller-soft mt-1 whitespace-pre-line">{d.description}</p>
+            {d.evidenceUrl && <button onClick={() => openStoredFile(d.evidenceUrl)} className="inline-flex items-center gap-1 text-xs taller-mari hover:underline mt-2">{d.evidenceKind === 'FILE' ? '📎' : '🔗'} Ver evidencia</button>}
+            <div className="flex items-center gap-2 mt-2 text-[11px] taller-muted">
               <span className="font-semibold">{d.authorName}</span><span>· Fase {d.phase}</span>
-              {!readOnly && <button onClick={() => del(d.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+              {!readOnly && <button onClick={() => del(d.id)} className="ml-auto taller-muted hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
             </div>
           </div>
         ))}</div>
@@ -1383,7 +1383,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   // Ritual de fundación: hasta que el equipo elija nombre + emblema, no se trabaja.
   if (team.identityState === 'DRAFT') {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 taller">
         {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
         <FoundTeam team={team} onDone={load} />
       </div>
@@ -1621,10 +1621,10 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       {showManual && (
         <div className="fixed inset-0 z-[100] flex justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
-          <div className="relative w-full max-w-md bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
-            <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="font-black text-slate-800 text-lg">Manual de Expedición</h3>
-              <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+          <div className="relative w-full max-w-md taller-surface h-full shadow-2xl overflow-y-auto border-l taller-line-c animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 taller-raised-80 backdrop-blur-md border-b taller-line-c px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="font-black taller-ink text-lg">Manual de Expedición</h3>
+              <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
             </div>
             <div className="p-6">
               <PresentationView project={pres} />
@@ -1648,17 +1648,17 @@ function TeacherView({ classroomId, projects, reload }: { classroomId: string; p
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 taller">
       <CreateProject classroomId={classroomId} onCreated={reload} />
       {projects.length === 0 ? (
         <Empty msg="Aún no has creado ninguna Expedición ABP." />
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
           {projects.map(p => (
-            <button key={p.id} onClick={() => setSelected(p.id)} className="text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-violet-300 p-4 transition-colors">
-              <h3 className="font-bold text-slate-800">🧭 {p.title}</h3>
-              {p.challenge && <p className="text-sm text-slate-500 mt-1 line-clamp-2">{p.challenge}</p>}
-              <div className="mt-3 flex items-center gap-1.5 text-sm text-violet-600 font-medium"><Users className="w-4 h-4" /> {p._count?.teams ?? 0} equipo(s)</div>
+            <button key={p.id} onClick={() => setSelected(p.id)} className="text-left taller-card p-4 hover:shadow-md transition-shadow">
+              <h3 className="font-bold taller-ink">🧭 {p.title}</h3>
+              {p.challenge && <p className="text-sm taller-soft mt-1 line-clamp-2">{p.challenge}</p>}
+              <div className="mt-3 flex items-center gap-1.5 text-sm taller-mari font-medium"><Users className="w-4 h-4" /> {p._count?.teams ?? 0} equipo(s)</div>
             </button>
           ))}
         </div>
@@ -1678,15 +1678,15 @@ function CreateProject({ classroomId, onCreated }: { classroomId: string; onCrea
     try { await abpApi.createProject({ classroomId, title: title.trim(), challenge: challenge.trim() || undefined }); setTitle(''); setChallenge(''); setOpen(false); onCreated() }
     finally { setBusy(false) }
   }
-  if (!open) return <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700"><Plus className="w-5 h-5" /> Nueva Expedición ABP</button>
+  if (!open) return <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2.5 taller-cta-inline rounded-xl text-sm font-semibold "><Plus className="w-5 h-5" /> Nueva Expedición ABP</button>
   return (
-    <div className="bg-white rounded-2xl border-2 border-violet-200 p-5 space-y-3">
-      <h3 className="font-bold text-slate-800">Nueva Expedición ABP</h3>
-      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del proyecto" className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm" autoFocus />
-      <textarea value={challenge} onChange={e => setChallenge(e.target.value)} placeholder="Reto general (opcional)" rows={2} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm resize-none" />
+    <div className="taller-card taller-mission p-5 space-y-3">
+      <h3 className="font-bold taller-ink">Nueva Expedición ABP</h3>
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del proyecto" className="w-full border taller-line-c rounded-xl px-4 py-2.5 text-sm" autoFocus />
+      <textarea value={challenge} onChange={e => setChallenge(e.target.value)} placeholder="Reto general (opcional)" rows={2} className="w-full border taller-line-c rounded-xl px-4 py-2.5 text-sm resize-none" />
       <div className="flex justify-end gap-2">
-        <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-        <button onClick={create} disabled={!title.trim() || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear</button>
+        <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm taller-soft hover:taller-surface rounded-xl">Cancelar</button>
+        <button onClick={create} disabled={!title.trim() || busy} className="px-5 py-2 taller-cta-inline rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear</button>
       </div>
     </div>
   )
@@ -1699,13 +1699,13 @@ function StatusChip({ status }: { status: string }) {
     AWAITING: ['Esperando validación', 'bg-amber-100 text-amber-700'],
     VALIDATED: ['Validada', 'bg-emerald-100 text-emerald-700'],
     RETURNED: ['Devuelta', 'bg-rose-100 text-rose-700'],
-    LOCKED: ['Bloqueada', 'bg-slate-100 text-slate-400'],
+    LOCKED: ['Bloqueada', 'taller-surface taller-muted'],
   }
-  const [label, cls] = map[status] || ['—', 'bg-slate-100 text-slate-400']
+  const [label, cls] = map[status] || ['—', 'taller-surface taller-muted']
   return <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 ${cls}`}>{label}</span>
 }
 
-function RONone() { return <p className="text-sm text-slate-300">Sin contenido todavía.</p> }
+function RONone() { return <p className="text-sm taller-muted">Sin contenido todavía.</p> }
 
 /** Trabajo de una fase en modo lectura (para el preview del docente). */
 function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
@@ -1715,9 +1715,9 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
     return (
       <div className="grid sm:grid-cols-2 gap-2">
         {CANVAS_CARDS.map((c, i) => (
-          <div key={i} className="rounded-lg border border-slate-200 p-2.5">
-            <div className="text-xs text-slate-400">{c.icon} {c.q}</div>
-            <div className="text-sm text-slate-700 mt-0.5">{canvas[i]?.value || <span className="text-slate-300">—</span>}</div>
+          <div key={i} className="rounded-lg border taller-line-c p-2.5">
+            <div className="text-xs taller-muted">{c.icon} {c.q}</div>
+            <div className="text-sm taller-ink mt-0.5">{canvas[i]?.value || <span className="taller-muted">—</span>}</div>
           </div>
         ))}
       </div>
@@ -1726,12 +1726,12 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
   if (phase === 2) {
     const ideas = data.ideas || []
     if (!ideas.length) return <RONone />
-    return <div className="space-y-1">{ideas.map((i: any) => <div key={i.id} className="flex items-center gap-2 text-sm"><span className="text-violet-600 font-bold w-8">▲{i.votes || 0}</span><span className="text-slate-700">{i.text}</span></div>)}</div>
+    return <div className="space-y-1">{ideas.map((i: any) => <div key={i.id} className="flex items-center gap-2 text-sm"><span className="taller-mari font-bold w-8">▲{i.votes || 0}</span><span className="taller-ink">{i.text}</span></div>)}</div>
   }
   if (phase === 3) {
     const s = data.smart || {}
     const checked = Array.isArray(s.checks) ? s.checks.filter(Boolean).length : 0
-    return <div className="text-sm"><p className="text-slate-700">{s.text || <span className="text-slate-300">Sin objetivo.</span>}</p><p className="text-xs text-slate-400 mt-1">Criterios SMART: {checked}/5</p></div>
+    return <div className="text-sm"><p className="taller-ink">{s.text || <span className="taller-muted">Sin objetivo.</span>}</p><p className="text-xs taller-muted mt-1">Criterios SMART: {checked}/5</p></div>
   }
   if (phase === 4) {
     const tasks = data.tasks || []
@@ -1740,8 +1740,8 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
       <div className="grid grid-cols-3 gap-2">
         {cols.map((c, ci) => (
           <div key={ci}>
-            <p className="text-xs font-bold text-slate-500 mb-1">{c}</p>
-            <div className="space-y-1">{tasks.filter((t: any) => t.col === ci).map((t: any) => <div key={t.id} className="text-xs bg-slate-50 rounded p-1.5 text-slate-700">{t.text}</div>)}</div>
+            <p className="text-xs font-bold taller-soft mb-1">{c}</p>
+            <div className="space-y-1">{tasks.filter((t: any) => t.col === ci).map((t: any) => <div key={t.id} className="text-xs taller-surface rounded p-1.5 taller-ink">{t.text}</div>)}</div>
           </div>
         ))}
       </div>
@@ -1750,11 +1750,11 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
   if (phase === 5) {
     const ev = data.evidences || []
     if (!ev.length) return <RONone />
-    return <div className="space-y-1">{ev.map((e: any) => <div key={e.id} className="text-sm text-slate-700 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-slate-400" />{e.label || e.url}</div>)}</div>
+    return <div className="space-y-1">{ev.map((e: any) => <div key={e.id} className="text-sm taller-ink flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 taller-muted" />{e.label || e.url}</div>)}</div>
   }
   if (phase === 6) {
     const co = Object.keys(data.coevals || {}).length
-    return <p className="text-sm text-slate-600">Equipos coevaluados: {co}</p>
+    return <p className="text-sm taller-soft">Equipos coevaluados: {co}</p>
   }
   return null
 }
@@ -1789,17 +1789,17 @@ function TeacherNewMission({ team, phase, onCreated }: { team: any; phase: numbe
   }
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="w-full mt-2 py-2 rounded-xl border-2 border-dashed border-slate-200 text-xs font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5">
+    <button onClick={() => setOpen(true)} className="w-full mt-2 py-2 rounded-xl border-2 border-dashed taller-line-c text-xs font-semibold taller-muted  hover:opacity-70 flex items-center justify-center gap-1.5">
       <Plus className="w-3.5 h-3.5" /> Nueva misión para este equipo
     </button>
   )
   return (
-    <div className="mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-      <input value={title} onChange={e => setTitle(e.target.value)} autoFocus placeholder="Qué deben hacer…" className="w-full text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
-      <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Objetivo: para qué sirve (opcional)" className="w-full text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 resize-none" />
+    <div className="mt-2 p-3 rounded-xl border taller-line-c taller-surface space-y-2">
+      <input value={title} onChange={e => setTitle(e.target.value)} autoFocus placeholder="Qué deben hacer…" className="w-full text-sm rounded-lg taller-line px-2.5 py-1.5" />
+      <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Objetivo: para qué sirve (opcional)" className="w-full text-sm rounded-lg taller-line px-2.5 py-1.5 resize-none" />
 
       <div>
-        <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">¿Para quién?</label>
+        <label className="text-[11px] font-bold uppercase tracking-wide taller-soft">¿Para quién?</label>
         <div className="flex flex-wrap gap-1 mt-1">
           <button onClick={() => setAssignee('')} className="text-xs rounded-lg px-2.5 py-1.5 border transition"
             style={assignee === '' ? { background: '#EEF2FF', borderColor: '#6366F1', color: '#4338CA', fontWeight: 700 } : { background: 'white', borderColor: '#E2E8F0', color: '#64748B' }}>
@@ -1815,7 +1815,7 @@ function TeacherNewMission({ team, phase, onCreated }: { team: any; phase: numbe
       </div>
 
       <div>
-        <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">¿Cómo la cumplen?</label>
+        <label className="text-[11px] font-bold uppercase tracking-wide taller-soft">¿Cómo la cumplen?</label>
         <div className="flex flex-wrap gap-1 mt-1">
           {([['NONE', '📋 Trabajo libre'], ['FILE', '📎 Entrega archivo'], ['LINK', '🔗 Entrega enlace'], ['TEXT', '📝 Entrega texto']] as const).map(([k, label]) => (
             <button key={k} onClick={() => setKind(k)} className="text-xs rounded-lg px-2.5 py-1.5 border transition"
@@ -1827,18 +1827,18 @@ function TeacherNewMission({ team, phase, onCreated }: { team: any; phase: numbe
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="flex items-center gap-1.5 text-xs text-slate-600">
-          <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-3.5 h-3.5 accent-violet-600" /> Obligatoria
+        <label className="flex items-center gap-1.5 text-xs taller-soft">
+          <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-3.5 h-3.5 taller-accent" /> Obligatoria
         </label>
-        <label className="flex items-center gap-1.5 text-xs text-slate-600">
-          Fecha límite <input type="date" value={dueAt} onChange={e => setDueAt(e.target.value)} className="border border-slate-200 rounded-md px-1.5 py-1 text-xs" />
+        <label className="flex items-center gap-1.5 text-xs taller-soft">
+          Fecha límite <input type="date" value={dueAt} onChange={e => setDueAt(e.target.value)} className="border taller-line-c rounded-md px-1.5 py-1 text-xs" />
         </label>
       </div>
       {assignee && required && <p className="text-[11px] text-amber-600">Ojo: al ser obligatoria, el equipo no podrá presentar la estación hasta que {nameOf(members.find((m: any) => m.studentEnrollmentId === assignee))} la cumpla.</p>}
 
       <div className="flex gap-2">
-        <button onClick={save} disabled={busy || !title.trim()} className="text-sm font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">{busy ? '…' : 'Crear misión'}</button>
-        <button onClick={() => setOpen(false)} className="text-sm text-slate-400">Cancelar</button>
+        <button onClick={save} disabled={busy || !title.trim()} className="text-sm font-bold taller-cta-inline rounded-lg px-3 py-1.5 disabled:opacity-40">{busy ? '…' : 'Crear misión'}</button>
+        <button onClick={() => setOpen(false)} className="text-sm taller-muted">Cancelar</button>
       </div>
     </div>
   )
@@ -1906,11 +1906,11 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
     try { await abpApi.addActivitiesBulk(mission.id, items); setSuggestions(null); onChanged() } finally { setBusy(false) }
   }
   return (
-    <div className={`rounded-xl border p-3 ${mission.complete ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'}`}>
+    <div className={`rounded-xl border p-3 ${mission.complete ? 'border-emerald-200 bg-emerald-50/30' : 'taller-line-c'}`}>
       <div className="flex items-center gap-2 flex-wrap">
-        <span className={mission.complete ? 'text-emerald-500' : 'text-slate-300'}>{mission.complete ? '✔' : '○'}</span>
-        <span className={`text-sm font-semibold ${mission.complete ? 'text-slate-500' : 'text-slate-700'}`}>{mission.title}</span>
-        {mission.required && <span className="text-[10px] font-bold text-violet-600 uppercase">obligatoria</span>}
+        <span className={mission.complete ? 'taller-mari' : 'taller-muted'}>{mission.complete ? '✔' : '○'}</span>
+        <span className={`text-sm font-semibold ${mission.complete ? 'taller-soft' : 'taller-ink'}`}>{mission.title}</span>
+        {mission.required && <span className="text-[10px] font-bold taller-mari uppercase">obligatoria</span>}
         {mission.deliverableKind && <span className="text-[10px] font-bold uppercase" style={{ color: mission.deliveryState === 'SUBMITTED' ? '#0f9d8c' : '#C8811A' }}>{mission.deliveryState === 'SUBMITTED' ? '✓ entregado' : `📎 entrega · ${DELIVERY_LABEL[mission.deliverableKind]}`}</span>}
       </div>
 
@@ -1918,10 +1918,10 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       {mission.deliverableKind && mission.deliveryState === 'SUBMITTED' && (
         <div className="mt-2 pl-6 text-xs">
           {mission.deliverableKind === 'TEXT'
-            ? <p className="text-slate-600 whitespace-pre-line bg-slate-50 rounded-lg p-2">{mission.deliveryText}</p>
+            ? <p className="taller-soft whitespace-pre-line taller-surface rounded-lg p-2">{mission.deliveryText}</p>
             : mission.deliverableKind === 'FILE'
-              ? <button onClick={async () => { try { const { data } = await storageApi.resolveUrl(mission.deliveryUrl); window.open(data.url, '_blank', 'noopener') } catch { window.open(mission.deliveryUrl, '_blank') } }} className="font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" /> {mission.deliveryLabel || 'Ver archivo'}</button>
-              : <a href={mission.deliveryUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1 break-all"><Link2 className="w-3.5 h-3.5 shrink-0" /> {mission.deliveryLabel || mission.deliveryUrl}</a>}
+              ? <button onClick={async () => { try { const { data } = await storageApi.resolveUrl(mission.deliveryUrl); window.open(data.url, '_blank', 'noopener') } catch { window.open(mission.deliveryUrl, '_blank') } }} className="font-semibold taller-mari hover:opacity-70 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" /> {mission.deliveryLabel || 'Ver archivo'}</button>
+              : <a href={mission.deliveryUrl} target="_blank" rel="noopener noreferrer" className="font-semibold taller-mari hover:opacity-70 flex items-center gap-1 break-all"><Link2 className="w-3.5 h-3.5 shrink-0" /> {mission.deliveryLabel || mission.deliveryUrl}</a>}
         </div>
       )}
 
@@ -1929,26 +1929,26 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
         <div className="mt-2 space-y-1 pl-6">
           {acts.map((a: any) => a.classroomActivityId ? (
             <div key={a.id} className="flex items-center gap-2 group">
-              <span className={`text-xs ${a.completed ? 'text-emerald-500' : 'text-slate-400'}`}>🎮</span>
-              <span className={`text-xs ${a.completed ? 'text-slate-400' : 'text-slate-600'}`}>{a.title}</span>
-              <span className="text-[10px] font-semibold text-violet-500">{a.linkedActivity ? 'reutilizada' : 'lección/juego'}{a.completed ? ' · hecha' : ''}</span>
+              <span className={`text-xs ${a.completed ? 'taller-mari' : 'taller-muted'}`}>🎮</span>
+              <span className={`text-xs ${a.completed ? 'taller-muted' : 'taller-soft'}`}>{a.title}</span>
+              <span className="text-[10px] font-semibold taller-mari">{a.linkedActivity ? 'reutilizada' : 'lección/juego'}{a.completed ? ' · hecha' : ''}</span>
               <div className="ml-auto flex items-center gap-2 shrink-0">
                 {!a.linkedActivity && (
                   <>
-                    <button onClick={() => genLesson(a)} disabled={genActId === a.id} className="text-[11px] font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+                    <button onClick={() => genLesson(a)} disabled={genActId === a.id} className="text-[11px] font-semibold taller-mari hover:opacity-70 flex items-center gap-1 disabled:opacity-50">
                       {genActId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✨'} Generar
                     </button>
-                    <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
+                    <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="text-[11px] font-semibold taller-mari hover:opacity-70">✏️ Editar</button>
                   </>
                 )}
-                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} title={a.linkedActivity ? 'Quitar de la misión (no borra el original)' : 'Eliminar'} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} title={a.linkedActivity ? 'Quitar de la misión (no borra el original)' : 'Eliminar'} className="opacity-0 group-hover:opacity-100 taller-muted hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
           ) : (
             <div key={a.id} className="flex items-center gap-2 group">
-              <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-3.5 h-3.5 accent-violet-600" />
-              <span className={`text-xs ${a.completed ? 'line-through text-slate-400' : 'text-slate-600'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
-              <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-3.5 h-3.5 taller-accent" />
+              <span className={`text-xs ${a.completed ? 'line-through taller-muted' : 'taller-soft'}`}><span className="taller-muted mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+              <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 taller-muted hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
         </div>
@@ -1956,15 +1956,15 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
 
       <div className="mt-2 pl-6 flex items-center gap-3 flex-wrap">
         <AddActivityForm mission={mission} onSaved={onChanged} />
-        <button onClick={addLesson} disabled={busy} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1 disabled:opacity-50"><Plus className="w-3.5 h-3.5" /> 🎮 Lección/Juego</button>
-        <button onClick={openPicker} disabled={busy || pickerLoading} className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1 disabled:opacity-50">{pickerLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '♻️'} Reutilizar existente</button>
-        <button onClick={suggest} disabled={suggesting} className="text-xs font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+        <button onClick={addLesson} disabled={busy} className="text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1 disabled:opacity-50"><Plus className="w-3.5 h-3.5" /> 🎮 Lección/Juego</button>
+        <button onClick={openPicker} disabled={busy || pickerLoading} className="text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1 disabled:opacity-50">{pickerLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '♻️'} Reutilizar existente</button>
+        <button onClick={suggest} disabled={suggesting} className="text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1 disabled:opacity-50">
           {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '✨'} Sugerir con Valeria
         </button>
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-[120] bg-white overflow-auto">
+        <div className="fixed inset-0 z-[120] taller-raised overflow-auto">
           <LessonEditor activityId={editing.activityId} activityTitle={editing.title} onClose={() => { setEditing(null); onChanged() }} onPreview={() => { /* sin preview aquí */ }} />
         </div>
       )}
@@ -1972,20 +1972,20 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       {picker && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setPicker(null)} />
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-[80vh] flex flex-col">
-            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-sm">♻️ Reutilizar una actividad del curso</h3>
-              <button onClick={() => setPicker(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+          <div className="relative w-full max-w-md taller-card rounded-2xl shadow-2xl border taller-line-c max-h-[80vh] flex flex-col">
+            <div className="px-5 py-3 border-b taller-line-c flex items-center justify-between">
+              <h3 className="font-bold taller-ink text-sm">♻️ Reutilizar una actividad del curso</h3>
+              <button onClick={() => setPicker(null)} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
             </div>
             <div className="p-3 overflow-y-auto">
               {picker.length === 0 ? (
-                <p className="text-xs text-slate-400 p-3 text-center">No hay actividades jugables disponibles en este curso (o ya están todas en la misión).</p>
+                <p className="text-xs taller-muted p-3 text-center">No hay actividades jugables disponibles en este curso (o ya están todas en la misión).</p>
               ) : picker.map(a => (
                 <button key={a.id} onClick={() => attach(a.id)} disabled={busy} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-teal-50 text-left disabled:opacity-50">
                   <span>🎮</span>
-                  <span className="flex-1 text-sm text-slate-700 truncate">{a.title}</span>
-                  <span className="text-[10px] font-mono text-slate-400">{a.type}</span>
-                  <span className="text-xs font-semibold text-teal-600 shrink-0">Añadir</span>
+                  <span className="flex-1 text-sm taller-ink truncate">{a.title}</span>
+                  <span className="text-[10px] font-mono taller-muted">{a.type}</span>
+                  <span className="text-xs font-semibold taller-mari shrink-0">Añadir</span>
                 </button>
               ))}
             </div>
@@ -1997,19 +1997,19 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
 
       {suggestions && (
         <div className="mt-2 ml-6 rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3">
-          {suggestions.length === 0 ? <p className="text-xs text-slate-500">Valeria no devolvió sugerencias. Intenta de nuevo.</p> : (
+          {suggestions.length === 0 ? <p className="text-xs taller-soft">Valeria no devolvió sugerencias. Intenta de nuevo.</p> : (
             <>
               <p className="text-xs font-bold text-fuchsia-700 mb-2">✨ Sugerencias de Valeria (revisa y elige)</p>
               <div className="space-y-1.5">
                 {suggestions.map((s, i) => (
                   <label key={i} className="flex items-start gap-2 text-xs cursor-pointer">
                     <input type="checkbox" checked={picked.has(i)} onChange={() => setPicked(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })} className="w-3.5 h-3.5 accent-fuchsia-600 mt-0.5" />
-                    <span><b className="text-slate-700">{ACT_LABEL[s.type] || s.type} · {s.title}</b>{s.description ? <span className="text-slate-500"> — {s.description}</span> : null}</span>
+                    <span><b className="taller-ink">{ACT_LABEL[s.type] || s.type} · {s.title}</b>{s.description ? <span className="taller-soft"> — {s.description}</span> : null}</span>
                   </label>
                 ))}
               </div>
               <div className="flex justify-end gap-2 mt-2">
-                <button onClick={() => setSuggestions(null)} className="text-xs text-slate-500 hover:text-slate-700">Descartar</button>
+                <button onClick={() => setSuggestions(null)} className="text-xs taller-soft hover:taller-ink">Descartar</button>
                 <button onClick={apply} disabled={busy || picked.size === 0} className="text-xs font-bold bg-fuchsia-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">Añadir {picked.size} a la misión</button>
               </div>
             </>
@@ -2029,23 +2029,23 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
   if (!team) return <Empty msg="No se pudo cargar el equipo." />
   const phases = team.phaseStates || []
   return (
-    <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver al panel</button>
-      <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
+    <div className="space-y-4 taller">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold taller-soft hover:opacity-70"><ChevronLeft className="w-4 h-4" /> Volver al panel</button>
+      <div className="taller-card taller-mission p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">Vista del docente · solo lectura</span>
-            <h3 className="text-xl font-bold text-slate-800 mt-1">{team.emoji} {team.name}</h3>
-            {team.problem && <p className="text-sm text-slate-500">Reto: {team.problem}</p>}
+            <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5" style={{ background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' }}>Vista del docente · solo lectura</span>
+            <h3 className="text-xl font-bold taller-ink mt-1">{team.emoji} {team.name}</h3>
+            {team.problem && <p className="text-sm taller-soft">Reto: {team.problem}</p>}
           </div>
-          <div className="text-right"><div className="text-2xl font-black text-violet-600">⭐ {team.xp}</div><div className="text-xs text-slate-400 font-semibold">XP</div></div>
+          <div className="text-right"><div className="text-2xl font-black taller-mari">⭐ {team.xp}</div><div className="text-xs taller-muted font-semibold">XP</div></div>
         </div>
         <div className="mt-3"><Trail team={team} /></div>
       </div>
       {phases.map((ps: any) => (
-        <div key={ps.phase} className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div key={ps.phase} className="taller-card p-5">
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <h4 className="font-bold text-slate-800">{PHASES.find(p => p.n === ps.phase)?.icon} Fase {ps.phase}: {phaseName(ps.phase)}</h4>
+            <h4 className="font-bold taller-ink">{PHASES.find(p => p.n === ps.phase)?.icon} Fase {ps.phase}: {phaseName(ps.phase)}</h4>
             <StatusChip status={ps.status} />
           </div>
           {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
@@ -2066,12 +2066,12 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
         </div>
       ))}
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h4 className="font-bold text-slate-800 mb-3">📔 Bitácora</h4>
+      <div className="taller-card p-5">
+        <h4 className="font-bold taller-ink mb-3">📔 Bitácora</h4>
         <LogbookView teamId={team.id} readOnly />
       </div>
-      <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h4 className="font-bold text-slate-800 mb-3">💡 Descubrimientos</h4>
+      <div className="taller-card p-5">
+        <h4 className="font-bold taller-ink mb-3">💡 Descubrimientos</h4>
         <DiscoveriesView teamId={team.id} readOnly />
       </div>
     </div>
@@ -2096,32 +2096,32 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
   }
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800">🎖️ Liberar misión a todos los equipos</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+      <div className="taller-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 taller-raised border-b taller-line-c px-5 py-3 flex items-center justify-between">
+          <h3 className="font-bold taller-ink">🎖️ Liberar misión a todos los equipos</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <label className="text-xs font-semibold text-slate-500">Fase</label>
-            <select value={phase} onChange={e => setPhase(Number(e.target.value))} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1">
+            <label className="text-xs font-semibold taller-soft">Fase</label>
+            <select value={phase} onChange={e => setPhase(Number(e.target.value))} className="w-full border taller-line-c rounded-lg px-3 py-2 text-sm mt-1">
               {PHASES.map(p => <option key={p.n} value={p.n}>{p.icon} Fase {p.n}: {p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-500">Título de la misión</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Entrevistar a un experto" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" autoFocus />
+            <label className="text-xs font-semibold taller-soft">Título de la misión</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Entrevistar a un experto" className="w-full border taller-line-c rounded-lg px-3 py-2 text-sm mt-1" autoFocus />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-500">Descripción (opcional)</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Qué deben lograr…" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none mt-1" />
+            <label className="text-xs font-semibold taller-soft">Descripción (opcional)</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Qué deben lograr…" className="w-full border taller-line-c rounded-lg px-3 py-2 text-sm resize-none mt-1" />
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-4 h-4 accent-violet-600" />
+          <label className="flex items-center gap-2 text-sm taller-soft">
+            <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-4 h-4 taller-accent" />
             Obligatoria para validar la fase
           </label>
           <div>
-            <label className="text-xs font-semibold text-slate-500">Tipo de misión</label>
+            <label className="text-xs font-semibold taller-soft">Tipo de misión</label>
             <div className="grid grid-cols-2 gap-2 mt-1">
               {([['NONE', '📋 Trabajo libre'], ['FILE', '📎 Entrega · Archivo'], ['LINK', '🔗 Entrega · Enlace'], ['TEXT', '📝 Entrega · Texto']] as const).map(([k, label]) => (
                 <button key={k} onClick={() => setKind(k)} className="text-left text-sm rounded-lg px-3 py-2 border transition"
@@ -2130,29 +2130,29 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
                 </button>
               ))}
             </div>
-            {kind !== 'NONE' && <p className="text-xs text-slate-400 mt-1.5">El equipo cumple esta misión <b>entregando</b> el producto desde el ABP. Se marca completa al entregar.</p>}
+            {kind !== 'NONE' && <p className="text-xs taller-muted mt-1.5">El equipo cumple esta misión <b>entregando</b> el producto desde el ABP. Se marca completa al entregar.</p>}
           </div>
           {kind === 'NONE' && (
           <div>
-            <label className="text-xs font-semibold text-slate-500">Actividades (opcional)</label>
+            <label className="text-xs font-semibold taller-soft">Actividades (opcional)</label>
             <div className="space-y-2 mt-1">
               {activities.map((a, i) => (
                 <div key={i} className="flex gap-2">
-                  <select value={a.type} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, type: e.target.value } : x))} className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                  <select value={a.type} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, type: e.target.value } : x))} className="border taller-line-c rounded-lg px-2 py-1.5 text-xs">
                     {ACT_TYPES.map(t => <option key={t} value={t}>{ACT_LABEL[t]}</option>)}
                   </select>
-                  <input value={a.title} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Describe la actividad…" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                  <button onClick={() => setActivities(as => as.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  <input value={a.title} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Describe la actividad…" className="flex-1 border taller-line-c rounded-lg px-2 py-1.5 text-sm" />
+                  <button onClick={() => setActivities(as => as.filter((_, j) => j !== i))} className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
-              <button onClick={() => setActivities(as => [...as, { type: 'READING', title: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
+              <button onClick={() => setActivities(as => [...as, { type: 'READING', title: '' }])} className="text-xs font-semibold taller-mari hover:opacity-70 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
             </div>
           </div>
           )}
         </div>
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-3 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-          <button onClick={submit} disabled={busy || !title.trim()} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 hover:bg-violet-700">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Liberar a todos</button>
+        <div className="sticky bottom-0 taller-raised border-t taller-line-c px-5 py-3 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm taller-soft hover:taller-surface rounded-xl">Cancelar</button>
+          <button onClick={submit} disabled={busy || !title.trim()} className="px-5 py-2 taller-cta-inline rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 ">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Liberar a todos</button>
         </div>
       </div>
     </div>
@@ -2343,25 +2343,25 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
 
       {/* ── 🗺️ MAPA: dónde está cada equipo en el sendero ─────────────────── */}
       {tab === 'map' && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 overflow-x-auto">
+        <div className="taller-card rounded-2xl p-6 overflow-x-auto">
           <div className="flex gap-4 min-w-[760px]">
             {PHASES.map((ph, idx) => {
               const pts = teamsByPhase[ph.n] || []
               return (
                 <div key={ph.n} className="flex-1 relative">
-                  {idx < PHASES.length - 1 && <div className="absolute top-5 left-1/2 w-full h-0.5 bg-slate-100 -z-10" />}
+                  {idx < PHASES.length - 1 && <div className="absolute top-5 left-1/2 w-full h-0.5 taller-surface -z-10" />}
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base border-2 bg-white ${pts.length > 0 ? 'border-violet-500' : 'border-slate-200 grayscale opacity-60'}`}>{ph.icon}</div>
-                    <span className="text-[11px] font-bold text-slate-500 mt-2 text-center leading-tight h-8">{ph.name}</span>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base border-2 taller-raised ${pts.length > 0 ? 'taller-line-c' : 'taller-line-c grayscale opacity-60'}`}>{ph.icon}</div>
+                    <span className="text-[11px] font-bold taller-soft mt-2 text-center leading-tight h-8">{ph.name}</span>
                     <div className="w-full mt-2 space-y-2">
                       {pts.map(t => (
-                        <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full bg-slate-50 hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-lg p-2 text-left transition-colors group" style={{ borderLeftColor: t.color, borderLeftWidth: 3 }}>
+                        <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full taller-surface hover:opacity-90 taller-line  rounded-lg p-2 text-left transition-colors group" style={{ borderLeftColor: t.color, borderLeftWidth: 3 }}>
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm">{t.emoji}</span>
-                            <span className="text-xs font-semibold text-slate-700 group-hover:text-violet-700 truncate">{t.name}</span>
+                            <span className="text-xs font-semibold taller-ink group-hover:opacity-70 truncate">{t.name}</span>
                           </div>
                           {t.awaitingValidation && <div className="text-[9px] font-bold text-amber-600 mt-0.5">🔔 espera validación</div>}
-                          {t.done && <div className="text-[9px] font-bold text-emerald-600 mt-0.5">🏆 completa</div>}
+                          {t.done && <div className="text-[9px] font-bold taller-ink mt-0.5">🏆 completa</div>}
                         </button>
                       ))}
                     </div>
@@ -2389,8 +2389,8 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                   <div className="flex items-start justify-between">
                     <h5 className="font-bold taller-ink">{t.emoji} {t.name}</h5>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setEditTeamId(t.id)} title="Editar integrantes" className="text-slate-300 hover:text-slate-600" style={{ color: 'var(--t-faint, #AAA394)' }}><Users className="w-4 h-4" /></button>
-                      <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setEditTeamId(t.id)} title="Editar integrantes" className="taller-muted hover:taller-soft" style={{ color: 'var(--t-faint, #AAA394)' }}><Users className="w-4 h-4" /></button>
+                      <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                   <p className="text-xs taller-muted mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
@@ -2425,15 +2425,15 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {showManual && (
         <div className="fixed inset-0 z-[100] flex justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
-          <div className="relative w-full max-w-lg bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
-            <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-200 px-5 py-3 flex items-center justify-between z-10">
+          <div className="relative w-full max-w-lg taller-surface h-full shadow-2xl overflow-y-auto border-l taller-line-c animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 taller-raised-90 backdrop-blur-md border-b taller-line-c px-5 py-3 flex items-center justify-between z-10">
               <div>
-                <h3 className="font-black text-slate-800">👁️ Así lo ven tus estudiantes</h3>
-                <p className="text-xs text-slate-400">Vista previa de la portada de la expedición</p>
+                <h3 className="font-black taller-ink">👁️ Así lo ven tus estudiantes</h3>
+                <p className="text-xs taller-muted">Vista previa de la portada de la expedición</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700">✏️ Editar</button>
-                <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+                <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-3 py-1.5 taller-cta-inline rounded-lg text-sm font-semibold ">✏️ Editar</button>
+                <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
               </div>
             </div>
             <div className="p-5">
@@ -2441,8 +2441,8 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                 ? <PresentationView project={project} />
                 : (
                   <div className="text-center py-12">
-                    <p className="text-slate-500 text-sm mb-4">Aún no has creado la portada de esta expedición. Tus estudiantes verán una pantalla vacía.</p>
-                    <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold">Crear portada ahora</button>
+                    <p className="taller-soft text-sm mb-4">Aún no has creado la portada de esta expedición. Tus estudiantes verán una pantalla vacía.</p>
+                    <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-5 py-2.5 taller-cta-inline rounded-xl text-sm font-bold">Crear portada ahora</button>
                   </div>
                 )}
             </div>
@@ -2476,37 +2476,37 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
     finally { setBusy(false) }
   }
 
-  if (!open) return <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200"><Plus className="w-5 h-5" /> Armar equipo</button>
+  if (!open) return <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2.5 taller-surface taller-ink rounded-xl text-sm font-semibold hover:opacity-80"><Plus className="w-5 h-5" /> Armar equipo</button>
   return (
-    <div className="bg-white rounded-2xl border-2 border-violet-200 p-5 space-y-3">
-      <h4 className="font-bold text-slate-800">Nuevo equipo</h4>
+    <div className="taller-card taller-mission p-5 space-y-3">
+      <h4 className="font-bold taller-ink">Nuevo equipo</h4>
       <div className="flex gap-2">
-        <input value={emoji} onChange={e => setEmoji(e.target.value)} disabled={letStudents} className="w-14 border border-slate-300 rounded-xl px-2 py-2.5 text-center text-lg disabled:opacity-50" maxLength={2} />
-        <input value={name} onChange={e => setName(e.target.value)} disabled={letStudents} placeholder={letStudents ? 'Lo elegirán los estudiantes' : 'Nombre del equipo'} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm disabled:opacity-50" autoFocus />
+        <input value={emoji} onChange={e => setEmoji(e.target.value)} disabled={letStudents} className="w-14 border taller-line-c rounded-xl px-2 py-2.5 text-center text-lg disabled:opacity-50" maxLength={2} />
+        <input value={name} onChange={e => setName(e.target.value)} disabled={letStudents} placeholder={letStudents ? 'Lo elegirán los estudiantes' : 'Nombre del equipo'} className="flex-1 border taller-line-c rounded-xl px-4 py-2.5 text-sm disabled:opacity-50" autoFocus />
       </div>
-      <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-        <input type="checkbox" checked={letStudents} onChange={e => setLetStudents(e.target.checked)} className="accent-violet-600" />
+      <label className="flex items-center gap-2 text-xs taller-soft cursor-pointer">
+        <input type="checkbox" checked={letStudents} onChange={e => setLetStudents(e.target.checked)} className="taller-accent" />
         Dejar que el equipo elija su nombre y emblema (ritual de fundación)
       </label>
       <div>
-        <p className="text-xs font-medium text-slate-500 mb-1.5">Integrantes ({sel.size})</p>
-        <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-2 grid sm:grid-cols-2 gap-1">
+        <p className="text-xs font-medium taller-soft mb-1.5">Integrantes ({sel.size})</p>
+        <div className="max-h-52 overflow-y-auto rounded-xl taller-line p-2 grid sm:grid-cols-2 gap-1">
           {roster.map(r => {
             const taken = !!r.assignedTeamName
             return (
-              <label key={r.enrollmentId} title={taken ? `Ya está en ${r.assignedTeamName}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm ${taken ? 'opacity-50 cursor-not-allowed text-slate-400' : sel.has(r.enrollmentId) ? 'bg-violet-50 text-violet-700 cursor-pointer' : 'hover:bg-slate-50 text-slate-600 cursor-pointer'}`}>
-                <input type="checkbox" disabled={taken} checked={sel.has(r.enrollmentId)} onChange={() => { if (taken) return; setSel(s => { const n = new Set(s); n.has(r.enrollmentId) ? n.delete(r.enrollmentId) : n.add(r.enrollmentId); return n }) }} className="accent-violet-600 disabled:cursor-not-allowed" />
+              <label key={r.enrollmentId} title={taken ? `Ya está en ${r.assignedTeamName}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm ${taken ? 'opacity-50 cursor-not-allowed taller-muted' : sel.has(r.enrollmentId) ? 'taller-mari-bg taller-mari cursor-pointer' : 'hover:taller-surface taller-soft cursor-pointer'}`}>
+                <input type="checkbox" disabled={taken} checked={sel.has(r.enrollmentId)} onChange={() => { if (taken) return; setSel(s => { const n = new Set(s); n.has(r.enrollmentId) ? n.delete(r.enrollmentId) : n.add(r.enrollmentId); return n }) }} className="taller-accent disabled:cursor-not-allowed" />
                 <span className="flex-1 truncate">{r.name}</span>
-                {taken && <span className="text-[10px] font-medium text-slate-400 shrink-0">{r.assignedTeamName}</span>}
+                {taken && <span className="text-[10px] font-medium taller-muted shrink-0">{r.assignedTeamName}</span>}
               </label>
             )
           })}
-          {roster.length === 0 && <p className="text-xs text-slate-400 p-2">Cargando matriculados…</p>}
+          {roster.length === 0 && <p className="text-xs taller-muted p-2">Cargando matriculados…</p>}
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-        <button onClick={create} disabled={(!name.trim() && !letStudents) || sel.size === 0 || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear equipo</button>
+        <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm taller-soft hover:taller-surface rounded-xl">Cancelar</button>
+        <button onClick={create} disabled={(!name.trim() && !letStudents) || sel.size === 0 || busy} className="px-5 py-2 taller-cta-inline rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear equipo</button>
       </div>
     </div>
   )
@@ -2541,33 +2541,33 @@ function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
-        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800">{team.emoji} {team.name} · Integrantes</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+      <div className="relative w-full max-w-md taller-card rounded-2xl shadow-2xl border taller-line-c max-h-[85vh] flex flex-col">
+        <div className="px-5 py-3 border-b taller-line-c flex items-center justify-between">
+          <h3 className="font-bold taller-ink">{team.emoji} {team.name} · Integrantes</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
         </div>
         <div className="p-5 space-y-4 overflow-y-auto">
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-1.5">En el equipo ({members.length})</p>
+            <p className="text-xs font-medium taller-soft mb-1.5">En el equipo ({members.length})</p>
             <div className="space-y-1">
               {members.map(m => (
-                <div key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-violet-50 text-violet-800 text-sm">
+                <div key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg taller-mari-bg taller-ink text-sm">
                   <span className="truncate">{m.name}</span>
-                  <button onClick={() => remove(m.id)} disabled={busy || members.length <= 1} title={members.length <= 1 ? 'El equipo no puede quedar vacío' : 'Sacar del equipo'} className="text-violet-300 hover:text-rose-500 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => remove(m.id)} disabled={busy || members.length <= 1} title={members.length <= 1 ? 'El equipo no puede quedar vacío' : 'Sacar del equipo'} className="taller-muted hover:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-1.5">Disponibles para añadir ({available.length})</p>
+            <p className="text-xs font-medium taller-soft mb-1.5">Disponibles para añadir ({available.length})</p>
             <div className="space-y-1 max-h-52 overflow-y-auto">
               {available.map(r => (
-                <div key={r.enrollmentId} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 text-sm">
+                <div key={r.enrollmentId} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:taller-surface taller-soft text-sm">
                   <span className="truncate">{r.name}</span>
-                  <button onClick={() => add(r.enrollmentId)} disabled={busy} className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700 disabled:opacity-40 shrink-0"><Plus className="w-4 h-4" /> Añadir</button>
+                  <button onClick={() => add(r.enrollmentId)} disabled={busy} className="flex items-center gap-1 text-xs font-semibold taller-mari hover:opacity-70 disabled:opacity-40 shrink-0"><Plus className="w-4 h-4" /> Añadir</button>
                 </div>
               ))}
-              {available.length === 0 && <p className="text-xs text-slate-400 p-2">No hay estudiantes sin equipo en este proyecto.</p>}
+              {available.length === 0 && <p className="text-xs taller-muted p-2">No hay estudiantes sin equipo en este proyecto.</p>}
             </div>
           </div>
         </div>
@@ -2578,14 +2578,14 @@ function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: {
 
 // ─── helpers UI ──────────────────────────────────────────────────────────────
 function Empty({ msg }: { msg: string }) {
-  return <div className="text-center py-16 bg-white rounded-2xl border border-slate-200"><Rocket className="w-12 h-12 mx-auto text-slate-300 mb-3" /><p className="text-slate-500">{msg}</p></div>
+  return <div className="text-center py-16 taller-card"><Rocket className="w-12 h-12 mx-auto taller-muted mb-3" /><p className="taller-soft">{msg}</p></div>
 }
-function Loading() { return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-violet-500" /></div> }
+function Loading() { return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin taller-mari" /></div> }
 function ProjectPicker({ projects, value, onChange }: { projects: any[]; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex gap-2 flex-wrap">
       {projects.map(p => (
-        <button key={p.id} onClick={() => onChange(p.id)} className={`px-3 py-2 rounded-xl text-sm font-medium border-2 ${value === p.id ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>{p.title}</button>
+        <button key={p.id} onClick={() => onChange(p.id)} className={`px-3 py-2 rounded-xl text-sm font-medium border-2 ${value === p.id ? 'taller-line-c taller-mari-bg taller-mari' : 'taller-line-c taller-soft'}`}>{p.title}</button>
       ))}
     </div>
   )
