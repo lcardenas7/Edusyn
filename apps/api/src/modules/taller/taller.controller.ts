@@ -82,6 +82,19 @@ export class TallerController {
     return this.service.addComment(await this.ctx(req), id, body?.text ?? '');
   }
 
+  // Conexión LIBRE entre dos piezas del mismo instrumento (Mapa de Actores).
+  @Post('relations')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async connect(@Request() req: any, @Body() body: { fromId: string; toId: string; relType?: string; label?: string }) {
+    return this.service.connectObjects(await this.ctx(req), body);
+  }
+
+  @Delete('relations/:id')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async disconnect(@Param('id') id: string, @Request() req: any) {
+    return this.service.disconnectObjects(await this.ctx(req), id);
+  }
+
   // Timeline del equipo (memoria narrativa; fuente = log de eventos).
   @Get('teams/:teamId/timeline')
   @Roles('ESTUDIANTE', 'DOCENTE', 'COORDINADOR')

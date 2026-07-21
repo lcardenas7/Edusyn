@@ -2633,6 +2633,8 @@ export const tallerApi = {
   deleteObject: (objectId: string) => api.delete(`/taller/objects/${objectId}`),
   toggleVote: (objectId: string) => api.post<{ voted: boolean }>(`/taller/objects/${objectId}/vote`),
   addComment: (objectId: string, text: string) => api.post<any>(`/taller/objects/${objectId}/comments`, { text }),
+  connect: (data: { fromId: string; toId: string; relType?: string; label?: string }) => api.post<any>(`/taller/relations`, data),
+  disconnect: (relationId: string) => api.delete(`/taller/relations/${relationId}`),
   teamTimeline: (teamId: string, limit?: number) => api.get<any[]>(`/taller/teams/${teamId}/timeline`, { params: { limit } }),
 }
 

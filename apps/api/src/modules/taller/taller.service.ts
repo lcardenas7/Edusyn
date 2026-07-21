@@ -160,7 +160,7 @@ export class TallerService {
     const itemIds = new Set(items.map(o => o.id));
     const edges = relations
       .filter(r => r.relType !== 'vota' && r.relType !== 'responde-a' && itemIds.has(r.fromId) && itemIds.has(r.toId))
-      .map(r => ({ fromId: r.fromId, toId: r.toId, relType: r.relType }));
+      .map(r => ({ id: r.id, fromId: r.fromId, toId: r.toId, relType: r.relType, label: r.label }));
 
     return { instrument: inst, objects: items, edges, me: { enrollmentId: actor.enrollmentId, name: actor.name, role: actor.role } };
   }
@@ -297,12 +297,56 @@ export class TallerService {
   // ─── Grafo: relaciones ─────────────────────────────────────────────────────
 
   /** Crea una arista tipada (idempotente vía unique(from,to,type) + skipDuplicates). */
-  private async link(ctx: Ctx, teamId: string | null, fromId: string, toId: string, relType: string): Promise<boolean> {
+  private async link(ctx: Ctx, teamId: string | null, fromId: string, toId: string, relType: string, label?: string | null): Promise<boolean> {
     const r = await this.prisma.tallerRelation.createMany({
-      data: [{ institutionId: ctx.institutionId, teamId, fromId, toId, relType }],
+      data: [{ institutionId: ctx.institutionId, teamId, fromId, toId, relType, label: label ?? null }],
       skipDuplicates: true,
     });
     return r.count > 0;
+  }
+
+  /** CONEXIÓN LIBRE entre dos objetos del mismo instrumento (Mapa de Actores y
+   * afines): cualquiera del equipo puede tejer el grafo — describir cómo se
+   * relacionan las piezas es trabajo colectivo. */
+  async connectObjects(ctx: Ctx, dto: { fromId: string; toId: string; relType?: string; label?: string }) {
+    if (!dto?.fromId || !dto?.toId) throw new BadRequestException('Faltan los extremos de la conexión');
+    if (dto.fromId === dto.toId) throw new BadRequestException('Una pieza no se conecta consigo misma');
+    const from = await this.prisma.tallerObject.findFirst({ where: { id: dto.fromId, institutionId: ctx.institutionId, deletedAt: null } });
+    const to = await this.prisma.tallerObject.findFirst({ where: { id: dto.toId, institutionId: ctx.institutionId, deletedAt: null } });
+    if (!from || !to) throw new NotFoundException('Alguna de las piezas ya no existe');
+    if (!from.instrumentId || from.instrumentId !== to.instrumentId) throw new BadRequestException('Solo se conectan piezas del mismo instrumento');
+    if (!from.teamId) throw new BadRequestException('Objeto sin equipo');
+    const actor = await this.resolveActor(from.teamId, ctx);
+
+    const relType = String(dto.relType || 'conecta-con').slice(0, 40);
+    const label = (dto.label || '').trim().slice(0, 120) || null;
+    const creada = await this.link(ctx, from.teamId, from.id, to.id, relType, label);
+    if (!creada && label) {
+      // ya existía esa conexión: actualizamos su etiqueta
+      await this.prisma.tallerRelation.updateMany({ where: { fromId: from.id, toId: to.id, relType }, data: { label } });
+    }
+    await this.emit(ctx, {
+      type: 'relation.Created', actorRole: actor.role,
+      teamId: from.teamId, expeditionId: from.expeditionId, instrumentId: from.instrumentId,
+      objectType: from.type, objectId: from.id, payload: { toId: to.id, relType, label },
+    });
+    return this.prisma.tallerRelation.findFirst({ where: { fromId: from.id, toId: to.id, relType } });
+  }
+
+  /** Quita una conexión libre. Cualquiera del equipo (tejer y destejer el grafo
+   * es colectivo); no aplica a las aristas internas de votos/comentarios. */
+  async disconnectObjects(ctx: Ctx, relationId: string) {
+    const rel = await this.prisma.tallerRelation.findFirst({ where: { id: relationId, institutionId: ctx.institutionId } });
+    if (!rel) throw new NotFoundException('Conexión no encontrada');
+    if (rel.relType === 'vota' || rel.relType === 'responde-a') throw new BadRequestException('Esa conexión la gestiona el sistema');
+    if (!rel.teamId) throw new BadRequestException('Conexión sin equipo');
+    const actor = await this.resolveActor(rel.teamId, ctx);
+    await this.prisma.tallerRelation.delete({ where: { id: relationId } });
+    await this.emit(ctx, {
+      type: 'relation.Removed', actorRole: actor.role, teamId: rel.teamId,
+      objectId: rel.fromId, payload: { toId: rel.toId, relType: rel.relType },
+    });
+    return { ok: true };
   }
 
   // ─── Votos (objeto Vote + arista 'vota') ───────────────────────────────────

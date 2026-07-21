@@ -7170,9 +7170,10 @@ model TallerRelation {
   id            String   @id @default(cuid())
   institutionId String
   teamId        String?
-  relType       String   // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a
+  relType       String   // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a | conecta-con
   fromId        String
   toId          String
+  label         String? // texto libre de la relación ("influye en", "usa el agua de…") — Mapa de Actores
   createdAt     DateTime @default(now())
 
   @@unique([fromId, toId, relType])

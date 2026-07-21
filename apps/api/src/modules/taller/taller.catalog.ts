@@ -36,7 +36,7 @@ export const INSTRUMENT_CATALOG: TallerInstrumentDef[] = [
   { key: 'BOARD:SCAMPER', motor: 'BOARD', dynamic: 'SCAMPER', name: 'SCAMPER', emoji: '🧩', intent: 'GENERAR', available: true,
     description: 'Transformar ideas existentes: Sustituir, Combinar, Adaptar, Modificar, otros usos, Eliminar, Reordenar.' },
   // ── 🔍 Investigar ──
-  { key: 'GRAPH:MAPA_ACTORES', motor: 'GRAPH', dynamic: 'MAPA_ACTORES', name: 'Mapa de actores', emoji: '🗺️', intent: 'INVESTIGAR', available: false,
+  { key: 'GRAPH:MAPA_ACTORES', motor: 'GRAPH', dynamic: 'MAPA_ACTORES', name: 'Mapa de actores', emoji: '🗺️', intent: 'INVESTIGAR', available: true,
     description: '¿Quiénes están involucrados en el problema y cómo se relacionan entre sí?' },
   { key: 'MEDIA:GALERIA', motor: 'MEDIA', dynamic: 'GALERIA', name: 'Galería de evidencias', emoji: '📷', intent: 'INVESTIGAR', available: true,
     description: 'Fotos, videos y hallazgos del terreno, con autor y fecha.' },

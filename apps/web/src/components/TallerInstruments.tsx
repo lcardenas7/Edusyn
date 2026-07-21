@@ -9,6 +9,7 @@ import TallerGallery from './TallerGallery'
 import TallerPoll from './TallerPoll'
 import TallerMatrix from './TallerMatrix'
 import TallerKanban from './TallerKanban'
+import TallerMap from './TallerMap'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Biblioteca de Instrumentos (Fase 5 del plan OS-first).
@@ -36,7 +37,9 @@ export function InstrumentRenderer({ instrumentKey, teamId, phase, members }: { 
   const [motor, dynamic] = instrumentKey.split(':')
   const stationId = `phase:${phase}`
   if (motor === 'BOARD') return <TallerBoard teamId={teamId} dynamic={dynamic} stationId={stationId} />
-  if (motor === 'GRAPH') return <TallerTree teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'GRAPH') return dynamic === 'MAPA_ACTORES'
+    ? <TallerMap teamId={teamId} dynamic={dynamic} stationId={stationId} />
+    : <TallerTree teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'TIMELINE') return <TallerTimeline teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'CARDS') return <TallerCards teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'MEDIA') return <TallerGallery teamId={teamId} dynamic={dynamic} stationId={stationId} />
