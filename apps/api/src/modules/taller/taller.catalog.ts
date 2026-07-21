@@ -47,15 +47,15 @@ export const INSTRUMENT_CATALOG: TallerInstrumentDef[] = [
     description: 'El problema central como tronco: las causas se cuelgan y se ramifican hasta llegar a las raíces de fondo.' },
   { key: 'GRAPH:CINCO_PORQUES', motor: 'GRAPH', dynamic: 'CINCO_PORQUES', name: '5 Porqués', emoji: '❓', intent: 'ANALIZAR', available: true,
     description: 'Preguntar "¿por qué?" en cadena hasta encontrar la causa raíz.' },
-  { key: 'MATRIX:IMPACTO_ESFUERZO', motor: 'MATRIX', dynamic: 'IMPACTO_ESFUERZO', name: 'Matriz impacto / esfuerzo', emoji: '📈', intent: 'ANALIZAR', available: false,
+  { key: 'MATRIX:IMPACTO_ESFUERZO', motor: 'MATRIX', dynamic: 'IMPACTO_ESFUERZO', name: 'Matriz impacto / esfuerzo', emoji: '📈', intent: 'ANALIZAR', available: true,
     description: 'Ubicar cada idea según cuánto cambia el problema y cuánto cuesta hacerla.' },
   // ── 🎯 Decidir ──
-  { key: 'POLL:VOTACION', motor: 'POLL', dynamic: 'VOTACION', name: 'Votación', emoji: '🗳️', intent: 'DECIDIR', available: false,
+  { key: 'POLL:VOTACION', motor: 'POLL', dynamic: 'VOTACION', name: 'Votación', emoji: '🗳️', intent: 'DECIDIR', available: true,
     description: 'Elegir entre opciones con votos simples, ponderados o por ranking.' },
   { key: 'CARDS:PROS_CONTRAS', motor: 'CARDS', dynamic: 'PROS_CONTRAS', name: 'Pros y contras', emoji: '⚖️', intent: 'DECIDIR', available: true,
     description: 'Dos columnas para pesar una decisión antes de tomarla.' },
   // ── 🏗️ Planificar ──
-  { key: 'FLOW:KANBAN', motor: 'FLOW', dynamic: 'KANBAN', name: 'Kanban', emoji: '📋', intent: 'PLANIFICAR', available: false,
+  { key: 'FLOW:KANBAN', motor: 'FLOW', dynamic: 'KANBAN', name: 'Kanban', emoji: '📋', intent: 'PLANIFICAR', available: true,
     description: 'Por hacer → haciendo → hecho: el plan de acción visible para todos.' },
   { key: 'TIMELINE:LINEA_TIEMPO', motor: 'TIMELINE', dynamic: 'LINEA_TIEMPO', name: 'Línea de tiempo', emoji: '📅', intent: 'PLANIFICAR', available: true,
     description: 'El equipo construye la cronología del proyecto: hechos, hallazgos y entregas ordenados en el tiempo.' },
@@ -89,7 +89,8 @@ export const DEFAULT_STATION_INSTRUMENTS: Record<number, { key: string; required
   3: [ // Objetivos — acordar el objetivo del equipo
     { key: 'BOARD:BRAINSTORM', required: false },
   ],
-  4: [ // Plan de Acción — organizar el trabajo en el tiempo
+  4: [ // Plan de Acción — repartir el trabajo y ordenarlo en el tiempo
+    { key: 'FLOW:KANBAN', required: false },
     { key: 'TIMELINE:LINEA_TIEMPO', required: false },
   ],
   5: [ // Prototipo — construir y documentar el proceso

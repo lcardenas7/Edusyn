@@ -6,6 +6,9 @@ import TallerTree from './TallerTree'
 import TallerTimeline from './TallerTimeline'
 import TallerCards from './TallerCards'
 import TallerGallery from './TallerGallery'
+import TallerPoll from './TallerPoll'
+import TallerMatrix from './TallerMatrix'
+import TallerKanban from './TallerKanban'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Biblioteca de Instrumentos (Fase 5 del plan OS-first).
@@ -29,7 +32,7 @@ function useCatalog() {
 }
 
 /** Renderiza la instancia de un instrumento para un equipo en una estación. */
-export function InstrumentRenderer({ instrumentKey, teamId, phase }: { instrumentKey: string; teamId: string; phase: number }) {
+export function InstrumentRenderer({ instrumentKey, teamId, phase, members }: { instrumentKey: string; teamId: string; phase: number; members?: any[] }) {
   const [motor, dynamic] = instrumentKey.split(':')
   const stationId = `phase:${phase}`
   if (motor === 'BOARD') return <TallerBoard teamId={teamId} dynamic={dynamic} stationId={stationId} />
@@ -37,6 +40,9 @@ export function InstrumentRenderer({ instrumentKey, teamId, phase }: { instrumen
   if (motor === 'TIMELINE') return <TallerTimeline teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'CARDS') return <TallerCards teamId={teamId} dynamic={dynamic} stationId={stationId} />
   if (motor === 'MEDIA') return <TallerGallery teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'POLL') return <TallerPoll teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'MATRIX') return <TallerMatrix teamId={teamId} dynamic={dynamic} stationId={stationId} />
+  if (motor === 'FLOW') return <TallerKanban teamId={teamId} dynamic={dynamic} stationId={stationId} members={members} />
   return <div className="taller-card p-6 text-sm taller-muted">Este instrumento aún no está disponible.</div>
 }
 
@@ -228,7 +234,7 @@ export function StationInstruments({ team, phase }: { team: any; phase: number }
       </div>
       {open && (
         <div className="mt-3">
-          <InstrumentRenderer instrumentKey={open} teamId={team.id} phase={phase} />
+          <InstrumentRenderer instrumentKey={open} teamId={team.id} phase={phase} members={team.members || []} />
         </div>
       )}
     </div>

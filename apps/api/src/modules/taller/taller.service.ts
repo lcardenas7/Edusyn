@@ -291,7 +291,15 @@ export class TallerService {
     if (!target.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(target.teamId, ctx);
     if (!actor.enrollmentId) throw new ForbiddenException('Solo los integrantes votan');
-    if (target.authorId === actor.enrollmentId) throw new BadRequestException('No puedes votar tu propio aporte');
+    // En una VOTACIÓN formal (motor Poll) sí puedes votar tu propia propuesta: si no,
+    // quien propone queda en desventaja. En los demás motores (muro de ideas, árbol…)
+    // se mantiene la regla de no auto-votarse.
+    if (target.authorId === actor.enrollmentId) {
+      const inst = target.instrumentId
+        ? await this.prisma.tallerInstrument.findUnique({ where: { id: target.instrumentId }, select: { motor: true } })
+        : null;
+      if (inst?.motor !== 'POLL') throw new BadRequestException('No puedes votar tu propio aporte');
+    }
 
     // ¿ya voté? (mi objeto Vote relacionado con el target)
     const myVotes = await this.prisma.tallerObject.findMany({
