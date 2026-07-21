@@ -2,6 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   EL TALLER — sistema visual del módulo Expedición ABP ("estudio al atardecer").
+   Aislado bajo .taller para NO afectar al resto del LMS. Rediseño por partes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.taller {
+  --t-canvas: #EAE4D8;
+  --t-surface: #FBF8F2;
+  --t-raised: #FFFFFF;
+  --t-ink: #211D16;
+  --t-soft: #5A5346;
+  --t-muted: #867E6E;
+  --t-line: rgba(40, 34, 22, 0.13);
+  --t-marigold: #C9791A;
+  --t-marigold-2: #E19325;
+  --t-teal: #0F8074;
+  --t-violet: #6C4FD0;
+  --t-terra: #C1622E;
+  --t-shadow-sm: 0 1px 2px rgba(40, 34, 22, 0.08), 0 6px 18px -6px rgba(40, 34, 22, 0.18);
+  --t-shadow-md: 0 12px 30px -10px rgba(40, 34, 22, 0.28);
+  color: var(--t-ink);
+}
+.taller-canvas {
+  background:
+    radial-gradient(120% 80% at 85% -10%, color-mix(in srgb, var(--t-marigold) 12%, var(--t-canvas)), transparent 55%),
+    radial-gradient(circle at 1px 1px, rgba(60, 50, 30, 0.09) 1px, transparent 0),
+    var(--t-canvas);
+  background-size: auto, 22px 22px, auto;
+  border: 1px solid var(--t-line);
+  border-radius: 22px;
+}
+.taller-card {
+  background: var(--t-surface);
+  border: 1px solid var(--t-line);
+  border-radius: 18px;
+  box-shadow: var(--t-shadow-sm);
+}
+.taller-mission {
+  background: radial-gradient(140% 120% at 0% 0%, color-mix(in srgb, var(--t-marigold) 15%, var(--t-surface)), var(--t-surface) 60%);
+  border: 1px solid color-mix(in srgb, var(--t-marigold) 22%, var(--t-line));
+}
+.taller-crest {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--t-marigold) 30%, var(--t-surface)), color-mix(in srgb, var(--t-terra) 24%, var(--t-surface)));
+}
+.taller-avatar {
+  background: var(--t-raised);
+  border: 1px solid var(--t-line);
+}
+.taller-chip {
+  background: var(--t-raised);
+  border: 1px solid var(--t-line);
+  color: var(--t-soft);
+}
+.taller-cta {
+  background: linear-gradient(180deg, var(--t-marigold-2), var(--t-marigold));
+  color: #241703;
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--t-marigold) 70%, transparent);
+}
+.taller-ink { color: var(--t-ink); }
+.taller-soft { color: var(--t-soft); }
+.taller-muted { color: var(--t-muted); }
+.taller-mari { color: var(--t-marigold); }
+/* Utilidades de migración: el módulo ABP hablaba el lenguaje visual anterior
+   (blanco/slate/violeta). Estas clases traducen bordes, superficies y acentos al
+   vocabulario del Taller sin reescribir cada estilo en línea. */
+.taller-line-c { border-color: var(--t-line); }
+.taller-line { border: 1px solid var(--t-line); }
+.taller-surface { background: var(--t-surface); }
+.taller-raised { background: var(--t-raised); }
+.taller-mari-bg { background: color-mix(in srgb, var(--t-marigold) 14%, transparent); }
+.taller-mari-solid { background: var(--t-marigold); }
+.taller-teal-solid { background: var(--t-teal); }
+.taller-line-bg { background: color-mix(in srgb, var(--t-line) 70%, transparent); }
+.taller-raised-95 { background: color-mix(in srgb, var(--t-raised) 95%, transparent); }
+.taller-raised-90 { background: color-mix(in srgb, var(--t-raised) 90%, transparent); }
+.taller-raised-80 { background: color-mix(in srgb, var(--t-raised) 80%, transparent); }
+.taller-accent { accent-color: var(--t-marigold); }
+.taller-cta-inline {
+  background: linear-gradient(180deg, var(--t-marigold-2), var(--t-marigold));
+  color: #241703;
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--t-marigold) 70%, transparent);
+}
+/* Post-it táctil: rotación base por inline-style, se endereza y eleva al pasar. */
+.taller-sticky { transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s; }
+.taller-sticky:hover { transform: rotate(0deg) translateY(-4px) !important; box-shadow: var(--t-shadow-md, 0 12px 30px -10px rgba(40, 34, 22, 0.28)); }
+
 :root {
   --primary: #2563eb;
   --primary-foreground: #ffffff;

@@ -6710,6 +6710,12 @@ enum AbpValidationStatus {
   RETURNED
 }
 
+enum AbpTeamIdentityState {
+  DRAFT // los estudiantes aún deben elegir nombre + emblema (ritual de fundación)
+  CONFIRMED // identidad establecida
+  RENAME_PENDING // hay un cambio de nombre solicitado, a la espera del docente
+}
+
 enum AbpContributionType {
   CANVAS_CARD
   IDEA
@@ -6795,6 +6801,8 @@ model AbpTeam {
   name          String
   emoji         String   @default("🚀")
   color         String   @default("#0E4A5A")
+  identityState AbpTeamIdentityState @default(CONFIRMED) // DRAFT = los estudiantes deben fundar (nombre+emblema); RENAME_PENDING = cambio en revisión
+  proposedName  String? // nombre propuesto por el equipo, a la espera de que el docente lo apruebe
   currentPhase  Int      @default(1) // 1–6
   xp            Int      @default(0) // XP de equipo (barra denormalizada)
   problem       String?  @db.Text // el reto propio del equipo
@@ -6821,6 +6829,7 @@ model AbpTeamMember {
   institutionId       String
   teamId              String
   studentEnrollmentId String
+  avatarId            String? // avatar elegido por el estudiante (de un set curado)
   createdAt           DateTime @default(now())
 
   institution       Institution       @relation("RlsInstitutionABPM", fields: [institutionId], references: [id])
@@ -6891,7 +6900,10 @@ model AbpContribution {
   team              AbpTeam           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
 
-  @@unique([studentEnrollmentId, type, refId]) // idempotencia: 1 voto por idea, 1 tarjeta, etc.
+  // Idempotencia POR EQUIPO: 1 voto por idea, 1 tarjeta, etc. — DEBE incluir teamId:
+  // sin él, la tarjeta '0' de un equipo anterior del mismo estudiante colisionaba con
+  // la del equipo nuevo y el INSERT abortaba la tx por-request (canvas "se borraba").
+  @@unique([teamId, studentEnrollmentId, type, refId])
   @@index([institutionId])
   @@index([teamId, phase])
   @@index([studentEnrollmentId])
@@ -6983,6 +6995,23 @@ model AbpMission {
   xp                Int              @default(0)
   generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
   generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  // DESTINATARIO: por defecto todo el equipo. INDIVIDUAL = dirigida a un
+  // integrante ("Juan, tú entrevista al encargado"): solo él la entrega, el
+  // equipo la ve para coordinarse. assigneeName va denormalizado para pintar
+  // la autoría sin joins.
+  assigneeType           String    @default("TEAM") // TEAM | INDIVIDUAL
+  assigneeEnrollmentId   String?
+  assigneeName           String?
+  dueAt                  DateTime? // fecha límite (opcional)
+  // Misión de ENTREGA: un "taller" que el equipo cumple ENTREGANDO un producto
+  // (no marcando un checkbox). Vive dentro del ABP porque es parte del proyecto.
+  deliverableKind        String? // null = trabajo libre · FILE | LINK | TEXT
+  deliveryState          String    @default("PENDING") // PENDING | SUBMITTED
+  deliveryUrl            String? // storage path (FILE) o enlace (LINK)
+  deliveryText           String?   @db.Text // entrega de texto
+  deliveryLabel          String? // nombre del archivo / etiqueta legible
+  deliveryByEnrollmentId String? // quién entregó (participación)
+  deliveredAt            DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -7005,6 +7034,7 @@ model AbpMissionActivity {
   completed               Boolean                @default(false)
   completedByEnrollmentId String? // quién la completó (participación)
   classroomActivityId     String? // si es una lección/juego jugable, apunta a la ClassroomActivity
+  linkedActivity          Boolean                @default(false) // true = actividad REUTILIZADA (enlazada, no se borra al quitar); false = propia (creada inline)
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
@@ -7056,4 +7086,130 @@ model AbpLogEntry {
 
   @@index([institutionId])
   @@index([teamId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL TALLER — NÚCLEO (Sistema Operativo de Colaboración)
+// Capa-plataforma NUEVA e independiente del ABP legacy (Abp*). Implementa el
+// contrato de docs/OBJECT_SCHEMA_BIBLE.md + docs/EVENT_BIBLE.md. El núcleo guarda
+// REFERENCIAS al Aula (courseId/teamId/authorId como String, sin FKs) siguiendo la
+// regla "Identidad = del Aula; el objeto guarda referencias, no copias". Nada se
+// borra de verdad (borrado suave). El ABP actual sigue vivo sin tocarse.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tipos de Objeto Universal (Object Schema Bible §1). Se amplía por configuración.
+enum TallerObjectType {
+  PostIt
+  Idea
+  Vote
+  Comment
+  Task
+  Evidence
+  Decision
+  Note
+  Question
+  Link
+  Attachment
+}
+
+// Instancia de un Instrumento (Motor + Dinámica) donde viven los objetos.
+// Ej.: un Board con dinámica Brainstorm dentro de una estación de un equipo.
+model TallerInstrument {
+  id            String   @id @default(cuid())
+  institutionId String
+  courseId      String?  // classroomId (referencia)
+  expeditionId  String?  // abpProjectId u otra experiencia (referencia)
+  teamId        String?  // equipo dueño del lienzo (referencia)
+  stationId     String?  // estación/fase (referencia)
+  motor         String   // BOARD | GRAPH | CARDS | MATRIX | POLL | FLOW | TIMELINE | FRAME | MEDIA | DOC | BUILDER
+  dynamic       String?  // BRAINSTORM | CRAZY8 | SCAMPER | AFINIDAD | ...
+  title         String
+  config        Json     @default("{}") // reglas de la dinámica (guía, límites, colores…)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  objects       TallerObject[]
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([expeditionId])
+}
+
+// Objeto Universal: base + capacidades (mixins) en `data`. Escritura atómica por
+// `version` (anti lost-update). `state` = ciclo de vida propio del tipo.
+model TallerObject {
+  id            String            @id @default(cuid())
+  institutionId String
+  // scope (referencias, no FKs)
+  courseId      String?
+  expeditionId  String?
+  teamId        String?
+  stationId     String?
+  instrumentId  String?           // dónde vive (Board/Brainstorm…)
+  type          TallerObjectType
+  authorId      String?           // studentEnrollmentId (null = docente/sistema)
+  authorName    String?           // nombre denormalizado (pintar autoría sin join)
+  state         String?           // p.ej. Task: TODO|DOING|DONE
+  data          Json              @default("{}") // text, colorId, x, y, votos, …
+  version       Int               @default(0)    // capacidad Historial + CAS atómico
+  deletedAt     DateTime?         // borrado suave (nada desaparece)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  instrument    TallerInstrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([instrumentId])
+  @@index([teamId])
+  @@index([expeditionId])
+  @@index([type])
+}
+
+// Relación = arista tipada del grafo (el "cerebro"). fromId/toId → TallerObject.id.
+model TallerRelation {
+  id            String   @id @default(cuid())
+  institutionId String
+  teamId        String?
+  relType       String   // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a | conecta-con
+  fromId        String
+  toId          String
+  label         String? // texto libre de la relación ("influye en", "usa el agua de…") — Mapa de Actores
+  createdAt     DateTime @default(now())
+
+  @@unique([fromId, toId, relType])
+  @@index([institutionId])
+  @@index([fromId])
+  @@index([toId])
+  @@index([teamId])
+}
+
+// Evento inmutable (Event Bible §2). Fuente de verdad de Timeline, Analíticas,
+// Gamificación, Estado de Colaboración y Valeria. Append-only.
+model TallerEvent {
+  id            String   @id @default(cuid())
+  institutionId String
+  type          String   // dominio.PasadoSimple: object.Created, abp.IdeaCreated, team.TeamNamed…
+  occurredAt    DateTime @default(now())
+  // actor
+  actorUserId   String?
+  actorRole     String?  // student | teacher | valeria | system
+  // scope
+  courseId      String?
+  expeditionId  String?
+  teamId        String?
+  stationId     String?
+  instrumentId  String?
+  // subject
+  objectType    String?
+  objectId      String?
+  payload       Json     @default("{}")
+  causationId   String?
+  correlationId String?
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([expeditionId])
+  @@index([instrumentId])
+  @@index([type])
+  @@index([occurredAt])
 }

@@ -52,9 +52,9 @@ export class AbpController {
   // Matriculados del aula (para armar equipos) — docente.
   @Get('classroom/:classroomId/roster')
   @Roles('DOCENTE', 'COORDINADOR')
-  async roster(@Param('classroomId') classroomId: string, @Request() req: any) {
+  async roster(@Param('classroomId') classroomId: string, @Query('projectId') projectId: string | undefined, @Request() req: any) {
     const { institutionId, userId } = await this.ctx(req);
-    return this.service.getRoster(classroomId, institutionId, userId);
+    return this.service.getRoster(classroomId, institutionId, userId, projectId);
   }
 
   // Detalle de un proyecto con sus equipos — docente.
@@ -79,6 +79,22 @@ export class AbpController {
   async updatePresentation(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { challenge?: string; presentation?: any }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.updatePresentation(projectId, institutionId, userId, body);
+  }
+
+  // Docente configura los instrumentos de una estación (Biblioteca de Instrumentos).
+  @Post('projects/:projectId/instruments')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async setPhaseInstruments(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { phase: number; items: { key: string; required?: boolean }[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setPhaseInstruments(projectId, institutionId, userId, Number(body?.phase), body?.items ?? []);
+  }
+
+  // Docente escribe las instrucciones de una estación (qué haremos aquí y cómo).
+  @Post('projects/:projectId/station-instructions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async setStationInstructions(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { phase: number; text: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setStationInstructions(projectId, institutionId, userId, Number(body?.phase), body?.text ?? '');
   }
 
   // ─── Recursos ──────────────────────────────────────────────────────────────
@@ -174,6 +190,55 @@ export class AbpController {
   async deleteTeam(@Param('teamId') teamId: string, @Request() req: any) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.deleteTeam(teamId, institutionId, userId);
+  }
+
+  // Añadir integrante a un equipo — docente.
+  @Post('teams/:teamId/members')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addTeamMember(@Param('teamId') teamId: string, @Body() body: { enrollmentId: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addTeamMember(teamId, institutionId, userId, body?.enrollmentId);
+  }
+
+  // Sacar integrante de un equipo — docente.
+  @Delete('teams/:teamId/members/:enrollmentId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async removeTeamMember(@Param('teamId') teamId: string, @Param('enrollmentId') enrollmentId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.removeTeamMember(teamId, institutionId, userId, enrollmentId);
+  }
+
+  // ─── Identidad del equipo (estudiantes eligen; docente aprueba el rename) ────
+  // Fundación: el equipo elige nombre + emblema (DRAFT → CONFIRMED).
+  @Post('teams/:teamId/identity')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async foundIdentity(@Param('teamId') teamId: string, @Body() body: { name: string; emoji?: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.foundTeamIdentity(teamId, institutionId, userId, body);
+  }
+
+  // El equipo solicita cambiar el nombre (→ al docente).
+  @Post('teams/:teamId/rename-request')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async requestRename(@Param('teamId') teamId: string, @Body() body: { proposedName: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.requestTeamRename(teamId, institutionId, userId, body?.proposedName);
+  }
+
+  // El docente aprueba/rechaza el cambio de nombre.
+  @Post('teams/:teamId/rename-resolve')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async resolveRename(@Param('teamId') teamId: string, @Body() body: { approve: boolean }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.resolveTeamRename(teamId, institutionId, userId, !!body?.approve);
+  }
+
+  // El estudiante elige su avatar.
+  @Post('teams/:teamId/my-avatar')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async setMyAvatar(@Param('teamId') teamId: string, @Body() body: { avatarId: string }, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setMyAvatar(teamId, institutionId, userId, body?.avatarId);
   }
 
   // ─── Sendero + validaciones (Ticket 2) ─────────────────────────────────────
@@ -274,9 +339,9 @@ export class AbpController {
   // Docente aprueba (rúbrica obligatoria) o devuelve una validación.
   @Post('validations/:validationId/resolve')
   @Roles('DOCENTE', 'COORDINADOR')
-  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string }) {
+  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string; missions?: { title: string; description?: string; required?: boolean; deliverableKind?: string }[] }) {
     const { institutionId, userId } = await this.ctx(req);
-    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback, body.rubricScores, body.rubricComment);
+    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback, body.rubricScores, body.rubricComment, body.missions);
   }
 
   // Pantalla de revisión del docente (trabajo + criterios + rúbrica + comentarios).
@@ -297,7 +362,7 @@ export class AbpController {
 
   @Post('teams/:teamId/phases/:phase/missions')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
-  async addMission(@Param('teamId') teamId: string, @Param('phase') phase: string, @Request() req: any, @Body() body: { title: string; description?: string; required?: boolean }) {
+  async addMission(@Param('teamId') teamId: string, @Param('phase') phase: string, @Request() req: any, @Body() body: { title: string; description?: string; required?: boolean; deliverableKind?: string; assigneeEnrollmentId?: string; dueAt?: string }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.addMission(teamId, institutionId, userId, parseInt(phase, 10), body);
   }
@@ -326,6 +391,22 @@ export class AbpController {
     return this.service.addLessonActivity(missionId, institutionId, userId, body);
   }
 
+  // Actividades/juegos existentes del curso reutilizables en esta misión.
+  @Get('missions/:missionId/reusable-activities')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async reusableActivities(@Param('missionId') missionId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listReusableActivities(missionId, institutionId, userId);
+  }
+
+  // Reutiliza (enlaza) una actividad/juego existente a la misión.
+  @Post('missions/:missionId/attach-activity')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async attachActivity(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { classroomActivityId: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.attachActivity(missionId, institutionId, userId, body?.classroomActivityId);
+  }
+
   // Alta en lote de actividades (aplicar sugerencias de Valeria).
   @Post('missions/:missionId/activities/bulk')
   @Roles('DOCENTE', 'COORDINADOR')
@@ -342,10 +423,18 @@ export class AbpController {
   }
 
   @Post('missions/:missionId/status')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  @Roles('DOCENTE', 'COORDINADOR')
   async setMissionStatus(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { completed: boolean }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.setMissionStatus(missionId, institutionId, userId, !!body.completed);
+  }
+
+  // El equipo ENTREGA el producto de una misión de entrega (taller dentro del ABP).
+  @Post('missions/:missionId/deliver')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async submitDelivery(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { url?: string; text?: string; label?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.submitMissionDelivery(missionId, institutionId, userId, body || {});
   }
 
   @Post('missions/:missionId/activities')
@@ -356,7 +445,7 @@ export class AbpController {
   }
 
   @Post('activities/:activityId/complete')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  @Roles('DOCENTE', 'COORDINADOR')
   async completeActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: { completed: boolean }) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.completeActivity(activityId, institutionId, userId, !!body.completed);

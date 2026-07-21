@@ -2553,11 +2553,13 @@ export interface RouteProgress {
 export const abpApi = {
   phases: () => api.get<any[]>(`/abp/phases`),
   listByClassroom: (classroomId: string) => api.get<any[]>(`/abp/classroom/${classroomId}/projects`),
-  roster: (classroomId: string) => api.get<{ enrollmentId: string; studentId: string; name: string }[]>(`/abp/classroom/${classroomId}/roster`),
+  roster: (classroomId: string, projectId?: string) => api.get<{ enrollmentId: string; studentId: string; name: string; assignedTeamName: string | null }[]>(`/abp/classroom/${classroomId}/roster${projectId ? `?projectId=${projectId}` : ''}`),
   getProject: (projectId: string) => api.get<any>(`/abp/projects/${projectId}`),
   dashboard: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/dashboard`),
   projectPresentation: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/presentation`),
   updatePresentation: (projectId: string, data: { challenge?: string; presentation?: any }) => api.post<any>(`/abp/projects/${projectId}/presentation`, data),
+  setPhaseInstruments: (projectId: string, phase: number, items: { key: string; required?: boolean }[]) => api.post<any>(`/abp/projects/${projectId}/instruments`, { phase, items }),
+  setStationInstructions: (projectId: string, phase: number, text: string) => api.post<any>(`/abp/projects/${projectId}/station-instructions`, { phase, text }),
   listResources: (projectId: string) => api.get<any[]>(`/abp/projects/${projectId}/resources`),
   addResource: (projectId: string, data: { type?: string; title: string; url: string; description?: string }) => api.post<any>(`/abp/projects/${projectId}/resources`, data),
   deleteResource: (resourceId: string) => api.delete(`/abp/resources/${resourceId}`),
@@ -2567,8 +2569,14 @@ export const abpApi = {
   deleteAnnouncement: (announcementId: string) => api.delete(`/abp/announcements/${announcementId}`),
   teamExpedition: (teamId: string) => api.get<any>(`/abp/teams/${teamId}/expedition`),
   createProject: (data: { classroomId: string; title: string; challenge?: string }) => api.post<any>(`/abp/projects`, data),
-  createTeam: (data: { projectId: string; name: string; emoji?: string; color?: string; problem?: string; memberEnrollmentIds: string[] }) => api.post<any>(`/abp/teams`, data),
+  createTeam: (data: { projectId: string; name: string; emoji?: string; color?: string; problem?: string; memberEnrollmentIds: string[]; letStudentsName?: boolean }) => api.post<any>(`/abp/teams`, data),
   deleteTeam: (teamId: string) => api.delete(`/abp/teams/${teamId}`),
+  addTeamMember: (teamId: string, enrollmentId: string) => api.post<any>(`/abp/teams/${teamId}/members`, { enrollmentId }),
+  removeTeamMember: (teamId: string, enrollmentId: string) => api.delete(`/abp/teams/${teamId}/members/${enrollmentId}`),
+  foundTeamIdentity: (teamId: string, name: string, emoji: string) => api.post<any>(`/abp/teams/${teamId}/identity`, { name, emoji }),
+  requestTeamRename: (teamId: string, proposedName: string) => api.post<any>(`/abp/teams/${teamId}/rename-request`, { proposedName }),
+  resolveTeamRename: (teamId: string, approve: boolean) => api.post<any>(`/abp/teams/${teamId}/rename-resolve`, { approve }),
+  setMyAvatar: (teamId: string, avatarId: string) => api.post<any>(`/abp/teams/${teamId}/my-avatar`, { avatarId }),
   myTeam: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/my-team`),
   saveCanvas: (teamId: string, cardIndex: number, value: string) => api.post<any>(`/abp/teams/${teamId}/canvas`, { cardIndex, value }),
   addIdea: (teamId: string, text: string) => api.post<any>(`/abp/teams/${teamId}/ideas`, { text }),
@@ -2582,17 +2590,20 @@ export const abpApi = {
   coeval: (teamId: string, targetTeamId: string, scores: number[]) => api.post<any>(`/abp/teams/${teamId}/coeval`, { targetTeamId, scores }),
   requestValidation: (teamId: string) => api.post<any>(`/abp/teams/${teamId}/request-validation`, {}),
   queue: (classroomId?: string) => api.get<any[]>(`/abp/queue`, { params: { classroomId } }),
-  resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),
+  resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string; missions?: { title: string; description?: string; required?: boolean; deliverableKind?: string }[] }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),
   getReview: (validationId: string) => api.get<any>(`/abp/validations/${validationId}/review`),
   addComment: (teamId: string, data: { phase: number; refType: string; refId?: string; content: string; parentId?: string }) => api.post<any>(`/abp/teams/${teamId}/comments`, data),
   resolveComment: (commentId: string, resolved: boolean) => api.post<any>(`/abp/comments/${commentId}/resolve`, { resolved }),
   // Misiones (Opción A: herramienta = misión por defecto de la fase)
   listMissions: (teamId: string, phase: number) => api.get<any[]>(`/abp/teams/${teamId}/phases/${phase}/missions`),
-  addMission: (teamId: string, phase: number, data: { title: string; description?: string; required?: boolean }) => api.post<any>(`/abp/teams/${teamId}/phases/${phase}/missions`, data),
-  broadcastMission: (projectId: string, data: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) => api.post<{ ok: boolean; count: number }>(`/abp/projects/${projectId}/broadcast-mission`, data),
+  addMission: (teamId: string, phase: number, data: { title: string; description?: string; required?: boolean; deliverableKind?: string; assigneeEnrollmentId?: string; dueAt?: string }) => api.post<any>(`/abp/teams/${teamId}/phases/${phase}/missions`, data),
+  broadcastMission: (projectId: string, data: { phase: number; title: string; description?: string; required?: boolean; deliverableKind?: string; activities?: { type: string; title: string }[] }) => api.post<{ ok: boolean; count: number }>(`/abp/projects/${projectId}/broadcast-mission`, data),
+  submitDelivery: (missionId: string, data: { url?: string; text?: string; label?: string }) => api.post<any>(`/abp/missions/${missionId}/deliver`, data),
   suggestActivities: (teamId: string, missionId: string, count?: number) => api.post<{ configured: boolean; model?: string; activities: { type: string; title: string; description: string }[] }>(`/abp/teams/${teamId}/missions/${missionId}/suggest`, { count }),
   addActivitiesBulk: (missionId: string, items: { type: string; title: string }[]) => api.post<any[]>(`/abp/missions/${missionId}/activities/bulk`, { items }),
   addLessonActivity: (missionId: string, title: string) => api.post<any>(`/abp/missions/${missionId}/lesson-activity`, { title }),
+  reusableActivities: (missionId: string) => api.get<{ id: string; title: string; type: string }[]>(`/abp/missions/${missionId}/reusable-activities`),
+  attachActivity: (missionId: string, classroomActivityId: string) => api.post<any>(`/abp/missions/${missionId}/attach-activity`, { classroomActivityId }),
   generateLessonContent: (activityId: string, instructions?: string) => api.post<{ ok: boolean; title: string; slides: number; model?: string }>(`/abp/activities/${activityId}/generate-lesson`, { instructions }),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
   setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
@@ -2606,6 +2617,25 @@ export const abpApi = {
   listDiscoveries: (teamId: string) => api.get<any[]>(`/abp/teams/${teamId}/discoveries`),
   addDiscovery: (teamId: string, data: { phase: number; title: string; description: string; evidenceKind?: string; evidenceUrl?: string; impact?: string }) => api.post<any>(`/abp/teams/${teamId}/discoveries`, data),
   deleteDiscovery: (discoveryId: string) => api.delete(`/abp/discoveries/${discoveryId}`),
+}
+
+// ═══ EL TALLER — núcleo del Sistema Operativo de Colaboración ═══
+// Objetos Universales + Grafo + Eventos + Motores (Board·Brainstorm primero).
+export const tallerApi = {
+  catalog: () => api.get<{ intents: { id: string; name: string }[]; instruments: { key: string; motor: string; dynamic: string; name: string; emoji: string; intent: string; description: string; available: boolean }[] }>(`/taller/catalog`),
+  resolveInstrument: (data: { teamId: string; motor: string; dynamic?: string; stationId?: string; title?: string }) =>
+    api.post<any>(`/taller/instruments/resolve`, data),
+  instrumentState: (instrumentId: string) => api.get<any>(`/taller/instruments/${instrumentId}`),
+  createObject: (instrumentId: string, data: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string; fields?: Record<string, string> }) =>
+    api.post<any>(`/taller/instruments/${instrumentId}/objects`, data),
+  updateObject: (objectId: string, data: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string; fields?: Record<string, string> }) =>
+    api.patch<any>(`/taller/objects/${objectId}`, data),
+  deleteObject: (objectId: string) => api.delete(`/taller/objects/${objectId}`),
+  toggleVote: (objectId: string) => api.post<{ voted: boolean }>(`/taller/objects/${objectId}/vote`),
+  addComment: (objectId: string, text: string) => api.post<any>(`/taller/objects/${objectId}/comments`, { text }),
+  connect: (data: { fromId: string; toId: string; relType?: string; label?: string }) => api.post<any>(`/taller/relations`, data),
+  disconnect: (relationId: string) => api.delete(`/taller/relations/${relationId}`),
+  teamTimeline: (teamId: string, limit?: number) => api.get<any[]>(`/taller/teams/${teamId}/timeline`, { params: { limit } }),
 }
 
 export const learningRouteApi = {

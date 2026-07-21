@@ -38,3 +38,6 @@ redesign_*.mjs
 render_*.mjs
 outputs/
 
+
+# Graphify generated graph (local, do not commit)
+graphify-out/

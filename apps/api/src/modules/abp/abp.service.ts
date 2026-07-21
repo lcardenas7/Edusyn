@@ -5,6 +5,7 @@ import { LearningIdentityService } from '../gamification/learning-identity.servi
 import { ApdAiService } from '../apd/ai/apd-ai.service';
 import { AiOrchestratorService } from '../apd/ai/ai-orchestrator.service';
 import { ABP_PHASE_COUNT, ABP_PHASES, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor, MISSION_TEMPLATES, toolCriterionMet } from './abp.constants';
+import { instrumentByKey, DEFAULT_STATION_INSTRUMENTS } from '../taller/taller.catalog';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -27,6 +28,33 @@ export class AbpService {
     try {
       await this.identity.grantXp({ institutionId, studentId, studentEnrollmentId: enrollmentId, source: 'ABP' as any, amount, reason, idempotencyKey: key });
     } catch { /* la gamificación no puede romper el flujo del ABP */ }
+  }
+
+  /**
+   * Leer-modificar-escribir ATÓMICO sobre AbpPhaseState.data (Capa 1 anti-conflictos).
+   * Toma un lock pesimista de la fila de la fase (SELECT … FOR UPDATE) dentro de una
+   * transacción, para SERIALIZAR las escrituras concurrentes de varios integrantes del
+   * equipo → elimina el "lost update" (que dos guardados a la vez se pisen y dejen una
+   * casilla vacía). El callback recibe una copia mutable de `data` y el `ps` bloqueado;
+   * al terminar se persiste `data`. Si el callback lanza, la transacción hace rollback.
+   * Las tareas idempotentes (contribuciones, XP) se hacen FUERA, para no alargar el lock.
+   */
+  private async withPhaseDataLock<T>(
+    teamId: string,
+    phase: number,
+    fn: (data: any, ps: { status: string; data: any }) => T | Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "AbpPhaseState" WHERE "teamId" = ${teamId} AND "phase" = ${phase} FOR UPDATE`;
+      const ps = await tx.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } } });
+      if (!ps) throw new BadRequestException('Fase no encontrada');
+      const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+      const out = await fn(data, ps as any);
+      await tx.abpPhaseState.update({ where: { teamId_phase: { teamId, phase } }, data: { data } });
+      return out;
+      // timeout amplio: si la transacción expira a mitad (default 5s), Prisma puede devolver
+      // la conexión al pool abortada (25P02) y envenenar requests ajenos.
+    }, { maxWait: 10000, timeout: 20000 });
   }
 
   /** Valida que el aula exista en la institución y que el docente sea su dueño. */
@@ -87,7 +115,7 @@ export class AbpService {
   async getProject(projectId: string, institutionId: string, userId: string) {
     const project = await this.assertProjectOwner(projectId, institutionId, userId);
     const teams = await this.listTeams(projectId, institutionId);
-    return { ...project, phaseConfig: resolvePhaseConfig(project.phaseConfig), teams };
+    return { ...project, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(project.phaseConfig)), teams };
   }
 
   // ─── PORTADA / PRESENTACIÓN (Nivel 1) ──────────────────────────────────────
@@ -183,7 +211,40 @@ export class AbpService {
     if (dto.challenge !== undefined) data.challenge = dto.challenge?.trim() || null;
     if (dto.presentation !== undefined) data.presentation = this.normalizePresentation(dto.presentation);
     const p = await this.prisma.abpProject.update({ where: { id: projectId }, data });
-    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+    return { ...p, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(p.phaseConfig)) };
+  }
+
+  /** Docente configura los INSTRUMENTOS de una estación (Biblioteca de Instrumentos).
+   * Se guarda en phaseConfig.instruments[phase] = [{ key, required }] — sin migración:
+   * resolvePhaseConfig conserva las claves extra. Los equipos resuelven su instancia
+   * propia del instrumento vía /taller (stationId = "phase:N"). */
+  async setPhaseInstruments(projectId: string, institutionId: string, userId: string, phase: number, items: { key: string; required?: boolean }[]) {
+    if (!Number.isInteger(phase) || phase < 1 || phase > ABP_PHASE_COUNT) throw new BadRequestException('Fase inválida');
+    const project = await this.assertProjectOwner(projectId, institutionId, userId);
+    const clean = (Array.isArray(items) ? items : [])
+      .map(i => ({ key: String(i?.key || ''), required: !!i?.required }))
+      .filter(i => {
+        const def = instrumentByKey(i.key);
+        return !!def && def.available;
+      });
+    // dedupe conservando el primero
+    const seen = new Set<string>();
+    const unique = clean.filter(i => (seen.has(i.key) ? false : (seen.add(i.key), true)));
+    const cfg: any = (project.phaseConfig && typeof project.phaseConfig === 'object') ? { ...(project.phaseConfig as any) } : {};
+    cfg.instruments = { ...(cfg.instruments || {}), [phase]: unique };
+    const p = await this.prisma.abpProject.update({ where: { id: projectId }, data: { phaseConfig: cfg } });
+    return { ...p, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(p.phaseConfig)) };
+  }
+
+  /** Docente escribe las INSTRUCCIONES de una estación ("¿qué haremos aquí y cómo?").
+   * Se guarda en phaseConfig.stationInstructions[phase] — sin migración. */
+  async setStationInstructions(projectId: string, institutionId: string, userId: string, phase: number, text: string) {
+    if (!Number.isInteger(phase) || phase < 1 || phase > ABP_PHASE_COUNT) throw new BadRequestException('Fase inválida');
+    const project = await this.assertProjectOwner(projectId, institutionId, userId);
+    const cfg: any = (project.phaseConfig && typeof project.phaseConfig === 'object') ? { ...(project.phaseConfig as any) } : {};
+    cfg.stationInstructions = { ...(cfg.stationInstructions || {}), [phase]: String(text ?? '').trim().slice(0, 2000) };
+    const p = await this.prisma.abpProject.update({ where: { id: projectId }, data: { phaseConfig: cfg } });
+    return { ...p, phaseConfig: this.withInstrumentDefaults(resolvePhaseConfig(p.phaseConfig)) };
   }
 
   /** Lectura de la portada para el alumno (campos públicos del proyecto). */
@@ -213,6 +274,14 @@ export class AbpService {
     });
     const pendingTeamIds = new Set(pending.map(p => p.teamId));
 
+    // Última actividad por equipo (para el Estado de Colaboración objetivo, no emocional).
+    const activity = await this.prisma.abpContribution.groupBy({
+      by: ['teamId'],
+      where: { institutionId, team: { projectId } },
+      _max: { createdAt: true },
+    });
+    const lastByTeam = new Map(activity.map(a => [a.teamId, a._max.createdAt]));
+
     const rows = teams.map(t => {
       const states = t.phaseStates as any[];
       const validated = states.filter(s => s.status === 'VALIDATED').length;
@@ -224,6 +293,7 @@ export class AbpService {
         validatedPhases: validated, progress: Math.round((validated / ABP_PHASE_COUNT) * 100),
         xp: t.xp, members: t._count.members,
         awaitingValidation: pendingTeamIds.has(t.id), done,
+        lastActivityAt: lastByTeam.get(t.id) ?? null,
       };
     });
     // "Atrasados": equipos con fase actual por debajo del líder del pelotón.
@@ -248,7 +318,7 @@ export class AbpService {
     if (!team) throw new NotFoundException('Equipo no encontrado');
     await this.assertProjectOwner(team.projectId, institutionId, userId);
 
-    const config = resolvePhaseConfig(team.project?.phaseConfig);
+    const config = this.withInstrumentDefaults(resolvePhaseConfig(team.project?.phaseConfig));
     const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
     const phaseStates = await this.prisma.abpPhaseState.findMany({
       where: { teamId, institutionId },
@@ -272,7 +342,7 @@ export class AbpService {
 
   // ─── ROSTER (matriculados del aula, para armar equipos) ─────────────────────
 
-  async getRoster(classroomId: string, institutionId: string, userId: string) {
+  async getRoster(classroomId: string, institutionId: string, userId: string, projectId?: string) {
     const classroom = await this.assertClassroomOwner(classroomId, institutionId, userId);
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
@@ -283,10 +353,26 @@ export class AbpService {
       include: { student: { include: { user: { select: { id: true, firstName: true, lastName: true } } } } },
       orderBy: { student: { user: { lastName: 'asc' } } },
     });
+
+    // Alumnos ya asignados a un equipo de ESTE proyecto: se marcan para que el
+    // docente no los pueda seleccionar en otro equipo (createTeam ya lo rechaza,
+    // pero aquí evitamos el error mostrándolos deshabilitados con su equipo).
+    const assigned = new Map<string, string>();
+    if (projectId) {
+      const members = await this.prisma.abpTeamMember.findMany({
+        where: { institutionId, team: { projectId } },
+        select: { studentEnrollmentId: true, team: { select: { name: true, emoji: true } } },
+      });
+      for (const m of members) {
+        assigned.set(m.studentEnrollmentId, `${m.team.emoji ?? ''} ${m.team.name}`.trim());
+      }
+    }
+
     return enrollments.map(e => ({
       enrollmentId: e.id,
       studentId: e.studentId,
       name: `${e.student.user?.firstName ?? ''} ${e.student.user?.lastName ?? ''}`.trim() || 'Estudiante',
+      assignedTeamName: assigned.get(e.id) ?? null,
     }));
   }
 
@@ -295,9 +381,10 @@ export class AbpService {
   /** Docente arma un equipo: nombre/identidad + miembros (matriculados del aula). */
   async createTeam(institutionId: string, userId: string, dto: {
     projectId: string; name: string; emoji?: string; color?: string;
-    problem?: string; memberEnrollmentIds: string[];
+    problem?: string; memberEnrollmentIds: string[]; letStudentsName?: boolean;
   }) {
-    if (!dto.name?.trim()) throw new BadRequestException('El nombre del equipo es obligatorio');
+    // Si el docente deja que el equipo elija su nombre, no es obligatorio ahora (DRAFT).
+    if (!dto.letStudentsName && !dto.name?.trim()) throw new BadRequestException('El nombre del equipo es obligatorio');
     await this.assertProjectOwner(dto.projectId, institutionId, userId);
 
     const memberIds = [...new Set(dto.memberEnrollmentIds || [])];
@@ -316,7 +403,8 @@ export class AbpService {
       data: {
         institutionId,
         projectId: dto.projectId,
-        name: dto.name.trim(),
+        name: dto.letStudentsName ? (dto.name?.trim() || 'Equipo sin nombre') : dto.name.trim(),
+        identityState: dto.letStudentsName ? ('DRAFT' as const) : ('CONFIRMED' as const),
         emoji: dto.emoji || '🚀',
         color: dto.color || '#0E4A5A',
         problem: dto.problem?.trim() || null,
@@ -356,6 +444,91 @@ export class AbpService {
     return { ok: true };
   }
 
+  /** Añade un integrante a un equipo ya creado (docente dueño). */
+  async addTeamMember(teamId: string, institutionId: string, userId: string, enrollmentId: string) {
+    if (!enrollmentId) throw new BadRequestException('Estudiante inválido');
+    const team = await this.prisma.abpTeam.findFirst({ where: { id: teamId, institutionId }, select: { projectId: true } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+
+    // Un alumno no puede estar en dos equipos del mismo proyecto.
+    const taken = await this.prisma.abpTeamMember.findFirst({
+      where: { studentEnrollmentId: enrollmentId, team: { projectId: team.projectId } },
+      select: { teamId: true },
+    });
+    if (taken) {
+      throw new BadRequestException(taken.teamId === teamId ? 'El estudiante ya está en este equipo' : 'El estudiante ya está en otro equipo de este proyecto');
+    }
+
+    await this.prisma.abpTeamMember.create({ data: { institutionId, teamId, studentEnrollmentId: enrollmentId } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** Saca a un integrante de un equipo (docente dueño). No borra sus aportes ya hechos. */
+  async removeTeamMember(teamId: string, institutionId: string, userId: string, enrollmentId: string) {
+    const team = await this.prisma.abpTeam.findFirst({
+      where: { id: teamId, institutionId },
+      select: { projectId: true, _count: { select: { members: true } } },
+    });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+    if (team._count.members <= 1) throw new BadRequestException('El equipo debe tener al menos un integrante. Elimínalo si quieres deshacerlo.');
+
+    const member = await this.prisma.abpTeamMember.findUnique({ where: { teamId_studentEnrollmentId: { teamId, studentEnrollmentId: enrollmentId } } });
+    if (!member) throw new NotFoundException('El estudiante no pertenece a este equipo');
+    await this.prisma.abpTeamMember.delete({ where: { id: member.id } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  // ─── IDENTIDAD DEL EQUIPO (la crean los estudiantes; §14.3) ─────────────────
+
+  /** Ritual de fundación: los estudiantes eligen nombre + emblema cuando el equipo
+   * está en DRAFT → pasa a CONFIRMED. Solo integrantes del equipo. */
+  async foundTeamIdentity(teamId: string, institutionId: string, userId: string, dto: { name: string; emoji?: string }) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    if ((team as any).identityState !== 'DRAFT') throw new BadRequestException('La identidad del equipo ya está definida');
+    const name = (dto.name || '').trim();
+    if (!name) throw new BadRequestException('Elijan un nombre para el equipo');
+    await this.prisma.abpTeam.update({
+      where: { id: teamId },
+      data: { name, emoji: (dto.emoji || '').trim() || '🚀', identityState: 'CONFIRMED' },
+    });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** El equipo solicita cambiar su nombre → queda RENAME_PENDING a la espera del docente. */
+  async requestTeamRename(teamId: string, institutionId: string, userId: string, proposedName: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const name = (proposedName || '').trim();
+    if (!name) throw new BadRequestException('Escriban el nuevo nombre');
+    if (name === team.name) throw new BadRequestException('El nombre propuesto es igual al actual');
+    await this.prisma.abpTeam.update({ where: { id: teamId }, data: { proposedName: name, identityState: 'RENAME_PENDING' } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** El docente aprueba o rechaza el cambio de nombre solicitado. */
+  async resolveTeamRename(teamId: string, institutionId: string, userId: string, approve: boolean) {
+    const team = await this.prisma.abpTeam.findFirst({ where: { id: teamId, institutionId }, select: { projectId: true, proposedName: true, identityState: true } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+    if (team.identityState !== 'RENAME_PENDING') throw new BadRequestException('No hay un cambio de nombre pendiente');
+    const data = approve && team.proposedName
+      ? { name: team.proposedName, proposedName: null, identityState: 'CONFIRMED' as const }
+      : { proposedName: null, identityState: 'CONFIRMED' as const };
+    await this.prisma.abpTeam.update({ where: { id: teamId }, data });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
+  /** Cada estudiante elige su propio avatar (de un set curado en el front). */
+  async setMyAvatar(teamId: string, institutionId: string, userId: string, avatarId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const me = this.memberOf(team, userId);
+    if (!me?.enrollmentId) throw new ForbiddenException('Solo los integrantes del equipo eligen avatar');
+    const avatar = (avatarId || '').trim().slice(0, 16) || null;
+    await this.prisma.abpTeamMember.updateMany({ where: { teamId, studentEnrollmentId: me.enrollmentId }, data: { avatarId: avatar } });
+    return this.prisma.abpTeam.findUnique({ where: { id: teamId }, include: this.teamInclude() });
+  }
+
   // ─── ESTUDIANTE: su equipo ─────────────────────────────────────────────────
 
   /** El equipo del estudiante autenticado en un proyecto (enriquecido con su config
@@ -384,7 +557,7 @@ export class AbpService {
       orderBy: { createdAt: 'asc' },
     });
     // Misiones de la fase actual con su estado de completitud calculado (Opción A).
-    const config = resolvePhaseConfig(team.project?.phaseConfig);
+    const config = this.withInstrumentDefaults(resolvePhaseConfig(team.project?.phaseConfig));
     const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
     const curPs = await this.prisma.abpPhaseState.findUnique({
       where: { teamId_phase: { teamId: team.id, phase: team.currentPhase } },
@@ -392,9 +565,13 @@ export class AbpService {
     });
     await this.markLessonCompletion((curPs?.missions as any[]) || [], memberIds);
     const currentMissions = ((curPs?.missions as any[]) || []).map(m => ({ ...m, complete: this.missionComplete(m, team.currentPhase, curPs!.data, config, memberIds) }));
-    const readyForValidation = currentMissions.length > 0
+    const missionsOk = currentMissions.length > 0
       ? currentMissions.filter(m => m.required).every(m => m.complete)
       : phaseCriteriaMet(team.currentPhase, curPs?.data, config, memberIds);
+    // Compuerta de instrumentos: los OBLIGATORIOS de la estación deben haberse USADO
+    // (hechos, no promesas: ≥1 objeto vivo del equipo en la instancia de la estación).
+    const requiredInstruments = await this.requiredInstrumentsStatus(team.id, team.currentPhase, config);
+    const readyForValidation = missionsOk && requiredInstruments.every(s => s.used);
     return {
       ...team,
       config,
@@ -403,8 +580,46 @@ export class AbpService {
       myVotedIds,
       siblings,
       currentMissions,
+      requiredInstruments,
       readyForValidation,
     };
+  }
+
+  /** Materializa los instrumentos EFECTIVOS de las 6 estaciones: los que configuró
+   * el docente o, si nunca configuró esa estación, la PLANTILLA SUGERIDA (para que
+   * el equipo no llegue a un espacio vacío). `instrumentsSource[phase]` dice cuál
+   * es: 'teacher' | 'default'. Si el docente la dejó vacía a propósito ([]), manda
+   * su decisión (no se re-inyecta la plantilla). */
+  private withInstrumentDefaults(config: any): any {
+    const explicit = (config?.instruments && typeof config.instruments === 'object') ? config.instruments : {};
+    const instruments: Record<number, any[]> = {};
+    const instrumentsSource: Record<number, 'teacher' | 'default'> = {};
+    for (let phase = 1; phase <= ABP_PHASE_COUNT; phase++) {
+      const set = explicit[phase] ?? explicit[String(phase)];
+      if (Array.isArray(set)) { instruments[phase] = set; instrumentsSource[phase] = 'teacher'; }
+      else { instruments[phase] = DEFAULT_STATION_INSTRUMENTS[phase] ?? []; instrumentsSource[phase] = 'default'; }
+    }
+    return { ...config, instruments, instrumentsSource };
+  }
+
+  /** Estado de uso de los instrumentos OBLIGATORIOS de una estación: usado = el
+   * equipo tiene ≥1 objeto vivo (sin contar votos/comentarios) en su instancia
+   * (stationId = "phase:N"). El Taller provee; el ABP solo consulta. */
+  private async requiredInstrumentsStatus(teamId: string, phase: number, config: any): Promise<{ key: string; used: boolean; objects: number }[]> {
+    const required: { key: string }[] = ((config?.instruments?.[phase] ?? []) as any[]).filter(i => i?.required);
+    if (required.length === 0) return [];
+    const out: { key: string; used: boolean; objects: number }[] = [];
+    for (const item of required) {
+      const [motor, dynamic] = String(item.key).split(':');
+      const inst = await this.prisma.tallerInstrument.findFirst({
+        where: { teamId, motor, dynamic: dynamic || null, stationId: `phase:${phase}` }, select: { id: true },
+      });
+      const objects = inst ? await this.prisma.tallerObject.count({
+        where: { instrumentId: inst.id, deletedAt: null, type: { notIn: ['Vote', 'Comment'] } },
+      }) : 0;
+      out.push({ key: item.key, used: objects > 0, objects });
+    }
+    return out;
   }
 
   private async loadTeamForUser(teamId: string, institutionId: string, userId: string) {
@@ -442,31 +657,66 @@ export class AbpService {
   async saveCanvasCard(teamId: string, institutionId: string, userId: string, cardIndex: number, value: string) {
     if (cardIndex < 0 || cardIndex >= CANVAS_CARDS.length) throw new BadRequestException('Tarjeta inválida');
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 1 no está en curso');
-
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const canvas: any[] = Array.isArray(data.canvas) ? [...data.canvas] : [];
-    while (canvas.length < CANVAS_CARDS.length) canvas.push(null);
-    const prev = canvas[cardIndex];
-    const wasFilled = !!(prev && String(prev.value || '').trim());
     const me = this.memberOf(team, userId);
 
-    canvas[cardIndex] = wasFilled
-      ? { value, by: prev.by ?? null, byName: prev.byName ?? null } // conserva el autor original
-      : { value, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
-    data.canvas = canvas;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 1 } }, data: { data } });
+    // Lee el estado actual solo para saber si la tarjeta YA estaba llena (decide XP la
+    // primera vez). No es una transacción: la idempotencia de XP la garantizan el
+    // @@unique de la contribución y la idempotencyKey de grantXp, no este read.
+    const ps = await this.prisma.abpPhaseState.findUnique({
+      where: { teamId_phase: { teamId, phase: 1 } }, select: { status: true, data: true },
+    });
+    if (!ps) throw new BadRequestException('Fase no encontrada');
+    if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 1 no está en curso');
+    const prevCard = Array.isArray((ps.data as any)?.canvas) ? (ps.data as any).canvas[cardIndex] : null;
+    const wasFilled = !!(prevCard && String(prevCard.value || '').trim());
+
+    const byId = me?.enrollmentId ?? null;
+    const byName = me?.name ?? 'Docente';
+    const n = CANVAS_CARDS.length;
+    // Escritura ATÓMICA por tarjeta con un ÚNICO `UPDATE … jsonb_set` (autocommit): sin
+    // transacción interactiva ni lock pesimista → elimina la contención sobre la fila de
+    // la fase que, bajo guardados concurrentes, dejaba la conexión del pool en
+    // "transaction aborted" (25P02) y hacía fallar el guardado (el texto "se borraba").
+    // Reconstruye el arreglo de n tarjetas tomando las existentes salvo en cardIndex;
+    // como cada guardado toca solo su ruta, dos integrantes en tarjetas distintas no se
+    // pisan. Conserva el autor original si la tarjeta ya tenía texto.
+    await this.prisma.$executeRaw`
+      UPDATE "AbpPhaseState" AS p
+      SET "data" = jsonb_set(
+        COALESCE(p."data", '{}'::jsonb),
+        '{canvas}',
+        (
+          SELECT jsonb_agg(
+            CASE WHEN gs = ${cardIndex}::int THEN jsonb_build_object(
+              'value', ${value}::text,
+              'by', CASE WHEN COALESCE(p."data"->'canvas'->(${cardIndex}::int)->>'value','') <> ''
+                         THEN p."data"->'canvas'->(${cardIndex}::int)->'by' ELSE to_jsonb(${byId}::text) END,
+              'byName', CASE WHEN COALESCE(p."data"->'canvas'->(${cardIndex}::int)->>'value','') <> ''
+                            THEN p."data"->'canvas'->(${cardIndex}::int)->'byName' ELSE to_jsonb(${byName}::text) END
+            )
+            ELSE COALESCE(p."data"->'canvas'->gs, 'null'::jsonb) END
+            ORDER BY gs
+          )
+          FROM generate_series(0, ${n - 1}::int) AS gs
+        )
+      )
+      WHERE p."teamId" = ${teamId} AND p."phase" = 1 AND p."status" = 'IN_PROGRESS'
+    `;
 
     // Primera vez que se llena, con autor estudiante → contribución + XP de equipo.
+    // CRÍTICO: createMany+skipDuplicates, NUNCA create(): todo el request corre dentro
+    // de la transacción por-request del TenantContextInterceptor, y un create() que
+    // viole el @@unique la deja ABORTADA (25P02 en toda query posterior → 500 →
+    // rollback del guardado: el texto del canvas "se borraba"). count=0 = ya contó.
     if (!wasFilled && value.trim() && me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 1, type: 'CANVAS_CARD', refId: String(cardIndex), detail: `Completó: ${CANVAS_CARDS[cardIndex].q}` },
-        });
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 1, type: 'CANVAS_CARD', refId: String(cardIndex), detail: `Completó: ${CANVAS_CARDS[cardIndex].q}` }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.CANVAS_CARD } } });
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.CANVAS_CARD, 'ABP · tarjeta del reto', `abp:canvas:${teamId}:${cardIndex}:${me.enrollmentId}`);
-      } catch { /* @@unique → ya contó, idempotente */ }
+      }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
   }
@@ -478,25 +728,27 @@ export class AbpService {
     const t = (text || '').trim();
     if (!t) throw new BadRequestException('La idea no puede estar vacía');
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 2 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 2 no está en curso');
-
     const me = this.memberOf(team, userId);
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const ideas: any[] = Array.isArray(data.ideas) ? [...data.ideas] : [];
     const idea = { id: randomUUID(), text: t, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente', votes: 0 };
-    ideas.push(idea);
-    data.ideas = ideas;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 2 } }, data: { data } });
+
+    // Append atómico: no se pierde una idea aunque dos publiquen a la vez.
+    await this.withPhaseDataLock(teamId, 2, (data, ps) => {
+      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 2 no está en curso');
+      const ideas: any[] = Array.isArray(data.ideas) ? [...data.ideas] : [];
+      ideas.push(idea);
+      data.ideas = ideas;
+    });
 
     if (me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'IDEA', refId: idea.id, detail: t.slice(0, 80) },
-        });
+      // createMany+skipDuplicates: un create() duplicado abortaría la tx por-request (25P02).
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'IDEA', refId: idea.id, detail: t.slice(0, 80) }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.IDEA } } });
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.IDEA, 'ABP · idea publicada', `abp:idea:${idea.id}`);
-      } catch { /* idempotente */ }
+      }
     }
     return this.getMyTeam(team.projectId, institutionId, userId);
   }
@@ -510,27 +762,30 @@ export class AbpService {
     const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 2 } } });
     if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 2 no está en curso');
 
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const ideas: any[] = Array.isArray(data.ideas) ? data.ideas : [];
-    const idea = ideas.find(i => i.id === ideaId);
-    if (!idea) throw new NotFoundException('Idea no encontrada');
-    if (idea.by === me.enrollmentId) throw new BadRequestException('No puedes votar tu propia idea');
+    // Validación de existencia y auto-voto (la autoría de una idea no cambia).
+    const ideas0: any[] = Array.isArray((ps.data as any)?.ideas) ? (ps.data as any).ideas : [];
+    const idea0 = ideas0.find(i => i.id === ideaId);
+    if (!idea0) throw new NotFoundException('Idea no encontrada');
+    if (idea0.by === me.enrollmentId) throw new BadRequestException('No puedes votar tu propia idea');
 
     const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
     const config = resolvePhaseConfig(project?.phaseConfig);
     const used = await this.prisma.abpContribution.count({ where: { teamId, phase: 2, type: 'VOTE', studentEnrollmentId: me.enrollmentId } });
     if (used >= config.votesPerStudent) throw new BadRequestException('Ya usaste todos tus votos');
 
-    // El @@unique(studentEnrollmentId,type,refId) impide votar dos veces la misma idea.
-    try {
-      await this.prisma.abpContribution.create({
-        data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'VOTE', refId: ideaId, detail: `Votó: ${String(idea.text).slice(0, 60)}` },
-      });
-    } catch {
-      throw new BadRequestException('Ya votaste esta idea');
-    }
-    idea.votes = (idea.votes || 0) + 1;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 2 } }, data: { data } });
+    // Guard de doble voto vía @@unique, SIN abortar la tx por-request: createMany +
+    // skipDuplicates no lanza; count=0 significa que ya existía el voto.
+    const claim = await this.prisma.abpContribution.createMany({
+      data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'VOTE', refId: ideaId, detail: `Votó: ${String(idea0.text).slice(0, 60)}` }],
+      skipDuplicates: true,
+    });
+    if (claim.count === 0) throw new BadRequestException('Ya votaste esta idea');
+    // Incremento atómico del contador de votos (no se pierde con votos concurrentes).
+    await this.withPhaseDataLock(teamId, 2, (data) => {
+      const ideas: any[] = Array.isArray(data.ideas) ? data.ideas : [];
+      const idea = ideas.find(i => i.id === ideaId);
+      if (idea) { idea.votes = (idea.votes || 0) + 1; data.ideas = ideas; }
+    });
     await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.VOTE } } });
     await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.VOTE, 'ABP · voto emitido', `abp:vote:${ideaId}:${me.enrollmentId}`);
     return this.getMyTeam(team.projectId, institutionId, userId);
@@ -541,18 +796,17 @@ export class AbpService {
   /** Guarda el objetivo del equipo + los 5 criterios SMART (campo colaborativo). */
   async saveSmart(teamId: string, institutionId: string, userId: string, text: string, checks: boolean[]) {
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 3 no está en curso');
     const me = this.memberOf(team, userId);
-    const prev: any = ps.data && typeof ps.data === 'object' ? (ps.data as any).smart : null;
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    data.smart = {
-      text: String(text || ''),
-      checks: Array.isArray(checks) ? checks.slice(0, 5).map(Boolean) : [],
-      by: me?.enrollmentId ?? prev?.by ?? null,
-      byName: me?.name ?? prev?.byName ?? null,
-    };
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 3 } }, data: { data } });
+    await this.withPhaseDataLock(teamId, 3, (data, ps) => {
+      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 3 no está en curso');
+      const prev: any = data.smart || null;
+      data.smart = {
+        text: String(text || ''),
+        checks: Array.isArray(checks) ? checks.slice(0, 5).map(Boolean) : [],
+        by: me?.enrollmentId ?? prev?.by ?? null,
+        byName: me?.name ?? prev?.byName ?? null,
+      };
+    });
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } } });
   }
 
@@ -565,15 +819,13 @@ export class AbpService {
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
     const owner = (team.members as any[]).find(m => m.studentEnrollmentId === ownerEnrollmentId);
     if (!owner) throw new BadRequestException('El responsable debe ser un integrante del equipo');
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
-
     const ownerName = `${owner.studentEnrollment.student.user?.firstName ?? ''} ${owner.studentEnrollment.student.user?.lastName ?? ''}`.trim() || 'Integrante';
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const tasks: any[] = Array.isArray(data.tasks) ? [...data.tasks] : [];
-    tasks.push({ id: randomUUID(), text: t, owner: ownerEnrollmentId, ownerName, col: 0 });
-    data.tasks = tasks;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 4 } }, data: { data } });
+    await this.withPhaseDataLock(teamId, 4, (data, ps) => {
+      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
+      const tasks: any[] = Array.isArray(data.tasks) ? [...data.tasks] : [];
+      tasks.push({ id: randomUUID(), text: t, owner: ownerEnrollmentId, ownerName, col: 0 });
+      data.tasks = tasks;
+    });
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
   }
 
@@ -581,36 +833,38 @@ export class AbpService {
    * contribución TASK_DONE atribuida a su responsable (dato de participación). */
   async moveTask(teamId: string, institutionId: string, userId: string, taskId: string) {
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const tasks: any[] = Array.isArray(data.tasks) ? data.tasks : [];
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) throw new NotFoundException('Tarea no encontrada');
-    if (task.col >= 2) return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
-    task.col += 1;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 4 } }, data: { data } });
-    if (task.col === 2 && task.owner) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: task.owner, phase: 4, type: 'TASK_DONE', refId: taskId, detail: `Terminó: ${String(task.text).slice(0, 60)}` },
-        });
+    // Avance atómico de columna: dos avances concurrentes no se pisan.
+    const done = await this.withPhaseDataLock(teamId, 4, (data, ps) => {
+      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
+      const tasks: any[] = Array.isArray(data.tasks) ? data.tasks : [];
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) throw new NotFoundException('Tarea no encontrada');
+      if (task.col >= 2) return null; // ya está en "Hecho": nada que avanzar
+      task.col += 1;
+      data.tasks = tasks;
+      return task.col === 2 && task.owner ? { owner: task.owner, text: task.text } : null;
+    });
+    if (done?.owner) {
+      // createMany+skipDuplicates: un create() duplicado abortaría la tx por-request (25P02).
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: done.owner, phase: 4, type: 'TASK_DONE', refId: taskId, detail: `Terminó: ${String(done.text).slice(0, 60)}` }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.TASK_DONE } } });
-        const ownerStudentId = (team.members as any[]).find(m => m.studentEnrollmentId === task.owner)?.studentEnrollment.student.id;
-        await this.awardStudentXp(institutionId, ownerStudentId, task.owner, ABP_XP.TASK_DONE, 'ABP · tarea terminada', `abp:task:${taskId}`);
-      } catch { /* idempotente */ }
+        const ownerStudentId = (team.members as any[]).find(m => m.studentEnrollmentId === done.owner)?.studentEnrollment.student.id;
+        await this.awardStudentXp(institutionId, ownerStudentId, done.owner, ABP_XP.TASK_DONE, 'ABP · tarea terminada', `abp:task:${taskId}`);
+      }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
   }
 
   /** Elimina una tarea del tablero. */
   async removeTask(teamId: string, institutionId: string, userId: string, taskId: string) {
-    const team = await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
-    if (!ps) throw new NotFoundException('Fase no encontrada');
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    data.tasks = (Array.isArray(data.tasks) ? data.tasks : []).filter((t: any) => t.id !== taskId);
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 4 } }, data: { data } });
+    await this.loadTeamForUser(teamId, institutionId, userId);
+    await this.withPhaseDataLock(teamId, 4, (data) => {
+      data.tasks = (Array.isArray(data.tasks) ? data.tasks : []).filter((t: any) => t.id !== taskId);
+    });
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
   }
 
@@ -622,25 +876,27 @@ export class AbpService {
     const u = (url || '').trim();
     if (!u) throw new BadRequestException('Falta el enlace o archivo de la evidencia');
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 5 no está en curso');
-
     const me = this.memberOf(team, userId);
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const evidences: any[] = Array.isArray(data.evidences) ? [...data.evidences] : [];
     const ev = { id: randomUUID(), kind: kind === 'FILE' ? 'FILE' : 'LINK', url: u, label: (label || '').trim() || u, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
-    evidences.push(ev);
-    data.evidences = evidences;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 5 } }, data: { data } });
+
+    // Append atómico: no se pierde una evidencia aunque dos suban a la vez.
+    await this.withPhaseDataLock(teamId, 5, (data, ps) => {
+      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 5 no está en curso');
+      const evidences: any[] = Array.isArray(data.evidences) ? [...data.evidences] : [];
+      evidences.push(ev);
+      data.evidences = evidences;
+    });
 
     if (me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 5, type: 'EVIDENCE', refId: ev.id, detail: ev.label.slice(0, 80) },
-        });
+      // createMany+skipDuplicates: un create() duplicado abortaría la tx por-request (25P02).
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 5, type: 'EVIDENCE', refId: ev.id, detail: ev.label.slice(0, 80) }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.EVIDENCE } } });
         await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.EVIDENCE, 'ABP · evidencia subida', `abp:evidence:${ev.id}`);
-      } catch { /* idempotente */ }
+      }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
   }
@@ -648,11 +904,9 @@ export class AbpService {
   /** Elimina una evidencia del listado. */
   async removeEvidence(teamId: string, institutionId: string, userId: string, evidenceId: string) {
     await this.loadTeamForUser(teamId, institutionId, userId);
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
-    if (!ps) throw new NotFoundException('Fase no encontrada');
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    data.evidences = (Array.isArray(data.evidences) ? data.evidences : []).filter((e: any) => e.id !== evidenceId);
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 5 } }, data: { data } });
+    await this.withPhaseDataLock(teamId, 5, (data) => {
+      data.evidences = (Array.isArray(data.evidences) ? data.evidences : []).filter((e: any) => e.id !== evidenceId);
+    });
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
   }
 
@@ -665,24 +919,26 @@ export class AbpService {
     if (targetTeamId === teamId) throw new BadRequestException('Un equipo no se evalúa a sí mismo');
     const target = await this.prisma.abpTeam.findFirst({ where: { id: targetTeamId, institutionId, projectId: team.projectId }, select: { id: true } });
     if (!target) throw new BadRequestException('Equipo a evaluar no encontrado en este proyecto');
-    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 6 } } });
-    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 6 no está en curso');
 
     const clean = (Array.isArray(scores) ? scores : []).slice(0, ABP_COEVAL_CRITERIA.length).map(n => Math.max(1, Math.min(4, Math.round(Number(n) || 1))));
     if (clean.length < ABP_COEVAL_CRITERIA.length) throw new BadRequestException('Faltan criterios por calificar');
     const me = this.memberOf(team, userId);
-    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
-    const coevals: any = { ...(data.coevals || {}) };
-    coevals[targetTeamId] = { scores: clean, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
-    data.coevals = coevals;
-    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 6 } }, data: { data } });
+
+    // Escritura atómica por equipo evaluado: no se pisan coevaluaciones concurrentes.
+    await this.withPhaseDataLock(teamId, 6, (data, ps) => {
+      if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 6 no está en curso');
+      const coevals: any = { ...(data.coevals || {}) };
+      coevals[targetTeamId] = { scores: clean, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
+      data.coevals = coevals;
+    });
 
     if (me?.enrollmentId) {
-      try {
-        await this.prisma.abpContribution.create({
-          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 6, type: 'COEVAL', refId: targetTeamId, detail: `Coevaluó a un equipo (${clean.join('/')})` },
-        });
-      } catch { /* idempotente: ya coevaluó a ese equipo */ }
+      // createMany+skipDuplicates: además permite REEDITAR la coevaluación sin que el
+      // duplicado aborte la tx por-request y revierta la edición (25P02).
+      await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 6, type: 'COEVAL', refId: targetTeamId, detail: `Coevaluó a un equipo (${clean.join('/')})` }],
+        skipDuplicates: true,
+      });
     }
     return this.getMyTeam(team.projectId, institutionId, userId);
   }
@@ -700,6 +956,7 @@ export class AbpService {
           data: {
             institutionId, phaseStateId: ps.id, title: t.title, description: t.description || null,
             sortOrder: i * 100, required: t.required, generatedBy: 'TEMPLATE',
+            deliverableKind: (t.deliverableKind ?? null) as any,
             activities: {
               create: t.tool
                 ? [{ institutionId, type: 'CUSTOM' as any, title: t.title, content: { tool: t.tool } as any, sortOrder: 0 }]
@@ -714,6 +971,8 @@ export class AbpService {
   /** ¿Está completa una misión? Herramienta → criterio de la herramienta; con actividades
    * → todas completas; sin actividades → status COMPLETED (manual). */
   private missionComplete(mission: any, phase: number, data: any, config: any, memberIds: string[]): boolean {
+    // Misión de entrega: completa cuando el equipo entregó el producto (no un checkbox).
+    if (mission.deliverableKind) return mission.deliveryState === 'SUBMITTED';
     const acts = mission.activities || [];
     const tool = acts.find((a: any) => (a.content as any)?.tool);
     if (tool) return toolCriterionMet(phase, data, config, memberIds);
@@ -750,23 +1009,48 @@ export class AbpService {
     return (ps.missions as any[]).map(m => ({ ...m, complete: this.missionComplete(m, phase, ps.data, config, memberIds) }));
   }
 
-  async addMission(teamId: string, institutionId: string, userId: string, phase: number, dto: { title: string; description?: string; required?: boolean }) {
+  async addMission(teamId: string, institutionId: string, userId: string, phase: number, dto: { title: string; description?: string; required?: boolean; deliverableKind?: string; assigneeEnrollmentId?: string; dueAt?: string }) {
     if (!dto.title?.trim()) throw new BadRequestException('El título de la misión es obligatorio');
-    await this.loadTeamForUser(teamId, institutionId, userId);
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
     const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } }, select: { id: true } });
     if (!ps) throw new NotFoundException('Fase no encontrada');
+    const deliverableKind = ['FILE', 'LINK', 'TEXT'].includes(dto.deliverableKind || '') ? dto.deliverableKind : null;
+
+    // Destinatario: todo el equipo o UN integrante (misión personal).
+    let assigneeType = 'TEAM', assigneeEnrollmentId: string | null = null, assigneeName: string | null = null;
+    if (dto.assigneeEnrollmentId) {
+      const m = (team.members as any[]).find(x => x.studentEnrollmentId === dto.assigneeEnrollmentId);
+      if (!m) throw new BadRequestException('El destinatario no pertenece a este equipo');
+      const u = m.studentEnrollment.student.user;
+      assigneeType = 'INDIVIDUAL';
+      assigneeEnrollmentId = dto.assigneeEnrollmentId;
+      assigneeName = `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Integrante';
+    }
+    const due = dto.dueAt ? new Date(dto.dueAt) : null;
+
     const max = await this.prisma.abpMission.aggregate({ where: { phaseStateId: ps.id }, _max: { sortOrder: true } });
-    return this.prisma.abpMission.create({ data: { institutionId, phaseStateId: ps.id, title: dto.title.trim(), description: dto.description?.trim() || null, required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL' } });
+    return this.prisma.abpMission.create({
+      data: {
+        institutionId, phaseStateId: ps.id,
+        title: dto.title.trim(), description: dto.description?.trim() || null,
+        required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL',
+        deliverableKind: deliverableKind as any,
+        assigneeType, assigneeEnrollmentId, assigneeName,
+        dueAt: due && !Number.isNaN(due.getTime()) ? due : null,
+      },
+    });
   }
 
   /** El docente "libera" una misión a TODOS los equipos del proyecto en una fase.
    * Crea la misión (con sus actividades opcionales) en cada phaseState correspondiente. */
-  async broadcastMission(projectId: string, institutionId: string, userId: string, dto: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) {
+  async broadcastMission(projectId: string, institutionId: string, userId: string, dto: { phase: number; title: string; description?: string; required?: boolean; deliverableKind?: string; activities?: { type: string; title: string }[] }) {
     await this.assertProjectOwner(projectId, institutionId, userId);
     if (!dto.title?.trim()) throw new BadRequestException('El título de la misión es obligatorio');
     const phase = dto.phase >= 1 && dto.phase <= 6 ? dto.phase : 1;
     const validTypes = ['READING', 'VIDEO', 'QUIZ', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM'];
-    const acts = (dto.activities || []).filter(a => a?.title?.trim());
+    const deliverableKind = ['FILE', 'LINK', 'TEXT'].includes(dto.deliverableKind || '') ? dto.deliverableKind : null;
+    // Una misión de entrega se cumple entregando: las actividades-checkbox no aplican.
+    const acts = deliverableKind ? [] : (dto.activities || []).filter(a => a?.title?.trim());
     const phaseStates = await this.prisma.abpPhaseState.findMany({
       where: { institutionId, phase, team: { projectId } },
       select: { id: true },
@@ -779,12 +1063,53 @@ export class AbpService {
           institutionId, phaseStateId: ps.id,
           title: dto.title.trim(), description: dto.description?.trim() || null,
           required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL',
+          deliverableKind: deliverableKind as any,
           activities: { create: acts.map((a, i) => ({ institutionId, type: (validTypes.includes(a.type) ? a.type : 'CUSTOM') as any, title: a.title.trim(), sortOrder: i * 100 })) },
         },
       });
       count++;
     }
     return { ok: true, count };
+  }
+
+  /** El equipo ENTREGA el producto de una misión de entrega (taller). Cualquier
+   * integrante puede entregar/reemplazar; la misión queda completa al entregar. */
+  async submitMissionDelivery(missionId: string, institutionId: string, userId: string, dto: { url?: string; text?: string; label?: string }) {
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true, phase: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    if (!m.deliverableKind) throw new BadRequestException('Esta misión no es de entrega');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const me = this.memberOf(team, userId);
+    // Misión personal: solo la entrega su destinatario (el docente sí puede, para
+    // registrar una entrega presencial).
+    if (m.assigneeType === 'INDIVIDUAL' && me && m.assigneeEnrollmentId !== me.enrollmentId) {
+      throw new ForbiddenException(`Esta es la misión personal de ${m.assigneeName ?? 'otro integrante'}`);
+    }
+
+    const data: any = { deliveryState: 'SUBMITTED', deliveryByEnrollmentId: me?.enrollmentId ?? null, deliveredAt: new Date() };
+    if (m.deliverableKind === 'TEXT') {
+      const t = (dto.text || '').trim();
+      if (!t) throw new BadRequestException('Escribe el texto de la entrega');
+      data.deliveryText = t.slice(0, 5000); data.deliveryUrl = null; data.deliveryLabel = null;
+    } else {
+      const u = (dto.url || '').trim();
+      if (!u) throw new BadRequestException(m.deliverableKind === 'FILE' ? 'Sube el archivo de la entrega' : 'Pega el enlace de la entrega');
+      data.deliveryUrl = u; data.deliveryLabel = (dto.label || '').trim() || u; data.deliveryText = null;
+    }
+    const updated = await this.prisma.abpMission.update({ where: { id: missionId }, data });
+
+    // XP + contribución la PRIMERA vez que se entrega (idempotente por misión).
+    if (me?.enrollmentId) {
+      const claim = await this.prisma.abpContribution.createMany({
+        data: [{ institutionId, teamId: m.phaseState.teamId, studentEnrollmentId: me.enrollmentId, phase: m.phaseState.phase, type: 'TASK_DONE', refId: `delivery:${missionId}`, detail: `Entregó: ${m.title.slice(0, 60)}` }],
+        skipDuplicates: true,
+      });
+      if (claim.count > 0) {
+        await this.prisma.abpTeam.update({ where: { id: m.phaseState.teamId }, data: { xp: { increment: ABP_XP.TASK_DONE } } });
+        await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.TASK_DONE, 'ABP · entrega de misión', `abp:delivery:${missionId}`);
+      }
+    }
+    return updated;
   }
 
   /** Valeria sugiere actividades para una misión, ligadas a la problemática del equipo.
@@ -854,6 +1179,49 @@ export class AbpService {
     const max = await this.prisma.abpMissionActivity.aggregate({ where: { missionId }, _max: { sortOrder: true } });
     return this.prisma.abpMissionActivity.create({
       data: { institutionId, missionId, type: 'CUSTOM' as any, title, classroomActivityId: activity.id, sortOrder: (max._max.sortOrder ?? 0) + 100 },
+    });
+  }
+
+  /** Actividades/juegos YA existentes del curso que se pueden REUTILIZAR en esta misión.
+   * Solo las jugables (con lección) y de la pestaña Actividades (no las de Rutas/ABP),
+   * excluyendo las que ya están adjuntas a la misión. */
+  async listReusableActivities(missionId: string, institutionId: string, userId: string) {
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { classroomId: true } });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+
+    const attached = await this.prisma.abpMissionActivity.findMany({ where: { missionId, classroomActivityId: { not: null } }, select: { classroomActivityId: true } });
+    const attachedIds = attached.map(a => a.classroomActivityId!).filter(Boolean);
+
+    return this.prisma.classroomActivity.findMany({
+      where: { classroomId: project.classroomId, isRouteScoped: false, lesson: { isNot: null }, id: { notIn: attachedIds } },
+      select: { id: true, title: true, type: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  /** Reutiliza una actividad/juego existente del curso enlazándola a la misión.
+   * linkedActivity=true → NO se borra su ClassroomActivity al quitarla (es compartida). */
+  async attachActivity(missionId: string, institutionId: string, userId: string, classroomActivityId: string) {
+    if (!classroomActivityId) throw new BadRequestException('Actividad inválida');
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { classroomId: true } });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+
+    // La actividad debe pertenecer al MISMO curso (seguridad multi-tenant).
+    const ca = await this.prisma.classroomActivity.findFirst({ where: { id: classroomActivityId, classroomId: project.classroomId }, select: { id: true, title: true } });
+    if (!ca) throw new BadRequestException('La actividad no pertenece a este curso');
+    const dup = await this.prisma.abpMissionActivity.findFirst({ where: { missionId, classroomActivityId } });
+    if (dup) throw new BadRequestException('Esa actividad ya está en la misión');
+
+    const max = await this.prisma.abpMissionActivity.aggregate({ where: { missionId }, _max: { sortOrder: true } });
+    return this.prisma.abpMissionActivity.create({
+      data: { institutionId, missionId, type: 'CUSTOM' as any, title: ca.title, classroomActivityId: ca.id, linkedActivity: true, sortOrder: (max._max.sortOrder ?? 0) + 100 },
     });
   }
 
@@ -928,19 +1296,29 @@ export class AbpService {
     for (const a of lessonActs) if (done.has(a.classroomActivityId)) a.completed = true;
   }
 
+  /** Solo el DOCENTE dueño puede borrar una misión: las misiones las coloca el
+   * docente y son parte del proyecto (el estudiante entrega, no borra). */
+  private async assertTeamTeacher(teamId: string, institutionId: string, userId: string) {
+    const team = await this.prisma.abpTeam.findFirst({ where: { id: teamId, institutionId }, select: { projectId: true } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+  }
+
   async deleteMission(missionId: string, institutionId: string, userId: string) {
     const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
     if (!m) throw new NotFoundException('Misión no encontrada');
-    await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    await this.assertTeamTeacher(m.phaseState.teamId, institutionId, userId);
     await this.prisma.abpMission.delete({ where: { id: missionId } });
     return { ok: true };
   }
 
-  /** Marca/desmarca una misión sin actividades como completada (manual). */
+  /** Marca/desmarca una misión de "trabajo libre" como completada. SOLO EL DOCENTE:
+   * un estudiante no puede declarar hecho lo que nadie verificó. Las demás misiones
+   * se cumplen con hechos (herramienta con criterio, entrega, o lección jugada). */
   async setMissionStatus(missionId: string, institutionId: string, userId: string, completed: boolean) {
     const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
     if (!m) throw new NotFoundException('Misión no encontrada');
-    await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    await this.assertTeamTeacher(m.phaseState.teamId, institutionId, userId);
     return this.prisma.abpMission.update({ where: { id: missionId }, data: { status: completed ? 'COMPLETED' : 'IN_PROGRESS' } });
   }
 
@@ -953,21 +1331,25 @@ export class AbpService {
     return this.prisma.abpMissionActivity.create({ data: { institutionId, missionId, type: (valid.includes(dto.type) ? dto.type : 'CUSTOM') as any, title: (dto.title || '').trim() || 'Actividad', content: dto.content ?? undefined, sortOrder: (max._max.sortOrder ?? 0) + 100 } });
   }
 
+  /** Marca una actividad como hecha. SOLO EL DOCENTE (verifica lo presencial): las
+   * lecciones y juegos se marcan solas al jugarlas (markLessonCompletion, con
+   * evidencia real de entrega), y el resto del trabajo se cumple entregando. */
   async completeActivity(activityId: string, institutionId: string, userId: string, completed: boolean) {
     const a = await this.prisma.abpMissionActivity.findFirst({ where: { id: activityId, institutionId }, include: { mission: { include: { phaseState: { select: { teamId: true } } } } } });
     if (!a) throw new NotFoundException('Actividad no encontrada');
-    const team = await this.loadTeamForUser(a.mission.phaseState.teamId, institutionId, userId);
-    const me = this.memberOf(team, userId);
-    return this.prisma.abpMissionActivity.update({ where: { id: activityId }, data: { completed, completedByEnrollmentId: completed ? (me?.enrollmentId ?? null) : null } });
+    await this.assertTeamTeacher(a.mission.phaseState.teamId, institutionId, userId);
+    return this.prisma.abpMissionActivity.update({ where: { id: activityId }, data: { completed, completedByEnrollmentId: null } });
   }
 
   async deleteActivity(activityId: string, institutionId: string, userId: string) {
     const a = await this.prisma.abpMissionActivity.findFirst({ where: { id: activityId, institutionId }, include: { mission: { include: { phaseState: { select: { teamId: true } } } } } });
     if (!a) throw new NotFoundException('Actividad no encontrada');
-    await this.loadTeamForUser(a.mission.phaseState.teamId, institutionId, userId);
+    // Solo el docente: las actividades de una misión son parte del proyecto.
+    await this.assertTeamTeacher(a.mission.phaseState.teamId, institutionId, userId);
     await this.prisma.abpMissionActivity.delete({ where: { id: activityId } });
-    // Si era una lección/juego, elimina también su ClassroomActivity (cascada limpia lección/submissions).
-    if (a.classroomActivityId) {
+    // Solo si era una lección/juego PROPIA (creada inline) se borra su ClassroomActivity.
+    // Una actividad REUTILIZADA (linkedActivity) es compartida: solo se desvincula.
+    if (a.classroomActivityId && !a.linkedActivity) {
       await this.prisma.classroomActivity.delete({ where: { id: a.classroomActivityId } }).catch(() => { /* ya no existe */ });
     }
     return { ok: true };
@@ -986,6 +1368,14 @@ export class AbpService {
     }
     if (!(await this.isPhaseReady(teamId, institutionId, phase))) {
       throw new BadRequestException('Aún faltan misiones por completar en esta fase');
+    }
+    // Compuerta de instrumentos: los obligatorios de la estación deben haberse usado.
+    const proj = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
+    const config = resolvePhaseConfig(proj?.phaseConfig);
+    const reqInstruments = await this.requiredInstrumentsStatus(teamId, phase, config);
+    const missing = reqInstruments.filter(s => !s.used);
+    if (missing.length > 0) {
+      throw new BadRequestException('Aún no han usado los instrumentos obligatorios de esta estación');
     }
     // Fase 6: debe haber coevaluado a todos los demás equipos del proyecto.
     if (phase === 6) {
@@ -1030,7 +1420,7 @@ export class AbpService {
 
   /** Docente resuelve una validación: aprueba (rúbrica OBLIGATORIA → desbloquea siguiente +
    * XP + insignia) o devuelve con retroalimentación (la fase vuelve a en curso). */
-  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string, rubricScores?: number[], rubricComment?: string) {
+  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string, rubricScores?: number[], rubricComment?: string, missions?: { title: string; description?: string; required?: boolean; deliverableKind?: string }[]) {
     const vr = await this.prisma.abpValidationRequest.findFirst({
       where: { id: validationId, institutionId, status: 'PENDING' },
       include: { team: { select: { id: true, projectId: true, currentPhase: true, xp: true, badges: true } } },
@@ -1040,10 +1430,29 @@ export class AbpService {
 
     if (action === 'return') {
       const fb = (feedback || '').trim() || 'Revisen los criterios de la fase y vuelvan a enviar.';
-      await this.prisma.abpPhaseState.update({
+      const ps = await this.prisma.abpPhaseState.update({
         where: { teamId_phase: { teamId: vr.teamId, phase: vr.phase } },
         data: { status: 'IN_PROGRESS', feedback: fb, submittedAt: null },
       });
+      // El docente puede devolver CON misiones: se crean en la misma estación y la
+      // compuerta las exigirá antes de volver a presentar (obligatorias por defecto).
+      const nuevas = (Array.isArray(missions) ? missions : []).filter(m => m?.title?.trim());
+      if (nuevas.length > 0) {
+        const max = await this.prisma.abpMission.aggregate({ where: { phaseStateId: ps.id }, _max: { sortOrder: true } });
+        let order = (max._max.sortOrder ?? 0) + 100;
+        for (const m of nuevas) {
+          const kind = ['FILE', 'LINK', 'TEXT'].includes(m.deliverableKind || '') ? m.deliverableKind : null;
+          await this.prisma.abpMission.create({
+            data: {
+              institutionId, phaseStateId: ps.id,
+              title: m.title.trim(), description: m.description?.trim() || null,
+              required: m.required ?? true, sortOrder: order, generatedBy: 'MANUAL',
+              deliverableKind: kind as any,
+            },
+          });
+          order += 100;
+        }
+      }
       return this.prisma.abpValidationRequest.update({
         where: { id: vr.id }, data: { status: 'RETURNED', feedback: fb, resolvedAt: new Date() },
       });
