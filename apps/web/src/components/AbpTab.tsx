@@ -724,6 +724,36 @@ function FileViewerModal({ file, onClose }: { file: { title: string; url: string
   )
 }
 
+/**
+ * Imagen de portada. El banner puede ser una URL pegada por el docente o una RUTA
+ * de storage (lo que devuelve la subida). Las rutas no sirven como `src`: hay que
+ * canjearlas por una URL firmada, y esas firmas caducan (~1h), así que se resuelven
+ * en cada render y NO se guardan. Si algo falla, cae al degradado en vez de dejar
+ * el icono de imagen rota.
+ */
+function BannerImage({ src, className }: { src: string; className: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    setFailed(false); setUrl(null)
+    const v = (src || '').trim()
+    if (!v) { setFailed(true); return }
+    // URL absoluta (o data:) → se usa tal cual; ruta de storage → se firma.
+    if (/^(https?:)?\/\//i.test(v) || v.startsWith('data:')) { setUrl(v); return }
+    storageApi.resolveUrl(v)
+      .then(({ data }) => { if (vivo) setUrl(data.url) })
+      .catch(() => { if (vivo) setFailed(true) })
+    return () => { vivo = false }
+  }, [src])
+
+  if (failed || !url) {
+    return <div className={`${className} taller-crest`} />
+  }
+  return <img src={url} alt="" className={className} onError={() => setFailed(true)} />
+}
+
 function PresentationView({ project }: { project: any }) {
   const p = project?.presentation || {}
   const embed = videoEmbed(p.videoUrl || '')
@@ -732,8 +762,8 @@ function PresentationView({ project }: { project: any }) {
       {/* Portada / hero */}
       <div className="relative rounded-2xl overflow-hidden">
         {p.banner
-          ? <img src={p.banner} alt="" className="w-full h-44 sm:h-56 object-cover" />
-          : <div className="w-full h-44 sm:h-56 bg-gradient-to-br taller-crest" />}
+          ? <BannerImage src={p.banner} className="w-full h-44 sm:h-56 object-cover" />
+          : <div className="w-full h-44 sm:h-56 taller-crest" />}
         <div className="absolute inset-0 bg-black/35 flex items-end p-5">
           <div>
             <div className="text-white/80 text-xs font-bold uppercase tracking-wide">Expedición ABP</div>
@@ -953,7 +983,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
                         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
                         <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 taller-surface taller-ink rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"><Paperclip className="w-4 h-4" /> Subir</button>
                       </div>
-                      {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
+                      {banner && <BannerImage src={banner} className="mt-2 w-full h-32 object-cover rounded-xl" />}
                     </div>
                     <div>
                       <label className="text-xs font-semibold taller-soft">Video de bienvenida (YouTube/Vimeo)</label>
@@ -2454,19 +2484,46 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
 }
 
 
+type RosterEntry = {
+  enrollmentId: string; name: string; assignedTeamName: string | null
+  lastName?: string; firstName?: string; documentNumber?: string | null
+}
+
+/** "APELLIDO Nombre": el apellido primero, como se pasa lista, para poder recorrer
+ * el listado alfabéticamente de un vistazo. Cae al nombre completo si el backend
+ * aún no envía los campos separados. */
+function rosterLabel(r: RosterEntry): string {
+  const ap = (r.lastName || '').trim()
+  const no = (r.firstName || '').trim()
+  if (ap || no) return [ap.toUpperCase(), no].filter(Boolean).join(' ')
+  return r.name
+}
+
+/** Filtra por nombre, apellido o documento (para desempatar homónimos). */
+function rosterFilter(roster: RosterEntry[], q: string): RosterEntry[] {
+  const t = q.trim().toLowerCase()
+  if (!t) return roster
+  return roster.filter(r =>
+    `${r.name} ${r.lastName ?? ''} ${r.firstName ?? ''} ${r.documentNumber ?? ''}`.toLowerCase().includes(t))
+}
+
 function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string; projectId: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false)
-  const [roster, setRoster] = useState<{ enrollmentId: string; name: string; assignedTeamName: string | null }[]>([])
+  const [roster, setRoster] = useState<RosterEntry[]>([])
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState('🚀')
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [letStudents, setLetStudents] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
 
   // Recarga el roster cada vez que se abre el panel (y al cambiar de proyecto),
   // para que los alumnos ya asignados a un equipo salgan marcados y no se puedan
   // volver a seleccionar.
   useEffect(() => { if (open) abpApi.roster(classroomId, projectId).then(({ data }) => setRoster(data)) }, [open, classroomId, projectId])
+
+  const libres = roster.filter(r => !r.assignedTeamName)
+  const filtrados = rosterFilter(roster, busqueda)
 
   const create = async () => {
     if ((!name.trim() && !letStudents) || sel.size === 0) return
@@ -2489,19 +2546,27 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
         Dejar que el equipo elija su nombre y emblema (ritual de fundación)
       </label>
       <div>
-        <p className="text-xs font-medium taller-soft mb-1.5">Integrantes ({sel.size})</p>
+        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+          <p className="text-xs font-medium taller-soft">Integrantes <b className="taller-ink">({sel.size})</b></p>
+          <span className="text-[11px] taller-muted">{libres.length} disponible{libres.length === 1 ? '' : 's'} de {roster.length}</span>
+          {roster.length > 8 && (
+            <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar…"
+              className="ml-auto border taller-line-c rounded-lg px-2.5 py-1 text-xs w-40" />
+          )}
+        </div>
         <div className="max-h-52 overflow-y-auto rounded-xl taller-line p-2 grid sm:grid-cols-2 gap-1">
-          {roster.map(r => {
+          {filtrados.map(r => {
             const taken = !!r.assignedTeamName
             return (
-              <label key={r.enrollmentId} title={taken ? `Ya está en ${r.assignedTeamName}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm ${taken ? 'opacity-50 cursor-not-allowed taller-muted' : sel.has(r.enrollmentId) ? 'taller-mari-bg taller-mari cursor-pointer' : 'hover:taller-surface taller-soft cursor-pointer'}`}>
+              <label key={r.enrollmentId} title={taken ? `Ya está en ${r.assignedTeamName}` : r.documentNumber ? `Doc. ${r.documentNumber}` : undefined} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm ${taken ? 'opacity-50 cursor-not-allowed taller-muted' : sel.has(r.enrollmentId) ? 'taller-mari-bg taller-mari cursor-pointer' : 'hover:taller-surface taller-soft cursor-pointer'}`}>
                 <input type="checkbox" disabled={taken} checked={sel.has(r.enrollmentId)} onChange={() => { if (taken) return; setSel(s => { const n = new Set(s); n.has(r.enrollmentId) ? n.delete(r.enrollmentId) : n.add(r.enrollmentId); return n }) }} className="taller-accent disabled:cursor-not-allowed" />
-                <span className="flex-1 truncate">{r.name}</span>
+                <span className="flex-1 truncate">{rosterLabel(r)}</span>
                 {taken && <span className="text-[10px] font-medium taller-muted shrink-0">{r.assignedTeamName}</span>}
               </label>
             )
           })}
           {roster.length === 0 && <p className="text-xs taller-muted p-2">Cargando matriculados…</p>}
+          {roster.length > 0 && filtrados.length === 0 && <p className="text-xs taller-muted p-2">Nadie coincide con “{busqueda}”.</p>}
         </div>
       </div>
       <div className="flex justify-end gap-2">
@@ -2514,8 +2579,9 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
 
 // Editar integrantes de un equipo YA creado: sacar/meter estudiantes.
 function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: { team: any; classroomId: string; projectId: string; onClose: () => void; onChanged: () => void }) {
-  const [roster, setRoster] = useState<{ enrollmentId: string; name: string; assignedTeamName: string | null }[]>([])
+  const [roster, setRoster] = useState<RosterEntry[]>([])
   const [busy, setBusy] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
 
   const reloadRoster = () => abpApi.roster(classroomId, projectId).then(({ data }) => setRoster(data))
   useEffect(() => { reloadRoster() }, [classroomId, projectId])
@@ -2559,11 +2625,17 @@ function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: {
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium taller-soft mb-1.5">Disponibles para añadir ({available.length})</p>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <p className="text-xs font-medium taller-soft">Disponibles para añadir ({available.length})</p>
+              {available.length > 8 && (
+                <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar…"
+                  className="ml-auto border taller-line-c rounded-lg px-2.5 py-1 text-xs w-36" />
+              )}
+            </div>
             <div className="space-y-1 max-h-52 overflow-y-auto">
-              {available.map(r => (
-                <div key={r.enrollmentId} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:taller-surface taller-soft text-sm">
-                  <span className="truncate">{r.name}</span>
+              {rosterFilter(available, busqueda).map(r => (
+                <div key={r.enrollmentId} title={r.documentNumber ? `Doc. ${r.documentNumber}` : undefined} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:taller-surface taller-soft text-sm">
+                  <span className="truncate">{rosterLabel(r)}</span>
                   <button onClick={() => add(r.enrollmentId)} disabled={busy} className="flex items-center gap-1 text-xs font-semibold taller-mari hover:opacity-70 disabled:opacity-40 shrink-0"><Plus className="w-4 h-4" /> Añadir</button>
                 </div>
               ))}

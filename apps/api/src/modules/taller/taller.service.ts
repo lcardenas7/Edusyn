@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { studentName } from '../abp/abp.service';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — núcleo del Sistema Operativo de Colaboración (Fase 1 del plan
@@ -36,14 +37,13 @@ export class TallerService {
       where: { id: teamId, institutionId: ctx.institutionId },
       include: {
         project: { select: { classroomId: true } },
-        members: { include: { studentEnrollment: { include: { student: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } } } } } },
+        members: { include: { studentEnrollment: { include: { student: { select: { userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true, user: { select: { firstName: true, lastName: true } } } } } } } },
       },
     });
     if (!team) throw new NotFoundException('Equipo no encontrado');
     const m = team.members.find(x => x.studentEnrollment.student.userId === ctx.userId);
     if (m) {
-      const u = m.studentEnrollment.student.user;
-      return { enrollmentId: m.studentEnrollmentId, name: `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Estudiante', role: 'student' };
+      return { enrollmentId: m.studentEnrollmentId, name: studentName(m.studentEnrollment.student), role: 'student' };
     }
     // ¿docente dueño del aula del proyecto?
     const classroom = await this.prisma.classroom.findFirst({

@@ -350,8 +350,18 @@ export class AbpService {
         academicYearId: classroom.teacherAssignment.academicYearId,
         status: 'ACTIVE',
       },
-      include: { student: { include: { user: { select: { id: true, firstName: true, lastName: true } } } } },
-      orderBy: { student: { user: { lastName: 'asc' } } },
+      include: {
+        student: {
+          select: {
+            id: true, userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true,
+            documentNumber: true,
+            user: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+      },
+      // Ordenar por el apellido de la FICHA: el del usuario es nulo para quienes
+      // no tienen cuenta y los dejaba amontonados al final.
+      orderBy: [{ student: { lastName: 'asc' } }, { student: { firstName: 'asc' } }],
     });
 
     // Alumnos ya asignados a un equipo de ESTE proyecto: se marcan para que el
@@ -371,7 +381,13 @@ export class AbpService {
     return enrollments.map(e => ({
       enrollmentId: e.id,
       studentId: e.studentId,
-      name: `${e.student.user?.firstName ?? ''} ${e.student.user?.lastName ?? ''}`.trim() || 'Estudiante',
+      name: studentName(e.student),
+      // Apellido y nombre por separado: el front los agrupa y ordena sin re-parsear.
+      lastName: `${e.student.lastName ?? ''} ${e.student.secondLastName ?? ''}`.trim(),
+      firstName: `${e.student.firstName ?? ''} ${e.student.secondName ?? ''}`.trim(),
+      // Sirve para desempatar homónimos en el selector del docente.
+      documentNumber: e.student.documentNumber ?? null,
+      hasAccount: !!e.student.userId,
       assignedTeamName: assigned.get(e.id) ?? null,
     }));
   }
@@ -628,7 +644,7 @@ export class AbpService {
       include: {
         members: {
           include: {
-            studentEnrollment: { include: { student: { select: { id: true, userId: true, user: { select: { firstName: true, lastName: true } } } } } },
+            studentEnrollment: { include: { student: { select: { id: true, userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true, user: { select: { firstName: true, lastName: true } } } } } },
           },
         },
       },
@@ -646,8 +662,7 @@ export class AbpService {
   private memberOf(team: any, userId: string): { enrollmentId: string; name: string; studentId: string } | null {
     const m = (team.members || []).find((x: any) => x.studentEnrollment.student.userId === userId);
     if (!m) return null;
-    const u = m.studentEnrollment.student.user;
-    return { enrollmentId: m.studentEnrollmentId, studentId: m.studentEnrollment.student.id, name: `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Estudiante' };
+    return { enrollmentId: m.studentEnrollmentId, studentId: m.studentEnrollment.student.id, name: studentName(m.studentEnrollment.student) };
   }
 
   // ─── FASE 1: Canvas del Problema ───────────────────────────────────────────
@@ -819,7 +834,7 @@ export class AbpService {
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
     const owner = (team.members as any[]).find(m => m.studentEnrollmentId === ownerEnrollmentId);
     if (!owner) throw new BadRequestException('El responsable debe ser un integrante del equipo');
-    const ownerName = `${owner.studentEnrollment.student.user?.firstName ?? ''} ${owner.studentEnrollment.student.user?.lastName ?? ''}`.trim() || 'Integrante';
+    const ownerName = studentName(owner.studentEnrollment.student);
     await this.withPhaseDataLock(teamId, 4, (data, ps) => {
       if (ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
       const tasks: any[] = Array.isArray(data.tasks) ? [...data.tasks] : [];
@@ -1021,10 +1036,9 @@ export class AbpService {
     if (dto.assigneeEnrollmentId) {
       const m = (team.members as any[]).find(x => x.studentEnrollmentId === dto.assigneeEnrollmentId);
       if (!m) throw new BadRequestException('El destinatario no pertenece a este equipo');
-      const u = m.studentEnrollment.student.user;
       assigneeType = 'INDIVIDUAL';
       assigneeEnrollmentId = dto.assigneeEnrollmentId;
-      assigneeName = `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Integrante';
+      assigneeName = studentName(m.studentEnrollment.student);
     }
     const due = dto.dueAt ? new Date(dto.dueAt) : null;
 
@@ -1572,8 +1586,7 @@ export class AbpService {
   }
 
   private memberName(m: any): string {
-    const u = m.studentEnrollment?.student?.user;
-    return `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Integrante';
+    return studentName(m.studentEnrollment?.student);
   }
 
   /** Comentarios de una fase (docente ↔ equipo). Docente dueño o miembro. */
@@ -1699,11 +1712,32 @@ export class AbpService {
       members: {
         include: {
           studentEnrollment: {
-            include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } },
+            include: {
+              student: {
+                select: {
+                  id: true, userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true,
+                  user: { select: { firstName: true, lastName: true } },
+                },
+              },
+            },
           },
         },
       },
       phaseStates: { orderBy: { phase: 'asc' as const } },
     };
   }
+}
+
+/**
+ * Nombre visible de un estudiante. La FICHA (Student) es la fuente autoritativa:
+ * `userId` es opcional y en la institución hay cientos de alumnos sin cuenta, que
+ * antes se mostraban todos como "Estudiante" (imposible distinguirlos al armar
+ * equipos). El usuario queda solo como respaldo.
+ */
+export function studentName(s: any): string {
+  if (!s) return 'Estudiante';
+  const ficha = [s.firstName, s.lastName].map((v: any) => (v ?? '').trim()).filter(Boolean).join(' ');
+  if (ficha) return ficha;
+  const cuenta = [s.user?.firstName, s.user?.lastName].map((v: any) => (v ?? '').trim()).filter(Boolean).join(' ');
+  return cuenta || 'Estudiante';
 }
