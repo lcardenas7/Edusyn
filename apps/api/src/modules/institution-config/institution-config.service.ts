@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { deriveScaleFromConfig, validateScaleRanges } from '../evaluation/performance-scale.util'
 
@@ -255,6 +255,22 @@ export class InstitutionConfigService {
       throw new NotFoundException('Institución no encontrada')
     }
 
+    // RE-6: los componentes de evaluación deben sumar 100% (antes se aceptaba
+    // cualquier suma y la renormalización la ocultaba).
+    const processes = (config as any)?.processes as Array<{ weightPercentage?: number }> | undefined
+    if (Array.isArray(processes) && processes.length > 0) {
+      const total = processes.reduce((s, p) => s + (Number(p?.weightPercentage) || 0), 0)
+      if (Math.abs(total - 100) > 0.01) {
+        throw new BadRequestException(
+          `Los componentes de evaluación deben sumar 100% (actualmente suman ${total}%).`,
+        )
+      }
+    }
+
+    // RE-4: la escala de desempeño resultante debe ser válida (sin solapes ni huecos).
+    // Se valida ANTES de escribir para no dejar config inválida persistida.
+    await this.assertDerivedScaleValid(institutionId, { gradingConfig: config })
+
     const configJson = JSON.stringify(config)
     await this.prisma.$executeRaw`
       UPDATE "Institution" SET "gradingConfig" = ${configJson}::jsonb WHERE id = ${institutionId}
@@ -289,6 +305,9 @@ export class InstitutionConfigService {
       throw new NotFoundException('Institución no encontrada')
     }
 
+    // RE-4: validar la escala resultante ANTES de escribir.
+    await this.assertDerivedScaleValid(institutionId, { academicLevelsConfig: levels })
+
     const levelsJson = JSON.stringify(levels)
     await this.prisma.$executeRaw`
       UPDATE "Institution" SET "academicLevelsConfig" = ${levelsJson}::jsonb WHERE id = ${institutionId}
@@ -305,24 +324,60 @@ export class InstitutionConfigService {
   // la config JSON. La tabla es la que leen boletines, desempeños y promoción.
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async syncScaleFromConfig(institutionId: string): Promise<{ synced: number }> {
-    try {
-      const inst = await this.prisma.institution.findUnique({
-        where: { id: institutionId },
-        select: { gradingConfig: true, academicLevelsConfig: true },
+  /**
+   * RE-4: valida (bloqueante) que la escala de desempeño DERIVADA de la configuración
+   * sea coherente (sin solapes ni huecos). Se llama ANTES de persistir el config para
+   * no dejar una escala inválida viva (que haría no-determinista getPerformanceLevel).
+   * `opts` permite validar contra el config ENTRANTE antes de escribirlo.
+   */
+  private async assertDerivedScaleValid(
+    institutionId: string,
+    opts: { gradingConfig?: any; academicLevelsConfig?: any },
+  ): Promise<void> {
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { gradingConfig: true, academicLevelsConfig: true },
+    })
+    const gradingConfig =
+      opts.gradingConfig !== undefined ? opts.gradingConfig : inst?.gradingConfig
+    const academicLevelsConfig =
+      opts.academicLevelsConfig !== undefined ? opts.academicLevelsConfig : inst?.academicLevelsConfig
+
+    const rows = deriveScaleFromConfig(gradingConfig, academicLevelsConfig)
+    const issues = validateScaleRanges(rows)
+    if (issues.length > 0) {
+      throw new BadRequestException({
+        message:
+          'La escala de desempeño resultante tiene rangos inválidos (solapes o huecos). Corrígela antes de guardar.',
+        issues,
       })
-      if (!inst) return { synced: 0 }
+    }
+  }
 
-      const rows = deriveScaleFromConfig(inst.gradingConfig, inst.academicLevelsConfig)
+  async syncScaleFromConfig(institutionId: string): Promise<{ synced: number }> {
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { gradingConfig: true, academicLevelsConfig: true },
+    })
+    if (!inst) return { synced: 0 }
 
-      // Validación no bloqueante: avisar si los rangos tienen huecos/solapes.
-      const issues = validateScaleRanges(rows)
-      if (issues.length > 0) {
-        console.warn(`[syncScaleFromConfig] escala con avisos para ${institutionId}:`, issues)
-      }
+    const rows = deriveScaleFromConfig(inst.gradingConfig, inst.academicLevelsConfig)
 
-      for (const r of rows) {
-        await this.prisma.performanceScale.upsert({
+    // RE-4: validación BLOQUEANTE (antes solo era console.warn).
+    const issues = validateScaleRanges(rows)
+    if (issues.length > 0) {
+      throw new BadRequestException({
+        message:
+          'La escala de desempeño resultante tiene rangos inválidos (solapes o huecos). Corrígela antes de guardar.',
+        issues,
+      })
+    }
+
+    // RE-5: todo-o-nada. Antes el upsert fila-por-fila podía dejar la escala a medias
+    // (unos niveles nuevos, otros viejos → solapes/huecos) si fallaba a mitad.
+    await this.prisma.$transaction(
+      rows.map((r) =>
+        this.prisma.performanceScale.upsert({
           where: { institutionId_level: { institutionId, level: r.level } },
           update: {
             minScore: r.minScore,
@@ -343,14 +398,10 @@ export class InstitutionConfigService {
             isApproved: r.isApproved,
             descriptor: r.descriptor,
           },
-        })
-      }
-      return { synced: rows.length }
-    } catch (error) {
-      // No romper el guardado de config si la sincronización falla.
-      console.error('[syncScaleFromConfig] error:', error)
-      return { synced: 0 }
-    }
+        }),
+      ),
+    )
+    return { synced: rows.length }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -373,6 +424,17 @@ export class InstitutionConfigService {
     const exists = await this.prisma.institution.findUnique({ where: { id: institutionId } })
     if (!exists) {
       throw new NotFoundException('Institución no encontrada')
+    }
+
+    // RE-6: los pesos de los períodos deben sumar 100% (antes cualquier suma se
+    // aceptaba y la renormalización del anual lo ocultaba).
+    if (Array.isArray(periods) && periods.length > 0) {
+      const totalWeight = periods.reduce((s, p) => s + (Number((p as any)?.weight) || 0), 0)
+      if (Math.abs(totalWeight - 100) > 0.01) {
+        throw new BadRequestException(
+          `Los pesos de los períodos deben sumar 100% (actualmente suman ${totalWeight}%).`,
+        )
+      }
     }
 
     const periodsJson = JSON.stringify(periods)

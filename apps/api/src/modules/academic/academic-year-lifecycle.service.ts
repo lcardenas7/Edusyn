@@ -58,6 +58,8 @@ export interface CloseYearResult {
   closedAt: Date;
   promotedCount: number;
   repeatedCount: number;
+  graduatedCount: number;
+  reviewPendingCount: number;
   withdrawnCount: number;
 }
 
@@ -350,6 +352,8 @@ export class AcademicYearLifecycleService {
     let promotionWrites: PromotionWrite[] = [];
     let promotedCount = 0;
     let repeatedCount = 0;
+    let graduatedCount = 0;
+    let reviewPendingCount = 0;
     let withdrawnCount = 0;
 
     if (dto.calculatePromotions) {
@@ -357,6 +361,8 @@ export class AcademicYearLifecycleService {
       promotionWrites = computed.writes;
       promotedCount = computed.promotedCount;
       repeatedCount = computed.repeatedCount;
+      graduatedCount = computed.graduatedCount;
+      reviewPendingCount = computed.reviewPendingCount;
       withdrawnCount = computed.withdrawnCount;
     }
 
@@ -400,6 +406,8 @@ export class AcademicYearLifecycleService {
       closedAt: new Date(),
       promotedCount,
       repeatedCount,
+      graduatedCount,
+      reviewPendingCount,
       withdrawnCount,
     };
   }
@@ -469,13 +477,25 @@ export class AcademicYearLifecycleService {
     writes: PromotionWrite[];
     promotedCount: number;
     repeatedCount: number;
+    graduatedCount: number;
+    reviewPendingCount: number;
     withdrawnCount: number;
   }> {
     let promotedCount = 0;
     let repeatedCount = 0;
+    let graduatedCount = 0;
+    let reviewPendingCount = 0;
 
     const year = await this.getYearById(yearId);
     const rulesCtx = await this.institutionContext.getContext(year.institutionId);
+
+    // YC-1: la secuencia de grados DEBE limitarse a la institución del año.
+    // Sin este filtro, getNextGradeFromSequence podía devolver el grado de OTRA
+    // institución y graduar/promover al estudiante a un grupo ajeno (cross-tenant).
+    const gradeSequence = await this.prisma.grade.findMany({
+      where: { institutionId: year.institutionId },
+      select: { id: true, name: true, stage: true, number: true },
+    });
 
     // Obtener todas las matrículas activas del año
     const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -496,22 +516,58 @@ export class AcademicYearLifecycleService {
     const writes: PromotionWrite[] = [];
     for (const enrollment of enrollments) {
       const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
-      const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
-      const newStatus: EnrollmentStatus = shouldPromote ? 'PROMOTED' : 'REPEATED';
 
-      writes.push({
-        enrollmentId: enrollment.id,
-        institutionId: enrollment.institutionId,
-        newStatus,
-        eventType: shouldPromote ? 'PROMOTED' : 'REPEATED',
-        reason: shouldPromote
-          ? `Cierre de año lectivo: ${assessment.result.reasons.join('; ') || 'Cumple los requisitos de promoción'}`
-          : assessment.result.reasons.join('; ') || 'No cumple los requisitos de promoción',
-      });
+      // YC-4: sin datos académicos NO se reprueba automáticamente. Un estudiante sin
+      // notas (matrícula tardía, adopción del sistema a mitad de año) quedaría
+      // REPEATED por AUSENCIA de datos, no por desempeño. Se mantiene ACTIVE y se
+      // marca para decisión manual.
+      if (!assessment.hasAcademicData) {
+        writes.push({
+          enrollmentId: enrollment.id,
+          institutionId: enrollment.institutionId,
+          newStatus: 'ACTIVE',
+          eventType: 'STATUS_CHANGED',
+          reason:
+            'Cierre de año: sin datos académicos suficientes — requiere decisión manual de promoción (no se reprueba automáticamente).',
+        });
+        reviewPendingCount++;
+        continue;
+      }
+
+      const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
 
       if (shouldPromote) {
+        // YC-2: si aprueba y está en el ÚLTIMO grado de su institución → GRADUADO
+        // (antes se re-matriculaba en el mismo grado por falta de estado GRADUATED).
+        const nextGrade = this.getNextGradeFromSequence(enrollment.group.grade, gradeSequence);
+        if (!nextGrade) {
+          writes.push({
+            enrollmentId: enrollment.id,
+            institutionId: enrollment.institutionId,
+            newStatus: 'GRADUATED',
+            eventType: 'GRADUATED',
+            reason: `Cierre de año lectivo: graduado (aprobó el último grado). ${assessment.result.reasons.join('; ')}`.trim(),
+          });
+          graduatedCount++;
+          continue;
+        }
+
+        writes.push({
+          enrollmentId: enrollment.id,
+          institutionId: enrollment.institutionId,
+          newStatus: 'PROMOTED',
+          eventType: 'PROMOTED',
+          reason: `Cierre de año lectivo: ${assessment.result.reasons.join('; ') || 'Cumple los requisitos de promoción'}`,
+        });
         promotedCount++;
       } else {
+        writes.push({
+          enrollmentId: enrollment.id,
+          institutionId: enrollment.institutionId,
+          newStatus: 'REPEATED',
+          eventType: 'REPEATED',
+          reason: assessment.result.reasons.join('; ') || 'No cumple los requisitos de promoción',
+        });
         repeatedCount++;
       }
     }
@@ -524,7 +580,7 @@ export class AcademicYearLifecycleService {
       },
     });
 
-    return { writes, promotedCount, repeatedCount, withdrawnCount };
+    return { writes, promotedCount, repeatedCount, graduatedCount, reviewPendingCount, withdrawnCount };
   }
 
   private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext) {
@@ -613,7 +669,9 @@ export class AcademicYearLifecycleService {
   async previewPromotions(yearId: string): Promise<PromotionPreview[]> {
     const yearData = await this.prisma.academicYear.findUnique({ where: { id: yearId }, select: { institutionId: true } });
     const rulesCtx = await this.institutionContext.getContext(yearData?.institutionId || '');
+    // YC-1: limitar la secuencia de grados a la institución del año (nunca global).
     const gradeSequence = await this.prisma.grade.findMany({
+      where: { institutionId: yearData?.institutionId ?? '__none__' },
       select: {
         id: true,
         name: true,
@@ -641,10 +699,34 @@ export class AcademicYearLifecycleService {
 
     for (const enrollment of enrollments) {
       const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
+
+      // YC-4: sin datos académicos → revisión manual (se sugiere mantener ACTIVE),
+      // nunca promoción/repitencia automática.
+      if (!assessment.hasAcademicData) {
+        previews.push({
+          studentId: enrollment.studentId,
+          studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+          currentGradeId: enrollment.group.gradeId,
+          currentGradeName: enrollment.group.grade.name,
+          currentGroupName: enrollment.group.name,
+          finalAverage: assessment.finalAverage,
+          suggestedStatus: 'ACTIVE',
+          nextGradeId: null,
+          nextGradeName: null,
+        });
+        continue;
+      }
+
       const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
       const nextGrade = shouldPromote
         ? this.getNextGradeFromSequence(enrollment.group.grade, gradeSequence)
         : null;
+      // YC-2: aprueba y no hay grado siguiente en SU institución → GRADUATED.
+      const suggestedStatus: EnrollmentStatus = !shouldPromote
+        ? 'REPEATED'
+        : nextGrade
+          ? 'PROMOTED'
+          : 'GRADUATED';
 
       previews.push({
         studentId: enrollment.studentId,
@@ -653,7 +735,7 @@ export class AcademicYearLifecycleService {
         currentGradeName: enrollment.group.grade.name,
         currentGroupName: enrollment.group.name,
         finalAverage: assessment.finalAverage,
-        suggestedStatus: shouldPromote ? 'PROMOTED' : 'REPEATED',
+        suggestedStatus,
         nextGradeId: nextGrade?.id ?? null,
         nextGradeName: nextGrade?.name ?? null,
       });
@@ -669,7 +751,10 @@ export class AcademicYearLifecycleService {
   async promoteStudents(dto: PromoteStudentsDto): Promise<PromotionResult> {
     const fromYear = await this.getYearById(dto.fromYearId);
     const toYear = await this.getYearById(dto.toYearId);
+    // YC-1: la secuencia de grados se limita a la institución del año de origen
+    // (evita promover a un grado/grupo de otra institución).
     const grades = await this.prisma.grade.findMany({
+      where: { institutionId: fromYear.institutionId },
       select: {
         id: true,
         name: true,

@@ -74,6 +74,7 @@ enum EnrollmentStatus {
   ACTIVE // Matriculado actualmente
   PROMOTED // Promovido al siguiente grado
   REPEATED // Repite el mismo grado
+  GRADUATED // Graduado (aprobó el último grado) — YC-2
   WITHDRAWN // Retirado
   TRANSFERRED // Trasladado a otra institución
 }
@@ -98,6 +99,7 @@ enum EnrollmentEventType {
   STATUS_CHANGED // Cambio de estado genérico
   GRADE_CORRECTED // Corrección de nota (con acta)
   PROMOTION_EXCEPTION // Promoción excepcional (comité)
+  GRADUATED // Graduación al cierre del año (último grado aprobado) — YC-2
 }
 
 // Tipo de movimiento de matrícula
