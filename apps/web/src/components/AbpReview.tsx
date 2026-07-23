@@ -109,11 +109,14 @@ export default function AbpReview({ validationId, onClose }: { validationId: str
   const toggleResolve = async (c: any) => { await abpApi.resolveComment(c.id, !c.resolved); load() }
 
   return (
-    <div className="fixed inset-0 z-[100] taller-surface overflow-y-auto">
+    // `taller` DEFINE las variables del sistema; sin él, taller-surface (y todo
+    // var(--t-*)) quedaba sin resolver → fondo transparente y el aula se veía por
+    // debajo, superpuesta (bug reportado en celular).
+    <div className="fixed inset-0 z-[100] taller taller-surface overflow-y-auto">
       {loading || !r ? (
         <div className="flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin taller-mari" /></div>
       ) : (
-        <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        <div className="max-w-6xl mx-auto p-3 sm:p-6">
           <button onClick={() => onClose(false)} className="flex items-center gap-1 text-sm taller-soft hover:taller-ink mb-3"><ChevronLeft className="w-4 h-4" /> Volver a la cola</button>
 
           {/* Cabecera */}
