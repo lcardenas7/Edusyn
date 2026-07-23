@@ -17,7 +17,19 @@ import { Link } from 'react-router-dom'
 import { useAcademic, AcademicLevel, GradingScaleType } from '../../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
-import { performanceScaleApi } from '../../../lib/api'
+import { performanceScaleApi, academicGradesApi } from '../../../lib/api'
+
+// Punto 3 — auto-derivar: mapea el `code` del nivel académico al `stage` de la
+// tabla Grade. Así los grados creados en Estructura se categorizan solos bajo su
+// nivel, sin teclear nombres a mano.
+const LEVEL_CODE_TO_STAGE: Record<string, string> = {
+  PREESCOLAR: 'PREESCOLAR',
+  PRIMARIA: 'BASICA_PRIMARIA',
+  BASICA_PRIMARIA: 'BASICA_PRIMARIA',
+  SECUNDARIA: 'BASICA_SECUNDARIA',
+  BASICA_SECUNDARIA: 'BASICA_SECUNDARIA',
+  MEDIA: 'MEDIA',
+}
 
 export default function Levels() {
   const { 
@@ -48,6 +60,23 @@ export default function Levels() {
   useEffect(() => {
     refreshConnectedScale()
   }, [])
+
+  // Punto 3 — grados reales de la institución (tabla Grade). Fuente de verdad para
+  // categorizar cada nivel por su `stage`, en vez de la lista manual `level.grades`.
+  const [allGrades, setAllGrades] = useState<Array<{ id: string; name: string; stage: string; number: number | null }>>([])
+  useEffect(() => {
+    academicGradesApi.getAll()
+      .then(res => setAllGrades(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAllGrades([]))
+  }, [])
+
+  const gradesForLevel = (code: string) => {
+    const stage = LEVEL_CODE_TO_STAGE[(code || '').toUpperCase()]
+    if (!stage) return []
+    return allGrades
+      .filter(g => g.stage === stage)
+      .sort((a, b) => (a.number ?? 99) - (b.number ?? 99) || a.name.localeCompare(b.name))
+  }
 
   const toggleExpand = (levelId: string) => {
     const key = `level-${levelId}`
@@ -379,7 +408,10 @@ export default function Levels() {
                           </span>
                         </div>
                         <div className="text-sm text-slate-500 mt-0.5">
-                          {level.grades.length > 0 ? level.grades.join(', ') : 'Sin grados asignados'}
+                          {(() => {
+                            const gs = gradesForLevel(level.code)
+                            return gs.length > 0 ? gs.map(g => g.name).join(', ') : 'Sin grados asignados'
+                          })()}
                         </div>
                       </div>
                       {/* Colores de la escala */}
