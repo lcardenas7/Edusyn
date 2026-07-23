@@ -201,10 +201,32 @@ export function StationAgenda({ team, phase, stationName, purpose, feedback, awa
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ESTUDIANTE — Paso guiado: número + título + pista, con ✓ cuando ya se cumplió.
+// Da el ORDEN de trabajo de la estación (herramientas → misiones → presentar) para
+// que el equipo nunca se pregunte "¿por dónde empiezo?".
+// ─────────────────────────────────────────────────────────────────────────────
+export function StationStep({ n, title, hint, done }: { n: number; title: string; hint: string; done?: boolean }) {
+  return (
+    <div className="flex items-start gap-2.5 mt-5 mb-2.5">
+      <span className="w-7 h-7 rounded-full grid place-items-center text-sm font-black shrink-0"
+        style={done
+          ? { background: 'color-mix(in srgb, var(--t-teal) 18%, transparent)', color: 'var(--t-teal)', border: '2px solid color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' }
+          : { background: 'color-mix(in srgb, var(--t-marigold) 16%, transparent)', color: 'var(--t-marigold)', border: '2px solid color-mix(in srgb, var(--t-marigold) 45%, transparent)' }}>
+        {done ? '✓' : n}
+      </span>
+      <div className="min-w-0">
+        <div className="text-sm font-black taller-ink leading-tight">{title}</div>
+        <div className="text-xs taller-soft mt-0.5">{hint}</div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ESTUDIANTE — Espacio de trabajo de la estación: los instrumentos que el
 // docente asignó a esta fase, abribles uno a la vez.
 // ─────────────────────────────────────────────────────────────────────────────
-export function StationInstruments({ team, phase }: { team: any; phase: number }) {
+export function StationInstruments({ team, phase, hideHeading }: { team: any; phase: number; hideHeading?: boolean }) {
   const cat = useCatalog()
   const [open, setOpen] = useState<string | null>(null)
   const assigned: { key: string; required?: boolean }[] = team?.config?.instruments?.[phase] || []
@@ -214,7 +236,7 @@ export function StationInstruments({ team, phase }: { team: any; phase: number }
 
   return (
     <div className="mb-5 pb-4" style={{ borderBottom: '1px solid var(--t-line)' }}>
-      <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2">🧰 Espacio de trabajo de la estación</div>
+      {!hideHeading && <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2">🧰 Espacio de trabajo de la estación</div>}
       <div className="flex flex-wrap gap-2">
         {assigned.map(a => {
           const def = defOf(a.key)
