@@ -549,7 +549,11 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
 function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
-  const tool = toolAct?.content?.tool
+  // Herramienta legacy de la misión (canvas/ideas/smart…). Si el docente configuró
+  // instrumentos del Taller en esta estación, el trabajo vive en el "Espacio de trabajo"
+  // y no se pinta este tool viejo (evita dos sistemas de ideas duplicados y confusos).
+  const usesTeacherInstruments = team?.config?.instrumentsSource?.[team?.currentPhase] === 'teacher'
+  const tool = usesTeacherInstruments ? null : toolAct?.content?.tool
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
   const complete = !!mission.complete
   // Misión personal: mía (solo yo la entrego) o de un compañero (la veo, no la entrego).
@@ -608,7 +612,13 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
             ))}
             {!tool && acts.length === 0 && (
               <p className="text-xs taller-muted">
-                {complete ? '✓ El docente dio esta misión por cumplida.' : '⏳ El docente verificará esta misión cuando la hayan hecho.'}
+                {usesTeacherInstruments
+                  ? (complete
+                      ? '✓ Cumplida con el trabajo del equipo en el Espacio de trabajo.'
+                      : '⬆️ Trabajen en el Espacio de trabajo de arriba para cumplir esta misión.')
+                  : (complete
+                      ? '✓ El docente dio esta misión por cumplida.'
+                      : '⏳ El docente verificará esta misión cuando la hayan hecho.')}
               </p>
             )}
           </div>
