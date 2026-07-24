@@ -2709,6 +2709,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     setAssignStudentsModal({ activityId, activityTitle })
     setSelectedStudentIds([])
     setIsRestrictedToAssigned(false)
+    restrictTouched.current = false
     setLoadingStudents(true)
     try {
       // Load classroom students
@@ -2774,10 +2775,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const toggleStudentSelection = (enrollmentId: string) => {
-    setSelectedStudentIds(prev => 
-      prev.includes(enrollmentId) 
-        ? prev.filter(id => id !== enrollmentId)
-        : [...prev, enrollmentId]
+    changeSelection(
+      selectedStudentIds.includes(enrollmentId)
+        ? selectedStudentIds.filter(id => id !== enrollmentId)
+        : [...selectedStudentIds, enrollmentId]
     )
   }
 
@@ -2832,6 +2833,17 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [isRestrictedToAssigned, setIsRestrictedToAssigned] = useState(false)
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingAssignments, setSavingAssignments] = useState(false)
+  // Seleccionar un subconjunto del curso implica querer restringir, así que la casilla
+  // se activa sola al cambiar la selección (antes había que marcarla aparte y se olvidaba).
+  // Solo reacciona a cambios hechos por el docente, nunca al abrir el modal, para no
+  // alterar actividades que ya existen. Si el docente toca la casilla, manda su decisión.
+  const restrictTouched = useRef(false)
+  const changeSelection = (next: string[]) => {
+    setSelectedStudentIds(next)
+    if (restrictTouched.current) return
+    const total = classroomStudents.length
+    setIsRestrictedToAssigned(next.length > 0 && total > 0 && next.length < total)
+  }
 
   const loadQuestions = async (activityId: string) => {
     setQuestionsLoading(true)
@@ -5193,18 +5205,25 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   Actividad: <span className="font-medium text-slate-800">{assignStudentsModal.activityTitle}</span>
                 </p>
 
-                {/* Restriction toggle */}
-                <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-lg border border-violet-200 mb-4">
-                  <input
-                    type="checkbox"
-                    id="restrictToAssigned"
-                    checked={isRestrictedToAssigned}
-                    onChange={e => setIsRestrictedToAssigned(e.target.checked)}
-                    className="w-4 h-4 text-violet-600 rounded"
-                  />
-                  <label htmlFor="restrictToAssigned" className="text-sm text-violet-800">
-                    <strong>Solo para seleccionados</strong> — La actividad solo será visible para los estudiantes marcados (útil para recuperaciones)
-                  </label>
+                {/* Restriction toggle — se activa solo al elegir un subconjunto del curso */}
+                <div className="p-3 bg-violet-50 rounded-lg border border-violet-200 mb-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="restrictToAssigned"
+                      checked={isRestrictedToAssigned}
+                      onChange={e => { restrictTouched.current = true; setIsRestrictedToAssigned(e.target.checked) }}
+                      className="w-4 h-4 text-violet-600 rounded"
+                    />
+                    <label htmlFor="restrictToAssigned" className="text-sm text-violet-800">
+                      <strong>Solo para seleccionados</strong> — útil para recuperaciones o refuerzo
+                    </label>
+                  </div>
+                  <p className="text-xs mt-2 pl-7 font-medium text-violet-900">
+                    {isRestrictedToAssigned
+                      ? `👁️ Solo ${selectedStudentIds.length} estudiante${selectedStudentIds.length === 1 ? '' : 's'} verá${selectedStudentIds.length === 1 ? '' : 'n'} esta actividad. El resto del curso no la verá.`
+                      : `👁️ Todo el curso (${classroomStudents.length}) verá esta actividad.`}
+                  </p>
                 </div>
 
                 {loadingStudents ? (
@@ -5218,10 +5237,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-xs text-slate-500">{selectedStudentIds.length} de {classroomStudents.length} seleccionados</p>
                       <div className="flex gap-2">
-                        <button onClick={() => setSelectedStudentIds(classroomStudents.map(s => s.enrollmentId))} className="text-xs text-blue-600 hover:underline">
+                        <button onClick={() => changeSelection(classroomStudents.map(s => s.enrollmentId))} className="text-xs text-blue-600 hover:underline">
                           Seleccionar todos
                         </button>
-                        <button onClick={() => setSelectedStudentIds([])} className="text-xs text-slate-500 hover:underline">
+                        <button onClick={() => changeSelection([])} className="text-xs text-slate-500 hover:underline">
                           Ninguno
                         </button>
                       </div>
