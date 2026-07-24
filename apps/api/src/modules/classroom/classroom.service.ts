@@ -607,8 +607,20 @@ export class ClassroomService {
 
     // Students see only published activities — ordered by publication date (newest first).
     // Las propias de una ruta se hacen desde el mapa de la ruta, no en esta lista.
+    //
+    // La matrícula se resuelve ANTES de consultar: hace falta tanto para ocultar las
+    // actividades restringidas a estudiantes concretos (recuperación, refuerzo) como
+    // para el candado por dependencias.
+    const enr = await this.resolveStudentEnrollment(classroomId, userId);
+
+    // Actividad restringida (isRestrictedToAssigned) → solo la ven los asignados.
+    // Sin matrícula resuelta no se puede probar la asignación: se muestran solo las abiertas.
+    const assignedFilter = enr
+      ? { OR: [{ isRestrictedToAssigned: false }, { assignedStudents: { some: { studentEnrollmentId: enr } } }] }
+      : { isRestrictedToAssigned: false };
+
     const activities = await this.prisma.classroomActivity.findMany({
-      where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false },
+      where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false, ...assignedFilter },
       include: {
         section: { select: { id: true, title: true, academicTermId: true } },
         submissions: {
@@ -628,7 +640,6 @@ export class ClassroomService {
     // Estado de candado por dependencias (Fase 4). Backend autoritativo; la UI solo pinta.
     // Sin reglas o sin matrícula → todo libre (retrocompatible).
     let gate = new Map<string, { locked: boolean; requirements: any[] }>();
-    const enr = await this.resolveStudentEnrollment(classroomId, userId);
     if (enr) gate = await this.gating.evaluateForStudent(classroomId, enr);
 
     return activities.map((a) => {
@@ -762,6 +773,16 @@ export class ClassroomService {
     // Student: must be published
     if (!activity.isPublished || !activity.isVisible) {
       throw new NotFoundException('Actividad no encontrada');
+    }
+
+    // Restringida a estudiantes concretos: solo la abren los asignados. Se responde
+    // 404 (no 403) para no revelar que la actividad existe.
+    if (activity.isRestrictedToAssigned) {
+      const enr = await this.resolveStudentEnrollment(activity.classroom.id, userId);
+      const assigned = enr
+        ? await this.prisma.activityAssignment.count({ where: { activityId, studentEnrollmentId: enr } })
+        : 0;
+      if (!assigned) throw new NotFoundException('Actividad no encontrada');
     }
     return activity;
   }
