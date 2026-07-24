@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Trash2, Pencil, Plus, X, MessageCircle } from 'lucide-react'
 import { tallerApi } from '../lib/api'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Motor MATRIX · dinámica IMPACTO / ESFUERZO. Las ideas se colocan
@@ -20,7 +21,14 @@ const QUADRANTS = [
   { key: 'descartar', label: '🚫 Mejor no', hint: 'Poco impacto · mucho esfuerzo', top: 50, left: 50, color: '#F6D3CE' },
 ]
 
+// Centro de cada cuadrante (para colocar por toque en móvil, sin arrastre).
+const QUAD_CENTER: Record<string, { x: number; y: number }> = {
+  ya: { x: 2500, y: 2500 }, proyecto: { x: 7500, y: 2500 },
+  relleno: { x: 2500, y: 7500 }, descartar: { x: 7500, y: 7500 },
+}
+
 export default function TallerMatrix({ teamId, dynamic = 'IMPACTO_ESFUERZO', stationId }: { teamId: string; dynamic?: string; stationId?: string }) {
+  const isMobile = useIsMobile()
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [me, setMe] = useState<any>(null)
@@ -114,6 +122,16 @@ export default function TallerMatrix({ teamId, dynamic = 'IMPACTO_ESFUERZO', sta
     if (!t || !commentsFor) return
     try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
   }
+  // Móvil: colocar en un cuadrante por toque (mueve x/y a su centro).
+  const setQuad = async (o: any, key: string) => {
+    const c = QUAD_CENTER[key]
+    setObjects(prev => prev.map(x => x.id === o.id ? { ...x, data: { ...x.data, x: c.x, y: c.y } } : x))
+    try { await tallerApi.updateObject(o.id, { x: c.x, y: c.y }) } catch { load(true) }
+  }
+  const currentQuadKey = (o: any) => {
+    const x = o.data?.x ?? SIZE / 2, y = o.data?.y ?? SIZE / 2
+    return y < SIZE / 2 ? (x < SIZE / 2 ? 'ya' : 'proyecto') : (x < SIZE / 2 ? 'relleno' : 'descartar')
+  }
 
   if (loading) return <div className="taller-card p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'var(--t-marigold)' }} /></div>
 
@@ -147,6 +165,45 @@ export default function TallerMatrix({ teamId, dynamic = 'IMPACTO_ESFUERZO', sta
         Arrastren cada idea: <b>arriba</b> = más impacto en el problema · <b>derecha</b> = más esfuerzo para hacerla. El cuadrante les dirá por dónde empezar.
       </div>
 
+      {isMobile ? (
+        /* MÓVIL: cada idea con selector de cuadrante por toque (sin arrastre). */
+        <div className="p-3 space-y-3">
+          {objects.length === 0 && (
+            <div className="py-8 text-center taller-muted text-sm">Añadan ideas y elijan su cuadrante 📈</div>
+          )}
+          {objects.map(o => {
+            const cur = currentQuadKey(o)
+            return (
+              <div key={o.id} className="rounded-xl p-3" style={{ background: 'var(--t-raised)', border: '1px solid var(--t-line)' }}>
+                {editingId === o.id ? (
+                  <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} onBlur={saveEdit}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() } }}
+                    className="w-full text-sm bg-transparent resize-none outline-none taller-ink" rows={2} maxLength={300} />
+                ) : (
+                  <p className="text-sm font-semibold taller-ink leading-snug break-words">{o.data?.text}</p>
+                )}
+                <div className="grid grid-cols-2 gap-1.5 mt-2">
+                  {QUADRANTS.map(q => (
+                    <button key={q.key} onClick={() => setQuad(o, q.key)}
+                      className="text-[11px] font-bold rounded-lg px-2 py-1.5 text-left leading-tight transition"
+                      style={{ background: cur === q.key ? `color-mix(in srgb, ${q.color} 65%, var(--t-surface))` : 'var(--t-surface)', border: `1.5px solid ${cur === q.key ? '#4a4335' : 'var(--t-line)'}`, color: '#4a4335' }}>
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-[11px] taller-muted font-semibold">
+                  <span className="truncate">{o.authorName ?? '—'}</span>
+                  <span className="ml-auto flex items-center gap-2 shrink-0">
+                    <button onClick={() => { setCommentsFor(o.id); setCommentText('') }} className="hover:opacity-70 flex items-center gap-0.5"><MessageCircle className="w-3.5 h-3.5" />{(o.comments?.length ?? 0) > 0 ? o.comments.length : ''}</button>
+                    {mine(o) && editingId !== o.id && <button onClick={() => { setEditingId(o.id); setEditText(o.data?.text ?? '') }} className="hover:opacity-70"><Pencil className="w-3.5 h-3.5" /></button>}
+                    {(mine(o) || me?.role === 'teacher') && <button onClick={() => remove(o)} className="hover:opacity-70"><Trash2 className="w-3.5 h-3.5" /></button>}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
       <div className="p-4">
         <div className="flex gap-2">
           {/* eje Y */}
@@ -216,11 +273,12 @@ export default function TallerMatrix({ teamId, dynamic = 'IMPACTO_ESFUERZO', sta
           </div>
         </div>
       </div>
+      )}
 
-      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2" style={{ borderTop: '1px solid var(--t-line)' }}>
+      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid var(--t-line)' }}>
         <span>{objects.length} idea{objects.length === 1 ? '' : 's'}</span>
         {enYa > 0 && <><span>·</span><span style={{ color: '#4a6b34' }}>{enYa} para hacer ya</span></>}
-        <span className="ml-auto">arrastra para ubicar · doble clic para editar la tuya</span>
+        <span className="ml-auto hidden sm:inline">arrastra para ubicar · doble clic para editar la tuya</span>
       </div>
 
       {commentsObj && (

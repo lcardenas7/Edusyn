@@ -3,7 +3,7 @@ import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, Chevron
 import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
-import { StationAgenda, StationGuide, StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
+import { StationAgenda, StationGuide, StationInstruments, StationStep, TeacherInstrumentsConfig } from './TallerInstruments'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -549,7 +549,11 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
 function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
-  const tool = toolAct?.content?.tool
+  // Herramienta legacy de la misión (canvas/ideas/smart…). Si el docente configuró
+  // instrumentos del Taller en esta estación, el trabajo vive en el "Espacio de trabajo"
+  // y no se pinta este tool viejo (evita dos sistemas de ideas duplicados y confusos).
+  const usesTeacherInstruments = team?.config?.instrumentsSource?.[team?.currentPhase] === 'teacher'
+  const tool = usesTeacherInstruments ? null : toolAct?.content?.tool
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
   const complete = !!mission.complete
   // Misión personal: mía (solo yo la entrego) o de un compañero (la veo, no la entrego).
@@ -608,7 +612,13 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
             ))}
             {!tool && acts.length === 0 && (
               <p className="text-xs taller-muted">
-                {complete ? '✓ El docente dio esta misión por cumplida.' : '⏳ El docente verificará esta misión cuando la hayan hecho.'}
+                {usesTeacherInstruments
+                  ? (complete
+                      ? '✓ Cumplida con el trabajo del equipo en el Espacio de trabajo.'
+                      : '⬆️ Trabajen en el Espacio de trabajo de arriba para cumplir esta misión.')
+                  : (complete
+                      ? '✓ El docente dio esta misión por cumplida.'
+                      : '⏳ El docente verificará esta misión cuando la hayan hecho.')}
               </p>
             )}
           </div>
@@ -1429,6 +1439,9 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const reqInstr: { key: string; used: boolean }[] = team.requiredInstruments || []
   const reqInstrUsed = reqInstr.filter(s => s.used).length
   const canRequest = !!team.readyForValidation
+  const hasInstruments = ((team?.config?.instruments?.[cur] as any[])?.length ?? 0) > 0
+  const step1Done = reqInstr.length > 0 && reqInstrUsed === reqInstr.length
+  const step2Done = reqMissions.length > 0 && reqDone === reqMissions.length
 
   return (
     <div className="space-y-4 taller">
@@ -1576,14 +1589,25 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           <div className="text-center py-6">🏆<p className="font-black taller-ink mt-2">¡Llegaron a la cima de la expedición!</p></div>
         ) : (
           <>
-            {/* 1. Instrucciones: qué haremos aquí y cómo (colapsable) */}
+            {/* Instrucciones generales de la estación (colapsable) */}
             <StationGuide team={team} phase={cur} />
-            {/* 2. Espacio de trabajo: los instrumentos, a la mano */}
-            <StationInstruments team={team} phase={cur} />
-            {/* 3. Misiones: el detalle del trabajo */}
+
+            {/* Flujo guiado en 3 pasos — el equipo siempre sabe el orden.
+                Paso 1 (herramientas) solo si el docente asignó instrumentos. */}
+            {hasInstruments && (<>
+              <StationStep n={1} title="Exploren con las herramientas" done={step1Done}
+                hint="Ábranlas y trabajen aquí primero: es donde piensan, conversan y organizan las ideas en equipo." />
+              <StationInstruments team={team} phase={cur} hideHeading />
+            </>)}
+
+            <StationStep n={hasInstruments ? 2 : 1} title="Cumplan las misiones de la fase" done={step2Done}
+              hint="Hagan lo que pide el docente y suban las evidencias (fotos, enlaces, archivos). Las obligatorias abren la presentación." />
             <MissionsPanel team={team} onSaved={() => load(true)} />
-            {/* 4. Compuerta de validación */}
-            <div className="mt-5 flex items-center gap-3 flex-wrap pt-4" style={{ borderTop: '1px solid var(--t-line)' }}>
+
+            <StationStep n={hasInstruments ? 3 : 2} title="Presenten la estación al docente"
+              hint="Cuando el equipo termine lo obligatorio, presenten para que el docente la revise y validen la estación." />
+            {/* Compuerta de validación */}
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
               {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
               {reqInstr.length > 0 && <span className="text-sm taller-soft">Instrumentos obligatorios: <b className="taller-ink">{reqInstrUsed}/{reqInstr.length}</b></span>}
               <button onClick={() => canRequest && setRitualOpen(true)} disabled={busy || !canRequest}

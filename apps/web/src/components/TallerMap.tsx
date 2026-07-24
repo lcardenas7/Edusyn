@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Trash2, Pencil, Plus, X, MessageCircle, Link2, Check } from 'lucide-react'
 import { tallerApi } from '../lib/api'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Motor GRAPH · dinámica MAPA DE ACTORES. A diferencia del Árbol
@@ -24,6 +25,7 @@ const ACTOR_TYPES = [
 const typeOf = (o: any) => ACTOR_TYPES.find(t => t.key === (o.data?.fields?.tipo || 'persona')) ?? ACTOR_TYPES[0]
 
 export default function TallerMap({ teamId, dynamic = 'MAPA_ACTORES', stationId }: { teamId: string; dynamic?: string; stationId?: string }) {
+  const isMobile = useIsMobile()
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [edges, setEdges] = useState<any[]>([])
@@ -196,6 +198,61 @@ export default function TallerMap({ teamId, dynamic = 'MAPA_ACTORES', stationId 
           : <>Añadan a todos los involucrados y arrástrenlos donde quieran. Luego usen <b>Conectar</b> para describir cómo se relacionan entre sí.</>}
       </div>
 
+      {isMobile ? (
+        /* MÓVIL: lista de actores + conexiones (tocar dos tarjetas en modo Conectar). */
+        <div className="p-3 space-y-2.5">
+          {objects.length === 0 && (
+            <div className="py-8 text-center taller-muted text-sm">¿Quiénes están involucrados? Añadan al primero 🗺️</div>
+          )}
+          {objects.map(o => {
+            const t = typeOf(o)
+            const esOrigen = origen === o.id
+            const conex = edges.filter(e => e.fromId === o.id || e.toId === o.id)
+            return (
+              <div key={o.id} className="rounded-xl p-3"
+                style={{
+                  background: `color-mix(in srgb, ${t.color} 45%, var(--t-raised))`,
+                  border: `1.5px solid ${esOrigen ? 'var(--t-marigold)' : 'rgba(0,0,0,.08)'}`,
+                  outline: esOrigen ? '2px solid var(--t-marigold)' : 'none', outlineOffset: 2,
+                  cursor: conectando ? 'pointer' : 'default',
+                }}
+                onClick={() => conectando && clicActor(o)}>
+                {editingId === o.id ? (
+                  <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} onBlur={saveEdit}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() } }}
+                    onClick={e => e.stopPropagation()}
+                    className="w-full text-sm bg-transparent resize-none outline-none" style={{ color: '#2a2412' }} rows={2} maxLength={120} />
+                ) : (
+                  <p className="text-sm font-bold leading-snug break-words" style={{ color: '#2a2412' }}>{t.label.split(' ')[0]} {o.data?.text}</p>
+                )}
+                {conex.length > 0 && !conectando && (
+                  <div className="mt-1.5 space-y-1">
+                    {conex.map(e => {
+                      const otro = e.fromId === o.id ? e.toId : e.fromId
+                      return (
+                        <div key={e.id} className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(42,36,18,.75)' }}>
+                          <Link2 className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{e.label ? <b>{e.label}</b> : 'conecta con'} → {nombre(otro)}</span>
+                          <button onClick={ev => { ev.stopPropagation(); quitarRelacion(e.id) }} className="ml-auto shrink-0 opacity-60 hover:opacity-100" style={{ color: '#CB4E42' }}><X className="w-3 h-3" /></button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {!conectando && (
+                  <div className="flex items-center gap-2 mt-2 text-[11px] font-semibold" style={{ color: 'rgba(42,36,18,.65)' }}>
+                    <span className="ml-auto flex items-center gap-2.5 shrink-0">
+                      <button onClick={() => { setCommentsFor(o.id); setCommentText('') }} className="hover:opacity-70 flex items-center gap-0.5"><MessageCircle className="w-3.5 h-3.5" />{(o.comments?.length ?? 0) > 0 ? o.comments.length : ''}</button>
+                      {mine(o) && editingId !== o.id && <button onClick={() => { setEditingId(o.id); setEditText(o.data?.text ?? '') }} className="hover:opacity-70"><Pencil className="w-3.5 h-3.5" /></button>}
+                      {(mine(o) || me?.role === 'teacher') && <button onClick={() => remove(o)} className="hover:opacity-70"><Trash2 className="w-3.5 h-3.5" /></button>}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
       <div className="p-4">
         <div ref={boardRef} className="relative rounded-xl overflow-hidden select-none"
           style={{ aspectRatio: '1 / 0.66', border: '1px solid var(--t-line)', background: 'radial-gradient(circle, var(--t-line) 1px, transparent 1px) 0 0 / 28px 28px, var(--t-surface)' }}
@@ -303,10 +360,11 @@ export default function TallerMap({ teamId, dynamic = 'MAPA_ACTORES', stationId 
           ))}
         </div>
       </div>
+      )}
 
-      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2" style={{ borderTop: '1px solid var(--t-line)' }}>
+      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid var(--t-line)' }}>
         <span>{objects.length} actor{objects.length === 1 ? '' : 'es'} · {edges.length} conexion{edges.length === 1 ? '' : 'es'}</span>
-        <span className="ml-auto">arrastra para ubicar · pasa el cursor sobre una línea para quitarla</span>
+        <span className="ml-auto hidden sm:inline">arrastra para ubicar · pasa el cursor sobre una línea para quitarla</span>
       </div>
 
       {/* etiqueta de la nueva conexión */}

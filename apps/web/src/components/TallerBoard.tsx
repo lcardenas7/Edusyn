@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Trash2, MessageCircle, Pencil, Plus, X } from 'lucide-react'
 import { tallerApi } from '../lib/api'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Motor BOARD · dinámica BRAINSTORM (primer motor del Sistema
@@ -33,6 +34,7 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
 }) {
   const variant = BOARD_VARIANTS[dynamic] ?? BOARD_VARIANTS.BRAINSTORM
   const headingText = heading ?? variant.heading
+  const isMobile = useIsMobile()
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [me, setMe] = useState<any>(null)
@@ -167,6 +169,47 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
   const top = Math.max(...objects.map(o => o.votes), 0)
   const selected = commentsFor ? objects.find(o => o.id === commentsFor) : null
 
+  // Contenido interno de una nota (texto/edición + autor + acciones). Lo comparten
+  // el lienzo (escritorio) y la lista táctil (móvil): mismas acciones, distinto envoltorio.
+  const noteInner = (o: any, mine: boolean) => (
+    <>
+      {editing === o.id ? (
+        <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)}
+          onBlur={saveEdit} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() } }}
+          className="w-full text-sm bg-transparent resize-none outline-none" rows={3} maxLength={500} />
+      ) : (
+        <p className="text-sm font-medium whitespace-pre-wrap break-words">{savingEdit && editing === o.id ? '…' : o.data?.text}</p>
+      )}
+      <div className="flex items-center gap-1 mt-2 text-[10px] opacity-70 font-semibold">
+        <span className="truncate">{o.authorName ?? '—'}</span>
+        <span className="ml-auto flex items-center gap-1">
+          {(o.comments?.length ?? 0) > 0 && <span>{o.comments.length}💬</span>}
+        </span>
+      </div>
+      <div className="flex items-center gap-1 mt-1.5 pt-1.5" style={{ borderTop: '1px dashed rgba(0,0,0,.15)' }}>
+        <button onClick={() => vote(o)} disabled={!!mine || me?.role !== 'student'}
+          className="text-xs font-bold px-2 py-1 rounded-md disabled:opacity-40"
+          style={{ background: o.iVoted ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.5)' }}
+          title={mine ? 'No puedes votar tu propia nota' : o.iVoted ? 'Quitar voto' : 'Votar'}>
+          ⭐ {o.votes}
+        </button>
+        <button onClick={() => { setCommentsFor(o.id); setCommentText('') }} className="text-xs px-2 py-1 rounded-md" style={{ background: 'rgba(255,255,255,.5)' }} title="Comentarios">
+          <MessageCircle className="w-3.5 h-3.5 inline" />
+        </button>
+        {mine && editing !== o.id && (
+          <button onClick={() => startEdit(o)} className="text-xs px-2 py-1 rounded-md" style={{ background: 'rgba(255,255,255,.5)' }} title="Editar mi nota">
+            <Pencil className="w-3.5 h-3.5 inline" />
+          </button>
+        )}
+        {(mine || me?.role === 'teacher') && (
+          <button onClick={() => remove(o)} className="ml-auto text-xs px-2 py-1 rounded-md opacity-60 hover:opacity-100" title="Quitar (borrado suave)">
+            <Trash2 className="w-3.5 h-3.5 inline" />
+          </button>
+        )}
+      </div>
+    </>
+  )
+
   return (
     <div className="taller-card overflow-hidden">
       {/* barra del instrumento */}
@@ -175,15 +218,15 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
           <div className="text-[10px] font-mono uppercase tracking-widest taller-mari">Motor Board · {dynamic.toLowerCase()}</div>
           <div className="font-black taller-ink">{headingText}</div>
         </div>
-        <div className="ml-auto flex items-center gap-2 flex-wrap">
+        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 flex-wrap">
           {STICKY.map((c, i) => (
-            <button key={c} onClick={() => setColorId(i)} className="w-6 h-6 rounded-md transition"
+            <button key={c} onClick={() => setColorId(i)} className="w-7 h-7 sm:w-6 sm:h-6 rounded-md transition"
               style={{ background: c, outline: colorId === i ? '2px solid var(--t-marigold)' : '1px solid rgba(0,0,0,.1)', outlineOffset: '1px' }} aria-label={`color ${i + 1}`} />
           ))}
           <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
             placeholder="Escribe una idea…" maxLength={500}
-            className="px-3 py-2 rounded-xl text-sm w-56" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
-          <button onClick={add} disabled={adding || !text.trim()} className="taller-cta px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-1 disabled:opacity-50">
+            className="px-3 py-2 rounded-xl text-sm flex-1 min-w-[140px] sm:flex-none sm:w-56" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-line)', color: 'var(--t-ink)' }} />
+          <button onClick={add} disabled={adding || !text.trim()} className="taller-cta px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-1 disabled:opacity-50 shrink-0">
             {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Pegar nota
           </button>
         </div>
@@ -196,7 +239,29 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
         </div>
       )}
 
-      {/* lienzo */}
+      {/* MÓVIL: lista apilada táctil — mismas acciones, sin arrastre ni lienzo. */}
+      {isMobile ? (
+        <div className="p-3 space-y-3" style={{ background: 'var(--t-surface)' }}>
+          {objects.length === 0 && (
+            <div className="py-10 text-center taller-muted text-sm">El muro está vacío. Peguen la primera nota 📌</div>
+          )}
+          {[...objects].sort((a, b) => b.votes - a.votes).map(o => {
+            const mine = !!(me?.enrollmentId && o.authorId === me.enrollmentId)
+            const isTop = top > 0 && o.votes === top
+            return (
+              <div key={o.id} className="rounded-lg p-3"
+                style={{
+                  background: STICKY[(o.data?.colorId ?? 0) % STICKY.length], color: '#2a2412',
+                  boxShadow: 'var(--t-shadow-sm)', border: '1px solid rgba(0,0,0,.06)',
+                  ...(isTop ? { outline: '2px solid var(--t-marigold)', outlineOffset: '2px' } : {}),
+                }}>
+                {noteInner(o, mine)}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+      /* ESCRITORIO: lienzo espacial con arrastre. */
       <div ref={boardRef} className="relative overflow-auto" style={{ height: 520, background: 'radial-gradient(circle, var(--t-line) 1px, transparent 1px) 0 0 / 24px 24px, var(--t-surface)' }}
         onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}>
         <div style={{ width: BOARD_W, height: BOARD_H, position: 'relative' }}>
@@ -205,7 +270,7 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
           )}
           {objects.map(o => {
             const pos = (dragPos && dragPos.id === o.id) ? dragPos : { x: o.data?.x ?? 0, y: o.data?.y ?? 0 }
-            const mine = me?.enrollmentId && o.authorId === me.enrollmentId
+            const mine = !!(me?.enrollmentId && o.authorId === me.enrollmentId)
             const rot = ((o.id.charCodeAt(o.id.length - 1) % 5) - 2) * 0.8
             const isTop = top > 0 && o.votes === top
             return (
@@ -223,50 +288,19 @@ export default function TallerBoard({ teamId, dynamic = 'BRAINSTORM', stationId,
                 }}
                 onPointerDown={e => { if (editing !== o.id) onPointerDown(e, o) }}
                 onDoubleClick={() => startEdit(o)}>
-                {editing === o.id ? (
-                  <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)}
-                    onBlur={saveEdit} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() } }}
-                    className="w-full text-sm bg-transparent resize-none outline-none" rows={3} maxLength={500} />
-                ) : (
-                  <p className="text-sm font-medium whitespace-pre-wrap break-words">{savingEdit && editing === o.id ? '…' : o.data?.text}</p>
-                )}
-                <div className="flex items-center gap-1 mt-2 text-[10px] opacity-70 font-semibold">
-                  <span className="truncate">{o.authorName ?? '—'}</span>
-                  <span className="ml-auto flex items-center gap-1">
-                    {(o.comments?.length ?? 0) > 0 && <span>{o.comments.length}💬</span>}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 mt-1.5 pt-1.5" style={{ borderTop: '1px dashed rgba(0,0,0,.15)' }}>
-                  <button onClick={() => vote(o)} disabled={!!mine || me?.role !== 'student'}
-                    className="text-xs font-bold px-2 py-0.5 rounded-md disabled:opacity-40"
-                    style={{ background: o.iVoted ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.5)' }}
-                    title={mine ? 'No puedes votar tu propia nota' : o.iVoted ? 'Quitar voto' : 'Votar'}>
-                    ⭐ {o.votes}
-                  </button>
-                  <button onClick={() => { setCommentsFor(o.id); setCommentText('') }} className="text-xs px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(255,255,255,.5)' }} title="Comentarios">
-                    <MessageCircle className="w-3.5 h-3.5 inline" />
-                  </button>
-                  {mine && editing !== o.id && (
-                    <button onClick={() => startEdit(o)} className="text-xs px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(255,255,255,.5)' }} title="Editar mi nota">
-                      <Pencil className="w-3.5 h-3.5 inline" />
-                    </button>
-                  )}
-                  {(mine || me?.role === 'teacher') && (
-                    <button onClick={() => remove(o)} className="ml-auto text-xs px-1.5 py-0.5 rounded-md opacity-60 hover:opacity-100" title="Quitar (borrado suave)">
-                      <Trash2 className="w-3.5 h-3.5 inline" />
-                    </button>
-                  )}
-                </div>
+                {noteInner(o, mine)}
               </div>
             )
           })}
         </div>
       </div>
+      )}
 
       {/* pie: leyenda del núcleo */}
-      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2" style={{ borderTop: '1px solid var(--t-line)' }}>
-        <span>⭐ la nota más votada lidera</span><span>·</span><span>✏️ o doble clic = editar tu nota</span><span>·</span><span>arrastra para organizar</span>
-        <span className="ml-auto">núcleo: objetos + grafo + eventos</span>
+      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid var(--t-line)' }}>
+        <span>⭐ la nota más votada lidera</span><span>·</span><span>{isMobile ? '✏️ toca el lápiz = editar tu nota' : '✏️ o doble clic = editar tu nota'}</span>
+        {!isMobile && <><span>·</span><span>arrastra para organizar</span></>}
+        <span className="ml-auto hidden sm:inline">núcleo: objetos + grafo + eventos</span>
       </div>
 
       {/* panel de comentarios (Inspector mínimo) */}

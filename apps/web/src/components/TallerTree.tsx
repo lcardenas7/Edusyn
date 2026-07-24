@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Trash2, MessageCircle, Pencil, Plus, X, GitBranch } from 'lucide-react'
 import { tallerApi } from '../lib/api'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EL TALLER — Motor GRAPH · dinámica ÁRBOL DE IDEAS. El ejemplo fundador:
@@ -58,6 +59,7 @@ const TREE_VARIANTS: Record<string, { heading: string; motorLabel: string; newRo
 
 export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId }: { teamId: string; dynamic?: string; stationId?: string }) {
   const V = TREE_VARIANTS[dynamic] ?? TREE_VARIANTS.ARBOL_IDEAS
+  const isMobile = useIsMobile()
   const [inst, setInst] = useState<any>(null)
   const [objects, setObjects] = useState<any[]>([])
   const [edges, setEdges] = useState<any[]>([])
@@ -224,6 +226,53 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
   const top = Math.max(...objects.map(o => o.votes), 0)
   const commentsObj = commentsFor ? byId.get(commentsFor) : null
 
+  // MÓVIL: lista jerárquica indentada (el mismo grafo 'deriva-de', sin lienzo).
+  // Al seleccionar una hoja aparecen las acciones inline: ramificar/votar/comentar/editar/borrar.
+  const renderMobileNode = (o: any, depth: number) => {
+    const kids = (childrenOf.get(o.id) || []).slice().sort(sortByDate)
+    const isSel = selected === o.id
+    const mine = !!(me?.enrollmentId && o.authorId === me.enrollmentId)
+    const isTop = top > 0 && o.votes === top
+    const d = Math.min(depth, LEAF_BG.length - 1)
+    return (
+      <div key={o.id} style={depth > 0 ? { marginLeft: 14, borderLeft: '2px solid var(--t-line)', paddingLeft: 10 } : undefined}>
+        <div className="rounded-xl p-2.5 mb-2 cursor-pointer"
+          style={{ background: LEAF_BG[d], color: '#33401f', border: `1.5px solid ${isSel ? 'var(--t-marigold)' : LEAF_EDGE[d]}` }}
+          onClick={() => setSelected(isSel ? null : o.id)}>
+          {editingId === o.id ? (
+            <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)}
+              onBlur={saveEdit} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() } }}
+              onClick={e => e.stopPropagation()}
+              className="w-full text-sm bg-transparent resize-none outline-none" rows={3} maxLength={500} />
+          ) : (
+            <p className="text-sm font-semibold leading-snug break-words">{isTop && '🌟 '}{o.data?.text}</p>
+          )}
+          <div className="flex items-center gap-1 mt-1 text-[10px] opacity-75 font-semibold">
+            <span className="truncate">🍃 {o.authorName ?? '—'}</span>
+            <span className="ml-auto flex items-center gap-1 shrink-0">
+              {o.votes > 0 && <span>⭐{o.votes}</span>}
+              {(o.comments?.length ?? 0) > 0 && <span>{o.comments.length}💬</span>}
+            </span>
+          </div>
+          {isSel && (
+            <div className="flex items-center gap-1.5 mt-2 pt-2 flex-wrap" style={{ borderTop: '1px dashed rgba(0,0,0,.15)' }} onClick={e => e.stopPropagation()}>
+              <button onClick={() => { setComposer({ parentId: o.id }); setComposerText('') }} className="taller-cta text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
+                <GitBranch className="w-3.5 h-3.5" /> {V.branchLabel}
+              </button>
+              {me?.role === 'student' && !mine && (
+                <button onClick={() => vote(o.id)} className="text-xs font-bold px-2.5 py-1.5 rounded-lg" style={{ background: o.iVoted ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.6)' }}>⭐ {o.iVoted ? 'Quitar' : 'Votar'}</button>
+              )}
+              <button onClick={() => { setCommentsFor(o.id); setCommentText('') }} className="text-xs px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,.6)' }}><MessageCircle className="w-3.5 h-3.5 inline" /> {o.comments?.length || ''}</button>
+              {mine && <button onClick={() => { setEditingId(o.id); setEditText(o.data?.text ?? '') }} className="text-xs px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,.6)' }}><Pencil className="w-3.5 h-3.5 inline" /></button>}
+              {(mine || me?.role === 'teacher') && <button onClick={() => remove(o.id)} className="text-xs px-2.5 py-1.5 rounded-lg opacity-70" style={{ background: 'rgba(255,255,255,.6)' }}><Trash2 className="w-3.5 h-3.5 inline" /></button>}
+            </div>
+          )}
+        </div>
+        {kids.map(k => renderMobileNode(k, depth + 1))}
+      </div>
+    )
+  }
+
   return (
     <div className="taller-card overflow-hidden">
       {/* barra del instrumento */}
@@ -238,7 +287,15 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
         </button>
       </div>
 
-      {/* lienzo del árbol */}
+      {/* MÓVIL: lista jerárquica del árbol */}
+      {isMobile ? (
+        <div className="p-3" style={{ background: 'linear-gradient(to bottom, #FDFBF3, #F5F2E4)' }}>
+          {objects.length === 0
+            ? <div className="py-10 text-center taller-muted text-sm">{V.emptyMsg}</div>
+            : roots.slice().sort(sortByDate).map(r => renderMobileNode(r, 0))}
+        </div>
+      ) : (
+      /* ESCRITORIO: lienzo del árbol */
       <div ref={scrollRef} className="relative overflow-auto" style={{ height: 580, background: 'linear-gradient(to bottom, #FDFBF3 0%, #FAF6E9 55%, #F0EED9 100%)' }}>
         <div style={{ width: W, height: H, position: 'relative', margin: '0 auto' }} onClick={() => setSelected(null)}>
           <svg width={W} height={H} className="absolute inset-0 pointer-events-none">
@@ -365,11 +422,12 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
           </div>
         )}
       </div>
+      )}
 
       {/* pie */}
-      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2" style={{ borderTop: '1px solid var(--t-line)' }}>
-        <span>toca una hoja para ramificar, votar o conversar</span><span>·</span><span>🌟 la más votada</span>
-        <span className="ml-auto">grafo: cada rama es una arista 'deriva-de'</span>
+      <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid var(--t-line)' }}>
+        <span>toca una {isMobile ? 'idea' : 'hoja'} para ramificar, votar o conversar</span><span>·</span><span>🌟 la más votada</span>
+        <span className="ml-auto hidden sm:inline">grafo: cada rama es una arista 'deriva-de'</span>
       </div>
 
       {/* compositor: nueva rama / ramificar */}

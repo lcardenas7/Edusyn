@@ -879,84 +879,34 @@ export class GradesBulkImportService {
     });
   }
 
-  private async forceDeleteStudent(studentId: string) {
-    await this.prisma.$transaction(async tx => {
-      const supportProfiles = await tx.educationalSupportProfile.findMany({
-        where: { studentId },
-        select: { id: true },
-      });
-
-      if (supportProfiles.length > 0) {
-        const supportProfileIds = supportProfiles.map(profile => profile.id);
-
-        await tx.pedagogicalSupportPlan.deleteMany({
-          where: { supportProfileId: { in: supportProfileIds } },
-        });
-
-        await tx.studentObservation.deleteMany({
-          where: { supportProfileId: { in: supportProfileIds } },
-        });
-      }
-
-      await tx.educationalSupportProfile.deleteMany({ where: { studentId } });
-      await tx.candidate.deleteMany({ where: { studentId } });
-      await tx.student.delete({ where: { id: studentId } });
-    });
-  }
-
+  /**
+   * BI-3: un import de NOTAS jamás debe borrar estudiantes (ni sus acudientes,
+   * documentos, matrículas u observaciones). El emparejamiento con el Excel es
+   * DIFUSO (documento → nombre exacto → Levenshtein): un nombre mal escrito o un
+   * documento faltante NO puede traducirse en pérdida irreversible de datos.
+   *
+   * Por eso "desactivar los que no están en el Excel" es SIEMPRE una desactivación
+   * suave (soft-delete) y reversible. Nunca elimina nada físicamente. La reactivación
+   * queda a cargo de un flujo administrativo explícito, no del import.
+   */
   private async deactivateOrDeleteStudent(studentId: string) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
-      include: {
-        enrollments: {
-          include: {
-            grades: { take: 1 },
-            attendanceRecords: { take: 1 },
-            studentObservations: { take: 1 },
-          },
-        },
-      },
+      select: { id: true },
     });
 
     if (!student) {
       return;
     }
 
-    const hasAcademicHistory = student.enrollments.some(
-      e => e.grades.length > 0 || e.attendanceRecords.length > 0 || e.studentObservations.length > 0,
-    );
-
-    if (hasAcademicHistory) {
-      await this.prisma.student.update({
-        where: { id: studentId },
-        data: {
-          isActive: false,
-          deletedAt: new Date(),
-          deletedReason: 'Desactivado por importación masiva de notas',
-        },
-      });
-      return;
-    }
-
-    await this.prisma.$transaction(async tx => {
-      await tx.studentObservation.deleteMany({
-        where: {
-          studentEnrollment: { studentId },
-        },
-      });
-
-      await tx.pedagogicalSupportPlan.deleteMany({
-        where: {
-          studentEnrollment: { studentId },
-        },
-      });
-
-      await tx.studentGuardian.deleteMany({ where: { studentId } });
-      await tx.studentDocument.deleteMany({ where: { studentId } });
-      await tx.studentEnrollment.deleteMany({ where: { studentId } });
-      await tx.educationalSupportProfile.deleteMany({ where: { studentId } });
-      await tx.candidate.deleteMany({ where: { studentId } });
-      await tx.student.delete({ where: { id: studentId } });
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+        deletedReason:
+          'Desactivado por importación masiva de notas (no estaba en el Excel — revisar; soft-delete reversible)',
+      },
     });
   }
 
