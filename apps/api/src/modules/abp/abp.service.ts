@@ -983,6 +983,16 @@ export class AbpService {
     }
   }
 
+  /** ¿La estación usa instrumentos del Taller que el docente configuró explícitamente?
+   * `instrumentsSource` lo trae withInstrumentDefaults; en configs crudas (sin defaults)
+   * basta con que exista un arreglo de instrumentos para esa fase. */
+  private phaseUsesTeacherInstruments(phase: number, config: any): boolean {
+    const src = config?.instrumentsSource?.[phase] ?? config?.instrumentsSource?.[String(phase)];
+    if (src) return src === 'teacher';
+    const set = config?.instruments?.[phase] ?? config?.instruments?.[String(phase)];
+    return Array.isArray(set) && set.length > 0;
+  }
+
   /** ¿Está completa una misión? Herramienta → criterio de la herramienta; con actividades
    * → todas completas; sin actividades → status COMPLETED (manual). */
   private missionComplete(mission: any, phase: number, data: any, config: any, memberIds: string[]): boolean {
@@ -990,7 +1000,16 @@ export class AbpService {
     if (mission.deliverableKind) return mission.deliveryState === 'SUBMITTED';
     const acts = mission.activities || [];
     const tool = acts.find((a: any) => (a.content as any)?.tool);
-    if (tool) return toolCriterionMet(phase, data, config, memberIds);
+    if (tool) {
+      // La misión-herramienta legacy (CANVAS/IDEAS/SMART…) medía su criterio contra el
+      // store viejo (data.ideas, data.canvas…). Si el docente configuró instrumentos del
+      // Taller en esta estación, el trabajo ocurre AHÍ (otras tablas) y el store legacy
+      // queda vacío → la fase quedaba trabada aunque el equipo hubiera trabajado. En ese
+      // caso la misión delega su cumplimiento al Taller: la compuerta de instrumentos
+      // OBLIGATORIOS (requiredInstrumentsStatus) verifica aparte que se haya usado.
+      if (this.phaseUsesTeacherInstruments(phase, config)) return true;
+      return toolCriterionMet(phase, data, config, memberIds);
+    }
     if (acts.length > 0) return acts.every((a: any) => a.completed);
     return mission.status === 'COMPLETED';
   }
