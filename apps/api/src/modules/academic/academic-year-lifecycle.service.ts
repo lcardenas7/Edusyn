@@ -7,6 +7,7 @@ import { StudentGradesService } from '../evaluation/student-grades.service';
 import { evaluatePromotion, type StudentPromotionData } from '../../engines/promotion.engine';
 import type { InstitutionRulesContext } from '../../engines/InstitutionRulesContext';
 import { resolveScaleLevel } from '../evaluation/performance-scale.util';
+import { findLevelForGrade } from '../../common/utils/academic-level.util';
 import {
   AcademicTermForReport,
   PerformanceScaleForReport,
@@ -1076,12 +1077,13 @@ export class AcademicYearLifecycleService {
     const levels: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.levels) ? raw.levels : []);
     if (levels.length === 0) return null;
 
-    const stageU = stage?.toUpperCase();
-    const found = levels.find((l: any) =>
-      (stageU && (l.code?.toUpperCase() === stageU || l.name?.toUpperCase() === stageU)) ||
-      (gradeName && (l.grades || []).some((g: string) => g === gradeName)),
-    );
-    return found && typeof found.minPassingGrade === 'number' ? found.minPassingGrade : null;
+    // El nivel se resuelve por ETAPA (BASICA_PRIMARIA ↔ "Primaria"). Antes se comparaba
+    // el enum contra el código del nivel sin normalizar, así que nunca casaba: la nota
+    // mínima POR NIVEL se ignoraba y toda la institución usaba el umbral global.
+    const found = findLevelForGrade(levels as any[], stage, gradeName);
+    return found && typeof (found as any).minPassingGrade === 'number'
+      ? (found as any).minPassingGrade
+      : null;
   }
 
   /**

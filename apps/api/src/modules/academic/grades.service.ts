@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { GradeStage, SchoolShift } from '@prisma/client';
+import { GRADE_TEMPLATES, deriveGradeNumber, levelKey } from '../../common/utils/academic-level.util';
 
 interface SyncGradeDto {
   id: string;
@@ -21,20 +22,42 @@ interface SyncGradeDto {
 export class GradesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateGradeDto & { institutionId: string }) {
-    return this.prisma.grade.create({
-      data: {
-        institutionId: dto.institutionId,
-        stage: dto.stage,
-        number: dto.number,
-        name: dto.name,
-      },
-    });
+  /**
+   * Traduce errores de Prisma a errores HTTP con mensaje humano.
+   * Antes, un choque de nombre reventaba como error crudo de Prisma → 500 y el
+   * texto técnico llegaba tal cual al navegador del rector.
+   */
+  private asHttpError(e: any, gradeName?: string): Error {
+    if (e?.code === 'P2002') {
+      return new ConflictException(
+        `Ya existe un grado llamado "${gradeName ?? ''}" en ese nivel educativo. Usa otro nombre.`,
+      );
+    }
+    return e;
   }
 
-  async list() {
+  async create(dto: CreateGradeDto & { institutionId: string }) {
+    try {
+      return await this.prisma.grade.create({
+        data: {
+          institutionId: dto.institutionId,
+          stage: dto.stage,
+          // Si no viene el número, se deduce del nombre: dejarlo en NULL rompe el
+          // cálculo del "grado siguiente" en la promoción.
+          number: dto.number ?? deriveGradeNumber(dto.name),
+          name: dto.name,
+        },
+      });
+    } catch (e) {
+      throw this.asHttpError(e, dto.name);
+    }
+  }
+
+  /** Todos los grados de UNA institución (nunca global: sería fuga entre instituciones). */
+  async list(institutionId: string) {
     return this.prisma.grade.findMany({
-      orderBy: [{ stage: 'asc' }, { name: 'asc' }],
+      where: { institutionId },
+      orderBy: [{ stage: 'asc' }, { number: 'asc' }, { name: 'asc' }],
     });
   }
 
@@ -83,17 +106,21 @@ export class GradesService {
       where: { id, institutionId },
     });
     if (!grade) {
-      throw new Error('Grado no encontrado en esta institución.');
+      throw new NotFoundException('Grado no encontrado en esta institución.');
     }
 
-    return this.prisma.grade.update({
-      where: { id },
-      data: {
-        ...(data.name && { name: data.name }),
-        ...(data.stage && { stage: data.stage }),
-        ...(data.number !== undefined && { number: data.number }),
-      },
-    });
+    try {
+      return await this.prisma.grade.update({
+        where: { id },
+        data: {
+          ...(data.name && { name: data.name }),
+          ...(data.stage && { stage: data.stage }),
+          ...(data.number !== undefined && { number: data.number }),
+        },
+      });
+    } catch (e) {
+      throw this.asHttpError(e, data.name ?? grade.name);
+    }
   }
 
   async delete(id: string, institutionId: string) {
@@ -102,16 +129,98 @@ export class GradesService {
       where: { id, institutionId },
     });
     if (!grade) {
-      throw new Error('Grado no encontrado en esta institución.');
+      throw new NotFoundException('Grado no encontrado en esta institución.');
     }
 
     // Contar grupos asociados
     const groupCount = await this.prisma.group.count({ where: { gradeId: id } });
     if (groupCount > 0) {
-      throw new Error(`No se puede eliminar el grado porque tiene ${groupCount} grupo(s) asociados. Elimine los grupos primero.`);
+      throw new ConflictException(
+        `No se puede eliminar el grado porque tiene ${groupCount} grupo(s) asociados. Elimina los grupos primero.`,
+      );
     }
 
     return this.prisma.grade.delete({ where: { id } });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FASE 1 — La tabla de grados es la fuente única. Estas operaciones evitan
+  // que el rector tenga que teclear grados uno por uno (y que queden sin número).
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Genera los grados estándar de un nivel educativo (Primaria → 1°…5°, etc.),
+   * cada uno con su número ya puesto. Idempotente: omite los que ya existen
+   * (por número o por nombre), así se puede volver a ejecutar sin duplicar.
+   */
+  async generateForStage(institutionId: string, stage: GradeStage) {
+    const template = GRADE_TEMPLATES[stage];
+    if (!template) {
+      throw new BadRequestException(`Nivel educativo desconocido: ${stage}`);
+    }
+
+    const existing = await this.prisma.grade.findMany({
+      where: { institutionId, stage },
+      select: { name: true, number: true },
+    });
+    const takenNumbers = new Set(existing.filter((g) => g.number != null).map((g) => g.number));
+    const takenNames = new Set(existing.map((g) => levelKey(g.name)));
+
+    const toCreate = template.filter(
+      (t) => !takenNumbers.has(t.number) && !takenNames.has(levelKey(t.name)),
+    );
+
+    if (toCreate.length > 0) {
+      await this.prisma.grade.createMany({
+        data: toCreate.map((t) => ({ institutionId, stage, number: t.number, name: t.name })),
+        skipDuplicates: true,
+      });
+    }
+
+    return {
+      stage,
+      created: toCreate.map((t) => t.name),
+      skipped: template.length - toCreate.length,
+      message:
+        toCreate.length > 0
+          ? `Se crearon ${toCreate.length} grado(s): ${toCreate.map((t) => t.name).join(', ')}.`
+          : 'Este nivel ya tenía todos sus grados.',
+    };
+  }
+
+  /**
+   * Rellena el número de los grados que lo tengan vacío, deduciéndolo del nombre
+   * ("Sexto" → 6). Sin número, la promoción no puede ordenar los grados y el
+   * "grado siguiente" queda indefinido.
+   */
+  async backfillNumbers(institutionId: string) {
+    const pending = await this.prisma.grade.findMany({
+      where: { institutionId, number: null },
+      select: { id: true, name: true },
+    });
+
+    const updated: { name: string; number: number }[] = [];
+    const unresolved: string[] = [];
+
+    for (const g of pending) {
+      const n = deriveGradeNumber(g.name);
+      if (n === null) {
+        unresolved.push(g.name);
+        continue;
+      }
+      await this.prisma.grade.update({ where: { id: g.id }, data: { number: n } });
+      updated.push({ name: g.name, number: n });
+    }
+
+    return {
+      updated,
+      unresolved,
+      message: `Se completaron ${updated.length} grado(s).${
+        unresolved.length > 0
+          ? ` ${unresolved.length} requieren número manual: ${unresolved.join(', ')}.`
+          : ''
+      }`,
+    };
   }
 
   // Sincronizar grados y grupos desde el frontend

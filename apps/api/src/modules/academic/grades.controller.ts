@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, Query, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, Query, BadRequestException, HttpException } from '@nestjs/common';
+import { GradeStage } from '@prisma/client';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -41,6 +42,29 @@ export class GradesController {
     return this.gradesService.listActiveByInstitution(instId);
   }
 
+  /**
+   * Genera los grados estándar de un nivel educativo (Primaria → 1°…5°),
+   * con su número ya asignado. Idempotente.
+   */
+  @Post('generate')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async generate(
+    @Request() req: any,
+    @Body() body: { stage: GradeStage; institutionId?: string },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body?.institutionId);
+    if (!body?.stage) throw new BadRequestException('Falta el nivel educativo (stage).');
+    return this.gradesService.generateForStage(instId, body.stage);
+  }
+
+  /** Completa el número de los grados que lo tengan vacío, deducido del nombre. */
+  @Post('backfill-numbers')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async backfillNumbers(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.gradesService.backfillNumbers(instId);
+  }
+
   // Sincronizar grados y grupos desde el frontend (localStorage -> BD)
   @Post('sync')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
@@ -64,6 +88,9 @@ export class GradesController {
       const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
       return await this.gradesService.update(id, instId, body as any);
     } catch (err: any) {
+      // Los errores ya tipados (404 Grado no encontrado, 409 nombre duplicado…)
+      // deben conservar su código y mensaje, no degradarse a un 400 genérico.
+      if (err instanceof HttpException) throw err;
       throw new BadRequestException(err.message);
     }
   }
@@ -75,6 +102,9 @@ export class GradesController {
       const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
       return await this.gradesService.delete(id, instId);
     } catch (err: any) {
+      // Los errores ya tipados (404 Grado no encontrado, 409 nombre duplicado…)
+      // deben conservar su código y mensaje, no degradarse a un 400 genérico.
+      if (err instanceof HttpException) throw err;
       throw new BadRequestException(err.message);
     }
   }

@@ -4,6 +4,7 @@ import { LearningIdentityService } from '../gamification/learning-identity.servi
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
+import { findLevelForGrade } from '../../common/utils/academic-level.util';
 
 @Injectable()
 export class ClassroomService {
@@ -2591,12 +2592,10 @@ export class ClassroomService {
       select: { academicLevelsConfig: true, gradingConfig: true },
     });
     const levels = (institution?.academicLevelsConfig as any[]) || [];
-    // Match by stage name (e.g., PRIMARIA) or by grade name in level.grades[]
-    const level = levels.find((l: any) =>
-      l.code?.toUpperCase() === gradeStage ||
-      l.name?.toUpperCase() === gradeStage ||
-      (l.grades || []).some((g: string) => g === gradeName)
-    );
+    // El nivel se resuelve por ETAPA (BASICA_PRIMARIA ↔ "Primaria"). Antes se comparaba
+    // el enum contra el código del nivel sin normalizar, así que nunca casaba y la
+    // escala POR NIVEL se ignoraba en silencio (caía siempre a 1–5 / aprueba 3).
+    const level = findLevelForGrade(levels, gradeStage, gradeName);
     return {
       min: level?.minGrade ?? 1,
       max: level?.maxGrade ?? 5,
