@@ -135,6 +135,19 @@ export class SuperadminService {
       }
     }
 
+    // daneCode es único a nivel BD: validarlo aquí devuelve un 409 con mensaje
+    // humano en vez de dejar reventar la transacción con el error crudo de Prisma
+    // (mismo patrón que el 409 de slug y email de arriba).
+    if (dto.daneCode) {
+      const existingDane = await this.prisma.institution.findFirst({
+        where: { daneCode: dto.daneCode },
+        select: { id: true },
+      });
+      if (existingDane) {
+        throw new ConflictException(`El código DANE "${dto.daneCode}" ya está registrado en otra institución`);
+      }
+    }
+
     // Usar contraseña proporcionada o generar una temporal
     const tempPassword = dto.adminPassword || this.generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
