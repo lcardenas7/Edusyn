@@ -174,13 +174,24 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   const behavior = (currentSlide?.activityData as any)?.behavior || {}
   const isOptionalAct = behavior.required === false
   const isGated = !!behavior.gateOnCorrect
-  // Intentos por defecto: si el docente no configura nada, una actividad normal da
-  // 2 intentos (1 reintento) antes de revelar; una actividad con "no avanzar hasta
-  // acertar" queda ilimitada (debe acertar). Explícito: N intentos; 0 = ilimitado.
+  // Intentos máximos. REGLA CLAVE: una actividad "no avanzar hasta acertar" (gated) NUNCA
+  // debe atrapar al estudiante — si no logra acertar y no puede avanzar, no termina la
+  // lección y quedarían bloqueadas las actividades dependientes. Por eso el gate SIEMPRE
+  // tiene un tope FINITO: tras agotar los intentos se revela la respuesta y puede continuar.
+  //   · Sin configurar: normal = 2; gated = 3.
+  //   · Explícito N>0: N (para ambos).
+  //   · Explícito 0 ("ilimitado"): normal = sin límite (igual nunca bloquea el avance);
+  //     gated = tope duro de 5 para no dejar callejones sin salida.
+  const GATED_DEFAULT_ATTEMPTS = 3
+  const GATED_HARD_CAP = 5
   const rawMaxAttempts = behavior.maxAttempts
-  const maxAttempts = (rawMaxAttempts === undefined || rawMaxAttempts === null || rawMaxAttempts === '')
-    ? (isGated ? 0 : 2)
-    : (Number(rawMaxAttempts) || 0)
+  let maxAttempts: number
+  if (rawMaxAttempts === undefined || rawMaxAttempts === null || rawMaxAttempts === '') {
+    maxAttempts = isGated ? GATED_DEFAULT_ATTEMPTS : 2
+  } else {
+    const n = Number(rawMaxAttempts) || 0
+    maxAttempts = n > 0 ? n : (isGated ? GATED_HARD_CAP : 0)
+  }
   const attemptsExhausted = maxAttempts > 0 && attempts >= maxAttempts
   const answeredCorrect = slideResult?.isCorrect === true
   // Reintentar por defecto (no solo en modo gated): mientras la respuesta esté mal
