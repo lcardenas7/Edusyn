@@ -78,6 +78,13 @@ export class PartialGradesService {
       }
     }
 
+    // `data` incluye `expectedUpdatedAt` (control de concurrencia optimista), que NO
+    // es columna de PartialGrade. Al crear una nota nueva, `create: { ...data }` lo
+    // arrastraba y Prisma lanzaba PrismaClientValidationError (500) → el docente no
+    // podía guardar notas nuevas. Se excluye del create; la rama update ya usa campos
+    // explícitos, así que nunca tuvo el problema.
+    const { expectedUpdatedAt: _omitConcurrencyControl, ...createData } = data;
+
     const result = await this.prisma.partialGrade.upsert({
       where: {
         studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
@@ -94,7 +101,7 @@ export class PartialGradesService {
         score: data.score,
         observations: data.observations,
       },
-      create: { ...data, institutionId: ta!.institutionId },
+      create: { ...createData, institutionId: ta!.institutionId },
     });
 
     // Auditoría: CREATE si no existía; UPDATE solo si la nota cambió

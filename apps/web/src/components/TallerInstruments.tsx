@@ -24,7 +24,7 @@ type CatalogItem = { key: string; motor: string; dynamic: string; name: string; 
 type Catalog = { intents: { id: string; name: string }[]; instruments: CatalogItem[] }
 
 let catalogCache: Catalog | null = null
-function useCatalog() {
+export function useCatalog() {
   const [cat, setCat] = useState<Catalog | null>(catalogCache)
   useEffect(() => {
     if (!catalogCache) tallerApi.catalog().then(({ data }) => { catalogCache = data; setCat(data) }).catch(() => {})
@@ -54,7 +54,7 @@ export function InstrumentRenderer({ instrumentKey, teamId, phase, members }: { 
 // Colapsable; texto del docente (phaseConfig.stationInstructions[phase]) o el
 // default pedagógico de la fase. El estudiante nunca se pregunta "¿y ahora qué?".
 // ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT_INSTRUCTIONS: Record<number, string> = {
+export const DEFAULT_INSTRUCTIONS: Record<number, string> = {
   1: 'Lean juntos el reto del proyecto y conversen: ¿qué está pasando y a quiénes afecta? Completen las tarjetas del reto entre todos y usen los instrumentos de esta estación para explorar el problema. Cuando el equipo sienta que COMPRENDE el problema, presenten la estación al docente.',
   2: 'Es momento de abrir la mente: propongan TODAS las ideas que se les ocurran para resolver el problema, sin juzgarlas todavía. Usen los instrumentos para registrarlas y voten las que más les convenzan. Cantidad primero, calidad después.',
   3: 'Elijan su mejor idea y conviértanla en un objetivo concreto: ¿qué van a lograr, cómo lo van a medir y para cuándo? Revisen los criterios SMART antes de presentar.',
