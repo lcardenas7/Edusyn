@@ -2695,13 +2695,41 @@ export class ClassroomService {
       select: { id: true, title: true, gradebookComponent: true, gradebookIndex: true },
     });
 
-    const gradingCfg = scaleInfo.gradingConfig || { evaluationProcesses: [] };
-    const processes = (gradingCfg.evaluationProcesses || []).map((p: any) => ({
-      code: p.code || p.name?.toUpperCase().replace(/\s+/g, '_'),
-      name: p.name,
-      weight: p.weightPercentage,
-      subprocesses: p.subprocesses || [],
-    }));
+    // FASE 2 — La estructura de evaluación sale de la tabla de componentes, que es
+    // la MISMA fuente de la que el motor hereda los pesos. Antes esto se leía de un
+    // JSON aparte, así que el docente veía una estructura y la nota se calculaba con
+    // otra. Se conserva el JSON como respaldo mientras una institución no tenga
+    // estructura creada.
+    const roots = await this.prisma.evaluationComponent.findMany({
+      where: { institutionId: classroom.institutionId, parentId: null },
+      include: { children: true },
+    });
+
+    let processes: any[];
+    if (roots.length > 0) {
+      processes = [...roots]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))
+        .map((p) => ({
+          code: p.code,
+          name: p.name,
+          weight: p.weightPercentage ?? 0,
+          subprocesses: [...p.children]
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))
+            .map((c) => ({
+              code: c.code,
+              name: c.name,
+              weightPercentage: c.weightPercentage ?? 0,
+            })),
+        }));
+    } else {
+      const gradingCfg = scaleInfo.gradingConfig || { evaluationProcesses: [] };
+      processes = (gradingCfg.evaluationProcesses || []).map((p: any) => ({
+        code: p.code || p.name?.toUpperCase().replace(/\s+/g, '_'),
+        name: p.name,
+        weight: p.weightPercentage,
+        subprocesses: p.subprocesses || [],
+      }));
+    }
 
     return {
       teacherAssignmentId: ta.id,
