@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, UseGuards, Request, BadRequestException } from '@nestjs/common'
+import { Controller, Get, Put, Post, Body, UseGuards, Request, BadRequestException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
@@ -144,6 +144,26 @@ export class InstitutionConfigController {
   async updatePeriods(@Request() req, @Body() periods: PeriodConfig[]) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updatePeriods(institutionId, periods)
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MÓDULO 2 (Onboarding v2) — CONFIGURACIÓN BASE + COMPLETITUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Aplica la configuración base estándar (composición 40/40/20 + 4 períodos).
+  // Idempotente: 409 si ya hay config y no se pasa overwrite=true.
+  @Post('apply-base')
+  @Roles(...CONFIG_WRITE_ROLES)
+  async applyBaseConfig(@Request() req, @Body() body: { overwrite?: boolean }) {
+    const institutionId = await this.getInstitutionId(req.user.id)
+    return this.configService.applyBaseConfig(institutionId, { overwrite: body?.overwrite })
+  }
+
+  // Gate del onboarding: ¿la config mínima está lista? { ready, missing[] }.
+  @Get('completeness')
+  async getCompleteness(@Request() req) {
+    const institutionId = await this.getInstitutionId(req.user.id)
+    return this.configService.getConfigCompleteness(institutionId)
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
