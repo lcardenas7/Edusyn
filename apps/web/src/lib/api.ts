@@ -2079,8 +2079,8 @@ export const classroomApi = {
   resetLessonForStudent: (activityId: string, studentEnrollmentId: string) =>
     api.post(`/classrooms/activities/${activityId}/lesson/reset`, { studentEnrollmentId }),
   updateActivity: (activityId: string, data: {
-    title?: string; description?: string; maxScore?: number; dueDate?: string;
-    openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
+    title?: string; description?: string; maxScore?: number; dueDate?: string | null;
+    openDate?: string | null; allowLateSubmit?: boolean; isVisible?: boolean;
     attachmentUrl?: string; attachmentName?: string;
   }) => api.put(`/classrooms/activities/${activityId}`, data),
   publishActivity: (activityId: string, body?: { scheduledPublishAt?: string }) =>

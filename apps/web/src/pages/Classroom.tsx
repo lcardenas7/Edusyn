@@ -2480,7 +2480,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         ...(gameType ? { gameType } : {}),
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
-        dueDate: form.dueDate || undefined,
+        dueDate: datetimeLocalToIso(form.dueDate),
         allowLateSubmit: form.allowLateSubmit,
         attachmentUrl, attachmentName,
         shuffleQuestions: form.shuffleQuestions,
@@ -2535,7 +2535,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const handleSchedulePublish = async (id: string, dateTime: string) => {
     try {
       // datetime-local gives local time string, convert to full ISO with timezone
-      const isoDate = new Date(dateTime).toISOString()
+      const isoDate = datetimeLocalToIso(dateTime)
       await classroomApi.publishActivity(id, { scheduledPublishAt: isoDate })
       if (selectedActivity && selectedActivity.id === id) {
         setSelectedActivity({ ...selectedActivity, scheduledPublishAt: dateTime, isPublished: false })
@@ -2564,7 +2564,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       title: act.title,
       description: act.description || '',
       maxScore: act.maxScore ? String(Number(act.maxScore)) : '5',
-      dueDate: act.dueDate ? new Date(act.dueDate).toISOString().slice(0, 16) : '',
+      dueDate: act.dueDate ? toLocalDatetimeStr(new Date(act.dueDate)) : '',
       allowLateSubmit: act.allowLateSubmit || false,
     })
     // Prerrequisitos actuales (Fase 4 los incluye en la lista del docente).
@@ -2580,7 +2580,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         title: editForm.title,
         description: editForm.description || undefined,
         maxScore: parseFloat(editForm.maxScore) || 5,
-        dueDate: editForm.dueDate || undefined,
+        dueDate: editForm.dueDate ? datetimeLocalToIso(editForm.dueDate) : null,
         allowLateSubmit: editForm.allowLateSubmit,
       })
       // Prerrequisitos (Fase 5): el backend valida misma aula + sin ciclo.
@@ -3282,7 +3282,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
-  const isDuePast = (d?: string) => d ? new Date(d) < new Date() : false
+  const isDuePast = (d?: string | null) => d ? new Date(d) < new Date() : false
+  const datetimeLocalToIso = (value?: string) => value ? new Date(value).toISOString() : undefined
   // Convert Date to local datetime-local input value (YYYY-MM-DDTHH:MM)
   const toLocalDatetimeStr = (d: Date) => {
     const pad = (n: number) => n.toString().padStart(2, '0')
