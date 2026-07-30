@@ -120,6 +120,15 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   // LOAD
   // ─────────────────────────────────────────────────────────────────
 
+  // Índice donde retomar: la PRIMERA diapositiva pendiente (no completada) — justo la
+  // actividad que le falta al estudiante. Así al volver a entrar cae donde se quedó y no
+  // tiene que navegar a mano hasta el punto del error. Si ya están todas, cae al final.
+  const resumeIndexFor = (slidesArr: any[], prog: any): number => {
+    const done = Array.isArray(prog?.completedSlides) ? (prog.completedSlides as string[]) : []
+    const firstPending = (slidesArr || []).findIndex((s: any) => !done.includes(s.id))
+    return firstPending >= 0 ? firstPending : (prog?.currentSlideIndex || prog?.lastCheckpointIndex || 0)
+  }
+
   const loadLesson = useCallback(async () => {
     try {
       setPhase('loading')
@@ -134,8 +143,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           setCurrentIndex(lessonData.slides.length - 1)
           setPhase('completed')
         } else if (prog.status === 'IN_PROGRESS') {
-          // Resume from last checkpoint if they left mid-lesson
-          setCurrentIndex(prog.lastCheckpointIndex || prog.currentSlideIndex || 0)
+          // Retomar directamente en la actividad pendiente (no en un checkpoint anterior).
+          setCurrentIndex(resumeIndexFor(lessonData.slides, prog))
           setPhase('playing')
         } else {
           setPhase('intro')
@@ -207,13 +216,16 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
   const handleStart = async () => {
     if (!lesson) return
+    let prog: any = progress
     if (!isTeacher) {
       try {
-        const { data: prog } = await lessonApi.start(lesson.id)
-        setProgress(prog)
+        const { data } = await lessonApi.start(lesson.id)
+        setProgress(data)
+        prog = data
       } catch {}
     }
-    setCurrentIndex(0)
+    // Retoma en la actividad pendiente (para "Continuar"); un inicio nuevo cae en 0.
+    setCurrentIndex(isTeacher || !prog ? 0 : resumeIndexFor(lesson.slides, prog))
     setPhase('playing')
     setSlideStartTime(Date.now())
   }
