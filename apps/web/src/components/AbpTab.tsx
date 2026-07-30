@@ -3,7 +3,8 @@ import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, Chevron
 import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
-import { StationAgenda, StationGuide, StationInstruments, StationStep, TeacherInstrumentsConfig } from './TallerInstruments'
+import { StationAgenda, StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
+import AbpGuidedStation from './AbpGuidedStation'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -392,7 +393,7 @@ function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MISIONES — el trabajo real dentro de cada fase-hito (Opción A: herramienta = misión).
 // ═══════════════════════════════════════════════════════════════════════════
-const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
+export const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
 
 // Espacios de Trabajo (nivel de la Biblia): agrupan instrumentos por intención dentro
 // de una estación. Se deriva de la herramienta de cada misión (sin tocar el modelo).
@@ -429,7 +430,7 @@ function artifactSummary(team: any, phase: number): string[] {
 const ACT_LABEL: Record<string, string> = { READING: '📖 Lectura', VIDEO: '🎬 Video', QUIZ: '❓ Quiz', INTERVIEW: '🎤 Entrevista', UPLOAD: '📤 Evidencia', LINK: '🔗 Enlace', CUSTOM: '✅ Tarea' }
 const ACT_TYPES = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM']
 
-function PhaseTool({ tool, team, onSaved }: { tool: string; team: any; onSaved: () => void }) {
+export function PhaseTool({ tool, team, onSaved }: { tool: string; team: any; onSaved: () => void }) {
   switch (tool) {
     case 'CANVAS': return <CanvasPhase team={team} onSaved={onSaved} />
     case 'IDEAS': return <IdeasPhase team={team} onSaved={onSaved} />
@@ -546,7 +547,7 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
   )
 }
 
-function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
+export function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
   // Herramienta legacy de la misión (canvas/ideas/smart…). Si el docente configuró
@@ -1434,14 +1435,10 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const curState = stateOf(team, cur)
   const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
   // Gating desde las misiones: todas las misiones obligatorias completas (lo calcula el backend).
+  // La estación guiada (AbpGuidedStation) calcula su propio progreso; aquí solo se
+  // conserva lo que usa el Ritual de Validación (resumen del artefacto).
   const reqMissions = (team.currentMissions || []).filter((m: any) => m.required)
   const reqDone = reqMissions.filter((m: any) => m.complete).length
-  const reqInstr: { key: string; used: boolean }[] = team.requiredInstruments || []
-  const reqInstrUsed = reqInstr.filter(s => s.used).length
-  const canRequest = !!team.readyForValidation
-  const hasInstruments = ((team?.config?.instruments?.[cur] as any[])?.length ?? 0) > 0
-  const step1Done = reqInstr.length > 0 && reqInstrUsed === reqInstr.length
-  const step2Done = reqMissions.length > 0 && reqDone === reqMissions.length
 
   return (
     <div className="space-y-4 taller">
@@ -1569,57 +1566,21 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       {expTab === 'log' && <LogbookView teamId={team.id} currentPhase={cur} />}
       {expTab === 'discoveries' && <DiscoveriesView teamId={team.id} currentPhase={cur} />}
 
-      {/* Panel de la fase actual — Estación */}
+      {/* Panel de la fase actual — Estación GUIADA (F.O.C.O.: una pantalla a la vez) */}
       {expTab === 'phases' && (
-      <div className="taller-card p-6">
-        <div className="text-[11px] font-mono uppercase tracking-[0.15em] taller-mari mb-1">Estación {cur} de 6</div>
-        <h3 className="text-xl font-black taller-ink mb-3 tracking-tight">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
-
-        {curPs?.feedback && (
-          <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'color-mix(in srgb, #CB4E42 10%, transparent)', borderLeft: '4px solid #CB4E42', color: '#7a2b22' }}>
-            🧑‍🏫 <b>Retroalimentación del docente:</b> {curPs.feedback}
-          </div>
-        )}
-
-        {curState === 'AWAITING' ? (
-          <div className="p-4 rounded-xl font-semibold flex items-center gap-2" style={{ background: 'color-mix(in srgb, var(--t-marigold) 12%, transparent)', color: '#8a5a10' }}>
-            <Clock className="w-5 h-5" /> En revisión — esperando al docente…
-          </div>
-        ) : cur === 6 && curState === 'VALIDATED' ? (
-          <div className="text-center py-6">🏆<p className="font-black taller-ink mt-2">¡Llegaron a la cima de la expedición!</p></div>
-        ) : (
-          <>
-            {/* Instrucciones generales de la estación (colapsable) */}
-            <StationGuide team={team} phase={cur} />
-
-            {/* Flujo guiado en 3 pasos — el equipo siempre sabe el orden.
-                Paso 1 (herramientas) solo si el docente asignó instrumentos. */}
-            {hasInstruments && (<>
-              <StationStep n={1} title="Exploren con las herramientas" done={step1Done}
-                hint="Ábranlas y trabajen aquí primero: es donde piensan, conversan y organizan las ideas en equipo." />
-              <StationInstruments team={team} phase={cur} hideHeading />
-            </>)}
-
-            <StationStep n={hasInstruments ? 2 : 1} title="Cumplan las misiones de la fase" done={step2Done}
-              hint="Hagan lo que pide el docente y suban las evidencias (fotos, enlaces, archivos). Las obligatorias abren la presentación." />
-            <MissionsPanel team={team} onSaved={() => load(true)} />
-
-            <StationStep n={hasInstruments ? 3 : 2} title="Presenten la estación al docente"
-              hint="Cuando el equipo termine lo obligatorio, presenten para que el docente la revise y validen la estación." />
-            {/* Compuerta de validación */}
-            <div className="mt-2 flex items-center gap-3 flex-wrap">
-              {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
-              {reqInstr.length > 0 && <span className="text-sm taller-soft">Instrumentos obligatorios: <b className="taller-ink">{reqInstrUsed}/{reqInstr.length}</b></span>}
-              <button onClick={() => canRequest && setRitualOpen(true)} disabled={busy || !canRequest}
-                className={`ml-auto py-3 px-6 font-bold rounded-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed transition ${canRequest ? 'taller-cta hover:opacity-95' : ''}`}
-                style={!canRequest ? { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' } : undefined}>
-                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : canRequest ? <Send className="w-5 h-5" /> : '🔒'}
-                {canRequest ? 'Presentar a validación' : (reqDone < reqMissions.length ? 'Completa las misiones' : reqInstrUsed < reqInstr.length ? 'Usen los instrumentos obligatorios' : 'Completa las misiones')}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+        <AbpGuidedStation
+          team={team}
+          phase={cur}
+          stationName={phaseName(cur)}
+          stationIcon={PHASES.find(p => p.n === cur)?.icon || '🧭'}
+          purpose={STATION_PURPOSE[cur]}
+          feedback={curPs?.feedback}
+          awaiting={curState === 'AWAITING'}
+          validated={curState === 'VALIDATED'}
+          busy={busy}
+          onSaved={() => load(true)}
+          onPresent={() => setRitualOpen(true)}
+        />
       )}
 
       {/* Anuncios y Recursos (al fondo, igual que el docente) */}
