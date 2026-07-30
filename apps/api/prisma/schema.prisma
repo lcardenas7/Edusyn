@@ -1324,8 +1324,16 @@ model EvaluationComponent {
   parentId      String?
   code          String
   name          String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Fase 2 — fuente única de la estructura de evaluación de la institución.
+  // El peso vive junto a la definición del componente y se HEREDA al plan de
+  // evaluación de cada asignación (EvaluationPlanComponentWeight), que es lo que
+  // realmente promedia el boletín. Antes el peso institucional vivía en un JSON
+  // que el motor de notas ignoraba.
+  weightPercentage      Int?
+  order                 Int?
+  allowTeacherAddGrades Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   institution Institution           @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   parent      EvaluationComponent?  @relation("EvalComponentHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
