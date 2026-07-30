@@ -18,7 +18,10 @@ describe('PartialGradesService.upsert — create sin expectedUpdatedAt', () => {
       },
     };
     const gradeAudit: any = { record: jest.fn().mockResolvedValue(undefined) };
-    return { svc: new PartialGradesService(prisma, gradeAudit), upsert };
+    // Fase 2: el servicio recibe EvaluationComponentsService (solo se usa en promedios
+    // ponderados, no en upsert); stub para satisfacer el constructor.
+    const components: any = { getWeightsByCode: jest.fn() };
+    return { svc: new PartialGradesService(prisma, gradeAudit, components), upsert };
   }
 
   const baseData = {

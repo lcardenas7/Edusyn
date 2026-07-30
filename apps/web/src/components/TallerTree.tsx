@@ -74,8 +74,14 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
   const [commentsFor, setCommentsFor] = useState<string | null>(null)
   const [commentText, setCommentText] = useState('')
   const busyRef = useRef(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const centeredRef = useRef(false)
+  // Lienzo encajar-a-la-vista (T15): sin barras de scroll — la copa siempre cabe
+  // en pantalla. `view === null` = auto-fit; si no, cámara manual {s,x,y}.
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const [vpSize, setVpSize] = useState({ w: 0, h: 580 })
+  const [view, setView] = useState<{ s: number; x: number; y: number } | null>(null)
+  const dragRef = useRef<{ px: number; py: number; vx: number; vy: number } | null>(null)
+  const suppressClickRef = useRef(false)
+  const [dragging, setDragging] = useState(false)
 
   const load = useCallback(async (background = false) => {
     if (!background) setLoading(true)
@@ -161,15 +167,51 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
   const collect = (n: TreeNode) => { flat.push(n); n.children.forEach(collect) }
   forest.forEach(collect)
 
-  // centrar el scroll en el tronco la primera vez
+  // Medir el viewport para encajar el árbol completo (fit = nunca scroll).
   useEffect(() => {
-    if (!centeredRef.current && scrollRef.current && !loading) {
-      const el = scrollRef.current
-      el.scrollLeft = Math.max(0, CX - el.clientWidth / 2)
-      el.scrollTop = el.scrollHeight
-      centeredRef.current = true
-    }
-  }, [loading, CX])
+    const el = viewportRef.current
+    if (!el) return
+    const measure = () => setVpSize({ w: el.clientWidth, h: el.clientHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [loading, isMobile])
+
+  // Cámara: por defecto la copa entera siempre visible; el usuario puede hacer
+  // zoom (botones) y arrastrar para moverse. Al tocar una hoja con la copa
+  // alejada, la cámara se acerca suavemente a ella; ⤢ devuelve el "ver todo".
+  const vw = vpSize.w || 1
+  const vh = vpSize.h || 580
+  const fitS = Math.max(Math.min((vw - 24) / W, (vh - 24) / H, 1), 0.05)
+  const cam = view ?? { s: fitS, x: (vw - W * fitS) / 2, y: (vh - H * fitS) / 2 }
+  const zoomAt = (factor: number) => {
+    const s2 = Math.min(Math.max(cam.s * factor, fitS * 0.6), 3)
+    const cx = vw / 2, cy = vh / 2
+    const wx = (cx - cam.x) / cam.s, wy = (cy - cam.y) / cam.s
+    setView({ s: s2, x: cx - wx * s2, y: cy - wy * s2 })
+  }
+  const focusNode = (n: TreeNode) => {
+    if (cam.s >= 0.9) return // ya se ve de cerca: solo seleccionar
+    setView({ s: 1, x: vw / 2 - n.x, y: vh / 2 - n.y })
+  }
+  const onPanStart = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('[data-node],[data-ui]')) return
+    dragRef.current = { px: e.clientX, py: e.clientY, vx: cam.x, vy: cam.y }
+    setDragging(true)
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+  }
+  const onPanMove = (e: React.PointerEvent) => {
+    const d = dragRef.current
+    if (!d) return
+    if (Math.hypot(e.clientX - d.px, e.clientY - d.py) > 6) suppressClickRef.current = true
+    setView({ s: cam.s, x: d.vx + (e.clientX - d.px), y: d.vy + (e.clientY - d.py) })
+  }
+  const onPanEnd = () => {
+    dragRef.current = null
+    setDragging(false)
+    setTimeout(() => { suppressClickRef.current = false }, 0)
+  }
 
   // rama orgánica: curva desde el punto padre hacia la hija siguiendo el radial
   const branch = (x1: number, y1: number, x2: number, y2: number) => {
@@ -295,9 +337,13 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
             : roots.slice().sort(sortByDate).map(r => renderMobileNode(r, 0))}
         </div>
       ) : (
-      /* ESCRITORIO: lienzo del árbol */
-      <div ref={scrollRef} className="relative overflow-auto" style={{ height: 580, background: 'linear-gradient(to bottom, #FDFBF3 0%, #FAF6E9 55%, #F0EED9 100%)' }}>
-        <div style={{ width: W, height: H, position: 'relative', margin: '0 auto' }} onClick={() => setSelected(null)}>
+      /* ESCRITORIO: lienzo del árbol — encajar-a-la-vista, sin barras de scroll */
+      <div ref={viewportRef}
+        className="relative overflow-hidden select-none"
+        style={{ height: 580, background: 'linear-gradient(to bottom, #FDFBF3 0%, #FAF6E9 55%, #F0EED9 100%)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+        onPointerDown={onPanStart} onPointerMove={onPanMove} onPointerUp={onPanEnd} onPointerCancel={onPanEnd}>
+        <div style={{ width: W, height: H, position: 'absolute', left: 0, top: 0, transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})`, transformOrigin: '0 0', transition: dragging ? 'none' : 'transform .45s cubic-bezier(.22,.9,.3,1)' }}
+          onClick={() => { if (!suppressClickRef.current) setSelected(null) }}>
           <svg width={W} height={H} className="absolute inset-0 pointer-events-none">
             <defs>
               <linearGradient id="trunkGrad" x1="0" y1="1" x2="0" y2="0">
@@ -358,6 +404,7 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
             const radius = leftSide ? '20px 20px 20px 5px' : '20px 20px 5px 20px'
             return (
               <div key={o.id}
+                data-node=""
                 className="absolute p-2.5 cursor-pointer transition-shadow"
                 style={{
                   left: n.x - NODE_W / 2, top: n.y - NODE_H / 2, width: NODE_W, minHeight: NODE_H,
@@ -367,7 +414,7 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
                   outline: isSel ? '2.5px solid var(--t-marigold)' : 'none', outlineOffset: '2px',
                   zIndex: isSel ? 20 : 2,
                 }}
-                onClick={e => { e.stopPropagation(); setSelected(isSel ? null : o.id) }}>
+                onClick={e => { e.stopPropagation(); setSelected(isSel ? null : o.id); if (!isSel) focusNode(n) }}>
                 {isTop && (
                   <span className="absolute -top-3 -right-2 text-base drop-shadow" title="La idea más votada">🌟</span>
                 )}
@@ -391,9 +438,9 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
           })}
         </div>
 
-        {/* barra de acciones del nodo seleccionado */}
+        {/* barra de acciones del nodo seleccionado (flotante sobre el lienzo) */}
         {sel && (
-          <div className="sticky bottom-3 left-0 right-0 flex justify-center pointer-events-none" style={{ zIndex: 40 }}>
+          <div data-ui="" className="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none" style={{ zIndex: 40 }}>
             <div className="taller-card pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-2xl" style={{ boxShadow: '0 10px 30px rgba(0,0,0,.18)' }}>
               <span className="text-xs font-bold taller-ink max-w-[140px] truncate">{sel.data?.text}</span>
               <span className="w-px h-5 mx-1" style={{ background: 'var(--t-line)' }} />
@@ -421,13 +468,20 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
             </div>
           </div>
         )}
+
+        {/* controles de cámara: acercar / alejar / ver todo el árbol */}
+        <div data-ui="" className="absolute top-3 right-3 flex flex-col gap-1.5" style={{ zIndex: 40 }}>
+          <button onClick={() => zoomAt(1.3)} title="Acercar" className="taller-card w-9 h-9 rounded-xl font-black taller-ink text-base leading-none">＋</button>
+          <button onClick={() => zoomAt(1 / 1.3)} title="Alejar" className="taller-card w-9 h-9 rounded-xl font-black taller-ink text-base leading-none">－</button>
+          <button onClick={() => setView(null)} title="Ver todo el árbol" className={`taller-card w-9 h-9 rounded-xl text-sm leading-none ${!view ? 'taller-mari' : 'taller-muted'}`}>⤢</button>
+        </div>
       </div>
       )}
 
       {/* pie */}
       <div className="px-4 py-2 text-[10px] font-mono taller-muted flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid var(--t-line)' }}>
         <span>toca una {isMobile ? 'idea' : 'hoja'} para ramificar, votar o conversar</span><span>·</span><span>🌟 la más votada</span>
-        <span className="ml-auto hidden sm:inline">grafo: cada rama es una arista 'deriva-de'</span>
+        <span className="ml-auto hidden sm:inline">el árbol siempre cabe en pantalla · arrastra para moverte · ⤢ ver todo</span>
       </div>
 
       {/* compositor: nueva rama / ramificar */}
