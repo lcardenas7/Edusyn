@@ -1236,6 +1236,20 @@ export class AbpService {
     });
   }
 
+  /** Igual que listReusableActivities pero a nivel EQUIPO (compositor "Colocar
+   * actividad" del TeamPreview FOCO: la misión aún no existe al listar). */
+  async listReusableActivitiesForTeam(teamId: string, institutionId: string, userId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { classroomId: true } });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+    return this.prisma.classroomActivity.findMany({
+      where: { classroomId: project.classroomId, isRouteScoped: false, lesson: { isNot: null } },
+      select: { id: true, title: true, type: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
   /** Reutiliza una actividad/juego existente del curso enlazándola a la misión.
    * linkedActivity=true → NO se borra su ClassroomActivity al quitarla (es compartida). */
   async attachActivity(missionId: string, institutionId: string, userId: string, classroomActivityId: string) {

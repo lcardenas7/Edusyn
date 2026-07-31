@@ -2035,17 +2035,258 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
   )
 }
 
-function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void }) {
+/** Compositor "Colocar actividad" (Addendum v3 §12.2): UNA sola puerta con tres
+ * caminos — 🛠️ crear aquí (Lección/Juego que se DESARROLLA dentro de Expedición,
+ * sin salir al módulo), ♻️ reutilizar una actividad del curso, o ✨ Valeria.
+ * Crea la misión contenedora y deja la actividad como paso de la ruta del equipo. */
+function ActivityComposer({ team, phase, onClose, onPlaced }: { team: any; phase: number; onClose: () => void; onPlaced: () => void }) {
+  const [src, setSrc] = useState<'crear' | 'reusar' | 'valeria'>('crear')
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [applied, setApplied] = useState(false)
+  const [editing, setEditing] = useState<{ activityId: string; title: string } | null>(null)
+  // reusar
+  const [pool, setPool] = useState<{ id: string; title: string; type: string }[] | null>(null)
+  const [poolLoading, setPoolLoading] = useState(false)
+  // valeria
+  const [promptText, setPromptText] = useState('')
+  const [pendingMissionId, setPendingMissionId] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<{ type: string; title: string; description: string }[] | null>(null)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [notConfigured, setNotConfigured] = useState(false)
+
+  useEffect(() => {
+    if (src === 'reusar' && pool === null && !poolLoading) {
+      setPoolLoading(true)
+      abpApi.teamReusableActivities(team.id).then(({ data }) => setPool(data)).catch(() => setPool([])).finally(() => setPoolLoading(false))
+    }
+  }, [src]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const createMission = async (t: string) => {
+    const { data: m } = await abpApi.addMission(team.id, phase, { title: t, required: false })
+    return m
+  }
+
+  // 🛠️ Crear aquí: misión contenedora + Lección/Juego → el editor se abre AQUÍ MISMO.
+  const crear = async () => {
+    if (!title.trim() || busy) return
+    setBusy(true)
+    try {
+      const m = await createMission(title.trim())
+      const { data } = await abpApi.addLessonActivity(m.id, title.trim())
+      setEditing({ activityId: data.classroomActivityId, title: title.trim() })
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la actividad') }
+    finally { setBusy(false) }
+  }
+
+  // ♻️ Reutilizar: misión con el nombre de la actividad + enlace (no se copia, es compartida).
+  const reusar = async (ca: { id: string; title: string }) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const m = await createMission(ca.title)
+      await abpApi.attachActivity(m.id, ca.id)
+      setApplied(true)
+      onPlaced()
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
+    finally { setBusy(false) }
+  }
+
+  // ✨ Valeria: crea la misión y sugiere actividades ancladas a la problemática.
+  const sugerir = async () => {
+    if (!title.trim() || busy) return
+    setBusy(true); setNotConfigured(false)
+    try {
+      const m = await createMission(title.trim())
+      setPendingMissionId(m.id)
+      const { data } = await abpApi.suggestActivities(team.id, m.id)
+      if (!data.configured) { setNotConfigured(true); return }
+      setSuggestions(data.activities || [])
+      setPicked(new Set((data.activities || []).map((_, i) => i)))
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo generar con Valeria') }
+    finally { setBusy(false) }
+  }
+  const aplicar = async () => {
+    if (!pendingMissionId || !suggestions) return
+    const items = suggestions.filter((_, i) => picked.has(i)).map(s => ({ type: s.type, title: s.title }))
+    if (!items.length) return
+    setBusy(true)
+    try { await abpApi.addActivitiesBulk(pendingMissionId, items); setApplied(true); onPlaced() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudieron añadir') }
+    finally { setBusy(false) }
+  }
+
+  const cerrar = async () => {
+    // Si se creó una misión para Valeria y no se aplicó nada, no dejar basura.
+    if (pendingMissionId && !applied) { try { await abpApi.deleteMission(pendingMissionId) } catch { /* best effort */ } }
+    onClose()
+  }
+
+  const tabBtn = (k: typeof src, icon: string, label: string, sub: string) => (
+    <button onClick={() => setSrc(k)} className="flex-1 text-left rounded-xl border-2 px-3 py-2.5 transition"
+      style={src === k
+        ? { borderColor: 'var(--t-marigold)', background: 'color-mix(in srgb, var(--t-marigold) 9%, var(--t-raised))' }
+        : { borderColor: 'var(--t-line)', background: 'var(--t-raised)' }}>
+      <div className="text-base">{icon}</div>
+      <div className="text-xs font-black taller-ink mt-0.5">{label}</div>
+      <div className="text-[10px] taller-muted">{sub}</div>
+    </button>
+  )
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={cerrar}>
+      <div className="taller-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 taller-raised border-b taller-line-c px-5 py-3 flex items-center justify-between z-10">
+          <h3 className="font-bold taller-ink text-sm">🎮 Colocar actividad · {phaseName(phase)}</h3>
+          <button onClick={cerrar} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-xs taller-soft leading-relaxed -mt-1">El equipo la vivirá como <b className="taller-ink">un paso más de la ruta</b>, con consigna 💡 y sin cromos del LMS.</p>
+
+          {/* Fuente: una decisión, tres caminos */}
+          <div className="flex gap-2">
+            {tabBtn('crear', '🛠️', 'Crear aquí', 'Se desarrolla en Expedición')}
+            {tabBtn('reusar', '♻️', 'Reutilizar', 'Ya existe en el curso')}
+            {tabBtn('valeria', '✨', 'Valeria', 'Redacta el borrador')}
+          </div>
+
+          {/* 🛠️ Crear aquí */}
+          {src === 'crear' && (
+            <div className="space-y-2.5">
+              <input value={title} onChange={e => setTitle(e.target.value)} autoFocus placeholder="Título — ej. ¿Entendimos el problema?"
+                className="w-full text-sm rounded-xl taller-line px-3 py-2.5" />
+              <p className="text-[11px] taller-muted leading-relaxed">Se crea como <b>Lección/Juego 🎮</b> y el editor se abre <b>aquí mismo</b>: la desarrollas sin salir de Expedición. (Quiz, preguntas y tareas del aula se traen desde ♻️ Reutilizar.)</p>
+              <button onClick={crear} disabled={busy || !title.trim()} className="w-full py-2.5 taller-cta-inline rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Crear y desarrollar →
+              </button>
+            </div>
+          )}
+
+          {/* ♻️ Reutilizar */}
+          {src === 'reusar' && (
+            <div>
+              {poolLoading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin taller-mari" /></div>}
+              {!poolLoading && pool !== null && pool.length === 0 && (
+                <p className="text-xs taller-muted text-center py-4">No hay actividades jugables en este curso todavía. Créala con 🛠️ o ✨.</p>
+              )}
+              {!poolLoading && (pool || []).length > 0 && (
+                <div className="space-y-2">
+                  {(pool || []).map(a => (
+                    <button key={a.id} onClick={() => reusar(a)} disabled={busy}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition hover:bg-teal-50 disabled:opacity-50 border taller-line-c">
+                      <span>🎮</span>
+                      <span className="flex-1 text-sm taller-ink truncate">{a.title}</span>
+                      <span className="text-[10px] font-mono taller-muted">{a.type}</span>
+                      <span className="text-xs font-bold taller-mari shrink-0">Colocar</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ✨ Valeria */}
+          {src === 'valeria' && (
+            <div className="space-y-2.5">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del paso — ej. Practiquen su diagnóstico"
+                className="w-full text-sm rounded-xl taller-line px-3 py-2.5" />
+              <textarea value={promptText} onChange={e => setPromptText(e.target.value)} rows={2}
+                placeholder="¿Qué quieres que practiquen? (opcional) Ej: que relacionen las causas de su árbol con la idea elegida"
+                className="w-full text-sm rounded-xl taller-line px-3 py-2.5 resize-none" />
+              {!suggestions && (
+                <button onClick={sugerir} disabled={busy || !title.trim()} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-fuchsia-600 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : '✨'} Generar sugerencias
+                </button>
+              )}
+              {notConfigured && <p className="text-xs text-amber-600">Valeria no está configurada (falta la API key de IA). Prueba con 🛠️ Crear aquí.</p>}
+              {suggestions && (
+                <div className="rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3">
+                  {suggestions.length === 0 ? <p className="text-xs taller-soft">Valeria no devolvió sugerencias. Intenta de nuevo.</p> : (
+                    <>
+                      <p className="text-xs font-bold text-fuchsia-700 mb-2">✨ Sugerencias de Valeria (revisa y elige)</p>
+                      <div className="space-y-1.5">
+                        {suggestions.map((s, i) => (
+                          <label key={i} className="flex items-start gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={picked.has(i)} onChange={e => setPicked(p => { const x = new Set(p); e.target.checked ? x.add(i) : x.delete(i); return x })} className="mt-0.5" />
+                            <span><b className="taller-ink">{ACT_LABEL[s.type] || s.type} · {s.title}</b>{s.description ? <span className="taller-soft"> — {s.description}</span> : null}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button onClick={aplicar} disabled={busy || picked.size === 0} className="mt-2.5 w-full py-2 bg-fuchsia-600 text-white text-xs font-bold rounded-lg disabled:opacity-50">
+                        Colocar {picked.size} actividad(es) ✓
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* El editor de la Lección/Juego se abre AQUÍ MISMO (dentro de Expedición) */}
+      {editing && (
+        <div className="fixed inset-0 z-[120] taller-raised overflow-auto">
+          <LessonEditor activityId={editing.activityId} activityTitle={editing.title} onClose={() => { setEditing(null); setApplied(true); onPlaced() }} onPreview={() => { /* sin preview aquí */ }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Vista del equipo (FOCO · Addendum v3 §12.3): su reto y los sellos de la
+ * expedición, "Lo siguiente" del docente, la estación actual protagonista con
+ * el trabajo visible y colocar trabajo en el lugar — y el resto en capa 3. */
+function TeamPreview({ teamId, onBack, queue = [], onReview }: { teamId: string; onBack: () => void; queue?: any[]; onReview?: (validationId: string) => void }) {
   const [team, setTeam] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [openPhase, setOpenPhase] = useState<number | null>(null)
+  const [composerPhase, setComposerPhase] = useState<number | null>(null)
+  const [layer3, setLayer3] = useState<'' | 'log' | 'disc'>('')
   const load = useCallback(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
   useEffect(() => { load() }, [load])
   if (loading) return <Loading />
   if (!team) return <Empty msg="No se pudo cargar el equipo." />
-  const phases = team.phaseStates || []
+  const phases: any[] = team.phaseStates || []
+  const current = phases.find(p => ['AWAITING', 'IN_PROGRESS', 'RETURNED'].includes(p.status)) || phases[phases.length - 1]
+  const awaiting = phases.find(p => p.status === 'AWAITING')
+  const queueItem = awaiting ? queue.find(q => q.team?.id === team.id && q.phase === awaiting.phase) : null
+  const returned = phases.find(p => p.status === 'RETURNED')
+
+  const sealStyle = (st: string) =>
+    st === 'VALIDATED' ? { background: 'color-mix(in srgb, var(--t-teal) 10%, var(--t-raised))', border: '1px solid color-mix(in srgb, var(--t-teal) 35%, transparent)' }
+    : st === 'AWAITING' ? { background: 'color-mix(in srgb, var(--t-marigold) 12%, var(--t-raised))', border: '1px solid var(--t-marigold)' }
+    : st === 'RETURNED' ? { background: 'color-mix(in srgb, #CB4E42 9%, var(--t-raised))', border: '1px solid color-mix(in srgb, #CB4E42 35%, transparent)' }
+    : { background: 'var(--t-surface)', border: '1px solid var(--t-line)', opacity: st === 'LOCKED' ? 0.6 : 1 }
+  const sealIcon = (st: string) => st === 'VALIDATED' ? '✓' : st === 'AWAITING' ? '⏳' : st === 'RETURNED' ? '↩️' : st === 'IN_PROGRESS' ? '●' : '🔒'
+
+  const phaseBody = (ps: any) => (
+    <div className="mt-3">
+      {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
+      {(ps.missions || []).length > 0 ? (
+        <div className="mb-2 space-y-2">
+          {ps.missions.map((m: any) => <TeacherMissionEditor key={m.id} mission={m} teamId={team.id} onChanged={load} />)}
+        </div>
+      ) : (
+        <p className="text-xs taller-muted mb-2">La estación nació limpia: coloca aquí el trabajo de este equipo. 🌱</p>
+      )}
+      {/* Colocar trabajo: UNA puerta para actividades + misión/entrega aparte */}
+      <button onClick={() => setComposerPhase(ps.phase)} className="text-xs font-bold px-3 py-2 rounded-xl transition hover:opacity-80"
+        style={{ background: 'color-mix(in srgb, var(--t-marigold) 14%, transparent)', color: 'var(--t-marigold)', border: '1px solid color-mix(in srgb, var(--t-marigold) 35%, transparent)' }}>
+        🎮 Colocar actividad
+      </button>
+      <TeacherNewMission team={team} phase={ps.phase} onCreated={load} />
+      <div className="taller mt-3"><StationInstruments team={team} phase={ps.phase} /></div>
+      <PhaseWorkRO phase={ps.phase} data={ps.data} />
+    </div>
+  )
+
   return (
-    <div className="space-y-4 taller">
+    <div className="space-y-4 taller max-w-3xl mx-auto">
       <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold taller-soft hover:opacity-70"><ChevronLeft className="w-4 h-4" /> Volver al panel</button>
+
+      {/* Encabezado: equipo, reto y sellos de la expedición */}
       <div className="taller-card taller-mission p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -2055,40 +2296,82 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
           </div>
           <div className="text-right"><div className="text-2xl font-black taller-mari">⭐ {team.xp}</div><div className="text-xs taller-muted font-semibold">XP</div></div>
         </div>
-        <div className="mt-3"><Trail team={team} /></div>
-      </div>
-      {phases.map((ps: any) => (
-        <div key={ps.phase} className="taller-card p-5">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <h4 className="font-bold taller-ink">{PHASES.find(p => p.n === ps.phase)?.icon} Fase {ps.phase}: {phaseName(ps.phase)}</h4>
-            <StatusChip status={ps.status} />
-          </div>
-          {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
-          {(ps.missions || []).length > 0 && (
-            <div className="mb-3 space-y-2">
-              {ps.missions.map((m: any) => (
-                <TeacherMissionEditor key={m.id} mission={m} teamId={team.id} onChanged={load} />
-              ))}
-            </div>
-          )}
-          {/* el docente dirige misiones a este equipo o a un integrante */}
-          <TeacherNewMission team={team} phase={ps.phase} onCreated={load} />
-          {/* Espacio de trabajo del equipo: el docente abre los instrumentos de la estación */}
-          <div className="taller">
-            <StationInstruments team={team} phase={ps.phase} />
-          </div>
-          <PhaseWorkRO phase={ps.phase} data={ps.data} />
+        <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+          {PHASES.map(p => {
+            const ps = phases.find((x: any) => x.phase === p.n)
+            const st = ps?.status || 'LOCKED'
+            return (
+              <div key={p.n} className="rounded-xl px-2 py-1.5 text-center" style={sealStyle(st)}>
+                <div className="text-base leading-none">{p.icon}</div>
+                <div className="text-[9px] font-bold taller-soft truncate mt-0.5">{p.name}</div>
+                <div className="text-[10px] font-black mt-0.5 taller-soft">{sealIcon(st)}</div>
+              </div>
+            )
+          })}
         </div>
-      ))}
+      </div>
 
-      <div className="taller-card p-5">
-        <h4 className="font-bold taller-ink mb-3">📔 Bitácora</h4>
-        <LogbookView teamId={team.id} readOnly />
+      {/* Lo siguiente del docente */}
+      {queueItem && onReview ? (
+        <div className="taller-card taller-mission p-5">
+          <div className="text-[11px] font-mono uppercase tracking-widest taller-mari">Lo siguiente · tu atención</div>
+          <h4 className="font-black taller-ink text-lg mt-1.5">⏳ Validar {phaseName(awaiting.phase)}</h4>
+          <p className="text-sm taller-soft mt-0.5">La estación está presentada. Abajo puedes ver el trabajo paso a paso; cuando estés listo, decide.</p>
+          <button onClick={() => onReview(queueItem.id)} className="taller-cta mt-3 px-4 py-2.5 rounded-xl text-sm font-bold">Revisar y decidir →</button>
+        </div>
+      ) : returned ? (
+        <div className="taller-card p-4" style={{ borderLeft: '4px solid #CB4E42' }}>
+          <div className="text-[11px] font-mono uppercase tracking-widest" style={{ color: '#CB4E42' }}>Lo siguiente · tu atención</div>
+          <p className="text-sm taller-soft mt-1">↩️ Devolviste <b className="taller-ink">{phaseName(returned.phase)}</b> — el equipo está corrigiendo; su avance aparece abajo.</p>
+        </div>
+      ) : (
+        <div className="taller-card p-4"><p className="text-sm taller-soft">✓ Al día — este equipo no tiene validaciones pendientes.</p></div>
+      )}
+
+      {/* Estación actual, protagonista */}
+      {current && (
+        <div className="taller-card p-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-bold taller-ink">{PHASES.find(p => p.n === current.phase)?.icon} {phaseName(current.phase)}</h4>
+            <StatusChip status={current.status} />
+            <span className="ml-auto text-[10px] font-mono taller-muted uppercase tracking-wide">Estación actual</span>
+          </div>
+          {phaseBody(current)}
+        </div>
+      )}
+
+      {/* Otras estaciones: colapsadas (capa 3) */}
+      {phases.filter(ps => current && ps.phase !== current.phase).length > 0 && (
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2 px-1">Otras estaciones</div>
+          <div className="space-y-2">
+            {phases.filter(ps => current && ps.phase !== current.phase).map(ps => (
+              <div key={ps.phase} className="taller-card overflow-hidden">
+                <button onClick={() => setOpenPhase(openPhase === ps.phase ? null : ps.phase)} className="w-full flex items-center gap-2.5 px-4 py-3 text-left">
+                  <span>{PHASES.find(p => p.n === ps.phase)?.icon}</span>
+                  <span className="text-sm font-bold taller-ink flex-1">{phaseName(ps.phase)}</span>
+                  <StatusChip status={ps.status} />
+                  <span className="taller-muted text-xs">{openPhase === ps.phase ? '▴' : '▾'}</span>
+                </button>
+                {openPhase === ps.phase && <div className="px-4 pb-4">{phaseBody(ps)}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Capa 3: memoria del equipo */}
+      <div className="flex items-center justify-center gap-5 text-xs font-bold taller-muted" style={{ fontFamily: 'ui-monospace, monospace' }}>
+        <button onClick={() => setLayer3(layer3 === 'log' ? '' : 'log')} className="hover:opacity-70">🕓 Bitácora</button>
+        <button onClick={() => setLayer3(layer3 === 'disc' ? '' : 'disc')} className="hover:opacity-70">💡 Descubrimientos</button>
       </div>
-      <div className="taller-card p-5">
-        <h4 className="font-bold taller-ink mb-3">💡 Descubrimientos</h4>
-        <DiscoveriesView teamId={team.id} readOnly />
-      </div>
+      {layer3 === 'log' && <div className="taller-card p-5"><h4 className="font-bold taller-ink mb-3">📔 Bitácora</h4><LogbookView teamId={team.id} readOnly /></div>}
+      {layer3 === 'disc' && <div className="taller-card p-5"><h4 className="font-bold taller-ink mb-3">💡 Descubrimientos</h4><DiscoveriesView teamId={team.id} readOnly /></div>}
+
+      {/* Compositor de actividad */}
+      {composerPhase !== null && (
+        <ActivityComposer team={team} phase={composerPhase} onClose={() => setComposerPhase(null)} onPlaced={() => { setComposerPhase(null); load() }} />
+      )}
     </div>
   )
 }
@@ -2196,7 +2479,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   useEffect(() => { load() }, [load])
 
   if (reviewingId) return <AbpReview validationId={reviewingId} onClose={(changed) => { setReviewingId(null); if (changed) load() }} />
-  if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} />
+  if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} queue={queue} onReview={(id) => setReviewingId(id)} />
   if (editingPres && project) return <PresentationEditor project={project} onClose={() => setEditingPres(false)} onSaved={() => { setEditingPres(false); load() }} />
   if (loading) return <Loading />
 
