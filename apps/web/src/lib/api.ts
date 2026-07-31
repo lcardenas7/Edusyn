@@ -2603,6 +2603,7 @@ export const abpApi = {
   addActivitiesBulk: (missionId: string, items: { type: string; title: string }[]) => api.post<any[]>(`/abp/missions/${missionId}/activities/bulk`, { items }),
   addLessonActivity: (missionId: string, title: string) => api.post<any>(`/abp/missions/${missionId}/lesson-activity`, { title }),
   reusableActivities: (missionId: string) => api.get<{ id: string; title: string; type: string }[]>(`/abp/missions/${missionId}/reusable-activities`),
+  teamReusableActivities: (teamId: string) => api.get<{ id: string; title: string; type: string }[]>(`/abp/teams/${teamId}/reusable-activities`),
   attachActivity: (missionId: string, classroomActivityId: string) => api.post<any>(`/abp/missions/${missionId}/attach-activity`, { classroomActivityId }),
   generateLessonContent: (activityId: string, instructions?: string) => api.post<{ ok: boolean; title: string; slides: number; model?: string }>(`/abp/activities/${activityId}/generate-lesson`, { instructions }),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
