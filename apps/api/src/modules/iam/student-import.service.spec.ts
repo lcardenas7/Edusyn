@@ -63,3 +63,27 @@ describe('StudentImportService.analyzeRows (Módulo 3)', () => {
     expect(res.issues.some((i) => i.curso === 'CICLO 3')).toBe(true);
   });
 });
+
+describe('StudentImportService.apply — validación de año (Módulo 3)', () => {
+  function svcWithYear(year: any) {
+    const prisma: any = { academicYear: { findUnique: jest.fn().mockResolvedValue(year) } };
+    return new StudentImportService(prisma);
+  }
+  const buf = Buffer.from('x');
+
+  it('404 si el año no existe', async () => {
+    await expect(svcWithYear(null).apply('inst-1', 'y1', buf)).rejects.toThrow(/no encontrado/i);
+  });
+
+  it('403 si el año es de otra institución', async () => {
+    await expect(
+      svcWithYear({ id: 'y1', institutionId: 'OTRA', status: 'DRAFT' }).apply('inst-1', 'y1', buf),
+    ).rejects.toThrow(/otra institución/i);
+  });
+
+  it('400 si el año está CLOSED', async () => {
+    await expect(
+      svcWithYear({ id: 'y1', institutionId: 'inst-1', status: 'CLOSED' }).apply('inst-1', 'y1', buf),
+    ).rejects.toThrow(/cerrado/i);
+  });
+});

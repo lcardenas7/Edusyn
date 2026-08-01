@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Post,
   Request,
@@ -39,5 +40,24 @@ export class OnboardingStudentsController {
     if (!file) throw new BadRequestException('No se proporcionó archivo');
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.studentImport.analyze(institutionId, file.buffer);
+  }
+
+  /**
+   * Aplica el import: crea el ecosistema (sedes/jornadas/grados/grupos) + estudiantes
+   * + matrículas, de forma idempotente. Requiere `academicYearId` (un año DRAFT que se
+   * crea antes). No borra a nadie.
+   */
+  @Post('apply')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }))
+  async apply(
+    @Request() req: any,
+    @UploadedFile() file: any,
+    @Body() body: { academicYearId?: string },
+  ) {
+    if (!file) throw new BadRequestException('No se proporcionó archivo');
+    if (!body?.academicYearId) throw new BadRequestException('Falta academicYearId (crea el año lectivo primero).');
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentImport.apply(institutionId, body.academicYearId, file.buffer);
   }
 }
