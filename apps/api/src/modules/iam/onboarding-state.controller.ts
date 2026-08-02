@@ -1,4 +1,4 @@
-import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -23,8 +23,10 @@ export class OnboardingStateController {
 
   @Get('state')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'RECTOR', 'COORDINADOR')
-  async getState(@Request() req: any) {
-    const institutionId = await requireInstitutionId(this.prisma as any, req);
-    return this.onboardingState.getState(institutionId);
+  async getState(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    // `institutionId` del query solo lo honra SUPERADMIN (resolveInstitutionId);
+    // el admin de una institución siempre resuelve por su JWT (AR6).
+    const resolved = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.onboardingState.getState(resolved);
   }
 }
