@@ -177,6 +177,34 @@ export default function TeacherScheduleWidget() {
   const hasTitleField = form.type === 'CLASE' || form.type === 'OTRO'
   const todayKey = JS_DAY_TO_KEY[new Date().getDay()]
 
+  // Tarjeta de un bloque, reutilizada por la cuadrícula (escritorio) y el apilado (móvil)
+  const renderBlockCard = (b: TeacherScheduleBlock) => {
+    const c = b.color || typeMeta(b.type).color
+    return (
+      <div key={b.id} className="group relative rounded-lg bg-white border border-slate-200 shadow-sm p-2 pl-2.5 overflow-hidden">
+        <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: c }} />
+        <div className="text-[11px] font-semibold text-slate-500 tabular-nums">{b.startTime}–{b.endTime}</div>
+        <div className="text-[13px] font-semibold text-slate-900 leading-snug mt-0.5 break-words">{b.title}</div>
+        {b.type !== 'OTRO' && (
+          <div className="text-[9px] font-medium uppercase tracking-wide text-slate-400 mt-0.5">{typeMeta(b.type).label}</div>
+        )}
+        {b.location && (
+          <div className="text-[11px] text-slate-500 flex items-center gap-0.5 mt-0.5">
+            <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{b.location}</span>
+          </div>
+        )}
+        <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded">
+          <button onClick={() => openEdit(b)} title="Editar" className="p-1 rounded text-slate-400 hover:text-slate-700">
+            <Pencil className="w-3 h-3" />
+          </button>
+          <button onClick={() => remove(b.id)} title="Eliminar" className="p-1 rounded text-slate-400 hover:text-red-600">
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
       <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
@@ -206,63 +234,54 @@ export default function TeacherScheduleWidget() {
           </button>
         </div>
       ) : (
-        <div className="p-3 overflow-x-auto">
-          <div className="flex gap-2 min-w-[760px]">
-            {DAYS.map(day => {
+        <>
+          {/* Escritorio/tablet: cuadrícula por día */}
+          <div className="hidden md:block p-3 overflow-x-auto">
+            <div className="flex gap-2">
+              {DAYS.map(day => {
+                const list = byDay.get(day.key) || []
+                const isToday = day.key === todayKey
+                return (
+                  <div
+                    key={day.key}
+                    className={`flex-1 min-w-[110px] rounded-xl border ${isToday ? 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200' : 'border-slate-200 bg-slate-50/40'}`}
+                  >
+                    <div className={`px-2 py-2 rounded-t-xl border-b text-center ${isToday ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}>
+                      <div className="text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1.5">
+                        <span>{day.short}</span>
+                        {isToday && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[9px] font-extrabold tracking-normal">HOY</span>}
+                      </div>
+                    </div>
+                    <div className="p-1.5 space-y-1.5 min-h-[88px]">
+                      {list.length === 0
+                        ? <p className="text-[11px] text-slate-300 text-center pt-5 select-none">·</p>
+                        : list.map(renderBlockCard)}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Móvil: apilado por día (solo días con bloques), sin scroll horizontal */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {DAYS.filter(d => (byDay.get(d.key) || []).length > 0).map(day => {
               const list = byDay.get(day.key) || []
               const isToday = day.key === todayKey
               return (
-                <div
-                  key={day.key}
-                  className={`flex-1 min-w-[120px] rounded-xl border ${isToday ? 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200' : 'border-slate-200 bg-slate-50/40'}`}
-                >
-                  {/* Cabecera del día — la de HOY se resalta */}
-                  <div className={`px-2 py-2 rounded-t-xl border-b text-center ${isToday ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}>
-                    <div className="text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1.5">
-                      <span>{day.short}</span>
-                      {isToday && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[9px] font-extrabold tracking-normal">HOY</span>}
-                    </div>
+                <div key={day.key} className={`px-3 py-3 ${isToday ? 'bg-indigo-50/60' : ''}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-bold uppercase tracking-wide ${isToday ? 'text-indigo-700' : 'text-slate-400'}`}>{day.label}</span>
+                    {isToday && <span className="rounded-full bg-indigo-600 text-white px-1.5 py-[1px] text-[9px] font-extrabold">HOY</span>}
                   </div>
-
-                  {/* Bloques del día, en orden de hora */}
-                  <div className="p-1.5 space-y-1.5 min-h-[88px]">
-                    {list.length === 0 ? (
-                      <p className="text-[11px] text-slate-300 text-center pt-5 select-none">·</p>
-                    ) : (
-                      list.map(b => {
-                        const c = b.color || typeMeta(b.type).color
-                        return (
-                          <div key={b.id} className="group relative rounded-lg bg-white border border-slate-200 shadow-sm p-2 pl-2.5 overflow-hidden">
-                            <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: c }} />
-                            <div className="text-[11px] font-semibold text-slate-500 tabular-nums">{b.startTime}–{b.endTime}</div>
-                            <div className="text-[13px] font-semibold text-slate-900 leading-snug mt-0.5 break-words">{b.title}</div>
-                            {b.type !== 'OTRO' && (
-                              <div className="text-[9px] font-medium uppercase tracking-wide text-slate-400 mt-0.5">{typeMeta(b.type).label}</div>
-                            )}
-                            {b.location && (
-                              <div className="text-[11px] text-slate-500 flex items-center gap-0.5 mt-0.5">
-                                <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{b.location}</span>
-                              </div>
-                            )}
-                            {/* Acciones al pasar el mouse */}
-                            <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded">
-                              <button onClick={() => openEdit(b)} title="Editar" className="p-1 rounded text-slate-400 hover:text-slate-700">
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button onClick={() => remove(b.id)} title="Eliminar" className="p-1 rounded text-slate-400 hover:text-red-600">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
+                  <div className="space-y-1.5">
+                    {list.map(renderBlockCard)}
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
+        </>
       )}
 
       {modalOpen && (
