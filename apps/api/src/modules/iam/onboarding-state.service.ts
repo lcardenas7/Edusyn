@@ -187,9 +187,9 @@ export class OnboardingStateService {
       actions: [
         {
           type: 'analyze',
-          label: 'Subir Excel de docentes',
-          enabled: false,
-          reason: 'Disponible próximamente',
+          label: teachersDone ? 'Actualizar docentes' : 'Subir Excel de docentes',
+          enabled: yearDone,
+          reason: yearDone ? undefined : 'Crea el año lectivo primero',
           variant: 'primary',
           requiresConfirmation: false,
           intent: { kind: 'upload', path: '/onboarding/teachers/analyze' },

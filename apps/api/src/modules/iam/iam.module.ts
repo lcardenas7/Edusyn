@@ -11,6 +11,8 @@ import { StudentImportService } from './student-import.service';
 import { OnboardingStudentsController } from './onboarding-students.controller';
 import { OnboardingStateService } from './onboarding-state.service';
 import { OnboardingStateController } from './onboarding-state.controller';
+import { TeacherImportService } from './teacher-import.service';
+import { OnboardingTeachersController } from './onboarding-teachers.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { InstitutionConfigModule } from '../institution-config/institution-config.module';
 import { AcademicModule } from '../academic/academic.module';
@@ -24,8 +26,8 @@ import { AcademicModule } from '../academic/academic.module';
       limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max para consolidados grandes
     }),
   ],
-  controllers: [UsersController, BulkUploadController, GradesBulkImportController, OnboardingStudentsController, OnboardingStateController],
-  providers: [UsersService, BulkUploadService, GradesBulkImportService, StudentImportService, OnboardingStateService],
+  controllers: [UsersController, BulkUploadController, GradesBulkImportController, OnboardingStudentsController, OnboardingStateController, OnboardingTeachersController],
+  providers: [UsersService, BulkUploadService, GradesBulkImportService, StudentImportService, OnboardingStateService, TeacherImportService],
   exports: [UsersService, BulkUploadService, GradesBulkImportService, StudentImportService],
 })
 export class IamModule {}
