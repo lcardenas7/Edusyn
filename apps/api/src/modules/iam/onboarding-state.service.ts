@@ -213,9 +213,9 @@ export class OnboardingStateService {
         actions: [
           {
             type: 'analyze',
-            label: 'Subir Excel de carga académica',
-            enabled: false,
-            reason: 'Disponible próximamente',
+            label: loadDone ? 'Actualizar carga académica' : 'Subir Excel de carga académica',
+            enabled: teachersDone && studentsDone,
+            reason: teachersDone && studentsDone ? undefined : 'Importa docentes y estudiantes primero',
             variant: 'primary',
             requiresConfirmation: false,
             intent: { kind: 'upload', path: '/onboarding/academic-load/analyze' },
