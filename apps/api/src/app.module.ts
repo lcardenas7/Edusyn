@@ -29,6 +29,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { ManagementTasksModule } from './modules/management-tasks/management-tasks.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { TimetablingModule } from './modules/timetabling/timetabling.module';
+import { TeacherScheduleModule } from './modules/teacher-schedule/teacher-schedule.module';
 import { CapabilitiesModule } from './modules/capabilities/capabilities.module';
 import { InstitutionContextModule } from './modules/institution-context/institution-context.module';
 import { PedagogicalSupportModule } from './modules/pedagogical-support/pedagogical-support.module';
@@ -81,6 +82,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
     ManagementTasksModule,
     FinanceModule,
     TimetablingModule,
+    TeacherScheduleModule,
     CapabilitiesModule,
     PedagogicalSupportModule,
     ApdModule,

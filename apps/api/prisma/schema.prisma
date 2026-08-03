@@ -342,6 +342,9 @@ model User {
   // Timetabling (Horarios)
   teacherAvailabilities TeacherAvailability[] @relation("TeacherScheduleAvailability")
 
+  // Horario personal del docente (agenda propia, manual)
+  teacherScheduleBlocks TeacherScheduleBlock[] @relation("TeacherScheduleBlocks")
+
   // Director / Acompañante de grupo
   directedGroups  Group[] @relation("groupDirector")
   companionGroups Group[] @relation("groupCompanion")
@@ -519,6 +522,7 @@ model Institution {
   scheduleGradeConfigs       ScheduleGradeConfig[]
   teacherAvailabilities      TeacherAvailability[]
   scheduleEntries            ScheduleEntry[]
+  teacherScheduleBlocks      TeacherScheduleBlock[]
   scheduleGenerationContexts ScheduleGenerationContext[]
   reportCardConfig           ReportCardConfig?           @relation("ReportCardConfigInstitution")
 
@@ -1319,11 +1323,11 @@ model EvaluationPlan {
 }
 
 model EvaluationComponent {
-  id            String   @id @default(cuid())
-  institutionId String
-  parentId      String?
-  code          String
-  name          String
+  id                    String   @id @default(cuid())
+  institutionId         String
+  parentId              String?
+  code                  String
+  name                  String
   // Fase 2 — fuente única de la estructura de evaluación de la institución.
   // El peso vive junto a la definición del componente y se HEREDA al plan de
   // evaluación de cada asignación (EvaluationPlanComponentWeight), que es lo que
@@ -4518,6 +4522,32 @@ model ScheduleEntry {
   @@index([dayOfWeek])
 }
 
+// Horario personal del docente (agenda propia, manual, solo visual).
+// NO es el horario institucional (ScheduleEntry): son bloques que el docente
+// crea a mano para verlos en su página de inicio.
+model TeacherScheduleBlock {
+  id            String    @id @default(cuid())
+  institutionId String
+  teacherId     String
+  dayOfWeek     DayOfWeek
+  startTime     String // "07:00" formato HH:mm
+  endTime       String // "07:45" formato HH:mm
+  type          String   @default("OTRO") // CLASE | TUTORIA | ATENCION_PADRES | REUNION_AREA | OTRO
+  title         String // "Matemáticas 6A", "Reunión de área", etc.
+  location      String? // Salón / lugar
+  color         String? // Color para la UI
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  teacher     User        @relation("TeacherScheduleBlocks", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([teacherId])
+}
+
 // Contexto persistente de generación de horarios (uno por institución+año+jornada)
 model ScheduleGenerationContext {
   id             String @id @default(cuid())
@@ -5660,16 +5690,16 @@ model Classroom {
 }
 
 model ClassroomSection {
-  id          String   @id @default(cuid())
-  classroomId String
-  title       String
-  description String?  @db.Text
-  sortOrder   Int      @default(0)
-  isVisible   Boolean  @default(true)
+  id             String   @id @default(cuid())
+  classroomId    String
+  title          String
+  description    String?  @db.Text
+  sortOrder      Int      @default(0)
+  isVisible      Boolean  @default(true)
   // Período académico OPCIONAL: permite categorizar el contenido por período.
   // Null = la sección no pertenece a ningún período (el docente que no lo use, no lo ve).
   academicTermId String?
-  createdAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   classroom    Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   academicTerm AcademicTerm?       @relation(fields: [academicTermId], references: [id], onDelete: SetNull)
@@ -5714,15 +5744,15 @@ model ClassroomAnnouncement {
 }
 
 model ClassroomActivity {
-  id          String                @id @default(cuid())
-  sectionId   String? // Nullable para permitir actividades huérfanas al borrar sección
+  id             String                @id @default(cuid())
+  sectionId      String? // Nullable para permitir actividades huérfanas al borrar sección
   // Período académico OPCIONAL y DIRECTO: la actividad puede vivir en un período sin
   // sección (el período es el organizador primario). Si null, hereda el de su sección.
   academicTermId String?
-  classroomId String
-  type        ClassroomActivityType
-  title       String
-  description String?               @db.Text
+  classroomId    String
+  type           ClassroomActivityType
+  title          String
+  description    String?               @db.Text
 
   maxScore         Decimal?  @db.Decimal(7, 2)
   dueDate          DateTime?
@@ -5800,7 +5830,7 @@ model ClassroomActivity {
 //  - Prerrequisito "blando" (informativo, no bloquea): columna `isOptional`.
 // ─────────────────────────────────────────────────────────────────────────────
 model ActivityDependency {
-  id             String @id @default(cuid())
+  id String @id @default(cuid())
 
   // Actividad que queda BLOQUEADA hasta que se cumpla la condición sobre el prerrequisito
   activityId     String
@@ -5812,11 +5842,11 @@ model ActivityDependency {
   condition ActivityUnlockCondition @default(SUBMITTED)
 
   // Puntaje mínimo requerido (solo relevante si condition = MIN_SCORE)
-  minScore  Decimal? @db.Decimal(7, 2)
+  minScore Decimal? @db.Decimal(7, 2)
 
   createdAt DateTime @default(now())
 
-  activity     ClassroomActivity @relation("ActivityDeps",     fields: [activityId],     references: [id], onDelete: Cascade)
+  activity     ClassroomActivity @relation("ActivityDeps", fields: [activityId], references: [id], onDelete: Cascade)
   prerequisite ClassroomActivity @relation("ActivityPrereqFor", fields: [prerequisiteId], references: [id], onDelete: Cascade)
 
   // Un prerrequisito no puede repetirse para la misma actividad
@@ -6805,20 +6835,20 @@ model AbpAnnouncement {
 }
 
 model AbpTeam {
-  id            String   @id @default(cuid())
+  id            String               @id @default(cuid())
   institutionId String
   projectId     String
   name          String
-  emoji         String   @default("🚀")
-  color         String   @default("#0E4A5A")
+  emoji         String               @default("🚀")
+  color         String               @default("#0E4A5A")
   identityState AbpTeamIdentityState @default(CONFIRMED) // DRAFT = los estudiantes deben fundar (nombre+emblema); RENAME_PENDING = cambio en revisión
   proposedName  String? // nombre propuesto por el equipo, a la espera de que el docente lo apruebe
-  currentPhase  Int      @default(1) // 1–6
-  xp            Int      @default(0) // XP de equipo (barra denormalizada)
-  problem       String?  @db.Text // el reto propio del equipo
-  badges        String[] @default([]) // insignias de equipo (códigos)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  currentPhase  Int                  @default(1) // 1–6
+  xp            Int                  @default(0) // XP de equipo (barra denormalizada)
+  problem       String?              @db.Text // el reto propio del equipo
+  badges        String[]             @default([]) // insignias de equipo (códigos)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   institution   Institution            @relation("RlsInstitutionABPT", fields: [institutionId], references: [id])
   project       AbpProject             @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -6994,36 +7024,36 @@ enum AbpImpact {
 }
 
 model AbpMission {
-  id                String           @id @default(cuid())
-  institutionId     String
-  phaseStateId      String
-  title             String
-  description       String?          @db.Text
-  sortOrder         Int              @default(0)
-  status            AbpMissionStatus @default(IN_PROGRESS)
-  required          Boolean          @default(true) // gating: obligatoria para validar la fase
-  xp                Int              @default(0)
-  generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
-  generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  id                     String           @id @default(cuid())
+  institutionId          String
+  phaseStateId           String
+  title                  String
+  description            String?          @db.Text
+  sortOrder              Int              @default(0)
+  status                 AbpMissionStatus @default(IN_PROGRESS)
+  required               Boolean          @default(true) // gating: obligatoria para validar la fase
+  xp                     Int              @default(0)
+  generatedBy            AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
+  generationContext      Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
   // DESTINATARIO: por defecto todo el equipo. INDIVIDUAL = dirigida a un
   // integrante ("Juan, tú entrevista al encargado"): solo él la entrega, el
   // equipo la ve para coordinarse. assigneeName va denormalizado para pintar
   // la autoría sin joins.
-  assigneeType           String    @default("TEAM") // TEAM | INDIVIDUAL
+  assigneeType           String           @default("TEAM") // TEAM | INDIVIDUAL
   assigneeEnrollmentId   String?
   assigneeName           String?
   dueAt                  DateTime? // fecha límite (opcional)
   // Misión de ENTREGA: un "taller" que el equipo cumple ENTREGANDO un producto
   // (no marcando un checkbox). Vive dentro del ABP porque es parte del proyecto.
   deliverableKind        String? // null = trabajo libre · FILE | LINK | TEXT
-  deliveryState          String    @default("PENDING") // PENDING | SUBMITTED
+  deliveryState          String           @default("PENDING") // PENDING | SUBMITTED
   deliveryUrl            String? // storage path (FILE) o enlace (LINK)
-  deliveryText           String?   @db.Text // entrega de texto
+  deliveryText           String?          @db.Text // entrega de texto
   deliveryLabel          String? // nombre del archivo / etiqueta legible
   deliveryByEnrollmentId String? // quién entregó (participación)
   deliveredAt            DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
   institution Institution          @relation("RlsInstitutionABPMI", fields: [institutionId], references: [id])
   phaseState  AbpPhaseState        @relation(fields: [phaseStateId], references: [id], onDelete: Cascade)
@@ -7127,18 +7157,18 @@ enum TallerObjectType {
 model TallerInstrument {
   id            String   @id @default(cuid())
   institutionId String
-  courseId      String?  // classroomId (referencia)
-  expeditionId  String?  // abpProjectId u otra experiencia (referencia)
-  teamId        String?  // equipo dueño del lienzo (referencia)
-  stationId     String?  // estación/fase (referencia)
-  motor         String   // BOARD | GRAPH | CARDS | MATRIX | POLL | FLOW | TIMELINE | FRAME | MEDIA | DOC | BUILDER
-  dynamic       String?  // BRAINSTORM | CRAZY8 | SCAMPER | AFINIDAD | ...
+  courseId      String? // classroomId (referencia)
+  expeditionId  String? // abpProjectId u otra experiencia (referencia)
+  teamId        String? // equipo dueño del lienzo (referencia)
+  stationId     String? // estación/fase (referencia)
+  motor         String // BOARD | GRAPH | CARDS | MATRIX | POLL | FLOW | TIMELINE | FRAME | MEDIA | DOC | BUILDER
+  dynamic       String? // BRAINSTORM | CRAZY8 | SCAMPER | AFINIDAD | ...
   title         String
   config        Json     @default("{}") // reglas de la dinámica (guía, límites, colores…)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  objects       TallerObject[]
+  objects TallerObject[]
 
   @@index([institutionId])
   @@index([teamId])
@@ -7148,25 +7178,25 @@ model TallerInstrument {
 // Objeto Universal: base + capacidades (mixins) en `data`. Escritura atómica por
 // `version` (anti lost-update). `state` = ciclo de vida propio del tipo.
 model TallerObject {
-  id            String            @id @default(cuid())
+  id            String           @id @default(cuid())
   institutionId String
   // scope (referencias, no FKs)
   courseId      String?
   expeditionId  String?
   teamId        String?
   stationId     String?
-  instrumentId  String?           // dónde vive (Board/Brainstorm…)
+  instrumentId  String? // dónde vive (Board/Brainstorm…)
   type          TallerObjectType
-  authorId      String?           // studentEnrollmentId (null = docente/sistema)
-  authorName    String?           // nombre denormalizado (pintar autoría sin join)
-  state         String?           // p.ej. Task: TODO|DOING|DONE
-  data          Json              @default("{}") // text, colorId, x, y, votos, …
-  version       Int               @default(0)    // capacidad Historial + CAS atómico
-  deletedAt     DateTime?         // borrado suave (nada desaparece)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  authorId      String? // studentEnrollmentId (null = docente/sistema)
+  authorName    String? // nombre denormalizado (pintar autoría sin join)
+  state         String? // p.ej. Task: TODO|DOING|DONE
+  data          Json             @default("{}") // text, colorId, x, y, votos, …
+  version       Int              @default(0) // capacidad Historial + CAS atómico
+  deletedAt     DateTime? // borrado suave (nada desaparece)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
-  instrument    TallerInstrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrument TallerInstrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
   @@index([institutionId])
   @@index([instrumentId])
@@ -7180,7 +7210,7 @@ model TallerRelation {
   id            String   @id @default(cuid())
   institutionId String
   teamId        String?
-  relType       String   // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a | conecta-con
+  relType       String // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a | conecta-con
   fromId        String
   toId          String
   label         String? // texto libre de la relación ("influye en", "usa el agua de…") — Mapa de Actores
@@ -7198,11 +7228,11 @@ model TallerRelation {
 model TallerEvent {
   id            String   @id @default(cuid())
   institutionId String
-  type          String   // dominio.PasadoSimple: object.Created, abp.IdeaCreated, team.TeamNamed…
+  type          String // dominio.PasadoSimple: object.Created, abp.IdeaCreated, team.TeamNamed…
   occurredAt    DateTime @default(now())
   // actor
   actorUserId   String?
-  actorRole     String?  // student | teacher | valeria | system
+  actorRole     String? // student | teacher | valeria | system
   // scope
   courseId      String?
   expeditionId  String?
