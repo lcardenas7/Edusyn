@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { dashboardApi } from '../lib/api'
 import TeacherAssignmentsWidget from '../components/TeacherAssignmentsWidget'
+import TeacherScheduleWidget from '../components/TeacherScheduleWidget'
 import AdminAlertsWidget from '../components/AdminAlertsWidget'
 
 interface Announcement {
@@ -124,6 +125,13 @@ export default function Dashboard() {
     return ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(name)
   })
 
+  // Solo para el cuadrito "Mi Horario": detección de rol robusta que también
+  // entiende la forma anidada { role: { name } } que entrega /auth/me.
+  const isDocente = (user?.roles ?? []).some((r: any) => {
+    const name = typeof r === 'string' ? r : (r?.name ?? r?.role?.name)
+    return name === 'DOCENTE'
+  })
+
   return (
     <div>
       <div className="mb-8">
@@ -134,6 +142,13 @@ export default function Dashboard() {
           Aquí tienes las novedades de la institución
         </p>
       </div>
+
+      {/* Mi Horario — cuadrito de agenda personal del docente */}
+      {isDocente && (
+        <div className="mb-6">
+          <TeacherScheduleWidget />
+        </div>
+      )}
 
       {/* F0.1: Tarjeta Edusyn Play para docentes */}
       {isTeacherOrAdmin && (
