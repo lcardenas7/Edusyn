@@ -13,11 +13,13 @@ import { OnboardingStateService } from './onboarding-state.service';
 import { OnboardingStateController } from './onboarding-state.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { InstitutionConfigModule } from '../institution-config/institution-config.module';
+import { AcademicModule } from '../academic/academic.module';
 
 @Module({
   imports: [
     PrismaModule,
     InstitutionConfigModule, // reusa getConfigCompleteness para el gate SIEE (AR3)
+    AcademicModule, // reusa validateYearForActivation para la honestidad de la activación (AR3)
     MulterModule.register({
       limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max para consolidados grandes
     }),

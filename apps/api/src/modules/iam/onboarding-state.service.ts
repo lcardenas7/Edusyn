@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { Action, CanonicalStep, OnboardingState, StepStatus } from '@edusyn/types';
+import type { Action, CanonicalStep, Issue, OnboardingState, StepStatus } from '@edusyn/types';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { InstitutionConfigService } from '../institution-config/institution-config.service';
+import { AcademicYearLifecycleService } from '../academic/academic-year-lifecycle.service';
 
 /**
  * MÓDULO 8 (Onboarding v2) — Estado Canónico del onboarding (§5, AR10).
@@ -33,6 +34,7 @@ export class OnboardingStateService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: InstitutionConfigService,
+    private readonly yearLifecycle: AcademicYearLifecycleService,
   ) {}
 
   async getState(institutionId: string): Promise<OnboardingState> {
@@ -223,29 +225,71 @@ export class OnboardingStateService {
     }
 
     // ── Paso 6: Activación del año ────────────────────────────────────────────
+    // Honestidad de la interfaz (UX11): el estado NO ofrece activar si el backend
+    // lo rechazaría. Reusa validateYearForActivation (AR3) para reflejar la verdad.
     {
-      const deps = [{ done: studentsDone, key: 'students-import', label: 'Completa la importación de estudiantes' }];
-      const canActivate = studentsDone && year?.status === 'DRAFT';
+      let activationStatus: StepStatus;
+      let activationBlockedBy: { key: string; message: string }[] = [];
+      let activationIssues: Issue[] = [];
+      let activationEnabled = false;
+      let activationReason: string | undefined;
+
+      if (activationDone) {
+        activationStatus = 'done';
+      } else if (!studentsDone) {
+        activationStatus = 'locked';
+        activationBlockedBy = [{ key: 'students-import', message: 'Completa la importación de estudiantes' }];
+        activationReason = 'Completa la importación de estudiantes';
+      } else if (year) {
+        // Estudiantes listos y año en DRAFT: preguntar al backend si de verdad se puede activar.
+        const val = await this.yearLifecycle.validateYearForActivation(year.id);
+        activationIssues = [
+          ...val.errors.map((e): Issue => ({
+            severity: 'blocking',
+            code: 'ACTIVATION_REQUIREMENT',
+            message: e,
+            howToFix: 'Corrige este requisito antes de activar el año.',
+          })),
+          ...val.warnings.map((w): Issue => ({
+            severity: 'warning',
+            code: 'ACTIVATION_WARNING',
+            message: w,
+          })),
+        ];
+        if (val.errors.length === 0) {
+          activationStatus = 'available';
+          activationEnabled = true;
+        } else {
+          activationStatus = 'locked';
+          activationBlockedBy = val.errors.map((e, i) => ({ key: `activation-req-${i}`, message: e }));
+          activationReason = val.errors[0];
+        }
+      } else {
+        activationStatus = 'locked';
+        activationReason = 'Crea el año lectivo primero';
+      }
+
       steps.push({
         key: 'activation',
         label: 'Activación del año',
-        status: statusFor(activationDone, deps),
-        blockedBy: blockersOf(activationDone, deps),
+        status: activationStatus,
+        blockedBy: activationBlockedBy,
         summary: activationDone && year ? [{ key: 'status', label: 'Estado', value: 'Activo' }] : [],
-        issues: [],
+        issues: activationIssues,
         actions: [
           {
             type: 'activate',
             label: year ? `Activar año lectivo ${year.year}` : 'Activar año lectivo',
-            enabled: canActivate,
-            reason: canActivate
-              ? undefined
-              : activationDone
-                ? 'El año ya está activo'
-                : 'Completa la importación de estudiantes',
+            enabled: activationEnabled,
+            reason: activationReason,
             variant: 'destructive',
             requiresConfirmation: true,
-            intent: { kind: 'submit', method: 'POST', path: `/academic-years/${year?.id ?? ''}/activate` },
+            // #3: sin año no hay id → evitar '//'. La acción va deshabilitada igual.
+            intent: {
+              kind: 'submit',
+              method: 'POST',
+              path: year ? `/academic-years/${year.id}/activate` : '/academic-years/activate',
+            },
           },
         ],
       });
