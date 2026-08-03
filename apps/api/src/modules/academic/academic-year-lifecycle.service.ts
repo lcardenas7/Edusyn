@@ -119,6 +119,31 @@ export class AcademicYearLifecycleService {
       },
     });
 
+    // Materializar los períodos del año desde la configuración institucional (SIEE).
+    // Antes, si el SIEE se aplicaba ANTES de crear el año, los AcademicTerm de
+    // período no se creaban (syncPeriodsToAcademicTerms no encontraba año) y el año
+    // quedaba imposible de activar ("Debe configurar al menos un período académico").
+    // Al nacer el año hereda la estructura de períodos ya configurada.
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: dto.institutionId },
+      select: { periodsConfig: true },
+    });
+    const periods = Array.isArray(inst?.periodsConfig) ? (inst!.periodsConfig as any[]) : [];
+    if (periods.length > 0) {
+      await this.prisma.academicTerm.createMany({
+        data: periods.map((p, i) => ({
+          academicYearId: academicYear.id,
+          type: 'PERIOD' as const,
+          name: p?.name || `Período ${i + 1}`,
+          order: i + 1,
+          weightPercentage: Number(p?.weight) || 0,
+          startDate: p?.startDate ? new Date(p.startDate) : null,
+          endDate: p?.endDate ? new Date(p.endDate) : null,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     return academicYear;
   }
 
