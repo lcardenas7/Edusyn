@@ -9,14 +9,19 @@ import {
   type TeacherScheduleBlockType,
 } from '../lib/api'
 
-const DAYS: { key: TeacherScheduleBlock['dayOfWeek']; label: string }[] = [
-  { key: 'MONDAY', label: 'Lunes' },
-  { key: 'TUESDAY', label: 'Martes' },
-  { key: 'WEDNESDAY', label: 'Miércoles' },
-  { key: 'THURSDAY', label: 'Jueves' },
-  { key: 'FRIDAY', label: 'Viernes' },
-  { key: 'SATURDAY', label: 'Sábado' },
+const DAYS: { key: TeacherScheduleBlock['dayOfWeek']; label: string; short: string }[] = [
+  { key: 'MONDAY', label: 'Lunes', short: 'Lun' },
+  { key: 'TUESDAY', label: 'Martes', short: 'Mar' },
+  { key: 'WEDNESDAY', label: 'Miércoles', short: 'Mié' },
+  { key: 'THURSDAY', label: 'Jueves', short: 'Jue' },
+  { key: 'FRIDAY', label: 'Viernes', short: 'Vie' },
+  { key: 'SATURDAY', label: 'Sábado', short: 'Sáb' },
 ]
+
+// Día actual (JS getDay: 0=Dom..6=Sáb) → clave de nuestro horario
+const JS_DAY_TO_KEY: Record<number, TeacherScheduleBlock['dayOfWeek'] | undefined> = {
+  1: 'MONDAY', 2: 'TUESDAY', 3: 'WEDNESDAY', 4: 'THURSDAY', 5: 'FRIDAY', 6: 'SATURDAY',
+}
 
 // Tipos de bloque. Cada uno con su color por defecto.
 const TYPES: { value: TeacherScheduleBlockType; label: string; color: string }[] = [
@@ -170,6 +175,7 @@ export default function TeacherScheduleWidget() {
   }
 
   const hasTitleField = form.type === 'CLASE' || form.type === 'OTRO'
+  const todayKey = JS_DAY_TO_KEY[new Date().getDay()]
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -200,47 +206,62 @@ export default function TeacherScheduleWidget() {
           </button>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 max-h-[420px] overflow-y-auto">
-          {DAYS.map(day => {
-            const list = byDay.get(day.key) || []
-            if (list.length === 0) return null
-            return (
-              <div key={day.key} className="px-5 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">{day.label}</p>
-                <div className="space-y-1.5">
-                  {list.map(b => (
-                    <div key={b.id} className="group flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50">
-                      <div className="w-1 h-9 rounded-full shrink-0" style={{ backgroundColor: b.color || typeMeta(b.type).color }} />
-                      <div className="w-24 shrink-0 text-xs text-slate-500 tabular-nums">
-                        {b.startTime}–{b.endTime}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{b.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {b.type !== 'OTRO' && (
-                            <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{typeMeta(b.type).label}</span>
-                          )}
-                          {b.location && (
-                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> {b.location}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEdit(b)} title="Editar" className="p-1.5 rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-700">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => remove(b.id)} title="Eliminar" className="p-1.5 rounded-md text-slate-400 hover:bg-red-100 hover:text-red-600">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+        <div className="p-3 overflow-x-auto">
+          <div className="flex gap-2 min-w-[760px]">
+            {DAYS.map(day => {
+              const list = byDay.get(day.key) || []
+              const isToday = day.key === todayKey
+              return (
+                <div
+                  key={day.key}
+                  className={`flex-1 min-w-[120px] rounded-xl border ${isToday ? 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200' : 'border-slate-200 bg-slate-50/40'}`}
+                >
+                  {/* Cabecera del día — la de HOY se resalta */}
+                  <div className={`px-2 py-2 rounded-t-xl border-b text-center ${isToday ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}>
+                    <div className="text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1.5">
+                      <span>{day.short}</span>
+                      {isToday && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[9px] font-extrabold tracking-normal">HOY</span>}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Bloques del día, en orden de hora */}
+                  <div className="p-1.5 space-y-1.5 min-h-[88px]">
+                    {list.length === 0 ? (
+                      <p className="text-[11px] text-slate-300 text-center pt-5 select-none">·</p>
+                    ) : (
+                      list.map(b => {
+                        const c = b.color || typeMeta(b.type).color
+                        return (
+                          <div key={b.id} className="group relative rounded-lg bg-white border border-slate-200 shadow-sm p-2 pl-2.5 overflow-hidden">
+                            <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: c }} />
+                            <div className="text-[11px] font-semibold text-slate-500 tabular-nums">{b.startTime}–{b.endTime}</div>
+                            <div className="text-[13px] font-semibold text-slate-900 leading-snug mt-0.5 break-words">{b.title}</div>
+                            {b.type !== 'OTRO' && (
+                              <div className="text-[9px] font-medium uppercase tracking-wide text-slate-400 mt-0.5">{typeMeta(b.type).label}</div>
+                            )}
+                            {b.location && (
+                              <div className="text-[11px] text-slate-500 flex items-center gap-0.5 mt-0.5">
+                                <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{b.location}</span>
+                              </div>
+                            )}
+                            {/* Acciones al pasar el mouse */}
+                            <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded">
+                              <button onClick={() => openEdit(b)} title="Editar" className="p-1 rounded text-slate-400 hover:text-slate-700">
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button onClick={() => remove(b.id)} title="Eliminar" className="p-1 rounded text-slate-400 hover:text-red-600">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
