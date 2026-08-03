@@ -21,15 +21,15 @@ import {
 import { onboardingSource } from '../lib/onboarding/onboardingSource';
 
 /**
- * OnboardingDemo — pantalla de demostración del kit data-driven.
+ * ConfiguracionInicial — puesta en marcha de la institución (Estado Canónico).
  *
  * Todo lo que se ve aquí llega del contrato: la pantalla no calcula estado,
  * progreso, elegibilidad ni bloqueos. Solo:
- *   1. pide el estado a la fuente intercambiable (mock hoy, API mañana),
+ *   1. pide el estado real a GET /onboarding/state (fuente intercambiable),
  *   2. reparte las props a los componentes,
  *   3. ejecuta los intents (navegar / subir / llamar endpoint).
  */
-export default function OnboardingDemo() {
+export default function ConfiguracionInicial() {
   const navigate = useNavigate();
   const [state, setState] = useState<OnboardingState | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -117,7 +117,7 @@ export default function OnboardingDemo() {
 
   return (
     <WizardShell
-      title="Onboarding institucional"
+      title="Configuración inicial"
       description="Estado real de tu institución, calculado por el backend. Completa cada paso para poner en marcha el año lectivo."
       steps={state.steps}
       recommendedNext={state.recommendedNext}
@@ -184,7 +184,7 @@ export default function OnboardingDemo() {
 
         {/* Columna lateral: progreso y siguiente sugerido */}
         <aside className="space-y-4">
-          <ProgressCard title="Avance del onboarding" progress={state.progress} />
+          <ProgressCard title="Avance de la configuración" progress={state.progress} />
 
           {recommended && recommendedAction && (
             <ActionCard
@@ -196,8 +196,8 @@ export default function OnboardingDemo() {
           )}
 
           <InfoBanner
-            title="Estado en vivo"
-            message="Esta pantalla refleja GET /onboarding/state en tiempo real. El backend decide qué está hecho, bloqueado o disponible; aquí solo se representa."
+            title="Se actualiza sola"
+            message="Esta pantalla muestra el avance real de tu institución. A medida que completes cada paso, se marca aquí automáticamente."
           />
         </aside>
       </div>

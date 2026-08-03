@@ -34,7 +34,7 @@ import AcademicYearClosure from './pages/AcademicYearClosure'
 import VotingPortal from './pages/VotingPortal'
 import Elections from './pages/Elections'
 import ElectionResults from './pages/ElectionResults'
-import OnboardingDemo from './pages/OnboardingDemo'
+import ConfiguracionInicial from './pages/ConfiguracionInicial'
 import LandingPage from './pages/LandingPage'
 import InstitutionalDocuments from './pages/InstitutionalDocuments'
 import ManagementTasks from './pages/ManagementTasks'
@@ -222,9 +222,6 @@ function App() {
       <Routes>
         {/* Landing Page - Página principal pública */}
         <Route path="/" element={<LandingPage />} />
-        
-        {/* Demo del kit data-driven (@edusyn/ui) — pública, sin auth */}
-        <Route path="/onboarding-demo" element={<OnboardingDemo />} />
 
         {/* Login por institución (multi-tenant) */}
         <Route path="/login" element={<InstitutionLogin />} />
@@ -300,6 +297,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/configuracion-inicial" element={<ConfiguracionInicial />} />
                   <Route path="/setup" element={<Setup />} />
                   <Route path="/institution" element={<InstitutionHub />} />
                   <Route path="/students" element={<Students />} />
