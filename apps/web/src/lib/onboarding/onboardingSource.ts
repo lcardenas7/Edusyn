@@ -1,4 +1,5 @@
 import type { OnboardingState } from '@edusyn/types';
+import api from '../api';
 
 /**
  * Fuente de datos del Onboarding Institucional — PUNTO ÚNICO DE INTERCAMBIO.
@@ -210,13 +211,19 @@ const mockSource: OnboardingDataSource = {
 };
 
 /**
- * Implementación futura (referencia; activar cuando el endpoint exista):
- *
- * const httpSource: OnboardingDataSource = {
- *   async getState() {
- *     const { data } = await api.get<OnboardingState>('/onboarding/state');
- *     return data;
- *   },
- * };
+ * Fuente real: consume GET /onboarding/state (Módulo 8) con el cliente axios
+ * autenticado (inyecta el token y maneja el 401 → login). El estado lo calcula
+ * el backend por completo; aquí no se deriva nada (AR2/E1).
  */
-export const onboardingSource: OnboardingDataSource = mockSource;
+const httpSource: OnboardingDataSource = {
+  async getState() {
+    const { data } = await api.get<OnboardingState>('/onboarding/state');
+    return data;
+  },
+};
+
+// Fuente activa. Para desarrollo offline sin backend, cambiar a `mockSource`.
+export const onboardingSource: OnboardingDataSource = httpSource;
+
+// Referencia de desarrollo (no se elimina): fixture que cumple el contrato.
+void mockSource;

@@ -118,7 +118,7 @@ export default function OnboardingDemo() {
   return (
     <WizardShell
       title="Onboarding institucional"
-      description="Pantalla de demostración del kit de componentes. Los datos son de ejemplo; los componentes son los finales."
+      description="Estado real de tu institución, calculado por el backend. Completa cada paso para poner en marcha el año lectivo."
       steps={state.steps}
       recommendedNext={state.recommendedNext}
       selectedStep={step?.key}
@@ -196,8 +196,8 @@ export default function OnboardingDemo() {
           )}
 
           <InfoBanner
-            title="Fuente de datos intercambiable"
-            message="Esta pantalla se alimenta de un adaptador mock que cumple el contrato. Cuando exista GET /onboarding/state, solo cambia el adaptador."
+            title="Estado en vivo"
+            message="Esta pantalla refleja GET /onboarding/state en tiempo real. El backend decide qué está hecho, bloqueado o disponible; aquí solo se representa."
           />
         </aside>
       </div>
