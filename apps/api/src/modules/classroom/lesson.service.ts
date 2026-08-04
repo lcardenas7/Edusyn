@@ -849,6 +849,30 @@ export class LessonService {
     return String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
+  // Normaliza una respuesta ESCRITA para compararla con tolerancia: minúsculas,
+  // sin acentos, sin espacios extra y sin puntuación en los extremos. DEBE
+  // coincidir con canonicalText() de web/grading.ts.
+  private canonicalText(s: any): string {
+    return String(s ?? '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/^[\s.,;:!?¿¡"'“”‘’()…]+|[\s.,;:!?¿¡"'“”‘’()…]+$/g, '')
+      .trim();
+  }
+
+  // Juez de respuestas escritas. Admite alternativas separadas por "|".
+  // DEBE coincidir con textMatches() de web/grading.ts.
+  private textMatches(correct: any, answer: any): boolean {
+    const a = this.canonicalText(answer);
+    if (!a) return false;
+    return String(correct ?? '')
+      .split('|')
+      .map((c) => this.canonicalText(c))
+      .filter(Boolean)
+      .some((c) => c === a);
+  }
+
   // Pares de MATCHING en `options` como "izquierda::derecha" (camino A).
   private parsePairs(options?: any[]): { left: string; right: string }[] {
     return (options || [])
@@ -905,12 +929,22 @@ export class LessonService {
       return Array.isArray(answer) && answer.length === n * n && answer.every((v: number, i: number) => v === i);
     }
 
-    if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
-      // Forma legada multi-hueco.
-      return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));
+    if (type === 'FILL_BLANK') {
+      // Forma legada multi-hueco (correctAnswer y answer como arrays).
+      if (Array.isArray(correct) && Array.isArray(answer)) {
+        return correct.every((c: string, i: number) => this.canonicalText(answer[i]) === this.canonicalText(c));
+      }
+      // Hueco simple: comparación tolerante (acentos/puntuación/alternativas "|").
+      return this.textMatches(correct, answer);
     }
 
-    // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, FILL_BLANK (hueco simple)
+    if (type === 'SHORT_ANSWER') {
+      // Abierta: cualquier respuesta no vacía es válida (alineado con el frontend).
+      if (activityData.openAnswer) return this.canonicalText(answer) !== '';
+      return this.textMatches(correct, answer);
+    }
+
+    // MULTIPLE_CHOICE, TRUE_FALSE (elección exacta de una opción)
     if (!correct) return false;
     return this.norm(answer) === this.norm(correct);
   }

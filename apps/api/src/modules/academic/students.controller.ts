@@ -78,6 +78,16 @@ export class StudentsController {
   }
 
   /**
+   * Iguala la contraseña de cada estudiante a su nombre de usuario (usuario = contraseña).
+   * Acceso: Admin, Coordinador, o docentes con permiso delegado (canManageCredentials)
+   */
+  @Post('bulk-password-equals-username')
+  @UseGuards(CredentialsGuard)
+  async bulkPasswordEqualsUsername(@Body() data: { studentIds: string[] }) {
+    return this.studentsService.bulkSetPasswordToUsername(data.studentIds);
+  }
+
+  /**
    * Regenera credenciales (username + password) de estudiantes sin acceso activo.
    * Útil cuando se actualizaron documentos pero los usernames quedaron con datos viejos.
    * Solo afecta estudiantes que nunca han iniciado sesión (mustChangePassword=true).

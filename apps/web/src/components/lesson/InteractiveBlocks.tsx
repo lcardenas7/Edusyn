@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { CheckCircle2, GripVertical, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
-import { type ActivityData, norm, parsePairs, parseHotspots, gradeAnswer, isAnswerComplete } from './grading'
+import { type ActivityData, norm, textMatches, parsePairs, parseHotspots, gradeAnswer, isAnswerComplete } from './grading'
 import { type WSCell, wsBuild, wsLine, wsMatch } from './wordsearch'
 import { useResolvedMediaUrl } from '../media/SmartMedia'
 import { cwBuild, cwSolved } from './crossword'
@@ -100,7 +100,7 @@ function InlineBlankBlock({ act, value, onChange, showResult }: BlockProps) {
   // metemos el input en su lugar → se completa dentro de la oración (§3.7).
   const parts = useMemo(() => (act.question || '').split(/_{2,}/), [act.question])
   const hasBlank = parts.length > 1
-  const isCorrect = showResult && norm(value) === norm(act.correctAnswer)
+  const isCorrect = showResult && textMatches(act.correctAnswer, value)
   const typed = String(value ?? '')
 
   const input = (
