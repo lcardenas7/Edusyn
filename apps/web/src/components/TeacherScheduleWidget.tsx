@@ -69,6 +69,10 @@ export default function TeacherScheduleWidget() {
   const [form, setForm] = useState<TeacherScheduleBlockInput>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Día visible en el widget: por defecto HOY (o Lunes si es domingo)
+  const [selectedDay, setSelectedDay] = useState<TeacherScheduleBlock['dayOfWeek']>(
+    () => JS_DAY_TO_KEY[new Date().getDay()] ?? 'MONDAY',
+  )
 
   const load = () => {
     teacherScheduleApi
@@ -113,7 +117,7 @@ export default function TeacherScheduleWidget() {
 
   const openNew = () => {
     setEditingId(null)
-    setForm(emptyForm)
+    setForm({ ...emptyForm, dayOfWeek: selectedDay })
     setError(null)
     setModalOpen(true)
   }
@@ -234,54 +238,55 @@ export default function TeacherScheduleWidget() {
           </button>
         </div>
       ) : (
-        <>
-          {/* Escritorio/tablet: cuadrícula por día */}
-          <div className="hidden md:block p-3 overflow-x-auto">
-            <div className="flex gap-2">
-              {DAYS.map(day => {
-                const list = byDay.get(day.key) || []
-                const isToday = day.key === todayKey
-                return (
-                  <div
-                    key={day.key}
-                    className={`flex-1 min-w-[110px] rounded-xl border ${isToday ? 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200' : 'border-slate-200 bg-slate-50/40'}`}
-                  >
-                    <div className={`px-2 py-2 rounded-t-xl border-b text-center ${isToday ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}>
-                      <div className="text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1.5">
-                        <span>{day.short}</span>
-                        {isToday && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[9px] font-extrabold tracking-normal">HOY</span>}
-                      </div>
-                    </div>
-                    <div className="p-1.5 space-y-1.5 min-h-[88px]">
-                      {list.length === 0
-                        ? <p className="text-[11px] text-slate-300 text-center pt-5 select-none">·</p>
-                        : list.map(renderBlockCard)}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Móvil: apilado por día (solo días con bloques), sin scroll horizontal */}
-          <div className="md:hidden divide-y divide-slate-100">
-            {DAYS.filter(d => (byDay.get(d.key) || []).length > 0).map(day => {
-              const list = byDay.get(day.key) || []
+        <div className="p-3">
+          {/* Selector de día — abre en HOY, el docente puede cambiar */}
+          <div className="flex gap-1 mb-3">
+            {DAYS.map(day => {
+              const isSel = day.key === selectedDay
               const isToday = day.key === todayKey
+              const count = (byDay.get(day.key) || []).length
+              const cls = isSel
+                ? 'bg-indigo-600 text-white'
+                : isToday
+                  ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               return (
-                <div key={day.key} className={`px-3 py-3 ${isToday ? 'bg-indigo-50/60' : ''}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs font-bold uppercase tracking-wide ${isToday ? 'text-indigo-700' : 'text-slate-400'}`}>{day.label}</span>
-                    {isToday && <span className="rounded-full bg-indigo-600 text-white px-1.5 py-[1px] text-[9px] font-extrabold">HOY</span>}
-                  </div>
-                  <div className="space-y-1.5">
-                    {list.map(renderBlockCard)}
-                  </div>
-                </div>
+                <button
+                  key={day.key}
+                  onClick={() => setSelectedDay(day.key)}
+                  className={`relative flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors ${cls}`}
+                >
+                  {day.short}
+                  {count > 0 && !isSel && (
+                    <span className="absolute -top-1 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">{count}</span>
+                  )}
+                </button>
               )
             })}
           </div>
-        </>
+
+          {/* Encabezado del día seleccionado */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-semibold text-slate-800">{DAYS.find(d => d.key === selectedDay)?.label}</span>
+            {selectedDay === todayKey && (
+              <span className="rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">Hoy</span>
+            )}
+          </div>
+
+          {/* Bloques del día seleccionado */}
+          {(byDay.get(selectedDay) || []).length === 0 ? (
+            <div className="py-6 text-center text-slate-400">
+              <p className="text-sm">No tienes bloques este día</p>
+              <button onClick={openNew} className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                Añadir uno
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {(byDay.get(selectedDay) || []).map(renderBlockCard)}
+            </div>
+          )}
+        </div>
       )}
 
       {modalOpen && (
