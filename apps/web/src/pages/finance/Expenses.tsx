@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -124,7 +126,7 @@ export default function Expenses() {
 
   const handleSubmitExpense = async () => {
     if (!expenseForm.categoryId || !expenseForm.description.trim() || !expenseForm.amount || Number(expenseForm.amount) <= 0) {
-      alert('Categoría, descripción y monto son requeridos')
+      toast.warning('Categoría, descripción y monto son requeridos')
       return
     }
     setSavingExpense(true)
@@ -142,7 +144,7 @@ export default function Expenses() {
       setShowNewExpenseModal(false)
       fetchExpenses()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al registrar egreso')
+      toast.error(err.response?.data?.message || 'Error al registrar egreso')
     } finally {
       setSavingExpense(false)
     }
@@ -164,7 +166,7 @@ export default function Expenses() {
       setQuickProviderName('')
       setQuickProviderDoc('')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al crear proveedor')
+      toast.error(err.response?.data?.message || 'Error al crear proveedor')
     } finally {
       setSavingProvider(false)
     }
@@ -178,12 +180,12 @@ export default function Expenses() {
     : providers
 
   const handleApproveExpense = async (id: string) => {
-    if (!confirm('¿Aprobar este egreso?')) return
+    if (!(await confirmDialog('¿Aprobar este egreso?', { danger: true }))) return
     try {
       await financeExpensesApi.approve(id)
       await fetchExpenses()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al aprobar egreso')
+      toast.error(err.response?.data?.message || 'Error al aprobar egreso')
     }
   }
 
@@ -194,7 +196,7 @@ export default function Expenses() {
       await financeExpensesApi.void(id, reason)
       await fetchExpenses()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al anular egreso')
+      toast.error(err.response?.data?.message || 'Error al anular egreso')
     }
   }
 

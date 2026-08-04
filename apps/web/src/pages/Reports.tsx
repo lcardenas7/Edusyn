@@ -17,6 +17,7 @@
  * @deprecated Usar los componentes modulares en /pages/reports/
  */
 import { useState, useEffect, useMemo } from 'react'
+import { toast } from '../lib/toast'
 import { 
   FileText,
   Users,
@@ -442,12 +443,12 @@ export default function Reports() {
         csvContent += `${idx + 1},"${s.subject}",${s.totalStudents},${s.totalRecords},${s.present},${s.absent},${s.pct}%\n`
       })
     } else {
-      alert('No hay datos para exportar en este reporte')
+      toast.warning('No hay datos para exportar en este reporte')
       return
     }
 
     if (!csvContent || csvContent.split('\n').length <= 1) {
-      alert('No hay datos para exportar')
+      toast.warning('No hay datos para exportar')
       return
     }
 

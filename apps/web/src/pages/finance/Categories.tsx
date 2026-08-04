@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -99,31 +101,31 @@ export default function Categories() {
       setShowModal(false)
       fetchCategories()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al guardar')
+      toast.error(err.response?.data?.message || 'Error al guardar')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar la categoría "${name}"?`)) return
+    if (!(await confirmDialog(`¿Eliminar la categoría "${name}"?`, { danger: true }))) return
     try {
       await financeCategoriesApi.delete(id)
       fetchCategories()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al eliminar')
+      toast.error(err.response?.data?.message || 'Error al eliminar')
     }
   }
 
   const handleSeedDefaults = async () => {
-    if (!confirm('¿Crear categorías por defecto? No se duplicarán las existentes.')) return
+    if (!(await confirmDialog('¿Crear categorías por defecto? No se duplicarán las existentes.', { danger: true }))) return
     setSeeding(true)
     try {
       const res = await financeCategoriesApi.seedDefaults()
-      alert(`Se crearon ${res.data.created} categorías`)
+      toast.error(`Se crearon ${res.data.created} categorías`)
       fetchCategories()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al crear categorías')
+      toast.error(err.response?.data?.message || 'Error al crear categorías')
     } finally {
       setSeeding(false)
     }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from '../../lib/toast'
 import { 
   FileText,
   Download,
@@ -56,17 +57,17 @@ export default function BulletinsReports() {
 
   const generateReport = async () => {
     if (!filterYear) {
-      alert('Seleccione un año escolar')
+      toast.error('Seleccione un año escolar')
       return
     }
     
     if ((selectedReport === 'report-partial') && !filterPeriod) {
-      alert('Seleccione un período')
+      toast.error('Seleccione un período')
       return
     }
 
     if (filterGrade === 'all' && filterStudentId === 'all') {
-      alert('Seleccione un grupo o un estudiante específico')
+      toast.error('Seleccione un grupo o un estudiante específico')
       return
     }
 
@@ -81,10 +82,10 @@ export default function BulletinsReports() {
     try {
       // Certificados y constancias: próximamente con generación PDF completa
       await new Promise(resolve => setTimeout(resolve, 800))
-      alert('La generación de este documento estará disponible próximamente. Use la sección de Boletines Académicos para generar boletines de notas.')
+      toast.error('La generación de este documento estará disponible próximamente. Use la sección de Boletines Académicos para generar boletines de notas.')
     } catch (err) {
       console.error('Error generating report:', err)
-      alert('Error al generar el reporte')
+      toast.error('Error al generar el reporte')
     } finally {
       setGeneratingPDF(false)
     }

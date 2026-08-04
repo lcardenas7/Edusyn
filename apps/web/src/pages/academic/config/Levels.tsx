@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../../lib/toast'
 import {
   GraduationCap,
   Calendar,
@@ -251,9 +252,9 @@ export default function Levels() {
     if (success) {
       // El backend sincroniza PerformanceScale al guardar → refrescar el indicador
       refreshConnectedScale()
-      alert('✅ Niveles académicos guardados correctamente')
+      toast.success('✅ Niveles académicos guardados correctamente')
     } else {
-      alert('❌ Error al guardar. Intente de nuevo.')
+      toast.error('❌ Error al guardar. Intente de nuevo.')
     }
   }
 

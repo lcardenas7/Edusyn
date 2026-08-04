@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, MessageCircle, Pencil, Plus, X } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 
@@ -57,7 +59,7 @@ export default function TallerTimeline({ teamId, dynamic = 'LINEA_TIEMPO', stati
       await tallerApi.createObject(inst.id, { type: 'Note', text: t, date })
       setText(''); setComposerOpen(false)
       await load(true)
-    } catch { alert('No se pudo agregar el hito') }
+    } catch { toast.error('No se pudo agregar el hito') }
     finally { setSending(false); busyRef.current = false }
   }
   const saveEdit = async () => {
@@ -67,17 +69,17 @@ export default function TallerTimeline({ teamId, dynamic = 'LINEA_TIEMPO', stati
     if (!o || !t) { setEditingId(null); return }
     busyRef.current = true
     try { await tallerApi.updateObject(editingId, { text: t, date: editDate || undefined, version: o.version }); await load(true) }
-    catch { alert('Conflicto al guardar; se recargó la línea'); await load(true) }
+    catch { toast.error('Conflicto al guardar; se recargó la línea'); await load(true) }
     finally { busyRef.current = false; setEditingId(null) }
   }
   const remove = async (o: any) => {
-    if (!confirm('¿Quitar este hito? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(o.id); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog('¿Quitar este hito? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(o.id); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
 
   if (loading) return <div className="taller-card p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'var(--t-marigold)' }} /></div>

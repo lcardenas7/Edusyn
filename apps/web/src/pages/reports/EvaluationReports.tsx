@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { toast } from '../../lib/toast'
 import {
   ClipboardList,
   Download,
@@ -170,7 +171,7 @@ export default function EvaluationReports() {
       body += `"Escala máxima",${rulesContext.maxGradeValue}\n`
     }
 
-    if (!body) { alert('No hay datos para exportar'); return }
+    if (!body) { toast.warning('No hay datos para exportar'); return }
     const blob = new Blob(['\ufeff' + header + body], { type: 'text/csv;charset=utf-8;' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)

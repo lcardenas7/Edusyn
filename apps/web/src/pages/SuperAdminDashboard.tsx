@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { 
   Building2, 
@@ -574,7 +575,7 @@ export default function SuperAdminDashboard() {
       )
     } catch (err: any) {
       console.error('Error updating institution status:', err)
-      alert(err.response?.data?.message || 'Error al actualizar estado')
+      toast.error(err.response?.data?.message || 'Error al actualizar estado')
     }
     setActiveMenu(null)
   }
@@ -1134,7 +1135,7 @@ function CreateInstitutionModal({
       onCreated(newInst)
     } catch (err: any) {
       console.error('Error creating institution:', err)
-      alert(err.response?.data?.message || 'Error al crear institución')
+      toast.error(err.response?.data?.message || 'Error al crear institución')
     } finally {
       setLoading(false)
     }
@@ -1494,7 +1495,7 @@ function CreateInstitutionModal({
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(createdCredentials.password)
-                        alert('Contraseña copiada al portapapeles')
+                        toast.success('Contraseña copiada al portapapeles')
                       }}
                       className="text-xs text-blue-600 hover:text-blue-800"
                     >
@@ -1523,7 +1524,7 @@ function CreateInstitutionModal({
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(createdCredentials.rector!.password)
-                          alert('Contraseña del rector copiada')
+                          toast.success('Contraseña del rector copiada')
                         }}
                         className="text-xs text-blue-600 hover:text-blue-800"
                       >
@@ -1585,7 +1586,7 @@ function EditInstitutionModal({
       onSave(formData)
     } catch (err: any) {
       console.error('Error updating institution:', err)
-      alert(err.response?.data?.message || 'Error al actualizar institución')
+      toast.error(err.response?.data?.message || 'Error al actualizar institución')
     } finally {
       setLoading(false)
     }
@@ -1786,7 +1787,7 @@ function ModulesModal({
       onSave(uniqueModules, uniqueFeatures)
     } catch (err: any) {
       console.error('Error updating modules:', err)
-      alert(err.response?.data?.message || 'Error al actualizar módulos')
+      toast.error(err.response?.data?.message || 'Error al actualizar módulos')
     } finally {
       setLoading(false)
     }

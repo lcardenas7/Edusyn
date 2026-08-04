@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from '../../lib/toast'
 import { 
   Bell,
   AlertTriangle,
@@ -157,7 +158,7 @@ export default function AlertsReports() {
     }
 
     if (!csvContent || csvContent.split('\n').length <= 1) {
-      alert('No hay datos para exportar')
+      toast.warning('No hay datos para exportar')
       return
     }
 

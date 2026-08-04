@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, Pencil, Plus, X, MessageCircle, Link2, Check } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -81,7 +83,7 @@ export default function TallerMap({ teamId, dynamic = 'MAPA_ACTORES', stationId 
       const y = Math.max(600, Math.min(SIZE - 600, Math.round(SIZE / 2 + Math.sin(ang) * rad * 0.68)))
       await tallerApi.createObject(inst.id, { type: 'Note', text: t, x, y, fields: { tipo } })
       setText(''); await load(true)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo agregar el actor') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo agregar el actor') }
     finally { setAdding(false); busyRef.current = false }
   }
 
@@ -126,12 +128,12 @@ export default function TallerMap({ teamId, dynamic = 'MAPA_ACTORES', stationId 
       await tallerApi.connect({ fromId: nuevaRel.fromId, toId: nuevaRel.toId, relType: 'conecta-con', label: relLabel.trim() || undefined })
       setNuevaRel(null); setRelLabel(''); setConectando(false)
       await load(true)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo conectar') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo conectar') }
     finally { busyRef.current = false }
   }
   const quitarRelacion = async (id: string) => {
-    if (!confirm('¿Quitar esta conexión?')) return
-    try { await tallerApi.disconnect(id); await load(true) } catch { alert('No se pudo quitar la conexión') }
+    if (!(await confirmDialog('¿Quitar esta conexión?', { danger: true }))) return
+    try { await tallerApi.disconnect(id); await load(true) } catch { toast.error('No se pudo quitar la conexión') }
   }
 
   const saveEdit = async () => {
@@ -141,18 +143,18 @@ export default function TallerMap({ teamId, dynamic = 'MAPA_ACTORES', stationId 
     if (!o || !t || t === o.data?.text) { setEditingId(null); return }
     busyRef.current = true
     try { await tallerApi.updateObject(editingId, { text: t, version: o.version }); await load(true) }
-    catch { alert('Conflicto al guardar; se recargó el mapa'); await load(true) }
+    catch { toast.error('Conflicto al guardar; se recargó el mapa'); await load(true) }
     finally { busyRef.current = false; setEditingId(null) }
   }
   const remove = async (o: any) => {
     const conex = edges.filter(e => e.fromId === o.id || e.toId === o.id).length
-    if (!confirm(conex ? `Este actor tiene ${conex} conexión(es); se irán con él. ¿Quitarlo?` : '¿Quitar este actor? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(o.id); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog(conex ? `Este actor tiene ${conex} conexión(es); se irán con él. ¿Quitarlo?` : '¿Quitar este actor? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(o.id); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
 
   if (loading) return <div className="taller-card p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'var(--t-marigold)' }} /></div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
 import { 
   Briefcase,
   Users,
@@ -318,7 +319,7 @@ export default function AdminReports() {
     }
 
     if (!csvContent || csvContent.split('\n').length <= 1) {
-      alert('No hay datos para exportar')
+      toast.warning('No hay datos para exportar')
       return
     }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { confirmDialog } from './ui/confirm'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ChevronRight,
@@ -727,8 +728,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         {/* Exit warning */}
         {!isTeacher && (
           <button
-            onClick={() => {
-              if (confirm('Si sales, continuarás desde el último punto de control. ¿Salir?')) {
+            onClick={async () => {
+              if ((await confirmDialog('Si sales, continuarás desde el último punto de control. ¿Salir?', { danger: true }))) {
                 onClose()
               }
             }}

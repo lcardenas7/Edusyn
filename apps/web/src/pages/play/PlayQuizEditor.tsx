@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { confirmDialog } from '../../components/ui/confirm'
 import { useParams, useNavigate } from 'react-router-dom'
 import { classroomApi } from '../../lib/api'
 import { playPanelApi } from '../../lib/playApi'
@@ -428,7 +429,7 @@ export default function PlayQuizEditor() {
   }
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm('¿Eliminar esta pregunta?')) return
+    if (!(await confirmDialog('¿Eliminar esta pregunta?', { danger: true }))) return
     try {
       await playPanelApi.deleteQuestion(questionId)
       setQuestions(prev => prev.filter(q => q.id !== questionId))
@@ -1198,11 +1199,11 @@ export default function PlayQuizEditor() {
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (!editingId) {
                   // Adding: check if there's content worth confirming
                   const hasContent = newText.trim() || newOptions.some(o => o.text.trim()) || newImageUrl.trim() || newExplanation.trim()
-                  if (hasContent && !confirm('¿Descartar la pregunta en borrador? Se perderá lo escrito.')) return
+                  if (hasContent && !(await confirmDialog('¿Descartar la pregunta en borrador? Se perderá lo escrito.', { danger: true }))) return
                   clearDraft()
                 }
                 setShowAddForm(false)

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { managementTasksApi, staffApi } from '../lib/api'
 import {
@@ -229,7 +231,7 @@ export default function ManagementTasks() {
 
   const handleCreateTask = async () => {
     if (!taskForm.title || taskForm.assigneeIds.length === 0) {
-      alert('Complete el título y seleccione al menos un usuario')
+      toast.error('Complete el título y seleccione al menos un usuario')
       return
     }
 
@@ -248,7 +250,7 @@ export default function ManagementTasks() {
       setTaskForm({ title: '', description: '', category: 'OTRO', priority: 'NORMAL', dueDate: '', assigneeIds: [] })
       loadAllTasks()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al crear tarea')
+      toast.error(error.response?.data?.message || 'Error al crear tarea')
     }
   }
 
@@ -266,18 +268,18 @@ export default function ManagementTasks() {
       setLeaderForm({ userId: '', area: 'ACADEMICA' })
       loadLeaders()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al asignar líder')
+      toast.error(error.response?.data?.message || 'Error al asignar líder')
     }
   }
 
   const handleRemoveLeader = async (id: string) => {
-    if (!confirm('¿Está seguro de remover este líder?')) return
+    if (!(await confirmDialog('¿Está seguro de remover este líder?', { danger: true }))) return
 
     try {
       await managementTasksApi.removeLeader(id)
       loadLeaders()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al remover líder')
+      toast.error(error.response?.data?.message || 'Error al remover líder')
     }
   }
 
@@ -295,18 +297,18 @@ export default function ManagementTasks() {
       setMemberForm({ userId: '', area: 'ACADEMICA' })
       loadAreaMembers()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al agregar miembro')
+      toast.error(error.response?.data?.message || 'Error al agregar miembro')
     }
   }
 
   const handleRemoveMember = async (id: string) => {
-    if (!confirm('¿Está seguro de remover este miembro?')) return
+    if (!(await confirmDialog('¿Está seguro de remover este miembro?', { danger: true }))) return
 
     try {
       await managementTasksApi.removeAreaMember(id)
       loadAreaMembers()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al remover miembro')
+      toast.error(error.response?.data?.message || 'Error al remover miembro')
     }
   }
 
@@ -315,7 +317,7 @@ export default function ManagementTasks() {
       await managementTasksApi.startTask(assignmentId)
       loadMyTasks()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al iniciar tarea')
+      toast.error(error.response?.data?.message || 'Error al iniciar tarea')
     }
   }
 
@@ -338,7 +340,7 @@ export default function ManagementTasks() {
       setResponseNote('')
       loadMyTasks()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al enviar')
+      toast.error(error.response?.data?.message || 'Error al enviar')
     }
   }
 
@@ -357,7 +359,7 @@ export default function ManagementTasks() {
       loadPendingVerifications()
       loadAllTasks()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al verificar')
+      toast.error(error.response?.data?.message || 'Error al verificar')
     }
   }
 

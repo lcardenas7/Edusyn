@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { confirmDialog } from './ui/confirm'
 import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles, Eye, Pencil } from 'lucide-react'
 import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress, type RoutePlan } from '../lib/api'
 import LessonPlayer from './LessonPlayer'
@@ -209,7 +210,7 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
   const stepProgress = (stepId: string) => progress?.steps.find(s => s.id === stepId)
 
   const publish = async () => { await learningRouteApi.update(route.id, { isPublished: !route.isPublished }); onReload() }
-  const removeRoute = async () => { if (confirm('¿Eliminar esta ruta y sus pasos?')) { await learningRouteApi.remove(route.id); onBack() } }
+  const removeRoute = async () => { if ((await confirmDialog('¿Eliminar esta ruta y sus pasos?', { danger: true }))) { await learningRouteApi.remove(route.id); onBack() } }
   const removeStep = async (stepId: string) => { await learningRouteApi.removeStep(stepId); onReload() }
   const generateLesson = async (stepId: string, instructions?: string) => {
     try {

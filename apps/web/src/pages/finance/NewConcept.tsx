@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, FileText, Save, Loader2 } from 'lucide-react'
 import { financeConceptsApi, financeCategoriesApi } from '../../lib/api'
@@ -67,7 +68,7 @@ export default function NewConcept() {
         }
       } catch (err) {
         console.error('Error loading concept form:', err)
-        alert(isEditMode ? 'Error al cargar el concepto' : 'Error al cargar categorías')
+        toast.error(isEditMode ? 'Error al cargar el concepto' : 'Error al cargar categorías')
         if (isEditMode) {
           navigate('/finance/concepts')
         }
@@ -82,7 +83,7 @@ export default function NewConcept() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim() || !form.categoryId || !form.defaultAmount) {
-      alert('Por favor completa los campos requeridos')
+      toast.warning('Por favor completa los campos requeridos')
       return
     }
     setSaving(true)
@@ -106,7 +107,7 @@ export default function NewConcept() {
 
       navigate('/finance/concepts')
     } catch (err: any) {
-      alert(err.response?.data?.message || (isEditMode ? 'Error al actualizar concepto' : 'Error al crear concepto'))
+      toast.error(err.response?.data?.message || (isEditMode ? 'Error al actualizar concepto' : 'Error al crear concepto'))
     } finally {
       setSaving(false)
     }

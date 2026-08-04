@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
@@ -623,7 +624,7 @@ export default function Achievements() {
 
   // Delete achievement
   const handleDeleteAchievement = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este logro?')) return
+    if (!(await confirmDialog('¿Estás seguro de eliminar este logro?', { danger: true }))) return
     setSaving(true)
     try {
       await achievementsApi.delete(id)

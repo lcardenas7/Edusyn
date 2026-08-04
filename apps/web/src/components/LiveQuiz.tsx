@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { liveSessionApi, toPublicFileUrl, LIVE_QUIZ_TEAM_POOL } from '../lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
@@ -1265,7 +1267,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setNewTeamName('')
       setShowCreateTeam(false)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al crear equipo')
+      toast.error(err.response?.data?.message || 'Error al crear equipo')
     } finally { setCreatingTeam(false) }
   }
 
@@ -1315,7 +1317,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         s.enrollmentId === enrollmentId ? { ...s, teamId } : s,
       ))
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al asignar estudiante')
+      toast.error(err.response?.data?.message || 'Error al asignar estudiante')
     }
   }, [sessionId])
 
@@ -1328,14 +1330,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         s.enrollmentId === enrollmentId ? { ...s, teamId: null } : s,
       ))
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al quitar estudiante')
+      toast.error(err.response?.data?.message || 'Error al quitar estudiante')
     }
   }, [sessionId])
 
   // Crear los equipos elegidos por el docente (del pool curado)
   const handleCreateSelectedTeams = useCallback(async () => {
     if (!sessionId || selectedTeamNames.length < 2) {
-      alert('Selecciona al menos 2 equipos')
+      toast.warning('Selecciona al menos 2 equipos')
       return
     }
     try {
@@ -1347,7 +1349,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       // refrescar lista de estudiantes (estarán sin asignar)
       loadTeamStudentsCatalog()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al crear equipos')
+      toast.error(err.response?.data?.message || 'Error al crear equipos')
     }
   }, [sessionId, selectedTeamNames, loadTeamStudentsCatalog])
 
@@ -1966,7 +1968,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                                 if (pickingIntoTeamId) {
                                   assignStudentToTeam(s.enrollmentId, pickingIntoTeamId)
                                 } else {
-                                  alert('Primero selecciona un equipo arriba')
+                                  toast.warning('Primero selecciona un equipo arriba')
                                 }
                               }}
                               disabled={!pickingIntoTeamId}
@@ -2023,11 +2025,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     </button>
                     <button
                       onClick={async () => {
-                        if (!confirm('¿Finalizar el quiz? Los estudiantes que no hayan terminado no podrán continuar.')) return
+                        if (!(await confirmDialog('¿Finalizar el quiz? Los estudiantes que no hayan terminado no podrán continuar.', { danger: true }))) return
                         try {
                           await liveSessionApi.finish(sessionId)
                         } catch (err: any) {
-                          alert('Error: ' + (err.response?.data?.message || err.message))
+                          toast.error('Error: ' + (err.response?.data?.message || err.message))
                         }
                       }}
                       className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 justify-center border border-white/20"
@@ -2053,12 +2055,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     </button>
                     <button
                       onClick={async () => {
-                        if (!confirm('¿Reiniciar sesión? Se borrarán todas las respuestas anteriores.')) return
+                        if (!(await confirmDialog('¿Reiniciar sesión? Se borrarán todas las respuestas anteriores.', { danger: true }))) return
                         try {
                           const { data } = await liveSessionApi.reset(sessionId)
-                          alert(`Sesión reiniciada. Se eliminaron ${data.deletedAnswers} respuestas.`)
+                          toast.error(`Sesión reiniciada. Se eliminaron ${data.deletedAnswers} respuestas.`)
                         } catch (err: any) {
-                          alert('Error al reiniciar: ' + (err.response?.data?.message || err.message))
+                          toast.error('Error al reiniciar: ' + (err.response?.data?.message || err.message))
                         }
                       }}
                       className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 justify-center border border-white/20"

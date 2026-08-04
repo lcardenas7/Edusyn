@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { Link } from 'react-router-dom'
 import { usePlayAuth } from '../../contexts/PlayAuthContext'
 import { playPanelApi } from '../../lib/playApi'
@@ -171,14 +173,14 @@ export default function PlayDashboard() {
             <div className="flex items-center gap-3">
               <button
                 onClick={async () => {
-                  if (!confirm('Cerrar todas las sesiones pendientes (en lobby o en curso)?')) return
+                  if (!(await confirmDialog('Cerrar todas las sesiones pendientes (en lobby o en curso)?', { danger: true }))) return
                   try {
                     const res = await playPanelApi.finishAllPending()
-                    alert(`${res.data.closed} sesión(es) cerrada(s)`)
+                    toast.error(`${res.data.closed} sesión(es) cerrada(s)`)
                     const refreshed = await playPanelApi.dashboard()
                     setData(refreshed.data)
                   } catch {
-                    alert('Error al cerrar sesiones pendientes')
+                    toast.error('Error al cerrar sesiones pendientes')
                   }
                 }}
                 className="text-sm text-amber-700 hover:text-amber-800 font-medium"

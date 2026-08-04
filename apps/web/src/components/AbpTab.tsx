@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
@@ -138,7 +140,7 @@ function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   }
   const vote = async (id: string) => {
     setBusy(true)
-    try { await abpApi.voteIdea(team.id, id); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo votar') } finally { setBusy(false) }
+    try { await abpApi.voteIdea(team.id, id); onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo votar') } finally { setBusy(false) }
   }
 
   return (
@@ -246,7 +248,7 @@ function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   const add = async () => {
     if (!text.trim() || !owner || busy) return
     setBusy(true)
-    try { await abpApi.addTask(team.id, text.trim(), owner); setText(''); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    try { await abpApi.addTask(team.id, text.trim(), owner); setText(''); onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const act = async (fn: Promise<any>) => { setBusy(true); try { await fn; onSaved() } finally { setBusy(false) } }
 
@@ -300,7 +302,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
     const u = link.trim()
     if (!u || busy) return
     setBusy(true)
-    try { await abpApi.addEvidence(team.id, 'LINK', u); setLink('') ; onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    try { await abpApi.addEvidence(team.id, 'LINK', u); setLink('') ; onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const upload = async (file: File) => {
     setBusy(true)
@@ -308,7 +310,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
       if (url) { await abpApi.addEvidence(team.id, 'FILE', url, file.name); onSaved() }
-    } catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+    } catch { toast.error('No se pudo subir el archivo') } finally { setBusy(false) }
   }
   const remove = async (id: string) => { setBusy(true); try { await abpApi.removeEvidence(team.id, id); onSaved() } finally { setBusy(false) } }
 
@@ -350,7 +352,7 @@ function CoevalCard({ team, sibling, existing, editable, onSaved }: { team: any;
   const submit = async () => {
     if (!complete || busy) return
     setBusy(true)
-    try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   return (
     <div className="rounded-xl p-4" style={{ border: `1.5px solid ${done ? 'color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' : 'var(--t-line)'}`, background: done ? 'color-mix(in srgb, var(--t-teal) 7%, var(--t-surface))' : 'var(--t-surface)' }}>
@@ -484,7 +486,7 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
   const submit = async (payload: { url?: string; text?: string; label?: string }) => {
     setBusy(true)
     try { await abpApi.submitDelivery(mission.id, payload); setEditing(false); setLink(''); onSaved() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo entregar') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo entregar') }
     finally { setBusy(false) }
   }
   const uploadFile = async (file: File) => {
@@ -493,8 +495,8 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
       if (url) await submit({ url, label: file.name })
-      else { alert('No se pudo subir el archivo'); setBusy(false) }
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
+      else { toast.error('No se pudo subir el archivo'); setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
   }
 
   return (
@@ -908,7 +910,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
       if (url) setBanner(url)
-    } catch { alert('No se pudo subir la imagen') } finally { setBusy(false) }
+    } catch { toast.error('No se pudo subir la imagen') } finally { setBusy(false) }
   }
   const save = async () => {
     setBusy(true)
@@ -918,7 +920,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
         presentation: { banner, videoUrl, teacherMessage, context, why, instructions: instructions.filter(Boolean), skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
       })
       onSaved()
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
   }
 
   // Acordeón: una sección abierta a la vez; punto violeta = sección con contenido.
@@ -1086,9 +1088,9 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
     if (!url.trim()) return
     setBusy(true)
     try { await abpApi.addResource(projectId, { type: inferResourceType(url), title: title.trim() || url.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
-    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
-  const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar recurso?', { danger: true }))) return; await abpApi.deleteResource(id); load() }
   // Enlace externo "normal" (no video/pdf/imagen) → pestaña nueva; el resto → visor.
   const open = (r: any) => {
     const viewable = r.type === 'PDF' || r.type === 'VIDEO' || !isHttp(r.url) || isPdfUrl(r.url) || isImageUrl(r.url) || videoEmbed(r.url)
@@ -1129,7 +1131,7 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
                 const { data } = await classroomApi.uploadMaterial(f);
                 const fileUrl = data?.data?.path || data?.data?.url;
                 if (fileUrl) { await abpApi.addResource(projectId, { type: inferResourceType(f.name), title: title.trim() || stripExt(f.name), url: fileUrl }); setTitle(''); setUrl(''); load(); }
-              } catch { alert('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
+              } catch { toast.error('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
             }} />
             <button onClick={() => document.getElementById(`res-file-${projectId}`)?.click()} disabled={busy} className="px-4 taller-surface hover:opacity-80 taller-ink rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
           </div>
@@ -1148,7 +1150,7 @@ function AnnouncementsView({ projectId, canManage }: { projectId: string; canMan
   useEffect(() => { load() }, [load])
   const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addAnnouncement(projectId, { content: content.trim() }); setContent(''); load() } finally { setBusy(false) } }
   const pin = async (a: any) => { await abpApi.pinAnnouncement(a.id, !a.pinned); load() }
-  const del = async (id: string) => { if (!confirm('¿Eliminar anuncio?')) return; await abpApi.deleteAnnouncement(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar anuncio?', { danger: true }))) return; await abpApi.deleteAnnouncement(id); load() }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
@@ -1189,7 +1191,7 @@ function LogbookView({ teamId, currentPhase, readOnly }: { teamId: string; curre
   const load = useCallback(() => { abpApi.listLog(teamId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [teamId])
   useEffect(() => { load() }, [load])
   const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addLog(teamId, { content: content.trim(), phase: currentPhase }); setContent(''); load() } finally { setBusy(false) } }
-  const del = async (id: string) => { if (!confirm('¿Eliminar entrada?')) return; await abpApi.deleteLog(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar entrada?', { danger: true }))) return; await abpApi.deleteLog(id); load() }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
@@ -1233,16 +1235,16 @@ function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; c
   const uploadEv = async (file: File) => {
     setBusy(true)
     try { const { data } = await classroomApi.uploadMaterial(file); const url = data?.data?.path || data?.data?.url; if (url) { setEvUrl(url); setEvKind('FILE') } }
-    catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+    catch { toast.error('No se pudo subir el archivo') } finally { setBusy(false) }
   }
   const reset = () => { setTitle(''); setDescription(''); setImpact('MEDIUM'); setEvUrl(''); setEvKind('LINK'); setOpen(false) }
   const add = async () => {
     if (!title.trim() || !description.trim()) return
     setBusy(true)
     try { await abpApi.addDiscovery(teamId, { phase: currentPhase || 1, title: title.trim(), description: description.trim(), impact, evidenceUrl: evUrl.trim() || undefined, evidenceKind: evUrl.trim() ? evKind : undefined }); reset(); load() }
-    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
-  const del = async (id: string) => { if (!confirm('¿Eliminar descubrimiento?')) return; await abpApi.deleteDiscovery(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar descubrimiento?', { danger: true }))) return; await abpApi.deleteDiscovery(id); load() }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
@@ -1317,7 +1319,7 @@ function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
     if (!window.confirm(`¿"${emoji} ${name.trim()}" es el nombre acordado por TODO el equipo?\n\nUna vez fundado, cambiarlo requerirá el permiso del docente.`)) return
     setBusy(true)
     try { await abpApi.foundTeamIdentity(team.id, name.trim(), emoji); onDone() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
   }
   return (
     <div className="taller">
@@ -1374,12 +1376,12 @@ function StudentExpedition({ projects }: { projects: any[] }) {
     if (!team) return
     const n = window.prompt('Nuevo nombre del equipo (lo tendrá que aprobar el docente):', team.name)?.trim()
     if (!n) return
-    try { await abpApi.requestTeamRename(team.id, n); load() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo solicitar el cambio') }
+    try { await abpApi.requestTeamRename(team.id, n); load() } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo solicitar el cambio') }
   }
   const pickAvatar = async (a: string) => {
     if (!team) return
     setAvatarOpen(false)
-    try { await abpApi.setMyAvatar(team.id, a); load(true) } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar el avatar') }
+    try { await abpApi.setMyAvatar(team.id, a); load(true) } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo guardar el avatar') }
   }
 
   const load = useCallback((silent = false) => {
@@ -1799,7 +1801,7 @@ function TeacherNewMission({ team, phase, onCreated }: { team: any; phase: numbe
         dueAt: dueAt || undefined,
       })
       setTitle(''); setDescription(''); setAssignee(''); setDueAt(''); setKind('NONE'); setOpen(false); onCreated()
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la misión') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la misión') }
     finally { setBusy(false) }
   }
 
@@ -1877,7 +1879,7 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
     if (!title) return
     setBusy(true)
     try { const { data } = await abpApi.addLessonActivity(mission.id, title); onChanged(); setEditing({ activityId: data.classroomActivityId, title }) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
   }
   // Valeria escribe el contenido jugable, anclado a la problemática del equipo.
   const genLesson = async (a: any) => {
@@ -1888,20 +1890,20 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       const { data } = await abpApi.generateLessonContent(a.id, instructions.trim() || undefined)
       onChanged()
       setEditing({ activityId: a.classroomActivityId, title: data.title || a.title })
-    } catch (e: any) { alert(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
     finally { setGenActId(null) }
   }
   // Reutilizar una actividad/juego que ya existe en el curso (pestaña Actividades).
   const openPicker = async () => {
     setPickerLoading(true); setPicker([])
     try { const { data } = await abpApi.reusableActivities(mission.id); setPicker(data) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudieron cargar las actividades'); setPicker(null) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudieron cargar las actividades'); setPicker(null) }
     finally { setPickerLoading(false) }
   }
   const attach = async (classroomActivityId: string) => {
     setBusy(true)
     try { await abpApi.attachActivity(mission.id, classroomActivityId); setPicker(null); onChanged() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
     finally { setBusy(false) }
   }
   const suggest = async () => {
@@ -1911,7 +1913,7 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       if (!data.configured) { setNotConfigured(true); return }
       setSuggestions(data.activities || [])
       setPicked(new Set((data.activities || []).map((_, i) => i)))
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo generar con Valeria') } finally { setSuggesting(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo generar con Valeria') } finally { setSuggesting(false) }
   }
   const apply = async () => {
     if (!suggestions) return
@@ -2075,7 +2077,7 @@ function ActivityComposer({ team, phase, onClose, onPlaced }: { team: any; phase
       const m = await createMission(title.trim())
       const { data } = await abpApi.addLessonActivity(m.id, title.trim())
       setEditing({ activityId: data.classroomActivityId, title: title.trim() })
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la actividad') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la actividad') }
     finally { setBusy(false) }
   }
 
@@ -2088,7 +2090,7 @@ function ActivityComposer({ team, phase, onClose, onPlaced }: { team: any; phase
       await abpApi.attachActivity(m.id, ca.id)
       setApplied(true)
       onPlaced()
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
     finally { setBusy(false) }
   }
 
@@ -2103,7 +2105,7 @@ function ActivityComposer({ team, phase, onClose, onPlaced }: { team: any; phase
       if (!data.configured) { setNotConfigured(true); return }
       setSuggestions(data.activities || [])
       setPicked(new Set((data.activities || []).map((_, i) => i)))
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo generar con Valeria') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo generar con Valeria') }
     finally { setBusy(false) }
   }
   const aplicar = async () => {
@@ -2112,7 +2114,7 @@ function ActivityComposer({ team, phase, onClose, onPlaced }: { team: any; phase
     if (!items.length) return
     setBusy(true)
     try { await abpApi.addActivitiesBulk(pendingMissionId, items); setApplied(true); onPlaced() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudieron añadir') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudieron añadir') }
     finally { setBusy(false) }
   }
 
@@ -2390,7 +2392,7 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
     try {
       const { data } = await abpApi.broadcastMission(projectId, { phase, title: title.trim(), description: description.trim() || undefined, required, deliverableKind: kind === 'NONE' ? undefined : kind, activities: kind === 'NONE' ? activities.filter(a => a.title.trim()) : [] })
       onDone(data.count)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
   }
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
@@ -2688,7 +2690,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                     <h5 className="font-bold taller-ink">{t.emoji} {t.name}</h5>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setEditTeamId(t.id)} title="Editar integrantes" className="taller-muted hover:taller-soft" style={{ color: 'var(--t-faint, #AAA394)' }}><Users className="w-4 h-4" /></button>
-                      <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={async () => { if ((await confirmDialog('¿Eliminar equipo?', { danger: true }))) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                   <p className="text-xs taller-muted mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
@@ -2715,7 +2717,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {tab === 'announcements' && <AnnouncementsView projectId={projectId} canManage />}
       {tab === 'resources' && <ResourcesView projectId={projectId} canManage />}
 
-      {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); alert(`Misión liberada a ${count} equipo(s).`); load() }} />}
+      {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); toast.error(`Misión liberada a ${count} equipo(s).`); load() }} />}
 
       {editTeamId && <EditTeamMembers team={teams.find((t: any) => t.id === editTeamId)} classroomId={classroomId} projectId={projectId} onClose={() => setEditTeamId(null)} onChanged={load} />}
 
@@ -2797,7 +2799,7 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
     if ((!name.trim() && !letStudents) || sel.size === 0) return
     setBusy(true)
     try { await abpApi.createTeam({ projectId, name: name.trim(), emoji, memberEnrollmentIds: [...sel], letStudentsName: letStudents }); setName(''); setSel(new Set()); setLetStudents(false); setOpen(false); onCreated() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear el equipo') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear el equipo') }
     finally { setBusy(false) }
   }
 
@@ -2861,14 +2863,14 @@ function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: {
   const add = async (enrollmentId: string) => {
     setBusy(true)
     try { await abpApi.addTeamMember(team.id, enrollmentId); await reloadRoster(); onChanged() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo añadir') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo añadir') }
     finally { setBusy(false) }
   }
   const remove = async (enrollmentId: string) => {
-    if (members.length <= 1) { alert('El equipo debe tener al menos un integrante.'); return }
+    if (members.length <= 1) { toast.warning('El equipo debe tener al menos un integrante.'); return }
     setBusy(true)
     try { await abpApi.removeTeamMember(team.id, enrollmentId); await reloadRoster(); onChanged() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo sacar') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo sacar') }
     finally { setBusy(false) }
   }
 

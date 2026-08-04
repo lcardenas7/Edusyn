@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { teacherWorkspaceApi } from '../lib/api'
 import {
@@ -466,7 +467,7 @@ export default function TeacherWorkspace() {
 
   // ─── Delete board ───
   const handleDeleteBoard = async (boardId: string) => {
-    if (!confirm('¿Eliminar este tablero y todo su contenido?')) return
+    if (!(await confirmDialog('¿Eliminar este tablero y todo su contenido?', { danger: true }))) return
     try {
       await teacherWorkspaceApi.deleteBoard(boardId)
       if (activeBoard?.id === boardId) setActiveBoard(null)
@@ -662,7 +663,7 @@ export default function TeacherWorkspace() {
 
   // ─── Delete column ───
   const handleDeleteColumn = async (columnId: string) => {
-    if (!confirm('¿Eliminar esta columna? Los items se moverán a sin columna.')) return
+    if (!(await confirmDialog('¿Eliminar esta columna? Los items se moverán a sin columna.', { danger: true }))) return
     try {
       await teacherWorkspaceApi.deleteColumn(columnId)
       if (activeBoard) await loadBoard(activeBoard.id)

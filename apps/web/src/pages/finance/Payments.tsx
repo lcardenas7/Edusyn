@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { toast } from '../../lib/toast'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -232,7 +233,7 @@ export default function Payments() {
       setPayingObligation(null)
       fetchPendingObligations()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al registrar pago')
+      toast.error(err.response?.data?.message || 'Error al registrar pago')
     } finally {
       setSavingPayment(false)
     }
@@ -262,7 +263,7 @@ export default function Payments() {
   // ═══ SUBMIT GENERAL PAYMENT ═══
   const handleSubmitGeneralPayment = async () => {
     if (!generalForm.thirdPartyId || !generalForm.amount || Number(generalForm.amount) <= 0) {
-      alert('Tercero y monto son requeridos')
+      toast.warning('Tercero y monto son requeridos')
       return
     }
     setSavingPayment(true)
@@ -281,7 +282,7 @@ export default function Payments() {
       setShowGeneralModal(false)
       if (mainTab === 'history') fetchPayments()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al registrar pago')
+      toast.error(err.response?.data?.message || 'Error al registrar pago')
     } finally {
       setSavingPayment(false)
     }
@@ -303,7 +304,7 @@ export default function Payments() {
       await financePaymentsApi.void(id, reason)
       fetchPayments()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al anular pago')
+      toast.error(err.response?.data?.message || 'Error al anular pago')
     }
   }
 
@@ -318,7 +319,7 @@ export default function Payments() {
       link.click()
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert('Error al descargar recibo')
+      toast.error('Error al descargar recibo')
     }
   }
 
@@ -330,7 +331,7 @@ export default function Payments() {
       setPreviewUrl(url)
       setPreviewTitle(`Recibo ${receiptNumber || id.slice(0, 8)}`)
     } catch (err: any) {
-      alert('Error al generar vista previa')
+      toast.error('Error al generar vista previa')
     }
   }
 

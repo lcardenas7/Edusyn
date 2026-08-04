@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from '../lib/toast'
 import { BookOpen, ChevronDown, Loader2, Plus, X, Lock } from 'lucide-react'
 import { abpApi, tallerApi } from '../lib/api'
 import TallerBoard from './TallerBoard'
@@ -290,7 +291,7 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
   const saveInstructions = async () => {
     setSaving(true)
     try { await abpApi.setStationInstructions(project.id, phase, instrText); setInstrDirty(false); onSaved() }
-    catch { alert('No se pudieron guardar las instrucciones') }
+    catch { toast.error('No se pudieron guardar las instrucciones') }
     finally { setSaving(false) }
   }
 
@@ -298,7 +299,7 @@ export function TeacherInstrumentsConfig({ project, phases, onSaved }: {
   const save = async (items: { key: string; required?: boolean }[]) => {
     setSaving(true)
     try { await abpApi.setPhaseInstruments(project.id, phase, items); onSaved() }
-    catch { alert('No se pudo guardar la configuración') }
+    catch { toast.error('No se pudo guardar la configuración') }
     finally { setSaving(false) }
   }
   const addInstrument = (key: string) => { setLibraryOpen(false); save([...assigned, { key, required: false }]) }

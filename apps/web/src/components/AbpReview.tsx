@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from '../lib/toast'
 import { Check, Loader2, Send, ChevronLeft } from 'lucide-react'
 import { abpApi } from '../lib/api'
 
@@ -89,7 +90,7 @@ export default function AbpReview({ validationId, onClose }: { validationId: str
     if (!rubricComplete || busy) return
     setBusy(true)
     try { await abpApi.resolve(validationId, { action: 'approve', rubricScores: scores, rubricComment }); onClose(true) }
-    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const doReturn = async () => {
     setBusy(true)
@@ -98,7 +99,7 @@ export default function AbpReview({ validationId, onClose }: { validationId: str
       deliverableKind: m.kind === 'NONE' ? undefined : m.kind,
     }))
     try { await abpApi.resolve(validationId, { action: 'return', feedback, missions }); onClose(true) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo devolver') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo devolver') }
     finally { setBusy(false) }
   }
   const addComment = async () => {

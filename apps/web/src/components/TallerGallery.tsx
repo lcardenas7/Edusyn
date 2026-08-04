@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, MessageCircle, Plus, X, Paperclip, Link2, ExternalLink } from 'lucide-react'
 import { tallerApi, classroomApi, storageApi } from '../lib/api'
 
@@ -64,7 +66,7 @@ export default function TallerGallery({ teamId, dynamic = 'GALERIA', stationId }
       await tallerApi.createObject(inst.id, { type: 'Evidence', text: texto, fields })
       setAdding(null); setCaption(''); setLink('')
       await load(true)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo agregar la evidencia') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo agregar la evidencia') }
     finally { busyRef.current = false; setBusy(false) }
   }
   const subirArchivo = async (file: File) => {
@@ -72,10 +74,10 @@ export default function TallerGallery({ teamId, dynamic = 'GALERIA', stationId }
     try {
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
-      if (!url) { alert('No se pudo subir el archivo'); setBusy(false); return }
+      if (!url) { toast.error('No se pudo subir el archivo'); setBusy(false); return }
       const esImagen = /\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(file.name)
       await crear({ kind: 'FILE', url, nombre: file.name, caption: caption.trim(), media: esImagen ? 'image' : 'file' }, caption.trim() || file.name)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
   }
   const agregarEnlace = async () => {
     const u = link.trim()
@@ -84,13 +86,13 @@ export default function TallerGallery({ teamId, dynamic = 'GALERIA', stationId }
     await crear({ kind: 'LINK', url: u, caption: caption.trim() }, caption.trim() || u)
   }
   const remove = async (o: any) => {
-    if (!confirm('¿Quitar esta evidencia? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(o.id); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog('¿Quitar esta evidencia? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(o.id); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
 
   if (loading) return <div className="taller-card p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'var(--t-marigold)' }} /></div>

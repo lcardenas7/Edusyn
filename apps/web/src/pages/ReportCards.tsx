@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
 import {
   FileText,
   Download,
@@ -336,7 +337,7 @@ export default function ReportCards() {
       a.click()
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al exportar Excel')
+      toast.error(err?.response?.data?.message || 'Error al exportar Excel')
     } finally {
       setExportingExcel(false)
     }
@@ -639,7 +640,7 @@ export default function ReportCards() {
     // Usar ventana emergente + print nativo del navegador (el más confiable, funciona siempre)
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
-      alert('Por favor permite las ventanas emergentes para descargar el boletín como PDF')
+      toast.error('Por favor permite las ventanas emergentes para descargar el boletín como PDF')
       return
     }
     printWindow.document.write(`<!DOCTYPE html>
@@ -686,7 +687,7 @@ export default function ReportCards() {
       const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
       await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al descargar el boletin PDF')
+      toast.error(err?.response?.data?.message || 'Error al descargar el boletin PDF')
     } finally {
       setDownloadingPdf(null)
     }
@@ -697,7 +698,7 @@ export default function ReportCards() {
     if (!selectedTermId || !selectedGroupId || !selectedYearId) return
     const ids = enrollmentIds || selectedCards
     if (ids.length === 0) {
-      alert('Seleccione al menos un estudiante')
+      toast.error('Seleccione al menos un estudiante')
       return
     }
     setIsGeneratingBulk(true)
@@ -719,10 +720,10 @@ export default function ReportCards() {
         const bulkHtml = htmlBlocks.join('')
         await generatePdfFromHtml(bulkHtml, `boletines-${selectedGroupId}-${selectedTermId}.pdf`)
       } else {
-        alert('No se pudo descargar ningun boletin. Verifique que existan notas registradas.')
+        toast.error('No se pudo descargar ningun boletin. Verifique que existan notas registradas.')
       }
     } catch (err: any) {
-      alert('Error al generar los boletines')
+      toast.error('Error al generar los boletines')
     } finally {
       setIsGeneratingBulk(false)
     }
@@ -747,7 +748,7 @@ export default function ReportCards() {
         setLogoPreviewUrl(urlToShow) // URL firmada para mostrar inmediatamente
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
+      toast.error(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
     } finally {
       setUploadingLogo(false)
     }
@@ -764,7 +765,7 @@ export default function ReportCards() {
       updated[idx] = { ...updated[idx], signatureImageUrl: url }
       setConfigDraft({ ...configDraft, signatureConfig: updated })
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al subir la firma. Verifique que sea PNG/JPG y menor a 200KB.')
+      toast.error(err?.response?.data?.message || 'Error al subir la firma. Verifique que sea PNG/JPG y menor a 200KB.')
     } finally {
       setUploadingSignature(null)
     }
@@ -803,7 +804,7 @@ export default function ReportCards() {
       setConfig(configDraft)
       setShowConfigModal(false)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al guardar configuracion')
+      toast.error(err.response?.data?.message || 'Error al guardar configuracion')
     } finally {
       setSavingConfig(false)
     }
@@ -833,7 +834,7 @@ export default function ReportCards() {
       await academicTermsApi.toggleBulletinsRelease(selectedTermId, !current)
       setTerms(prev => prev.map(t => t.id === selectedTermId ? { ...t, bulletinsReleasedForTeachers: !current } : t))
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al cambiar visibilidad de boletines')
+      toast.error(err?.response?.data?.message || 'Error al cambiar visibilidad de boletines')
     } finally {
       setTogglingBulletins(false)
     }

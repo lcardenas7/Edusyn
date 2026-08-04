@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
 import { 
   Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, XCircle, 
   Users, BookOpen, ArrowRight, Loader2, Info, UserPlus, UserMinus, Download,
@@ -93,7 +94,7 @@ export default function GradesBulkImport() {
       if (res.data.success) {
         // Recargar estado
         await loadConvivenciaStatus(convivenciaGrade)
-        alert(res.data.message)
+        toast.error(res.data.message)
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error actualizando Convivencia')

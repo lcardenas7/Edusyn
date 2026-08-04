@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
 import { X, Shield, Plus, Trash2, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { usePermissions, PERMISSIONS } from '../hooks/usePermissions'
 
@@ -142,7 +143,7 @@ export default function UserPermissionsModal({
       setNewPermission({ code: '', reason: '', isPermanent: true, validTo: '' })
       onPermissionsChanged?.()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al otorgar permiso')
+      toast.error(err.response?.data?.message || 'Error al otorgar permiso')
     } finally {
       setSaving(false)
     }
@@ -164,7 +165,7 @@ export default function UserPermissionsModal({
       setRevokeReason('')
       onPermissionsChanged?.()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al revocar permiso')
+      toast.error(err.response?.data?.message || 'Error al revocar permiso')
     } finally {
       setSaving(false)
     }

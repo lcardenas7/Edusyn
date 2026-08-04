@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { capabilitiesApi } from '../lib/api'
 import {
@@ -148,7 +149,7 @@ export default function CapabilitiesConfig() {
 
   const handleReset = async () => {
     if (!institutionId) return
-    if (!confirm('¿Restaurar todos los permisos a los valores por defecto del sistema?')) return
+    if (!(await confirmDialog('¿Restaurar todos los permisos a los valores por defecto del sistema?', { danger: true }))) return
     setSaving(true)
     try {
       await capabilitiesApi.resetToDefaults(institutionId)

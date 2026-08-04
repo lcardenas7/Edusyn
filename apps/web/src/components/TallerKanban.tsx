@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, Pencil, Plus, X, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 
@@ -64,7 +66,7 @@ export default function TallerKanban({ teamId, dynamic = 'KANBAN', stationId, me
     try {
       await tallerApi.createObject(inst.id, { type: 'Task', text: t, fields: { col: 'TODO', ...(owner ? { owner } : {}) } })
       setText(''); setOwner(''); await load(true)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la tarea') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la tarea') }
     finally { setAdding(false); busyRef.current = false }
   }
   const mover = async (o: any, dir: 1 | -1) => {
@@ -74,13 +76,13 @@ export default function TallerKanban({ teamId, dynamic = 'KANBAN', stationId, me
     busyRef.current = true
     setObjects(prev => prev.map(x => x.id === o.id ? { ...x, data: { ...x.data, fields: { ...x.data?.fields, col: COLUMNS[destino].key } } } : x))
     try { await tallerApi.updateObject(o.id, { fields: { col: COLUMNS[destino].key } }) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo mover'); await load(true) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo mover'); await load(true) }
     finally { busyRef.current = false; load(true) }
   }
   const asignar = async (o: any, enrollmentId: string) => {
     busyRef.current = true
     try { await tallerApi.updateObject(o.id, { fields: { owner: enrollmentId } }); await load(true) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo asignar') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo asignar') }
     finally { busyRef.current = false }
   }
   const saveEdit = async () => {
@@ -90,17 +92,17 @@ export default function TallerKanban({ teamId, dynamic = 'KANBAN', stationId, me
     if (!o || !t || t === o.data?.text) { setEditingId(null); return }
     busyRef.current = true
     try { await tallerApi.updateObject(editingId, { text: t, version: o.version }); await load(true) }
-    catch { alert('Conflicto al guardar; se recargó el tablero'); await load(true) }
+    catch { toast.error('Conflicto al guardar; se recargó el tablero'); await load(true) }
     finally { busyRef.current = false; setEditingId(null) }
   }
   const remove = async (o: any) => {
-    if (!confirm('¿Quitar esta tarea? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(o.id); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog('¿Quitar esta tarea? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(o.id); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
 
   if (loading) return <div className="taller-card p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'var(--t-marigold)' }} /></div>

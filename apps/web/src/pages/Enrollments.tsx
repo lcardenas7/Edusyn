@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useNavigate } from 'react-router-dom'
 import { 
   Users, 
@@ -345,7 +346,7 @@ const Enrollments: React.FC = () => {
       
       // Si es cambio de grado (no mismo grado), requerir confirmación adicional
       if (validation.data.gradeChangeType !== 'SAME_GRADE') {
-        if (!confirm(`¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`)) {
+        if (!(await confirmDialog(`¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`, { danger: true }))) {
           setValidatingChange(false)
           return
         }

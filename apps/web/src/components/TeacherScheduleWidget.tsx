@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { confirmDialog } from './ui/confirm'
 import { Clock, Plus, Pencil, Trash2, X, MapPin, Loader2, CalendarDays } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -171,7 +172,7 @@ export default function TeacherScheduleWidget() {
   }
 
   const remove = async (id: string) => {
-    if (!confirm('¿Eliminar este bloque de tu horario?')) return
+    if (!(await confirmDialog('¿Eliminar este bloque de tu horario?', { danger: true }))) return
     try {
       await teacherScheduleApi.remove(id)
       setBlocks(prev => prev.filter(b => b.id !== id))

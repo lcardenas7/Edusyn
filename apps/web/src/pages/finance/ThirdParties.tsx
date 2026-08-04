@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -66,7 +67,7 @@ export default function ThirdParties() {
         syncGuardians: true,
       })
       const result = response.data
-      alert(`Sincronización completada: ${result.created} creados, ${result.updated} actualizados`)
+      toast.success(`Sincronización completada: ${result.created} creados, ${result.updated} actualizados`)
       fetchThirdParties()
     } catch (err) {
       console.error('Error syncing:', err)

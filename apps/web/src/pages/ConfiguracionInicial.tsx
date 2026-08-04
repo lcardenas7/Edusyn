@@ -19,6 +19,7 @@ import {
   EmptyView,
 } from '@edusyn/ui';
 import { onboardingSource } from '../lib/onboarding/onboardingSource';
+import { StudentsImportPanel } from '../components/onboarding/StudentsImportPanel';
 
 /**
  * ConfiguracionInicial — puesta en marcha de la institución (Estado Canónico).
@@ -79,13 +80,10 @@ export default function ConfiguracionInicial() {
     [navigate],
   );
 
-  /** Subida mock del archivo: simula la llamada al endpoint del contrato. */
-  const handleUpload = useCallback(async (file: File, path: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    toast.success(`[mock] ${file.name} enviado a ${path}`, {
-      description: 'El análisis correría en el servidor y el progreso llegaría vía ImportState.',
-    });
-  }, []);
+  /** Refresca el Estado Canónico (tras apply: stepper y progreso se actualizan solos). */
+  const refreshState = useCallback(() => {
+    void load();
+  }, [load]);
 
   if (loadError) {
     return (
@@ -160,13 +158,20 @@ export default function ConfiguracionInicial() {
               {uploadAction && uploadAction.intent.kind === 'upload' && (
                 <section aria-label="Carga de archivo">
                   <h3 className="mb-2 text-h3 font-semibold text-ink-primary">{uploadAction.label}</h3>
-                  <FileDropUpload
-                    path={uploadAction.intent.path}
-                    onUpload={handleUpload}
-                    disabled={!uploadAction.enabled}
-                    disabledReason={uploadAction.reason}
-                    helperText="Plantilla oficial .xlsx — el análisis no modifica datos"
-                  />
+                  {step.key === 'students-import' ? (
+                    /* Flujo real punta a punta (analyze → confirmación → apply → cuadre) */
+                    <StudentsImportPanel uploadAction={uploadAction} onApplied={refreshState} />
+                  ) : (
+                    /* Docentes y carga académica: aún deshabilitados por el backend
+                       ("Disponible próximamente"). Si se habilitan, el dropzone
+                       hace el POST real al endpoint que expone el estado. */
+                    <FileDropUpload
+                      path={uploadAction.intent.path}
+                      disabled={!uploadAction.enabled}
+                      disabledReason={uploadAction.reason}
+                      helperText="Plantilla oficial .xlsx — el análisis no modifica datos"
+                    />
+                  )}
                 </section>
               )}
 

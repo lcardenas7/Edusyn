@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, MessageCircle, Pencil, Plus, X, GitBranch } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -231,7 +233,7 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
       await tallerApi.createObject(inst.id, { type: 'Idea', text: t, parentId: composer?.parentId ?? undefined })
       setComposer(null); setComposerText('')
       await load(true)
-    } catch { alert('No se pudo agregar la idea') }
+    } catch { toast.error('No se pudo agregar la idea') }
     finally { setSending(false); busyRef.current = false }
   }
   const saveEdit = async () => {
@@ -241,7 +243,7 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
     if (!o || !t || t === o.data?.text) { setEditingId(null); return }
     busyRef.current = true
     try { await tallerApi.updateObject(editingId, { text: t, version: o.version }); await load(true) }
-    catch { alert('Conflicto al guardar; se recargó el árbol'); await load(true) }
+    catch { toast.error('Conflicto al guardar; se recargó el árbol'); await load(true) }
     finally { busyRef.current = false; setEditingId(null) }
   }
   const vote = async (id: string) => {
@@ -252,13 +254,13 @@ export default function TallerTree({ teamId, dynamic = 'ARBOL_IDEAS', stationId 
   }
   const remove = async (id: string) => {
     const kids = childrenOf.get(id)?.length ?? 0
-    if (!confirm(kids ? `Esta rama tiene ${kids} idea(s) colgada(s); quedarán como ramas sueltas. ¿Quitar?` : '¿Quitar esta idea? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(id); setSelected(null); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog(kids ? `Esta rama tiene ${kids} idea(s) colgada(s); quedarán como ramas sueltas. ¿Quitar?` : '¿Quitar esta idea? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(id); setSelected(null); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
 
   if (loading) return <div className="taller-card p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'var(--t-marigold)' }} /></div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
 import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck, Paperclip, Download, AlertTriangle, Reply, CornerDownRight } from 'lucide-react'
 import { communicationsApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -235,7 +236,7 @@ export default function Communications() {
 
     const invalid = toAdd.filter(f => f.size > MAX_FILE_SIZE_MB * 1024 * 1024)
     if (invalid.length > 0) {
-      alert(`Archivos exceden el limite de ${MAX_FILE_SIZE_MB}MB: ${invalid.map(f => f.name).join(', ')}`)
+      toast.error(`Archivos exceden el limite de ${MAX_FILE_SIZE_MB}MB: ${invalid.map(f => f.name).join(', ')}`)
       return
     }
     setSelectedFiles(prev => [...prev, ...toAdd.filter(f => f.size <= MAX_FILE_SIZE_MB * 1024 * 1024)])
@@ -261,7 +262,7 @@ export default function Communications() {
       }
     } catch (err: any) {
       console.error('Error uploading attachments:', err)
-      alert(err.response?.data?.message || 'Error al subir adjuntos')
+      toast.error(err.response?.data?.message || 'Error al subir adjuntos')
     } finally {
       setUploadingFiles(false)
     }
@@ -279,7 +280,7 @@ export default function Communications() {
       link.click()
       document.body.removeChild(link)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al descargar adjunto')
+      toast.error(err.response?.data?.message || 'Error al descargar adjunto')
     }
   }
 
@@ -313,7 +314,7 @@ export default function Communications() {
       setShowReplyForm(false)
       loadReplies(selectedCommunication.id)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al enviar respuesta')
+      toast.error(err.response?.data?.message || 'Error al enviar respuesta')
     } finally {
       setSendingReply(false)
     }
@@ -372,7 +373,7 @@ export default function Communications() {
       await reloadCommunications()
     } catch (err: any) {
       console.error('Error saving draft:', err)
-      alert(err.response?.data?.message || 'Error al guardar borrador')
+      toast.error(err.response?.data?.message || 'Error al guardar borrador')
     } finally {
       setSaving(false)
     }
@@ -400,7 +401,7 @@ export default function Communications() {
       await reloadCommunications()
     } catch (err: any) {
       console.error('Error sending:', err)
-      alert(err.response?.data?.message || 'Error al enviar comunicación')
+      toast.error(err.response?.data?.message || 'Error al enviar comunicación')
     } finally {
       setSaving(false)
     }
@@ -414,7 +415,7 @@ export default function Communications() {
       await reloadCommunications()
     } catch (err: any) {
       console.error('Error deleting:', err)
-      alert(err.response?.data?.message || 'Error al eliminar')
+      toast.error(err.response?.data?.message || 'Error al eliminar')
       setDeleteConfirm(null)
     }
   }

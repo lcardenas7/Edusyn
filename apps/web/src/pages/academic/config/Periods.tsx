@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from '../../../lib/toast'
 import { 
   Calendar,
   Clock,
@@ -65,7 +66,7 @@ export default function Periods() {
       setDbFinalComponents(prev => prev.map(fc => fc.id === fcId ? { ...fc, isOpen: !currentIsOpen } : fc))
     } catch (err) {
       console.error('Error toggling final component:', err)
-      alert('Error al cambiar el estado del componente')
+      toast.error('Error al cambiar el estado del componente')
     } finally {
       setTogglingFc(null)
     }
@@ -124,13 +125,13 @@ export default function Periods() {
     try {
       const success = await savePeriodsToAPI()
       if (success) {
-        alert('✅ Períodos guardados correctamente')
+        toast.success('✅ Períodos guardados correctamente')
       } else {
-        alert('❌ Error al guardar los períodos. Intente de nuevo.')
+        toast.error('❌ Error al guardar los períodos. Intente de nuevo.')
       }
     } catch (err) {
       console.error('Error saving periods:', err)
-      alert('❌ Error al guardar los períodos. Intente de nuevo.')
+      toast.error('❌ Error al guardar los períodos. Intente de nuevo.')
     } finally {
       setSavingPeriods(false)
     }
@@ -139,9 +140,9 @@ export default function Periods() {
   const handleSaveGradingConfig = async () => {
     const success = await saveGradingConfigToAPI()
     if (success) {
-      alert('✅ Sistema de calificación guardado correctamente')
+      toast.success('✅ Sistema de calificación guardado correctamente')
     } else {
-      alert('❌ Error al guardar. Intente de nuevo.')
+      toast.error('❌ Error al guardar. Intente de nuevo.')
     }
   }
 

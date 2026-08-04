@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
@@ -608,7 +609,7 @@ export default function Students() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('¿Está seguro de eliminar este estudiante? Esta acción no se puede deshacer.')) {
+    if ((await confirmDialog('¿Está seguro de eliminar este estudiante? Esta acción no se puede deshacer.', { danger: true }))) {
       try {
         await studentsApi.delete(id)
         setStudents(students.filter(s => s.id !== id))
@@ -628,7 +629,7 @@ export default function Students() {
     }
     
     const confirmMsg = `¿Crear acceso al sistema para ${studentIds.length} estudiantes del grupo "${filterGroup === 'ALL' ? 'Todos' : filterGroup}"?\n\nSe creará un usuario con:\n- Email: documento@estudiante.edusyn.com\n- Contraseña inicial: número de documento\n- Rol: ESTUDIANTE`
-    if (!confirm(confirmMsg)) return
+    if (!(await confirmDialog(confirmMsg, { danger: true }))) return
     
     setCreatingAccess(true)
     try {
@@ -702,7 +703,7 @@ export default function Students() {
   }
 
   const handleDeactivateAccess = async (studentId: string) => {
-    if (!confirm('¿Desactivar acceso al sistema para este estudiante? Se eliminará su usuario.')) return
+    if (!(await confirmDialog('¿Desactivar acceso al sistema para este estudiante? Se eliminará su usuario.', { danger: true }))) return
     try {
       setProcessingCredentials(true)
       await studentsApi.deactivateAccess(studentId)
@@ -715,7 +716,7 @@ export default function Students() {
   }
 
   const handleResetPassword = async (studentId: string) => {
-    if (!confirm('¿Resetear la contraseña de este estudiante a su número de documento?')) return
+    if (!(await confirmDialog('¿Resetear la contraseña de este estudiante a su número de documento?', { danger: true }))) return
     try {
       setProcessingCredentials(true)
       await studentsApi.resetPassword(studentId)
@@ -746,7 +747,7 @@ export default function Students() {
     }
     const msg = `¿Crear acceso al sistema para ${studentsWithoutAccess.length} estudiantes?\n\n` +
       `Se creará un usuario con:\n- Usuario: inicial+apellido+doc\n- Contraseña inicial: número de documento\n- Rol: ESTUDIANTE`
-    if (!confirm(msg)) return
+    if (!(await confirmDialog(msg, { danger: true }))) return
     
     setProcessingCredentials(true)
     try {
@@ -766,7 +767,7 @@ export default function Students() {
       toast.info('No hay estudiantes con acceso para resetear')
       return
     }
-    if (!confirm(`¿Resetear contraseña a ${studentsWithAccess.length} estudiantes?\nLa contraseña será su número de documento.`)) return
+    if (!(await confirmDialog(`¿Resetear contraseña a ${studentsWithAccess.length} estudiantes?\nLa contraseña será su número de documento.`, { danger: true }))) return
     
     setProcessingCredentials(true)
     try {
@@ -786,7 +787,7 @@ export default function Students() {
       toast.info('No hay estudiantes elegibles. Solo aplica para quienes nunca han iniciado sesión.')
       return
     }
-    if (!confirm(`¿Regenerar usuario y contraseña para ${studentsToRegenerate.length} estudiantes?\n\nEsto actualizará el username basándose en el documento actual.\nSolo afecta estudiantes que nunca han iniciado sesión.`)) return
+    if (!(await confirmDialog(`¿Regenerar usuario y contraseña para ${studentsToRegenerate.length} estudiantes?\n\nEsto actualizará el username basándose en el documento actual.\nSolo afecta estudiantes que nunca han iniciado sesión.`, { danger: true }))) return
     
     setProcessingCredentials(true)
     try {
@@ -898,8 +899,8 @@ export default function Students() {
     if (!institution?.id) return
     
     const confirmMsg = '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los estudiantes que NO tengan:\n- Notas\n- Asistencias\n- Observaciones\n\n¿Está seguro de continuar?'
-    if (!confirm(confirmMsg)) return
-    if (!confirm('¿CONFIRMAR ELIMINACIÓN MASIVA? Esta acción NO se puede deshacer.')) return
+    if (!(await confirmDialog(confirmMsg, { danger: true }))) return
+    if (!(await confirmDialog('¿CONFIRMAR ELIMINACIÓN MASIVA? Esta acción NO se puede deshacer.', { danger: true }))) return
     
     try {
       const response = await studentsApi.bulkDeleteWithoutRecords(institution.id)
@@ -1292,7 +1293,7 @@ export default function Students() {
       
       summaryMsg += '\n\n¿Desea continuar con la importación?'
       
-      if (!confirm(summaryMsg)) {
+      if (!(await confirmDialog(summaryMsg, { danger: true }))) {
         setImporting(false)
         return
       }
