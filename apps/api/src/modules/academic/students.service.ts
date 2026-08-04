@@ -759,6 +759,49 @@ export class StudentsService {
   }
 
   /**
+   * Iguala la contraseña de cada estudiante a su nombre de usuario.
+   * Pensado para entregar credenciales simples: el estudiante entra con su
+   * usuario como contraseña. No fuerza cambio en el primer inicio de sesión.
+   */
+  async bulkSetPasswordToUsername(studentIds: string[]) {
+    const results = {
+      updated: 0,
+      errors: [] as { studentId: string; error: string }[],
+    };
+
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      include: { user: { select: { id: true, username: true } } },
+    });
+
+    for (const student of students) {
+      try {
+        if (!student.userId || !student.user?.username) {
+          results.errors.push({
+            studentId: student.id,
+            error: 'El estudiante no tiene usuario/username',
+          });
+          continue;
+        }
+
+        const passwordHash = await bcrypt.hash(student.user.username, 10);
+        await this.prisma.user.update({
+          where: { id: student.userId },
+          data: { passwordHash, mustChangePassword: false },
+        });
+        results.updated++;
+      } catch (error: any) {
+        results.errors.push({
+          studentId: student.id,
+          error: error.message || 'Error desconocido',
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Regenera credenciales (username + password) de estudiantes sin acceso activo.
    * Solo afecta estudiantes que nunca han iniciado sesión (mustChangePassword=true).
    * Útil cuando se actualizaron documentos pero los usernames quedaron con datos viejos.

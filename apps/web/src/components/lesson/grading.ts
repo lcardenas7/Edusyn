@@ -37,6 +37,34 @@ export function norm(s: any): string {
   return String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+// Signos de puntuación que NO deben decidir si una respuesta escrita es correcta
+// (van al inicio/fin del texto). No incluye "-" ni "°" para no alterar números.
+const EDGE_PUNCT = /^[\s.,;:!?¿¡"'“”‘’()…]+|[\s.,;:!?¿¡"'“”‘’()…]+$/g
+
+// Normaliza una respuesta ESCRITA para compararla con tolerancia: minúsculas,
+// sin acentos/diacríticos, sin espacios extra y sin puntuación en los extremos.
+// Así "Canción", "cancion" y "cancion." se consideran la misma respuesta.
+export function canonicalText(s: any): string {
+  return String(s ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // quita acentos
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(EDGE_PUNCT, '')
+    .trim()
+}
+
+// Juez de respuestas escritas (FILL_BLANK / SHORT_ANSWER). Acepta varias
+// respuestas válidas separadas por "|" (p. ej. "big|large" o "sí|si|claro").
+export function textMatches(correct: any, value: any): boolean {
+  const answer = canonicalText(value)
+  if (!answer) return false
+  return String(correct ?? '')
+    .split('|')
+    .map(canonicalText)
+    .filter(Boolean)
+    .some(c => c === answer)
+}
+
 // Los pares de MATCHING viven en `options` como "izquierda::derecha".
 export function parsePairs(options?: string[]): { left: string; right: string }[] {
   return (options || [])
@@ -116,9 +144,13 @@ export function gradeAnswer(act: ActivityData, value: any): boolean {
     }
     case 'SHORT_ANSWER':
       // Abierta: se acepta cualquier respuesta no vacía (sin respuesta exacta) → no
-      // marca error ni penaliza. Si no es abierta, exige coincidencia exacta.
-      if (act.openAnswer) return norm(value) !== ''
-      return norm(value) === norm(act.correctAnswer)
+      // marca error ni penaliza. Si no es abierta, compara con tolerancia.
+      if (act.openAnswer) return canonicalText(value) !== ''
+      return textMatches(act.correctAnswer, value)
+    case 'FILL_BLANK':
+      // El alumno escribe la palabra del hueco: comparación tolerante (acentos,
+      // mayúsculas, puntuación) y admite alternativas separadas por "|".
+      return textMatches(act.correctAnswer, value)
     default:
       return norm(value) === norm(act.correctAnswer)
   }

@@ -579,6 +579,7 @@ export const studentsApi = {
   bulkActivateAccess: (studentIds: string[]) => api.post('/students/bulk-activate-access', { studentIds }),
   resetPassword: (studentId: string) => api.post(`/students/${studentId}/reset-password`),
   bulkResetPassword: (studentIds: string[]) => api.post('/students/bulk-reset-password', { studentIds }),
+  bulkPasswordEqualsUsername: (studentIds: string[]) => api.post('/students/bulk-password-equals-username', { studentIds }),
   bulkRegenerateCredentials: (studentIds: string[]) => api.post('/students/bulk-regenerate-credentials', { studentIds }),
   getCredentials: (institutionId: string) => api.get('/students/credentials/list', { params: { institutionId } }),
   bulkDeleteWithoutRecords: (institutionId: string) => api.post('/students/bulk-delete-without-records', { institutionId }),

@@ -781,6 +781,26 @@ export default function Students() {
     }
   }
 
+  const handleBulkPasswordEqualsUsername = async () => {
+    const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
+    if (studentsWithAccess.length === 0) {
+      toast.info('No hay estudiantes con acceso para actualizar')
+      return
+    }
+    if (!(await confirmDialog(`¿Igualar la contraseña al usuario para ${studentsWithAccess.length} estudiantes?\n\nCada estudiante podrá entrar usando su mismo usuario como contraseña.`, { danger: true }))) return
+
+    setProcessingCredentials(true)
+    try {
+      const result = await studentsApi.bulkPasswordEqualsUsername(studentsWithAccess.map(s => s.id))
+      toast.success(`Contraseña igualada al usuario: ${result.data.updated}`)
+      await loadCredentialStudents()
+    } catch (err: any) {
+      toast.error(err)
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
   const handleBulkRegenerateCredentials = async () => {
     const studentsToRegenerate = filteredCredentialStudents.filter(s => s.hasAccess && s.mustChangePassword)
     if (studentsToRegenerate.length === 0) {
@@ -2649,6 +2669,15 @@ export default function Students() {
                 >
                   {processingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   Reset Masivo ({filteredCredentialStudents.filter(s => s.hasAccess).length})
+                </button>
+                <button
+                  onClick={handleBulkPasswordEqualsUsername}
+                  disabled={processingCredentials}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+                  title="Igualar la contraseña al usuario para los estudiantes filtrados con acceso"
+                >
+                  {processingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                  Usuario = Contraseña ({filteredCredentialStudents.filter(s => s.hasAccess).length})
                 </button>
                 <button
                   onClick={handleBulkRegenerateCredentials}

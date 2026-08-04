@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi, academicTermsApi } from '../lib/api'
 import { compareStudents } from '../utils/sortStudents'
+import { bogotaInputToIso, isoToBogotaInput, formatBogota } from '../lib/datetime'
 import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
 import LearningBadges from '../components/LearningBadges'
@@ -713,7 +714,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
   if (isStudent) {
     const firstName = user?.firstName || 'Estudiante'
     const allActivities = sections.flatMap(s => (s as any).activities || [])
-    const formatShortDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : null
+    const formatShortDate = (d?: string) => d ? formatBogota(d, { day: 'numeric', month: 'short' }) : null
     const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', LIVE_QUIZ: 'Live Quiz', HOME_QUIZ: 'Quiz en Casa', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
 
     // Período académico actual (lo calcula el backend según las fechas del año lectivo).
@@ -1111,7 +1112,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
                     )
                   )}
                   <p className="text-sm text-slate-400 mt-4">
-                    {a.author.firstName} {a.author.lastName} · {new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {a.author.firstName} {a.author.lastName} · {formatBogota(a.createdAt, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 {isTeacher && (
@@ -3281,14 +3282,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     } catch {} finally { setIcfesLoading(false) }
   }
 
-  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+  // Fechas ancladas a Colombia (UTC-5) — no dependen de la zona del dispositivo.
+  const formatDate = (d?: string) => formatBogota(d)
   const isDuePast = (d?: string | null) => d ? new Date(d) < new Date() : false
-  const datetimeLocalToIso = (value?: string) => value ? new Date(value).toISOString() : undefined
-  // Convert Date to local datetime-local input value (YYYY-MM-DDTHH:MM)
-  const toLocalDatetimeStr = (d: Date) => {
-    const pad = (n: number) => n.toString().padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  }
+  const datetimeLocalToIso = (value?: string) => bogotaInputToIso(value)
+  const toLocalDatetimeStr = (d: Date) => isoToBogotaInput(d)
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
 
@@ -3378,7 +3376,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     </button>
                     {!act.isPublished && (
                       <button onClick={() => { setShowScheduleModal(act.id); setScheduleDate(act.scheduledPublishAt ? toLocalDatetimeStr(new Date(act.scheduledPublishAt)) : '') }} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.scheduledPublishAt ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`} title="Programar publicación">
-                        <Clock className="w-4 h-4 inline mr-1" />{act.scheduledPublishAt ? new Date(act.scheduledPublishAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Programar'}
+                        <Clock className="w-4 h-4 inline mr-1" />{act.scheduledPublishAt ? formatBogota(act.scheduledPublishAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Programar'}
                       </button>
                     )}
                     <button onClick={() => startEditActivity(act)} className="p-2 sm:p-2.5 rounded-xl hover:bg-amber-50" title="Editar actividad">
@@ -6367,7 +6365,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
     } catch {}
   }
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const formatDate = (d: string) => formatBogota(d, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   const currentUserId = user?.id
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
@@ -6628,7 +6626,7 @@ function GradesTab({ classroomId }: { classroomId: string }) {
     AUTO_GRADED: { label: 'Auto-calificado', color: 'bg-purple-100 text-purple-700' },
   }
 
-  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—'
+  const formatDate = (d?: string) => d ? formatBogota(d, { day: 'numeric', month: 'short' }) : '—'
 
   if (loading) {
     return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>

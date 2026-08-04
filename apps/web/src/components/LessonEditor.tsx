@@ -1093,6 +1093,7 @@ export default function LessonEditor({
                   placeholder={slide.activityData.questionType === 'FILL_BLANK' ? 'cooks' : 'Respuesta exacta'}
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
                 />
+                <p className="text-xs text-slate-400 mt-1">No distingue mayúsculas ni tildes. ¿Varias válidas? Sepáralas con <code className="text-violet-600">|</code> (ej. <code className="text-violet-600">grande|large</code>).</p>
               </div>
             )}
 
