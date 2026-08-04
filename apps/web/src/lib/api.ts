@@ -1521,6 +1521,35 @@ export const timetablingEntriesApi = {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// HORARIO PERSONAL DEL DOCENTE (agenda propia, manual, solo visual)
+// Distinto del horario institucional (timetablingEntriesApi).
+// ═══════════════════════════════════════════════════════════════
+
+export type TeacherScheduleBlockType = 'CLASE' | 'TUTORIA' | 'ATENCION_PADRES' | 'REUNION_AREA' | 'OTRO'
+
+export interface TeacherScheduleBlock {
+  id: string
+  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY'
+  startTime: string // "07:00"
+  endTime: string   // "07:45"
+  type: TeacherScheduleBlockType
+  title: string
+  location?: string | null
+  color?: string | null
+  notes?: string | null
+}
+
+export type TeacherScheduleBlockInput = Omit<TeacherScheduleBlock, 'id'>
+
+export const teacherScheduleApi = {
+  getAll: () => api.get<TeacherScheduleBlock[]>('/teacher-schedule'),
+  create: (data: TeacherScheduleBlockInput) => api.post<TeacherScheduleBlock>('/teacher-schedule', data),
+  update: (id: string, data: Partial<TeacherScheduleBlockInput>) =>
+    api.put<TeacherScheduleBlock>(`/teacher-schedule/${id}`, data),
+  remove: (id: string) => api.delete(`/teacher-schedule/${id}`),
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TIMETABLING - GENERADOR DE HORARIOS
 // ═══════════════════════════════════════════════════════════════
 

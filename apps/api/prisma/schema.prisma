@@ -342,6 +342,9 @@ model User {
   // Timetabling (Horarios)
   teacherAvailabilities TeacherAvailability[] @relation("TeacherScheduleAvailability")
 
+  // Horario personal del docente (agenda propia, manual)
+  teacherScheduleBlocks TeacherScheduleBlock[] @relation("TeacherScheduleBlocks")
+
   // Director / Acompañante de grupo
   directedGroups  Group[] @relation("groupDirector")
   companionGroups Group[] @relation("groupCompanion")
@@ -519,6 +522,7 @@ model Institution {
   scheduleGradeConfigs       ScheduleGradeConfig[]
   teacherAvailabilities      TeacherAvailability[]
   scheduleEntries            ScheduleEntry[]
+  teacherScheduleBlocks      TeacherScheduleBlock[]
   scheduleGenerationContexts ScheduleGenerationContext[]
   reportCardConfig           ReportCardConfig?           @relation("ReportCardConfigInstitution")
 
@@ -4508,6 +4512,32 @@ model ScheduleEntry {
   @@index([teacherAssignmentId])
   @@index([roomId])
   @@index([dayOfWeek])
+}
+
+// Horario personal del docente (agenda propia, manual, solo visual).
+// NO es el horario institucional (ScheduleEntry): son bloques que el docente
+// crea a mano para verlos en su página de inicio.
+model TeacherScheduleBlock {
+  id            String    @id @default(cuid())
+  institutionId String
+  teacherId     String
+  dayOfWeek     DayOfWeek
+  startTime     String // "07:00" formato HH:mm
+  endTime       String // "07:45" formato HH:mm
+  type          String   @default("OTRO") // CLASE | TUTORIA | ATENCION_PADRES | REUNION_AREA | OTRO
+  title         String // "Matemáticas 6A", "Reunión de área", etc.
+  location      String? // Salón / lugar
+  color         String? // Color para la UI
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  teacher     User        @relation("TeacherScheduleBlocks", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([teacherId])
 }
 
 // Contexto persistente de generación de horarios (uno por institución+año+jornada)
