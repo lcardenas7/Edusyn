@@ -19,8 +19,14 @@ import { cx } from './cx.js';
 export interface FileDropUploadProps {
   /** Endpoint de upload, viene del estado (Action.intent kind:'upload'). */
   path: string;
-  /** Inyección de la fuente de subida (mock hoy, API real mañana). */
-  onUpload?: (file: File, path: string) => Promise<void>;
+  /**
+   * Inyección de la fuente de subida (mock o API real). Devuelve la respuesta
+   * del endpoint, que el componente entrega intacta vía `onComplete` — nunca
+   * la interpreta (AR2).
+   */
+  onUpload?: (file: File, path: string) => Promise<unknown>;
+  /** Recibe la respuesta del endpoint tras una subida exitosa. */
+  onComplete?: (result: unknown) => void;
   accept?: string;
   /** Texto de ayuda (localizado; viene de la pantalla/contrato). */
   helperText?: string;
@@ -35,6 +41,7 @@ type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 export function FileDropUpload({
   path,
   onUpload,
+  onComplete,
   accept = '.xlsx,.xls,.csv',
   helperText,
   disabled,
@@ -50,17 +57,20 @@ export function FileDropUpload({
     setFileName(file.name);
     setStatus('uploading');
     try {
+      let result: unknown;
       if (onUpload) {
-        await onUpload(file, path);
+        result = await onUpload(file, path);
       } else {
         const body = new FormData();
         body.append('file', file); // campo estándar del contrato
         const res = await fetch(path, { method: 'POST', body });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        result = await res.json().catch(() => undefined);
       }
       setStatus('success');
+      onComplete?.(result);
     } catch {
-      setStatus('error'); // el detalle del error llega vía estado del backend; aquí solo señalamos
+      setStatus('error'); // el detalle del error lo muestra quien orquesta (pantalla/estado)
     }
   };
 
