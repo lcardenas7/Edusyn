@@ -1126,7 +1126,11 @@ const Enrollments: React.FC = () => {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-slate-900">
                         {event.type === 'CREATED' && 'Matrícula creada'}
-                        {event.type === 'GROUP_CHANGED' && 'Cambio de grupo'}
+                        {event.type === 'GROUP_CHANGED' && (
+                          event.previousValue?.gradeId && event.newValue?.gradeId && event.previousValue.gradeId !== event.newValue.gradeId
+                            ? 'Cambio de grado'
+                            : 'Cambio de curso'
+                        )}
                         {event.type === 'WITHDRAWN' && 'Retiro'}
                         {event.type === 'TRANSFERRED' && 'Transferencia'}
                         {event.type === 'PROMOTED' && 'Promoción'}
@@ -1144,15 +1148,28 @@ const Enrollments: React.FC = () => {
                       </p>
                     )}
                     
-                    {event.previousValue && (
-                      <div className="text-xs text-slate-500 mb-1">
-                        <strong>Cambio:</strong>
-                        {typeof event.previousValue === 'object' 
-                          ? JSON.stringify(event.previousValue, null, 2)
-                          : event.previousValue}
-                      </div>
+                    {(event.previousValue?.groupName || event.newValue?.groupName) && (
+                      <p className="text-sm text-slate-600 mb-1">
+                        <strong>Cambio:</strong>{' '}
+                        {[event.previousValue?.gradeName, event.previousValue?.groupName].filter(Boolean).join(' ') || '—'}
+                        {' → '}
+                        {[event.newValue?.gradeName, event.newValue?.groupName].filter(Boolean).join(' ') || '—'}
+                      </p>
                     )}
-                    
+
+                    {event.movementType && (
+                      <p className="text-xs text-slate-500 mb-1">
+                        <strong>Tipo:</strong>{' '}
+                        {event.movementType === 'ADMINISTRATIVE' ? 'Administrativo (corrección)' : 'Académico'}
+                      </p>
+                    )}
+
+                    {event.academicAct && (
+                      <p className="text-xs text-slate-500 mb-1">
+                        <strong>Acta:</strong> {event.academicAct.actNumber}{event.academicAct.title ? ` — ${event.academicAct.title}` : ''}
+                      </p>
+                    )}
+
                     {event.observations && (
                       <p className="text-sm text-slate-600">
                         <strong>Observaciones:</strong> {event.observations}
