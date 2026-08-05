@@ -39,8 +39,8 @@ export class GradeChangeController {
     @Body() dto: ChangeGradeDto,
     @Request() req: any,
   ) {
-    // Agregar información de quién realiza el cambio
-    return this.gradeChangeService.changeGrade(dto);
+    // Quién realiza el cambio: usuario autenticado (para la auditoría / FK del evento).
+    return this.gradeChangeService.changeGrade({ ...dto, performedById: req.user.id });
   }
 
   /**
