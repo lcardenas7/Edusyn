@@ -92,6 +92,7 @@ export class GradeChangeService {
       gradeChangeType,
       rulesCtx,
       promotionAssessment,
+      dto.movementType === EnrollmentMovementType.ADMINISTRATIVE,
     );
 
     return {
@@ -109,11 +110,14 @@ export class GradeChangeService {
    * Ejecuta el cambio de grado/grupo con todas las validaciones
    */
   async changeGrade(dto: ChangeGradeDto) {
-    // Primero validar
+    // Primero validar (respetando si es una corrección administrativa)
     const validation = await this.validateGradeChange({
       enrollmentId: dto.enrollmentId,
       newGroupId: dto.newGroupId,
+      movementType: dto.movementType,
     });
+
+    const isAdministrativeCorrection = dto.movementType === EnrollmentMovementType.ADMINISTRATIVE;
 
     if (!validation.canChange) {
       throw new BadRequestException(
@@ -134,10 +138,11 @@ export class GradeChangeService {
       include: { grade: true },
     });
 
-    // Para promociones/demociones, verificar acta si es requerida
-    if (dto.gradeChangeType !== GradeChangeType.SAME_GRADE && !dto.academicActId) {
+    // Para promociones/demociones se requiere acta, SALVO que sea una corrección
+    // administrativa (error de matrícula): en ese caso el admin lo asume y queda auditado.
+    if (dto.gradeChangeType !== GradeChangeType.SAME_GRADE && !dto.academicActId && !isAdministrativeCorrection) {
       throw new BadRequestException(
-        'Para cambios de grado se requiere el ID de un acta académica que respalde la decisión'
+        'Para cambios de grado se requiere el ID de un acta académica que respalde la decisión, o marcarlo como corrección administrativa'
       );
     }
 
@@ -245,10 +250,22 @@ export class GradeChangeService {
     gradeChangeType: GradeChangeType,
     rulesCtx: InstitutionRulesContext,
     promotionAssessment: Awaited<ReturnType<GradeChangeService['buildPromotionAssessment']>> | null = null,
+    isAdministrativeCorrection = false,
   ) {
     const warnings: string[] = [];
     const requirements: string[] = [];
     const restrictions: string[] = [];
+
+    // Corrección administrativa (p. ej. el estudiante fue matriculado por error en
+    // el grado/grupo equivocado): el admin asume la responsabilidad, no se exige acta
+    // ni se aplican las reglas académicas de promoción/rebaja. El cambio queda
+    // registrado en la auditoría (movementType=ADMINISTRATIVE + motivo + usuario).
+    if (isAdministrativeCorrection && gradeChangeType !== GradeChangeType.SAME_GRADE) {
+      warnings.push(
+        'Corrección administrativa: se permite el cambio de grado sin acta. Quedará registrado en la auditoría con el motivo indicado y el usuario que lo realiza.',
+      );
+      return { allowed: true, warnings, requirements, restrictions };
+    }
 
     // Regla 1: No se permite cambiar a grados inferiores sin justificación muy fuerte
     if (gradeChangeType === GradeChangeType.DEMOTION) {

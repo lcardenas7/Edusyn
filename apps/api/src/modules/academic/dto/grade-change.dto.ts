@@ -48,4 +48,11 @@ export class ValidateGradeChangeDto {
   @IsString()
   @IsNotEmpty()
   newGroupId: string;
+
+  // Si es ADMINISTRATIVE, la validación trata el cambio como corrección
+  // administrativa: no exige acta y no aplica las reglas académicas de
+  // promoción/rebaja (queda registrado en la auditoría).
+  @IsEnum(EnrollmentMovementType)
+  @IsOptional()
+  movementType?: EnrollmentMovementType;
 }
