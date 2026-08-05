@@ -193,6 +193,7 @@ export class GradeChangeService {
       observations: dto.observations,
       movementType: dto.movementType,
       academicActId: dto.academicActId,
+      performedById: dto.performedById,
     });
 
     return updatedEnrollment;
@@ -394,7 +395,11 @@ export class GradeChangeService {
     observations?: string;
     movementType: EnrollmentMovementType;
     academicActId?: string;
+    performedById?: string;
   }) {
+    if (!data.performedById) {
+      throw new BadRequestException('No se pudo determinar el usuario que realiza el cambio de grado');
+    }
     const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.enrollmentId }, select: { institutionId: true } });
     await this.prisma.enrollmentEvent.create({
       data: {
@@ -407,7 +412,7 @@ export class GradeChangeService {
         observations: data.observations,
         movementType: data.movementType,
         academicActId: data.academicActId,
-        performedById: 'system', // Esto debería venir del usuario autenticado
+        performedById: data.performedById, // usuario autenticado (FK a User)
         performedAt: new Date(),
       },
     });

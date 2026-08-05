@@ -33,6 +33,11 @@ export class ChangeGradeDto {
   @IsString()
   @IsOptional()
   academicActId?: string; // Acta que respalda el cambio (requerido para promociones/demociones)
+
+  // Se asigna en el servidor desde el usuario autenticado (el cliente NO lo envía).
+  @IsString()
+  @IsOptional()
+  performedById?: string;
 }
 
 export class ValidateGradeChangeDto {
