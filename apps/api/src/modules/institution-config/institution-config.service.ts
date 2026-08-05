@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { deriveScaleFromConfig, validateScaleRanges } from '../evaluation/performance-scale.util'
 
@@ -593,6 +593,79 @@ export class InstitutionConfigService {
     })
 
     return updated
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MÓDULO 2 (Onboarding v2) — CONFIGURACIÓN BASE + COMPLETITUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async applyBaseConfig(institutionId: string, opts: { overwrite?: boolean } = {}) {
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, gradingConfig: true, periodsConfig: true },
+    })
+    if (!inst) throw new NotFoundException('Institución no encontrada')
+
+    const alreadyConfigured = inst.gradingConfig != null || inst.periodsConfig != null
+    if (alreadyConfigured && !opts.overwrite) {
+      throw new ConflictException(
+        'La institución ya tiene configuración. Usa overwrite=true para reemplazarla.',
+      )
+    }
+
+    await this.updateGradingConfig(institutionId, this.getDefaultGradingConfig())
+    await this.updatePeriods(institutionId, this.getDefaultPeriods())
+
+    return this.getFullConfig(institutionId)
+  }
+
+  async getConfigCompleteness(institutionId: string) {
+    const [scaleCount, roots, inst] = await Promise.all([
+      this.prisma.performanceScale.count({ where: { institutionId } }),
+      this.prisma.evaluationComponent.findMany({
+        where: { institutionId, parentId: null },
+        select: { weightPercentage: true },
+      }),
+      this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { gradingConfig: true, periodsConfig: true },
+      }),
+    ])
+
+    const sumBy = (arr: any, key: string) =>
+      (Array.isArray(arr) ? arr : []).reduce((s: number, x: any) => s + (Number(x?.[key]) || 0), 0)
+
+    const escala = scaleCount > 0
+    let periodos = Math.abs(sumBy((inst?.periodsConfig as any), 'weight') - 100) < 0.01
+    if (!periodos) {
+      const year = await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: { in: ['DRAFT', 'ACTIVE'] } },
+        orderBy: { year: 'desc' },
+        select: { id: true },
+      })
+      if (year) {
+        const terms = await this.prisma.academicTerm.findMany({
+          where: { academicYearId: year.id, type: 'PERIOD' },
+          select: { weightPercentage: true },
+        })
+        if (terms.length > 0) {
+          const termSum = terms.reduce((s, t) => s + (t.weightPercentage ?? 0), 0)
+          periodos = Math.abs(termSum - 100) < 0.01
+        }
+      }
+    }
+    let compTotal = roots.reduce((s, r) => s + (r.weightPercentage ?? 0), 0)
+    if (roots.length === 0) {
+      compTotal = sumBy((inst?.gradingConfig as any)?.evaluationProcesses, 'weightPercentage')
+    }
+    const composicion = Math.abs(compTotal - 100) < 0.01
+
+    const missing: string[] = []
+    if (!escala) missing.push('escala')
+    if (!periodos) missing.push('periodos')
+    if (!composicion) missing.push('composicion')
+
+    return { ready: missing.length === 0, missing, checks: { escala, periodos, composicion } }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
