@@ -180,10 +180,24 @@ export class GradeChangeService {
       },
     });
 
+    // Cambio de CURSO (mismo grado): los consolidados siguen al estudiante. Re-apunta
+    // PartialGrade/AttendanceRecord/TutoringAttendance al TeacherAssignment del nuevo grupo
+    // por asignatura (PeriodFinalGrade sobrevive por subjectId). En cambio de GRADO no se
+    // migra: otra malla, las notas viejas quedan como histórico. docs/AUDITORIA_MOVIMIENTO_NOTAS.md (Fase 3).
+    const isSameGrade = previousGradeId === newGroup!.gradeId;
+    if (isSameGrade) {
+      await this.enrollmentService.migrateGradesToNewGroup(
+        dto.enrollmentId,
+        previousGroupId,
+        dto.newGroupId,
+        enrollment!.academicYearId,
+      );
+    }
+
     // Regenerar el snapshot académico (EnrollmentArea/EnrollmentSubject): el nuevo grupo/
     // grado tiene otra malla (áreas/asignaturas/pesos) y/o docentes. Sin esto, los boletines,
     // promedios y la promoción seguirían usando la estructura del grupo anterior.
-    // docs/AUDITORIA_MOVIMIENTO_NOTAS.md (Fase 1). No migra notas: solo la estructura.
+    // docs/AUDITORIA_MOVIMIENTO_NOTAS.md (Fase 1). En cambio de grado NO migra notas: solo la estructura.
     await this.enrollmentService.regenerateAcademicSnapshot(dto.enrollmentId);
 
     // Crear evento de auditoría
