@@ -657,7 +657,9 @@ export class EnrollmentService {
   // Solo para cambios entre grupos del MISMO GRADO
   // ═══════════════════════════════════════════════════════════════════════════
 
-  private async migrateGradesToNewGroup(
+  // Público: lo reutiliza GradeChangeService al mover de curso (mismo grado) para
+  // que los consolidados sigan al estudiante. docs/AUDITORIA_MOVIMIENTO_NOTAS.md (Fase 3).
+  async migrateGradesToNewGroup(
     enrollmentId: string,
     previousGroupId: string,
     newGroupId: string,
