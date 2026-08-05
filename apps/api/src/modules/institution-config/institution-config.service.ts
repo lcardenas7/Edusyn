@@ -657,7 +657,24 @@ export class InstitutionConfigService {
       (Array.isArray(arr) ? arr : []).reduce((s: number, x: any) => s + (Number(x?.[key]) || 0), 0)
 
     const escala = scaleCount > 0
-    const periodos = Math.abs(sumBy((inst?.periodsConfig as any), 'weight') - 100) < 0.01
+    let periodos = Math.abs(sumBy((inst?.periodsConfig as any), 'weight') - 100) < 0.01
+    if (!periodos) {
+      const year = await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: { in: ['DRAFT', 'ACTIVE'] } },
+        orderBy: { year: 'desc' },
+        select: { id: true },
+      })
+      if (year) {
+        const terms = await this.prisma.academicTerm.findMany({
+          where: { academicYearId: year.id, type: 'PERIOD' },
+          select: { weightPercentage: true },
+        })
+        if (terms.length > 0) {
+          const termSum = terms.reduce((s, t) => s + (t.weightPercentage ?? 0), 0)
+          periodos = Math.abs(termSum - 100) < 0.01
+        }
+      }
+    }
     // Composición: fuente única EvaluationComponent; si aún no está materializada,
     // se valida desde el gradingConfig (que la sembrará en la primera lectura).
     let compTotal = roots.reduce((s, r) => s + (r.weightPercentage ?? 0), 0)

@@ -18,6 +18,7 @@ import {
   ErrorView,
   EmptyView,
 } from '@edusyn/ui';
+import api from '../lib/api';
 import { onboardingSource } from '../lib/onboarding/onboardingSource';
 import { StudentsImportPanel } from '../components/onboarding/StudentsImportPanel';
 
@@ -58,16 +59,21 @@ export default function ConfiguracionInicial() {
 
   /** Ejecutor de intents: la única pieza de la pantalla que "actúa". */
   const handleIntent = useCallback(
-    (intent: ActionIntent) => {
+    async (intent: ActionIntent) => {
       switch (intent.kind) {
         case 'navigate':
           navigate(intent.path);
           break;
         case 'submit':
-          // Mock: cuando exista la API, aquí se hace la llamada real.
-          toast.info(`[mock] ${intent.method} ${intent.path}`, {
-            description: 'Con la API real, esto ejecuta la acción en el servidor.',
-          });
+          try {
+            const method = (intent.method?.toLowerCase() ?? 'post') as 'post' | 'put' | 'patch' | 'delete';
+            await api[method](intent.path);
+            toast.success('Acción ejecutada correctamente.');
+            void load();
+          } catch (err: any) {
+            const msg = err?.response?.data?.message;
+            toast.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Error al ejecutar la acción.');
+          }
           break;
         case 'upload':
           // El upload real lo maneja FileDropUpload; este intent llega solo
