@@ -5,6 +5,7 @@ import { ChangeGradeDto, ValidateGradeChangeDto, GradeChangeType } from './dto/g
 import { AttendanceService } from '../attendance/attendance.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
+import { EnrollmentService } from './enrollment.service';
 import { evaluatePromotion, type StudentPromotionData } from '../../engines/promotion.engine';
 import type { InstitutionRulesContext } from '../../engines/InstitutionRulesContext';
 
@@ -15,6 +16,7 @@ export class GradeChangeService {
     private readonly attendanceService: AttendanceService,
     private readonly studentGradesService: StudentGradesService,
     private readonly institutionContext: InstitutionContextService,
+    private readonly enrollmentService: EnrollmentService,
   ) {}
 
   /**
@@ -177,6 +179,12 @@ export class GradeChangeService {
         },
       },
     });
+
+    // Regenerar el snapshot académico (EnrollmentArea/EnrollmentSubject): el nuevo grupo/
+    // grado tiene otra malla (áreas/asignaturas/pesos) y/o docentes. Sin esto, los boletines,
+    // promedios y la promoción seguirían usando la estructura del grupo anterior.
+    // docs/AUDITORIA_MOVIMIENTO_NOTAS.md (Fase 1). No migra notas: solo la estructura.
+    await this.enrollmentService.regenerateAcademicSnapshot(dto.enrollmentId);
 
     // Crear evento de auditoría
     await this.createGradeChangeEvent({
