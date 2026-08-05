@@ -327,26 +327,31 @@ const Enrollments: React.FC = () => {
     try {
       const validation = await gradeChangeApi.validate({
         enrollmentId: selectedEnrollment.id,
-        newGroupId: changeGroupForm.newGroupId
+        newGroupId: changeGroupForm.newGroupId,
+        movementType: changeGroupForm.movementType,
       })
-      
+
       setGradeChangeValidation(validation.data)
-      
+
       // Si no está permitido, mostrar error
       if (!validation.data.canChange) {
         setError(`Cambio no permitido: ${validation.data.restrictions.join(', ')}`)
         setValidatingChange(false)
         return
       }
-      
+
       // Si hay advertencias, mostrarlas pero permitir continuar
       if (validation.data.warnings.length > 0) {
         console.warn('Advertencias de cambio:', validation.data.warnings)
       }
-      
+
       // Si es cambio de grado (no mismo grado), requerir confirmación adicional
+      const isAdminCorrection = changeGroupForm.movementType === 'ADMINISTRATIVE'
       if (validation.data.gradeChangeType !== 'SAME_GRADE') {
-        if (!(await confirmDialog(`¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`, { danger: true }))) {
+        const confirmMsg = isAdminCorrection
+          ? `Corrección administrativa de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nEste cambio NO requiere acta, pero quedará registrado en la auditoría de la matrícula (con el motivo, la fecha y tu usuario). Úsalo solo para corregir errores de matrícula.\n\n¿Deseas continuar?`
+          : `¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`
+        if (!(await confirmDialog(confirmMsg, { danger: true }))) {
           setValidatingChange(false)
           return
         }
@@ -1014,12 +1019,23 @@ const Enrollments: React.FC = () => {
                 </label>
                 <select
                   value={changeGroupForm.movementType}
-                  onChange={(e) => setChangeGroupForm(prev => ({ ...prev, movementType: e.target.value }))}
+                  onChange={(e) => {
+                    // Al cambiar el tipo, se invalida la validación previa para que
+                    // el botón se re-habilite y se vuelva a validar con el nuevo tipo.
+                    setChangeGroupForm(prev => ({ ...prev, movementType: e.target.value }))
+                    setGradeChangeValidation(null)
+                    setError('')
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 >
                   <option value="ACADEMIC">Académico</option>
-                  <option value="ADMINISTRATIVE">Administrativo</option>
+                  <option value="ADMINISTRATIVE">Administrativo (corrección — sin acta)</option>
                 </select>
+                {changeGroupForm.movementType === 'ADMINISTRATIVE' && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Corrección de error de matrícula: permite cambiar de grado sin acta. Quedará registrado en la auditoría con el motivo y tu usuario.
+                  </p>
+                )}
               </div>
 
               <div>

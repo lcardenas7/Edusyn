@@ -198,7 +198,7 @@ export const enrollmentsApi = {
 
 // Grade Change (cambios de grado con validaciones estrictas)
 export const gradeChangeApi = {
-  validate: (data: { enrollmentId: string; newGroupId: string }) => api.post('/grade-change/validate', data),
+  validate: (data: { enrollmentId: string; newGroupId: string; movementType?: string }) => api.post('/grade-change/validate', data),
   execute: (data: { enrollmentId: string; newGroupId: string; gradeChangeType: string; movementType: string; reason: string; observations?: string; academicActId?: string }) => api.post('/grade-change/execute', data),
   getRules: () => api.get('/grade-change/rules'),
 }
