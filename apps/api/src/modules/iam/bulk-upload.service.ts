@@ -454,6 +454,19 @@ export class BulkUploadService {
       orderBy: { lastName: 'asc' },
     });
 
+    // Catálogo de áreas y asignaturas ya existentes: para que el usuario reutilice
+    // los nombres EXACTOS y no genere duplicados ("Inglés" vs "ingles").
+    const areas = await this.prisma.area.findMany({
+      where: { institutionId },
+      select: { name: true, subjects: { select: { name: true }, orderBy: { name: 'asc' } } },
+      orderBy: { name: 'asc' },
+    });
+    const areaSubjectRows: (string | number)[][] = [];
+    for (const a of areas) {
+      if (a.subjects.length === 0) { areaSubjectRows.push([a.name, '(sin asignaturas)']); continue; }
+      for (const s of a.subjects) areaSubjectRows.push([a.name, s.name]);
+    }
+
     buildInicioSheet(workbook, {
       theme,
       institutionName,
@@ -461,7 +474,8 @@ export class BulkUploadService {
         'Esta plantilla te permite asignar docentes a las asignaturas y grupos del año lectivo. Cada fila representa una asignación: qué docente dicta qué materia en qué grupo. Las áreas y asignaturas que no existan se crearán automáticamente.',
       quickSteps: [
         'Ve a la hoja "Carga" y completa una fila por cada asignación (docente + asignatura + grupo).',
-        'Usa la hoja "Catálogos" para ver los grupos y docentes disponibles.',
+        'Usa la hoja "Catálogos" para ver grupos, docentes y las áreas/asignaturas ya existentes.',
+        'Si la asignatura ya existe, cópiala TAL CUAL del catálogo (mismas tildes y mayúsculas) para no duplicarla.',
         'Borra las filas de ejemplo (en gris cursiva) antes de subir el archivo.',
         'Guarda como .xlsx y sube desde Configuración Inicial → Carga Académica.',
         'Revisa el reporte: las asignaciones duplicadas se omiten automáticamente.',
@@ -483,12 +497,19 @@ export class BulkUploadService {
         rows: teachers.map(t => [t.email, t.documentNumber || '', `${t.firstName} ${t.lastName}`]),
       });
     }
+    if (areaSubjectRows.length > 0) {
+      catalogBlocks.push({
+        title: 'Áreas y asignaturas existentes (reutiliza estos nombres exactos)',
+        headers: ['Área', 'Asignatura'],
+        rows: areaSubjectRows,
+      });
+    }
     const catalogos = buildCatalogosSheet(workbook, { theme, blocks: catalogBlocks });
 
     const columns: ColumnDef[] = [
       { header: 'Curso', key: 'curso', width: 18, required: true, comment: 'Código del grupo (ej: "6°-A", "TA"). Usa los valores de la hoja Catálogos.' },
-      { header: 'Área', key: 'area', width: 22, comment: 'Nombre del área. Si no existe, se crea. Si se omite, se usa "General".' },
-      { header: 'Asignatura', key: 'asignatura', width: 25, required: true, comment: 'Nombre de la asignatura. Si no existe, se crea bajo el área.' },
+      { header: 'Área', key: 'area', width: 22, comment: 'Nombre del área. Reutiliza los del catálogo si ya existen. Si se omite, se usa "General".' },
+      { header: 'Asignatura', key: 'asignatura', width: 25, required: true, comment: 'Nombre de la asignatura. Si ya existe, cópiala igual del catálogo (tildes/mayúsculas) para no duplicar.' },
       { header: 'Intensidad horaria', key: 'intensidad', width: 18, comment: 'Horas semanales (número). Ej: 4' },
       { header: 'Documento docente', key: 'docenteDoc', width: 20, comment: 'Número de documento del docente.' },
       { header: 'Correo docente', key: 'docenteCorreo', width: 30, comment: 'Correo del docente. Se requiere documento O correo.' },

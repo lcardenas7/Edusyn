@@ -161,6 +161,12 @@ export class AcademicLoadImportService {
     let invalidas = 0;
     const seen = new Set<string>();
 
+    // Catálogo existente indexado por nombre normalizado (mismo criterio que apply).
+    const existingSubjects = await this.prisma.subject.findMany({
+      where: { area: { institutionId } }, select: { id: true, name: true },
+    });
+    const subjectByNorm = new Map(existingSubjects.map((s) => [norm(s.name), s.id]));
+
     for (const r of rows) {
       if (!r.asignatura) { invalidas++; issues.push({ severity: 'blocking', code: 'ROW_INVALID', message: 'Falta la asignatura', location: { row: r.rowNumber } }); continue; }
       const groupId = await this.findGroup(institutionId, r.curso);
@@ -168,17 +174,15 @@ export class AcademicLoadImportService {
       const teacherId = await this.findTeacher(institutionId, r);
       if (!teacherId) { invalidas++; issues.push({ severity: 'blocking', code: 'TEACHER_NOT_FOUND', message: `Docente no encontrado (${r.docenteCorreo || r.docenteDoc}); impórtalo en el paso de docentes`, location: { row: r.rowNumber } }); continue; }
 
-      // ¿Existe ya la asignatura? Si no, es nueva (se creará en apply).
-      const subject = await this.prisma.subject.findFirst({
-        where: { name: r.asignatura, area: { institutionId } }, select: { id: true },
-      });
-      const key = `${groupId}|${subject?.id ?? 'new:' + norm(r.asignatura)}|${teacherId}`;
+      // ¿Existe ya la asignatura? (normalizado, sin tildes/mayúsculas). Si no, es nueva.
+      const subjectId = subjectByNorm.get(norm(r.asignatura));
+      const key = `${groupId}|${subjectId ?? 'new:' + norm(r.asignatura)}|${teacherId}`;
       if (seen.has(key)) { continue; } // duplicado en archivo
       seen.add(key);
 
-      if (subject) {
+      if (subjectId) {
         const existing = await this.prisma.teacherAssignment.findFirst({
-          where: { academicYearId: year.id, groupId, subjectId: subject.id, teacherId }, select: { id: true },
+          where: { academicYearId: year.id, groupId, subjectId, teacherId }, select: { id: true },
         });
         if (existing) { existentes++; continue; }
       }
@@ -211,23 +215,30 @@ export class AcademicLoadImportService {
     const errors: Issue[] = [];
     const warnings: Issue[] = [];
 
-    const areaCache = new Map<string, string>();
-    const subjectCache = new Map<string, string>();
+    // Precarga del CATÁLOGO existente indexado por nombre NORMALIZADO (sin tildes
+    // ni mayúsculas). La búsqueda por texto exacto duplicaba "Inglés" vs "ingles"
+    // entre importaciones o contra áreas/asignaturas creadas a mano.
+    const [existingAreas, existingSubjects] = await Promise.all([
+      this.prisma.area.findMany({ where: { institutionId }, select: { id: true, name: true } }),
+      this.prisma.subject.findMany({ where: { area: { institutionId } }, select: { id: true, name: true, areaId: true } }),
+    ]);
+    const areaByNorm = new Map(existingAreas.map((a) => [norm(a.name), a.id]));
+    const subjectByNorm = new Map(existingSubjects.map((s) => [`${s.areaId}|${norm(s.name)}`, s.id]));
 
     const ensureArea = async (name: string): Promise<string> => {
       const key = norm(name);
-      if (areaCache.has(key)) return areaCache.get(key)!;
-      let area = await this.prisma.area.findFirst({ where: { institutionId, name }, select: { id: true } });
-      if (!area) area = await this.prisma.area.create({ data: { institutionId, name }, select: { id: true } });
-      areaCache.set(key, area.id);
+      const found = areaByNorm.get(key);
+      if (found) return found;
+      const area = await this.prisma.area.create({ data: { institutionId, name }, select: { id: true } });
+      areaByNorm.set(key, area.id);
       return area.id;
     };
     const ensureSubject = async (areaId: string, name: string): Promise<string> => {
       const key = `${areaId}|${norm(name)}`;
-      if (subjectCache.has(key)) return subjectCache.get(key)!;
-      let subject = await this.prisma.subject.findFirst({ where: { areaId, name }, select: { id: true } });
-      if (!subject) subject = await this.prisma.subject.create({ data: { areaId, name }, select: { id: true } });
-      subjectCache.set(key, subject.id);
+      const found = subjectByNorm.get(key);
+      if (found) return found;
+      const subject = await this.prisma.subject.create({ data: { areaId, name }, select: { id: true } });
+      subjectByNorm.set(key, subject.id);
       return subject.id;
     };
 
