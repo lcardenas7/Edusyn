@@ -178,7 +178,7 @@ export class OnboardingStateService {
             enabled: true,
             variant: 'secondary',
             requiresConfirmation: false,
-            intent: { kind: 'navigate', path: '/api/bulk-upload/template/students' },
+            intent: { kind: 'navigate', path: '/api/iam/bulk/template/students' },
           },
         ],
       });
@@ -208,7 +208,7 @@ export class OnboardingStateService {
           enabled: true,
           variant: 'secondary',
           requiresConfirmation: false,
-          intent: { kind: 'navigate', path: '/api/bulk-upload/template/teachers' },
+          intent: { kind: 'navigate', path: '/api/iam/bulk/template/teachers' },
         },
       ],
     });
@@ -242,7 +242,7 @@ export class OnboardingStateService {
             enabled: true,
             variant: 'secondary',
             requiresConfirmation: false,
-            intent: { kind: 'navigate', path: '/api/bulk-upload/template/academic-load' },
+            intent: { kind: 'navigate', path: '/api/iam/bulk/template/academic-load' },
           },
         ],
       });
