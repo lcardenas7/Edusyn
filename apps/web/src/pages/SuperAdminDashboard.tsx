@@ -41,7 +41,10 @@ import {
   ChevronDown,
   Edit,
   Trash2,
-  Activity
+  Activity,
+  Key,
+  Copy,
+  X
 } from 'lucide-react'
 import { superadminApi } from '../lib/api'
 
@@ -443,6 +446,7 @@ export default function SuperAdminDashboard() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [observeInstitution, setObserveInstitution] = useState<Institution | null>(null) // null = sin abrir; con valor = modal por institución
   const [showGlobalAudit, setShowGlobalAudit] = useState(false)
+  const [usersInstitution, setUsersInstitution] = useState<Institution | null>(null)
 
   // El sidebar del SuperAdmin usa rutas (/superadmin/audit-logs, /institutions/new, …) que
   // todas renderizan este mismo dashboard. Abrimos la vista correspondiente según la ruta,
@@ -778,6 +782,13 @@ export default function SuperAdminDashboard() {
                           <Activity className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => setUsersInstitution(inst)}
+                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
+                          title="Gestionar usuarios"
+                        >
+                          <Users className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedInstitution(inst)
                             setShowEditModal(true)
@@ -903,6 +914,14 @@ export default function SuperAdminDashboard() {
             setShowModulesModal(false)
             setSelectedInstitution(null)
           }}
+        />
+      )}
+
+      {/* Modal: Usuarios de una institución */}
+      {usersInstitution && (
+        <InstitutionUsersModal
+          institution={usersInstitution}
+          onClose={() => setUsersInstitution(null)}
         />
       )}
 
@@ -2175,6 +2194,230 @@ function ObservabilityModal({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Modal: Usuarios de una institución (con reset de contraseña)
+function InstitutionUsersModal({
+  institution,
+  onClose,
+}: {
+  institution: Institution
+  onClose: () => void
+}) {
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [resetTarget, setResetTarget] = useState<any | null>(null)
+  const [customPassword, setCustomPassword] = useState('')
+  const [mustChange, setMustChange] = useState(true)
+  const [resetResult, setResetResult] = useState<{ newPassword: string } | null>(null)
+  const [resetting, setResetting] = useState(false)
+
+  useEffect(() => {
+    loadUsers()
+  }, [institution.id])
+
+  const loadUsers = async () => {
+    setLoading(true)
+    try {
+      const res = await superadminApi.getInstitutionUsers(institution.id)
+      setUsers(res.data?.users || [])
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Error al cargar usuarios')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleReset = async () => {
+    if (!resetTarget) return
+    setResetting(true)
+    try {
+      const res = await superadminApi.resetUserPassword(resetTarget.id, {
+        newPassword: customPassword || undefined,
+        mustChangePassword: mustChange,
+      })
+      setResetResult({ newPassword: res.data.newPassword })
+      toast.success('Contraseña restablecida')
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Error al resetear contraseña')
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const filtered = users.filter((u) => {
+    const term = searchTerm.toLowerCase()
+    return (
+      u.firstName?.toLowerCase().includes(term) ||
+      u.lastName?.toLowerCase().includes(term) ||
+      u.email?.toLowerCase().includes(term) ||
+      u.username?.toLowerCase().includes(term) ||
+      u.roles?.some((r: string) => r.toLowerCase().includes(term))
+    )
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Usuarios — {institution.name}</h2>
+            <p className="text-sm text-slate-500">{users.length} usuarios registrados</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        <div className="p-4 border-b border-slate-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, email, usuario o rol..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">No se encontraron usuarios</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 sticky top-0">
+                <tr>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-slate-500 uppercase">Nombre</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-slate-500 uppercase">Email / Usuario</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-slate-500 uppercase">Roles</th>
+                  <th className="text-right px-4 py-2 text-xs font-medium text-slate-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((u) => (
+                  <tr key={u.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">{u.firstName} {u.lastName}</div>
+                      {u.documentNumber && <div className="text-xs text-slate-400">Doc: {u.documentNumber}</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-slate-700">{u.email}</div>
+                      {u.username && <div className="text-xs text-slate-400">@{u.username}</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {u.roles?.map((r: string) => (
+                          <span key={r} className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">{r}</span>
+                        ))}
+                        {u.isAdmin && <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700">Admin</span>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => {
+                          setResetTarget(u)
+                          setCustomPassword('')
+                          setMustChange(true)
+                          setResetResult(null)
+                        }}
+                        className="p-2 hover:bg-amber-50 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
+                        title="Resetear contraseña"
+                      >
+                        <Key className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Sub-modal: Reset de contraseña */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-slate-900">
+              Resetear contraseña
+            </h3>
+            <p className="text-sm text-slate-600">
+              <strong>{resetTarget.firstName} {resetTarget.lastName}</strong>
+              <br />
+              <span className="text-slate-400">{resetTarget.email}</span>
+            </p>
+
+            {resetResult ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+                <p className="text-sm text-green-800 font-medium">Contraseña restablecida</p>
+                <div className="flex items-center gap-2">
+                  <code className="bg-white px-3 py-1.5 rounded border border-green-200 text-sm font-mono flex-1">
+                    {resetResult.newPassword}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetResult.newPassword)
+                      toast.success('Copiada al portapapeles')
+                    }}
+                    className="p-2 hover:bg-green-100 rounded-lg text-green-700"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm text-slate-600 mb-1">Contraseña personalizada (opcional)</label>
+                  <input
+                    type="text"
+                    value={customPassword}
+                    onChange={(e) => setCustomPassword(e.target.value)}
+                    placeholder="Dejar vacío = número de documento o aleatoria"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={mustChange}
+                    onChange={(e) => setMustChange(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  Debe cambiar contraseña al iniciar sesión
+                </label>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setResetTarget(null)}
+                className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg text-sm"
+              >
+                {resetResult ? 'Cerrar' : 'Cancelar'}
+              </button>
+              {!resetResult && (
+                <button
+                  onClick={handleReset}
+                  disabled={resetting}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 text-sm"
+                >
+                  {resetting ? 'Reseteando...' : 'Resetear contraseña'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

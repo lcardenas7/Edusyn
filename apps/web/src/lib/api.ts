@@ -1166,6 +1166,14 @@ export const superadminApi = {
   // Observabilidad: registro forense de cambios de notas (general o por institución)
   getGradeAuditLog: (params?: { institutionId?: string; action?: string; studentEnrollmentId?: string; actorUserId?: string; limit?: number; offset?: number }) =>
     api.get('/superadmin/grade-audit', { params }),
+
+  // Usuarios de una institución
+  getInstitutionUsers: (institutionId: string) =>
+    api.get(`/superadmin/institutions/${institutionId}/users`),
+
+  // Reset de contraseña (como SuperAdmin)
+  resetUserPassword: (userId: string, data?: { newPassword?: string; mustChangePassword?: boolean }) =>
+    api.post(`/superadmin/users/${userId}/reset-password`, data || {}),
 }
 
 // Documentos Institucionales
