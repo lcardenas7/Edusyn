@@ -110,30 +110,38 @@ export class StudentImportService {
     return map;
   }
 
-  private rowsFromSheet(sheet: ExcelJS.Worksheet): StudentRow[] {
-    const cols = this.mapColumns(sheet.getRow(1));
-    if (cols.curso === undefined || cols.documento === undefined) {
-      const headers: string[] = [];
-      sheet.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
+  private findHeaderRow(sheet: ExcelJS.Worksheet): { cols: Record<string, number>; headerRowNum: number } {
+    for (let r = 1; r <= Math.min(10, sheet.rowCount); r++) {
+      const cols = this.mapColumns(sheet.getRow(r));
+      if (cols.curso !== undefined && cols.documento !== undefined) return { cols, headerRowNum: r };
+    }
+    const headers: string[] = [];
+    for (let r = 1; r <= Math.min(5, sheet.rowCount); r++) {
+      sheet.getRow(r).eachCell({ includeEmpty: false }, (cell) => {
         const v = String(cell.value ?? '').trim();
         if (v) headers.push(v);
       });
-      const falta = [
-        cols.curso === undefined ? 'Curso/Grado' : null,
-        cols.documento === undefined ? 'Documento' : null,
-      ].filter(Boolean).join(' y ');
-      throw new BadRequestException(
-        `No se encontró la columna: ${falta}. ` +
-        `Columnas detectadas: [${headers.join(', ')}]. ` +
-        `Acepta: Curso/Grado/Grupo/Nivel para ubicación; Documento/Identificación/Cédula/Nro para documento.`,
-      );
     }
+    const cols = this.mapColumns(sheet.getRow(1));
+    const falta = [
+      cols.curso === undefined ? 'Curso/Grado' : null,
+      cols.documento === undefined ? 'Documento' : null,
+    ].filter(Boolean).join(' y ');
+    throw new BadRequestException(
+      `No se encontró la columna: ${falta}. ` +
+      `Columnas detectadas: [${headers.join(', ')}]. ` +
+      `Acepta: Curso/Grado/Grupo/Nivel para ubicación; Documento/Identificación/Cédula/Nro para documento.`,
+    );
+  }
+
+  private rowsFromSheet(sheet: ExcelJS.Worksheet): StudentRow[] {
+    const { cols, headerRowNum } = this.findHeaderRow(sheet);
     const cell = (row: ExcelJS.Row, key: string): string => {
       const c = cols[key];
       return c === undefined ? '' : String(row.getCell(c).value ?? '').trim();
     };
     const rows: StudentRow[] = [];
-    for (let i = 2; i <= sheet.rowCount; i++) {
+    for (let i = headerRowNum + 1; i <= sheet.rowCount; i++) {
       const row = sheet.getRow(i);
       const curso = cell(row, 'curso');
       const documento = cell(row, 'documento');
@@ -164,9 +172,13 @@ export class StudentImportService {
     return (async () => {
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(buffer as any);
-      const sheet = wb.getWorksheet('PLANTILLA') || wb.worksheets[0];
-      if (!sheet) throw new BadRequestException('El archivo no contiene hojas.');
-      return this.rowsFromSheet(sheet);
+      if (wb.worksheets.length === 0) throw new BadRequestException('El archivo no contiene hojas.');
+      const named = wb.getWorksheet('PLANTILLA') || wb.getWorksheet('Estudiantes');
+      if (named) return this.rowsFromSheet(named);
+      for (const ws of wb.worksheets) {
+        try { return this.rowsFromSheet(ws); } catch { /* try next sheet */ }
+      }
+      return this.rowsFromSheet(wb.worksheets[0]);
     })();
   }
 

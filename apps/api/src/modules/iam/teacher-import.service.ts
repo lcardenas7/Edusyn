@@ -73,29 +73,37 @@ export class TeacherImportService {
     return map;
   }
 
+  private findHeaderRow(sheet: ExcelJS.Worksheet): { cols: Record<string, number>; headerRowNum: number } {
+    for (let r = 1; r <= Math.min(10, sheet.rowCount); r++) {
+      const cols = this.mapColumns(sheet.getRow(r));
+      if (cols.documento !== undefined && cols.correo !== undefined) return { cols, headerRowNum: r };
+    }
+    const headers: string[] = [];
+    for (let r = 1; r <= Math.min(5, sheet.rowCount); r++) {
+      sheet.getRow(r).eachCell({ includeEmpty: false }, (cell) => {
+        const v = String(cell.value ?? '').trim();
+        if (v) headers.push(v);
+      });
+    }
+    const cols = this.mapColumns(sheet.getRow(1));
+    const falta = [
+      cols.documento === undefined ? 'Documento' : null,
+      cols.correo === undefined ? 'Correo' : null,
+    ].filter(Boolean).join(' y ');
+    throw new BadRequestException(
+      `No se encontró la columna: ${falta}. ` +
+      `Columnas detectadas: [${headers.join(', ')}]. ` +
+      `Acepta: Documento/Identificación/Cédula/Nro para documento; Correo/Email/Mail para correo.`,
+    );
+  }
+
   private async parse(buffer: Buffer): Promise<TeacherRow[]> {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buffer as any);
     const sheet = wb.getWorksheet('PLANTILLA') || wb.getWorksheet('Docentes') || wb.worksheets[0];
     if (!sheet) throw new BadRequestException('El archivo no contiene hojas.');
 
-    const cols = this.mapColumns(sheet.getRow(1));
-    if (cols.documento === undefined || cols.correo === undefined) {
-      const headers: string[] = [];
-      sheet.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
-        const v = String(cell.value ?? '').trim();
-        if (v) headers.push(v);
-      });
-      const falta = [
-        cols.documento === undefined ? 'Documento' : null,
-        cols.correo === undefined ? 'Correo' : null,
-      ].filter(Boolean).join(' y ');
-      throw new BadRequestException(
-        `No se encontró la columna: ${falta}. ` +
-        `Columnas detectadas: [${headers.join(', ')}]. ` +
-        `Acepta: Documento/Identificación/Cédula/Nro para documento; Correo/Email/Mail para correo.`,
-      );
-    }
+    const { cols, headerRowNum } = this.findHeaderRow(sheet);
     const cell = (row: ExcelJS.Row, key: string): string => {
       const c = cols[key];
       if (c === undefined) return '';
@@ -109,14 +117,14 @@ export class TeacherImportService {
     };
 
     const rows: TeacherRow[] = [];
-    for (let i = 2; i <= sheet.rowCount; i++) {
+    for (let i = headerRowNum + 1; i <= sheet.rowCount; i++) {
       const row = sheet.getRow(i);
       const documento = cell(row, 'documento');
       const correo = cell(row, 'correo').toLowerCase();
       const nombres = cell(row, 'nombres');
       const apellidos = cell(row, 'apellidos');
-      if (!documento && !correo && !nombres && !apellidos) continue; // fila vacía
-      if (nombres.startsWith('*') || norm(nombres).startsWith('tipos')) continue; // notas
+      if (!documento && !correo && !nombres && !apellidos) continue;
+      if (nombres.startsWith('*') || norm(nombres).startsWith('tipos')) continue;
       rows.push({
         rowNumber: i,
         tipoDocumento: cell(row, 'tipoDocumento') || undefined,

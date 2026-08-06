@@ -55,18 +55,25 @@ export class AcademicLoadImportService {
     return map;
   }
 
+  private findHeaderRow(sheet: ExcelJS.Worksheet): { cols: Record<string, number>; headerRowNum: number } {
+    for (let r = 1; r <= Math.min(10, sheet.rowCount); r++) {
+      const cols = this.mapColumns(sheet.getRow(r));
+      if (cols.curso !== undefined && cols.asignatura !== undefined && (cols.docenteDoc !== undefined || cols.docenteCorreo !== undefined)) {
+        return { cols, headerRowNum: r };
+      }
+    }
+    throw new BadRequestException(
+      'El archivo no tiene las columnas mínimas (Curso, Asignatura y Documento o Correo del docente). Descarga la plantilla oficial.',
+    );
+  }
+
   private async parse(buffer: Buffer): Promise<LoadRow[]> {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buffer as any);
     const sheet = wb.getWorksheet('PLANTILLA') || wb.getWorksheet('Carga') || wb.worksheets[0];
     if (!sheet) throw new BadRequestException('El archivo no contiene hojas.');
 
-    const cols = this.mapColumns(sheet.getRow(1));
-    if (cols.curso === undefined || cols.asignatura === undefined || (cols.docenteDoc === undefined && cols.docenteCorreo === undefined)) {
-      throw new BadRequestException(
-        'El archivo no tiene las columnas mínimas (Curso, Asignatura y Documento o Correo del docente). Descarga la plantilla oficial.',
-      );
-    }
+    const { cols, headerRowNum } = this.findHeaderRow(sheet);
     const cell = (row: ExcelJS.Row, key: string): string => {
       const c = cols[key];
       if (c === undefined) return '';
@@ -80,7 +87,7 @@ export class AcademicLoadImportService {
     };
 
     const rows: LoadRow[] = [];
-    for (let i = 2; i <= sheet.rowCount; i++) {
+    for (let i = headerRowNum + 1; i <= sheet.rowCount; i++) {
       const row = sheet.getRow(i);
       const curso = cell(row, 'curso');
       const asignatura = cell(row, 'asignatura');
