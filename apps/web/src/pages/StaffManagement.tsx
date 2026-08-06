@@ -56,7 +56,11 @@ export default function StaffManagement() {
   
   // Verificar si el usuario es ADMIN_INSTITUTIONAL (solo ellos pueden ver credenciales)
   const isAdmin = useMemo(() => {
-    return user?.roles?.some((r: any) => r.role?.name === 'ADMIN_INSTITUTIONAL') || false
+    if (user?.isSuperAdmin) return true
+    return user?.roles?.some((r: any) => {
+      const name = r?.role?.name || r?.name || r
+      return name === 'ADMIN_INSTITUTIONAL' || name === 'SUPERADMIN' || name === 'RECTOR'
+    }) || false
   }, [user])
   
   const [activeTab, setActiveTab] = useState<TabType>('staff')
@@ -701,6 +705,18 @@ export default function StaffManagement() {
                               title="Editar"
                             >
                               <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setResetPasswordUser(user)
+                                setCustomPassword('')
+                                setMustChangeOnLogin(true)
+                                setResetResult(null)
+                              }}
+                              className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                              title="Resetear contraseña"
+                            >
+                              <Key className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(user)}
