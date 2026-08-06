@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { GradeStage, SchoolShift } from '@prisma/client';
 import { GRADE_TEMPLATES, deriveGradeNumber, levelKey } from '../../common/utils/academic-level.util';
+import { suggestStructureByStage } from '../../engines/AcademicStructure';
 
 interface SyncGradeDto {
   id: string;
@@ -46,6 +47,7 @@ export class GradesService {
           // cálculo del "grado siguiente" en la promoción.
           number: dto.number ?? deriveGradeNumber(dto.name),
           name: dto.name,
+          academicStructure: suggestStructureByStage(dto.stage),
         },
       });
     } catch (e) {
@@ -171,8 +173,9 @@ export class GradesService {
     );
 
     if (toCreate.length > 0) {
+      const academicStructure = suggestStructureByStage(stage);
       await this.prisma.grade.createMany({
-        data: toCreate.map((t) => ({ institutionId, stage, number: t.number, name: t.name })),
+        data: toCreate.map((t) => ({ institutionId, stage, number: t.number, name: t.name, academicStructure })),
         skipDuplicates: true,
       });
     }
@@ -221,6 +224,14 @@ export class GradesService {
           : ''
       }`,
     };
+  }
+
+  async backfillAcademicStructure(institutionId: string) {
+    const result = await this.prisma.grade.updateMany({
+      where: { institutionId, stage: 'PREESCOLAR', academicStructure: 'AREAS_SUBJECTS' },
+      data: { academicStructure: 'DIMENSIONS' },
+    });
+    return { updated: result.count, message: result.count > 0 ? `Se corrigieron ${result.count} grado(s) de preescolar a evaluación cualitativa.` : 'Todos los grados de preescolar ya estaban configurados correctamente.' };
   }
 
   // Sincronizar grados y grupos desde el frontend
@@ -295,6 +306,7 @@ export class GradesService {
             name: gradeData.name,
             stage,
             number: gradeData.order,
+            academicStructure: suggestStructureByStage(stage),
           }
         });
       }

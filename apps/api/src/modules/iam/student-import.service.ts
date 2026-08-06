@@ -313,7 +313,10 @@ export class StudentImportService {
     const ensureGrade = async (number: number, name: string, stage: any): Promise<string> => {
       if (gradeCache.has(number)) return gradeCache.get(number)!;
       let grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, name }, select: { id: true } });
-      if (!grade) { grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name }, select: { id: true } }); _r.ecosistema.gradosCreados++; }
+      if (!grade) {
+        const academicStructure = stage === 'PREESCOLAR' ? 'DIMENSIONS' : 'AREAS_SUBJECTS';
+        grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name, academicStructure }, select: { id: true } }); _r.ecosistema.gradosCreados++;
+      }
       gradeCache.set(number, grade.id);
       return grade.id;
     };

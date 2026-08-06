@@ -1659,6 +1659,20 @@ export default function Grades() {
           </div>
         )}
 
+        {resolvedLevel?.gradingScaleType === 'QUALITATIVE_DESC' && !isQualitative && (
+          <div className="mb-4 p-4 bg-orange-50 border border-orange-300 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-orange-800">
+                El nivel "{resolvedLevel.name}" está configurado como evaluación cualitativa, pero este grado aún usa la planilla numérica.
+              </p>
+              <p className="text-sm text-orange-700 mt-1">
+                Para que esta planilla muestre la escala cualitativa ({resolvedLevel.qualitativeLevels?.map(l => l.name).join(', ')}), un administrador debe corregir la estructura del grado. En Configuración Inicial o desde el panel de administración, ejecute la opción "Corregir estructura de preescolar".
+              </p>
+            </div>
+          </div>
+        )}
+
         {isQualitative ? (
           <QualitativeGradesPanel
             students={students}

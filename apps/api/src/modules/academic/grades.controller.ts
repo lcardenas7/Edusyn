@@ -65,6 +65,13 @@ export class GradesController {
     return this.gradesService.backfillNumbers(instId);
   }
 
+  @Post('backfill-structure')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async backfillStructure(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.gradesService.backfillAcademicStructure(instId);
+  }
+
   // Sincronizar grados y grupos desde el frontend (localStorage -> BD)
   @Post('sync')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
