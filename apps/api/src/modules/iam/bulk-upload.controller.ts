@@ -80,6 +80,24 @@ export class BulkUploadController {
     res.end();
   }
 
+  @Get('template/academic-load')
+  async downloadAcademicLoadTemplate(@Request() req: any, @Res() res: Response) {
+    const institutionId = await this.getInstitutionId(req.user.id);
+    const workbook = await this.bulkUploadService.generateAcademicLoadTemplate(institutionId);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=plantilla_carga_academica.xlsx',
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  }
+
   @Get('template/staff')
   async downloadStaffTemplate(@Request() req: any, @Res() res: Response) {
     const institutionId = await this.getInstitutionId(req.user.id);

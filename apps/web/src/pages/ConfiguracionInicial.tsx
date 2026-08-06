@@ -63,7 +63,25 @@ export default function ConfiguracionInicial() {
     async (intent: ActionIntent) => {
       switch (intent.kind) {
         case 'navigate':
-          navigate(intent.path);
+          if (intent.path.startsWith('/api/')) {
+            try {
+              const endpoint = intent.path.replace(/^\/api/, '');
+              const res = await api.get(endpoint, { responseType: 'blob' });
+              const cd = res.headers['content-disposition'] || '';
+              const match = cd.match(/filename="?([^";\n]+)"?/);
+              const filename = match?.[1] || 'plantilla.xlsx';
+              const url = URL.createObjectURL(res.data);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch (err: any) {
+              toast.error('No se pudo descargar la plantilla.');
+            }
+          } else {
+            navigate(intent.path);
+          }
           break;
         case 'submit':
           try {

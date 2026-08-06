@@ -172,6 +172,14 @@ export class OnboardingStateService {
             requiresConfirmation: false,
             intent: { kind: 'upload', path: '/onboarding/students/analyze' },
           },
+          {
+            type: 'download_template',
+            label: 'Descargar plantilla',
+            enabled: true,
+            variant: 'secondary',
+            requiresConfirmation: false,
+            intent: { kind: 'navigate', path: '/api/bulk-upload/template/students' },
+          },
         ],
       });
     }
@@ -193,6 +201,14 @@ export class OnboardingStateService {
           variant: 'primary',
           requiresConfirmation: false,
           intent: { kind: 'upload', path: '/onboarding/teachers/analyze' },
+        },
+        {
+          type: 'download_template',
+          label: 'Descargar plantilla',
+          enabled: true,
+          variant: 'secondary',
+          requiresConfirmation: false,
+          intent: { kind: 'navigate', path: '/api/bulk-upload/template/teachers' },
         },
       ],
     });
@@ -219,6 +235,14 @@ export class OnboardingStateService {
             variant: 'primary',
             requiresConfirmation: false,
             intent: { kind: 'upload', path: '/onboarding/academic-load/analyze' },
+          },
+          {
+            type: 'download_template',
+            label: 'Descargar plantilla',
+            enabled: true,
+            variant: 'secondary',
+            requiresConfirmation: false,
+            intent: { kind: 'navigate', path: '/api/bulk-upload/template/academic-load' },
           },
         ],
       });
