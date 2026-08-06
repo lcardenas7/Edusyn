@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { SchoolShift } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
+import type { ImportAnalysis, ApplyResult, Issue, SummaryFact } from '@edusyn/types';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -195,8 +196,37 @@ export class StudentImportService {
   // ANALIZAR (read-only)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async analyze(institutionId: string, buffer: Buffer): Promise<StudentAnalysis> {
-    return this.analyzeRows(institutionId, await this.parse(buffer));
+  async analyze(institutionId: string, buffer: Buffer): Promise<ImportAnalysis> {
+    const raw = await this.analyzeRows(institutionId, await this.parse(buffer));
+    const eco = raw.ecosystem;
+
+    const summary: SummaryFact[] = [
+      { key: 'total', label: 'Filas en el archivo', value: String(raw.students.total) },
+      { key: 'nuevos', label: 'Estudiantes nuevos', value: String(raw.students.nuevos) },
+      { key: 'existentes', label: 'Ya registrados', value: String(raw.students.existentes) },
+      { key: 'niveles', label: 'Niveles', value: String(eco.niveles.length) },
+      { key: 'grados', label: 'Grados', value: String(eco.grados.length) },
+      { key: 'grupos', label: 'Grupos', value: String(eco.totalGrupos) },
+    ];
+    if (raw.students.total - raw.students.validos > 0) {
+      summary.push({ key: 'sinDoc', label: 'Sin documento (se omitirán)', value: String(raw.students.total - raw.students.validos) });
+    }
+
+    const issues: Issue[] = raw.issues.map((iss) => ({
+      severity: 'warning' as const,
+      code: 'COURSE_NOT_RECOGNIZED',
+      message: `Curso "${iss.curso}": ${iss.motivo} (${iss.filas} fila${iss.filas > 1 ? 's' : ''})`,
+      howToFix: 'Revisa el valor del curso en el Excel y corrige el formato (ej. "6A", "TA", "Transición A").',
+    }));
+
+    const canApply = raw.students.nuevos > 0;
+    return {
+      contractVersion: 1,
+      summary,
+      issues,
+      canApply,
+      ...(canApply ? {} : { blockedReason: 'No hay estudiantes nuevos para importar en este archivo.' }),
+    };
   }
 
   async analyzeRows(institutionId: string, rows: StudentRow[]): Promise<StudentAnalysis> {
@@ -227,8 +257,7 @@ export class StudentImportService {
   // APLICAR (escribe — idempotente, no borra a nadie)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async apply(institutionId: string, academicYearId: string, buffer: Buffer): Promise<StudentApplyResult> {
-    // 1. Validar año destino (opción A: debe existir; se crea aparte, en DRAFT).
+  async apply(institutionId: string, academicYearId: string, buffer: Buffer): Promise<ApplyResult> {
     const year = await this.prisma.academicYear.findUnique({
       where: { id: academicYearId },
       select: { id: true, institutionId: true, status: true },
@@ -239,16 +268,20 @@ export class StudentImportService {
 
     const rows = await this.parse(buffer);
 
-    const result: StudentApplyResult = {
+    const _r = {
       ecosistema: { gradosCreados: 0, gruposCreados: 0, sedesCreadas: 0, jornadasCreadas: 0 },
       estudiantes: { creados: 0, existentes: 0 },
       matriculas: { creadas: 0, existentes: 0 },
       omitidos: 0,
-      errores: [],
-      advertencias: [],
     };
+    const errors: Issue[] = [];
+    const warnings: Issue[] = [];
     if (rows.some((r) => r.acudienteNombre?.trim())) {
-      result.advertencias.push('Los acudientes NO se importaron: el formato no incluye documento del acudiente (requerido). Agrega esa columna o usa un flujo aparte.');
+      warnings.push({
+        severity: 'warning', code: 'GUARDIANS_NOT_IMPORTED',
+        message: 'Los acudientes NO se importaron: el formato no incluye documento del acudiente.',
+        howToFix: 'Agrega una columna de documento del acudiente o usa un flujo aparte.',
+      });
     }
 
     // Caches idempotentes (find-or-create).
@@ -261,7 +294,7 @@ export class StudentImportService {
       const key = norm(name);
       if (campusCache.has(key)) return campusCache.get(key)!;
       let campus = await this.prisma.campus.findFirst({ where: { institutionId, name }, select: { id: true } });
-      if (!campus) { campus = await this.prisma.campus.create({ data: { institutionId, name, address: '' }, select: { id: true } }); result.ecosistema.sedesCreadas++; }
+      if (!campus) { campus = await this.prisma.campus.create({ data: { institutionId, name, address: '' }, select: { id: true } }); _r.ecosistema.sedesCreadas++; }
       campusCache.set(key, campus.id);
       return campus.id;
     };
@@ -272,7 +305,7 @@ export class StudentImportService {
       let shift = await this.prisma.shift.findFirst({ where: { campusId, type }, select: { id: true } });
       if (!shift) {
         const name = { MORNING: 'Jornada Mañana', AFTERNOON: 'Jornada Tarde', SINGLE: 'Jornada Única', NIGHT: 'Jornada Noche' }[type];
-        shift = await this.prisma.shift.create({ data: { campusId, name, type }, select: { id: true } }); result.ecosistema.jornadasCreadas++;
+        shift = await this.prisma.shift.create({ data: { campusId, name, type }, select: { id: true } }); _r.ecosistema.jornadasCreadas++;
       }
       shiftCache.set(key, shift.id);
       return shift.id;
@@ -280,7 +313,7 @@ export class StudentImportService {
     const ensureGrade = async (number: number, name: string, stage: any): Promise<string> => {
       if (gradeCache.has(number)) return gradeCache.get(number)!;
       let grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, name }, select: { id: true } });
-      if (!grade) { grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name }, select: { id: true } }); result.ecosistema.gradosCreados++; }
+      if (!grade) { grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name }, select: { id: true } }); _r.ecosistema.gradosCreados++; }
       gradeCache.set(number, grade.id);
       return grade.id;
     };
@@ -292,7 +325,7 @@ export class StudentImportService {
         group = await this.prisma.group.create({
           data: { gradeId, campusId, shiftId, name, code: `${gradeName}-${name}`, maxCapacity: 40 },
           select: { id: true },
-        }); result.ecosistema.gruposCreados++;
+        }); _r.ecosistema.gruposCreados++;
       }
       groupCache.set(key, group.id);
       return group.id;
@@ -300,9 +333,9 @@ export class StudentImportService {
 
     for (const row of rows) {
       try {
-        if (!row.documento || row.documento.length < 3) { result.omitidos++; continue; }
+        if (!row.documento || row.documento.length < 3) { _r.omitidos++; continue; }
         const parsed = parseCourse(row.curso);
-        if (!parsed) { result.omitidos++; result.errores.push({ fila: row.rowNumber, motivo: `Curso no reconocido: "${row.curso}"` }); continue; }
+        if (!parsed) { _r.omitidos++; errors.push({ severity: 'blocking', code: 'COURSE_NOT_RECOGNIZED', message: `Curso no reconocido: "${row.curso}"`, location: { row: row.rowNumber, field: 'curso' } }); continue; }
 
         // Ecosistema (idempotente)
         const campusId = await ensureCampus(row.sede?.trim() || 'Sede Principal');
@@ -320,9 +353,9 @@ export class StudentImportService {
             data: { institutionId, documentType: row.tipoDocumento || 'TI', documentNumber: row.documento, ...name },
             select: { id: true },
           });
-          result.estudiantes.creados++;
+          _r.estudiantes.creados++;
         } else {
-          result.estudiantes.existentes++;
+          _r.estudiantes.existentes++;
         }
 
         // Matrícula (idempotente por studentId+academicYearId)
@@ -330,18 +363,33 @@ export class StudentImportService {
           where: { studentId: student.id, academicYearId }, select: { id: true },
         });
         if (existingEnr) {
-          result.matriculas.existentes++;
+          _r.matriculas.existentes++;
         } else {
           await this.prisma.studentEnrollment.create({
             data: { institutionId, studentId: student.id, academicYearId, groupId, status: 'ACTIVE', enrollmentType: 'NEW' },
           });
-          result.matriculas.creadas++;
+          _r.matriculas.creadas++;
         }
       } catch (e: any) {
-        result.errores.push({ fila: row.rowNumber, motivo: e?.message || String(e) });
+        errors.push({ severity: 'blocking', code: 'ROW_FAILED', message: e?.message || String(e), location: { row: row.rowNumber } });
       }
     }
 
-    return result;
+    const summary: SummaryFact[] = [
+      { key: 'creados', label: 'Estudiantes creados', value: String(_r.estudiantes.creados) },
+      { key: 'existentes', label: 'Ya registrados', value: String(_r.estudiantes.existentes) },
+      { key: 'matriculas', label: 'Matrículas creadas', value: String(_r.matriculas.creadas) },
+      { key: 'ecosistema', label: 'Grados/Grupos creados', value: `${_r.ecosistema.gradosCreados}/${_r.ecosistema.gruposCreados}` },
+    ];
+
+    return {
+      contractVersion: 1,
+      summary,
+      created: _r.estudiantes.creados,
+      updated: 0,
+      skipped: _r.omitidos + _r.estudiantes.existentes,
+      errors,
+      warnings,
+    };
   }
 }
