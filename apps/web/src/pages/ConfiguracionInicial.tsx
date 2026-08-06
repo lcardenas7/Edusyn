@@ -21,6 +21,7 @@ import {
 import api from '../lib/api';
 import { onboardingSource } from '../lib/onboarding/onboardingSource';
 import { StudentsImportPanel } from '../components/onboarding/StudentsImportPanel';
+import { GenericImportPanel } from '../components/onboarding/GenericImportPanel';
 
 /**
  * ConfiguracionInicial — puesta en marcha de la institución (Estado Canónico).
@@ -165,12 +166,12 @@ export default function ConfiguracionInicial() {
                 <section aria-label="Carga de archivo">
                   <h3 className="mb-2 text-h3 font-semibold text-ink-primary">{uploadAction.label}</h3>
                   {step.key === 'students-import' ? (
-                    /* Flujo real punta a punta (analyze → confirmación → apply → cuadre) */
                     <StudentsImportPanel uploadAction={uploadAction} onApplied={refreshState} />
+                  ) : step.key === 'teachers-import' ? (
+                    <GenericImportPanel uploadAction={uploadAction} applyPath="/onboarding/teachers/apply" onApplied={refreshState} />
+                  ) : step.key === 'academic-load' ? (
+                    <GenericImportPanel uploadAction={uploadAction} applyPath="/onboarding/academic-load/apply" onApplied={refreshState} />
                   ) : (
-                    /* Docentes y carga académica: aún deshabilitados por el backend
-                       ("Disponible próximamente"). Si se habilitan, el dropzone
-                       hace el POST real al endpoint que expone el estado. */
                     <FileDropUpload
                       path={uploadAction.intent.path}
                       disabled={!uploadAction.enabled}
