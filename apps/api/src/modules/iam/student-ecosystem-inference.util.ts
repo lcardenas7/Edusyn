@@ -53,6 +53,7 @@ function norm(s: string): string {
  *   "Sexto A", "Once 2"    → grado por palabra
  *   "601", "1101", "1002"  → NNGG colombiano (grado + grupo numérico)
  *   "Transición A"         → grado 0 · grupo A
+ *   "TA", "TB", "TC"       → abreviatura Transición · grupo A/B/C
  */
 export function parseCourse(raw: string): ParsedCourse | null {
   const n = norm(raw);
@@ -102,6 +103,14 @@ export function parseCourse(raw: string): ParsedCourse | null {
     }
     const one = parseInt(d.slice(0, 1), 10);
     const built = build(one, d.slice(1));
+    if (built) return built;
+  }
+
+  // 5) Abreviatura de grado + grupo: "TA"→Transición·A, "TB"→Transición·B.
+  const ABBREV_TO_GRADE: Record<string, number> = { T: 0 };
+  const abbr = n.match(/^([A-Z])([A-Z]{1,2})$/);
+  if (abbr && ABBREV_TO_GRADE[abbr[1]] !== undefined) {
+    const built = build(ABBREV_TO_GRADE[abbr[1]], abbr[2]);
     if (built) return built;
   }
 
