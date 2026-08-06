@@ -2348,6 +2348,10 @@ export const liveSessionApi = {
     api.post(`/live-session/${sessionId}/add-partner`, { teamId, studentEnrollmentId }),
   removeFromTeam: (sessionId: string, studentEnrollmentId: string) =>
     api.post(`/live-session/${sessionId}/remove-from-team`, { studentEnrollmentId }),
+  assignTeams: (sessionId: string, assignments: { enrollmentId: string; teamId: string | null }[]) =>
+    api.post(`/live-session/${sessionId}/assign-teams`, { assignments }),
+  getFullRanking: (sessionId: string, limit?: number) =>
+    api.get(`/live-session/${sessionId}/ranking`, { params: { limit } }),
   searchStudents: (sessionId: string, query?: string) =>
     api.get(`/live-session/${sessionId}/search-students`, { params: { q: query } }),
   createTeamByStudent: (sessionId: string, name: string) =>

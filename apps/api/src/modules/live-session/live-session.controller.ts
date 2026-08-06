@@ -242,6 +242,31 @@ export class LiveSessionController {
     return this.liveSessionService.removeFromTeam(sessionId, body.studentEnrollmentId, req.user.id);
   }
 
+  // Asignación por lote (docente): mueve varios estudiantes en una sola llamada.
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/assign-teams')
+  async assignTeams(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { assignments: { enrollmentId: string; teamId: string | null }[] },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.assignTeamsBatch(sessionId, req.user.id, body.assignments || []);
+  }
+
+  // Ranking COMPLETO (docente): el broadcast SSE solo trae el top 5/10; este
+  // endpoint devuelve la lista entera para la vista de resultados del profesor.
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/ranking')
+  async getFullRanking(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Query('limit') limit?: string,
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.getFullRanking(sessionId, Math.min(Number(limit) || 100, 200));
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get(':id/search-students')
   async searchStudents(

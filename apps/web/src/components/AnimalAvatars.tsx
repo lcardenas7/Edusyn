@@ -56,7 +56,7 @@ export function getAvatarFromName(name: string): typeof ANIMAL_AVATARS[0] {
 interface AvatarProps {
   avatarId?: string
   name?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   showName?: boolean
   animate?: boolean
   mood?: 'happy' | 'sad' | 'neutral'
@@ -64,6 +64,7 @@ interface AvatarProps {
 }
 
 const sizeClasses = {
+  xs: 'w-5 h-5 text-xs',
   sm: 'w-8 h-8 text-lg',
   md: 'w-12 h-12 text-2xl',
   lg: 'w-16 h-16 text-3xl',
