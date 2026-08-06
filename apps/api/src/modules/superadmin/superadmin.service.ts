@@ -666,7 +666,7 @@ export class SuperadminService {
     });
     if (!institution) throw new NotFoundException('Institución no encontrada');
 
-    const users = await this.prisma.institutionUser.findMany({
+    const users: any[] = await this.prisma.institutionUser.findMany({
       where: { institutionId },
       include: {
         user: {
@@ -683,11 +683,11 @@ export class SuperadminService {
             createdAt: true,
           },
         },
-        roles: {
-          include: { role: { select: { name: true, displayName: true } } },
+        institutionUserRoles: {
+          include: { role: { select: { name: true } } },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { joinedAt: 'desc' },
     });
 
     return {
@@ -703,7 +703,7 @@ export class SuperadminService {
         isActive: iu.user.isActive,
         isAdmin: iu.isAdmin,
         mustChangePassword: iu.user.mustChangePassword,
-        roles: iu.roles.map((r) => r.role?.name || r.roleId).filter(Boolean),
+        roles: (iu.institutionUserRoles || []).map((r: any) => r.role?.name || r.roleId).filter(Boolean),
         createdAt: iu.user.createdAt,
       })),
     };
