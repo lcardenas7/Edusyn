@@ -620,12 +620,8 @@ export class InstitutionConfigService {
   }
 
   async getConfigCompleteness(institutionId: string) {
-    const [scaleCount, roots, inst] = await Promise.all([
+    const [scaleCount, inst] = await Promise.all([
       this.prisma.performanceScale.count({ where: { institutionId } }),
-      this.prisma.evaluationComponent.findMany({
-        where: { institutionId, parentId: null },
-        select: { weightPercentage: true },
-      }),
       this.prisma.institution.findUnique({
         where: { id: institutionId },
         select: { gradingConfig: true, periodsConfig: true },
@@ -654,10 +650,7 @@ export class InstitutionConfigService {
         }
       }
     }
-    let compTotal = roots.reduce((s, r) => s + (r.weightPercentage ?? 0), 0)
-    if (roots.length === 0) {
-      compTotal = sumBy((inst?.gradingConfig as any)?.evaluationProcesses, 'weightPercentage')
-    }
+    const compTotal = sumBy((inst?.gradingConfig as any)?.evaluationProcesses, 'weightPercentage')
     const composicion = Math.abs(compTotal - 100) < 0.01
 
     const missing: string[] = []
