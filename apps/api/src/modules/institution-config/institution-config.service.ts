@@ -480,26 +480,24 @@ export class InstitutionConfigService {
         const existingTerm = existingTerms.find(t => t.type === 'PERIOD' && (t.order === order || t.name === period.name))
 
         if (existingTerm) {
-          // Actualizar término existente
           await this.prisma.academicTerm.update({
             where: { id: existingTerm.id },
             data: {
               name: period.name,
               order,
-              weightPercentage: period.weight,
+              weightPercentage: Math.round(period.weight),
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
             }
           })
         } else {
-          // Crear nuevo término
           await this.prisma.academicTerm.create({
             data: {
               academicYearId: academicYear.id,
               type: 'PERIOD',
               name: period.name,
               order,
-              weightPercentage: period.weight,
+              weightPercentage: Math.round(period.weight),
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
             }

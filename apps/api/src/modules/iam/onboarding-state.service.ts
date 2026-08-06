@@ -126,7 +126,7 @@ export class OnboardingStateService {
         : [],
       issues: [],
       actions: yearDone
-        ? [action('view', 'Ver año lectivo', { kind: 'navigate', path: '/academic-years' }, 'secondary')]
+        ? [action('view', 'Ver año lectivo', { kind: 'navigate', path: '/academic-year-wizard' }, 'secondary')]
         : [
             {
               type: 'create_year',
@@ -135,7 +135,7 @@ export class OnboardingStateService {
               reason: sieeDone ? undefined : 'Configura el SIEE base primero',
               variant: 'primary',
               requiresConfirmation: false,
-              intent: { kind: 'navigate', path: '/academic-years' },
+              intent: { kind: 'navigate', path: '/academic-year-wizard' },
             },
           ],
     });
