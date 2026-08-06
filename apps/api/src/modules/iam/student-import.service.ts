@@ -84,21 +84,28 @@ export class StudentImportService {
       const h = norm(cell.value);
       if (!h) return;
       const set = (k: string) => { if (map[k] === undefined) map[k] = col; };
-      if (h.includes('curso') || h.includes('grupo')) set('curso');
+
+      // Curso/grado/grupo — columna de ubicación académica
+      if (h.includes('curso') || h.includes('grupo') || h.includes('grado')
+          || h.includes('nivel') || h.includes('salon') || h.includes('aula')) set('curso');
       else if (h.includes('jornada')) set('jornada');
       else if (h.includes('sede')) set('sede');
       else if (h.includes('tipo') && h.includes('doc')) set('tipoDocumento');
-      else if (h.includes('documento') || h.includes('identidad') || h.includes('cedula') || h.includes('identificacion')) set('documento');
-      else if (h.includes('nacimiento')) set('fechaNacimiento');
+      // Documento — detección amplia para formatos colombianos
+      else if (h.includes('documento') || h.includes('identidad') || h.includes('cedula')
+          || h.includes('identificacion') || h.includes('nro') || h.includes('n°')
+          || (h.includes('numero') && !h.includes('telefono') && !h.includes('celular'))
+          || h === 'id' || h === 'doc' || h === 'ti' || h === 'cc') set('documento');
+      else if (h.includes('nacimiento') || h.includes('fecha nac')) set('fechaNacimiento');
       else if (h.includes('genero') || h.includes('sexo')) set('genero');
-      else if (h.includes('acudiente')) set('acudienteNombre');
+      else if (h.includes('acudiente') || h.includes('responsable') || h.includes('tutor')) set('acudienteNombre');
       else if (h.includes('primer') && h.includes('nombre')) set('primerNombre');
       else if (h.includes('segundo') && h.includes('nombre')) set('segundoNombre');
       else if (h.includes('primer') && h.includes('apellido')) set('primerApellido');
       else if (h.includes('segundo') && h.includes('apellido')) set('segundoApellido');
       else if (h.includes('nombre') && h.includes('apellido')) set('nombreCompleto');
       else if (h.includes('apellido')) set('apellidos');
-      else if (h.includes('nombre')) set('nombres');
+      else if (h.includes('nombre') || h.includes('estudiante') || h.includes('alumno')) set('nombres');
     });
     return map;
   }
@@ -106,8 +113,19 @@ export class StudentImportService {
   private rowsFromSheet(sheet: ExcelJS.Worksheet): StudentRow[] {
     const cols = this.mapColumns(sheet.getRow(1));
     if (cols.curso === undefined || cols.documento === undefined) {
+      const headers: string[] = [];
+      sheet.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
+        const v = String(cell.value ?? '').trim();
+        if (v) headers.push(v);
+      });
+      const falta = [
+        cols.curso === undefined ? 'Curso/Grado' : null,
+        cols.documento === undefined ? 'Documento' : null,
+      ].filter(Boolean).join(' y ');
       throw new BadRequestException(
-        'El archivo no tiene las columnas mínimas (Curso y Documento). Descarga la plantilla oficial.',
+        `No se encontró la columna: ${falta}. ` +
+        `Columnas detectadas: [${headers.join(', ')}]. ` +
+        `Acepta: Curso/Grado/Grupo/Nivel para ubicación; Documento/Identificación/Cédula/Nro para documento.`,
       );
     }
     const cell = (row: ExcelJS.Row, key: string): string => {
