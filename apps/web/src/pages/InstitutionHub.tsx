@@ -24,9 +24,10 @@ interface ConfigCard {
 export default function InstitutionHub() {
   const { institution } = useInstitution()
 
-  // Configuración de la institución
-  const configCards: ConfigCard[] = [
+  // Configuración de la institución — orden lógico para puesta en marcha
+  const configCards: (ConfigCard & { step: number })[] = [
     {
+      step: 1,
       title: 'Información General',
       description: 'Datos básicos, logo, DANE, rector',
       icon: Building2,
@@ -36,6 +37,7 @@ export default function InstitutionHub() {
       borderColor: 'border-blue-200'
     },
     {
+      step: 2,
       title: 'Estructura Organizacional',
       description: 'Sedes, jornadas, grados y grupos',
       icon: UsersRound,
@@ -45,8 +47,9 @@ export default function InstitutionHub() {
       borderColor: 'border-teal-200'
     },
     {
+      step: 3,
       title: 'Configuración Académica (SIEE)',
-      description: 'Períodos, escala, niveles, áreas y ventanas',
+      description: 'Escala valorativa, procesos evaluativos y períodos',
       icon: Percent,
       href: '/academic',
       color: 'text-green-600',
@@ -54,6 +57,7 @@ export default function InstitutionHub() {
       borderColor: 'border-green-200'
     },
     {
+      step: 4,
       title: 'Catálogo Académico',
       description: 'Áreas, asignaturas y plan de estudios',
       icon: BookOpen,
@@ -63,8 +67,9 @@ export default function InstitutionHub() {
       borderColor: 'border-orange-200'
     },
     {
+      step: 5,
       title: 'Año Académico',
-      description: 'Configuración y asistente del año escolar',
+      description: 'Crear el año escolar y materializar períodos',
       icon: Calendar,
       href: '/academic-year-wizard',
       color: 'text-amber-600',
@@ -72,8 +77,9 @@ export default function InstitutionHub() {
       borderColor: 'border-amber-200'
     },
     {
+      step: 6,
       title: 'Usuarios',
-      description: 'Gestión de usuarios y roles del sistema',
+      description: 'Docentes, administrativos y roles del sistema',
       icon: Users,
       href: '/staff',
       color: 'text-purple-600',
@@ -111,21 +117,23 @@ export default function InstitutionHub() {
         </div>
       </div>
 
-      {/* Grid de configuraciones */}
+      {/* Grid de configuraciones — orden de puesta en marcha */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {configCards.map((card) => (
           <Link
             key={card.href}
             to={card.href}
-            className={`group p-5 rounded-xl border ${card.borderColor} ${card.bgColor} hover:shadow-md transition-all`}
+            className={`group p-5 rounded-xl border ${card.borderColor} ${card.bgColor} hover:shadow-md transition-all relative`}
           >
-            <div className="flex items-start justify-between">
+            <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/80 border border-slate-200 flex items-center justify-center">
+              <span className="text-xs font-bold text-slate-500">{card.step}</span>
+            </div>
+            <div className="flex items-start">
               <div className={`w-12 h-12 rounded-lg ${card.bgColor} flex items-center justify-center border ${card.borderColor}`}>
                 <card.icon className={`w-6 h-6 ${card.color}`} />
               </div>
-              <ChevronRight className={`w-5 h-5 ${card.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
             </div>
-            <h3 className={`mt-4 font-semibold text-slate-900`}>{card.title}</h3>
+            <h3 className="mt-4 font-semibold text-slate-900">{card.title}</h3>
             <p className="mt-1 text-sm text-slate-600">{card.description}</p>
           </Link>
         ))}
