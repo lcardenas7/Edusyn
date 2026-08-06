@@ -41,12 +41,16 @@ export class AcademicLoadImportService {
       const h = norm(cell.value);
       if (!h) return;
       const set = (k: string) => { if (map[k] === undefined) map[k] = col; };
-      if (h.includes('curso') || h.includes('grupo')) set('curso');
+      if (h.includes('curso') || h.includes('grupo') || h.includes('grado')
+          || h.includes('nivel') || h.includes('salon')) set('curso');
       else if (h.includes('area')) set('area');
       else if (h.includes('asignatura') || h.includes('materia')) set('asignatura');
       else if (h.includes('intensidad') || h.includes('horas') || h === 'ih') set('intensidad');
-      else if (h.includes('documento') || h.includes('cedula') || h.includes('identificacion')) set('docenteDoc');
-      else if (h.includes('correo') || h.includes('email') || h.includes('mail')) set('docenteCorreo');
+      else if (h.includes('documento') || h.includes('cedula') || h.includes('identificacion')
+          || h.includes('identidad') || h.includes('nro') || h.includes('n°')
+          || (h.includes('numero') && !h.includes('telefono'))) set('docenteDoc');
+      else if (h.includes('correo') || h.includes('email') || h.includes('mail')
+          || h.includes('e-mail') || h.includes('electronico')) set('docenteCorreo');
     });
     return map;
   }

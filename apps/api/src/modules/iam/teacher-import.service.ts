@@ -60,11 +60,15 @@ export class TeacherImportService {
       if (!h) return;
       const set = (k: string) => { if (map[k] === undefined) map[k] = col; };
       if (h.includes('tipo') && h.includes('doc')) set('tipoDocumento');
-      else if (h.includes('documento') || h.includes('cedula') || h.includes('identificacion') || h.includes('identidad')) set('documento');
-      else if (h.includes('correo') || h.includes('email') || h.includes('mail')) set('correo');
+      else if (h.includes('documento') || h.includes('cedula') || h.includes('identificacion')
+          || h.includes('identidad') || h.includes('nro') || h.includes('n°')
+          || (h.includes('numero') && !h.includes('telefono') && !h.includes('celular'))
+          || h === 'id' || h === 'doc' || h === 'cc') set('documento');
+      else if (h.includes('correo') || h.includes('email') || h.includes('mail')
+          || h.includes('e-mail') || h.includes('electronico')) set('correo');
       else if (h.includes('celular') || h.includes('telefono') || h.includes('movil') || h.includes('contacto')) set('celular');
       else if (h.includes('apellido')) set('apellidos');
-      else if (h.includes('nombre')) set('nombres');
+      else if (h.includes('nombre') || h.includes('docente') || h.includes('profesor')) set('nombres');
     });
     return map;
   }
@@ -77,8 +81,19 @@ export class TeacherImportService {
 
     const cols = this.mapColumns(sheet.getRow(1));
     if (cols.documento === undefined || cols.correo === undefined) {
+      const headers: string[] = [];
+      sheet.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
+        const v = String(cell.value ?? '').trim();
+        if (v) headers.push(v);
+      });
+      const falta = [
+        cols.documento === undefined ? 'Documento' : null,
+        cols.correo === undefined ? 'Correo' : null,
+      ].filter(Boolean).join(' y ');
       throw new BadRequestException(
-        'El archivo no tiene las columnas mínimas (Documento y Correo). Descarga la plantilla oficial.',
+        `No se encontró la columna: ${falta}. ` +
+        `Columnas detectadas: [${headers.join(', ')}]. ` +
+        `Acepta: Documento/Identificación/Cédula/Nro para documento; Correo/Email/Mail para correo.`,
       );
     }
     const cell = (row: ExcelJS.Row, key: string): string => {
