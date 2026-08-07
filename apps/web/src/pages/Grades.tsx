@@ -779,13 +779,22 @@ export default function Grades() {
         }
 
         if (isQualitative) {
+          // Las valoraciones guardadas vienen por studentEnrollmentId, pero la
+          // grilla se indexa por student.id: traducir para restaurar la selección.
+          const studentIdByEnrollment = new Map<string, string>(
+            students.map((s: any) => [s.enrollmentId, s.id])
+          )
           const nextGrades: Record<string, Record<string, { levelCode: string; observation: string }>> = {}
           achievementsList.forEach((achievement: any) => {
             nextGrades[achievement.id] = {}
             ;(achievement.studentAchievements || []).forEach((sa: any) => {
-              nextGrades[achievement.id][sa.studentEnrollmentId] = {
+              const studentId = studentIdByEnrollment.get(sa.studentEnrollmentId)
+              if (!studentId) return
+              nextGrades[achievement.id][studentId] = {
                 levelCode: toQualitativeCode(sa.performanceLevel, toQual),
-                observation: sa.observation || sa.approvedText || sa.suggestedText || '',
+                // La observación es solo la nota libre del docente: el descriptor
+                // (approvedText/suggestedText) NO se mezcla de vuelta aquí.
+                observation: sa.observation || '',
               }
             })
           })
