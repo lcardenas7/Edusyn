@@ -234,6 +234,71 @@ export class GradesService {
     return { updated: result.count, message: result.count > 0 ? `Se corrigieron ${result.count} grado(s) de preescolar a evaluación cualitativa.` : 'Todos los grados de preescolar ya estaban configurados correctamente.' };
   }
 
+  /**
+   * Detecta grados duplicados (misma etapa+número, distinto nombre — p. ej. "1°" y
+   * "Primero" que crea el importador de horarios). Con apply=false solo reporta;
+   * con apply=true borra ÚNICAMENTE los duplicados VACÍOS (sin grupos, plantillas,
+   * elecciones ni logros), conservando el que tiene datos reales. Nunca destruye
+   * un grado con contenido.
+   */
+  async dedupeGrades(institutionId: string, apply = false) {
+    const grades = await this.prisma.grade.findMany({
+      where: { institutionId },
+      select: {
+        id: true, name: true, stage: true, number: true,
+        _count: { select: { groups: true, gradeTemplates: true, elections: true, achievementBank: true } },
+      },
+      orderBy: [{ stage: 'asc' }, { number: 'asc' }, { name: 'asc' }],
+    });
+
+    const byKey = new Map<string, typeof grades>();
+    for (const g of grades) {
+      if (g.number == null) continue; // sin número no se puede canonizar con seguridad
+      const key = `${g.stage}|${g.number}`;
+      const list = byKey.get(key) ?? [];
+      list.push(g);
+      byKey.set(key, list);
+    }
+
+    const isEmpty = (g: typeof grades[number]) =>
+      g._count.groups === 0 && g._count.gradeTemplates === 0 && g._count.elections === 0 && g._count.achievementBank === 0;
+
+    const duplicates: any[] = [];
+    const deleted: string[] = [];
+    const skipped: string[] = [];
+
+    for (const list of byKey.values()) {
+      if (list.length < 2) continue;
+      // Conservar el que tenga más grupos (datos reales); en empate, el primero.
+      const sorted = [...list].sort((a, b) => b._count.groups - a._count.groups);
+      const keep = sorted[0];
+      for (const dup of sorted.slice(1)) {
+        const empty = isEmpty(dup);
+        duplicates.push({ kept: keep.name, duplicate: dup.name, empty, groups: dup._count.groups });
+        if (empty && apply) {
+          try {
+            await this.prisma.grade.delete({ where: { id: dup.id } });
+            deleted.push(dup.name);
+          } catch {
+            skipped.push(dup.name); // FK inesperada: no forzar
+          }
+        } else if (!empty) {
+          skipped.push(dup.name); // tiene datos: requiere revisión manual (fusión)
+        }
+      }
+    }
+
+    return {
+      applied: apply,
+      duplicates,
+      deleted,
+      skipped,
+      message: apply
+        ? `Se eliminaron ${deleted.length} grado(s) duplicado(s) vacío(s).${skipped.length ? ` ${skipped.length} con datos requieren revisión manual: ${skipped.join(', ')}.` : ''}`
+        : `${duplicates.length} duplicado(s) detectado(s).${skipped.length ? ` ${skipped.length} con datos (fusión manual): ${skipped.join(', ')}.` : ''}`,
+    };
+  }
+
   // Sincronizar grados y grupos desde el frontend
   async syncGradesAndGroups(institutionId: string, grades: SyncGradeDto[]) {
     // 1. Asegurar que existe un campus por defecto
