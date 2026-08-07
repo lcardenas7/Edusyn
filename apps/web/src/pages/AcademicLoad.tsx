@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from '../components/ui/confirm'
 import { 
   Plus, 
   Edit2, 
@@ -359,7 +361,7 @@ export default function AcademicLoad() {
       setDeleteConfirm(null)
     } catch (err: any) {
       console.error('Error deleting assignment:', err)
-      alert(err.response?.data?.message || 'Error al eliminar la asignación')
+      toast.error(err.response?.data?.message || 'Error al eliminar la asignación')
     }
   }
 
@@ -476,12 +478,12 @@ export default function AcademicLoad() {
           {/* TEMPORAL: Botón para eliminar toda la carga */}
           <button
             onClick={async () => {
-              if (!confirm('⚠️ ¿Estás seguro de eliminar TODA la carga académica?\n\nEsta acción no se puede deshacer.')) return
-              if (!confirm('🚨 ÚLTIMA CONFIRMACIÓN: Se eliminarán TODAS las asignaciones de docentes.\n\n¿Continuar?')) return
+              if (!(await confirmDialog('⚠️ ¿Estás seguro de eliminar TODA la carga académica?\n\nEsta acción no se puede deshacer.', { danger: true }))) return
+              if (!(await confirmDialog('🚨 ÚLTIMA CONFIRMACIÓN: Se eliminarán TODAS las asignaciones de docentes.\n\n¿Continuar?', { danger: true }))) return
               try {
                 setSaving(true)
                 const res = await teacherAssignmentsApi.deleteAll(academicYearId || undefined)
-                alert(res.data?.message || 'Carga eliminada')
+                toast.error(res.data?.message || 'Carga eliminada')
                 // Recargar datos
                 const loadsRes = await teacherAssignmentsApi.getAll({ academicYearId })
                 const mappedLoads = (loadsRes.data || []).map((a: any) => ({
@@ -502,7 +504,7 @@ export default function AcademicLoad() {
                 }))
                 setLoads(mappedLoads)
               } catch (err: any) {
-                alert(err.response?.data?.message || 'Error al eliminar')
+                toast.error(err.response?.data?.message || 'Error al eliminar')
               } finally {
                 setSaving(false)
               }
@@ -1178,7 +1180,7 @@ export default function AcademicLoad() {
                       academicYearId,
                       assignmentIds: selectedAssignments,
                     })
-                    alert(`✅ Transferencia exitosa: ${res.data.transferredCount} asignaciones transferidas de ${res.data.fromTeacher} a ${res.data.toTeacher}`)
+                    toast.error(`✅ Transferencia exitosa: ${res.data.transferredCount} asignaciones transferidas de ${res.data.fromTeacher} a ${res.data.toTeacher}`)
                     setShowTransferModal(false)
                     // Recargar asignaciones
                     const loadsRes = await teacherAssignmentsApi.getAll({ academicYearId })
@@ -1200,7 +1202,7 @@ export default function AcademicLoad() {
                     }))
                     setLoads(mappedLoads)
                   } catch (err: any) {
-                    alert(err.response?.data?.message || 'Error al transferir carga')
+                    toast.error(err.response?.data?.message || 'Error al transferir carga')
                   } finally {
                     setTransferLoading(false)
                   }

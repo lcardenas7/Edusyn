@@ -1,0 +1,17 @@
+{
+  "name": "@edusyn/types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contratos tipados backend/frontend de Edusyn (Estado Canónico, Importadores, errores estructurados). Type-only: no emite runtime.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit && node scripts/assert-type-only.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

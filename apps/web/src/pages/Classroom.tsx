@@ -2581,7 +2581,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         title: editForm.title,
         description: editForm.description || undefined,
         maxScore: parseFloat(editForm.maxScore) || 5,
-        dueDate: datetimeLocalToIso(editForm.dueDate),
+        dueDate: editForm.dueDate ? datetimeLocalToIso(editForm.dueDate) : null,
         allowLateSubmit: editForm.allowLateSubmit,
       })
       // Prerrequisitos (Fase 5): el backend valida misma aula + sin ciclo.

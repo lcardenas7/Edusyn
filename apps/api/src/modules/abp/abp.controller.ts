@@ -399,6 +399,15 @@ export class AbpController {
     return this.service.listReusableActivities(missionId, institutionId, userId);
   }
 
+  // Actividades/juegos reutilizables a nivel EQUIPO: para el compositor "Colocar
+  // actividad" del TeamPreview FOCO, donde la misión aún no existe al listar.
+  @Get('teams/:teamId/reusable-activities')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async teamReusableActivities(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listReusableActivitiesForTeam(teamId, institutionId, userId);
+  }
+
   // Reutiliza (enlaza) una actividad/juego existente a la misión.
   @Post('missions/:missionId/attach-activity')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')

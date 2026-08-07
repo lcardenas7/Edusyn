@@ -480,26 +480,24 @@ export class InstitutionConfigService {
         const existingTerm = existingTerms.find(t => t.type === 'PERIOD' && (t.order === order || t.name === period.name))
 
         if (existingTerm) {
-          // Actualizar término existente
           await this.prisma.academicTerm.update({
             where: { id: existingTerm.id },
             data: {
               name: period.name,
               order,
-              weightPercentage: period.weight,
+              weightPercentage: Math.round(period.weight),
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
             }
           })
         } else {
-          // Crear nuevo término
           await this.prisma.academicTerm.create({
             data: {
               academicYearId: academicYear.id,
               type: 'PERIOD',
               name: period.name,
               order,
-              weightPercentage: period.weight,
+              weightPercentage: Math.round(period.weight),
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
             }
@@ -599,6 +597,22 @@ export class InstitutionConfigService {
   // MÓDULO 2 (Onboarding v2) — CONFIGURACIÓN BASE + COMPLETITUD
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Aplica la configuración base ("plantilla") a una institución recién creada:
+   * composición de la nota (procesos/pesos 40/40/20) + períodos (4×25). La escala
+   * de desempeño ya se sembró al crear la institución (DEFAULT_PERFORMANCE_SCALE).
+   *
+   * Reusa los setters validados (RE-4 escala, RE-6 pesos=100); los defaults ya
+   * cumplen esas reglas, así que no fallan. La composición (EvaluationComponent)
+   * se materializa de forma perezosa en la primera lectura de la estructura (Fase 2),
+   * a partir del gradingConfig escrito aquí.
+   *
+   * Idempotente/protegido: no pisa una config existente salvo `overwrite=true`.
+   *
+   * NOTA (reportada): no es una única transacción — cada setter abre la suya. Como
+   * se aplican DEFAULTS válidos y la operación es reintentable, un fallo parcial se
+   * recupera reejecutando. Atomizar exigiría refactorizar los setters (fuera de alcance).
+   */
   async applyBaseConfig(institutionId: string, opts: { overwrite?: boolean } = {}) {
     const inst = await this.prisma.institution.findUnique({
       where: { id: institutionId },
@@ -619,9 +633,18 @@ export class InstitutionConfigService {
     return this.getFullConfig(institutionId)
   }
 
+  /**
+   * Gate del onboarding: ¿la configuración mínima está lista para importar y activar?
+   * Chequea la config a nivel de definición (JSON/escala), NO las tablas que dependen
+   * de que ya exista un año lectivo (los AcademicTerm se crean al configurar el año).
+   */
   async getConfigCompleteness(institutionId: string) {
-    const [scaleCount, inst] = await Promise.all([
+    const [scaleCount, roots, inst] = await Promise.all([
       this.prisma.performanceScale.count({ where: { institutionId } }),
+      this.prisma.evaluationComponent.findMany({
+        where: { institutionId, parentId: null },
+        select: { weightPercentage: true },
+      }),
       this.prisma.institution.findUnique({
         where: { id: institutionId },
         select: { gradingConfig: true, periodsConfig: true },
@@ -650,7 +673,12 @@ export class InstitutionConfigService {
         }
       }
     }
-    const compTotal = sumBy((inst?.gradingConfig as any)?.evaluationProcesses, 'weightPercentage')
+    // Composición: fuente única EvaluationComponent; si aún no está materializada,
+    // se valida desde el gradingConfig (que la sembrará en la primera lectura).
+    let compTotal = roots.reduce((s, r) => s + (r.weightPercentage ?? 0), 0)
+    if (roots.length === 0) {
+      compTotal = sumBy((inst?.gradingConfig as any)?.evaluationProcesses, 'weightPercentage')
+    }
     const composicion = Math.abs(compTotal - 100) < 0.01
 
     const missing: string[] = []

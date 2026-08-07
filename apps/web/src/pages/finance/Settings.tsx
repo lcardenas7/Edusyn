@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { toast } from '../../lib/toast'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Settings as SettingsIcon, Save, RefreshCw, Plus, Trash2, Upload, Image, ChevronDown, ChevronRight, FileText, Building2, Palette, CreditCard, Bell, Shield } from 'lucide-react'
 import { financeSettingsApi, storageApi } from '../../lib/api'
@@ -225,7 +226,7 @@ export default function FinanceSettings() {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al guardar')
+      toast.error(err.response?.data?.message || 'Error al guardar')
     } finally {
       setSaving(false)
     }

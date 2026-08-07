@@ -65,6 +65,24 @@ export class GradesController {
     return this.gradesService.backfillNumbers(instId);
   }
 
+  @Post('backfill-structure')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async backfillStructure(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.gradesService.backfillAcademicStructure(instId);
+  }
+
+  /**
+   * Detecta (y opcionalmente elimina) grados duplicados por etapa+número.
+   * ?apply=true borra solo los duplicados vacíos; sin él, solo reporta.
+   */
+  @Post('dedupe')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async dedupeGrades(@Request() req: any, @Query('apply') apply?: string, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.gradesService.dedupeGrades(instId, apply === 'true');
+  }
+
   // Sincronizar grados y grupos desde el frontend (localStorage -> BD)
   @Post('sync')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')

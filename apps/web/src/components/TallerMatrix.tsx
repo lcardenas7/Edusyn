@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, Pencil, Plus, X, MessageCircle } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -73,7 +75,7 @@ export default function TallerMatrix({ teamId, dynamic = 'IMPACTO_ESFUERZO', sta
       // nace en el centro: el equipo decide dónde va arrastrándola
       await tallerApi.createObject(inst.id, { type: 'Idea', text: t, x: Math.round(SIZE / 2), y: Math.round(SIZE / 2) })
       setText(''); await load(true)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo agregar') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo agregar') }
     finally { setAdding(false); busyRef.current = false }
   }
 
@@ -110,17 +112,17 @@ export default function TallerMatrix({ teamId, dynamic = 'IMPACTO_ESFUERZO', sta
     if (!o || !t || t === o.data?.text) { setEditingId(null); return }
     busyRef.current = true
     try { await tallerApi.updateObject(editingId, { text: t, version: o.version }); await load(true) }
-    catch { alert('Conflicto al guardar; se recargó la matriz'); await load(true) }
+    catch { toast.error('Conflicto al guardar; se recargó la matriz'); await load(true) }
     finally { busyRef.current = false; setEditingId(null) }
   }
   const remove = async (o: any) => {
-    if (!confirm('¿Quitar esta idea de la matriz? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(o.id); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog('¿Quitar esta idea de la matriz? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(o.id); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
   // Móvil: colocar en un cuadrante por toque (mueve x/y a su centro).
   const setQuad = async (o: any, key: string) => {

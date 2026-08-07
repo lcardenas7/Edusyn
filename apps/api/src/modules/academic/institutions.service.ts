@@ -1,23 +1,14 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateInstitutionDto } from './dto/create-institution.dto';
 
 @Injectable()
 export class InstitutionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateInstitutionDto) {
-    return this.prisma.institution.create({
-      data: {
-        name: dto.name,
-        slug: dto.slug,
-        daneCode: dto.daneCode,
-        nit: dto.nit,
-        status: 'TRIAL',
-      },
-    });
-  }
+  // La creación de instituciones vive SOLO en superadmin.service.createInstitution
+  // (transaccional, con admin + roles + escala). Aquí se eliminó un create()
+  // superficial que generaba instituciones inutilizables. Onboarding v2 · Módulo 1.
 
   async list() {
     return this.prisma.institution.findMany({

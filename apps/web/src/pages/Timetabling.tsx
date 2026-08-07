@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import {
   timetablingTimeBlocksApi,
@@ -727,7 +729,7 @@ function TimeBlocksTab({ timeBlocks, onReload, showMessage }: any) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este bloque?')) return
+    if (!(await confirmDialog('¿Eliminar este bloque?', { danger: true }))) return
     try {
       await timetablingTimeBlocksApi.delete(id)
       onReload()
@@ -866,7 +868,7 @@ function RoomsTab({ rooms, onReload, showMessage }: any) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este espacio?')) return
+    if (!(await confirmDialog('¿Eliminar este espacio?', { danger: true }))) return
     try {
       await timetablingRoomsApi.delete(id)
       onReload()
@@ -1117,7 +1119,7 @@ function UnplacedHoursPanel({ generateResult, academicYearId, shiftId, onRetryGe
   const [autoPlacing, setAutoPlacing] = useState(false)
 
   const handleAutoPlace = async () => {
-    if (!confirm('¿Intentar colocar automáticamente las horas restantes? El sistema buscará slots vacíos sin conflictos.')) return
+    if (!(await confirmDialog('¿Intentar colocar automáticamente las horas restantes? El sistema buscará slots vacíos sin conflictos.', { danger: true }))) return
     setAutoPlacing(true)
     try {
       const res = await timetablingGeneratorApi.autoPlace(academicYearId, shiftId || undefined)
@@ -1130,10 +1132,10 @@ function UnplacedHoursPanel({ generateResult, academicYearId, shiftId, onRetryGe
         }
         if (data.failed.length > 5) msg += `\n  ... y ${data.failed.length - 5} más`
       }
-      alert(msg)
+      toast.error(msg)
       onAutoPlaceComplete?.()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al auto-colocar')
+      toast.error(err.response?.data?.message || 'Error al auto-colocar')
     } finally {
       setAutoPlacing(false)
     }
@@ -3135,14 +3137,14 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       loadView()
     } catch (err: any) {
       console.error('Error placing entry:', err)
-      alert(err.response?.data?.message || 'Error al colocar la entrada. Puede haber conflictos de horario.')
+      toast.error(err.response?.data?.message || 'Error al colocar la entrada. Puede haber conflictos de horario.')
     }
   }
 
   // Auto-colocar horas sin ubicar
   const [autoPlacing, setAutoPlacing] = useState(false)
   const handleAutoPlace = async () => {
-    if (!confirm('¿Intentar colocar automáticamente las horas restantes? El sistema buscará slots vacíos sin conflictos.')) return
+    if (!(await confirmDialog('¿Intentar colocar automáticamente las horas restantes? El sistema buscará slots vacíos sin conflictos.', { danger: true }))) return
     setAutoPlacing(true)
     try {
       const res = await timetablingGeneratorApi.autoPlace(academicYearId, selectedViewShiftId || undefined)
@@ -3154,10 +3156,10 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
           msg += `\n  - ${f.groupName} - ${f.subjectName} (${f.teacherName})`
         }
       }
-      alert(msg)
+      toast.error(msg)
       loadView()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al auto-colocar')
+      toast.error(err.response?.data?.message || 'Error al auto-colocar')
     } finally {
       setAutoPlacing(false)
     }
@@ -3171,14 +3173,14 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       loadView() // Recargar datos
     } catch (err: any) {
       console.error('Error moving entry:', err)
-      alert(err.response?.data?.message || 'Error al mover la entrada. Puede haber conflictos.')
+      toast.error(err.response?.data?.message || 'Error al mover la entrada. Puede haber conflictos.')
       setMovingEntry(null)
     }
   }
 
   // Quitar entrada del horario (devolver al pool de sin colocar)
   const handleRemoveEntry = async (entryId: string, subjectName: string) => {
-    if (!confirm(`¿Quitar "${subjectName}" del horario? La hora quedará sin colocar y podrás reubicarla.`)) return
+    if (!(await confirmDialog(`¿Quitar "${subjectName}" del horario? La hora quedará sin colocar y podrás reubicarla.`, { danger: true }))) return
     try {
       await timetablingEntriesApi.delete(entryId)
       setMovingEntry(null)
@@ -3186,7 +3188,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       loadView()
     } catch (err: any) {
       console.error('Error removing entry:', err)
-      alert(err.response?.data?.message || 'Error al quitar la entrada')
+      toast.error(err.response?.data?.message || 'Error al quitar la entrada')
     }
   }
 
@@ -3198,7 +3200,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       loadView()
     } catch (err: any) {
       console.error('Error swapping entries:', err)
-      alert(err.response?.data?.message || 'Error al intercambiar. Puede haber conflictos.')
+      toast.error(err.response?.data?.message || 'Error al intercambiar. Puede haber conflictos.')
       setMovingEntry(null)
       loadView()
     }

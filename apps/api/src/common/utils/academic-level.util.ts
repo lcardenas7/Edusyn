@@ -137,3 +137,24 @@ export function deriveGradeNumber(name: string): number | null {
 
   return null;
 }
+
+/**
+ * Nombre canónico de un grado. Si se puede derivar el número (incluye variantes
+ * "6°"/"6º"/"6"/"Sexto"), devuelve el nombre estándar de GRADE_TEMPLATES ("6°"),
+ * unificando el ordinal `º`→`°` y espacios. Para grados no ordinarios ("CICLO 6",
+ * "Play") solo normaliza espacios/ordinal sin renombrar.
+ *
+ * Es la clave para NO duplicar grados por variantes invisibles de nombre: todo
+ * creador debe pasar el nombre por aquí (y preferir búsqueda por número+etapa).
+ */
+export function canonicalGradeName(name: string): string {
+  const trimmed = (name || '').trim().replace(/\s+/g, ' ').replace(/º/g, '°');
+  const n = deriveGradeNumber(trimmed);
+  if (n !== null) {
+    for (const rows of Object.values(GRADE_TEMPLATES)) {
+      const hit = rows.find((r) => r.number === n);
+      if (hit) return hit.name;
+    }
+  }
+  return trimmed;
+}

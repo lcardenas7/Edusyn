@@ -1,12 +1,14 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeAuditService, GradeAuditActor } from './grade-audit.service';
+import { EvaluationComponentsService } from './evaluation-components.service';
 
 @Injectable()
 export class PartialGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gradeAudit: GradeAuditService,
+    private readonly components: EvaluationComponentsService,
   ) {}
 
   /**
@@ -76,6 +78,13 @@ export class PartialGradesService {
       }
     }
 
+    // `data` incluye `expectedUpdatedAt` (control de concurrencia optimista), que NO
+    // es columna de PartialGrade. Al crear una nota nueva, `create: { ...data }` lo
+    // arrastraba y Prisma lanzaba PrismaClientValidationError (500) → el docente no
+    // podía guardar notas nuevas. Se excluye del create; la rama update ya usa campos
+    // explícitos, así que nunca tuvo el problema.
+    const { expectedUpdatedAt: _omitConcurrencyControl, ...createData } = data;
+
     const result = await this.prisma.partialGrade.upsert({
       where: {
         studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
@@ -92,12 +101,7 @@ export class PartialGradesService {
         score: data.score,
         observations: data.observations,
       },
-      // `data` incluye `expectedUpdatedAt` (control de concurrencia optimista), que NO
-      // es columna de PartialGrade. Al crear una nota nueva, `create: { ...data }` lo
-      // arrastraba y Prisma lanzaba PrismaClientValidationError (500) → el docente no
-      // podía guardar notas nuevas. Se excluye del create; la rama update usa campos
-      // explícitos, así que nunca tuvo el problema.
-      create: (({ expectedUpdatedAt, ...rest }) => ({ ...rest, institutionId: ta!.institutionId }))(data),
+      create: { ...createData, institutionId: ta!.institutionId },
     });
 
     // Auditoría: CREATE si no existía; UPDATE solo si la nota cambió
@@ -455,9 +459,38 @@ export class PartialGradesService {
 
       finalScore = totalWeight > 0 ? weightedSum / totalWeight : 0;
     } else {
-      // Sin plan de evaluación → promedio simple de todas las notas
-      const allScores = partials.map(p => Number(p.score));
-      finalScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+      // FASE 2 — Sin plan de evaluación se aplican los PESOS INSTITUCIONALES
+      // (la estructura que configuró el rector en SIEE). Antes se hacía un promedio
+      // simple que ignoraba por completo esa configuración: el rector definía
+      // 40/40/20 y la nota salía como si todo pesara igual.
+      const instWeights = await this.components.getWeightsByCode(assignment.institutionId);
+
+      const componentScores = new Map<string, number[]>();
+      for (const p of partials) {
+        const scores = componentScores.get(p.componentType) || [];
+        scores.push(Number(p.score));
+        componentScores.set(p.componentType, scores);
+      }
+
+      let weightedSum = 0;
+      let totalWeight = 0;
+      for (const [componentType, scores] of componentScores) {
+        const weight = instWeights.get(componentType) || 0;
+        if (weight > 0) {
+          const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+          weightedSum += avg * weight;
+          totalWeight += weight;
+        }
+      }
+
+      if (totalWeight > 0) {
+        finalScore = weightedSum / totalWeight;
+      } else {
+        // La institución aún no tiene estructura configurada (o los códigos no
+        // coinciden): se conserva el comportamiento anterior para no romper nada.
+        const allScores = partials.map(p => Number(p.score));
+        finalScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+      }
     }
 
     // 6. Redondear a 1 decimal

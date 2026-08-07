@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger } from '@ne
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertEvaluationPlanDto } from './dto/upsert-evaluation-plan.dto';
 import { PartialGradesService } from './partial-grades.service';
+import { EvaluationComponentsService } from './evaluation-components.service';
 
 @Injectable()
 export class EvaluationPlansService {
@@ -11,6 +12,7 @@ export class EvaluationPlansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly partialGrades: PartialGradesService,
+    private readonly components: EvaluationComponentsService,
   ) {}
 
   /**
@@ -112,5 +114,58 @@ export class EvaluationPlansService {
         components: true,
       },
     });
+  }
+
+  /**
+   * FASE 2 — Materializa el plan de una asignación HEREDANDO los pesos que la
+   * institución definió en su estructura de evaluación.
+   *
+   * Nunca pisa lo existente: si el plan ya tiene componentes (porque un docente o
+   * coordinador los ajustó), se devuelve tal cual. Solo siembra cuando está vacío.
+   */
+  async ensurePlan(params: { teacherAssignmentId: string; academicTermId: string }) {
+    const existing = await this.get(params);
+    if (existing && existing.components.length > 0) return existing;
+
+    const assignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: params.teacherAssignmentId },
+      select: { institutionId: true },
+    });
+    if (!assignment) return existing;
+
+    const defaults = await this.components.getDefaultWeights(assignment.institutionId);
+    if (defaults.length === 0) return existing;
+
+    await this.prisma.$transaction(async (tx) => {
+      const plan = await tx.evaluationPlan.upsert({
+        where: {
+          teacherAssignmentId_academicTermId: {
+            teacherAssignmentId: params.teacherAssignmentId,
+            academicTermId: params.academicTermId,
+          },
+        },
+        update: {},
+        create: {
+          teacherAssignmentId: params.teacherAssignmentId,
+          academicTermId: params.academicTermId,
+        },
+      });
+
+      // createMany + skipDuplicates: un create sobre una clave única dentro de una
+      // transacción deja la conexión envenenada si choca.
+      await tx.evaluationPlanComponentWeight.createMany({
+        data: defaults.map((d) => ({
+          evaluationPlanId: plan.id,
+          componentId: d.componentId,
+          percentage: d.percentage,
+        })),
+        skipDuplicates: true,
+      });
+    });
+
+    this.logger.log(
+      `Plan de evaluación sembrado desde la estructura institucional (asignación ${params.teacherAssignmentId}).`,
+    );
+    return this.get(params);
   }
 }

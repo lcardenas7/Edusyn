@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import {
   BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download,
   ArrowLeft, ChevronLeft, Calculator, TrendingUp, FileText, AlertTriangle,
@@ -688,7 +690,7 @@ export default function AcademicReports() {
     }
 
     if (!csvContent || csvContent.split('\n').length <= 1) {
-      alert('No hay datos para exportar')
+      toast.warning('No hay datos para exportar')
       return
     }
 
@@ -773,7 +775,7 @@ export default function AcademicReports() {
     })()
 
     if (!hasData) {
-      alert('No hay datos para exportar en PDF')
+      toast.warning('No hay datos para exportar en PDF')
       return
     }
 
@@ -2858,13 +2860,13 @@ export default function AcademicReports() {
       const cBar = (pct: number) => pct >= 100 ? 'bg-green-500' : pct >= 75 ? 'bg-amber-500' : pct >= 50 ? 'bg-orange-500' : 'bg-red-500'
 
       const handleReSnapshot = async (termId: string) => {
-        if (!confirm('¿Regenerar snapshots para este período? Se creará una nueva versión con datos actualizados.')) return
+        if (!(await confirmDialog('¿Regenerar snapshots para este período? Se creará una nueva versión con datos actualizados.', { danger: true }))) return
         setReSnapshotLoading(true)
         try {
           const res = await reportsApi.reSnapshotTerm(termId)
-          alert(`Snapshots regenerados: ${res.data.totalSnapshots} estudiantes en ${res.data.totalGroups} grupos (v${res.data.version})`)
+          toast.success(`Snapshots regenerados: ${res.data.totalSnapshots} estudiantes en ${res.data.totalGroups} grupos (v${res.data.version})`)
         } catch (err: any) {
-          alert('Error: ' + (err.response?.data?.message || err.message))
+          toast.error('Error: ' + (err.response?.data?.message || err.message))
         } finally { setReSnapshotLoading(false) }
       }
 

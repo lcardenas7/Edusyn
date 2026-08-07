@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { toast } from '../lib/toast'
 import {
   FileText,
   Download,
@@ -20,6 +21,12 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi, storageApi, toPublicFileUrl } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import {
+  TEMPLATE_CATALOG,
+  buildPreescolarNarrativoHtml,
+  buildMultiperiodoTabularHtml,
+  type TemplateCtx,
+} from './reportCardTemplates'
 
 interface StudentRow {
   enrollmentId: string
@@ -69,6 +76,7 @@ interface ReportConfig {
   showRecoveryGrades: boolean
   showComponents: boolean
   signatureConfig: SignatureEntry[]
+  defaultTemplateKey?: string
 }
 
 const defaultConfig: ReportConfig = {
@@ -100,7 +108,14 @@ const defaultConfig: ReportConfig = {
     { role: 'COORDINATOR', label: 'Coordinador(a)', name: '', enabled: true, signatureImageUrl: '' },
     { role: 'TEACHER', label: 'Director(a) de Grupo', name: '', enabled: true, signatureImageUrl: '' },
   ],
+  defaultTemplateKey: 'edusyn-clasico',
 }
+
+const STRUCTURE_LABELS: Array<{ key: string; label: string }> = [
+  { key: 'DIMENSIONS', label: 'Preescolar (dimensiones)' },
+  { key: 'SUBJECTS_ONLY', label: 'Primaria (asignaturas)' },
+  { key: 'AREAS_SUBJECTS', label: 'Bachillerato (áreas)' },
+]
 
 type PerfEntry = { label: string; color: string; bgColor: string; min: number; max: number }
 
@@ -146,6 +161,7 @@ export default function ReportCards() {
   const [students, setStudents] = useState<StudentRow[]>([])
   const [config, setConfig] = useState<ReportConfig>(defaultConfig)
   const [configDraft, setConfigDraft] = useState<ReportConfig>(defaultConfig)
+  const [templateSelByStructure, setTemplateSelByStructure] = useState<Record<string, string>>({})
 
   // Selección
   const [selectedYearId, setSelectedYearId] = useState('')
@@ -159,6 +175,7 @@ export default function ReportCards() {
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewData, setPreviewData] = useState<any>(null)
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
@@ -336,7 +353,7 @@ export default function ReportCards() {
       a.click()
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al exportar Excel')
+      toast.error(err?.response?.data?.message || 'Error al exportar Excel')
     } finally {
       setExportingExcel(false)
     }
@@ -445,7 +462,9 @@ export default function ReportCards() {
         if (showAchiev) {
           let content = '-'
           if (isQualitative) {
-            content = sg.qualitativeObservation || sg.achievement || '-'
+            // En cualitativo el texto principal es el descriptor del nivel
+            // (achievement); la observación del docente es nota secundaria.
+            content = sg.achievement || sg.qualitativeObservation || '-'
           } else {
             content = sg.achievement || '-'
           }
@@ -639,7 +658,7 @@ export default function ReportCards() {
     // Usar ventana emergente + print nativo del navegador (el más confiable, funciona siempre)
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
-      alert('Por favor permite las ventanas emergentes para descargar el boletín como PDF')
+      toast.error('Por favor permite las ventanas emergentes para descargar el boletín como PDF')
       return
     }
     printWindow.document.write(`<!DOCTYPE html>
@@ -675,18 +694,91 @@ export default function ReportCards() {
     }
   }
 
+  // ── Banco de Formatos: plantilla resuelta para el grupo seleccionado ──────────
+  const [resolvedTemplateKey, setResolvedTemplateKey] = useState<string>('edusyn-clasico')
+  useEffect(() => {
+    const grade = groups.find(g => g.id === selectedGroupId)?.grade
+    const gradeId = grade?.id
+    if (!gradeId) { setResolvedTemplateKey('edusyn-clasico'); return }
+    reportsApi.resolveTemplate({ gradeId })
+      .then(r => setResolvedTemplateKey(r.data?.templateKey || 'edusyn-clasico'))
+      .catch(() => setResolvedTemplateKey('edusyn-clasico'))
+  }, [selectedGroupId, groups])
+
+  /** Contexto compartido (colores, logo, firmas, escala) para las plantillas del banco. */
+  const buildTemplateCtx = async (data: any): Promise<TemplateCtx> => {
+    let logoBase64 = logoCachedBase64
+    if (!logoBase64 && config.showLogo) {
+      const logoSrc = logoPreviewUrl || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')
+      logoBase64 = logoSrc ? await imageUrlToBase64(logoSrc) : ''
+      if (logoBase64) setLogoCachedBase64(logoBase64)
+    }
+    const sigs = await Promise.all(
+      ((config.signatureConfig as any[]) || [])
+        .filter((s: any) => s?.enabled)
+        .map(async (s: any) => ({
+          label: s.label || '',
+          name: s.name || '',
+          imageSrc: s.signatureImageUrl ? await imageUrlToBase64(toPublicFileUrl(s.signatureImageUrl)) : undefined,
+        })),
+    )
+    const p = config.primaryColor || '#1E3A8A'
+    return {
+      colors: {
+        primary: p,
+        secondary: (config as any).secondaryColor || p,
+        accent: (config as any).accentColor || p,
+        headerBg: (config as any).headerBgColor || '#f1f5f9',
+        tableStripe: (config as any).tableStripeColor || '#f8fafc',
+        text: (config as any).textColor || '#0f172a',
+      },
+      logoSrc: logoBase64 || '',
+      shieldSrc: logoBase64 || '',
+      institutionName: data?.institution?.name || institution?.name || '',
+      headerLines: [
+        [config.headerResolution, (institution as any)?.daneCode ? `DANE ${(institution as any).daneCode}` : '', data?.institution?.nit ? `NIT ${data.institution.nit}` : '']
+          .filter(Boolean).join(' · '),
+        [data?.institution?.address, data?.institution?.phone, data?.institution?.email].filter(Boolean).join(' · '),
+      ].filter(Boolean),
+      signatures: sigs,
+      performanceLabels: Object.fromEntries(
+        Object.entries(performanceConfig).map(([k, v]: any) => [k, v.label]),
+      ),
+      qualitativeLevels: data?.displayConfig?.qualitativeLevels || undefined,
+      showRanking: !!config.showRanking,
+      showAttendance: !!config.showAttendance,
+      showVerification: true,
+      verificationCode: data?.verificationCode || undefined,
+    }
+  }
+
+  /** Genera el HTML del boletín de un estudiante según la plantilla resuelta. */
+  const buildStudentHtml = async (student: StudentRow): Promise<string> => {
+    if (resolvedTemplateKey === 'multiperiodo-tabular') {
+      const yr = await reportsApi.getReportCardYear(student.enrollmentId, selectedTermId)
+      const ctx = await buildTemplateCtx(yr.data)
+      return buildMultiperiodoTabularHtml(yr.data, ctx, { rank: student.rank, totalStudents: student.totalStudents })
+    }
+    const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
+    const data = res.data
+    if (resolvedTemplateKey === 'preescolar-narrativo') {
+      const ctx = await buildTemplateCtx(data)
+      const periodLabel = data?.term?.name || ''
+      return buildPreescolarNarrativoHtml(data, ctx, periodLabel)
+    }
+    return buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+  }
+
   // Descargar PDF individual de un estudiante
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null)
   const handleDownloadPdf = async (student: StudentRow) => {
     if (!selectedTermId) return
     setDownloadingPdf(student.enrollmentId)
     try {
-      const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
-      const data = res.data
-      const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+      const html = await buildStudentHtml(student)
       await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al descargar el boletin PDF')
+      toast.error(err?.response?.data?.message || 'Error al descargar el boletin PDF')
     } finally {
       setDownloadingPdf(null)
     }
@@ -697,7 +789,7 @@ export default function ReportCards() {
     if (!selectedTermId || !selectedGroupId || !selectedYearId) return
     const ids = enrollmentIds || selectedCards
     if (ids.length === 0) {
-      alert('Seleccione al menos un estudiante')
+      toast.error('Seleccione al menos un estudiante')
       return
     }
     setIsGeneratingBulk(true)
@@ -707,9 +799,7 @@ export default function ReportCards() {
         try {
           const student = students.find(s => s.enrollmentId === enrollmentId)
           if (!student) continue
-          const res = await reportsApi.getReportCard(enrollmentId, selectedTermId)
-          const data = res.data
-          const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+          const html = await buildStudentHtml(student)
           htmlBlocks.push(`<section class="report-card-page">${html}</section>`)
         } catch (err) {
           console.error(`Error descargando boletin de ${enrollmentId}:`, err)
@@ -719,10 +809,10 @@ export default function ReportCards() {
         const bulkHtml = htmlBlocks.join('')
         await generatePdfFromHtml(bulkHtml, `boletines-${selectedGroupId}-${selectedTermId}.pdf`)
       } else {
-        alert('No se pudo descargar ningun boletin. Verifique que existan notas registradas.')
+        toast.error('No se pudo descargar ningun boletin. Verifique que existan notas registradas.')
       }
     } catch (err: any) {
-      alert('Error al generar los boletines')
+      toast.error('Error al generar los boletines')
     } finally {
       setIsGeneratingBulk(false)
     }
@@ -747,7 +837,7 @@ export default function ReportCards() {
         setLogoPreviewUrl(urlToShow) // URL firmada para mostrar inmediatamente
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
+      toast.error(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
     } finally {
       setUploadingLogo(false)
     }
@@ -764,7 +854,7 @@ export default function ReportCards() {
       updated[idx] = { ...updated[idx], signatureImageUrl: url }
       setConfigDraft({ ...configDraft, signatureConfig: updated })
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al subir la firma. Verifique que sea PNG/JPG y menor a 200KB.')
+      toast.error(err?.response?.data?.message || 'Error al subir la firma. Verifique que sea PNG/JPG y menor a 200KB.')
     } finally {
       setUploadingSignature(null)
     }
@@ -773,9 +863,17 @@ export default function ReportCards() {
   const handlePreview = async (student: StudentRow) => {
     setLoadingPreview(true)
     setShowPreview(true)
+    setPreviewHtml(null)
     try {
-      const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
-      setPreviewData({ ...res.data, rank: student.rank, totalStudents: student.totalStudents })
+      if (resolvedTemplateKey !== 'edusyn-clasico') {
+        // Plantilla del banco: la vista previa muestra el mismo documento que se descarga.
+        const html = await buildStudentHtml(student)
+        setPreviewHtml(html)
+        setPreviewData({})
+      } else {
+        const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
+        setPreviewData({ ...res.data, rank: student.rank, totalStudents: student.totalStudents })
+      }
     } catch (err) {
       console.error('Error loading preview:', err)
       setPreviewData(null)
@@ -803,9 +901,28 @@ export default function ReportCards() {
       setConfig(configDraft)
       setShowConfigModal(false)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al guardar configuracion')
+      toast.error(err.response?.data?.message || 'Error al guardar configuracion')
     } finally {
       setSavingConfig(false)
+    }
+  }
+
+  // Banco de Formatos: cargar selecciones por estructura al abrir el modal.
+  useEffect(() => {
+    if (!showConfigModal) return
+    reportsApi.getTemplateSelections().then(r => {
+      const m: Record<string, string> = {}
+      for (const s of (r.data?.byStructure || [])) if (s.academicStructure) m[s.academicStructure] = s.templateKey
+      setTemplateSelByStructure(m)
+    }).catch(() => {})
+  }, [showConfigModal])
+
+  const setStructureTemplate = async (structure: string, templateKey: string) => {
+    setTemplateSelByStructure(prev => ({ ...prev, [structure]: templateKey }))
+    try {
+      await reportsApi.upsertTemplateSelection({ academicStructure: structure, templateKey })
+    } catch {
+      toast.error('No se pudo guardar la plantilla del nivel')
     }
   }
 
@@ -833,7 +950,7 @@ export default function ReportCards() {
       await academicTermsApi.toggleBulletinsRelease(selectedTermId, !current)
       setTerms(prev => prev.map(t => t.id === selectedTermId ? { ...t, bulletinsReleasedForTeachers: !current } : t))
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al cambiar visibilidad de boletines')
+      toast.error(err?.response?.data?.message || 'Error al cambiar visibilidad de boletines')
     } finally {
       setTogglingBulletins(false)
     }
@@ -1096,7 +1213,7 @@ export default function ReportCards() {
                 <h3 className="text-lg font-semibold text-slate-900">Vista Previa del Boletin</h3>
                 <p className="text-sm text-slate-500">{selectedTermName} - {selectedYearName}</p>
               </div>
-              <button onClick={() => { setShowPreview(false); setPreviewData(null) }} className="p-2 hover:bg-slate-100 rounded-lg">
+              <button onClick={() => { setShowPreview(false); setPreviewData(null); setPreviewHtml(null) }} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
@@ -1104,6 +1221,8 @@ export default function ReportCards() {
             <div className="flex-1 overflow-y-auto p-6 bg-slate-100">
               {loadingPreview ? (
                 <div className="flex items-center justify-center py-20"><Loader2 className="w-10 h-10 text-blue-600 animate-spin" /></div>
+              ) : previewHtml ? (
+                <div className="bg-white rounded-lg shadow max-w-3xl mx-auto p-6" dangerouslySetInnerHTML={{ __html: previewHtml }} />
               ) : previewData ? (() => {
                 // Merge: backend displayConfig (capabilities por estructura) + user config (preferencias)
                 const dc = previewData.displayConfig || {}
@@ -1211,8 +1330,13 @@ export default function ReportCards() {
                                   <td className="px-2 py-1.5 text-slate-700">
                                     {isQualitative ? (
                                       <>
-                                        {sg.qualitativeObservation || sg.achievementObservation || sg.achievement ? (
-                                          <p className="leading-tight">{sg.qualitativeObservation || sg.achievementObservation || sg.achievement}</p>
+                                        {sg.achievement || sg.qualitativeObservation ? (
+                                          <>
+                                            <p className="leading-tight">{sg.achievement || sg.qualitativeObservation}</p>
+                                            {sg.achievement && sg.achievementObservation && sg.achievementObservation !== sg.achievement && (
+                                              <p className="leading-tight text-slate-500 italic mt-0.5">{sg.achievementObservation}</p>
+                                            )}
+                                          </>
                                         ) : (
                                           <p className="leading-tight text-slate-400">-</p>
                                         )}
@@ -1375,6 +1499,40 @@ export default function ReportCards() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Plantilla del boletín (Banco de Formatos) */}
+              <div>
+                <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2"><FileText className="w-4 h-4" /> Plantilla del boletín</h4>
+                <p className="text-xs text-slate-500 mb-3">Elige el formato por nivel educativo. Si un nivel no tiene formato propio, se usa el default general; y si tampoco, el clásico de Edusyn.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Default general</label>
+                    <select
+                      value={configDraft.defaultTemplateKey || 'edusyn-clasico'}
+                      onChange={(e) => setConfigDraft({ ...configDraft, defaultTemplateKey: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      {TEMPLATE_CATALOG.map(t => (<option key={t.key} value={t.key}>{t.name}</option>))}
+                    </select>
+                  </div>
+                  {STRUCTURE_LABELS.map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
+                      <select
+                        value={templateSelByStructure[key] || ''}
+                        onChange={(e) => setStructureTemplate(key, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">— Usar default general —</option>
+                        {TEMPLATE_CATALOG
+                          .filter(t => t.supportedStructures.includes(key))
+                          .map(t => (<option key={t.key} value={t.key}>{t.name}</option>))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2">El formato por nivel se guarda al seleccionarlo. El default general se guarda con «Guardar Configuración».</p>
+              </div>
+
               {/* Encabezado */}
               <div>
                 <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Encabezado</h4>

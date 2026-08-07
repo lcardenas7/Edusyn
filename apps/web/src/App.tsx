@@ -34,6 +34,7 @@ import AcademicYearClosure from './pages/AcademicYearClosure'
 import VotingPortal from './pages/VotingPortal'
 import Elections from './pages/Elections'
 import ElectionResults from './pages/ElectionResults'
+import ConfiguracionInicial from './pages/ConfiguracionInicial'
 import LandingPage from './pages/LandingPage'
 import InstitutionalDocuments from './pages/InstitutionalDocuments'
 import ManagementTasks from './pages/ManagementTasks'
@@ -221,7 +222,7 @@ function App() {
       <Routes>
         {/* Landing Page - Página principal pública */}
         <Route path="/" element={<LandingPage />} />
-        
+
         {/* Login por institución (multi-tenant) */}
         <Route path="/login" element={<InstitutionLogin />} />
         <Route path="/login/:slug" element={<InstitutionLogin />} />
@@ -296,6 +297,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/configuracion-inicial" element={<ConfiguracionInicial />} />
                   <Route path="/setup" element={<Setup />} />
                   <Route path="/institution" element={<InstitutionHub />} />
                   <Route path="/students" element={<Students />} />

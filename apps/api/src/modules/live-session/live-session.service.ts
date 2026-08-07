@@ -1698,6 +1698,11 @@ export class LiveSessionService implements OnModuleDestroy {
     };
   }
 
+  // Ranking completo (docente): mismo cálculo del broadcast pero sin recorte top 5/10.
+  async getFullRanking(sessionId: string, limit = 100) {
+    return this.getRanking(sessionId, limit);
+  }
+
   // Public async-home ranking (no broadcast) — used by teacher "Ver resultados parciales"
   async getAsyncRankingPublic(sessionId: string) {
     const session = await this.prisma.liveSession.findUnique({
@@ -2081,6 +2086,71 @@ export class LiveSessionService implements OnModuleDestroy {
     return { success: true };
   }
 
+  // Asignación por LOTE (docente): mueve varios estudiantes de una vez — una
+  // transacción y un solo broadcast, en vez de N llamadas a add-partner.
+  // assignments: [{ enrollmentId, teamId | null }] (teamId null = quitar del equipo).
+  async assignTeamsBatch(
+    sessionId: string,
+    teacherId: string,
+    assignments: { enrollmentId: string; teamId: string | null }[],
+  ) {
+    const session = await this.validateTeacherSession(sessionId, teacherId);
+    if (session.mode !== 'TEAM') {
+      throw new BadRequestException('La sesión no está en modo equipos');
+    }
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      throw new BadRequestException('No hay asignaciones');
+    }
+
+    // Validar que los equipos destino pertenezcan a ESTA sesión.
+    const teamIds = [...new Set(assignments.map(a => a.teamId).filter(Boolean))] as string[];
+    if (teamIds.length > 0) {
+      const validTeams = await this.prisma.liveSessionTeam.count({
+        where: { id: { in: teamIds }, sessionId },
+      });
+      if (validTeams !== teamIds.length) {
+        throw new BadRequestException('Uno o más equipos no pertenecen a esta sesión');
+      }
+    }
+
+    // Validar que todos los estudiantes sean del grupo del aula.
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: session.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const enrollmentIds = [...new Set(assignments.map(a => a.enrollmentId))];
+    const validEnrollments = await this.prisma.studentEnrollment.count({
+      where: {
+        id: { in: enrollmentIds },
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+      },
+    });
+    if (validEnrollments !== enrollmentIds.length) {
+      throw new BadRequestException('Uno o más estudiantes no pertenecen a este grupo');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Quitar a todos los afectados de cualquier equipo de la sesión.
+      await tx.liveSessionTeamMember.deleteMany({
+        where: { studentEnrollmentId: { in: enrollmentIds }, team: { sessionId } },
+      });
+      // Re-insertar solo los que tienen equipo destino.
+      const rows = assignments
+        .filter(a => a.teamId)
+        .map(a => ({ teamId: a.teamId as string, studentEnrollmentId: a.enrollmentId }));
+      if (rows.length > 0) {
+        await tx.liveSessionTeamMember.createMany({ data: rows });
+      }
+    });
+
+    const teams = await this.getTeams(sessionId);
+    this.broadcast(sessionId, { type: 'TEAMS_UPDATED' as any, data: teams });
+    return teams;
+  }
+
   async searchGroupStudents(sessionId: string, query: string) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
@@ -2108,8 +2178,9 @@ export class LiveSessionService implements OnModuleDestroy {
         } : undefined,
       },
       include: { student: { select: { firstName: true, lastName: true } } },
-      take: 20,
-      orderBy: { student: { lastName: 'asc' } },
+      // Sin límite: el docente debe ver TODOS los estudiantes del grupo para
+      // asignarlos (un salón puede tener 30-40+; con take:20 los demás nunca salían).
+      orderBy: [{ student: { lastName: 'asc' } }, { student: { firstName: 'asc' } }],
     });
 
     // Check which are already in a team
@@ -2129,11 +2200,18 @@ export class LiveSessionService implements OnModuleDestroy {
   async joinTeam(sessionId: string, teamId: string, userId: string) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      select: { id: true, mode: true, status: true, classroomId: true },
+      select: { id: true, mode: true, status: true, classroomId: true, config: true },
     });
     if (!session) throw new NotFoundException('Sesión no encontrada');
     if (session.mode !== 'TEAM') throw new BadRequestException('La sesión no está en modo equipos');
     if (session.status === 'FINISHED') throw new BadRequestException('La sesión ya finalizó');
+
+    // Política consistente con createTeamByStudent: si el docente asigna los
+    // equipos, el estudiante no puede auto-unirse (antes solo se bloqueaba crear).
+    const config = (session.config as any) || {};
+    if (config.teamAssignment === 'TEACHER_ASSIGNED') {
+      throw new ForbiddenException('El docente asigna los equipos en esta sesión');
+    }
 
     // Get enrollment
     const classroom = await this.prisma.classroom.findUnique({
@@ -2151,6 +2229,20 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
     if (!enrollment) throw new ForbiddenException('No está matriculado');
+
+    // Límite opcional de integrantes por equipo (config.maxTeamSize).
+    const maxTeamSize = Number(config.maxTeamSize) || 0;
+    if (maxTeamSize > 0) {
+      const alreadyMember = await this.prisma.liveSessionTeamMember.findFirst({
+        where: { teamId, studentEnrollmentId: enrollment.id },
+      });
+      if (!alreadyMember) {
+        const size = await this.prisma.liveSessionTeamMember.count({ where: { teamId } });
+        if (size >= maxTeamSize) {
+          throw new BadRequestException(`Este equipo ya está lleno (máximo ${maxTeamSize})`);
+        }
+      }
+    }
 
     // Remove from any existing team in this session
     await this.prisma.liveSessionTeamMember.deleteMany({

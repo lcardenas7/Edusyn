@@ -37,11 +37,11 @@ export class SuperadminController {
   }
 
   /**
-   * Obtiene una institución por ID
+   * Lista usuarios de una institución
    */
-  @Get('institutions/:id')
-  getInstitutionById(@Request() req, @Param('id') id: string) {
-    return this.superadminService.getInstitutionById(req.user.id, id);
+  @Get('institutions/:id/users')
+  getInstitutionUsers(@Request() req, @Param('id') id: string) {
+    return this.superadminService.getInstitutionUsers(req.user.id, id);
   }
 
   /**
@@ -50,6 +50,14 @@ export class SuperadminController {
   @Get('institutions/:id/usage')
   getInstitutionUsage(@Request() req, @Param('id') id: string) {
     return this.superadminService.getInstitutionUsage(req.user.id, id);
+  }
+
+  /**
+   * Obtiene una institución por ID (debe ir DESPUÉS de rutas más específicas)
+   */
+  @Get('institutions/:id')
+  getInstitutionById(@Request() req, @Param('id') id: string) {
+    return this.superadminService.getInstitutionById(req.user.id, id);
   }
 
   /**
@@ -134,5 +142,17 @@ export class SuperadminController {
     @Body() body: { confirmationName: string },
   ) {
     return this.superadminService.deleteInstitution(req.user.id, id, body.confirmationName);
+  }
+
+  /**
+   * Resetea la contraseña de cualquier usuario (SuperAdmin)
+   */
+  @Post('users/:id/reset-password')
+  resetUserPassword(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: { newPassword?: string; mustChangePassword?: boolean },
+  ) {
+    return this.superadminService.resetUserPassword(req.user.id, id, body);
   }
 }

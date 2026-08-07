@@ -159,6 +159,22 @@ const AcademicYearWizard: React.FC = () => {
       if (!newYear?.id) throw new Error('No se recibió el ID del año')
 
       setDraftYear(newYear)
+
+      // Cargar términos materializados (createYear hereda periodsConfig)
+      try {
+        const termsRes = await academicTermsApi.getByAcademicYear(newYear.id)
+        const existing = (termsRes.data || []).filter((t: any) => t.type === 'PERIOD')
+        if (existing.length > 0) {
+          setTerms(existing.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            type: t.type,
+            order: t.order,
+            weightPercentage: t.weightPercentage,
+          })))
+        }
+      } catch { /* usar defaults */ }
+
       setSuccess('Año lectivo creado. Ahora configura los períodos académicos.')
       setView('periods')
     } catch (err: any) {
@@ -184,25 +200,27 @@ const AcademicYearWizard: React.FC = () => {
 
     setIsCreating(true)
     try {
-      for (const term of terms) {
-        await academicTermsApi.create({
-          academicYearId: draftYear.id,
-          type: 'PERIOD',
-          name: term.name,
-          order: term.order,
-          weightPercentage: term.weightPercentage
-        })
-      }
+      // Sync upserts períodos (evita conflicto unique academicYearId+order
+      // cuando createYear ya materializó períodos desde periodsConfig)
+      await academicTermsApi.syncPeriods(
+        draftYear.id,
+        terms.map(t => ({ name: t.name, weight: t.weightPercentage, order: t.order }))
+      )
+      // Componentes finales (SEMESTER_EXAM) se crean aparte
       if (useFinalComponents) {
         for (let i = 0; i < finalComponents.length; i++) {
           const fc = finalComponents[i]
-          await academicTermsApi.create({
-            academicYearId: draftYear.id,
-            type: 'SEMESTER_EXAM',
-            name: fc.name,
-            order: terms.length + i + 1,
-            weightPercentage: fc.weightPercentage
-          })
+          try {
+            await academicTermsApi.create({
+              academicYearId: draftYear.id,
+              type: 'SEMESTER_EXAM',
+              name: fc.name,
+              order: terms.length + i + 1,
+              weightPercentage: fc.weightPercentage
+            })
+          } catch {
+            // Si ya existe por orden, ignorar (idempotente)
+          }
         }
       }
       setSuccess('Períodos guardados correctamente.')

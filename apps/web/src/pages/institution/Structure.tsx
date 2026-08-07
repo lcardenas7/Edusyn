@@ -19,6 +19,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useAcademic } from '../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../hooks/usePermissions'
 import { academicGradesApi, groupsApi, teachersApi, shiftsApi, campusesApi } from '../../lib/api'
+import { confirmDialog } from '../../components/ui/confirm'
+import { toast } from '../../lib/toast'
 
 // Nivel educativo para visualización (derivado de AcademicLevel)
 interface EducationLevel {
@@ -227,19 +229,19 @@ export default function Structure() {
       setShowShiftModal(false)
     } catch (err: any) {
       console.error('[Structure] Error saving shift:', err)
-      alert(err.response?.data?.message || 'Error al guardar la jornada')
+      toast.error(err.response?.data?.message || 'Error al guardar la jornada')
     } finally {
       setSavingShift(false)
     }
   }
 
   const deleteShift = async (id: string) => {
-    if (!confirm('¿Eliminar esta jornada?')) return
+    if (!(await confirmDialog('¿Eliminar esta jornada?', { danger: true }))) return
     try {
       await shiftsApi.delete(id)
       await loadShifts()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al eliminar la jornada')
+      toast.error(err.response?.data?.message || 'Error al eliminar la jornada')
     }
   }
 
@@ -370,7 +372,7 @@ export default function Structure() {
   const deleteLevel = async (id: string) => {
     const gradesInLevel = grades.filter(g => g.levelId === id)
     if (gradesInLevel.length > 0) {
-      alert(`No se puede eliminar este nivel porque tiene ${gradesInLevel.length} grado(s) asignados. Elimina o mueve los grados primero.`)
+      toast.error(`No se puede eliminar este nivel porque tiene ${gradesInLevel.length} grado(s) asignados. Elimina o mueve los grados primero.`)
       return
     }
     setAcademicLevels(academicLevels.filter(l => l.id !== id))
@@ -425,7 +427,7 @@ export default function Structure() {
         await loadGradesFromAPI()
       } catch (err: any) {
         console.error('[Structure] Error updating grade:', err)
-        alert(err.response?.data?.message || 'Error al actualizar el grado')
+        toast.error(err.response?.data?.message || 'Error al actualizar el grado')
         return
       }
     } else {
@@ -439,7 +441,7 @@ export default function Structure() {
         await loadGradesFromAPI()
       } catch (err: any) {
         console.error('[Structure] Error creating grade:', err)
-        alert(err.response?.data?.message || 'Error al crear el grado')
+        toast.error(err.response?.data?.message || 'Error al crear el grado')
         return
       }
     }
@@ -449,15 +451,15 @@ export default function Structure() {
   const deleteGrade = async (id: string) => {
     const grade = grades.find(g => g.id === id)
     if (grade && grade.groups.length > 0) {
-      alert(`No se puede eliminar "${grade.name}" porque tiene ${grade.groups.length} grupo(s). Elimine los grupos primero.`)
+      toast.error(`No se puede eliminar "${grade.name}" porque tiene ${grade.groups.length} grupo(s). Elimine los grupos primero.`)
       return
     }
-    if (!confirm(`¿Eliminar el grado "${grade?.name || id}"? Esta acción no se puede deshacer.`)) return
+    if (!(await confirmDialog(`¿Eliminar el grado "${grade?.name || id}"?`, { danger: true, title: 'Eliminar grado' }))) return
     try {
       await academicGradesApi.delete(id)
       setGrades(grades.filter(g => g.id !== id))
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al eliminar el grado')
+      toast.error(err.response?.data?.message || 'Error al eliminar el grado')
     }
   }
 
@@ -502,14 +504,14 @@ export default function Structure() {
         await loadGradesFromAPI()
       } catch (err) {
         console.error('[Structure] Error updating group:', err)
-        alert('Error al actualizar el grupo')
+        toast.error('Error al actualizar el grupo')
       } finally {
         setSavingGroup(false)
       }
     } else {
       // Crear grupo nuevo - llamar a la API
       if (!groupForm.shiftId || !campusId) {
-        alert('Selecciona una jornada')
+        toast.warning('Selecciona una jornada')
         return
       }
       setSavingGroup(true)
@@ -524,7 +526,7 @@ export default function Structure() {
         await loadGradesFromAPI()
       } catch (err: any) {
         console.error('[Structure] Error creating group:', err)
-        alert(err.response?.data?.message || 'Error al crear el grupo')
+        toast.error(err.response?.data?.message || 'Error al crear el grupo')
       } finally {
         setSavingGroup(false)
       }
@@ -535,14 +537,14 @@ export default function Structure() {
   const deleteGroup = async (gradeId: string, groupId: string) => {
     const grade = grades.find(g => g.id === gradeId)
     const group = grade?.groups.find(gr => gr.id === groupId)
-    if (!confirm(`¿Eliminar el grupo "${grade?.name} ${group?.name || groupId}"? Esta acción no se puede deshacer.`)) return
+    if (!(await confirmDialog(`¿Eliminar el grupo "${grade?.name} ${group?.name || groupId}"?`, { danger: true, title: 'Eliminar grupo' }))) return
     try {
       await groupsApi.delete(groupId)
       setGrades(grades.map(g => 
         g.id === gradeId ? { ...g, groups: g.groups.filter(gr => gr.id !== groupId) } : g
       ))
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al eliminar el grupo')
+      toast.error(err.response?.data?.message || 'Error al eliminar el grupo')
     }
   }
 

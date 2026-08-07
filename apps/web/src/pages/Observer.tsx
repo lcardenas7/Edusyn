@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import {
   ClipboardList, Search, Plus, Eye, X, Save, Bell,
   ThumbsUp, AlertTriangle, AlertOctagon, FileText, Phone,
@@ -308,7 +309,7 @@ export default function Observer() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta observación?')) return
+    if (!(await confirmDialog('¿Está seguro de eliminar esta observación?', { danger: true }))) return
     try {
       await observerApi.delete(id)
       setToast({ msg: 'Observación eliminada', type: 'success' })

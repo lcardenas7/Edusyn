@@ -525,6 +525,7 @@ model Institution {
   teacherScheduleBlocks      TeacherScheduleBlock[]
   scheduleGenerationContexts ScheduleGenerationContext[]
   reportCardConfig           ReportCardConfig?           @relation("ReportCardConfigInstitution")
+  reportCardTemplateSelections ReportCardTemplateSelection[] @relation("ReportCardTemplateSelectionInstitution")
 
   // Capabilities de visualización por rol
   roleCapabilities InstitutionRoleCapability[] @relation("InstitutionRoleCapabilities")
@@ -713,6 +714,7 @@ model Grade {
   scheduleGradeConfigs ScheduleGradeConfig[]
   achievementBank      AchievementBank[]
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
+  reportCardTemplateSelections ReportCardTemplateSelection[]
 
   @@unique([institutionId, stage, name])
   @@index([institutionId])
@@ -1323,13 +1325,21 @@ model EvaluationPlan {
 }
 
 model EvaluationComponent {
-  id            String   @id @default(cuid())
-  institutionId String
-  parentId      String?
-  code          String
-  name          String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  institutionId         String
+  parentId              String?
+  code                  String
+  name                  String
+  // Fase 2 — fuente única de la estructura de evaluación de la institución.
+  // El peso vive junto a la definición del componente y se HEREDA al plan de
+  // evaluación de cada asignación (EvaluationPlanComponentWeight), que es lo que
+  // realmente promedia el boletín. Antes el peso institucional vivía en un JSON
+  // que el motor de notas ignoraba.
+  weightPercentage      Int?
+  order                 Int?
+  allowTeacherAddGrades Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   institution Institution           @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   parent      EvaluationComponent?  @relation("EvalComponentHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
@@ -2893,6 +2903,12 @@ model AchievementConfig {
   // Configuración de juicios valorativos
   useValueJudgments Boolean @default(true) // Habilitar juicios valorativos por desempeño
 
+  // Modo de descriptor (evaluación cualitativa / preescolar).
+  // FREE: el docente escribe observación libre; el nivel solo etiqueta (comportamiento histórico).
+  // DESCRIPTOR_PER_LEVEL: cada indicador guarda un descriptor por escala (L/EP/I) que
+  // autocompleta el boletín al elegir el nivel. Configurable por institución (Decreto 1411).
+  descriptorMode AchievementDescriptorMode @default(FREE)
+
   // Configuración de observaciones
   useObservations Boolean @default(false) // Habilitar campo de observación por estudiante (el docente escribe manualmente)
 
@@ -2907,6 +2923,11 @@ model AchievementConfig {
   institution            Institution             @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   valueJudgmentTemplates ValueJudgmentTemplate[]
   observationTemplates   ObservationTemplate[]
+}
+
+enum AchievementDescriptorMode {
+  FREE // El nivel solo etiqueta; la observación es libre (histórico)
+  DESCRIPTOR_PER_LEVEL // Cada indicador tiene un descriptor por escala cualitativa
 }
 
 enum AchievementDisplayMode {
@@ -2980,6 +3001,7 @@ model Achievement {
   studentAchievements     StudentAchievement[]
   attitudinalAchievements AttitudinalAchievement[]
   pedagogicalSupportPlans PedagogicalSupportPlan[]
+  levelDescriptors        AchievementLevelDescriptor[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
   @@unique([code, teacherAssignmentId]) // Código único por asignación
@@ -3019,6 +3041,25 @@ model AttitudinalAchievement {
 
   @@index([teacherAssignmentId])
   @@index([academicTermId])
+}
+
+// Descriptor de un indicador para una escala cualitativa concreta (L/EP/I).
+// El docente lo redacta una vez por indicador; al elegir el nivel de un estudiante,
+// este texto autocompleta el boletín. Solo se usa si AchievementConfig.descriptorMode
+// = DESCRIPTOR_PER_LEVEL. levelCode referencia el código de la escala del SIEE.
+model AchievementLevelDescriptor {
+  id            String @id @default(cuid())
+  achievementId String
+  levelCode     String // Código de la escala cualitativa del SIEE (ej: "L", "EP", "I")
+  text          String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, levelCode])
+  @@index([achievementId])
 }
 
 // Logro del estudiante (con nota, texto adaptado y juicio valorativo)
@@ -4605,8 +4646,17 @@ model ReportCardConfig {
   headerMunicipality String?
   headerDepartment   String?
 
-  // Colores personalizables
-  primaryColor String? @default("#1E3A8A") // Color primario (encabezados, barras)
+  // Colores personalizables (skin institucional — Banco de Formatos de Boletín §6)
+  primaryColor String? @default("#1E3A8A") // Color primario (encabezados, barras) = token "primary"
+  secondaryColor   String? // barras de área/sección
+  accentColor      String? // resaltados, promedios
+  headerBgColor    String? // fondo del encabezado
+  tableStripeColor String? // filas alternas
+  textColor        String? // texto principal
+
+  // Banco de Formatos de Boletín: default general de la institución (fallback tras
+  // la resolución por grado/estructura). Si null → 'edusyn-clasico'.
+  defaultTemplateKey String?
 
   // Tipo de evaluación — DEPRECADO: el sistema lo deduce de academicStructure del nivel
   // Se mantiene por compatibilidad con datos existentes, pero NO se usa para decidir layout
@@ -5682,16 +5732,16 @@ model Classroom {
 }
 
 model ClassroomSection {
-  id          String   @id @default(cuid())
-  classroomId String
-  title       String
-  description String?  @db.Text
-  sortOrder   Int      @default(0)
-  isVisible   Boolean  @default(true)
+  id             String   @id @default(cuid())
+  classroomId    String
+  title          String
+  description    String?  @db.Text
+  sortOrder      Int      @default(0)
+  isVisible      Boolean  @default(true)
   // Período académico OPCIONAL: permite categorizar el contenido por período.
   // Null = la sección no pertenece a ningún período (el docente que no lo use, no lo ve).
   academicTermId String?
-  createdAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   classroom    Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   academicTerm AcademicTerm?       @relation(fields: [academicTermId], references: [id], onDelete: SetNull)
@@ -5736,15 +5786,15 @@ model ClassroomAnnouncement {
 }
 
 model ClassroomActivity {
-  id          String                @id @default(cuid())
-  sectionId   String? // Nullable para permitir actividades huérfanas al borrar sección
+  id             String                @id @default(cuid())
+  sectionId      String? // Nullable para permitir actividades huérfanas al borrar sección
   // Período académico OPCIONAL y DIRECTO: la actividad puede vivir en un período sin
   // sección (el período es el organizador primario). Si null, hereda el de su sección.
   academicTermId String?
-  classroomId String
-  type        ClassroomActivityType
-  title       String
-  description String?               @db.Text
+  classroomId    String
+  type           ClassroomActivityType
+  title          String
+  description    String?               @db.Text
 
   maxScore         Decimal?  @db.Decimal(7, 2)
   dueDate          DateTime?
@@ -5822,7 +5872,7 @@ model ClassroomActivity {
 //  - Prerrequisito "blando" (informativo, no bloquea): columna `isOptional`.
 // ─────────────────────────────────────────────────────────────────────────────
 model ActivityDependency {
-  id             String @id @default(cuid())
+  id String @id @default(cuid())
 
   // Actividad que queda BLOQUEADA hasta que se cumpla la condición sobre el prerrequisito
   activityId     String
@@ -5834,11 +5884,11 @@ model ActivityDependency {
   condition ActivityUnlockCondition @default(SUBMITTED)
 
   // Puntaje mínimo requerido (solo relevante si condition = MIN_SCORE)
-  minScore  Decimal? @db.Decimal(7, 2)
+  minScore Decimal? @db.Decimal(7, 2)
 
   createdAt DateTime @default(now())
 
-  activity     ClassroomActivity @relation("ActivityDeps",     fields: [activityId],     references: [id], onDelete: Cascade)
+  activity     ClassroomActivity @relation("ActivityDeps", fields: [activityId], references: [id], onDelete: Cascade)
   prerequisite ClassroomActivity @relation("ActivityPrereqFor", fields: [prerequisiteId], references: [id], onDelete: Cascade)
 
   // Un prerrequisito no puede repetirse para la misma actividad
@@ -6827,20 +6877,20 @@ model AbpAnnouncement {
 }
 
 model AbpTeam {
-  id            String   @id @default(cuid())
+  id            String               @id @default(cuid())
   institutionId String
   projectId     String
   name          String
-  emoji         String   @default("🚀")
-  color         String   @default("#0E4A5A")
+  emoji         String               @default("🚀")
+  color         String               @default("#0E4A5A")
   identityState AbpTeamIdentityState @default(CONFIRMED) // DRAFT = los estudiantes deben fundar (nombre+emblema); RENAME_PENDING = cambio en revisión
   proposedName  String? // nombre propuesto por el equipo, a la espera de que el docente lo apruebe
-  currentPhase  Int      @default(1) // 1–6
-  xp            Int      @default(0) // XP de equipo (barra denormalizada)
-  problem       String?  @db.Text // el reto propio del equipo
-  badges        String[] @default([]) // insignias de equipo (códigos)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  currentPhase  Int                  @default(1) // 1–6
+  xp            Int                  @default(0) // XP de equipo (barra denormalizada)
+  problem       String?              @db.Text // el reto propio del equipo
+  badges        String[]             @default([]) // insignias de equipo (códigos)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   institution   Institution            @relation("RlsInstitutionABPT", fields: [institutionId], references: [id])
   project       AbpProject             @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -7016,36 +7066,36 @@ enum AbpImpact {
 }
 
 model AbpMission {
-  id                String           @id @default(cuid())
-  institutionId     String
-  phaseStateId      String
-  title             String
-  description       String?          @db.Text
-  sortOrder         Int              @default(0)
-  status            AbpMissionStatus @default(IN_PROGRESS)
-  required          Boolean          @default(true) // gating: obligatoria para validar la fase
-  xp                Int              @default(0)
-  generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
-  generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  id                     String           @id @default(cuid())
+  institutionId          String
+  phaseStateId           String
+  title                  String
+  description            String?          @db.Text
+  sortOrder              Int              @default(0)
+  status                 AbpMissionStatus @default(IN_PROGRESS)
+  required               Boolean          @default(true) // gating: obligatoria para validar la fase
+  xp                     Int              @default(0)
+  generatedBy            AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
+  generationContext      Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
   // DESTINATARIO: por defecto todo el equipo. INDIVIDUAL = dirigida a un
   // integrante ("Juan, tú entrevista al encargado"): solo él la entrega, el
   // equipo la ve para coordinarse. assigneeName va denormalizado para pintar
   // la autoría sin joins.
-  assigneeType           String    @default("TEAM") // TEAM | INDIVIDUAL
+  assigneeType           String           @default("TEAM") // TEAM | INDIVIDUAL
   assigneeEnrollmentId   String?
   assigneeName           String?
   dueAt                  DateTime? // fecha límite (opcional)
   // Misión de ENTREGA: un "taller" que el equipo cumple ENTREGANDO un producto
   // (no marcando un checkbox). Vive dentro del ABP porque es parte del proyecto.
   deliverableKind        String? // null = trabajo libre · FILE | LINK | TEXT
-  deliveryState          String    @default("PENDING") // PENDING | SUBMITTED
+  deliveryState          String           @default("PENDING") // PENDING | SUBMITTED
   deliveryUrl            String? // storage path (FILE) o enlace (LINK)
-  deliveryText           String?   @db.Text // entrega de texto
+  deliveryText           String?          @db.Text // entrega de texto
   deliveryLabel          String? // nombre del archivo / etiqueta legible
   deliveryByEnrollmentId String? // quién entregó (participación)
   deliveredAt            DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
   institution Institution          @relation("RlsInstitutionABPMI", fields: [institutionId], references: [id])
   phaseState  AbpPhaseState        @relation(fields: [phaseStateId], references: [id], onDelete: Cascade)
@@ -7149,18 +7199,18 @@ enum TallerObjectType {
 model TallerInstrument {
   id            String   @id @default(cuid())
   institutionId String
-  courseId      String?  // classroomId (referencia)
-  expeditionId  String?  // abpProjectId u otra experiencia (referencia)
-  teamId        String?  // equipo dueño del lienzo (referencia)
-  stationId     String?  // estación/fase (referencia)
-  motor         String   // BOARD | GRAPH | CARDS | MATRIX | POLL | FLOW | TIMELINE | FRAME | MEDIA | DOC | BUILDER
-  dynamic       String?  // BRAINSTORM | CRAZY8 | SCAMPER | AFINIDAD | ...
+  courseId      String? // classroomId (referencia)
+  expeditionId  String? // abpProjectId u otra experiencia (referencia)
+  teamId        String? // equipo dueño del lienzo (referencia)
+  stationId     String? // estación/fase (referencia)
+  motor         String // BOARD | GRAPH | CARDS | MATRIX | POLL | FLOW | TIMELINE | FRAME | MEDIA | DOC | BUILDER
+  dynamic       String? // BRAINSTORM | CRAZY8 | SCAMPER | AFINIDAD | ...
   title         String
   config        Json     @default("{}") // reglas de la dinámica (guía, límites, colores…)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  objects       TallerObject[]
+  objects TallerObject[]
 
   @@index([institutionId])
   @@index([teamId])
@@ -7170,25 +7220,25 @@ model TallerInstrument {
 // Objeto Universal: base + capacidades (mixins) en `data`. Escritura atómica por
 // `version` (anti lost-update). `state` = ciclo de vida propio del tipo.
 model TallerObject {
-  id            String            @id @default(cuid())
+  id            String           @id @default(cuid())
   institutionId String
   // scope (referencias, no FKs)
   courseId      String?
   expeditionId  String?
   teamId        String?
   stationId     String?
-  instrumentId  String?           // dónde vive (Board/Brainstorm…)
+  instrumentId  String? // dónde vive (Board/Brainstorm…)
   type          TallerObjectType
-  authorId      String?           // studentEnrollmentId (null = docente/sistema)
-  authorName    String?           // nombre denormalizado (pintar autoría sin join)
-  state         String?           // p.ej. Task: TODO|DOING|DONE
-  data          Json              @default("{}") // text, colorId, x, y, votos, …
-  version       Int               @default(0)    // capacidad Historial + CAS atómico
-  deletedAt     DateTime?         // borrado suave (nada desaparece)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  authorId      String? // studentEnrollmentId (null = docente/sistema)
+  authorName    String? // nombre denormalizado (pintar autoría sin join)
+  state         String? // p.ej. Task: TODO|DOING|DONE
+  data          Json             @default("{}") // text, colorId, x, y, votos, …
+  version       Int              @default(0) // capacidad Historial + CAS atómico
+  deletedAt     DateTime? // borrado suave (nada desaparece)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
-  instrument    TallerInstrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrument TallerInstrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
   @@index([institutionId])
   @@index([instrumentId])
@@ -7202,7 +7252,7 @@ model TallerRelation {
   id            String   @id @default(cuid())
   institutionId String
   teamId        String?
-  relType       String   // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a | conecta-con
+  relType       String // genero | deriva-de | tiene | pertenece-a | responde-a | agrupa | evidencia-a | decide-sobre | bloquea-a | conecta-con
   fromId        String
   toId          String
   label         String? // texto libre de la relación ("influye en", "usa el agua de…") — Mapa de Actores
@@ -7220,11 +7270,11 @@ model TallerRelation {
 model TallerEvent {
   id            String   @id @default(cuid())
   institutionId String
-  type          String   // dominio.PasadoSimple: object.Created, abp.IdeaCreated, team.TeamNamed…
+  type          String // dominio.PasadoSimple: object.Created, abp.IdeaCreated, team.TeamNamed…
   occurredAt    DateTime @default(now())
   // actor
   actorUserId   String?
-  actorRole     String?  // student | teacher | valeria | system
+  actorRole     String? // student | teacher | valeria | system
   // scope
   courseId      String?
   expeditionId  String?
@@ -7244,4 +7294,28 @@ model TallerEvent {
   @@index([instrumentId])
   @@index([type])
   @@index([occurredAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BANCO DE FORMATOS DE BOLETÍN — Selección de plantilla por nivel o por grado
+// (docs/DISENO_BANCO_FORMATOS_BOLETIN.md)
+// Resolución: gradeId (grado individual) → academicStructure (nivel) →
+// default general (ReportCardConfig.defaultTemplateKey) → 'edusyn-clasico'.
+// ═══════════════════════════════════════════════════════════════════════════
+model ReportCardTemplateSelection {
+  id                String  @id @default(cuid())
+  institutionId     String
+  gradeId           String? // override por grado individual (ej: 1°–3°)
+  academicStructure String? // DIMENSIONS | SUBJECTS_ONLY | AREAS_SUBJECTS
+  templateKey       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution Institution @relation("ReportCardTemplateSelectionInstitution", fields: [institutionId], references: [id], onDelete: Cascade)
+  grade       Grade?      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, gradeId])
+  @@unique([institutionId, academicStructure])
+  @@index([institutionId])
 }

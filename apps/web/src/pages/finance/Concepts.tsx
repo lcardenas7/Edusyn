@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -60,13 +62,13 @@ export default function Concepts() {
     const message = concept._count.obligations > 0
       ? `El concepto "${concept.name}" tiene obligaciones asociadas y se desactivará. ¿Deseas continuar?`
       : `¿Eliminar el concepto "${concept.name}"?`
-    if (!confirm(message)) return
+    if (!(await confirmDialog(message, { danger: true }))) return
 
     try {
       await financeConceptsApi.delete(concept.id)
       await fetchConcepts()
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al eliminar el concepto')
+      toast.error(err?.response?.data?.message || 'Error al eliminar el concepto')
     }
   }
 

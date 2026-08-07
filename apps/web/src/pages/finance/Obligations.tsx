@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from '../../lib/toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -193,7 +194,7 @@ export default function Obligations() {
 
   const handleSubmitMassive = async () => {
     if (!massiveForm.conceptId || !massiveForm.targetId) {
-      alert('Concepto y destino son requeridos')
+      toast.warning('Concepto y destino son requeridos')
       return
     }
     setSavingMassive(true)
@@ -211,7 +212,7 @@ export default function Obligations() {
       setMassiveResult(res.data)
       fetchObligations()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error en asignación masiva')
+      toast.error(err.response?.data?.message || 'Error en asignación masiva')
     } finally {
       setSavingMassive(false)
     }
@@ -239,7 +240,7 @@ export default function Obligations() {
       setPayingObligation(null)
       fetchObligations(currentPage)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al registrar pago')
+      toast.error(err.response?.data?.message || 'Error al registrar pago')
     } finally {
       setSavingPayment(false)
     }
@@ -252,7 +253,7 @@ export default function Obligations() {
       await financeObligationsApi.cancel(id, reason)
       fetchObligations(currentPage)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al cancelar obligación')
+      toast.error(err.response?.data?.message || 'Error al cancelar obligación')
     }
   }
 

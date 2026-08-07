@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, Query, Res, Request, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, Res, Request, UseGuards, ForbiddenException } from '@nestjs/common';
 import type { Response } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -50,6 +50,50 @@ export class ReportsController {
   ) {
     await this.guardBulletinAccess(req, academicTermId);
     return this.reportsService.getReportCardData(studentEnrollmentId, academicTermId);
+  }
+
+  @Get('report-card-year/:studentEnrollmentId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  async getReportCardYear(
+    @Request() req,
+    @Param('studentEnrollmentId') studentEnrollmentId: string,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    await this.guardBulletinAccess(req, academicTermId);
+    return this.reportsService.getReportCardYear(studentEnrollmentId, academicTermId);
+  }
+
+  // ── Banco de Formatos de Boletín: selección/resolución de plantilla ──────────
+  @Get('report-card-templates/selections')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getTemplateSelections(@Request() req) {
+    return this.reportsService.getTemplateSelections(req.user.institutionId);
+  }
+
+  @Put('report-card-templates/selections')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async upsertTemplateSelection(
+    @Request() req,
+    @Body() body: { gradeId?: string | null; academicStructure?: string | null; templateKey: string },
+  ) {
+    return this.reportsService.upsertTemplateSelection(req.user.institutionId, body);
+  }
+
+  @Delete('report-card-templates/selections/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async deleteTemplateSelection(@Request() req, @Param('id') id: string) {
+    return this.reportsService.deleteTemplateSelection(req.user.institutionId, id);
+  }
+
+  @Get('report-card-templates/resolve')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  async resolveTemplate(
+    @Request() req,
+    @Query('gradeId') gradeId?: string,
+    @Query('academicStructure') academicStructure?: string,
+  ) {
+    const templateKey = await this.reportsService.resolveTemplateKey(req.user.institutionId, gradeId, academicStructure);
+    return { templateKey };
   }
 
   @Get('report-card/:studentEnrollmentId/pdf')

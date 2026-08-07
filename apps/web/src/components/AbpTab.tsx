@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
-import { StationAgenda, StationGuide, StationInstruments, StationStep, TeacherInstrumentsConfig } from './TallerInstruments'
+import { StationAgenda, StationInstruments, TeacherInstrumentsConfig } from './TallerInstruments'
+import AbpGuidedStation from './AbpGuidedStation'
 import LessonEditor from './LessonEditor'
 import LessonPlayer from './LessonPlayer'
 
@@ -137,7 +140,7 @@ function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   }
   const vote = async (id: string) => {
     setBusy(true)
-    try { await abpApi.voteIdea(team.id, id); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo votar') } finally { setBusy(false) }
+    try { await abpApi.voteIdea(team.id, id); onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo votar') } finally { setBusy(false) }
   }
 
   return (
@@ -245,7 +248,7 @@ function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   const add = async () => {
     if (!text.trim() || !owner || busy) return
     setBusy(true)
-    try { await abpApi.addTask(team.id, text.trim(), owner); setText(''); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    try { await abpApi.addTask(team.id, text.trim(), owner); setText(''); onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const act = async (fn: Promise<any>) => { setBusy(true); try { await fn; onSaved() } finally { setBusy(false) } }
 
@@ -299,7 +302,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
     const u = link.trim()
     if (!u || busy) return
     setBusy(true)
-    try { await abpApi.addEvidence(team.id, 'LINK', u); setLink('') ; onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    try { await abpApi.addEvidence(team.id, 'LINK', u); setLink('') ; onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const upload = async (file: File) => {
     setBusy(true)
@@ -307,7 +310,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
       if (url) { await abpApi.addEvidence(team.id, 'FILE', url, file.name); onSaved() }
-    } catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+    } catch { toast.error('No se pudo subir el archivo') } finally { setBusy(false) }
   }
   const remove = async (id: string) => { setBusy(true); try { await abpApi.removeEvidence(team.id, id); onSaved() } finally { setBusy(false) } }
 
@@ -349,7 +352,7 @@ function CoevalCard({ team, sibling, existing, editable, onSaved }: { team: any;
   const submit = async () => {
     if (!complete || busy) return
     setBusy(true)
-    try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   return (
     <div className="rounded-xl p-4" style={{ border: `1.5px solid ${done ? 'color-mix(in srgb, var(--t-teal) 45%, var(--t-line))' : 'var(--t-line)'}`, background: done ? 'color-mix(in srgb, var(--t-teal) 7%, var(--t-surface))' : 'var(--t-surface)' }}>
@@ -392,7 +395,7 @@ function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MISIONES — el trabajo real dentro de cada fase-hito (Opción A: herramienta = misión).
 // ═══════════════════════════════════════════════════════════════════════════
-const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
+export const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
 
 // Espacios de Trabajo (nivel de la Biblia): agrupan instrumentos por intención dentro
 // de una estación. Se deriva de la herramienta de cada misión (sin tocar el modelo).
@@ -429,7 +432,7 @@ function artifactSummary(team: any, phase: number): string[] {
 const ACT_LABEL: Record<string, string> = { READING: '📖 Lectura', VIDEO: '🎬 Video', QUIZ: '❓ Quiz', INTERVIEW: '🎤 Entrevista', UPLOAD: '📤 Evidencia', LINK: '🔗 Enlace', CUSTOM: '✅ Tarea' }
 const ACT_TYPES = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM']
 
-function PhaseTool({ tool, team, onSaved }: { tool: string; team: any; onSaved: () => void }) {
+export function PhaseTool({ tool, team, onSaved }: { tool: string; team: any; onSaved: () => void }) {
   switch (tool) {
     case 'CANVAS': return <CanvasPhase team={team} onSaved={onSaved} />
     case 'IDEAS': return <IdeasPhase team={team} onSaved={onSaved} />
@@ -483,7 +486,7 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
   const submit = async (payload: { url?: string; text?: string; label?: string }) => {
     setBusy(true)
     try { await abpApi.submitDelivery(mission.id, payload); setEditing(false); setLink(''); onSaved() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo entregar') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo entregar') }
     finally { setBusy(false) }
   }
   const uploadFile = async (file: File) => {
@@ -492,8 +495,8 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
       if (url) await submit({ url, label: file.name })
-      else { alert('No se pudo subir el archivo'); setBusy(false) }
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
+      else { toast.error('No se pudo subir el archivo'); setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo subir el archivo'); setBusy(false) }
   }
 
   return (
@@ -546,7 +549,7 @@ function MissionDelivery({ mission, canDeliver, onSaved }: { mission: any; canDe
   )
 }
 
-function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
+export function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
   // Herramienta legacy de la misión (canvas/ideas/smart…). Si el docente configuró
@@ -907,7 +910,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
       const { data } = await classroomApi.uploadMaterial(file)
       const url = data?.data?.path || data?.data?.url
       if (url) setBanner(url)
-    } catch { alert('No se pudo subir la imagen') } finally { setBusy(false) }
+    } catch { toast.error('No se pudo subir la imagen') } finally { setBusy(false) }
   }
   const save = async () => {
     setBusy(true)
@@ -917,7 +920,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
         presentation: { banner, videoUrl, teacherMessage, context, why, instructions: instructions.filter(Boolean), skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
       })
       onSaved()
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
   }
 
   // Acordeón: una sección abierta a la vez; punto violeta = sección con contenido.
@@ -1085,9 +1088,9 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
     if (!url.trim()) return
     setBusy(true)
     try { await abpApi.addResource(projectId, { type: inferResourceType(url), title: title.trim() || url.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
-    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
-  const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar recurso?', { danger: true }))) return; await abpApi.deleteResource(id); load() }
   // Enlace externo "normal" (no video/pdf/imagen) → pestaña nueva; el resto → visor.
   const open = (r: any) => {
     const viewable = r.type === 'PDF' || r.type === 'VIDEO' || !isHttp(r.url) || isPdfUrl(r.url) || isImageUrl(r.url) || videoEmbed(r.url)
@@ -1128,7 +1131,7 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
                 const { data } = await classroomApi.uploadMaterial(f);
                 const fileUrl = data?.data?.path || data?.data?.url;
                 if (fileUrl) { await abpApi.addResource(projectId, { type: inferResourceType(f.name), title: title.trim() || stripExt(f.name), url: fileUrl }); setTitle(''); setUrl(''); load(); }
-              } catch { alert('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
+              } catch { toast.error('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
             }} />
             <button onClick={() => document.getElementById(`res-file-${projectId}`)?.click()} disabled={busy} className="px-4 taller-surface hover:opacity-80 taller-ink rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
           </div>
@@ -1147,7 +1150,7 @@ function AnnouncementsView({ projectId, canManage }: { projectId: string; canMan
   useEffect(() => { load() }, [load])
   const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addAnnouncement(projectId, { content: content.trim() }); setContent(''); load() } finally { setBusy(false) } }
   const pin = async (a: any) => { await abpApi.pinAnnouncement(a.id, !a.pinned); load() }
-  const del = async (id: string) => { if (!confirm('¿Eliminar anuncio?')) return; await abpApi.deleteAnnouncement(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar anuncio?', { danger: true }))) return; await abpApi.deleteAnnouncement(id); load() }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
@@ -1188,7 +1191,7 @@ function LogbookView({ teamId, currentPhase, readOnly }: { teamId: string; curre
   const load = useCallback(() => { abpApi.listLog(teamId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [teamId])
   useEffect(() => { load() }, [load])
   const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addLog(teamId, { content: content.trim(), phase: currentPhase }); setContent(''); load() } finally { setBusy(false) } }
-  const del = async (id: string) => { if (!confirm('¿Eliminar entrada?')) return; await abpApi.deleteLog(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar entrada?', { danger: true }))) return; await abpApi.deleteLog(id); load() }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
@@ -1232,16 +1235,16 @@ function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; c
   const uploadEv = async (file: File) => {
     setBusy(true)
     try { const { data } = await classroomApi.uploadMaterial(file); const url = data?.data?.path || data?.data?.url; if (url) { setEvUrl(url); setEvKind('FILE') } }
-    catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+    catch { toast.error('No se pudo subir el archivo') } finally { setBusy(false) }
   }
   const reset = () => { setTitle(''); setDescription(''); setImpact('MEDIUM'); setEvUrl(''); setEvKind('LINK'); setOpen(false) }
   const add = async () => {
     if (!title.trim() || !description.trim()) return
     setBusy(true)
     try { await abpApi.addDiscovery(teamId, { phase: currentPhase || 1, title: title.trim(), description: description.trim(), impact, evidenceUrl: evUrl.trim() || undefined, evidenceKind: evUrl.trim() ? evKind : undefined }); reset(); load() }
-    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
-  const del = async (id: string) => { if (!confirm('¿Eliminar descubrimiento?')) return; await abpApi.deleteDiscovery(id); load() }
+  const del = async (id: string) => { if (!(await confirmDialog('¿Eliminar descubrimiento?', { danger: true }))) return; await abpApi.deleteDiscovery(id); load() }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
@@ -1316,7 +1319,7 @@ function FoundTeam({ team, onDone }: { team: any; onDone: () => void }) {
     if (!window.confirm(`¿"${emoji} ${name.trim()}" es el nombre acordado por TODO el equipo?\n\nUna vez fundado, cambiarlo requerirá el permiso del docente.`)) return
     setBusy(true)
     try { await abpApi.foundTeamIdentity(team.id, name.trim(), emoji); onDone() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo fundar el equipo') } finally { setBusy(false) }
   }
   return (
     <div className="taller">
@@ -1373,12 +1376,12 @@ function StudentExpedition({ projects }: { projects: any[] }) {
     if (!team) return
     const n = window.prompt('Nuevo nombre del equipo (lo tendrá que aprobar el docente):', team.name)?.trim()
     if (!n) return
-    try { await abpApi.requestTeamRename(team.id, n); load() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo solicitar el cambio') }
+    try { await abpApi.requestTeamRename(team.id, n); load() } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo solicitar el cambio') }
   }
   const pickAvatar = async (a: string) => {
     if (!team) return
     setAvatarOpen(false)
-    try { await abpApi.setMyAvatar(team.id, a); load(true) } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar el avatar') }
+    try { await abpApi.setMyAvatar(team.id, a); load(true) } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo guardar el avatar') }
   }
 
   const load = useCallback((silent = false) => {
@@ -1434,14 +1437,10 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const curState = stateOf(team, cur)
   const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
   // Gating desde las misiones: todas las misiones obligatorias completas (lo calcula el backend).
+  // La estación guiada (AbpGuidedStation) calcula su propio progreso; aquí solo se
+  // conserva lo que usa el Ritual de Validación (resumen del artefacto).
   const reqMissions = (team.currentMissions || []).filter((m: any) => m.required)
   const reqDone = reqMissions.filter((m: any) => m.complete).length
-  const reqInstr: { key: string; used: boolean }[] = team.requiredInstruments || []
-  const reqInstrUsed = reqInstr.filter(s => s.used).length
-  const canRequest = !!team.readyForValidation
-  const hasInstruments = ((team?.config?.instruments?.[cur] as any[])?.length ?? 0) > 0
-  const step1Done = reqInstr.length > 0 && reqInstrUsed === reqInstr.length
-  const step2Done = reqMissions.length > 0 && reqDone === reqMissions.length
 
   return (
     <div className="space-y-4 taller">
@@ -1569,57 +1568,21 @@ function StudentExpedition({ projects }: { projects: any[] }) {
       {expTab === 'log' && <LogbookView teamId={team.id} currentPhase={cur} />}
       {expTab === 'discoveries' && <DiscoveriesView teamId={team.id} currentPhase={cur} />}
 
-      {/* Panel de la fase actual — Estación */}
+      {/* Panel de la fase actual — Estación GUIADA (F.O.C.O.: una pantalla a la vez) */}
       {expTab === 'phases' && (
-      <div className="taller-card p-6">
-        <div className="text-[11px] font-mono uppercase tracking-[0.15em] taller-mari mb-1">Estación {cur} de 6</div>
-        <h3 className="text-xl font-black taller-ink mb-3 tracking-tight">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
-
-        {curPs?.feedback && (
-          <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'color-mix(in srgb, #CB4E42 10%, transparent)', borderLeft: '4px solid #CB4E42', color: '#7a2b22' }}>
-            🧑‍🏫 <b>Retroalimentación del docente:</b> {curPs.feedback}
-          </div>
-        )}
-
-        {curState === 'AWAITING' ? (
-          <div className="p-4 rounded-xl font-semibold flex items-center gap-2" style={{ background: 'color-mix(in srgb, var(--t-marigold) 12%, transparent)', color: '#8a5a10' }}>
-            <Clock className="w-5 h-5" /> En revisión — esperando al docente…
-          </div>
-        ) : cur === 6 && curState === 'VALIDATED' ? (
-          <div className="text-center py-6">🏆<p className="font-black taller-ink mt-2">¡Llegaron a la cima de la expedición!</p></div>
-        ) : (
-          <>
-            {/* Instrucciones generales de la estación (colapsable) */}
-            <StationGuide team={team} phase={cur} />
-
-            {/* Flujo guiado en 3 pasos — el equipo siempre sabe el orden.
-                Paso 1 (herramientas) solo si el docente asignó instrumentos. */}
-            {hasInstruments && (<>
-              <StationStep n={1} title="Exploren con las herramientas" done={step1Done}
-                hint="Ábranlas y trabajen aquí primero: es donde piensan, conversan y organizan las ideas en equipo." />
-              <StationInstruments team={team} phase={cur} hideHeading />
-            </>)}
-
-            <StationStep n={hasInstruments ? 2 : 1} title="Cumplan las misiones de la fase" done={step2Done}
-              hint="Hagan lo que pide el docente y suban las evidencias (fotos, enlaces, archivos). Las obligatorias abren la presentación." />
-            <MissionsPanel team={team} onSaved={() => load(true)} />
-
-            <StationStep n={hasInstruments ? 3 : 2} title="Presenten la estación al docente"
-              hint="Cuando el equipo termine lo obligatorio, presenten para que el docente la revise y validen la estación." />
-            {/* Compuerta de validación */}
-            <div className="mt-2 flex items-center gap-3 flex-wrap">
-              {reqMissions.length > 0 && <span className="text-sm taller-soft">Misiones obligatorias: <b className="taller-ink">{reqDone}/{reqMissions.length}</b></span>}
-              {reqInstr.length > 0 && <span className="text-sm taller-soft">Instrumentos obligatorios: <b className="taller-ink">{reqInstrUsed}/{reqInstr.length}</b></span>}
-              <button onClick={() => canRequest && setRitualOpen(true)} disabled={busy || !canRequest}
-                className={`ml-auto py-3 px-6 font-bold rounded-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed transition ${canRequest ? 'taller-cta hover:opacity-95' : ''}`}
-                style={!canRequest ? { background: 'var(--t-surface)', color: 'var(--t-muted)', border: '1px solid var(--t-line)' } : undefined}>
-                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : canRequest ? <Send className="w-5 h-5" /> : '🔒'}
-                {canRequest ? 'Presentar a validación' : (reqDone < reqMissions.length ? 'Completa las misiones' : reqInstrUsed < reqInstr.length ? 'Usen los instrumentos obligatorios' : 'Completa las misiones')}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+        <AbpGuidedStation
+          team={team}
+          phase={cur}
+          stationName={phaseName(cur)}
+          stationIcon={PHASES.find(p => p.n === cur)?.icon || '🧭'}
+          purpose={STATION_PURPOSE[cur]}
+          feedback={curPs?.feedback}
+          awaiting={curState === 'AWAITING'}
+          validated={curState === 'VALIDATED'}
+          busy={busy}
+          onSaved={() => load(true)}
+          onPresent={() => setRitualOpen(true)}
+        />
       )}
 
       {/* Anuncios y Recursos (al fondo, igual que el docente) */}
@@ -1838,7 +1801,7 @@ function TeacherNewMission({ team, phase, onCreated }: { team: any; phase: numbe
         dueAt: dueAt || undefined,
       })
       setTitle(''); setDescription(''); setAssignee(''); setDueAt(''); setKind('NONE'); setOpen(false); onCreated()
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la misión') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la misión') }
     finally { setBusy(false) }
   }
 
@@ -1916,7 +1879,7 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
     if (!title) return
     setBusy(true)
     try { const { data } = await abpApi.addLessonActivity(mission.id, title); onChanged(); setEditing({ activityId: data.classroomActivityId, title }) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
   }
   // Valeria escribe el contenido jugable, anclado a la problemática del equipo.
   const genLesson = async (a: any) => {
@@ -1927,20 +1890,20 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       const { data } = await abpApi.generateLessonContent(a.id, instructions.trim() || undefined)
       onChanged()
       setEditing({ activityId: a.classroomActivityId, title: data.title || a.title })
-    } catch (e: any) { alert(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
     finally { setGenActId(null) }
   }
   // Reutilizar una actividad/juego que ya existe en el curso (pestaña Actividades).
   const openPicker = async () => {
     setPickerLoading(true); setPicker([])
     try { const { data } = await abpApi.reusableActivities(mission.id); setPicker(data) }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudieron cargar las actividades'); setPicker(null) }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudieron cargar las actividades'); setPicker(null) }
     finally { setPickerLoading(false) }
   }
   const attach = async (classroomActivityId: string) => {
     setBusy(true)
     try { await abpApi.attachActivity(mission.id, classroomActivityId); setPicker(null); onChanged() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
     finally { setBusy(false) }
   }
   const suggest = async () => {
@@ -1950,7 +1913,7 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
       if (!data.configured) { setNotConfigured(true); return }
       setSuggestions(data.activities || [])
       setPicked(new Set((data.activities || []).map((_, i) => i)))
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo generar con Valeria') } finally { setSuggesting(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo generar con Valeria') } finally { setSuggesting(false) }
   }
   const apply = async () => {
     if (!suggestions) return
@@ -2074,17 +2037,258 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
   )
 }
 
-function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void }) {
+/** Compositor "Colocar actividad" (Addendum v3 §12.2): UNA sola puerta con tres
+ * caminos — 🛠️ crear aquí (Lección/Juego que se DESARROLLA dentro de Expedición,
+ * sin salir al módulo), ♻️ reutilizar una actividad del curso, o ✨ Valeria.
+ * Crea la misión contenedora y deja la actividad como paso de la ruta del equipo. */
+function ActivityComposer({ team, phase, onClose, onPlaced }: { team: any; phase: number; onClose: () => void; onPlaced: () => void }) {
+  const [src, setSrc] = useState<'crear' | 'reusar' | 'valeria'>('crear')
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [applied, setApplied] = useState(false)
+  const [editing, setEditing] = useState<{ activityId: string; title: string } | null>(null)
+  // reusar
+  const [pool, setPool] = useState<{ id: string; title: string; type: string }[] | null>(null)
+  const [poolLoading, setPoolLoading] = useState(false)
+  // valeria
+  const [promptText, setPromptText] = useState('')
+  const [pendingMissionId, setPendingMissionId] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<{ type: string; title: string; description: string }[] | null>(null)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [notConfigured, setNotConfigured] = useState(false)
+
+  useEffect(() => {
+    if (src === 'reusar' && pool === null && !poolLoading) {
+      setPoolLoading(true)
+      abpApi.teamReusableActivities(team.id).then(({ data }) => setPool(data)).catch(() => setPool([])).finally(() => setPoolLoading(false))
+    }
+  }, [src]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const createMission = async (t: string) => {
+    const { data: m } = await abpApi.addMission(team.id, phase, { title: t, required: false })
+    return m
+  }
+
+  // 🛠️ Crear aquí: misión contenedora + Lección/Juego → el editor se abre AQUÍ MISMO.
+  const crear = async () => {
+    if (!title.trim() || busy) return
+    setBusy(true)
+    try {
+      const m = await createMission(title.trim())
+      const { data } = await abpApi.addLessonActivity(m.id, title.trim())
+      setEditing({ activityId: data.classroomActivityId, title: title.trim() })
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear la actividad') }
+    finally { setBusy(false) }
+  }
+
+  // ♻️ Reutilizar: misión con el nombre de la actividad + enlace (no se copia, es compartida).
+  const reusar = async (ca: { id: string; title: string }) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const m = await createMission(ca.title)
+      await abpApi.attachActivity(m.id, ca.id)
+      setApplied(true)
+      onPlaced()
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo reutilizar la actividad') }
+    finally { setBusy(false) }
+  }
+
+  // ✨ Valeria: crea la misión y sugiere actividades ancladas a la problemática.
+  const sugerir = async () => {
+    if (!title.trim() || busy) return
+    setBusy(true); setNotConfigured(false)
+    try {
+      const m = await createMission(title.trim())
+      setPendingMissionId(m.id)
+      const { data } = await abpApi.suggestActivities(team.id, m.id)
+      if (!data.configured) { setNotConfigured(true); return }
+      setSuggestions(data.activities || [])
+      setPicked(new Set((data.activities || []).map((_, i) => i)))
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo generar con Valeria') }
+    finally { setBusy(false) }
+  }
+  const aplicar = async () => {
+    if (!pendingMissionId || !suggestions) return
+    const items = suggestions.filter((_, i) => picked.has(i)).map(s => ({ type: s.type, title: s.title }))
+    if (!items.length) return
+    setBusy(true)
+    try { await abpApi.addActivitiesBulk(pendingMissionId, items); setApplied(true); onPlaced() }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudieron añadir') }
+    finally { setBusy(false) }
+  }
+
+  const cerrar = async () => {
+    // Si se creó una misión para Valeria y no se aplicó nada, no dejar basura.
+    if (pendingMissionId && !applied) { try { await abpApi.deleteMission(pendingMissionId) } catch { /* best effort */ } }
+    onClose()
+  }
+
+  const tabBtn = (k: typeof src, icon: string, label: string, sub: string) => (
+    <button onClick={() => setSrc(k)} className="flex-1 text-left rounded-xl border-2 px-3 py-2.5 transition"
+      style={src === k
+        ? { borderColor: 'var(--t-marigold)', background: 'color-mix(in srgb, var(--t-marigold) 9%, var(--t-raised))' }
+        : { borderColor: 'var(--t-line)', background: 'var(--t-raised)' }}>
+      <div className="text-base">{icon}</div>
+      <div className="text-xs font-black taller-ink mt-0.5">{label}</div>
+      <div className="text-[10px] taller-muted">{sub}</div>
+    </button>
+  )
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={cerrar}>
+      <div className="taller-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 taller-raised border-b taller-line-c px-5 py-3 flex items-center justify-between z-10">
+          <h3 className="font-bold taller-ink text-sm">🎮 Colocar actividad · {phaseName(phase)}</h3>
+          <button onClick={cerrar} className="w-8 h-8 flex items-center justify-center rounded-full taller-surface taller-soft hover:opacity-80 font-bold">✕</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-xs taller-soft leading-relaxed -mt-1">El equipo la vivirá como <b className="taller-ink">un paso más de la ruta</b>, con consigna 💡 y sin cromos del LMS.</p>
+
+          {/* Fuente: una decisión, tres caminos */}
+          <div className="flex gap-2">
+            {tabBtn('crear', '🛠️', 'Crear aquí', 'Se desarrolla en Expedición')}
+            {tabBtn('reusar', '♻️', 'Reutilizar', 'Ya existe en el curso')}
+            {tabBtn('valeria', '✨', 'Valeria', 'Redacta el borrador')}
+          </div>
+
+          {/* 🛠️ Crear aquí */}
+          {src === 'crear' && (
+            <div className="space-y-2.5">
+              <input value={title} onChange={e => setTitle(e.target.value)} autoFocus placeholder="Título — ej. ¿Entendimos el problema?"
+                className="w-full text-sm rounded-xl taller-line px-3 py-2.5" />
+              <p className="text-[11px] taller-muted leading-relaxed">Se crea como <b>Lección/Juego 🎮</b> y el editor se abre <b>aquí mismo</b>: la desarrollas sin salir de Expedición. (Quiz, preguntas y tareas del aula se traen desde ♻️ Reutilizar.)</p>
+              <button onClick={crear} disabled={busy || !title.trim()} className="w-full py-2.5 taller-cta-inline rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Crear y desarrollar →
+              </button>
+            </div>
+          )}
+
+          {/* ♻️ Reutilizar */}
+          {src === 'reusar' && (
+            <div>
+              {poolLoading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin taller-mari" /></div>}
+              {!poolLoading && pool !== null && pool.length === 0 && (
+                <p className="text-xs taller-muted text-center py-4">No hay actividades jugables en este curso todavía. Créala con 🛠️ o ✨.</p>
+              )}
+              {!poolLoading && (pool || []).length > 0 && (
+                <div className="space-y-2">
+                  {(pool || []).map(a => (
+                    <button key={a.id} onClick={() => reusar(a)} disabled={busy}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition hover:bg-teal-50 disabled:opacity-50 border taller-line-c">
+                      <span>🎮</span>
+                      <span className="flex-1 text-sm taller-ink truncate">{a.title}</span>
+                      <span className="text-[10px] font-mono taller-muted">{a.type}</span>
+                      <span className="text-xs font-bold taller-mari shrink-0">Colocar</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ✨ Valeria */}
+          {src === 'valeria' && (
+            <div className="space-y-2.5">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del paso — ej. Practiquen su diagnóstico"
+                className="w-full text-sm rounded-xl taller-line px-3 py-2.5" />
+              <textarea value={promptText} onChange={e => setPromptText(e.target.value)} rows={2}
+                placeholder="¿Qué quieres que practiquen? (opcional) Ej: que relacionen las causas de su árbol con la idea elegida"
+                className="w-full text-sm rounded-xl taller-line px-3 py-2.5 resize-none" />
+              {!suggestions && (
+                <button onClick={sugerir} disabled={busy || !title.trim()} className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-fuchsia-600 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : '✨'} Generar sugerencias
+                </button>
+              )}
+              {notConfigured && <p className="text-xs text-amber-600">Valeria no está configurada (falta la API key de IA). Prueba con 🛠️ Crear aquí.</p>}
+              {suggestions && (
+                <div className="rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3">
+                  {suggestions.length === 0 ? <p className="text-xs taller-soft">Valeria no devolvió sugerencias. Intenta de nuevo.</p> : (
+                    <>
+                      <p className="text-xs font-bold text-fuchsia-700 mb-2">✨ Sugerencias de Valeria (revisa y elige)</p>
+                      <div className="space-y-1.5">
+                        {suggestions.map((s, i) => (
+                          <label key={i} className="flex items-start gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={picked.has(i)} onChange={e => setPicked(p => { const x = new Set(p); e.target.checked ? x.add(i) : x.delete(i); return x })} className="mt-0.5" />
+                            <span><b className="taller-ink">{ACT_LABEL[s.type] || s.type} · {s.title}</b>{s.description ? <span className="taller-soft"> — {s.description}</span> : null}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button onClick={aplicar} disabled={busy || picked.size === 0} className="mt-2.5 w-full py-2 bg-fuchsia-600 text-white text-xs font-bold rounded-lg disabled:opacity-50">
+                        Colocar {picked.size} actividad(es) ✓
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* El editor de la Lección/Juego se abre AQUÍ MISMO (dentro de Expedición) */}
+      {editing && (
+        <div className="fixed inset-0 z-[120] taller-raised overflow-auto">
+          <LessonEditor activityId={editing.activityId} activityTitle={editing.title} onClose={() => { setEditing(null); setApplied(true); onPlaced() }} onPreview={() => { /* sin preview aquí */ }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Vista del equipo (FOCO · Addendum v3 §12.3): su reto y los sellos de la
+ * expedición, "Lo siguiente" del docente, la estación actual protagonista con
+ * el trabajo visible y colocar trabajo en el lugar — y el resto en capa 3. */
+function TeamPreview({ teamId, onBack, queue = [], onReview }: { teamId: string; onBack: () => void; queue?: any[]; onReview?: (validationId: string) => void }) {
   const [team, setTeam] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [openPhase, setOpenPhase] = useState<number | null>(null)
+  const [composerPhase, setComposerPhase] = useState<number | null>(null)
+  const [layer3, setLayer3] = useState<'' | 'log' | 'disc'>('')
   const load = useCallback(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
   useEffect(() => { load() }, [load])
   if (loading) return <Loading />
   if (!team) return <Empty msg="No se pudo cargar el equipo." />
-  const phases = team.phaseStates || []
+  const phases: any[] = team.phaseStates || []
+  const current = phases.find(p => ['AWAITING', 'IN_PROGRESS', 'RETURNED'].includes(p.status)) || phases[phases.length - 1]
+  const awaiting = phases.find(p => p.status === 'AWAITING')
+  const queueItem = awaiting ? queue.find(q => q.team?.id === team.id && q.phase === awaiting.phase) : null
+  const returned = phases.find(p => p.status === 'RETURNED')
+
+  const sealStyle = (st: string) =>
+    st === 'VALIDATED' ? { background: 'color-mix(in srgb, var(--t-teal) 10%, var(--t-raised))', border: '1px solid color-mix(in srgb, var(--t-teal) 35%, transparent)' }
+    : st === 'AWAITING' ? { background: 'color-mix(in srgb, var(--t-marigold) 12%, var(--t-raised))', border: '1px solid var(--t-marigold)' }
+    : st === 'RETURNED' ? { background: 'color-mix(in srgb, #CB4E42 9%, var(--t-raised))', border: '1px solid color-mix(in srgb, #CB4E42 35%, transparent)' }
+    : { background: 'var(--t-surface)', border: '1px solid var(--t-line)', opacity: st === 'LOCKED' ? 0.6 : 1 }
+  const sealIcon = (st: string) => st === 'VALIDATED' ? '✓' : st === 'AWAITING' ? '⏳' : st === 'RETURNED' ? '↩️' : st === 'IN_PROGRESS' ? '●' : '🔒'
+
+  const phaseBody = (ps: any) => (
+    <div className="mt-3">
+      {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
+      {(ps.missions || []).length > 0 ? (
+        <div className="mb-2 space-y-2">
+          {ps.missions.map((m: any) => <TeacherMissionEditor key={m.id} mission={m} teamId={team.id} onChanged={load} />)}
+        </div>
+      ) : (
+        <p className="text-xs taller-muted mb-2">La estación nació limpia: coloca aquí el trabajo de este equipo. 🌱</p>
+      )}
+      {/* Colocar trabajo: UNA puerta para actividades + misión/entrega aparte */}
+      <button onClick={() => setComposerPhase(ps.phase)} className="text-xs font-bold px-3 py-2 rounded-xl transition hover:opacity-80"
+        style={{ background: 'color-mix(in srgb, var(--t-marigold) 14%, transparent)', color: 'var(--t-marigold)', border: '1px solid color-mix(in srgb, var(--t-marigold) 35%, transparent)' }}>
+        🎮 Colocar actividad
+      </button>
+      <TeacherNewMission team={team} phase={ps.phase} onCreated={load} />
+      <div className="taller mt-3"><StationInstruments team={team} phase={ps.phase} /></div>
+      <PhaseWorkRO phase={ps.phase} data={ps.data} />
+    </div>
+  )
+
   return (
-    <div className="space-y-4 taller">
+    <div className="space-y-4 taller max-w-3xl mx-auto">
       <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold taller-soft hover:opacity-70"><ChevronLeft className="w-4 h-4" /> Volver al panel</button>
+
+      {/* Encabezado: equipo, reto y sellos de la expedición */}
       <div className="taller-card taller-mission p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -2094,40 +2298,82 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
           </div>
           <div className="text-right"><div className="text-2xl font-black taller-mari">⭐ {team.xp}</div><div className="text-xs taller-muted font-semibold">XP</div></div>
         </div>
-        <div className="mt-3"><Trail team={team} /></div>
-      </div>
-      {phases.map((ps: any) => (
-        <div key={ps.phase} className="taller-card p-5">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <h4 className="font-bold taller-ink">{PHASES.find(p => p.n === ps.phase)?.icon} Fase {ps.phase}: {phaseName(ps.phase)}</h4>
-            <StatusChip status={ps.status} />
-          </div>
-          {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
-          {(ps.missions || []).length > 0 && (
-            <div className="mb-3 space-y-2">
-              {ps.missions.map((m: any) => (
-                <TeacherMissionEditor key={m.id} mission={m} teamId={team.id} onChanged={load} />
-              ))}
-            </div>
-          )}
-          {/* el docente dirige misiones a este equipo o a un integrante */}
-          <TeacherNewMission team={team} phase={ps.phase} onCreated={load} />
-          {/* Espacio de trabajo del equipo: el docente abre los instrumentos de la estación */}
-          <div className="taller">
-            <StationInstruments team={team} phase={ps.phase} />
-          </div>
-          <PhaseWorkRO phase={ps.phase} data={ps.data} />
+        <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+          {PHASES.map(p => {
+            const ps = phases.find((x: any) => x.phase === p.n)
+            const st = ps?.status || 'LOCKED'
+            return (
+              <div key={p.n} className="rounded-xl px-2 py-1.5 text-center" style={sealStyle(st)}>
+                <div className="text-base leading-none">{p.icon}</div>
+                <div className="text-[9px] font-bold taller-soft truncate mt-0.5">{p.name}</div>
+                <div className="text-[10px] font-black mt-0.5 taller-soft">{sealIcon(st)}</div>
+              </div>
+            )
+          })}
         </div>
-      ))}
+      </div>
 
-      <div className="taller-card p-5">
-        <h4 className="font-bold taller-ink mb-3">📔 Bitácora</h4>
-        <LogbookView teamId={team.id} readOnly />
+      {/* Lo siguiente del docente */}
+      {queueItem && onReview ? (
+        <div className="taller-card taller-mission p-5">
+          <div className="text-[11px] font-mono uppercase tracking-widest taller-mari">Lo siguiente · tu atención</div>
+          <h4 className="font-black taller-ink text-lg mt-1.5">⏳ Validar {phaseName(awaiting.phase)}</h4>
+          <p className="text-sm taller-soft mt-0.5">La estación está presentada. Abajo puedes ver el trabajo paso a paso; cuando estés listo, decide.</p>
+          <button onClick={() => onReview(queueItem.id)} className="taller-cta mt-3 px-4 py-2.5 rounded-xl text-sm font-bold">Revisar y decidir →</button>
+        </div>
+      ) : returned ? (
+        <div className="taller-card p-4" style={{ borderLeft: '4px solid #CB4E42' }}>
+          <div className="text-[11px] font-mono uppercase tracking-widest" style={{ color: '#CB4E42' }}>Lo siguiente · tu atención</div>
+          <p className="text-sm taller-soft mt-1">↩️ Devolviste <b className="taller-ink">{phaseName(returned.phase)}</b> — el equipo está corrigiendo; su avance aparece abajo.</p>
+        </div>
+      ) : (
+        <div className="taller-card p-4"><p className="text-sm taller-soft">✓ Al día — este equipo no tiene validaciones pendientes.</p></div>
+      )}
+
+      {/* Estación actual, protagonista */}
+      {current && (
+        <div className="taller-card p-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-bold taller-ink">{PHASES.find(p => p.n === current.phase)?.icon} {phaseName(current.phase)}</h4>
+            <StatusChip status={current.status} />
+            <span className="ml-auto text-[10px] font-mono taller-muted uppercase tracking-wide">Estación actual</span>
+          </div>
+          {phaseBody(current)}
+        </div>
+      )}
+
+      {/* Otras estaciones: colapsadas (capa 3) */}
+      {phases.filter(ps => current && ps.phase !== current.phase).length > 0 && (
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-widest taller-muted mb-2 px-1">Otras estaciones</div>
+          <div className="space-y-2">
+            {phases.filter(ps => current && ps.phase !== current.phase).map(ps => (
+              <div key={ps.phase} className="taller-card overflow-hidden">
+                <button onClick={() => setOpenPhase(openPhase === ps.phase ? null : ps.phase)} className="w-full flex items-center gap-2.5 px-4 py-3 text-left">
+                  <span>{PHASES.find(p => p.n === ps.phase)?.icon}</span>
+                  <span className="text-sm font-bold taller-ink flex-1">{phaseName(ps.phase)}</span>
+                  <StatusChip status={ps.status} />
+                  <span className="taller-muted text-xs">{openPhase === ps.phase ? '▴' : '▾'}</span>
+                </button>
+                {openPhase === ps.phase && <div className="px-4 pb-4">{phaseBody(ps)}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Capa 3: memoria del equipo */}
+      <div className="flex items-center justify-center gap-5 text-xs font-bold taller-muted" style={{ fontFamily: 'ui-monospace, monospace' }}>
+        <button onClick={() => setLayer3(layer3 === 'log' ? '' : 'log')} className="hover:opacity-70">🕓 Bitácora</button>
+        <button onClick={() => setLayer3(layer3 === 'disc' ? '' : 'disc')} className="hover:opacity-70">💡 Descubrimientos</button>
       </div>
-      <div className="taller-card p-5">
-        <h4 className="font-bold taller-ink mb-3">💡 Descubrimientos</h4>
-        <DiscoveriesView teamId={team.id} readOnly />
-      </div>
+      {layer3 === 'log' && <div className="taller-card p-5"><h4 className="font-bold taller-ink mb-3">📔 Bitácora</h4><LogbookView teamId={team.id} readOnly /></div>}
+      {layer3 === 'disc' && <div className="taller-card p-5"><h4 className="font-bold taller-ink mb-3">💡 Descubrimientos</h4><DiscoveriesView teamId={team.id} readOnly /></div>}
+
+      {/* Compositor de actividad */}
+      {composerPhase !== null && (
+        <ActivityComposer team={team} phase={composerPhase} onClose={() => setComposerPhase(null)} onPlaced={() => { setComposerPhase(null); load() }} />
+      )}
     </div>
   )
 }
@@ -2146,7 +2392,7 @@ function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: stri
     try {
       const { data } = await abpApi.broadcastMission(projectId, { phase, title: title.trim(), description: description.trim() || undefined, required, deliverableKind: kind === 'NONE' ? undefined : kind, activities: kind === 'NONE' ? activities.filter(a => a.title.trim()) : [] })
       onDone(data.count)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
   }
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
@@ -2235,7 +2481,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   useEffect(() => { load() }, [load])
 
   if (reviewingId) return <AbpReview validationId={reviewingId} onClose={(changed) => { setReviewingId(null); if (changed) load() }} />
-  if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} />
+  if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} queue={queue} onReview={(id) => setReviewingId(id)} />
   if (editingPres && project) return <PresentationEditor project={project} onClose={() => setEditingPres(false)} onSaved={() => { setEditingPres(false); load() }} />
   if (loading) return <Loading />
 
@@ -2444,7 +2690,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
                     <h5 className="font-bold taller-ink">{t.emoji} {t.name}</h5>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setEditTeamId(t.id)} title="Editar integrantes" className="taller-muted hover:taller-soft" style={{ color: 'var(--t-faint, #AAA394)' }}><Users className="w-4 h-4" /></button>
-                      <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={async () => { if ((await confirmDialog('¿Eliminar equipo?', { danger: true }))) { await abpApi.deleteTeam(t.id); load() } }} title="Eliminar equipo" className="taller-muted hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                   <p className="text-xs taller-muted mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
@@ -2471,7 +2717,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {tab === 'announcements' && <AnnouncementsView projectId={projectId} canManage />}
       {tab === 'resources' && <ResourcesView projectId={projectId} canManage />}
 
-      {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); alert(`Misión liberada a ${count} equipo(s).`); load() }} />}
+      {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); toast.error(`Misión liberada a ${count} equipo(s).`); load() }} />}
 
       {editTeamId && <EditTeamMembers team={teams.find((t: any) => t.id === editTeamId)} classroomId={classroomId} projectId={projectId} onClose={() => setEditTeamId(null)} onChanged={load} />}
 
@@ -2553,7 +2799,7 @@ function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string
     if ((!name.trim() && !letStudents) || sel.size === 0) return
     setBusy(true)
     try { await abpApi.createTeam({ projectId, name: name.trim(), emoji, memberEnrollmentIds: [...sel], letStudentsName: letStudents }); setName(''); setSel(new Set()); setLetStudents(false); setOpen(false); onCreated() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear el equipo') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo crear el equipo') }
     finally { setBusy(false) }
   }
 
@@ -2617,14 +2863,14 @@ function EditTeamMembers({ team, classroomId, projectId, onClose, onChanged }: {
   const add = async (enrollmentId: string) => {
     setBusy(true)
     try { await abpApi.addTeamMember(team.id, enrollmentId); await reloadRoster(); onChanged() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo añadir') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo añadir') }
     finally { setBusy(false) }
   }
   const remove = async (enrollmentId: string) => {
-    if (members.length <= 1) { alert('El equipo debe tener al menos un integrante.'); return }
+    if (members.length <= 1) { toast.warning('El equipo debe tener al menos un integrante.'); return }
     setBusy(true)
     try { await abpApi.removeTeamMember(team.id, enrollmentId); await reloadRoster(); onChanged() }
-    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo sacar') }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo sacar') }
     finally { setBusy(false) }
   }
 

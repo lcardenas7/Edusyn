@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { institutionalDocumentsApi } from '../lib/api'
 import {
@@ -152,7 +154,7 @@ export default function InstitutionalDocuments() {
       loadDocuments()
       if (isAdmin) loadStorageUsage()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al subir documento')
+      toast.error(error.response?.data?.message || 'Error al subir documento')
     } finally {
       setUploading(false)
     }
@@ -173,32 +175,32 @@ export default function InstitutionalDocuments() {
       resetForm()
       loadDocuments()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al actualizar documento')
+      toast.error(error.response?.data?.message || 'Error al actualizar documento')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este documento?')) return
+    if (!(await confirmDialog('¿Está seguro de eliminar este documento?', { danger: true }))) return
 
     try {
       await institutionalDocumentsApi.delete(id)
       loadDocuments()
       if (isAdmin) loadStorageUsage()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar documento')
+      toast.error(error.response?.data?.message || 'Error al eliminar documento')
     }
   }
 
   const handleCleanup = async () => {
-    if (!confirm('¿Limpiar archivos huérfanos y recalcular espacio? Esto eliminará archivos que se subieron pero no se registraron correctamente.')) return
+    if (!(await confirmDialog('¿Limpiar archivos huérfanos y recalcular espacio? Esto eliminará archivos que se subieron pero no se registraron correctamente.', { danger: true }))) return
 
     try {
       const response = await institutionalDocumentsApi.cleanup(institutionId!)
-      alert(response.data.message || 'Limpieza completada')
+      toast.warning(response.data.message || 'Limpieza completada')
       loadDocuments()
       loadStorageUsage()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al limpiar archivos')
+      toast.error(error.response?.data?.message || 'Error al limpiar archivos')
     }
   }
 

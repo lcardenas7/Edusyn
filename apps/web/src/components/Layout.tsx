@@ -119,7 +119,12 @@ const superAdminNavigation: NavItem[] = [
 // ═══════════════════════════════════════════════════════════════════════════
 const institutionalNavigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'DASHBOARD' },
-  
+
+  // ── CONFIGURACIÓN INICIAL — flujo guiado de puesta en marcha (una vez al año) ──
+  // Ítem propio y visible: es lo primero de un colegio nuevo y sirve de tablero de
+  // progreso (Estado como corazón). Distinto de "Configuración" (ajustes permanentes).
+  { name: 'Configuración inicial', href: '/configuracion-inicial', icon: ListTodo, roles: ['ADMIN_INSTITUTIONAL', 'RECTOR'] },
+
   // ── CONFIGURACIÓN (reglas de evaluación e institución) — Solo Admin/Rector ──
   // NO coordinador: cambiar la escala/pesos/nota mínima a mitad de año recalcula los
   // boletines de TODO el colegio. Es configuración estructural, se toca una vez al año.

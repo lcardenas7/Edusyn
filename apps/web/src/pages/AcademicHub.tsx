@@ -71,8 +71,9 @@ export default function AcademicHub() {
   ]
 
   // Estructura del SIEE — se define al inicio del año (cambiarla a mitad de año tiene impacto)
-  const structureCards: ConfigCard[] = [
+  const structureCards: (ConfigCard & { step: number })[] = [
     {
+      step: 1,
       title: 'Niveles y Escala de Valoración',
       description: 'Superior/Alto/Básico/Bajo, rangos y nota mínima — es lo que usa el boletín',
       icon: GraduationCap,
@@ -82,6 +83,7 @@ export default function AcademicHub() {
       borderColor: 'border-indigo-200'
     },
     {
+      step: 2,
       title: 'Procesos y Pesos',
       description: 'Cuánto pesa cada saber: Cognitivo, Procedimental, Actitudinal (suman 100%)',
       icon: Percent,
@@ -91,8 +93,9 @@ export default function AcademicHub() {
       borderColor: 'border-teal-200'
     },
     {
+      step: 3,
       title: 'Períodos Académicos',
-      description: 'Configuración de períodos y componentes',
+      description: 'Configuración de períodos y componentes finales',
       icon: Layers,
       href: '/academic/config/periods',
       color: 'text-amber-600',
@@ -215,8 +218,9 @@ export default function AcademicHub() {
               className={`group p-4 rounded-lg border ${card.borderColor} bg-white hover:${card.bgColor} hover:shadow-sm transition-all`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${card.bgColor} flex items-center justify-center`}>
+                <div className={`w-10 h-10 rounded-lg ${card.bgColor} flex items-center justify-center relative`}>
                   <card.icon className={`w-5 h-5 ${card.color}`} />
+                  <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">{card.step}</span>
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium text-slate-900">{card.title}</h3>

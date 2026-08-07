@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { useNavigate } from 'react-router-dom'
 import { playPanelApi } from '../../lib/playApi'
 import {
@@ -70,12 +72,12 @@ export default function PlayLessons() {
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`¿Eliminar "${title}"? Esta acción no se puede deshacer.`)) return
+    if (!(await confirmDialog(`¿Eliminar "${title}"? Esta acción no se puede deshacer.`, { danger: true }))) return
     try {
       await playPanelApi.deleteLesson(id)
       setLessons(prev => prev.filter(l => l.id !== id))
     } catch {
-      alert('Error al eliminar lección')
+      toast.error('Error al eliminar lección')
     }
   }
 

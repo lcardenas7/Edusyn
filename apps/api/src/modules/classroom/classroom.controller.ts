@@ -214,8 +214,8 @@ export class ClassroomController {
     title: string;
     description?: string;
     maxScore?: number;
-    dueDate?: string;
-    openDate?: string;
+    dueDate?: string | null;
+    openDate?: string | null;
     allowLateSubmit?: boolean;
     attachmentUrl?: string;
     attachmentName?: string;
@@ -247,8 +247,8 @@ export class ClassroomController {
     title?: string;
     description?: string;
     maxScore?: number;
-    dueDate?: string;
-    openDate?: string;
+    dueDate?: string | null;
+    openDate?: string | null;
     allowLateSubmit?: boolean;
     isVisible?: boolean;
     attachmentUrl?: string;

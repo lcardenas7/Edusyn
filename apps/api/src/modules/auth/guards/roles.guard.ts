@@ -18,7 +18,9 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user as { roles?: string[] | any[] } | undefined;
+    const user = request.user as { roles?: string[] | any[]; isSuperAdmin?: boolean } | undefined;
+
+    if (user?.isSuperAdmin === true) return true;
 
     // Extraer roles - soportar tanto array de strings como array de objetos
     let roles: string[] = [];

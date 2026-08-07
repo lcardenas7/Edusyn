@@ -1,11 +1,10 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
-import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { InstitutionsService } from './institutions.service';
 
 @Controller('institutions')
@@ -16,11 +15,11 @@ export class InstitutionsController {
     private readonly prisma: PrismaService,
   ) {}
 
-  @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async create(@Body() dto: CreateInstitutionDto) {
-    return this.institutionsService.create(dto);
-  }
+  // NOTA (Onboarding v2 · Módulo 1): el POST /institutions se eliminó. Creaba
+  // instituciones ROTAS (sin admin, sin roles, sin escala) y permitía el rol
+  // ADMIN_INSTITUTIONAL, lo que dejaba a un admin de institución crear otras
+  // instituciones. La creación canónica es POST /superadmin/institutions
+  // (superadmin.service.createInstitution). Este controlador solo consulta.
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Clock,
@@ -197,7 +198,7 @@ export default function StaffLeave() {
   }
 
   const handleCancel = async (id: string) => {
-    if (!confirm('¿Está seguro de cancelar esta solicitud?')) return
+    if (!(await confirmDialog('¿Está seguro de cancelar esta solicitud?', { danger: true }))) return
     try {
       await staffLeaveApi.cancel(id)
       setMessage({ type: 'success', text: 'Solicitud cancelada' })

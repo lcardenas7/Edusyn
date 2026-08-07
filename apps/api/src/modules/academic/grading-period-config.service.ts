@@ -119,10 +119,14 @@ export class GradingPeriodConfigService {
       const config = term.gradingPeriodConfig;
       let status: 'open' | 'closed' | 'upcoming' | 'not_configured' = 'not_configured';
       let canEnterGrades = false;
+      // Por qué está cerrado: 'toggle' = deshabilitado manualmente,
+      // 'date' = la ventana está habilitada pero su fecha de cierre ya pasó.
+      let closedBy: 'toggle' | 'date' | null = null;
 
       if (config) {
         if (!config.isOpen) {
           status = 'closed';
+          closedBy = 'toggle';
         } else if (config.openDate && now < config.openDate) {
           status = 'upcoming';
         } else if (config.closeDate) {
@@ -132,6 +136,7 @@ export class GradingPeriodConfigService {
           }
           if (now > effectiveCloseDate) {
             status = 'closed';
+            closedBy = 'date';
           } else {
             status = 'open';
             canEnterGrades = true;
@@ -148,6 +153,7 @@ export class GradingPeriodConfigService {
         order: term.order,
         status,
         canEnterGrades,
+        closedBy,
         openDate: config?.openDate,
         closeDate: config?.closeDate,
         allowLateEntry: config?.allowLateEntry || false,

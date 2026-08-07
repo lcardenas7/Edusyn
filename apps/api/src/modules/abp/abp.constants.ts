@@ -124,12 +124,14 @@ export const PHASE_TOOL: Record<number, string> = {
 // Toda misión sembrada debe tener una forma REAL de cumplirse: una herramienta con
 // criterio verificable (`tool`) o una ENTREGA (`deliverableKind`). Nunca un checkbox
 // que el estudiante marca sin haber hecho nada.
+// Addendum v3 (T14): las estaciones nacen LIMPIAS — solo se siembra la misión-herramienta
+// de cada fase. Las misiones opcionales ("leer una fuente", "fotografiar el problema"…)
+// ya no se crean solas: el docente las coloca cuando quiera (nueva misión, liberar a
+// todos, o ✨ Sugerir con Valeria, que reemplaza a las plantillas).
 export interface MissionTemplate { title: string; description?: string; required: boolean; tool?: string; deliverableKind?: 'FILE' | 'LINK' | 'TEXT'; activities?: { type: string; title: string }[] }
 export const MISSION_TEMPLATES: Record<number, MissionTemplate[]> = {
   1: [
     { title: 'Comprender el problema', description: 'Completen el Canvas del Problema con sus 4 preguntas.', required: true, tool: 'CANVAS' },
-    { title: 'Leer una fuente sobre el tema', description: 'Busquen una fuente real (noticia, artículo, video). Peguen el enlace y escriban CON SUS PALABRAS, en 3 líneas, qué aprendieron.', required: false, deliverableKind: 'TEXT' },
-    { title: 'Fotografiar el problema en su entorno', description: 'Salgan a recoger información real: suban una foto del problema tal como ocurre en el colegio.', required: false, deliverableKind: 'FILE' },
   ],
   2: [{ title: 'Generar y priorizar ideas', description: 'Lluvia de ideas y votación en el muro.', required: true, tool: 'IDEAS' }],
   3: [{ title: 'Definir el objetivo', description: 'Redacten su objetivo SMART.', required: true, tool: 'SMART' }],

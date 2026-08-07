@@ -49,6 +49,7 @@ export class AchievementService {
           },
         },
         attitudinalAchievements: true,
+        levelDescriptors: true,
       },
     });
   }
@@ -81,6 +82,7 @@ export class AchievementService {
     baseDescription: string;
     isPromotional?: boolean;
     achievementType?: 'ACADEMIC' | 'ATTITUDINAL' | 'PROMOTIONAL';
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
   }) {
     // Generate code automatically
     const assignment = await this.prisma.teacherAssignment.findUnique({
@@ -102,6 +104,7 @@ export class AchievementService {
     const code = `${typePrefix}-${subjectCode}-P${periodOrder}-${String(data.orderNumber).padStart(2, '0')}`;
 
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
+    const descriptors = (data.levelDescriptors ?? []).filter((d) => d.levelCode && d.text?.trim());
     return this.prisma.achievement.create({
       data: {
         institutionId: ta!.institutionId,
@@ -112,14 +115,30 @@ export class AchievementService {
         achievementType: data.achievementType ?? 'ACADEMIC',
         baseDescription: data.baseDescription,
         isPromotional: data.isPromotional ?? false,
+        ...(descriptors.length > 0
+          ? { levelDescriptors: { create: descriptors.map((d) => ({ levelCode: d.levelCode, text: d.text.trim() })) } }
+          : {}),
       },
+      include: { levelDescriptors: true },
     });
   }
 
-  async updateAchievement(id: string, data: { baseDescription: string }) {
+  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> }) {
+    // Reemplazo total de descriptores solo si el cliente los envía (undefined = no tocar).
+    if (data.levelDescriptors !== undefined) {
+      const descriptors = data.levelDescriptors.filter((d) => d.levelCode && d.text?.trim());
+      await this.prisma.achievementLevelDescriptor.deleteMany({ where: { achievementId: id } });
+      if (descriptors.length > 0) {
+        await this.prisma.achievementLevelDescriptor.createMany({
+          data: descriptors.map((d) => ({ achievementId: id, levelCode: d.levelCode, text: d.text.trim() })),
+          skipDuplicates: true,
+        });
+      }
+    }
     return this.prisma.achievement.update({
       where: { id },
       data: { baseDescription: data.baseDescription },
+      include: { levelDescriptors: true },
     });
   }
 

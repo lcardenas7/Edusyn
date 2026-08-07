@@ -610,9 +610,18 @@ export class TimetableExcelService {
       if (!grade) {
         const mapped = GRADE_MAPPING[gradeKey];
         if (mapped) {
-          grade = await this.prisma.grade.findFirst({
-            where: { institutionId, stage: mapped.stage, name: { equals: mapped.name, mode: 'insensitive' } },
-          });
+          // Reusar por NÚMERO+etapa (clave canónica): evita duplicar "1°" vs "Primero"
+          // vs "1" cuando el Excel usa una convención de nombre distinta a la existente.
+          if (mapped.number !== null) {
+            grade = await this.prisma.grade.findFirst({
+              where: { institutionId, stage: mapped.stage, number: mapped.number },
+            });
+          }
+          if (!grade) {
+            grade = await this.prisma.grade.findFirst({
+              where: { institutionId, stage: mapped.stage, name: { equals: mapped.name, mode: 'insensitive' } },
+            });
+          }
           if (!grade) {
             grade = await this.prisma.grade.create({
               data: { institutionId, stage: mapped.stage, number: mapped.number, name: mapped.name },
@@ -626,11 +635,17 @@ export class TimetableExcelService {
           if (numMatch) {
             const num = parseInt(numMatch[1], 10);
             const stage: GradeStage = num <= 0 ? 'PREESCOLAR' : num <= 5 ? 'BASICA_PRIMARIA' : num <= 9 ? 'BASICA_SECUNDARIA' : 'MEDIA';
-            grade = await this.prisma.grade.create({
-              data: { institutionId, stage, number: num, name: row.gradeName },
+            // Reusar por número+etapa antes de crear (mismo criterio anti-duplicados).
+            grade = await this.prisma.grade.findFirst({
+              where: { institutionId, stage, number: num },
             });
-            entitiesCreated.grades++;
-            warnings.push(`Grado "${row.gradeName}" creado como ${stage}`);
+            if (!grade) {
+              grade = await this.prisma.grade.create({
+                data: { institutionId, stage, number: num, name: row.gradeName },
+              });
+              entitiesCreated.grades++;
+              warnings.push(`Grado "${row.gradeName}" creado como ${stage}`);
+            }
           } else {
             errors.push(`Fila ${row.rowNumber}: No se pudo interpretar el grado "${row.gradeName}"`);
             continue;

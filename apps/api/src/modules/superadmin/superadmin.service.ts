@@ -135,6 +135,19 @@ export class SuperadminService {
       }
     }
 
+    // daneCode es único a nivel BD: validarlo aquí devuelve un 409 con mensaje
+    // humano en vez de dejar reventar la transacción con el error crudo de Prisma
+    // (mismo patrón que el 409 de slug y email de arriba).
+    if (dto.daneCode) {
+      const existingDane = await this.prisma.institution.findFirst({
+        where: { daneCode: dto.daneCode },
+        select: { id: true },
+      });
+      if (existingDane) {
+        throw new ConflictException(`El código DANE "${dto.daneCode}" ya está registrado en otra institución`);
+      }
+    }
+
     // Usar contraseña proporcionada o generar una temporal
     const tempPassword = dto.adminPassword || this.generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
@@ -642,5 +655,97 @@ export class SuperadminService {
     });
 
     return { items, total, limit: take, offset: skip };
+  }
+
+  async getInstitutionUsers(superAdminId: string, institutionId: string) {
+    await this.verifySuperAdmin(superAdminId);
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, name: true },
+    });
+    if (!institution) throw new NotFoundException('Institución no encontrada');
+
+    const users: any[] = await this.prisma.institutionUser.findMany({
+      where: { institutionId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            documentNumber: true,
+            phone: true,
+            isActive: true,
+            mustChangePassword: true,
+            createdAt: true,
+          },
+        },
+        institutionUserRoles: {
+          include: { role: { select: { name: true } } },
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+
+    return {
+      institution: institution.name,
+      users: users.map((iu) => ({
+        id: iu.user.id,
+        email: iu.user.email,
+        username: iu.user.username,
+        firstName: iu.user.firstName,
+        lastName: iu.user.lastName,
+        documentNumber: iu.user.documentNumber,
+        phone: iu.user.phone,
+        isActive: iu.user.isActive,
+        isAdmin: iu.isAdmin,
+        mustChangePassword: iu.user.mustChangePassword,
+        roles: (iu.institutionUserRoles || []).map((r: any) => r.role?.name || r.roleId).filter(Boolean),
+        createdAt: iu.user.createdAt,
+      })),
+    };
+  }
+
+  async resetUserPassword(
+    superAdminId: string,
+    userId: string,
+    opts?: { newPassword?: string; mustChangePassword?: boolean },
+  ) {
+    await this.verifySuperAdmin(superAdminId);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, email: true, documentNumber: true, firstName: true, lastName: true },
+    });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    let newPassword: string;
+    if (opts?.newPassword && opts.newPassword.length >= 6) {
+      newPassword = opts.newPassword;
+    } else if (user.documentNumber) {
+      newPassword = user.documentNumber;
+    } else {
+      newPassword = `Edu${Math.random().toString(36).substring(2, 8)}`;
+    }
+
+    const mustChange = opts?.mustChangePassword !== undefined ? opts.mustChangePassword : true;
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: mustChange },
+    });
+
+    return {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      newPassword,
+      mustChangePassword: mustChange,
+    };
   }
 }

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from '../components/ui/confirm'
 import {
   Megaphone,
   Image,
@@ -112,19 +114,19 @@ export default function ContentManager() {
   // Manejar subida de imagen a Supabase
   const handleFileUpload = async (file: File, type: 'announcement' | 'gallery') => {
     if (!institution?.id) {
-      alert('No se pudo determinar la institución')
+      toast.error('No se pudo determinar la institución')
       return
     }
     
     // Validar tamaño (max 500KB)
     if (file.size > 500 * 1024) {
-      alert('La imagen es muy grande. Máximo 500KB.')
+      toast.error('La imagen es muy grande. Máximo 500KB.')
       return
     }
     
     // Validar tipo
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('Formato no válido. Use JPG, PNG o WebP.')
+      toast.error('Formato no válido. Use JPG, PNG o WebP.')
       return
     }
     
@@ -149,7 +151,7 @@ export default function ContentManager() {
       }
     } catch (err: any) {
       console.error('Error uploading file:', err)
-      alert(err.response?.data?.message || 'Error al subir la imagen')
+      toast.error(err.response?.data?.message || 'Error al subir la imagen')
     } finally {
       setUploading(false)
     }
@@ -290,14 +292,14 @@ export default function ContentManager() {
       fetchData()
     } catch (err) {
       console.error('Error saving:', err)
-      alert('Error al guardar. Verifica los datos e intenta de nuevo.')
+      toast.error('Error al guardar. Verifica los datos e intenta de nuevo.')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este elemento?')) return
+    if (!(await confirmDialog('¿Estás seguro de eliminar este elemento?', { danger: true }))) return
     try {
       if (activeTab === 'announcements') {
         await announcementsApi.delete(id)

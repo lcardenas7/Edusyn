@@ -11,6 +11,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Building2, Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Search, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
 
 // Detectar URL de API según entorno (staging excluido)
@@ -450,9 +451,13 @@ export default function InstitutionLogin() {
                   </button>
 
                   <div className="text-center">
-                    <a href="#" className="text-sm text-blue-600 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => toast.info('Contacta al administrador de tu institución para que restablezca tu contraseña.')}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
                       ¿Olvidaste tu contraseña?
-                    </a>
+                    </button>
                   </div>
                 </div>
               </form>

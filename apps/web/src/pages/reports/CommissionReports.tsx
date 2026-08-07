@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from '../../lib/toast'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, BarChart3, CheckCircle, ClipboardList, Download,
@@ -609,7 +610,7 @@ export default function CommissionReports() {
     const dataForDownload = { ...loadedData, subjectLevelData: filteredSubjectData() }
     const html = buildActaHtml(actaConfig, dataForDownload, actaObs, referrals, institution?.name || '', logoBase64)
     const win = window.open('', '_blank')
-    if (!win) { alert('Permite las ventanas emergentes para descargar el PDF'); setDownloading(false); return }
+    if (!win) { toast.error('Permite las ventanas emergentes para descargar el PDF'); setDownloading(false); return }
     win.document.write(html)
     win.document.close()
     const trigger = () => { win.focus(); win.print(); setDownloading(false) }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import { 
@@ -218,7 +219,7 @@ export default function Elections() {
   }
 
   const handleCloseProcess = async (processId: string) => {
-    if (!confirm('¿Cerrar el proceso electoral y calcular resultados finales?')) return
+    if (!(await confirmDialog('¿Cerrar el proceso electoral y calcular resultados finales?', { danger: true }))) return
     try {
       setActionLoading(true)
       await api.post(`/elections/process/${processId}/close`)
@@ -234,7 +235,7 @@ export default function Elections() {
   }
 
   const handleDeleteProcess = async (processId: string) => {
-    if (!confirm('¿Eliminar este proceso electoral? Esta acción no se puede deshacer.')) return
+    if (!(await confirmDialog('¿Eliminar este proceso electoral? Esta acción no se puede deshacer.', { danger: true }))) return
     try {
       setActionLoading(true)
       await api.put(`/elections/process/${processId}/delete`)

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -66,12 +68,12 @@ export default function Invoices() {
   useEffect(() => { fetchInvoices() }, [statusFilter, typeFilter])
 
   const handleIssue = async (id: string) => {
-    if (!confirm('¿Emitir esta factura? Una vez emitida no se puede editar.')) return
+    if (!(await confirmDialog('¿Emitir esta factura? Una vez emitida no se puede editar.', { danger: true }))) return
     try {
       await financeInvoicesApi.issue(id)
       fetchInvoices()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al emitir')
+      toast.error(err.response?.data?.message || 'Error al emitir')
     }
   }
 
@@ -82,7 +84,7 @@ export default function Invoices() {
       await financeInvoicesApi.cancel(id, reason)
       fetchInvoices()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al anular')
+      toast.error(err.response?.data?.message || 'Error al anular')
     }
   }
 
@@ -96,7 +98,7 @@ export default function Invoices() {
       link.click()
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert('Error al descargar PDF')
+      toast.error('Error al descargar PDF')
     }
   }
 

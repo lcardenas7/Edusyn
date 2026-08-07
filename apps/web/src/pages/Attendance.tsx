@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -395,7 +396,7 @@ export default function Attendance() {
           </div>
           <button
             onClick={async () => {
-              if (!confirm('¿Desea deshabilitar la asistencia de tutoría?')) return
+              if (!(await confirmDialog('¿Desea deshabilitar la asistencia de tutoría?', { danger: true }))) return
               setTogglingTutoring(true)
               try {
                 await tutoringAttendanceApi.toggle(false)

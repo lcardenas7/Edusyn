@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from '../lib/toast'
+import { confirmDialog } from './ui/confirm'
 import { Loader2, Trash2, MessageCircle, Pencil, Plus, X, ExternalLink, Copy } from 'lucide-react'
 import { tallerApi } from '../lib/api'
 
@@ -119,7 +121,7 @@ export default function TallerCards({ teamId, dynamic = 'REFERENCIAS', stationId
   const save = async () => {
     if (!form || !inst || sending) return
     const faltan = V.fields.filter(f => f.required && !String(form[f.key] || '').trim())
-    if (faltan.length) { alert(`Falta: ${faltan.map(f => f.label).join(', ')}`); return }
+    if (faltan.length) { toast.warning(`Falta: ${faltan.map(f => f.label).join(', ')}`); return }
     setSending(true); busyRef.current = true
     try {
       const text = V.titleOf(form).slice(0, 200)
@@ -127,17 +129,17 @@ export default function TallerCards({ teamId, dynamic = 'REFERENCIAS', stationId
       else await tallerApi.createObject(inst.id, { type: V.objectType, text, fields: form })
       setForm(null); setEditingId(null)
       await load(true)
-    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'No se pudo guardar') }
     finally { setSending(false); busyRef.current = false }
   }
   const remove = async (o: any) => {
-    if (!confirm('¿Quitar esta ficha? (queda en la memoria del proyecto)')) return
-    try { await tallerApi.deleteObject(o.id); await load(true) } catch { alert('No se pudo quitar') }
+    if (!(await confirmDialog('¿Quitar esta ficha? (queda en la memoria del proyecto)', { danger: true }))) return
+    try { await tallerApi.deleteObject(o.id); await load(true) } catch { toast.error('No se pudo quitar') }
   }
   const sendComment = async () => {
     const t = commentText.trim()
     if (!t || !commentsFor) return
-    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { alert('No se pudo comentar') }
+    try { await tallerApi.addComment(commentsFor, t); setCommentText(''); await load(true) } catch { toast.error('No se pudo comentar') }
   }
   const copiarCita = async (o: any) => {
     try { await navigator.clipboard.writeText(citaAPA(o.data?.fields || {})); setCopied(o.id); setTimeout(() => setCopied(null), 1500) } catch { }

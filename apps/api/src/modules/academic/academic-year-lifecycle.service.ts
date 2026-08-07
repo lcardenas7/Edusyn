@@ -93,12 +93,18 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createYear(dto: CreateAcademicYearDto) {
-    // Verificar que no exista un año con el mismo número para esta institución
+    if (!dto.institutionId) {
+      throw new BadRequestException('institutionId es requerido');
+    }
+    if (!dto.year || dto.year < 2000 || dto.year > 2100) {
+      throw new BadRequestException('Año inválido');
+    }
+
     const existingYear = await this.prisma.academicYear.findUnique({
       where: {
         institutionId_year: {
           institutionId: dto.institutionId,
-          year: dto.year,
+          year: Number(dto.year),
         },
       },
     });
@@ -107,17 +113,41 @@ export class AcademicYearLifecycleService {
       throw new BadRequestException(`Ya existe un año lectivo ${dto.year} para esta institución`);
     }
 
-    // Crear el año en estado DRAFT
     const academicYear = await this.prisma.academicYear.create({
       data: {
         institutionId: dto.institutionId,
-        year: dto.year,
+        year: Number(dto.year),
         name: dto.name || `Año Lectivo ${dto.year}`,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
+        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         status: 'DRAFT',
       },
     });
+
+    // Materializar los períodos del año desde la configuración institucional (SIEE).
+    try {
+      const inst = await this.prisma.institution.findUnique({
+        where: { id: dto.institutionId },
+        select: { periodsConfig: true },
+      });
+      const periods = Array.isArray(inst?.periodsConfig) ? (inst!.periodsConfig as any[]) : [];
+      if (periods.length > 0) {
+        await this.prisma.academicTerm.createMany({
+          data: periods.map((p, i) => ({
+            academicYearId: academicYear.id,
+            type: 'PERIOD' as const,
+            name: p?.name || `Período ${i + 1}`,
+            order: i + 1,
+            weightPercentage: Math.round(Number(p?.weight) || 0),
+            startDate: p?.startDate ? new Date(p.startDate) : null,
+            endDate: p?.endDate ? new Date(p.endDate) : null,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    } catch (err) {
+      console.error(`[createYear] Error materializando períodos para año ${academicYear.id}:`, err);
+    }
 
     return academicYear;
   }

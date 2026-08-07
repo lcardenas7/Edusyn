@@ -217,6 +217,7 @@ export default function Grades() {
     order: number;
     status: 'open' | 'closed' | 'upcoming' | 'not_configured';
     canEnterGrades: boolean;
+    closedBy?: 'toggle' | 'date' | null;
     openDate?: string;
     closeDate?: string;
   }>>([])
@@ -240,6 +241,7 @@ export default function Grades() {
     orderNumber: number;
     baseDescription: string;
     achievementType: string;
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
     studentAchievements?: Array<{
       id: string;
       studentEnrollmentId: string;
@@ -253,7 +255,9 @@ export default function Grades() {
   const [achievementConfig, setAchievementConfig] = useState<{
     achievementsPerPeriod: number;
     useValueJudgments: boolean;
+    descriptorMode: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
   } | null>(null)
+  const descriptorMode = achievementConfig?.descriptorMode ?? 'FREE'
 
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
@@ -404,8 +408,10 @@ export default function Grades() {
       if (!currentPeriodStatus.canEnterGrades) {
         if (currentPeriodStatus.status === 'upcoming') {
           setPeriodClosedMessage(`Este período abre el ${new Date(currentPeriodStatus.openDate || '').toLocaleDateString('es-CO')}`)
+        } else if (currentPeriodStatus.status === 'closed' && currentPeriodStatus.closedBy === 'date') {
+          setPeriodClosedMessage(`La ventana está habilitada, pero su fecha de cierre fue el ${new Date(currentPeriodStatus.closeDate || '').toLocaleDateString('es-CO')}. Un administrador debe ajustar la fecha en «Ventanas de Calificación».`)
         } else if (currentPeriodStatus.status === 'closed') {
-          setPeriodClosedMessage(`Este período cerró el ${new Date(currentPeriodStatus.closeDate || '').toLocaleDateString('es-CO')}`)
+          setPeriodClosedMessage('Este período está deshabilitado para calificaciones. Un administrador puede habilitarlo en «Ventanas de Calificación».')
         } else {
           setPeriodClosedMessage('Este período no está habilitado para calificaciones')
         }
@@ -755,7 +761,8 @@ export default function Grades() {
 
       try {
         const requests: Promise<any>[] = [achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)]
-        if (viewMode === 'achievements' && institutionId) {
+        // La config (incluye descriptorMode) se necesita tanto en modo logros como cualitativo.
+        if ((viewMode === 'achievements' || isQualitative) && institutionId) {
           requests.push(achievementConfigApi.get(institutionId))
         }
 
@@ -767,17 +774,27 @@ export default function Grades() {
           setAchievementConfig({
             achievementsPerPeriod: configRes.data.achievementsPerPeriod || 1,
             useValueJudgments: configRes.data.useValueJudgments ?? true,
+            descriptorMode: configRes.data.descriptorMode ?? 'FREE',
           })
         }
 
         if (isQualitative) {
+          // Las valoraciones guardadas vienen por studentEnrollmentId, pero la
+          // grilla se indexa por student.id: traducir para restaurar la selección.
+          const studentIdByEnrollment = new Map<string, string>(
+            students.map((s: any) => [s.enrollmentId, s.id])
+          )
           const nextGrades: Record<string, Record<string, { levelCode: string; observation: string }>> = {}
           achievementsList.forEach((achievement: any) => {
             nextGrades[achievement.id] = {}
             ;(achievement.studentAchievements || []).forEach((sa: any) => {
-              nextGrades[achievement.id][sa.studentEnrollmentId] = {
+              const studentId = studentIdByEnrollment.get(sa.studentEnrollmentId)
+              if (!studentId) return
+              nextGrades[achievement.id][studentId] = {
                 levelCode: toQualitativeCode(sa.performanceLevel, toQual),
-                observation: sa.observation || sa.approvedText || sa.suggestedText || '',
+                // La observación es solo la nota libre del docente: el descriptor
+                // (approvedText/suggestedText) NO se mezcla de vuelta aquí.
+                observation: sa.observation || '',
               }
             })
           })
@@ -1016,7 +1033,7 @@ export default function Grades() {
 
     try {
       if (achievements.length === 0) {
-        toast.warning('No hay logros creados para esta dimensión en este período. Cree logros primero desde el módulo de Logros.')
+        toast.warning('Primero crea un indicador aquí mismo: escribe su nombre en "Agregar indicador" y presiona el botón. Luego asigna el nivel a cada estudiante.')
         return
       }
 
@@ -1035,7 +1052,12 @@ export default function Grades() {
             continue
           }
 
-          const achievementText = buildQualitativeAchievementText(achievement.baseDescription, qg.levelCode)
+          // Con descriptor por nivel: el texto del boletín es el descriptor redactado
+          // para esa escala. Si falta, se cae al texto mecánico "{Nivel}: {base}".
+          const descriptor = descriptorMode === 'DESCRIPTOR_PER_LEVEL'
+            ? (achievement.levelDescriptors || []).find((d: any) => d.levelCode === qg.levelCode)?.text?.trim()
+            : undefined
+          const achievementText = descriptor || buildQualitativeAchievementText(achievement.baseDescription, qg.levelCode)
 
           await achievementsApi.upsertStudentAchievement('upsert', {
             studentEnrollmentId: student.enrollmentId,
@@ -1063,7 +1085,10 @@ export default function Grades() {
     }
   }
 
-  const handleCreateQualitativeAchievement = async (baseDescription: string) => {
+  const handleCreateQualitativeAchievement = async (
+    baseDescription: string,
+    levelDescriptors?: Array<{ levelCode: string; text: string }>,
+  ) => {
     if (!selectedAssignment?.id || !academicTermId) {
       toast.warning('No se puede crear el indicador: falta información del período o dimensión')
       return
@@ -1076,6 +1101,7 @@ export default function Grades() {
         orderNumber: achievements.length + 1,
         baseDescription,
         isPromotional: false,
+        ...(levelDescriptors && levelDescriptors.length > 0 ? { levelDescriptors } : {}),
       })
 
       const created = response.data
@@ -1087,9 +1113,53 @@ export default function Grades() {
         [created.id]: prev[created.id] || {},
       }))
       setSelectedQualitativeAchievementId(created.id)
-      toast.success('Indicador creado correctamente')
+      toast.success('Indicador creado. Ahora asigna el nivel a cada estudiante en la grilla.')
+      // Llevar al docente directo a la grilla de valoración
+      setTimeout(() => {
+        document.getElementById('qualitative-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 150)
     } catch (err: any) {
       console.error('Error creating qualitative achievement:', err)
+      toast.error(err)
+      throw err
+    }
+  }
+
+  const handleUpdateQualitativeAchievement = async (
+    achievementId: string,
+    baseDescription: string,
+    levelDescriptors?: Array<{ levelCode: string; text: string }>,
+  ) => {
+    try {
+      const response = await achievementsApi.update(achievementId, {
+        baseDescription,
+        ...(levelDescriptors && levelDescriptors.length > 0 ? { levelDescriptors } : {}),
+      })
+      const updated = response.data
+      setAchievements(prev => prev.map(a => (a.id === achievementId ? { ...a, ...(updated || {}), baseDescription, levelDescriptors: updated?.levelDescriptors ?? levelDescriptors ?? a.levelDescriptors } : a)))
+      toast.success('Indicador actualizado')
+    } catch (err: any) {
+      console.error('Error updating qualitative achievement:', err)
+      toast.error(err)
+      throw err
+    }
+  }
+
+  const handleDeleteQualitativeAchievement = async (achievementId: string) => {
+    try {
+      await achievementsApi.delete(achievementId)
+      setAchievements(prev => prev.filter(a => a.id !== achievementId))
+      setQualitativeGradesByAchievement(prev => {
+        const next = { ...prev }
+        delete next[achievementId]
+        return next
+      })
+      if (selectedQualitativeAchievementId === achievementId) {
+        setSelectedQualitativeAchievementId(null)
+      }
+      toast.success('Indicador eliminado')
+    } catch (err: any) {
+      console.error('Error deleting qualitative achievement:', err)
       toast.error(err)
     }
   }
@@ -1659,12 +1729,27 @@ export default function Grades() {
           </div>
         )}
 
+        {resolvedLevel?.gradingScaleType === 'QUALITATIVE_DESC' && !isQualitative && (
+          <div className="mb-4 p-4 bg-orange-50 border border-orange-300 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-orange-800">
+                El nivel "{resolvedLevel.name}" está configurado como evaluación cualitativa, pero este grado aún usa la planilla numérica.
+              </p>
+              <p className="text-sm text-orange-700 mt-1">
+                Para que esta planilla muestre la escala cualitativa ({resolvedLevel.qualitativeLevels?.map(l => l.name).join(', ')}), un administrador debe corregir la estructura del grado. En Configuración Inicial o desde el panel de administración, ejecute la opción "Corregir estructura de preescolar".
+              </p>
+            </div>
+          </div>
+        )}
+
         {isQualitative ? (
           <QualitativeGradesPanel
             students={students}
             loadingStudents={loadingStudents}
             currentPeriodOpen={currentPeriodOpen}
             achievements={achievements}
+            descriptorMode={descriptorMode}
             selectedAchievementId={selectedQualitativeAchievementId}
             onSelectAchievement={setSelectedQualitativeAchievementId}
             qualitativeLevels={qualitativeLevels}
@@ -1682,6 +1767,8 @@ export default function Grades() {
               }))
             }}
             onCreateAchievement={handleCreateQualitativeAchievement}
+            onEditAchievement={handleUpdateQualitativeAchievement}
+            onDeleteAchievement={handleDeleteQualitativeAchievement}
           />
         ) : selectedSourceType === 'final_component' ? (
           /* ═══════════════════════════════════════════════════════

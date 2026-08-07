@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react'
+import { toast } from '../lib/toast'
 import { Download, Loader2 } from 'lucide-react'
 
 // ─── Colores corporativos (alineados con la plataforma) ─────────────────────
@@ -219,7 +220,7 @@ export default function InstitutionalPortfolio() {
       await html2pdf().set(opt).from(contentRef.current).save()
     } catch (err) {
       console.error('Error generating PDF:', err)
-      alert('Error al generar el PDF')
+      toast.error('Error al generar el PDF')
     } finally {
       setGenerating(false)
     }

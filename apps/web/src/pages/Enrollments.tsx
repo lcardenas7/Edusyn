@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useNavigate } from 'react-router-dom'
 import { 
   Users, 
@@ -350,7 +351,7 @@ const Enrollments: React.FC = () => {
         const confirmMsg = isAdminCorrection
           ? `Corrección administrativa de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nEste cambio NO requiere acta, pero quedará registrado en la auditoría de la matrícula (con el motivo, la fecha y tu usuario). Úsalo solo para corregir errores de matrícula.\n\n¿Deseas continuar?`
           : `¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`
-        if (!confirm(confirmMsg)) {
+        if (!(await confirmDialog(confirmMsg, { danger: true }))) {
           setValidatingChange(false)
           return
         }

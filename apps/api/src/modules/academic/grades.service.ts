@@ -3,7 +3,8 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException }
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { GradeStage, SchoolShift } from '@prisma/client';
-import { GRADE_TEMPLATES, deriveGradeNumber, levelKey } from '../../common/utils/academic-level.util';
+import { GRADE_TEMPLATES, deriveGradeNumber, levelKey, canonicalGradeName } from '../../common/utils/academic-level.util';
+import { suggestStructureByStage } from '../../engines/AcademicStructure';
 
 interface SyncGradeDto {
   id: string;
@@ -38,14 +39,25 @@ export class GradesService {
 
   async create(dto: CreateGradeDto & { institutionId: string }) {
     try {
+      const number = dto.number ?? deriveGradeNumber(dto.name);
+      const name = canonicalGradeName(dto.name);
+      // Idempotente por número+etapa: no crear "Primero" si ya existe "1°" (mismo
+      // número), aunque el nombre entrante use otra convención.
+      if (number != null) {
+        const existing = await this.prisma.grade.findFirst({
+          where: { institutionId: dto.institutionId, stage: dto.stage, number },
+        });
+        if (existing) return existing;
+      }
       return await this.prisma.grade.create({
         data: {
           institutionId: dto.institutionId,
           stage: dto.stage,
           // Si no viene el número, se deduce del nombre: dejarlo en NULL rompe el
           // cálculo del "grado siguiente" en la promoción.
-          number: dto.number ?? deriveGradeNumber(dto.name),
-          name: dto.name,
+          number,
+          name,
+          academicStructure: suggestStructureByStage(dto.stage),
         },
       });
     } catch (e) {
@@ -171,8 +183,9 @@ export class GradesService {
     );
 
     if (toCreate.length > 0) {
+      const academicStructure = suggestStructureByStage(stage);
       await this.prisma.grade.createMany({
-        data: toCreate.map((t) => ({ institutionId, stage, number: t.number, name: t.name })),
+        data: toCreate.map((t) => ({ institutionId, stage, number: t.number, name: t.name, academicStructure })),
         skipDuplicates: true,
       });
     }
@@ -220,6 +233,83 @@ export class GradesService {
           ? ` ${unresolved.length} requieren número manual: ${unresolved.join(', ')}.`
           : ''
       }`,
+    };
+  }
+
+  async backfillAcademicStructure(institutionId: string) {
+    const result = await this.prisma.grade.updateMany({
+      where: { institutionId, stage: 'PREESCOLAR', academicStructure: 'AREAS_SUBJECTS' },
+      data: { academicStructure: 'DIMENSIONS' },
+    });
+    return { updated: result.count, message: result.count > 0 ? `Se corrigieron ${result.count} grado(s) de preescolar a evaluación cualitativa.` : 'Todos los grados de preescolar ya estaban configurados correctamente.' };
+  }
+
+  /**
+   * Detecta grados duplicados (misma etapa+número, distinto nombre — p. ej. "1°" y
+   * "Primero" que crea el importador de horarios). Con apply=false solo reporta;
+   * con apply=true borra ÚNICAMENTE los duplicados VACÍOS (sin grupos, plantillas,
+   * elecciones ni logros), conservando el que tiene datos reales. Nunca destruye
+   * un grado con contenido.
+   */
+  async dedupeGrades(institutionId: string, apply = false) {
+    const grades = await this.prisma.grade.findMany({
+      where: { institutionId },
+      select: {
+        id: true, name: true, stage: true, number: true,
+        _count: { select: { groups: true, gradeTemplates: true, elections: true, achievementBank: true } },
+      },
+      orderBy: [{ stage: 'asc' }, { number: 'asc' }, { name: 'asc' }],
+    });
+
+    const byKey = new Map<string, typeof grades>();
+    for (const g of grades) {
+      // Número canónico: el guardado o el derivado del nombre ("Primero"→1, "6º"→6).
+      const num = g.number ?? deriveGradeNumber(g.name);
+      // Con número → agrupa "1°"/"Primero"/"6º"; sin número (CICLO/Play) → por nombre normalizado.
+      const key = num != null
+        ? `${g.stage}|#${num}`
+        : `${g.stage}|n:${canonicalGradeName(g.name).toLowerCase()}`;
+      const list = byKey.get(key) ?? [];
+      list.push(g);
+      byKey.set(key, list);
+    }
+
+    const isEmpty = (g: typeof grades[number]) =>
+      g._count.groups === 0 && g._count.gradeTemplates === 0 && g._count.elections === 0 && g._count.achievementBank === 0;
+
+    const duplicates: any[] = [];
+    const deleted: string[] = [];
+    const skipped: string[] = [];
+
+    for (const list of byKey.values()) {
+      if (list.length < 2) continue;
+      // Conservar el que tenga más grupos (datos reales); en empate, el primero.
+      const sorted = [...list].sort((a, b) => b._count.groups - a._count.groups);
+      const keep = sorted[0];
+      for (const dup of sorted.slice(1)) {
+        const empty = isEmpty(dup);
+        duplicates.push({ kept: keep.name, duplicate: dup.name, empty, groups: dup._count.groups });
+        if (empty && apply) {
+          try {
+            await this.prisma.grade.delete({ where: { id: dup.id } });
+            deleted.push(dup.name);
+          } catch {
+            skipped.push(dup.name); // FK inesperada: no forzar
+          }
+        } else if (!empty) {
+          skipped.push(dup.name); // tiene datos: requiere revisión manual (fusión)
+        }
+      }
+    }
+
+    return {
+      applied: apply,
+      duplicates,
+      deleted,
+      skipped,
+      message: apply
+        ? `Se eliminaron ${deleted.length} grado(s) duplicado(s) vacío(s).${skipped.length ? ` ${skipped.length} con datos requieren revisión manual: ${skipped.join(', ')}.` : ''}`
+        : `${duplicates.length} duplicado(s) detectado(s).${skipped.length ? ` ${skipped.length} con datos (fusión manual): ${skipped.join(', ')}.` : ''}`,
     };
   }
 
@@ -283,18 +373,26 @@ export class GradesService {
     for (const gradeData of grades) {
       const stage = levelToStage[gradeData.level] || GradeStage.BASICA_PRIMARIA;
 
-      // Buscar o crear el grado PARA ESTA INSTITUCIÓN
-      let grade = await this.prisma.grade.findFirst({
-        where: { institutionId, name: gradeData.name }
-      });
+      // Buscar o crear el grado PARA ESTA INSTITUCIÓN.
+      // Reusar por número+etapa (canónico) antes que por nombre: evita duplicar
+      // "1°" vs "Primero" cuando la estructura usa otra convención de nombre.
+      const number = gradeData.order ?? deriveGradeNumber(gradeData.name);
+      const canonName = canonicalGradeName(gradeData.name);
+      let grade = number != null
+        ? await this.prisma.grade.findFirst({ where: { institutionId, stage, number } })
+        : null;
+      if (!grade) {
+        grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, name: canonName } });
+      }
 
       if (!grade) {
         grade = await this.prisma.grade.create({
           data: {
             institutionId,
-            name: gradeData.name,
+            name: canonName,
             stage,
-            number: gradeData.order,
+            number,
+            academicStructure: suggestStructureByStage(stage),
           }
         });
       }

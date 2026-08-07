@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from '../lib/toast'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Layers, Save, Loader2, AlertTriangle, ArrowRightLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { areasApi } from '../lib/api'
@@ -113,7 +114,7 @@ export default function AcademicCatalog() {
       await loadAreas()
       setShowAreaModal(false)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al guardar área')
+      toast.error(error.response?.data?.message || 'Error al guardar área')
     } finally {
       setSaving(false)
     }
@@ -127,7 +128,7 @@ export default function AcademicCatalog() {
       await loadAreas()
       setDeleteConfirm(null)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar área')
+      toast.error(error.response?.data?.message || 'Error al eliminar área')
     } finally {
       setSaving(false)
     }
@@ -175,7 +176,7 @@ export default function AcademicCatalog() {
       await loadAreas()
       setShowSubjectModal(false)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al guardar asignatura')
+      toast.error(error.response?.data?.message || 'Error al guardar asignatura')
     } finally {
       setSaving(false)
     }
@@ -189,7 +190,7 @@ export default function AcademicCatalog() {
       await loadAreas()
       setDeleteConfirm(null)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar asignatura')
+      toast.error(error.response?.data?.message || 'Error al eliminar asignatura')
     } finally {
       setSaving(false)
     }
@@ -203,7 +204,7 @@ export default function AcademicCatalog() {
       await loadAreas()
       setMoveSubjectData(null)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al mover asignatura')
+      toast.error(error.response?.data?.message || 'Error al mover asignatura')
     } finally {
       setSaving(false)
     }

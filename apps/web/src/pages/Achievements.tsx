@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
@@ -46,6 +47,7 @@ interface AchievementConfig {
   useAttitudinalAchievement: boolean
   attitudinalMode: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT'
   useValueJudgments: boolean
+  descriptorMode: 'FREE' | 'DESCRIPTOR_PER_LEVEL'
   useObservations: boolean
   displayMode: 'SEPARATE' | 'COMBINED'
   displayFormat: 'LIST' | 'PARAGRAPH'
@@ -136,6 +138,7 @@ export default function Achievements() {
     useAttitudinalAchievement: false,
     attitudinalMode: 'GENERAL_PER_PERIOD',
     useValueJudgments: true,
+    descriptorMode: 'FREE',
     useObservations: false,
     displayMode: 'SEPARATE',
     displayFormat: 'LIST',
@@ -349,6 +352,7 @@ export default function Achievements() {
             useAttitudinalAchievement: response.data.useAttitudinalAchievement ?? false,
             attitudinalMode: response.data.attitudinalMode || 'GENERAL_PER_PERIOD',
             useValueJudgments: response.data.useValueJudgments ?? true,
+            descriptorMode: response.data.descriptorMode ?? 'FREE',
             useObservations: response.data.useObservations ?? false,
             displayMode: response.data.displayMode || 'SEPARATE',
             displayFormat: response.data.displayFormat || 'LIST',
@@ -623,7 +627,7 @@ export default function Achievements() {
 
   // Delete achievement
   const handleDeleteAchievement = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este logro?')) return
+    if (!(await confirmDialog('¿Estás seguro de eliminar este logro?', { danger: true }))) return
     setSaving(true)
     try {
       await achievementsApi.delete(id)
@@ -1336,6 +1340,24 @@ export default function Achievements() {
                   />
                   <span className="text-sm text-slate-700">Habilitar juicios valorativos por desempeño</span>
                 </label>
+
+                <div className="pt-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Modo de descriptor (evaluación cualitativa / preescolar)
+                  </label>
+                  <select
+                    value={config.descriptorMode}
+                    onChange={(e) => setConfig({ ...config, descriptorMode: e.target.value as any })}
+                    className="w-full sm:w-auto px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="FREE">Libre — el nivel etiqueta; la observación es libre</option>
+                    <option value="DESCRIPTOR_PER_LEVEL">Descriptor por escala — redactas un texto por cada nivel del indicador</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Con "Descriptor por escala", cada indicador guarda un texto por nivel (ej: Logrado / En Proceso / Iniciando)
+                    que autocompleta el boletín al calificar. Ideal para preescolar (Decreto 1411).
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -106,26 +106,24 @@ export class AcademicTermsService {
       const existing = existingTerms.find(t => t.order === order);
 
       if (existing) {
-        // Actualizar existente
         const updated = await this.prisma.academicTerm.update({
           where: { id: existing.id },
           data: {
             name: period.name,
-            weightPercentage: period.weight,
+            weightPercentage: Math.round(period.weight),
             startDate: period.startDate ? new Date(period.startDate) : existing.startDate,
             endDate: period.endDate ? new Date(period.endDate) : existing.endDate,
           },
         });
         results.push(updated);
       } else {
-        // Crear nuevo
         const created = await this.prisma.academicTerm.create({
           data: {
             academicYearId,
             type: 'PERIOD',
             name: period.name,
             order,
-            weightPercentage: period.weight,
+            weightPercentage: Math.round(period.weight),
             startDate: period.startDate ? new Date(period.startDate) : null,
             endDate: period.endDate ? new Date(period.endDate) : null,
           },

@@ -416,6 +416,16 @@ export const preventiveCutsApi = {
 export const reportsApi = {
   getReportCard: (studentEnrollmentId: string, academicTermId: string) =>
     api.get(`/reports/report-card/${studentEnrollmentId}`, { params: { academicTermId } }),
+  // Boletín multiperíodo (Banco de Formatos §8): P1..Pn acumulativo hasta el período dado.
+  getReportCardYear: (studentEnrollmentId: string, academicTermId: string) =>
+    api.get(`/reports/report-card-year/${studentEnrollmentId}`, { params: { academicTermId } }),
+  // Banco de Formatos de Boletín: selección/resolución de plantilla.
+  getTemplateSelections: () => api.get('/reports/report-card-templates/selections'),
+  upsertTemplateSelection: (data: { gradeId?: string | null; academicStructure?: string | null; templateKey: string }) =>
+    api.put('/reports/report-card-templates/selections', data),
+  deleteTemplateSelection: (id: string) => api.delete(`/reports/report-card-templates/selections/${id}`),
+  resolveTemplate: (params: { gradeId?: string; academicStructure?: string }) =>
+    api.get('/reports/report-card-templates/resolve', { params }),
   getGroupReport: (groupId: string, academicTermId: string) =>
     api.get('/reports/group', { params: { groupId, academicTermId } }),
   // Reportes predictivos - Nota mínima requerida
@@ -611,7 +621,12 @@ export const academicGradesApi = {
   create: (data: { name: string; stage: string; number?: number }) => api.post('/grades', data),
   update: (id: string, data: { name?: string; stage?: string; number?: number }) => api.patch(`/grades/${id}`, data),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
-  delete: (id: string) => api.delete(`/grades/${id}`),
+  // institutionId explícito: sin él, el backend resuelve la institución del JWT y
+  // un SUPERADMIN viendo OTRA institución recibía "Grado no encontrado".
+  delete: (id: string, institutionId?: string) => api.delete(`/grades/${id}`, { params: { institutionId } }),
+  // Detecta/elimina grados duplicados (apply=false solo reporta; true borra los vacíos).
+  dedupe: (apply: boolean, institutionId?: string) =>
+    api.post('/grades/dedupe', {}, { params: { apply: apply ? 'true' : 'false', institutionId } }),
 }
 
 // Dashboard APIs
@@ -848,6 +863,7 @@ export const achievementConfigApi = {
     useAttitudinalAchievement?: boolean;
     attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
     useValueJudgments?: boolean;
+    descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
     displayMode?: 'SEPARATE' | 'COMBINED';
     displayFormat?: 'LIST' | 'PARAGRAPH';
     judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
@@ -890,8 +906,9 @@ export const achievementsApi = {
     orderNumber: number;
     baseDescription: string;
     isPromotional?: boolean;
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
   }) => api.post('/achievements', data),
-  update: (id: string, data: { baseDescription: string }) => 
+  update: (id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> }) =>
     api.put(`/achievements/${id}`, data),
   delete: (id: string) => api.delete(`/achievements/${id}`),
   
@@ -1166,6 +1183,14 @@ export const superadminApi = {
   // Observabilidad: registro forense de cambios de notas (general o por institución)
   getGradeAuditLog: (params?: { institutionId?: string; action?: string; studentEnrollmentId?: string; actorUserId?: string; limit?: number; offset?: number }) =>
     api.get('/superadmin/grade-audit', { params }),
+
+  // Usuarios de una institución
+  getInstitutionUsers: (institutionId: string) =>
+    api.get(`/superadmin/institutions/${institutionId}/users`),
+
+  // Reset de contraseña (como SuperAdmin)
+  resetUserPassword: (userId: string, data?: { newPassword?: string; mustChangePassword?: boolean }) =>
+    api.post(`/superadmin/users/${userId}/reset-password`, data || {}),
 }
 
 // Documentos Institucionales
@@ -2109,8 +2134,8 @@ export const classroomApi = {
   resetLessonForStudent: (activityId: string, studentEnrollmentId: string) =>
     api.post(`/classrooms/activities/${activityId}/lesson/reset`, { studentEnrollmentId }),
   updateActivity: (activityId: string, data: {
-    title?: string; description?: string; maxScore?: number; dueDate?: string;
-    openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
+    title?: string; description?: string; maxScore?: number; dueDate?: string | null;
+    openDate?: string | null; allowLateSubmit?: boolean; isVisible?: boolean;
     attachmentUrl?: string; attachmentName?: string;
   }) => api.put(`/classrooms/activities/${activityId}`, data),
   publishActivity: (activityId: string, body?: { scheduledPublishAt?: string }) =>
@@ -2340,6 +2365,10 @@ export const liveSessionApi = {
     api.post(`/live-session/${sessionId}/add-partner`, { teamId, studentEnrollmentId }),
   removeFromTeam: (sessionId: string, studentEnrollmentId: string) =>
     api.post(`/live-session/${sessionId}/remove-from-team`, { studentEnrollmentId }),
+  assignTeams: (sessionId: string, assignments: { enrollmentId: string; teamId: string | null }[]) =>
+    api.post(`/live-session/${sessionId}/assign-teams`, { assignments }),
+  getFullRanking: (sessionId: string, limit?: number) =>
+    api.get(`/live-session/${sessionId}/ranking`, { params: { limit } }),
   searchStudents: (sessionId: string, query?: string) =>
     api.get(`/live-session/${sessionId}/search-students`, { params: { q: query } }),
   createTeamByStudent: (sessionId: string, name: string) =>
@@ -2633,6 +2662,7 @@ export const abpApi = {
   addActivitiesBulk: (missionId: string, items: { type: string; title: string }[]) => api.post<any[]>(`/abp/missions/${missionId}/activities/bulk`, { items }),
   addLessonActivity: (missionId: string, title: string) => api.post<any>(`/abp/missions/${missionId}/lesson-activity`, { title }),
   reusableActivities: (missionId: string) => api.get<{ id: string; title: string; type: string }[]>(`/abp/missions/${missionId}/reusable-activities`),
+  teamReusableActivities: (teamId: string) => api.get<{ id: string; title: string; type: string }[]>(`/abp/teams/${teamId}/reusable-activities`),
   attachActivity: (missionId: string, classroomActivityId: string) => api.post<any>(`/abp/missions/${missionId}/attach-activity`, { classroomActivityId }),
   generateLessonContent: (activityId: string, instructions?: string) => api.post<{ ok: boolean; title: string; slides: number; model?: string }>(`/abp/activities/${activityId}/generate-lesson`, { instructions }),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),

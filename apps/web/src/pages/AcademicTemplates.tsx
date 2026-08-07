@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from '../lib/toast'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Layers, Save, Loader2, AlertTriangle, Settings, GraduationCap, Clock, Percent, Star, Calendar } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { academicTemplatesApi, areasApi, academicGradesApi, academicYearLifecycleApi } from '../lib/api'
@@ -220,15 +221,15 @@ export default function AcademicTemplates() {
 
   const saveTemplate = async () => {
     if (!institution?.id) {
-      alert('Error: No se encontró la institución')
+      toast.error('Error: No se encontró la institución')
       return
     }
     if (!selectedYear?.id) {
-      alert('Error: Debe seleccionar un año académico')
+      toast.error('Error: Debe seleccionar un año académico')
       return
     }
     if (!templateForm.name.trim()) {
-      alert('Error: El nombre de la plantilla es requerido')
+      toast.error('Error: El nombre de la plantilla es requerido')
       return
     }
     
@@ -254,7 +255,7 @@ export default function AcademicTemplates() {
       setShowTemplateModal(false)
     } catch (error: any) {
       console.error('[AcademicTemplates] Error saving template:', error)
-      alert(error.response?.data?.message || 'Error al guardar plantilla')
+      toast.error(error.response?.data?.message || 'Error al guardar plantilla')
     } finally {
       setSaving(false)
     }
@@ -268,7 +269,7 @@ export default function AcademicTemplates() {
       await loadData()
       setDeleteConfirm(null)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar plantilla')
+      toast.error(error.response?.data?.message || 'Error al eliminar plantilla')
     } finally {
       setSaving(false)
     }
@@ -311,7 +312,7 @@ export default function AcademicTemplates() {
       await loadData()
       setShowAreaModal(false)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al guardar área')
+      toast.error(error.response?.data?.message || 'Error al guardar área')
     } finally {
       setSaving(false)
     }
@@ -323,7 +324,7 @@ export default function AcademicTemplates() {
       await academicTemplatesApi.removeArea(templateAreaId)
       await loadData()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar área')
+      toast.error(error.response?.data?.message || 'Error al eliminar área')
     } finally {
       setSaving(false)
     }
@@ -364,7 +365,7 @@ export default function AcademicTemplates() {
       await loadData()
       setShowSubjectModal(false)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al guardar asignatura')
+      toast.error(error.response?.data?.message || 'Error al guardar asignatura')
     } finally {
       setSaving(false)
     }
@@ -386,7 +387,7 @@ export default function AcademicTemplates() {
           return
         }
       } else {
-        alert(errData?.message || 'Error al eliminar asignatura')
+        toast.error(errData?.message || 'Error al eliminar asignatura')
       }
     } finally {
       setSaving(false)
@@ -415,7 +416,7 @@ export default function AcademicTemplates() {
       await loadData()
       setShowAssignModal(false)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al asignar plantilla')
+      toast.error(error.response?.data?.message || 'Error al asignar plantilla')
     } finally {
       setSaving(false)
     }
@@ -423,12 +424,12 @@ export default function AcademicTemplates() {
 
   const syncGradeTemplateFromAssignments = async (grade: Grade) => {
     if (!selectedYear?.id) {
-      alert('Error: Debe seleccionar un año académico')
+      toast.error('Error: Debe seleccionar un año académico')
       return
     }
 
     if (!grade.activeAssignmentsCount) {
-      alert('Este grado no tiene asignaciones activas para sincronizar')
+      toast.error('Este grado no tiene asignaciones activas para sincronizar')
       return
     }
 
@@ -437,7 +438,7 @@ export default function AcademicTemplates() {
       await academicTemplatesApi.syncFromAssignments(grade.id, selectedYear.id)
       await loadData()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al sincronizar la plantilla desde las asignaciones')
+      toast.error(error.response?.data?.message || 'Error al sincronizar la plantilla desde las asignaciones')
     } finally {
       setSaving(false)
     }

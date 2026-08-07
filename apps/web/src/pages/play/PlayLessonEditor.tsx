@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { confirmDialog } from '../../components/ui/confirm'
 import { useNavigate, useParams } from 'react-router-dom'
 import { classroomApi } from '../../lib/api'
 import { playPanelApi } from '../../lib/playApi'
@@ -208,7 +209,7 @@ export default function PlayLessonEditor() {
   }
 
   const handleDeleteSlide = async (slideId: string) => {
-    if (!lessonId || !confirm('¿Eliminar este slide?')) return
+    if (!lessonId || !(await confirmDialog('¿Eliminar este slide?', { danger: true }))) return
     try {
       await playPanelApi.deleteLessonSlide(lessonId, slideId)
       setLesson((prev) => prev ? {

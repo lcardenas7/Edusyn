@@ -235,6 +235,173 @@ export class ReportsService {
     return result;
   }
 
+  /**
+   * BOLETÍN MULTIPERÍODO (Banco de Formatos §8).
+   *
+   * Agrega los datos período a período HASTA el período consultado (inclusive):
+   * P2 muestra P1+P2, P3 muestra P1+P2+P3, etc. Reusa getReportCardData por
+   * período, que ya resuelve snapshot (períodos cerrados) vs live (período en
+   * curso) y trae las recuperaciones (grade=final efectiva, originalGrade,
+   * recoveryGrade, hasRecovery). No recalcula notas: solo las alinea en matriz.
+   */
+  async getReportCardYear(studentEnrollmentId: string, academicTermId: string): Promise<any> {
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: studentEnrollmentId },
+      select: { academicYearId: true, institutionId: true, groupId: true },
+    });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+
+    // Intensidad horaria por asignatura (I.H.) desde las asignaciones del grupo.
+    const groupAssignments = await this.prisma.teacherAssignment.findMany({
+      where: { groupId: enrollment.groupId, academicYearId: enrollment.academicYearId },
+      select: { subjectId: true, weeklyHours: true },
+    });
+    const weeklyHoursBySubject = new Map(groupAssignments.map(a => [a.subjectId, a.weeklyHours]));
+
+    const allTerms = await this.academicYearService.getTermsByAcademicYear(enrollment.academicYearId);
+    const periods = allTerms.filter(t => t.type === 'PERIOD').sort((a, b) => a.order - b.order);
+    const idx = periods.findIndex(p => p.id === academicTermId);
+    if (idx === -1) throw new NotFoundException('El período no pertenece al año de la matrícula');
+    const periodsUpTo = periods.slice(0, idx + 1);
+
+    // Datos por período (cerrado→snapshot / actual→live, resuelto por getReportCardData).
+    const perPeriod = await Promise.all(
+      periodsUpTo.map(async (p) => ({
+        term: p,
+        data: await this.getReportCardData(studentEnrollmentId, p.id),
+      })),
+    );
+
+    const current = perPeriod[perPeriod.length - 1].data;
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    // Matriz por asignatura (clave: subjectId, fallback nombre) con celda por período.
+    interface Cell {
+      grade: number | null;
+      originalGrade: number | null;
+      recoveryGrade: number | null;
+      hasRecovery: boolean;
+      recoveryStatus: string | null;
+      performanceLevel: string | null;
+    }
+    interface SubjectRow {
+      subjectId: string | null;
+      subject: string;
+      teacher: string | null;
+      weeklyHours: number | null;
+      weightPercentage: number;
+      achievement: string | null;
+      cells: Record<string, Cell>;
+      def: number | null;
+      defPerformanceLevel: string | null;
+    }
+    interface AreaRow {
+      areaId: string | null;
+      area: string;
+      subjects: SubjectRow[];
+    }
+
+    const areaMap = new Map<string, AreaRow>();
+    const subjKey = (areaKey: string, sId: string | null, name: string) => `${areaKey}::${sId ?? 'n:' + name}`;
+    const subjMap = new Map<string, SubjectRow>();
+
+    for (const { term, data } of perPeriod) {
+      for (const area of (data.areaGrades || []) as any[]) {
+        const areaKey = area.areaId || 'a:' + area.area;
+        if (!areaMap.has(areaKey)) {
+          areaMap.set(areaKey, { areaId: area.areaId ?? null, area: area.area, subjects: [] });
+        }
+        const areaRow = areaMap.get(areaKey)!;
+        for (const s of (area.subjects || []) as any[]) {
+          const key = subjKey(areaKey, s.subjectId ?? null, s.subject);
+          let row = subjMap.get(key);
+          if (!row) {
+            row = {
+              subjectId: s.subjectId ?? null,
+              subject: s.subject,
+              teacher: s.teacher ?? null,
+              weeklyHours: (s.subjectId && weeklyHoursBySubject.get(s.subjectId)) ?? null,
+              weightPercentage: s.weightPercentage ?? 0,
+              achievement: null,
+              cells: {},
+              def: null,
+              defPerformanceLevel: null,
+            };
+            subjMap.set(key, row);
+            areaRow.subjects.push(row);
+          }
+          row.cells[term.id] = {
+            grade: s.grade ?? null,
+            originalGrade: s.originalGrade ?? null,
+            recoveryGrade: s.recoveryGrade ?? null,
+            hasRecovery: !!s.hasRecovery,
+            recoveryStatus: s.recoveryStatus ?? null,
+            performanceLevel: s.performanceLevel ?? null,
+          };
+          // El logro visible es el del período consultado (el más reciente).
+          if (term.id === academicTermId) row.achievement = s.achievement ?? null;
+        }
+      }
+    }
+
+    // DEF/acumulado por asignatura = promedio ponderado por peso de período sobre
+    // los períodos con nota (usa grade = nota final efectiva, ya con recuperación).
+    const performanceScales = await this.prisma.performanceScale.findMany({
+      where: { institutionId: enrollment.institutionId },
+      orderBy: { minScore: 'asc' },
+    });
+    const scaleArray = performanceScales.map(s => ({
+      level: s.level,
+      minScore: Number(s.minScore),
+      maxScore: Number(s.maxScore),
+    }));
+    for (const row of subjMap.values()) {
+      const graded = periodsUpTo
+        .map(p => ({ w: p.weightPercentage || 0, cell: row.cells[p.id] }))
+        .filter(x => x.cell && x.cell.grade !== null) as { w: number; cell: Cell }[];
+      if (graded.length > 0) {
+        const totalW = graded.reduce((a, x) => a + x.w, 0);
+        row.def = totalW > 0
+          ? round2(graded.reduce((a, x) => a + x.cell.grade! * x.w, 0) / totalW)
+          : round2(graded.reduce((a, x) => a + x.cell.grade!, 0) / graded.length);
+        row.defPerformanceLevel = this.studentGradesService.getPerformanceLevelFromScale(scaleArray, row.def)?.level || null;
+      }
+    }
+
+    const areas = Array.from(areaMap.values());
+    const allRows = Array.from(subjMap.values());
+
+    // Promedios: período (notas del período consultado) y acumulado (DEF).
+    const curGrades = allRows.map(r => r.cells[academicTermId]?.grade).filter((g): g is number => g !== null && g !== undefined);
+    const defGrades = allRows.map(r => r.def).filter((g): g is number => g !== null);
+    const promedioPeriodo = curGrades.length ? round2(curGrades.reduce((a, b) => a + b, 0) / curGrades.length) : null;
+    const promedioAcumulado = defGrades.length ? round2(defGrades.reduce((a, b) => a + b, 0) / defGrades.length) : null;
+
+    const att = current.attendance || { absent: 0, excused: 0 } as any;
+    return {
+      institution: current.institution,
+      academicYear: current.academicYear,
+      student: current.student,
+      group: current.group,
+      academicStructure: current.academicStructure,
+      displayConfig: current.displayConfig,
+      periods: periodsUpTo.map(p => ({ id: p.id, name: p.name, order: p.order })),
+      currentTermId: academicTermId,
+      areas,
+      summary: {
+        promedioPeriodo,
+        promedioAcumulado,
+        inasistencias: att.absent ?? 0,
+        fallasJustificadas: att.excused ?? 0,
+        fallasInjustificadas: Math.max(0, (att.absent ?? 0) - (att.excused ?? 0)),
+      },
+      attendance: current.attendance,
+      observations: current.observations,
+      achievements: current.achievements,
+      generatedAt: current.generatedAt,
+    };
+  }
+
   async generateReportCardPdf(studentEnrollmentId: string, academicTermId: string): Promise<Buffer> {
     const data = await this.getReportCardData(studentEnrollmentId, academicTermId);
     return this.renderReportCardPdf(data);
@@ -3168,6 +3335,12 @@ export class ReportsService {
         headerMunicipality: data.headerMunicipality,
         headerDepartment: data.headerDepartment,
         primaryColor: data.primaryColor,
+        secondaryColor: data.secondaryColor,
+        accentColor: data.accentColor,
+        headerBgColor: data.headerBgColor,
+        tableStripeColor: data.tableStripeColor,
+        textColor: data.textColor,
+        defaultTemplateKey: data.defaultTemplateKey,
         evaluationType: data.evaluationType,
         showNumericGrade: data.showNumericGrade,
         showPerformanceLevel: data.showPerformanceLevel,
@@ -3187,6 +3360,105 @@ export class ReportsService {
         signatureConfig: data.signatureConfig,
       },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BANCO DE FORMATOS DE BOLETÍN — Selección y resolución de plantilla
+  // (docs/DISENO_BANCO_FORMATOS_BOLETIN.md)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Todas las selecciones de la institución + el default general. */
+  async getTemplateSelections(institutionId: string) {
+    const [selections, config] = await Promise.all([
+      this.prisma.reportCardTemplateSelection.findMany({
+        where: { institutionId },
+        include: { grade: { select: { id: true, name: true, stage: true } } },
+      }),
+      this.prisma.reportCardConfig.findUnique({
+        where: { institutionId },
+        select: { defaultTemplateKey: true },
+      }),
+    ]);
+    return {
+      byStructure: selections.filter(s => !s.gradeId && s.academicStructure),
+      byGrade: selections.filter(s => s.gradeId),
+      defaultTemplateKey: config?.defaultTemplateKey ?? null,
+    };
+  }
+
+  /**
+   * Crea/actualiza una selección. Regla: exactamente uno de gradeId /
+   * academicStructure (§7.1). El default general vive en ReportCardConfig.
+   */
+  async upsertTemplateSelection(
+    institutionId: string,
+    data: { gradeId?: string | null; academicStructure?: string | null; templateKey: string },
+  ) {
+    const hasGrade = !!data.gradeId;
+    const hasStructure = !!data.academicStructure;
+    if (hasGrade === hasStructure) {
+      throw new BadRequestException('Indica exactamente uno: gradeId (override por grado) o academicStructure (por nivel).');
+    }
+    if (hasGrade) {
+      // Idempotente por (institución, grado).
+      const existing = await this.prisma.reportCardTemplateSelection.findFirst({
+        where: { institutionId, gradeId: data.gradeId! },
+      });
+      if (existing) {
+        return this.prisma.reportCardTemplateSelection.update({
+          where: { id: existing.id },
+          data: { templateKey: data.templateKey, academicStructure: null },
+        });
+      }
+      return this.prisma.reportCardTemplateSelection.create({
+        data: { institutionId, gradeId: data.gradeId!, templateKey: data.templateKey },
+      });
+    }
+    const existing = await this.prisma.reportCardTemplateSelection.findFirst({
+      where: { institutionId, academicStructure: data.academicStructure!, gradeId: null },
+    });
+    if (existing) {
+      return this.prisma.reportCardTemplateSelection.update({
+        where: { id: existing.id },
+        data: { templateKey: data.templateKey },
+      });
+    }
+    return this.prisma.reportCardTemplateSelection.create({
+      data: { institutionId, academicStructure: data.academicStructure!, templateKey: data.templateKey },
+    });
+  }
+
+  async deleteTemplateSelection(institutionId: string, id: string) {
+    const sel = await this.prisma.reportCardTemplateSelection.findFirst({ where: { id, institutionId } });
+    if (!sel) throw new NotFoundException('Selección no encontrada');
+    await this.prisma.reportCardTemplateSelection.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  /**
+   * Resuelve la plantilla efectiva: grado → estructura → default general →
+   * 'edusyn-clasico' (§4). Si se pasa gradeId, se deduce su academicStructure.
+   */
+  async resolveTemplateKey(institutionId: string, gradeId?: string, academicStructure?: string) {
+    let structure = academicStructure;
+    if (gradeId && !structure) {
+      const grade = await this.prisma.grade.findUnique({ where: { id: gradeId }, select: { academicStructure: true } });
+      structure = grade?.academicStructure;
+    }
+    if (gradeId) {
+      const byGrade = await this.prisma.reportCardTemplateSelection.findFirst({ where: { institutionId, gradeId } });
+      if (byGrade) return byGrade.templateKey;
+    }
+    if (structure) {
+      const byStructure = await this.prisma.reportCardTemplateSelection.findFirst({
+        where: { institutionId, academicStructure: structure, gradeId: null },
+      });
+      if (byStructure) return byStructure.templateKey;
+    }
+    const config = await this.prisma.reportCardConfig.findUnique({
+      where: { institutionId }, select: { defaultTemplateKey: true },
+    });
+    return config?.defaultTemplateKey || 'edusyn-clasico';
   }
 
   /**

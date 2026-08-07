@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from '../../../lib/toast'
 import { 
   Calendar,
   Clock,
@@ -65,7 +66,7 @@ export default function Periods() {
       setDbFinalComponents(prev => prev.map(fc => fc.id === fcId ? { ...fc, isOpen: !currentIsOpen } : fc))
     } catch (err) {
       console.error('Error toggling final component:', err)
-      alert('Error al cambiar el estado del componente')
+      toast.error('Error al cambiar el estado del componente')
     } finally {
       setTogglingFc(null)
     }
@@ -119,29 +120,23 @@ export default function Periods() {
     setPeriods(periods.filter(p => p.id !== id))
   }
 
-  const handleSavePeriodsAndSync = async () => {
+  const handleSaveAll = async () => {
     setSavingPeriods(true)
     try {
-      const success = await savePeriodsToAPI()
-      if (success) {
-        alert('✅ Períodos guardados correctamente')
+      const [periodsOk, gradingOk] = await Promise.all([
+        savePeriodsToAPI(),
+        saveGradingConfigToAPI(),
+      ])
+      if (periodsOk && gradingOk) {
+        toast.success('Configuración guardada correctamente')
       } else {
-        alert('❌ Error al guardar los períodos. Intente de nuevo.')
+        toast.error('Error al guardar. Intente de nuevo.')
       }
     } catch (err) {
-      console.error('Error saving periods:', err)
-      alert('❌ Error al guardar los períodos. Intente de nuevo.')
+      console.error('Error saving:', err)
+      toast.error('Error al guardar. Intente de nuevo.')
     } finally {
       setSavingPeriods(false)
-    }
-  }
-
-  const handleSaveGradingConfig = async () => {
-    const success = await saveGradingConfigToAPI()
-    if (success) {
-      alert('✅ Sistema de calificación guardado correctamente')
-    } else {
-      alert('❌ Error al guardar. Intente de nuevo.')
     }
   }
 
@@ -229,20 +224,6 @@ export default function Periods() {
               </div>
             ))}
           </div>
-
-          {/* Botón Guardar Períodos */}
-          {canEditPeriods && (
-            <div className="flex justify-end pt-4 mt-4 border-t border-slate-200">
-              <button
-                onClick={handleSavePeriodsAndSync}
-                disabled={savingPeriods || isSaving}
-                className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium ${(savingPeriods || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Save className="w-4 h-4" />
-                {savingPeriods ? 'Guardando...' : 'Guardar Períodos'}
-              </button>
-            </div>
-          )}
 
           {/* Componentes Finales Institucionales */}
           <div className="mt-6 pt-6 border-t border-slate-200">
@@ -401,16 +382,16 @@ export default function Periods() {
             )}
           </div>
 
-          {/* Botón Guardar Sistema de Calificación */}
-          {canEditGradingScale && (
+          {/* Botón Guardar (períodos + componentes finales) */}
+          {(canEditPeriods || canEditGradingScale) && (
             <div className="flex justify-end pt-6 mt-6 border-t border-slate-200">
               <button
-                onClick={handleSaveGradingConfig}
-                disabled={isSaving}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={handleSaveAll}
+                disabled={savingPeriods || isSaving || !isWeightValid}
+                className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium ${(savingPeriods || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Save className="w-4 h-4" />
-                {isSaving ? 'Guardando...' : 'Guardar Sistema de Calificación'}
+                {savingPeriods || isSaving ? 'Guardando...' : 'Guardar Configuración'}
               </button>
             </div>
           )}

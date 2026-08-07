@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { toast } from '../../lib/toast'
+import { confirmDialog } from '../../components/ui/confirm'
 import { useNavigate } from 'react-router-dom'
 import { playPanelApi } from '../../lib/playApi'
 import {
@@ -80,12 +82,12 @@ export default function PlayQuizzes() {
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`¿Eliminar "${title}"? Esta acción no se puede deshacer.`)) return
+    if (!(await confirmDialog(`¿Eliminar "${title}"? Esta acción no se puede deshacer.`, { danger: true }))) return
     try {
       await playPanelApi.deleteQuiz(id)
       setQuizzes(prev => prev.filter(q => q.id !== id))
     } catch {
-      alert('Error al eliminar quiz')
+      toast.error('Error al eliminar quiz')
     }
   }
 
@@ -97,7 +99,7 @@ export default function PlayQuizzes() {
       const res = await playPanelApi.duplicateQuiz(id)
       setQuizzes(prev => [res.data, ...prev])
     } catch {
-      alert('No se pudo duplicar el quiz')
+      toast.error('No se pudo duplicar el quiz')
     } finally {
       setDuplicatingId(null)
     }

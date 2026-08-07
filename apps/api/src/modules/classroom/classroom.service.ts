@@ -6,6 +6,23 @@ import { ActivityGatingService } from './gating/activity-gating.service';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
 
+const COLOMBIA_TIMEZONE_OFFSET = '-05:00';
+const HAS_TIMEZONE_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseClassroomDate(value: string): Date {
+  const normalized = HAS_TIMEZONE_OFFSET.test(value)
+    ? value
+    : DATE_ONLY.test(value)
+      ? `${value}T00:00:00${COLOMBIA_TIMEZONE_OFFSET}`
+      : `${value}${COLOMBIA_TIMEZONE_OFFSET}`;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException('Fecha inválida');
+  }
+  return date;
+}
+
 @Injectable()
 export class ClassroomService {
   private readonly logger = new Logger(ClassroomService.name);
@@ -513,8 +530,8 @@ export class ClassroomService {
     title: string;
     description?: string;
     maxScore?: number;
-    dueDate?: string;
-    openDate?: string;
+    dueDate?: string | null;
+    openDate?: string | null;
     allowLateSubmit?: boolean;
     attachmentUrl?: string;
     attachmentName?: string;
@@ -556,8 +573,8 @@ export class ClassroomService {
         title: dto.title,
         description: dto.description,
         maxScore: dto.maxScore,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-        openDate: dto.openDate ? new Date(dto.openDate) : undefined,
+        dueDate: dto.dueDate ? parseClassroomDate(dto.dueDate) : undefined,
+        openDate: dto.openDate ? parseClassroomDate(dto.openDate) : undefined,
         allowLateSubmit: dto.allowLateSubmit ?? false,
         shuffleQuestions: dto.shuffleQuestions ?? false,
         showResults: dto.showResults ?? true,
@@ -792,8 +809,8 @@ export class ClassroomService {
     title?: string;
     description?: string;
     maxScore?: number;
-    dueDate?: string;
-    openDate?: string;
+    dueDate?: string | null;
+    openDate?: string | null;
     allowLateSubmit?: boolean;
     isVisible?: boolean;
     attachmentUrl?: string;
@@ -805,8 +822,8 @@ export class ClassroomService {
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.maxScore !== undefined) data.maxScore = dto.maxScore;
-    if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
-    if (dto.openDate !== undefined) data.openDate = dto.openDate ? new Date(dto.openDate) : null;
+    if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? parseClassroomDate(dto.dueDate) : null;
+    if (dto.openDate !== undefined) data.openDate = dto.openDate ? parseClassroomDate(dto.openDate) : null;
     if (dto.allowLateSubmit !== undefined) data.allowLateSubmit = dto.allowLateSubmit;
     if (dto.isVisible !== undefined) data.isVisible = dto.isVisible;
     if (dto.attachmentUrl !== undefined) {
@@ -830,7 +847,7 @@ export class ClassroomService {
     if (dto?.scheduledPublishAt) {
       return this.prisma.classroomActivity.update({
         where: { id: activityId },
-        data: { scheduledPublishAt: new Date(dto.scheduledPublishAt), isPublished: false },
+        data: { scheduledPublishAt: parseClassroomDate(dto.scheduledPublishAt), isPublished: false },
       });
     }
 
@@ -2678,13 +2695,41 @@ export class ClassroomService {
       select: { id: true, title: true, gradebookComponent: true, gradebookIndex: true },
     });
 
-    const gradingCfg = scaleInfo.gradingConfig || { evaluationProcesses: [] };
-    const processes = (gradingCfg.evaluationProcesses || []).map((p: any) => ({
-      code: p.code || p.name?.toUpperCase().replace(/\s+/g, '_'),
-      name: p.name,
-      weight: p.weightPercentage,
-      subprocesses: p.subprocesses || [],
-    }));
+    // FASE 2 — La estructura de evaluación sale de la tabla de componentes, que es
+    // la MISMA fuente de la que el motor hereda los pesos. Antes esto se leía de un
+    // JSON aparte, así que el docente veía una estructura y la nota se calculaba con
+    // otra. Se conserva el JSON como respaldo mientras una institución no tenga
+    // estructura creada.
+    const roots = await this.prisma.evaluationComponent.findMany({
+      where: { institutionId: classroom.institutionId, parentId: null },
+      include: { children: true },
+    });
+
+    let processes: any[];
+    if (roots.length > 0) {
+      processes = [...roots]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))
+        .map((p) => ({
+          code: p.code,
+          name: p.name,
+          weight: p.weightPercentage ?? 0,
+          subprocesses: [...p.children]
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))
+            .map((c) => ({
+              code: c.code,
+              name: c.name,
+              weightPercentage: c.weightPercentage ?? 0,
+            })),
+        }));
+    } else {
+      const gradingCfg = scaleInfo.gradingConfig || { evaluationProcesses: [] };
+      processes = (gradingCfg.evaluationProcesses || []).map((p: any) => ({
+        code: p.code || p.name?.toUpperCase().replace(/\s+/g, '_'),
+        name: p.name,
+        weight: p.weightPercentage,
+        subprocesses: p.subprocesses || [],
+      }));
+    }
 
     return {
       teacherAssignmentId: ta.id,

@@ -8,6 +8,7 @@ import {
   buildCatalogosSheet,
   buildInstruccionesSheet,
   ColumnDef,
+  CatalogBlock,
 } from './bulk-upload-template.helper';
 
 interface TeacherRow {
@@ -421,6 +422,152 @@ export class BulkUploadService {
         { error: 'Rol inválido', cause: 'El valor en la columna Rol no está en la lista permitida', fix: 'Usa solo los códigos de la hoja "Catálogos"' },
         { error: 'Correo ya registrado', cause: 'Otro usuario usa ese correo', fix: 'Verifica si el usuario ya existe o usa otro correo' },
         { error: 'Número de documento requerido', cause: 'No se proporcionó documento', fix: 'Completa el campo — se usa como contraseña inicial' },
+      ],
+    });
+
+    return workbook;
+  }
+
+  /**
+   * Genera plantilla Excel para carga académica (4 hojas: Inicio, Carga, Catálogos, Instrucciones)
+   */
+  async generateAcademicLoadTemplate(institutionId: string): Promise<ExcelJS.Workbook> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Edusyn';
+    workbook.created = new Date();
+
+    const theme = { primary: '0891B2', entityName: 'Carga Académica', entitySingular: 'asignación' };
+
+    const inst = await this.prisma.institution.findUnique({ where: { id: institutionId }, select: { name: true } });
+    const institutionName = inst?.name;
+
+    const groups = await this.prisma.group.findMany({
+      where: { grade: { institutionId } },
+      include: { grade: { select: { name: true, number: true } } },
+      orderBy: [{ grade: { number: 'asc' } }, { name: 'asc' }],
+    });
+    const groupCodes = groups.map(g => `${g.grade.name}-${g.name}`);
+
+    const teachers = await this.prisma.user.findMany({
+      where: { institutionUsers: { some: { institutionId } }, roles: { some: { role: { name: 'DOCENTE' } } } },
+      select: { email: true, documentNumber: true, firstName: true, lastName: true },
+      orderBy: { lastName: 'asc' },
+    });
+
+    // Catálogo de áreas y asignaturas ya existentes: para que el usuario reutilice
+    // los nombres EXACTOS y no genere duplicados ("Inglés" vs "ingles").
+    const areas = await this.prisma.area.findMany({
+      where: { institutionId },
+      select: { name: true, subjects: { select: { name: true }, orderBy: { name: 'asc' } } },
+      orderBy: { name: 'asc' },
+    });
+    const areaSubjectRows: (string | number)[][] = [];
+    for (const a of areas) {
+      if (a.subjects.length === 0) { areaSubjectRows.push([a.name, '(sin asignaturas)']); continue; }
+      for (const s of a.subjects) areaSubjectRows.push([a.name, s.name]);
+    }
+
+    buildInicioSheet(workbook, {
+      theme,
+      institutionName,
+      description:
+        'Esta plantilla te permite asignar docentes a las asignaturas y grupos del año lectivo. Cada fila representa una asignación: qué docente dicta qué materia en qué grupo. Las áreas y asignaturas que no existan se crearán automáticamente.',
+      quickSteps: [
+        'Ve a la hoja "Carga" y completa una fila por cada asignación (docente + asignatura + grupo).',
+        'Usa la hoja "Catálogos" para ver grupos, docentes y las áreas/asignaturas ya existentes.',
+        'Si la asignatura ya existe, cópiala TAL CUAL del catálogo (mismas tildes y mayúsculas) para no duplicarla.',
+        'Borra las filas de ejemplo (en gris cursiva) antes de subir el archivo.',
+        'Guarda como .xlsx y sube desde Configuración Inicial → Carga Académica.',
+        'Revisa el reporte: las asignaciones duplicadas se omiten automáticamente.',
+      ],
+    });
+
+    const catalogBlocks: CatalogBlock[] = [
+      {
+        title: 'Grupos disponibles',
+        headers: ['Código del grupo', 'Grado'],
+        rows: groups.map(g => [`${g.grade.name}-${g.name}`, g.grade.name]),
+        rangeKey: 'curso',
+      },
+    ];
+    if (teachers.length > 0) {
+      catalogBlocks.push({
+        title: 'Docentes registrados',
+        headers: ['Correo', 'Documento', 'Nombre'],
+        rows: teachers.map(t => [t.email, t.documentNumber || '', `${t.firstName} ${t.lastName}`]),
+      });
+    }
+    if (areaSubjectRows.length > 0) {
+      catalogBlocks.push({
+        title: 'Áreas y asignaturas existentes (reutiliza estos nombres exactos)',
+        headers: ['Área', 'Asignatura'],
+        rows: areaSubjectRows,
+      });
+    }
+    const catalogos = buildCatalogosSheet(workbook, { theme, blocks: catalogBlocks });
+
+    const columns: ColumnDef[] = [
+      { header: 'Curso', key: 'curso', width: 18, required: true, comment: 'Código del grupo (ej: "6°-A", "TA"). Usa los valores de la hoja Catálogos.' },
+      { header: 'Área', key: 'area', width: 22, comment: 'Nombre del área. Reutiliza los del catálogo si ya existen. Si se omite, se usa "General".' },
+      { header: 'Asignatura', key: 'asignatura', width: 25, required: true, comment: 'Nombre de la asignatura. Si ya existe, cópiala igual del catálogo (tildes/mayúsculas) para no duplicar.' },
+      { header: 'Intensidad horaria', key: 'intensidad', width: 18, comment: 'Horas semanales (número). Ej: 4' },
+      { header: 'Documento docente', key: 'docenteDoc', width: 20, comment: 'Número de documento del docente.' },
+      { header: 'Correo docente', key: 'docenteCorreo', width: 30, comment: 'Correo del docente. Se requiere documento O correo.' },
+    ];
+
+    const exCurso = groupCodes[0] || 'TA';
+    const exCorreo = teachers[0]?.email || 'jperez@ejemplo.com';
+    const exDoc = teachers[0]?.documentNumber || '12345678';
+
+    buildDataSheet(workbook, {
+      sheetName: 'Carga',
+      theme,
+      columns,
+      examples: [
+        { curso: exCurso, area: 'Matemáticas', asignatura: 'Aritmética', intensidad: 5, docenteDoc: exDoc, docenteCorreo: exCorreo },
+        { curso: exCurso, area: 'Lenguaje', asignatura: 'Español', intensidad: 4, docenteDoc: '', docenteCorreo: exCorreo },
+        { curso: exCurso, area: 'Ciencias Naturales', asignatura: 'Biología', intensidad: 3, docenteDoc: exDoc, docenteCorreo: '' },
+      ],
+      validationRefs: catalogos.ranges,
+    });
+
+    const order = ['Inicio', 'Carga', 'Catálogos'];
+    workbook.worksheets.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+
+    buildInstruccionesSheet(workbook, {
+      theme,
+      sections: [
+        {
+          title: '1. Requisitos previos',
+          items: [
+            'La institución debe tener un año académico activo (Módulo Académico → Años).',
+            'Los grupos deben existir (se crean al importar estudiantes).',
+            'Los docentes deben estar registrados (importados en el paso anterior).',
+            { type: 'warning', text: 'Si un docente no está registrado, la fila será rechazada. Impórtalo primero.' },
+          ],
+        },
+        {
+          title: '2. Cómo funciona',
+          items: [
+            'Cada fila es una asignación: docente X dicta materia Y en grupo Z.',
+            'Si el área o asignatura no existen, se crean automáticamente.',
+            'Si la asignación ya existe (mismo docente + materia + grupo), se omite.',
+            { type: 'tip', text: 'Puedes identificar al docente por documento O correo — no necesitas ambos.' },
+            { type: 'success', text: 'La operación es idempotente: puedes subir el mismo archivo varias veces sin duplicar datos.' },
+          ],
+        },
+        {
+          title: '3. Después de cargar',
+          items: [
+            'Revisa el reporte de importación: asignaciones creadas, omitidas y errores.',
+            'En el módulo "Carga Académica" puedes ver y ajustar las asignaciones.',
+          ],
+        },
+      ],
+      commonErrors: [
+        { error: 'Curso/grupo no encontrado', cause: 'El código del grupo no coincide con ninguno registrado', fix: 'Verifica el código en la hoja "Catálogos" o importa estudiantes primero' },
+        { error: 'Docente no encontrado', cause: 'El correo o documento no coincide con ningún docente registrado', fix: 'Importa al docente en el paso anterior y luego reintenta' },
+        { error: 'Falta la asignatura', cause: 'La columna Asignatura está vacía', fix: 'Completa el nombre de la asignatura para esa fila' },
       ],
     });
 

@@ -3,6 +3,16 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   Toasts (sonner) SIEMPRE por encima de todo — incluidos modales/diálogos
+   (DialogHost usa z-200, algunos overlays z-50). Sin esto, en algunas vistas
+   los mensajes de "guardado/error" podían quedar tapados ("detrás"). El toaster
+   se portamonta en body; este z-index máximo garantiza que se lean siempre.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-sonner-toaster] {
+  z-index: 2147483647 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    EL TALLER — sistema visual del módulo Expedición ABP ("estudio al atardecer").
    Aislado bajo .taller para NO afectar al resto del LMS. Rediseño por partes.
    ═══════════════════════════════════════════════════════════════════════════ */
