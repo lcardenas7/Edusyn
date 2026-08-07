@@ -446,7 +446,9 @@ export default function ReportCards() {
         if (showAchiev) {
           let content = '-'
           if (isQualitative) {
-            content = sg.qualitativeObservation || sg.achievement || '-'
+            // En cualitativo el texto principal es el descriptor del nivel
+            // (achievement); la observación del docente es nota secundaria.
+            content = sg.achievement || sg.qualitativeObservation || '-'
           } else {
             content = sg.achievement || '-'
           }
@@ -1212,8 +1214,13 @@ export default function ReportCards() {
                                   <td className="px-2 py-1.5 text-slate-700">
                                     {isQualitative ? (
                                       <>
-                                        {sg.qualitativeObservation || sg.achievementObservation || sg.achievement ? (
-                                          <p className="leading-tight">{sg.qualitativeObservation || sg.achievementObservation || sg.achievement}</p>
+                                        {sg.achievement || sg.qualitativeObservation ? (
+                                          <>
+                                            <p className="leading-tight">{sg.achievement || sg.qualitativeObservation}</p>
+                                            {sg.achievement && sg.achievementObservation && sg.achievementObservation !== sg.achievement && (
+                                              <p className="leading-tight text-slate-500 italic mt-0.5">{sg.achievementObservation}</p>
+                                            )}
+                                          </>
                                         ) : (
                                           <p className="leading-tight text-slate-400">-</p>
                                         )}

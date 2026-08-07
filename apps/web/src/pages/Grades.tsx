@@ -1112,6 +1112,46 @@ export default function Grades() {
     } catch (err: any) {
       console.error('Error creating qualitative achievement:', err)
       toast.error(err)
+      throw err
+    }
+  }
+
+  const handleUpdateQualitativeAchievement = async (
+    achievementId: string,
+    baseDescription: string,
+    levelDescriptors?: Array<{ levelCode: string; text: string }>,
+  ) => {
+    try {
+      const response = await achievementsApi.update(achievementId, {
+        baseDescription,
+        ...(levelDescriptors && levelDescriptors.length > 0 ? { levelDescriptors } : {}),
+      })
+      const updated = response.data
+      setAchievements(prev => prev.map(a => (a.id === achievementId ? { ...a, ...(updated || {}), baseDescription, levelDescriptors: updated?.levelDescriptors ?? levelDescriptors ?? a.levelDescriptors } : a)))
+      toast.success('Indicador actualizado')
+    } catch (err: any) {
+      console.error('Error updating qualitative achievement:', err)
+      toast.error(err)
+      throw err
+    }
+  }
+
+  const handleDeleteQualitativeAchievement = async (achievementId: string) => {
+    try {
+      await achievementsApi.delete(achievementId)
+      setAchievements(prev => prev.filter(a => a.id !== achievementId))
+      setQualitativeGradesByAchievement(prev => {
+        const next = { ...prev }
+        delete next[achievementId]
+        return next
+      })
+      if (selectedQualitativeAchievementId === achievementId) {
+        setSelectedQualitativeAchievementId(null)
+      }
+      toast.success('Indicador eliminado')
+    } catch (err: any) {
+      console.error('Error deleting qualitative achievement:', err)
+      toast.error(err)
     }
   }
 
@@ -1718,6 +1758,8 @@ export default function Grades() {
               }))
             }}
             onCreateAchievement={handleCreateQualitativeAchievement}
+            onEditAchievement={handleUpdateQualitativeAchievement}
+            onDeleteAchievement={handleDeleteQualitativeAchievement}
           />
         ) : selectedSourceType === 'final_component' ? (
           /* ═══════════════════════════════════════════════════════

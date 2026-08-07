@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { BookOpen, ChevronDown, Plus, Sparkles } from 'lucide-react'
+import { AlertTriangle, BookOpen, ChevronDown, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { DiagnosisBadge } from '../StudentBadges'
 import type { QualitativeLevel } from '../../contexts/AcademicContext'
 
@@ -34,6 +34,8 @@ interface QualitativeGradeValue {
   observation: string
 }
 
+type DescriptorInput = Array<{ levelCode: string; text: string }>
+
 interface Props {
   students: StudentRow[]
   loadingStudents: boolean
@@ -45,8 +47,12 @@ interface Props {
   qualitativeLevels: QualitativeLevel[]
   gradesByAchievement: Record<string, Record<string, QualitativeGradeValue>>
   onUpdateGrade: (achievementId: string, studentId: string, patch: Partial<QualitativeGradeValue>) => void
-  onCreateAchievement: (description: string, levelDescriptors?: Array<{ levelCode: string; text: string }>) => Promise<void>
+  onCreateAchievement: (description: string, levelDescriptors?: DescriptorInput) => Promise<void>
+  onEditAchievement: (achievementId: string, description: string, levelDescriptors?: DescriptorInput) => Promise<void>
+  onDeleteAchievement: (achievementId: string) => Promise<void>
 }
+
+const MIN_NAME_LENGTH = 5
 
 export default function QualitativeGradesPanel({
   students,
@@ -60,11 +66,22 @@ export default function QualitativeGradesPanel({
   gradesByAchievement,
   onUpdateGrade,
   onCreateAchievement,
+  onEditAchievement,
+  onDeleteAchievement,
 }: Props) {
-  const [newIndicator, setNewIndicator] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [descriptorDraft, setDescriptorDraft] = useState<Record<string, string>>({})
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null)
+
+  // Modal de creación/edición de indicador
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingAchievement, setEditingAchievement] = useState<AchievementRow | null>(null)
+  const [modalName, setModalName] = useState('')
+  const [modalDescriptors, setModalDescriptors] = useState<Record<string, string>>({})
+  const [modalSaving, setModalSaving] = useState(false)
+  const [modalError, setModalError] = useState('')
+
+  // Confirmación de borrado (dos pasos, inline en la tarjeta)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const perLevel = descriptorMode === 'DESCRIPTOR_PER_LEVEL'
 
@@ -87,6 +104,19 @@ export default function QualitativeGradesPanel({
     })
     return map
   }, [activeAchievement])
+
+  // Un indicador está "listo para calificar" cuando (en modo descriptor) tiene
+  // descriptor redactado para TODOS los niveles de la escala.
+  const descriptorsComplete = (achievement: AchievementRow | null): boolean => {
+    if (!perLevel || !achievement) return true
+    const map = new Map<string, string>()
+    ;(achievement.levelDescriptors || []).forEach((d) => {
+      if (d.text?.trim()) map.set(d.levelCode, d.text.trim())
+    })
+    return sortedLevels.length > 0 && sortedLevels.every((lvl) => !!map.get(lvl.code))
+  }
+
+  const gradingBlocked = perLevel && !!activeAchievement && !descriptorsComplete(activeAchievement)
 
   const levelIndexByCode = useMemo(() => {
     const map = new Map<string, number>()
@@ -135,21 +165,64 @@ export default function QualitativeGradesPanel({
 
   const gridTemplateColumns = `48px minmax(200px, 1fr) repeat(${sortedLevels.length}, minmax(84px, 110px)) 48px`
 
-  const handleCreate = async () => {
-    const description = newIndicator.trim()
-    if (!description || !currentPeriodOpen) return
-    setCreating(true)
+  const openCreateModal = () => {
+    setEditingAchievement(null)
+    setModalName('')
+    setModalDescriptors({})
+    setModalError('')
+    setModalOpen(true)
+  }
+
+  const openEditModal = (achievement: AchievementRow) => {
+    setEditingAchievement(achievement)
+    setModalName(achievement.baseDescription)
+    const draft: Record<string, string> = {}
+    ;(achievement.levelDescriptors || []).forEach((d) => {
+      draft[d.levelCode] = d.text
+    })
+    setModalDescriptors(draft)
+    setModalError('')
+    setModalOpen(true)
+  }
+
+  const handleModalSave = async () => {
+    const description = modalName.trim()
+    if (description.length < MIN_NAME_LENGTH) {
+      setModalError(`El nombre del indicador debe tener al menos ${MIN_NAME_LENGTH} caracteres.`)
+      return
+    }
+    let descriptors: DescriptorInput | undefined
+    if (perLevel) {
+      const missing = sortedLevels.filter((lvl) => !(modalDescriptors[lvl.code] || '').trim())
+      if (missing.length > 0) {
+        setModalError(`Faltan descriptores para: ${missing.map((l) => l.name).join(', ')}. Son obligatorios para poder calificar.`)
+        return
+      }
+      descriptors = sortedLevels.map((lvl) => ({ levelCode: lvl.code, text: modalDescriptors[lvl.code].trim() }))
+    }
+    setModalSaving(true)
+    setModalError('')
     try {
-      const descriptors = perLevel
-        ? sortedLevels
-            .map((lvl) => ({ levelCode: lvl.code, text: (descriptorDraft[lvl.code] || '').trim() }))
-            .filter((d) => d.text)
-        : undefined
-      await onCreateAchievement(description, descriptors)
-      setNewIndicator('')
-      setDescriptorDraft({})
+      if (editingAchievement) {
+        await onEditAchievement(editingAchievement.id, description, descriptors)
+      } else {
+        await onCreateAchievement(description, descriptors)
+      }
+      setModalOpen(false)
+    } catch {
+      setModalError('No se pudo guardar el indicador. Intenta de nuevo.')
     } finally {
-      setCreating(false)
+      setModalSaving(false)
+    }
+  }
+
+  const handleDelete = async (achievement: AchievementRow) => {
+    setDeletingId(achievement.id)
+    try {
+      await onDeleteAchievement(achievement.id)
+      setDeleteConfirmId(null)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -168,103 +241,125 @@ export default function QualitativeGradesPanel({
               <h3 className="font-semibold text-slate-900">Evaluación cualitativa</h3>
             </div>
             <p className="text-sm text-slate-600 mt-1">
-              Crea los indicadores una sola vez y luego asigna niveles con un clic por estudiante.
+              {perLevel
+                ? 'Crea cada indicador con sus descriptores por nivel y luego valora estudiantes con un clic.'
+                : 'Crea los indicadores una sola vez y luego asigna niveles con un clic por estudiante.'}
             </p>
           </div>
-          <div className="text-right text-xs text-slate-500">
-            <div>{achievements.length} indicador(es)</div>
-            <div>{selectedLevelCount}/{students.length} estudiantes valorados en el indicador activo</div>
+          <div className="flex items-center gap-4">
+            <div className="text-right text-xs text-slate-500">
+              <div>{achievements.length} indicador(es)</div>
+              <div>{selectedLevelCount}/{students.length} estudiantes valorados en el indicador activo</div>
+            </div>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              disabled={!currentPeriodOpen}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo indicador
+            </button>
           </div>
         </div>
 
         <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-3">
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <input
-              type="text"
-              value={newIndicator}
-              onChange={(e) => setNewIndicator(e.target.value)}
-              disabled={!currentPeriodOpen}
-              placeholder="Nombre del indicador (obligatorio) — ej: «Reconoce y expresa sus emociones»"
-              className={`w-full px-3 py-2 rounded-lg border outline-none text-sm ${
-                currentPeriodOpen ? 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500' : 'border-slate-200 bg-slate-100 text-slate-400'
-              }`}
-            />
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={!currentPeriodOpen || !newIndicator.trim() || creating}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              Agregar indicador
-            </button>
-          </div>
-
-          {!currentPeriodOpen ? (
+          {!currentPeriodOpen && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
               El período está cerrado para calificaciones. Un administrador debe habilitarlo en
               «Ventanas de Calificación» para poder crear indicadores y valorar estudiantes.
             </p>
-          ) : !newIndicator.trim() ? (
-            <p className="text-xs text-slate-500">
-              Escribe el nombre del indicador arriba y presiona «Agregar indicador». Los descriptores por escala son opcionales.
-            </p>
-          ) : null}
-
-          {perLevel && (
-            <div className="rounded-lg border border-amber-200 bg-white p-3 space-y-2">
-              <p className="text-xs text-slate-500">
-                Descriptor por escala (opcional): redacta qué significa cada nivel para este indicador.
-                Al calificar, el nivel elegido autocompleta el boletín.
-              </p>
-              {sortedLevels.map((lvl) => (
-                <div key={lvl.id} className="grid gap-1 sm:grid-cols-[120px_1fr] sm:items-center">
-                  <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: lvl.color }} />
-                    {lvl.code} · {lvl.name}
-                  </span>
-                  <input
-                    type="text"
-                    value={descriptorDraft[lvl.code] || ''}
-                    onChange={(e) => setDescriptorDraft((prev) => ({ ...prev, [lvl.code]: e.target.value }))}
-                    disabled={!currentPeriodOpen}
-                    placeholder={`Descriptor para "${lvl.name}"…`}
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 outline-none text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-slate-100"
-                  />
-                </div>
-              ))}
-            </div>
           )}
 
           <div className="flex flex-wrap gap-2">
             {achievements.length === 0 ? (
               <div className="text-sm text-slate-500 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
-                Todavía no hay indicadores creados para esta dimensión.
+                Todavía no hay indicadores. Usa el botón «Nuevo indicador» para crear el primero
+                {perLevel ? ' con sus descriptores por nivel' : ''}.
               </div>
             ) : (
               achievements.map((achievement) => {
                 const active = achievement.id === selectedAchievementId
                 const completed = students.filter((student) => !!gradesByAchievement[achievement.id]?.[student.id]?.levelCode).length
+                const incomplete = perLevel && !descriptorsComplete(achievement)
+                const confirmingDelete = deleteConfirmId === achievement.id
                 return (
-                  <button
+                  <div
                     key={achievement.id}
-                    type="button"
-                    onClick={() => onSelectAchievement(achievement.id)}
-                    className={`min-w-[240px] max-w-full text-left rounded-xl border px-3 py-2 transition-all ${
+                    className={`min-w-[240px] max-w-full rounded-xl border px-3 py-2 transition-all ${
                       active ? 'border-amber-500 bg-amber-50 shadow-sm' : 'border-slate-200 bg-white hover:border-amber-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-[10px] font-mono text-amber-700">{achievement.code}</div>
-                        <div className="text-sm font-medium text-slate-900 line-clamp-2">{achievement.baseDescription}</div>
+                    <button
+                      type="button"
+                      onClick={() => onSelectAchievement(achievement.id)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-mono text-amber-700">{achievement.code}</div>
+                          <div className="text-sm font-medium text-slate-900 line-clamp-2">{achievement.baseDescription}</div>
+                          {incomplete && (
+                            <div className="text-[10px] font-semibold text-red-600 mt-0.5 inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Faltan descriptores
+                            </div>
+                          )}
+                        </div>
+                        <div className={`text-xs px-2 py-0.5 rounded-full ${active ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          {completed}/{students.length}
+                        </div>
                       </div>
-                      <div className={`text-xs px-2 py-0.5 rounded-full ${active ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                        {completed}/{students.length}
-                      </div>
+                    </button>
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-end gap-1">
+                      {confirmingDelete ? (
+                        <>
+                          <span className="text-[11px] text-red-600 mr-1">
+                            ¿Eliminar{completed > 0 ? ` (tiene ${completed} valoraciones)` : ''}?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(achievement)}
+                            disabled={deletingId === achievement.id}
+                            className="text-[11px] font-semibold px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {deletingId === achievement.id ? 'Eliminando…' : 'Sí, eliminar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-100"
+                          >
+                            No
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(achievement)}
+                            disabled={!currentPeriodOpen}
+                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-slate-200 text-slate-600 hover:border-amber-400 hover:text-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Editar nombre y descriptores"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirmId(achievement.id)}
+                            disabled={!currentPeriodOpen}
+                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-slate-200 text-slate-600 hover:border-red-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Eliminar indicador"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Eliminar
+                          </button>
+                        </>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 )
               })
             )}
@@ -329,6 +424,22 @@ export default function QualitativeGradesPanel({
           <div className="px-6 py-8 text-center text-slate-500">
             Selecciona o crea un indicador para comenzar la evaluación.
           </div>
+        ) : gradingBlocked ? (
+          <div className="px-6 py-10 text-center">
+            <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
+            <p className="mt-3 font-medium text-slate-800">Este indicador aún no tiene sus descriptores por nivel.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Primero redacta qué significa cada nivel ({sortedLevels.map((l) => l.name).join(' / ')}) y luego podrás valorar estudiantes.
+            </p>
+            <button
+              type="button"
+              onClick={() => activeAchievement && openEditModal(activeAchievement)}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700"
+            >
+              <Pencil className="w-4 h-4" />
+              Completar descriptores
+            </button>
+          </div>
         ) : (
           students.map((student, idx) => {
             const row = getGradeRow(student.id)
@@ -360,12 +471,7 @@ export default function QualitativeGradesPanel({
                               onUpdateGrade(selectedAchievementId, student.id, { levelCode: '' })
                               return
                             }
-                            const patch: Partial<QualitativeGradeValue> = { levelCode: level.code }
-                            // Con descriptor por nivel: autollenar la observación con el
-                            // descriptor si el docente aún no escribió nada propio.
-                            const desc = perLevel ? descriptorByLevel.get(level.code) : undefined
-                            if (desc && !row.observation?.trim()) patch.observation = desc
-                            onUpdateGrade(selectedAchievementId, student.id, patch)
+                            onUpdateGrade(selectedAchievementId, student.id, { levelCode: level.code })
                           }}
                           title={active ? `${level.name} · clic para quitar` : (level.description || level.name)}
                           className={`w-full h-9 rounded-md text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -394,17 +500,20 @@ export default function QualitativeGradesPanel({
                   </div>
                 </div>
                 {expanded && (
-                  <div className="px-4 pb-3 pt-2 bg-slate-50 border-t border-slate-100">
+                  <div className="px-4 pb-3 pt-2 bg-slate-50 border-t border-slate-100 space-y-2">
                     {activeDescriptor && (
-                      <p className="text-[11px] mb-2 text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1 leading-tight">
-                        Descriptor del nivel: {activeDescriptor}
-                      </p>
+                      <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1.5 leading-tight">
+                        <span className="font-semibold uppercase tracking-wide text-[10px] text-amber-600 block mb-0.5">
+                          Texto del boletín para este nivel (descriptor)
+                        </span>
+                        {activeDescriptor}
+                      </div>
                     )}
                     <textarea
                       value={row.observation}
                       onChange={(e) => currentPeriodOpen && onUpdateGrade(selectedAchievementId, student.id, { observation: e.target.value })}
                       disabled={!currentPeriodOpen}
-                      placeholder="Observación del docente (se autocompleta con el descriptor del nivel si está definido)…"
+                      placeholder="Observación opcional del docente (nota aparte, no reemplaza el descriptor)…"
                       rows={2}
                       className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none resize-none ${
                         currentPeriodOpen ? 'border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500' : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
@@ -417,6 +526,87 @@ export default function QualitativeGradesPanel({
           })
         )}
       </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900">
+                {editingAchievement ? 'Editar indicador' : 'Nuevo indicador'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Nombre del indicador <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={modalName}
+                  onChange={(e) => setModalName(e.target.value)}
+                  placeholder="Ej: «Reconoce y expresa sus emociones en diferentes contextos»"
+                  autoFocus
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+              </div>
+
+              {perLevel && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2">
+                  <p className="text-xs text-slate-600">
+                    <span className="font-semibold">Descriptores por nivel (obligatorios):</span> redacta qué significa
+                    cada nivel para este indicador. Este texto es el que saldrá en el boletín al valorar.
+                  </p>
+                  {sortedLevels.map((lvl) => (
+                    <div key={lvl.id} className="space-y-1">
+                      <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                        <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: lvl.color }} />
+                        {lvl.code} · {lvl.name} <span className="text-red-500">*</span>
+                      </span>
+                      <textarea
+                        value={modalDescriptors[lvl.code] || ''}
+                        onChange={(e) => setModalDescriptors((prev) => ({ ...prev, [lvl.code]: e.target.value }))}
+                        placeholder={`Qué significa "${lvl.name}" para este indicador…`}
+                        rows={2}
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white outline-none text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {modalError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                  {modalError}
+                </p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-600 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleModalSave}
+                disabled={modalSaving}
+                className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+              >
+                {modalSaving ? 'Guardando…' : editingAchievement ? 'Guardar cambios' : 'Crear indicador'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
