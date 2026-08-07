@@ -3,7 +3,7 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException }
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { GradeStage, SchoolShift } from '@prisma/client';
-import { GRADE_TEMPLATES, deriveGradeNumber, levelKey } from '../../common/utils/academic-level.util';
+import { GRADE_TEMPLATES, deriveGradeNumber, levelKey, canonicalGradeName } from '../../common/utils/academic-level.util';
 import { suggestStructureByStage } from '../../engines/AcademicStructure';
 
 interface SyncGradeDto {
@@ -39,14 +39,24 @@ export class GradesService {
 
   async create(dto: CreateGradeDto & { institutionId: string }) {
     try {
+      const number = dto.number ?? deriveGradeNumber(dto.name);
+      const name = canonicalGradeName(dto.name);
+      // Idempotente por número+etapa: no crear "Primero" si ya existe "1°" (mismo
+      // número), aunque el nombre entrante use otra convención.
+      if (number != null) {
+        const existing = await this.prisma.grade.findFirst({
+          where: { institutionId: dto.institutionId, stage: dto.stage, number },
+        });
+        if (existing) return existing;
+      }
       return await this.prisma.grade.create({
         data: {
           institutionId: dto.institutionId,
           stage: dto.stage,
           // Si no viene el número, se deduce del nombre: dejarlo en NULL rompe el
           // cálculo del "grado siguiente" en la promoción.
-          number: dto.number ?? deriveGradeNumber(dto.name),
-          name: dto.name,
+          number,
+          name,
           academicStructure: suggestStructureByStage(dto.stage),
         },
       });
@@ -253,8 +263,12 @@ export class GradesService {
 
     const byKey = new Map<string, typeof grades>();
     for (const g of grades) {
-      if (g.number == null) continue; // sin número no se puede canonizar con seguridad
-      const key = `${g.stage}|${g.number}`;
+      // Número canónico: el guardado o el derivado del nombre ("Primero"→1, "6º"→6).
+      const num = g.number ?? deriveGradeNumber(g.name);
+      // Con número → agrupa "1°"/"Primero"/"6º"; sin número (CICLO/Play) → por nombre normalizado.
+      const key = num != null
+        ? `${g.stage}|#${num}`
+        : `${g.stage}|n:${canonicalGradeName(g.name).toLowerCase()}`;
       const list = byKey.get(key) ?? [];
       list.push(g);
       byKey.set(key, list);
@@ -359,18 +373,25 @@ export class GradesService {
     for (const gradeData of grades) {
       const stage = levelToStage[gradeData.level] || GradeStage.BASICA_PRIMARIA;
 
-      // Buscar o crear el grado PARA ESTA INSTITUCIÓN
-      let grade = await this.prisma.grade.findFirst({
-        where: { institutionId, name: gradeData.name }
-      });
+      // Buscar o crear el grado PARA ESTA INSTITUCIÓN.
+      // Reusar por número+etapa (canónico) antes que por nombre: evita duplicar
+      // "1°" vs "Primero" cuando la estructura usa otra convención de nombre.
+      const number = gradeData.order ?? deriveGradeNumber(gradeData.name);
+      const canonName = canonicalGradeName(gradeData.name);
+      let grade = number != null
+        ? await this.prisma.grade.findFirst({ where: { institutionId, stage, number } })
+        : null;
+      if (!grade) {
+        grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, name: canonName } });
+      }
 
       if (!grade) {
         grade = await this.prisma.grade.create({
           data: {
             institutionId,
-            name: gradeData.name,
+            name: canonName,
             stage,
-            number: gradeData.order,
+            number,
             academicStructure: suggestStructureByStage(stage),
           }
         });

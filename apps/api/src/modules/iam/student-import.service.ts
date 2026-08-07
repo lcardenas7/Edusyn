@@ -4,6 +4,7 @@ import * as ExcelJS from 'exceljs';
 import type { ImportAnalysis, ApplyResult, Issue, SummaryFact } from '@edusyn/types';
 
 import { PrismaService } from '../../prisma/prisma.service';
+import { canonicalGradeName } from '../../common/utils/academic-level.util';
 import {
   inferEcosystem,
   InferredEcosystem,
@@ -312,10 +313,14 @@ export class StudentImportService {
     };
     const ensureGrade = async (number: number, name: string, stage: any): Promise<string> => {
       if (gradeCache.has(number)) return gradeCache.get(number)!;
-      let grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, name }, select: { id: true } });
+      const canonName = canonicalGradeName(name);
+      // Reusar por número+etapa (clave canónica): no duplicar por variantes de
+      // nombre ("6°" vs "6º" vs "Sexto"). Fallback por nombre canónico.
+      let grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, number }, select: { id: true } });
+      if (!grade) grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, name: canonName }, select: { id: true } });
       if (!grade) {
         const academicStructure = stage === 'PREESCOLAR' ? 'DIMENSIONS' : 'AREAS_SUBJECTS';
-        grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name, academicStructure }, select: { id: true } }); _r.ecosistema.gradosCreados++;
+        grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name: canonName, academicStructure }, select: { id: true } }); _r.ecosistema.gradosCreados++;
       }
       gradeCache.set(number, grade.id);
       return grade.id;
