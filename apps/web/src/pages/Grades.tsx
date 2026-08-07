@@ -240,6 +240,7 @@ export default function Grades() {
     orderNumber: number;
     baseDescription: string;
     achievementType: string;
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
     studentAchievements?: Array<{
       id: string;
       studentEnrollmentId: string;
@@ -253,7 +254,9 @@ export default function Grades() {
   const [achievementConfig, setAchievementConfig] = useState<{
     achievementsPerPeriod: number;
     useValueJudgments: boolean;
+    descriptorMode: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
   } | null>(null)
+  const descriptorMode = achievementConfig?.descriptorMode ?? 'FREE'
 
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
@@ -755,7 +758,8 @@ export default function Grades() {
 
       try {
         const requests: Promise<any>[] = [achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)]
-        if (viewMode === 'achievements' && institutionId) {
+        // La config (incluye descriptorMode) se necesita tanto en modo logros como cualitativo.
+        if ((viewMode === 'achievements' || isQualitative) && institutionId) {
           requests.push(achievementConfigApi.get(institutionId))
         }
 
@@ -767,6 +771,7 @@ export default function Grades() {
           setAchievementConfig({
             achievementsPerPeriod: configRes.data.achievementsPerPeriod || 1,
             useValueJudgments: configRes.data.useValueJudgments ?? true,
+            descriptorMode: configRes.data.descriptorMode ?? 'FREE',
           })
         }
 
@@ -1035,7 +1040,12 @@ export default function Grades() {
             continue
           }
 
-          const achievementText = buildQualitativeAchievementText(achievement.baseDescription, qg.levelCode)
+          // Con descriptor por nivel: el texto del boletín es el descriptor redactado
+          // para esa escala. Si falta, se cae al texto mecánico "{Nivel}: {base}".
+          const descriptor = descriptorMode === 'DESCRIPTOR_PER_LEVEL'
+            ? (achievement.levelDescriptors || []).find((d: any) => d.levelCode === qg.levelCode)?.text?.trim()
+            : undefined
+          const achievementText = descriptor || buildQualitativeAchievementText(achievement.baseDescription, qg.levelCode)
 
           await achievementsApi.upsertStudentAchievement('upsert', {
             studentEnrollmentId: student.enrollmentId,
@@ -1063,7 +1073,10 @@ export default function Grades() {
     }
   }
 
-  const handleCreateQualitativeAchievement = async (baseDescription: string) => {
+  const handleCreateQualitativeAchievement = async (
+    baseDescription: string,
+    levelDescriptors?: Array<{ levelCode: string; text: string }>,
+  ) => {
     if (!selectedAssignment?.id || !academicTermId) {
       toast.warning('No se puede crear el indicador: falta información del período o dimensión')
       return
@@ -1076,6 +1089,7 @@ export default function Grades() {
         orderNumber: achievements.length + 1,
         baseDescription,
         isPromotional: false,
+        ...(levelDescriptors && levelDescriptors.length > 0 ? { levelDescriptors } : {}),
       })
 
       const created = response.data
@@ -1679,6 +1693,7 @@ export default function Grades() {
             loadingStudents={loadingStudents}
             currentPeriodOpen={currentPeriodOpen}
             achievements={achievements}
+            descriptorMode={descriptorMode}
             selectedAchievementId={selectedQualitativeAchievementId}
             onSelectAchievement={setSelectedQualitativeAchievementId}
             qualitativeLevels={qualitativeLevels}

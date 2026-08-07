@@ -17,6 +17,7 @@ interface AchievementRow {
   orderNumber: number
   baseDescription: string
   achievementType?: string
+  levelDescriptors?: Array<{ levelCode: string; text: string }>
   studentAchievements?: Array<{
     id: string
     studentEnrollmentId: string
@@ -38,12 +39,13 @@ interface Props {
   loadingStudents: boolean
   currentPeriodOpen: boolean
   achievements: AchievementRow[]
+  descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL'
   selectedAchievementId: string | null
   onSelectAchievement: (achievementId: string) => void
   qualitativeLevels: QualitativeLevel[]
   gradesByAchievement: Record<string, Record<string, QualitativeGradeValue>>
   onUpdateGrade: (achievementId: string, studentId: string, patch: Partial<QualitativeGradeValue>) => void
-  onCreateAchievement: (description: string) => Promise<void>
+  onCreateAchievement: (description: string, levelDescriptors?: Array<{ levelCode: string; text: string }>) => Promise<void>
 }
 
 export default function QualitativeGradesPanel({
@@ -51,6 +53,7 @@ export default function QualitativeGradesPanel({
   loadingStudents,
   currentPeriodOpen,
   achievements,
+  descriptorMode = 'FREE',
   selectedAchievementId,
   onSelectAchievement,
   qualitativeLevels,
@@ -60,6 +63,9 @@ export default function QualitativeGradesPanel({
 }: Props) {
   const [newIndicator, setNewIndicator] = useState('')
   const [creating, setCreating] = useState(false)
+  const [descriptorDraft, setDescriptorDraft] = useState<Record<string, string>>({})
+
+  const perLevel = descriptorMode === 'DESCRIPTOR_PER_LEVEL'
 
   const sortedLevels = useMemo(
     () => [...qualitativeLevels].sort((a, b) => a.order - b.order),
@@ -72,6 +78,14 @@ export default function QualitativeGradesPanel({
   )
 
   const activeGrades = selectedAchievementId ? (gradesByAchievement[selectedAchievementId] || {}) : {}
+
+  const descriptorByLevel = useMemo(() => {
+    const map = new Map<string, string>()
+    ;(activeAchievement?.levelDescriptors || []).forEach((d) => {
+      if (d.text?.trim()) map.set(d.levelCode, d.text.trim())
+    })
+    return map
+  }, [activeAchievement])
 
   const levelIndexByCode = useMemo(() => {
     const map = new Map<string, number>()
@@ -129,8 +143,14 @@ export default function QualitativeGradesPanel({
     if (!description || !currentPeriodOpen) return
     setCreating(true)
     try {
-      await onCreateAchievement(description)
+      const descriptors = perLevel
+        ? sortedLevels
+            .map((lvl) => ({ levelCode: lvl.code, text: (descriptorDraft[lvl.code] || '').trim() }))
+            .filter((d) => d.text)
+        : undefined
+      await onCreateAchievement(description, descriptors)
       setNewIndicator('')
+      setDescriptorDraft({})
     } finally {
       setCreating(false)
     }
@@ -182,6 +202,31 @@ export default function QualitativeGradesPanel({
               Agregar indicador
             </button>
           </div>
+
+          {perLevel && (
+            <div className="rounded-lg border border-amber-200 bg-white p-3 space-y-2">
+              <p className="text-xs text-slate-500">
+                Descriptor por escala (opcional): redacta qué significa cada nivel para este indicador.
+                Al calificar, el nivel elegido autocompleta el boletín.
+              </p>
+              {sortedLevels.map((lvl) => (
+                <div key={lvl.id} className="grid gap-1 sm:grid-cols-[120px_1fr] sm:items-center">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: lvl.color }} />
+                    {lvl.code} · {lvl.name}
+                  </span>
+                  <input
+                    type="text"
+                    value={descriptorDraft[lvl.code] || ''}
+                    onChange={(e) => setDescriptorDraft((prev) => ({ ...prev, [lvl.code]: e.target.value }))}
+                    disabled={!currentPeriodOpen}
+                    placeholder={`Descriptor para "${lvl.name}"…`}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 outline-none text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-slate-100"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             {achievements.length === 0 ? (
@@ -299,7 +344,15 @@ export default function QualitativeGradesPanel({
                             <button
                               key={level.id}
                               type="button"
-                              onClick={() => currentPeriodOpen && onUpdateGrade(selectedAchievementId, student.id, { levelCode: level.code })}
+                              onClick={() => {
+                                if (!currentPeriodOpen) return
+                                const patch: Partial<QualitativeGradeValue> = { levelCode: level.code }
+                                // Con descriptor por nivel: autollenar la observación con el
+                                // descriptor si el docente aún no escribió nada propio.
+                                const desc = perLevel ? descriptorByLevel.get(level.code) : undefined
+                                if (desc && !row.observation?.trim()) patch.observation = desc
+                                onUpdateGrade(selectedAchievementId, student.id, patch)
+                              }}
                               disabled={!currentPeriodOpen}
                               className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-all disabled:cursor-not-allowed ${
                                 active ? 'border-amber-600 bg-amber-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-amber-300'
@@ -313,7 +366,11 @@ export default function QualitativeGradesPanel({
                           )
                         })}
                       </div>
-                      {selectedLevel && (
+                      {perLevel && row.levelCode && descriptorByLevel.get(row.levelCode) ? (
+                        <p className="text-[11px] mt-2 text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1 leading-tight text-center">
+                          {descriptorByLevel.get(row.levelCode)}
+                        </p>
+                      ) : selectedLevel && (
                         <p className="text-[10px] mt-2 text-slate-500 leading-tight text-center">
                           {selectedLevel.description}
                         </p>

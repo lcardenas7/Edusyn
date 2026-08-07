@@ -26,6 +26,7 @@ export class AchievementConfigService {
     useAttitudinalAchievement?: boolean;
     attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
     useValueJudgments?: boolean;
+    descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
     displayMode?: 'SEPARATE' | 'COMBINED';
     displayFormat?: 'LIST' | 'PARAGRAPH';
     judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
@@ -38,6 +39,7 @@ export class AchievementConfigService {
         useAttitudinalAchievement: data.useAttitudinalAchievement,
         attitudinalMode: data.attitudinalMode,
         useValueJudgments: data.useValueJudgments,
+        descriptorMode: data.descriptorMode,
         displayMode: data.displayMode,
         displayFormat: data.displayFormat,
         judgmentPosition: data.judgmentPosition,
@@ -49,6 +51,7 @@ export class AchievementConfigService {
         useAttitudinalAchievement: data.useAttitudinalAchievement ?? false,
         attitudinalMode: data.attitudinalMode ?? 'GENERAL_PER_PERIOD',
         useValueJudgments: data.useValueJudgments ?? true,
+        descriptorMode: data.descriptorMode ?? 'FREE',
         displayMode: data.displayMode ?? 'SEPARATE',
         displayFormat: data.displayFormat ?? 'LIST',
         judgmentPosition: data.judgmentPosition ?? 'END_OF_EACH',

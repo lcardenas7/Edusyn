@@ -50,6 +50,7 @@ export class AchievementController {
       useAttitudinalAchievement?: boolean;
       attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
       useValueJudgments?: boolean;
+      descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
       displayMode?: 'SEPARATE' | 'COMBINED';
       displayFormat?: 'LIST' | 'PARAGRAPH';
       judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
@@ -163,6 +164,7 @@ export class AchievementController {
       orderNumber: number;
       baseDescription: string;
       isPromotional?: boolean;
+      levelDescriptors?: Array<{ levelCode: string; text: string }>;
     },
   ) {
     return this.achievementService.createAchievement(body);
@@ -172,7 +174,7 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async updateAchievement(
     @Param('id') id: string,
-    @Body() body: { baseDescription: string },
+    @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> },
   ) {
     return this.achievementService.updateAchievement(id, body);
   }

@@ -2901,6 +2901,12 @@ model AchievementConfig {
   // Configuración de juicios valorativos
   useValueJudgments Boolean @default(true) // Habilitar juicios valorativos por desempeño
 
+  // Modo de descriptor (evaluación cualitativa / preescolar).
+  // FREE: el docente escribe observación libre; el nivel solo etiqueta (comportamiento histórico).
+  // DESCRIPTOR_PER_LEVEL: cada indicador guarda un descriptor por escala (L/EP/I) que
+  // autocompleta el boletín al elegir el nivel. Configurable por institución (Decreto 1411).
+  descriptorMode AchievementDescriptorMode @default(FREE)
+
   // Configuración de observaciones
   useObservations Boolean @default(false) // Habilitar campo de observación por estudiante (el docente escribe manualmente)
 
@@ -2915,6 +2921,11 @@ model AchievementConfig {
   institution            Institution             @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   valueJudgmentTemplates ValueJudgmentTemplate[]
   observationTemplates   ObservationTemplate[]
+}
+
+enum AchievementDescriptorMode {
+  FREE // El nivel solo etiqueta; la observación es libre (histórico)
+  DESCRIPTOR_PER_LEVEL // Cada indicador tiene un descriptor por escala cualitativa
 }
 
 enum AchievementDisplayMode {
@@ -2988,6 +2999,7 @@ model Achievement {
   studentAchievements     StudentAchievement[]
   attitudinalAchievements AttitudinalAchievement[]
   pedagogicalSupportPlans PedagogicalSupportPlan[]
+  levelDescriptors        AchievementLevelDescriptor[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
   @@unique([code, teacherAssignmentId]) // Código único por asignación
@@ -3027,6 +3039,25 @@ model AttitudinalAchievement {
 
   @@index([teacherAssignmentId])
   @@index([academicTermId])
+}
+
+// Descriptor de un indicador para una escala cualitativa concreta (L/EP/I).
+// El docente lo redacta una vez por indicador; al elegir el nivel de un estudiante,
+// este texto autocompleta el boletín. Solo se usa si AchievementConfig.descriptorMode
+// = DESCRIPTOR_PER_LEVEL. levelCode referencia el código de la escala del SIEE.
+model AchievementLevelDescriptor {
+  id            String @id @default(cuid())
+  achievementId String
+  levelCode     String // Código de la escala cualitativa del SIEE (ej: "L", "EP", "I")
+  text          String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, levelCode])
+  @@index([achievementId])
 }
 
 // Logro del estudiante (con nota, texto adaptado y juicio valorativo)

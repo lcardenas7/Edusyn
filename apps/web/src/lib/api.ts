@@ -848,6 +848,7 @@ export const achievementConfigApi = {
     useAttitudinalAchievement?: boolean;
     attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
     useValueJudgments?: boolean;
+    descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
     displayMode?: 'SEPARATE' | 'COMBINED';
     displayFormat?: 'LIST' | 'PARAGRAPH';
     judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
@@ -890,8 +891,9 @@ export const achievementsApi = {
     orderNumber: number;
     baseDescription: string;
     isPromotional?: boolean;
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
   }) => api.post('/achievements', data),
-  update: (id: string, data: { baseDescription: string }) => 
+  update: (id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> }) =>
     api.put(`/achievements/${id}`, data),
   delete: (id: string) => api.delete(`/achievements/${id}`),
   
