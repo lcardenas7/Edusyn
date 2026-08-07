@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { BookOpen, CheckCircle2, Circle, Plus, Sparkles } from 'lucide-react'
+import { BookOpen, ChevronDown, Plus, Sparkles } from 'lucide-react'
 import { DiagnosisBadge } from '../StudentBadges'
 import type { QualitativeLevel } from '../../contexts/AcademicContext'
 
@@ -64,6 +64,7 @@ export default function QualitativeGradesPanel({
   const [newIndicator, setNewIndicator] = useState('')
   const [creating, setCreating] = useState(false)
   const [descriptorDraft, setDescriptorDraft] = useState<Record<string, string>>({})
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null)
 
   const perLevel = descriptorMode === 'DESCRIPTOR_PER_LEVEL'
 
@@ -90,12 +91,6 @@ export default function QualitativeGradesPanel({
   const levelIndexByCode = useMemo(() => {
     const map = new Map<string, number>()
     sortedLevels.forEach((level, index) => map.set(level.code, index))
-    return map
-  }, [sortedLevels])
-
-  const levelByCode = useMemo(() => {
-    const map = new Map<string, QualitativeLevel>()
-    sortedLevels.forEach((level) => map.set(level.code, level))
     return map
   }, [sortedLevels])
 
@@ -137,6 +132,8 @@ export default function QualitativeGradesPanel({
     }, 0)
     return Math.round((filledSlots / totalSlots) * 100)
   }, [achievements, gradesByAchievement, students])
+
+  const gridTemplateColumns = `48px minmax(200px, 1fr) repeat(${sortedLevels.length}, minmax(84px, 110px)) 48px`
 
   const handleCreate = async () => {
     const description = newIndicator.trim()
@@ -187,7 +184,7 @@ export default function QualitativeGradesPanel({
               value={newIndicator}
               onChange={(e) => setNewIndicator(e.target.value)}
               disabled={!currentPeriodOpen}
-              placeholder="Agregar indicador o logro base para esta dimensión"
+              placeholder="Nombre del indicador (obligatorio) — ej: «Reconoce y expresa sus emociones»"
               className={`w-full px-3 py-2 rounded-lg border outline-none text-sm ${
                 currentPeriodOpen ? 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500' : 'border-slate-200 bg-slate-100 text-slate-400'
               }`}
@@ -202,6 +199,17 @@ export default function QualitativeGradesPanel({
               Agregar indicador
             </button>
           </div>
+
+          {!currentPeriodOpen ? (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              El período está cerrado para calificaciones. Un administrador debe habilitarlo en
+              «Ventanas de Calificación» para poder crear indicadores y valorar estudiantes.
+            </p>
+          ) : !newIndicator.trim() ? (
+            <p className="text-xs text-slate-500">
+              Escribe el nombre del indicador arriba y presiona «Agregar indicador». Los descriptores por escala son opcionales.
+            </p>
+          ) : null}
 
           {perLevel && (
             <div className="rounded-lg border border-amber-200 bg-white p-3 space-y-2">
@@ -290,116 +298,124 @@ export default function QualitativeGradesPanel({
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-amber-50">
-              <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[250px]">Estudiante</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[220px]">Nivel</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[300px]">Observación</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loadingStudents ? (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600" />
-                    Cargando estudiantes...
-                  </div>
-                </td>
-              </tr>
-            ) : students.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                  No hay estudiantes matriculados en este grupo
-                </td>
-              </tr>
-            ) : selectedAchievementId ? (
-              students.map((student, idx) => {
-                const row = getGradeRow(student.id)
-                const selectedLevel = levelByCode.get(row.levelCode) || null
-                const consolidatedLevel = consolidatedByStudent[student.id]
+      <div id="qualitative-grid" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div
+          className="grid items-stretch bg-amber-50 border-b border-amber-100 text-xs font-semibold uppercase text-slate-500"
+          style={{ gridTemplateColumns }}
+        >
+          <div className="px-2 py-3 text-center self-center">N°</div>
+          <div className="px-4 py-3 self-center">Estudiante</div>
+          {sortedLevels.map((level) => (
+            <div key={level.id} className="px-2 py-2 text-center border-b-4 self-center" style={{ borderColor: level.color }}>
+              <span className="block text-sm font-bold" style={{ color: level.color }}>{level.code}</span>
+              <span className="block text-[10px] normal-case font-medium text-slate-500 leading-tight">{level.name}</span>
+            </div>
+          ))}
+          <div className="px-2 py-3 text-center self-center">Obs</div>
+        </div>
 
-                return (
-                  <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-2 py-3 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900 align-top">
-                      <div className="flex flex-col gap-1">
-                        <div>{student.name}<DiagnosisBadge student={student} /></div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5">
-                            <Circle className="w-3 h-3" />
-                            Consolidado: {consolidatedLevel ? consolidatedLevel.name : 'Sin valor'}
-                          </span>
-                        </div>
+        {loadingStudents ? (
+          <div className="px-6 py-8 text-center text-slate-500">
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600" />
+              Cargando estudiantes...
+            </div>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="px-6 py-8 text-center text-slate-500">
+            No hay estudiantes matriculados en este grupo
+          </div>
+        ) : !selectedAchievementId ? (
+          <div className="px-6 py-8 text-center text-slate-500">
+            Selecciona o crea un indicador para comenzar la evaluación.
+          </div>
+        ) : (
+          students.map((student, idx) => {
+            const row = getGradeRow(student.id)
+            const consolidatedLevel = consolidatedByStudent[student.id]
+            const expanded = expandedStudentId === student.id
+            const activeDescriptor = perLevel && row.levelCode ? descriptorByLevel.get(row.levelCode) : undefined
+
+            return (
+              <div key={student.id} className="border-b border-slate-100 last:border-b-0">
+                <div className="grid items-stretch hover:bg-slate-50 transition-colors" style={{ gridTemplateColumns }}>
+                  <div className="px-2 py-2 text-center text-sm font-medium text-slate-500 self-center">{idx + 1}</div>
+                  <div className="px-4 py-2 self-center min-w-0">
+                    <div className="font-medium text-slate-900 text-sm truncate">{student.name}<DiagnosisBadge student={student} /></div>
+                    <div className="text-[11px] text-slate-500">
+                      Consolidado: {consolidatedLevel ? consolidatedLevel.name : 'Sin valor'}
+                    </div>
+                  </div>
+                  {sortedLevels.map((level) => {
+                    const active = row.levelCode === level.code
+                    return (
+                      <div key={level.id} className="p-1 self-center">
+                        <button
+                          type="button"
+                          disabled={!currentPeriodOpen}
+                          onClick={() => {
+                            if (!currentPeriodOpen) return
+                            if (active) {
+                              // Clic de nuevo sobre el nivel activo: quita la valoración
+                              onUpdateGrade(selectedAchievementId, student.id, { levelCode: '' })
+                              return
+                            }
+                            const patch: Partial<QualitativeGradeValue> = { levelCode: level.code }
+                            // Con descriptor por nivel: autollenar la observación con el
+                            // descriptor si el docente aún no escribió nada propio.
+                            const desc = perLevel ? descriptorByLevel.get(level.code) : undefined
+                            if (desc && !row.observation?.trim()) patch.observation = desc
+                            onUpdateGrade(selectedAchievementId, student.id, patch)
+                          }}
+                          title={active ? `${level.name} · clic para quitar` : (level.description || level.name)}
+                          className={`w-full h-9 rounded-md text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                            active ? 'text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300'
+                          }`}
+                          style={active ? { backgroundColor: level.color } : undefined}
+                        >
+                          {level.code}
+                        </button>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {sortedLevels.map((level) => {
-                          const active = row.levelCode === level.code
-                          return (
-                            <button
-                              key={level.id}
-                              type="button"
-                              onClick={() => {
-                                if (!currentPeriodOpen) return
-                                const patch: Partial<QualitativeGradeValue> = { levelCode: level.code }
-                                // Con descriptor por nivel: autollenar la observación con el
-                                // descriptor si el docente aún no escribió nada propio.
-                                const desc = perLevel ? descriptorByLevel.get(level.code) : undefined
-                                if (desc && !row.observation?.trim()) patch.observation = desc
-                                onUpdateGrade(selectedAchievementId, student.id, patch)
-                              }}
-                              disabled={!currentPeriodOpen}
-                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-all disabled:cursor-not-allowed ${
-                                active ? 'border-amber-600 bg-amber-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-amber-300'
-                              }`}
-                              style={active ? undefined : { borderLeftColor: level.color, borderLeftWidth: '4px' }}
-                              title={level.description}
-                            >
-                              {active ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
-                              {level.code} · {level.name}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      {perLevel && row.levelCode && descriptorByLevel.get(row.levelCode) ? (
-                        <p className="text-[11px] mt-2 text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1 leading-tight text-center">
-                          {descriptorByLevel.get(row.levelCode)}
-                        </p>
-                      ) : selectedLevel && (
-                        <p className="text-[10px] mt-2 text-slate-500 leading-tight text-center">
-                          {selectedLevel.description}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <textarea
-                        value={row.observation}
-                        onChange={(e) => currentPeriodOpen && onUpdateGrade(selectedAchievementId, student.id, { observation: e.target.value })}
-                        disabled={!currentPeriodOpen}
-                        placeholder="Observación del docente..."
-                        rows={2}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none resize-none ${
-                          currentPeriodOpen ? 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500' : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
-                        }`}
-                      />
-                    </td>
-                  </tr>
-                )
-              })
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                  Selecciona o crea un indicador para comenzar la evaluación.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    )
+                  })}
+                  <div className="p-1 self-center text-center">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedStudentId(expanded ? null : student.id)}
+                      className={`inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors ${
+                        expanded || row.observation?.trim()
+                          ? 'border-amber-300 text-amber-700 bg-amber-50'
+                          : 'border-slate-200 text-slate-400 hover:text-slate-600'
+                      }`}
+                      title="Observación del docente"
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+                {expanded && (
+                  <div className="px-4 pb-3 pt-2 bg-slate-50 border-t border-slate-100">
+                    {activeDescriptor && (
+                      <p className="text-[11px] mb-2 text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1 leading-tight">
+                        Descriptor del nivel: {activeDescriptor}
+                      </p>
+                    )}
+                    <textarea
+                      value={row.observation}
+                      onChange={(e) => currentPeriodOpen && onUpdateGrade(selectedAchievementId, student.id, { observation: e.target.value })}
+                      disabled={!currentPeriodOpen}
+                      placeholder="Observación del docente (se autocompleta con el descriptor del nivel si está definido)…"
+                      rows={2}
+                      className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none resize-none ${
+                        currentPeriodOpen ? 'border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500' : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
+                      }`}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
       </div>
     </div>
   )

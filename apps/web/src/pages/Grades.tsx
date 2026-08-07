@@ -217,6 +217,7 @@ export default function Grades() {
     order: number;
     status: 'open' | 'closed' | 'upcoming' | 'not_configured';
     canEnterGrades: boolean;
+    closedBy?: 'toggle' | 'date' | null;
     openDate?: string;
     closeDate?: string;
   }>>([])
@@ -407,8 +408,10 @@ export default function Grades() {
       if (!currentPeriodStatus.canEnterGrades) {
         if (currentPeriodStatus.status === 'upcoming') {
           setPeriodClosedMessage(`Este período abre el ${new Date(currentPeriodStatus.openDate || '').toLocaleDateString('es-CO')}`)
+        } else if (currentPeriodStatus.status === 'closed' && currentPeriodStatus.closedBy === 'date') {
+          setPeriodClosedMessage(`La ventana está habilitada, pero su fecha de cierre fue el ${new Date(currentPeriodStatus.closeDate || '').toLocaleDateString('es-CO')}. Un administrador debe ajustar la fecha en «Ventanas de Calificación».`)
         } else if (currentPeriodStatus.status === 'closed') {
-          setPeriodClosedMessage(`Este período cerró el ${new Date(currentPeriodStatus.closeDate || '').toLocaleDateString('es-CO')}`)
+          setPeriodClosedMessage('Este período está deshabilitado para calificaciones. Un administrador puede habilitarlo en «Ventanas de Calificación».')
         } else {
           setPeriodClosedMessage('Este período no está habilitado para calificaciones')
         }
@@ -1021,7 +1024,7 @@ export default function Grades() {
 
     try {
       if (achievements.length === 0) {
-        toast.warning('No hay logros creados para esta dimensión en este período. Cree logros primero desde el módulo de Logros.')
+        toast.warning('Primero crea un indicador aquí mismo: escribe su nombre en "Agregar indicador" y presiona el botón. Luego asigna el nivel a cada estudiante.')
         return
       }
 
@@ -1101,7 +1104,11 @@ export default function Grades() {
         [created.id]: prev[created.id] || {},
       }))
       setSelectedQualitativeAchievementId(created.id)
-      toast.success('Indicador creado correctamente')
+      toast.success('Indicador creado. Ahora asigna el nivel a cada estudiante en la grilla.')
+      // Llevar al docente directo a la grilla de valoración
+      setTimeout(() => {
+        document.getElementById('qualitative-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 150)
     } catch (err: any) {
       console.error('Error creating qualitative achievement:', err)
       toast.error(err)
