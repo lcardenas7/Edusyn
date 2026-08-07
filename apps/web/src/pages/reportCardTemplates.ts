@@ -91,9 +91,9 @@ function headerBlock(ctx: TemplateCtx): string {
     <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid ${c.primary};padding-bottom:8px;">
       ${shield}
       <div style="flex:1;text-align:center;">
-        <div style="font-size:10px;letter-spacing:3px;color:${c.text};text-transform:uppercase;">Boletín Académico</div>
-        <div style="font-size:20px;font-weight:800;color:${c.primary};letter-spacing:1px;">${esc(ctx.institutionName)}</div>
-        ${ctx.headerLines.map(l => `<div style="font-size:8.5px;color:#64748b;">${esc(l)}</div>`).join('')}
+        <div style="font-size:9px;letter-spacing:3px;color:#94a3b8;text-transform:uppercase;">Boletín Académico</div>
+        <div style="font-size:16px;font-weight:800;color:${c.primary};line-height:1.15;text-transform:uppercase;">${esc(ctx.institutionName)}</div>
+        ${ctx.headerLines.map(l => `<div style="font-size:8px;color:#64748b;">${esc(l)}</div>`).join('')}
       </div>
       ${logo}
     </div>`;
@@ -226,31 +226,34 @@ export function buildMultiperiodoTabularHtml(year: any, ctx: TemplateCtx, extra?
 
   // Celda de período: nota + (si recuperó) badge con la recuperación.
   const periodCell = (cell: any) => {
-    if (!cell || cell.grade === null || cell.grade === undefined) return '<td style="text-align:center;color:#cbd5e1;">—</td>';
+    if (!cell || cell.grade === null || cell.grade === undefined) return '<td style="text-align:center;color:#cbd5e1;border-left:1px solid #eef2f7;">—</td>';
     const recovered = cell.hasRecovery && cell.originalGrade !== null && cell.originalGrade !== undefined;
     const shown = recovered ? cell.originalGrade : cell.grade; // en P1 se ve la nota perdida
     const badge = recovered && cell.recoveryGrade != null
       ? `<div style="font-size:7.5px;color:#16a34a;font-weight:700;">rec. ${fmt1(cell.recoveryGrade)}</div>`
       : '';
-    return `<td style="text-align:center;">
-      <div style="font-weight:700;color:${recovered ? '#dc2626' : c.text};">${fmt1(shown)}</div>
-      <div style="font-size:7px;color:${perfColor(cell.performanceLevel)};">${esc(perfLabel(cell.performanceLevel))}</div>
+    return `<td style="text-align:center;border-left:1px solid #eef2f7;padding:3px 2px;">
+      <div style="font-weight:800;color:${recovered ? '#dc2626' : c.text};">${fmt1(shown)}</div>
+      <div style="font-size:7px;text-transform:uppercase;color:${perfColor(cell.performanceLevel)};">${esc(perfLabel(cell.performanceLevel))}</div>
       ${badge}
     </td>`;
   };
 
-  const periodHeaders = periods.map(p => `<th style="padding:4px;text-align:center;">${esc(shortPeriod(p.name, p.order))}</th>`).join('');
+  const periodHeaders = periods.map(p => `<th style="padding:5px 4px;text-align:center;border-left:1px solid #e2e8f0;">${esc(shortPeriod(p.name, p.order))}</th>`).join('');
 
-  const areaRows = ((year.areas || []) as any[]).map(area => {
+  // Paleta rotativa para el nombre del área (estilo referencia San José).
+  const areaPalette = ['#0f766e', '#1d4ed8', '#7c3aed', '#b45309', '#be123c', '#0369a1', '#4d7c0f'];
+  const areaRows = ((year.areas || []) as any[]).map((area, ai) => {
     const subjects = (area.subjects || []) as any[];
+    const areaColor = areaPalette[ai % areaPalette.length];
     return subjects.map((sub, i) => `
-      <tr style="${i % 2 ? `background:${c.tableStripe};` : ''}">
-        ${i === 0 ? `<td rowspan="${subjects.length}" style="font-weight:700;color:${c.secondary};vertical-align:middle;padding:4px;border-right:1px solid #e2e8f0;">${esc(area.area)}</td>` : ''}
-        <td style="padding:4px;">${esc(sub.subject)}</td>
+      <tr style="border-top:1px solid #eef2f7;${i % 2 ? `background:${c.tableStripe};` : ''}">
+        ${i === 0 ? `<td rowspan="${subjects.length}" style="font-weight:800;color:${areaColor};vertical-align:middle;text-align:center;padding:4px 6px;border-right:1px solid #e2e8f0;font-size:8.5px;line-height:1.2;">${esc(area.area)}</td>` : ''}
+        <td style="padding:4px 6px;font-weight:600;">${esc(sub.subject)}</td>
         <td style="text-align:center;color:#94a3b8;">${sub.weeklyHours ? esc(sub.weeklyHours) + 'h' : ''}</td>
-        <td style="padding:4px;font-size:8.5px;color:#475569;">${esc(sub.achievement || '')}</td>
+        <td style="padding:4px 6px;font-size:8px;color:#475569;line-height:1.3;">${esc(sub.achievement || '')}</td>
         ${periods.map(p => periodCell(sub.cells?.[p.id])).join('')}
-        <td style="text-align:center;font-weight:800;color:${c.primary};">${fmt(sub.def)}</td>
+        <td style="text-align:center;font-weight:800;color:${c.primary};border-left:1px solid #e2e8f0;">${fmt(sub.def)}</td>
         <td style="text-align:center;font-weight:700;color:${perfColor(sub.defPerformanceLevel)};">${esc(perfLabel(sub.defPerformanceLevel))}</td>
       </tr>`).join('');
   }).join('');

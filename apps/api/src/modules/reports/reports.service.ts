@@ -247,9 +247,16 @@ export class ReportsService {
   async getReportCardYear(studentEnrollmentId: string, academicTermId: string): Promise<any> {
     const enrollment = await this.prisma.studentEnrollment.findUnique({
       where: { id: studentEnrollmentId },
-      select: { academicYearId: true, institutionId: true },
+      select: { academicYearId: true, institutionId: true, groupId: true },
     });
     if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+
+    // Intensidad horaria por asignatura (I.H.) desde las asignaciones del grupo.
+    const groupAssignments = await this.prisma.teacherAssignment.findMany({
+      where: { groupId: enrollment.groupId, academicYearId: enrollment.academicYearId },
+      select: { subjectId: true, weeklyHours: true },
+    });
+    const weeklyHoursBySubject = new Map(groupAssignments.map(a => [a.subjectId, a.weeklyHours]));
 
     const allTerms = await this.academicYearService.getTermsByAcademicYear(enrollment.academicYearId);
     const periods = allTerms.filter(t => t.type === 'PERIOD').sort((a, b) => a.order - b.order);
@@ -281,6 +288,7 @@ export class ReportsService {
       subjectId: string | null;
       subject: string;
       teacher: string | null;
+      weeklyHours: number | null;
       weightPercentage: number;
       achievement: string | null;
       cells: Record<string, Cell>;
@@ -312,6 +320,7 @@ export class ReportsService {
               subjectId: s.subjectId ?? null,
               subject: s.subject,
               teacher: s.teacher ?? null,
+              weeklyHours: (s.subjectId && weeklyHoursBySubject.get(s.subjectId)) ?? null,
               weightPercentage: s.weightPercentage ?? 0,
               achievement: null,
               cells: {},

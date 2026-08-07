@@ -175,6 +175,7 @@ export default function ReportCards() {
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewData, setPreviewData] = useState<any>(null)
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
@@ -862,9 +863,17 @@ export default function ReportCards() {
   const handlePreview = async (student: StudentRow) => {
     setLoadingPreview(true)
     setShowPreview(true)
+    setPreviewHtml(null)
     try {
-      const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
-      setPreviewData({ ...res.data, rank: student.rank, totalStudents: student.totalStudents })
+      if (resolvedTemplateKey !== 'edusyn-clasico') {
+        // Plantilla del banco: la vista previa muestra el mismo documento que se descarga.
+        const html = await buildStudentHtml(student)
+        setPreviewHtml(html)
+        setPreviewData({})
+      } else {
+        const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
+        setPreviewData({ ...res.data, rank: student.rank, totalStudents: student.totalStudents })
+      }
     } catch (err) {
       console.error('Error loading preview:', err)
       setPreviewData(null)
@@ -1204,7 +1213,7 @@ export default function ReportCards() {
                 <h3 className="text-lg font-semibold text-slate-900">Vista Previa del Boletin</h3>
                 <p className="text-sm text-slate-500">{selectedTermName} - {selectedYearName}</p>
               </div>
-              <button onClick={() => { setShowPreview(false); setPreviewData(null) }} className="p-2 hover:bg-slate-100 rounded-lg">
+              <button onClick={() => { setShowPreview(false); setPreviewData(null); setPreviewHtml(null) }} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
@@ -1212,6 +1221,8 @@ export default function ReportCards() {
             <div className="flex-1 overflow-y-auto p-6 bg-slate-100">
               {loadingPreview ? (
                 <div className="flex items-center justify-center py-20"><Loader2 className="w-10 h-10 text-blue-600 animate-spin" /></div>
+              ) : previewHtml ? (
+                <div className="bg-white rounded-lg shadow max-w-3xl mx-auto p-6" dangerouslySetInnerHTML={{ __html: previewHtml }} />
               ) : previewData ? (() => {
                 // Merge: backend displayConfig (capabilities por estructura) + user config (preferencias)
                 const dc = previewData.displayConfig || {}
