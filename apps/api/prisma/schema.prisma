@@ -525,6 +525,7 @@ model Institution {
   teacherScheduleBlocks      TeacherScheduleBlock[]
   scheduleGenerationContexts ScheduleGenerationContext[]
   reportCardConfig           ReportCardConfig?           @relation("ReportCardConfigInstitution")
+  reportCardTemplateSelections ReportCardTemplateSelection[] @relation("ReportCardTemplateSelectionInstitution")
 
   // Capabilities de visualización por rol
   roleCapabilities InstitutionRoleCapability[] @relation("InstitutionRoleCapabilities")
@@ -713,6 +714,7 @@ model Grade {
   scheduleGradeConfigs ScheduleGradeConfig[]
   achievementBank      AchievementBank[]
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
+  reportCardTemplateSelections ReportCardTemplateSelection[]
 
   @@unique([institutionId, stage, name])
   @@index([institutionId])
@@ -4644,8 +4646,17 @@ model ReportCardConfig {
   headerMunicipality String?
   headerDepartment   String?
 
-  // Colores personalizables
-  primaryColor String? @default("#1E3A8A") // Color primario (encabezados, barras)
+  // Colores personalizables (skin institucional — Banco de Formatos de Boletín §6)
+  primaryColor String? @default("#1E3A8A") // Color primario (encabezados, barras) = token "primary"
+  secondaryColor   String? // barras de área/sección
+  accentColor      String? // resaltados, promedios
+  headerBgColor    String? // fondo del encabezado
+  tableStripeColor String? // filas alternas
+  textColor        String? // texto principal
+
+  // Banco de Formatos de Boletín: default general de la institución (fallback tras
+  // la resolución por grado/estructura). Si null → 'edusyn-clasico'.
+  defaultTemplateKey String?
 
   // Tipo de evaluación — DEPRECADO: el sistema lo deduce de academicStructure del nivel
   // Se mantiene por compatibilidad con datos existentes, pero NO se usa para decidir layout
@@ -7283,4 +7294,28 @@ model TallerEvent {
   @@index([instrumentId])
   @@index([type])
   @@index([occurredAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BANCO DE FORMATOS DE BOLETÍN — Selección de plantilla por nivel o por grado
+// (docs/DISENO_BANCO_FORMATOS_BOLETIN.md)
+// Resolución: gradeId (grado individual) → academicStructure (nivel) →
+// default general (ReportCardConfig.defaultTemplateKey) → 'edusyn-clasico'.
+// ═══════════════════════════════════════════════════════════════════════════
+model ReportCardTemplateSelection {
+  id                String  @id @default(cuid())
+  institutionId     String
+  gradeId           String? // override por grado individual (ej: 1°–3°)
+  academicStructure String? // DIMENSIONS | SUBJECTS_ONLY | AREAS_SUBJECTS
+  templateKey       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution Institution @relation("ReportCardTemplateSelectionInstitution", fields: [institutionId], references: [id], onDelete: Cascade)
+  grade       Grade?      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, gradeId])
+  @@unique([institutionId, academicStructure])
+  @@index([institutionId])
 }
