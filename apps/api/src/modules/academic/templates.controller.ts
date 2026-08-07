@@ -7,18 +7,24 @@ import {
   Body,
   Param,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { TemplatesService } from './templates.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { AcademicLevel, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule, GroupExceptionType } from '@prisma/client';
 
 @Controller('academic-templates')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TemplatesController {
-  constructor(private readonly templatesService: TemplatesService) {}
+  constructor(
+    private readonly templatesService: TemplatesService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PLANTILLAS
@@ -85,10 +91,14 @@ export class TemplatesController {
   @Get('grades')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async listGradesWithTemplates(
+    @Request() req: any,
     @Query('institutionId') institutionId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
-    return this.templatesService.listGradesWithTemplates(institutionId, academicYearId);
+    // Nunca confiar en el institutionId del query: el resolver fuerza la institución
+    // del JWT para usuarios normales y solo deja elegir a SUPERADMIN.
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.templatesService.listGradesWithTemplates(instId, academicYearId);
   }
 
   @Get(':id')

@@ -860,8 +860,12 @@ export class TemplatesService {
   }
 
   async listGradesWithTemplates(institutionId: string, academicYearId: string) {
-    // Obtener todos los grados y sus plantillas asignadas PARA ESTE AÑO
+    // Grados de ESTA institución con su plantilla asignada PARA ESTE AÑO.
+    // El filtro por institutionId es obligatorio: sin él la pantalla listaba los
+    // grados de TODAS las instituciones de la base (fuga multi-tenant), y los
+    // ajenos aparecían como "Sin asignar" — se veían como duplicados.
     const grades = await this.prisma.grade.findMany({
+      where: { institutionId },
       include: {
         gradeTemplates: {
           where: { academicYearId },

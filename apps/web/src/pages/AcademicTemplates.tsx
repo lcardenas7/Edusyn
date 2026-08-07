@@ -3,7 +3,6 @@ import { toast } from '../lib/toast'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Layers, Save, Loader2, AlertTriangle, Settings, GraduationCap, Clock, Percent, Star, Calendar } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { academicTemplatesApi, areasApi, academicGradesApi, academicYearLifecycleApi } from '../lib/api'
-import { confirmDialog } from '../components/ui/confirm'
 
 interface Subject {
   id: string
@@ -158,48 +157,6 @@ export default function AcademicTemplates() {
       }
     } catch (error) {
       console.error('Error loading academic years:', error)
-    }
-  }
-
-  const [cleaning, setCleaning] = useState(false)
-  const handleCleanupDuplicates = async () => {
-    setCleaning(true)
-    try {
-      const report = await academicGradesApi.dedupe(false)
-      const dups = report.data?.duplicates || []
-      if (dups.length === 0) {
-        toast.info('No hay grados duplicados.')
-        return
-      }
-      const emptyList = dups.filter((d: any) => d.empty).map((d: any) => d.duplicate)
-      const withData = dups.filter((d: any) => !d.empty).map((d: any) => d.duplicate)
-      const lines = [
-        emptyList.length ? `Se eliminarán ${emptyList.length} duplicado(s) vacío(s): ${emptyList.join(', ')}.` : 'No hay duplicados vacíos para eliminar.',
-        withData.length ? `\n\n${withData.length} con datos NO se tocan (requieren fusión manual): ${withData.join(', ')}.` : '',
-      ].join('')
-      const ok = await confirmDialog(lines, { title: 'Limpiar grados duplicados', confirmLabel: 'Eliminar vacíos', danger: true })
-      if (!ok) return
-      const applied = await academicGradesApi.dedupe(true)
-      toast.success(applied.data?.message || 'Duplicados limpiados.')
-      await loadData()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'No se pudo limpiar los duplicados.')
-    } finally {
-      setCleaning(false)
-    }
-  }
-
-  const handleDeleteGrade = async (grade: Grade) => {
-    const ok = await confirmDialog(`¿Eliminar el grado "${grade.name}"? Solo se puede si no tiene grupos ni datos.`, {
-      title: 'Eliminar grado', confirmLabel: 'Eliminar', danger: true,
-    })
-    if (!ok) return
-    try {
-      await academicGradesApi.delete(grade.id)
-      toast.success(`Grado "${grade.name}" eliminado.`)
-      await loadData()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'No se pudo eliminar: el grado tiene datos asociados.')
     }
   }
 
@@ -793,19 +750,6 @@ export default function AcademicTemplates() {
 
       {/* Tab: Asignación a Grados */}
       {activeTab === 'grades' && (
-        <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">Asigna una plantilla de plan de estudios a cada grado.</p>
-          <button
-            onClick={handleCleanupDuplicates}
-            disabled={cleaning}
-            className="inline-flex items-center gap-2 px-3 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-50 disabled:opacity-50"
-            title="Detecta y elimina grados duplicados vacíos (ej: '1°' y 'Primero')"
-          >
-            {cleaning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Limpiar duplicados
-          </button>
-        </div>
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -864,22 +808,12 @@ export default function AcademicTemplates() {
                       >
                         {grade.gradeTemplates?.[0] ? 'Cambiar' : 'Asignar'}
                       </button>
-                      {!grade.gradeTemplates?.[0] && !grade.activeAssignmentsCount ? (
-                        <button
-                          onClick={() => handleDeleteGrade(grade)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
-                          title="Eliminar grado vacío (sin plantilla ni asignaciones)"
-                        >
-                          Eliminar
-                        </button>
-                      ) : null}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
         </div>
       )}
 
