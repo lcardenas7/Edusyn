@@ -622,6 +622,9 @@ export const academicGradesApi = {
   update: (id: string, data: { name?: string; stage?: string; number?: number }) => api.patch(`/grades/${id}`, data),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
   delete: (id: string) => api.delete(`/grades/${id}`),
+  // Detecta/elimina grados duplicados (apply=false solo reporta; true borra los vacíos).
+  dedupe: (apply: boolean, institutionId?: string) =>
+    api.post('/grades/dedupe', {}, { params: { apply: apply ? 'true' : 'false', institutionId } }),
 }
 
 // Dashboard APIs
