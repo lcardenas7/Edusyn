@@ -21,6 +21,12 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi, storageApi, toPublicFileUrl } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import {
+  TEMPLATE_CATALOG,
+  buildPreescolarNarrativoHtml,
+  buildMultiperiodoTabularHtml,
+  type TemplateCtx,
+} from './reportCardTemplates'
 
 interface StudentRow {
   enrollmentId: string
@@ -70,6 +76,7 @@ interface ReportConfig {
   showRecoveryGrades: boolean
   showComponents: boolean
   signatureConfig: SignatureEntry[]
+  defaultTemplateKey?: string
 }
 
 const defaultConfig: ReportConfig = {
@@ -101,7 +108,14 @@ const defaultConfig: ReportConfig = {
     { role: 'COORDINATOR', label: 'Coordinador(a)', name: '', enabled: true, signatureImageUrl: '' },
     { role: 'TEACHER', label: 'Director(a) de Grupo', name: '', enabled: true, signatureImageUrl: '' },
   ],
+  defaultTemplateKey: 'edusyn-clasico',
 }
+
+const STRUCTURE_LABELS: Array<{ key: string; label: string }> = [
+  { key: 'DIMENSIONS', label: 'Preescolar (dimensiones)' },
+  { key: 'SUBJECTS_ONLY', label: 'Primaria (asignaturas)' },
+  { key: 'AREAS_SUBJECTS', label: 'Bachillerato (áreas)' },
+]
 
 type PerfEntry = { label: string; color: string; bgColor: string; min: number; max: number }
 
@@ -147,6 +161,7 @@ export default function ReportCards() {
   const [students, setStudents] = useState<StudentRow[]>([])
   const [config, setConfig] = useState<ReportConfig>(defaultConfig)
   const [configDraft, setConfigDraft] = useState<ReportConfig>(defaultConfig)
+  const [templateSelByStructure, setTemplateSelByStructure] = useState<Record<string, string>>({})
 
   // Selección
   const [selectedYearId, setSelectedYearId] = useState('')
@@ -678,15 +693,88 @@ export default function ReportCards() {
     }
   }
 
+  // ── Banco de Formatos: plantilla resuelta para el grupo seleccionado ──────────
+  const [resolvedTemplateKey, setResolvedTemplateKey] = useState<string>('edusyn-clasico')
+  useEffect(() => {
+    const grade = groups.find(g => g.id === selectedGroupId)?.grade
+    const gradeId = grade?.id
+    if (!gradeId) { setResolvedTemplateKey('edusyn-clasico'); return }
+    reportsApi.resolveTemplate({ gradeId })
+      .then(r => setResolvedTemplateKey(r.data?.templateKey || 'edusyn-clasico'))
+      .catch(() => setResolvedTemplateKey('edusyn-clasico'))
+  }, [selectedGroupId, groups])
+
+  /** Contexto compartido (colores, logo, firmas, escala) para las plantillas del banco. */
+  const buildTemplateCtx = async (data: any): Promise<TemplateCtx> => {
+    let logoBase64 = logoCachedBase64
+    if (!logoBase64 && config.showLogo) {
+      const logoSrc = logoPreviewUrl || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')
+      logoBase64 = logoSrc ? await imageUrlToBase64(logoSrc) : ''
+      if (logoBase64) setLogoCachedBase64(logoBase64)
+    }
+    const sigs = await Promise.all(
+      ((config.signatureConfig as any[]) || [])
+        .filter((s: any) => s?.enabled)
+        .map(async (s: any) => ({
+          label: s.label || '',
+          name: s.name || '',
+          imageSrc: s.signatureImageUrl ? await imageUrlToBase64(toPublicFileUrl(s.signatureImageUrl)) : undefined,
+        })),
+    )
+    const p = config.primaryColor || '#1E3A8A'
+    return {
+      colors: {
+        primary: p,
+        secondary: (config as any).secondaryColor || p,
+        accent: (config as any).accentColor || p,
+        headerBg: (config as any).headerBgColor || '#f1f5f9',
+        tableStripe: (config as any).tableStripeColor || '#f8fafc',
+        text: (config as any).textColor || '#0f172a',
+      },
+      logoSrc: logoBase64 || '',
+      shieldSrc: logoBase64 || '',
+      institutionName: data?.institution?.name || institution?.name || '',
+      headerLines: [
+        [config.headerResolution, (institution as any)?.daneCode ? `DANE ${(institution as any).daneCode}` : '', data?.institution?.nit ? `NIT ${data.institution.nit}` : '']
+          .filter(Boolean).join(' · '),
+        [data?.institution?.address, data?.institution?.phone, data?.institution?.email].filter(Boolean).join(' · '),
+      ].filter(Boolean),
+      signatures: sigs,
+      performanceLabels: Object.fromEntries(
+        Object.entries(performanceConfig).map(([k, v]: any) => [k, v.label]),
+      ),
+      qualitativeLevels: data?.displayConfig?.qualitativeLevels || undefined,
+      showRanking: !!config.showRanking,
+      showAttendance: !!config.showAttendance,
+      showVerification: true,
+      verificationCode: data?.verificationCode || undefined,
+    }
+  }
+
+  /** Genera el HTML del boletín de un estudiante según la plantilla resuelta. */
+  const buildStudentHtml = async (student: StudentRow): Promise<string> => {
+    if (resolvedTemplateKey === 'multiperiodo-tabular') {
+      const yr = await reportsApi.getReportCardYear(student.enrollmentId, selectedTermId)
+      const ctx = await buildTemplateCtx(yr.data)
+      return buildMultiperiodoTabularHtml(yr.data, ctx, { rank: student.rank, totalStudents: student.totalStudents })
+    }
+    const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
+    const data = res.data
+    if (resolvedTemplateKey === 'preescolar-narrativo') {
+      const ctx = await buildTemplateCtx(data)
+      const periodLabel = data?.term?.name || ''
+      return buildPreescolarNarrativoHtml(data, ctx, periodLabel)
+    }
+    return buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+  }
+
   // Descargar PDF individual de un estudiante
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null)
   const handleDownloadPdf = async (student: StudentRow) => {
     if (!selectedTermId) return
     setDownloadingPdf(student.enrollmentId)
     try {
-      const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
-      const data = res.data
-      const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+      const html = await buildStudentHtml(student)
       await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Error al descargar el boletin PDF')
@@ -710,9 +798,7 @@ export default function ReportCards() {
         try {
           const student = students.find(s => s.enrollmentId === enrollmentId)
           if (!student) continue
-          const res = await reportsApi.getReportCard(enrollmentId, selectedTermId)
-          const data = res.data
-          const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+          const html = await buildStudentHtml(student)
           htmlBlocks.push(`<section class="report-card-page">${html}</section>`)
         } catch (err) {
           console.error(`Error descargando boletin de ${enrollmentId}:`, err)
@@ -809,6 +895,25 @@ export default function ReportCards() {
       toast.error(err.response?.data?.message || 'Error al guardar configuracion')
     } finally {
       setSavingConfig(false)
+    }
+  }
+
+  // Banco de Formatos: cargar selecciones por estructura al abrir el modal.
+  useEffect(() => {
+    if (!showConfigModal) return
+    reportsApi.getTemplateSelections().then(r => {
+      const m: Record<string, string> = {}
+      for (const s of (r.data?.byStructure || [])) if (s.academicStructure) m[s.academicStructure] = s.templateKey
+      setTemplateSelByStructure(m)
+    }).catch(() => {})
+  }, [showConfigModal])
+
+  const setStructureTemplate = async (structure: string, templateKey: string) => {
+    setTemplateSelByStructure(prev => ({ ...prev, [structure]: templateKey }))
+    try {
+      await reportsApi.upsertTemplateSelection({ academicStructure: structure, templateKey })
+    } catch {
+      toast.error('No se pudo guardar la plantilla del nivel')
     }
   }
 
@@ -1383,6 +1488,40 @@ export default function ReportCards() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Plantilla del boletín (Banco de Formatos) */}
+              <div>
+                <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2"><FileText className="w-4 h-4" /> Plantilla del boletín</h4>
+                <p className="text-xs text-slate-500 mb-3">Elige el formato por nivel educativo. Si un nivel no tiene formato propio, se usa el default general; y si tampoco, el clásico de Edusyn.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Default general</label>
+                    <select
+                      value={configDraft.defaultTemplateKey || 'edusyn-clasico'}
+                      onChange={(e) => setConfigDraft({ ...configDraft, defaultTemplateKey: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      {TEMPLATE_CATALOG.map(t => (<option key={t.key} value={t.key}>{t.name}</option>))}
+                    </select>
+                  </div>
+                  {STRUCTURE_LABELS.map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
+                      <select
+                        value={templateSelByStructure[key] || ''}
+                        onChange={(e) => setStructureTemplate(key, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">— Usar default general —</option>
+                        {TEMPLATE_CATALOG
+                          .filter(t => t.supportedStructures.includes(key))
+                          .map(t => (<option key={t.key} value={t.key}>{t.name}</option>))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2">El formato por nivel se guarda al seleccionarlo. El default general se guarda con «Guardar Configuración».</p>
+              </div>
+
               {/* Encabezado */}
               <div>
                 <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Encabezado</h4>

@@ -416,6 +416,16 @@ export const preventiveCutsApi = {
 export const reportsApi = {
   getReportCard: (studentEnrollmentId: string, academicTermId: string) =>
     api.get(`/reports/report-card/${studentEnrollmentId}`, { params: { academicTermId } }),
+  // Boletín multiperíodo (Banco de Formatos §8): P1..Pn acumulativo hasta el período dado.
+  getReportCardYear: (studentEnrollmentId: string, academicTermId: string) =>
+    api.get(`/reports/report-card-year/${studentEnrollmentId}`, { params: { academicTermId } }),
+  // Banco de Formatos de Boletín: selección/resolución de plantilla.
+  getTemplateSelections: () => api.get('/reports/report-card-templates/selections'),
+  upsertTemplateSelection: (data: { gradeId?: string | null; academicStructure?: string | null; templateKey: string }) =>
+    api.put('/reports/report-card-templates/selections', data),
+  deleteTemplateSelection: (id: string) => api.delete(`/reports/report-card-templates/selections/${id}`),
+  resolveTemplate: (params: { gradeId?: string; academicStructure?: string }) =>
+    api.get('/reports/report-card-templates/resolve', { params }),
   getGroupReport: (groupId: string, academicTermId: string) =>
     api.get('/reports/group', { params: { groupId, academicTermId } }),
   // Reportes predictivos - Nota mínima requerida
