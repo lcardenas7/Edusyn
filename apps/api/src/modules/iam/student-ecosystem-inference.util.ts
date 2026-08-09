@@ -32,7 +32,8 @@ export function gradeNameFromNumber(n: number): string {
 
 export interface ParsedCourse {
   raw: string;
-  gradeNumber: number;
+  /** null para modelos flexibles que no equivalen a un grado ordinal. */
+  gradeNumber: number | null;
   gradeName: string;
   stage: GradeStage;
   groupName: string;
@@ -44,7 +45,7 @@ function norm(s: string): string {
 
 /**
  * Parsea un código de curso a { grado, grupo }. Devuelve null si no es un curso
- * ordinario reconocible (p. ej. "CICLO 3", "ACELERACIÓN").
+ * ordinario reconocible, salvo los modelos flexibles soportados explícitamente.
  *
  * Casos soportados:
  *   "6A", "11B"            → grado 6/11 · grupo A/B
@@ -54,6 +55,7 @@ function norm(s: string): string {
  *   "601", "1101", "1002"  → NNGG colombiano (grado + grupo numérico)
  *   "Transición A"         → grado 0 · grupo A
  *   "TA", "TB", "TC"       → abreviatura Transición · grupo A/B/C
+ *   "Aceleración del Aprendizaje" → modelo flexible · grupo A
  */
 export function parseCourse(raw: string): ParsedCourse | null {
   const n = norm(raw);
@@ -66,6 +68,18 @@ export function parseCourse(raw: string): ParsedCourse | null {
     if (!g) return null;
     return { raw, gradeNumber, gradeName: gradeNameFromNumber(gradeNumber), stage, groupName: g };
   };
+
+  // Modelo Educativo Flexible del MEN. No corresponde a un grado ordinal, por
+  // lo que se guarda sin número y se mantiene separado de 1°–11° al promover.
+  if (n === 'ACELERACION' || n === 'ACELERACION DEL APRENDIZAJE') {
+    return {
+      raw,
+      gradeNumber: null,
+      gradeName: 'Aceleración del Aprendizaje',
+      stage: 'BASICA_PRIMARIA',
+      groupName: 'A',
+    };
+  }
 
   // 1) Palabra de grado + resto como grupo ("SEXTO A", "TRANSICION B", "ONCE 2").
   const words = n.split(/[^A-Z0-9]+/).filter(Boolean);
@@ -129,7 +143,7 @@ export interface InferredEcosystem {
   sedes: string[];
   jornadas: string[];
   niveles: { stage: GradeStage; label: string }[];
-  grados: { number: number; name: string; stage: GradeStage; grupos: string[] }[];
+  grados: { number: number | null; name: string; stage: GradeStage; grupos: string[] }[];
   totalGrupos: number;
   issues: { curso: string; motivo: string; filas: number }[];
 }
@@ -146,7 +160,7 @@ const DEFAULT_JORNADA = 'Única';
 
 /** Infiere el ecosistema completo a partir de las filas del Excel. No escribe nada. */
 export function inferEcosystem(rows: EcosystemRow[]): InferredEcosystem {
-  const gradeMap = new Map<number, { number: number; name: string; stage: GradeStage; grupos: Set<string> }>();
+  const gradeMap = new Map<string, { number: number | null; name: string; stage: GradeStage; grupos: Set<string> }>();
   const sedes = new Set<string>();
   const jornadas = new Set<string>();
   const issuesMap = new Map<string, number>();
@@ -161,10 +175,13 @@ export function inferEcosystem(rows: EcosystemRow[]): InferredEcosystem {
       issuesMap.set(key, (issuesMap.get(key) || 0) + 1);
       continue;
     }
-    let g = gradeMap.get(parsed.gradeNumber);
+    const gradeKey = parsed.gradeNumber === null
+      ? `SPECIAL:${norm(parsed.gradeName)}`
+      : `NUMBER:${parsed.gradeNumber}`;
+    let g = gradeMap.get(gradeKey);
     if (!g) {
       g = { number: parsed.gradeNumber, name: parsed.gradeName, stage: parsed.stage, grupos: new Set() };
-      gradeMap.set(parsed.gradeNumber, g);
+      gradeMap.set(gradeKey, g);
     }
     g.grupos.add(parsed.groupName);
   }
@@ -173,7 +190,7 @@ export function inferEcosystem(rows: EcosystemRow[]): InferredEcosystem {
   if (jornadas.size === 0) jornadas.add(DEFAULT_JORNADA);
 
   const grados = [...gradeMap.values()]
-    .sort((a, b) => a.number - b.number)
+    .sort((a, b) => (a.number ?? Number.MAX_SAFE_INTEGER) - (b.number ?? Number.MAX_SAFE_INTEGER))
     .map((g) => ({
       number: g.number,
       name: g.name,

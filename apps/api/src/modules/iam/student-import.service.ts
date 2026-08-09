@@ -288,7 +288,7 @@ export class StudentImportService {
     // Caches idempotentes (find-or-create).
     const campusCache = new Map<string, string>();
     const shiftCache = new Map<string, string>();
-    const gradeCache = new Map<number, string>();
+    const gradeCache = new Map<string, string>();
     const groupCache = new Map<string, string>();
 
     const ensureCampus = async (name: string): Promise<string> => {
@@ -311,9 +311,10 @@ export class StudentImportService {
       shiftCache.set(key, shift.id);
       return shift.id;
     };
-    const ensureGrade = async (number: number, name: string, stage: any): Promise<string> => {
-      if (gradeCache.has(number)) return gradeCache.get(number)!;
+    const ensureGrade = async (number: number | null, name: string, stage: any): Promise<string> => {
       const canonName = canonicalGradeName(name);
+      const cacheKey = number === null ? `${stage}|${norm(canonName)}` : `${stage}|#${number}`;
+      if (gradeCache.has(cacheKey)) return gradeCache.get(cacheKey)!;
       // Reusar por número+etapa (clave canónica): no duplicar por variantes de
       // nombre ("6°" vs "6º" vs "Sexto"). Fallback por nombre canónico.
       let grade = await this.prisma.grade.findFirst({ where: { institutionId, stage, number }, select: { id: true } });
@@ -322,7 +323,7 @@ export class StudentImportService {
         const academicStructure = stage === 'PREESCOLAR' ? 'DIMENSIONS' : 'AREAS_SUBJECTS';
         grade = await this.prisma.grade.create({ data: { institutionId, stage, number, name: canonName, academicStructure }, select: { id: true } }); _r.ecosistema.gradosCreados++;
       }
-      gradeCache.set(number, grade.id);
+      gradeCache.set(cacheKey, grade.id);
       return grade.id;
     };
     const ensureGroup = async (gradeId: string, campusId: string, shiftId: string, name: string, gradeName: string): Promise<string> => {

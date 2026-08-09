@@ -64,8 +64,18 @@ describe('student-ecosystem-inference (Módulo 3)', () => {
     });
   });
 
-  describe('parseCourse — no reconocibles', () => {
-    it.each(['CICLO 3', 'ACELERACION', '', 'XYZ'])('"%s" → null', (raw) => {
+  describe('parseCourse — modelos flexibles', () => {
+    it('"Aceleración del Aprendizaje" crea un grado especial no ordinal', () => {
+      expect(parseCourse('Aceleración del Aprendizaje')).toEqual({
+        raw: 'Aceleración del Aprendizaje',
+        gradeNumber: null,
+        gradeName: 'Aceleración del Aprendizaje',
+        stage: 'BASICA_PRIMARIA',
+        groupName: 'A',
+      });
+    });
+
+    it.each(['CICLO 3', '', 'XYZ'])('"%s" → null', (raw) => {
       expect(parseCourse(raw)).toBeNull();
     });
   });
@@ -97,9 +107,20 @@ describe('student-ecosystem-inference (Módulo 3)', () => {
       expect(eco.issues).toEqual([{ curso: 'CICLO 3', motivo: expect.any(String), filas: 2 }]);
     });
 
-    it('ningún grado inferido queda sin número (regla Fase 1)', () => {
+    it('los grados ordinarios conservan número para la promoción', () => {
       const eco = inferEcosystem([{ curso: '6A' }, { curso: 'Sexto B' }, { curso: '1101' }]);
       for (const g of eco.grados) expect(typeof g.number).toBe('number');
+    });
+
+    it('incluye Aceleración como grado especial sin reportarlo como error', () => {
+      const eco = inferEcosystem([{ curso: 'Aceleración del Aprendizaje' }]);
+      expect(eco.grados).toEqual([{
+        number: null,
+        name: 'Aceleración del Aprendizaje',
+        stage: 'BASICA_PRIMARIA',
+        grupos: ['A'],
+      }]);
+      expect(eco.issues).toEqual([]);
     });
   });
 
