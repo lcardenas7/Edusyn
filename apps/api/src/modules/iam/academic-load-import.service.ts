@@ -125,13 +125,30 @@ export class AcademicLoadImportService {
   private async findGroup(institutionId: string, curso: string): Promise<string | null> {
     const parsed = parseCourse(curso);
     if (!parsed) return null;
-    const grade = await this.prisma.grade.findFirst({
-      where: { institutionId, stage: parsed.stage, name: parsed.gradeName }, select: { id: true },
+
+    // Las instituciones pueden haber creado el grado como "TRANSICION" (sin
+    // tilde) y los grupos como "TRANSICION A", mientras el parser canónico
+    // produce "Transición" + "A". Resolver por nombre normalizado y, para
+    // grados ordinarios, también por número evita que una variante visual
+    // bloquee la importación.
+    const grades = await this.prisma.grade.findMany({
+      where: { institutionId, stage: parsed.stage },
+      select: { id: true, name: true, number: true },
     });
+    const grade = grades.find((candidate) =>
+      norm(candidate.name) === norm(parsed.gradeName)
+      || (parsed.gradeNumber !== null && candidate.number === parsed.gradeNumber),
+    );
     if (!grade) return null;
-    const group = await this.prisma.group.findFirst({
-      where: { gradeId: grade.id, name: parsed.groupName }, select: { id: true },
+
+    // Se admiten grupos guardados como "A" o con el curso completo
+    // ("TRANSICION A"), pues ambos formatos ya existen en instituciones.
+    const expectedNames = new Set([norm(parsed.groupName), norm(curso)]);
+    const groups = await this.prisma.group.findMany({
+      where: { gradeId: grade.id },
+      select: { id: true, name: true },
     });
+    const group = groups.find((candidate) => expectedNames.has(norm(candidate.name)));
     return group?.id ?? null;
   }
 
