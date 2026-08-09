@@ -19,6 +19,7 @@ import { useAcademic, AcademicLevel, GradingScaleType } from '../../../contexts/
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
 import { performanceScaleApi, academicGradesApi } from '../../../lib/api'
+import { confirmDialog } from '../../../components/ui/confirm'
 
 // Punto 3 — auto-derivar: mapea el `code` del nivel académico al `stage` de la
 // tabla Grade. Así los grados creados en Estructura se categorizan solos bajo su
@@ -64,7 +65,7 @@ export default function Levels() {
 
   // Punto 3 — grados reales de la institución (tabla Grade). Fuente de verdad para
   // categorizar cada nivel por su `stage`, en vez de la lista manual `level.grades`.
-  const [allGrades, setAllGrades] = useState<Array<{ id: string; name: string; stage: string; number: number | null }>>([])
+  const [allGrades, setAllGrades] = useState<Array<{ id: string; name: string; stage: string; number: number | null; academicStructure: string }>>([])
   useEffect(() => {
     academicGradesApi.getAll()
       .then(res => setAllGrades(Array.isArray(res.data) ? res.data : []))
@@ -77,6 +78,24 @@ export default function Levels() {
     return allGrades
       .filter(g => g.stage === stage)
       .sort((a, b) => (a.number ?? 99) - (b.number ?? 99) || a.name.localeCompare(b.name))
+  }
+
+  const activateQualitativeGrade = async (grade: { id: string; name: string }) => {
+    if (!canEditGradingLevels) return
+    const confirmed = await confirmDialog(
+      `¿Activar la planilla cualitativa para "${grade.name}"? Las nuevas evaluaciones usarán Logrado, En Proceso e Iniciando en lugar de notas numéricas.`,
+    )
+    if (!confirmed) return
+
+    try {
+      await academicGradesApi.update(grade.id, { academicStructure: 'DIMENSIONS' })
+      setAllGrades(current => current.map(item =>
+        item.id === grade.id ? { ...item, academicStructure: 'DIMENSIONS' } : item,
+      ))
+      toast.success(`Planilla cualitativa activada para ${grade.name}`)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'No fue posible activar la planilla cualitativa')
+    }
   }
 
   const toggleExpand = (levelId: string) => {
@@ -498,21 +517,49 @@ export default function Levels() {
                         </div>
                       </div>
 
-                      {/* Grados del nivel */}
+                      {/* Grados reales del nivel: la relación se determina por la etapa
+                          del grado, no por una lista de texto que no actualizaba nada. */}
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Grados (separados por coma)</label>
-                        <input
-                          type="text"
-                          value={level.grades.join(', ')}
-                          disabled={!canEditGradingLevels}
-                          onChange={(e) => {
-                            if (!canEditGradingLevels) return
-                            const gradesArray = e.target.value.split(',').map(g => g.trim()).filter(g => g)
-                            updateLevel(level.id, { grades: gradesArray })
-                          }}
-                          placeholder="Ej: Transición, 1°, 2°, 3°"
-                          className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-lg ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
-                        />
+                        <label className="block text-xs text-slate-500 mb-2">Grados reales de este nivel</label>
+                        {(() => {
+                          const grades = gradesForLevel(level.code)
+                          const isPreschool = LEVEL_CODE_TO_STAGE[(level.code || '').toUpperCase()] === 'PREESCOLAR'
+                          if (grades.length === 0) {
+                            return <p className="text-sm text-slate-500 rounded-lg border border-dashed border-slate-300 px-3 py-2">No hay grados creados para este nivel todavía.</p>
+                          }
+                          return (
+                            <div className="space-y-2">
+                              {grades.map((grade) => {
+                                const qualitativeReady = grade.academicStructure === 'DIMENSIONS'
+                                return (
+                                  <div key={grade.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-800">{grade.name}</p>
+                                      <p className="text-xs text-slate-500">
+                                        {qualitativeReady ? 'Planilla cualitativa por dimensiones activa' : 'Planilla numérica activa'}
+                                      </p>
+                                    </div>
+                                    {isPreschool && level.gradingScaleType.startsWith('QUALITATIVE') && (
+                                      qualitativeReady ? (
+                                        <span className="flex items-center gap-1 text-xs font-medium text-green-700"><CheckCircle2 className="w-4 h-4" /> Configurado</span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => activateQualitativeGrade(grade)}
+                                          disabled={!canEditGradingLevels}
+                                          className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          Activar planilla cualitativa
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )
+                        })()}
+                        <p className="mt-2 text-xs text-slate-500">Los grados aparecen automáticamente según su etapa. En Preescolar, activa la planilla cualitativa en el grado que corresponda.</p>
                       </div>
 
                       {/* Configuración según tipo de escala */}

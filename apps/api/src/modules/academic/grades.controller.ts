@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, Query, BadRequestException, HttpException } from '@nestjs/common';
-import { GradeStage } from '@prisma/client';
+import { AcademicStructureType, GradeStage } from '@prisma/client';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -99,7 +99,7 @@ export class GradesController {
   async update(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { name?: string; stage?: string; number?: number },
+    @Body() body: { name?: string; stage?: string; number?: number; academicStructure?: AcademicStructureType },
     @Query('institutionId') institutionId?: string
   ) {
     try {

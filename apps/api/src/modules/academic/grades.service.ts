@@ -2,7 +2,7 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException }
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
-import { GradeStage, SchoolShift } from '@prisma/client';
+import { AcademicStructureType, GradeStage, SchoolShift } from '@prisma/client';
 import { GRADE_TEMPLATES, deriveGradeNumber, levelKey, canonicalGradeName } from '../../common/utils/academic-level.util';
 import { suggestStructureByStage } from '../../engines/AcademicStructure';
 
@@ -112,13 +112,17 @@ export class GradesService {
     });
   }
 
-  async update(id: string, institutionId: string, data: { name?: string; stage?: GradeStage; number?: number }) {
+  async update(id: string, institutionId: string, data: { name?: string; stage?: GradeStage; number?: number; academicStructure?: AcademicStructureType }) {
     // Verificar que el grado pertenece a esta institución
     const grade = await this.prisma.grade.findFirst({
       where: { id, institutionId },
     });
     if (!grade) {
       throw new NotFoundException('Grado no encontrado en esta institución.');
+    }
+
+    if (data.academicStructure === 'DIMENSIONS' && grade.stage !== 'PREESCOLAR') {
+      throw new BadRequestException('La evaluación por dimensiones solo se puede activar en grados de preescolar.');
     }
 
     try {
@@ -128,6 +132,7 @@ export class GradesService {
           ...(data.name && { name: data.name }),
           ...(data.stage && { stage: data.stage }),
           ...(data.number !== undefined && { number: data.number }),
+          ...(data.academicStructure && { academicStructure: data.academicStructure }),
         },
       });
     } catch (e) {

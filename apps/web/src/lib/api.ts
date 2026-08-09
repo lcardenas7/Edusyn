@@ -619,7 +619,7 @@ export const academicGradesApi = {
   getAll: (institutionId?: string) => api.get('/grades', { params: { institutionId } }),
   getActive: (institutionId?: string) => api.get('/grades/active', { params: { institutionId } }),
   create: (data: { name: string; stage: string; number?: number }) => api.post('/grades', data),
-  update: (id: string, data: { name?: string; stage?: string; number?: number }) => api.patch(`/grades/${id}`, data),
+  update: (id: string, data: { name?: string; stage?: string; number?: number; academicStructure?: 'DIMENSIONS' | 'SUBJECTS_ONLY' | 'AREAS_SUBJECTS' }) => api.patch(`/grades/${id}`, data),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
   // institutionId explícito: sin él, el backend resuelve la institución del JWT y
   // un SUPERADMIN viendo OTRA institución recibía "Grado no encontrado".
