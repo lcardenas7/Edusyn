@@ -156,21 +156,6 @@ export class TeacherAssignmentsController {
   }
 
   /**
-   * Eliminar una asignación individual
-   */
-  @Delete(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async delete(
-    @Request() req: any,
-    @Param('id') id: string,
-    @Query('institutionId') institutionId?: string,
-  ) {
-    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
-    if (!instId) throw new Error('No se pudo determinar la institución');
-    return this.teacherAssignmentsService.delete(id, instId);
-  }
-
-  /**
    * TEMPORAL: Eliminar toda la carga académica de la institución
    * Solo para ADMIN_INSTITUTIONAL - usar con precaución
    */
@@ -186,5 +171,21 @@ export class TeacherAssignmentsController {
       return { deleted: 0, message: 'No se pudo determinar la institución' };
     }
     return this.teacherAssignmentsService.deleteAll(instId, academicYearId);
+  }
+
+  /**
+   * Eliminar una asignación individual.
+   * Se declara después de las rutas estáticas para que /all no se trate como un id.
+   */
+  @Delete(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async delete(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.teacherAssignmentsService.delete(id, instId);
   }
 }
