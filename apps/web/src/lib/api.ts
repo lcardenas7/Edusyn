@@ -1126,6 +1126,10 @@ export const staffApi = {
   getDelegatedStudentsPermissions: () => api.get('/iam/delegated-permissions/students'),
   getAvailableTeachersForStudentsPermission: () => api.get('/iam/delegated-permissions/students/available-teachers'),
   toggleStudentsPermission: (userId: string, allow: boolean) => api.post('/iam/delegated-permissions/students', { userId, allow }),
+  // Permisos de administrador (rol ADMIN_INSTITUTIONAL) para coordinadores/docentes
+  getAdmins: () => api.get('/iam/institution/admins'),
+  grantAdmin: (userId: string) => api.post(`/iam/users/${userId}/grant-admin`),
+  revokeAdmin: (userId: string) => api.post(`/iam/users/${userId}/revoke-admin`),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

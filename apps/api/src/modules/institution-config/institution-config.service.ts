@@ -430,7 +430,8 @@ export class InstitutionConfigService {
     // aceptaba y la renormalización del anual lo ocultaba).
     if (Array.isArray(periods) && periods.length > 0) {
       const totalWeight = periods.reduce((s, p) => s + (Number((p as any)?.weight) || 0), 0)
-      if (Math.abs(totalWeight - 100) > 0.01) {
+      // Tolerancia ±0.5%: 3 períodos de 33.33% suman 99.99 (redondeo válido).
+      if (Math.abs(totalWeight - 100) > 0.5) {
         throw new BadRequestException(
           `Los pesos de los períodos deben sumar 100% (actualmente suman ${totalWeight}%).`,
         )
@@ -485,7 +486,7 @@ export class InstitutionConfigService {
             data: {
               name: period.name,
               order,
-              weightPercentage: Math.round(period.weight),
+              weightPercentage: period.weight,
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
             }
@@ -497,7 +498,7 @@ export class InstitutionConfigService {
               type: 'PERIOD',
               name: period.name,
               order,
-              weightPercentage: Math.round(period.weight),
+              weightPercentage: period.weight,
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
             }

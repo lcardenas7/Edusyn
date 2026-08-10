@@ -57,7 +57,8 @@ export class AcademicTermsService {
       where: { academicYearId },
     });
     const total = terms.reduce((sum, t) => sum + t.weightPercentage, 0);
-    if (total !== 100) {
+    // Tolerancia: 3 períodos de 33.33% suman 99.99; aceptamos ±0.5% de redondeo.
+    if (Math.abs(total - 100) > 0.5) {
       throw new BadRequestException(
         `La suma de pesos de los cortes debe ser 100%. Actual: ${total}%`,
       );
@@ -110,7 +111,7 @@ export class AcademicTermsService {
           where: { id: existing.id },
           data: {
             name: period.name,
-            weightPercentage: Math.round(period.weight),
+            weightPercentage: period.weight,
             startDate: period.startDate ? new Date(period.startDate) : existing.startDate,
             endDate: period.endDate ? new Date(period.endDate) : existing.endDate,
           },
@@ -123,7 +124,7 @@ export class AcademicTermsService {
             type: 'PERIOD',
             name: period.name,
             order,
-            weightPercentage: Math.round(period.weight),
+            weightPercentage: period.weight,
             startDate: period.startDate ? new Date(period.startDate) : null,
             endDate: period.endDate ? new Date(period.endDate) : null,
           },

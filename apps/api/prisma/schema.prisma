@@ -1102,7 +1102,7 @@ model AcademicTerm {
   type                         AcademicTermType
   name                         String
   order                        Int
-  weightPercentage             Int
+  weightPercentage             Float // Permite pesos decimales (ej. 33.33% en 3 períodos)
   status                       AcademicTermStatus @default(OPEN)
   bulletinsReleasedForTeachers Boolean            @default(false) // Coordinador/admin libera boletines para docentes
   finalizedAt                  DateTime?

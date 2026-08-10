@@ -111,6 +111,37 @@ export default function StaffManagement() {
   const [availableTeachers, setAvailableTeachers] = useState<any[]>([])
   const [loadingDelegated, setLoadingDelegated] = useState(false)
   const [togglingPermission, setTogglingPermission] = useState<string | null>(null)
+  // Permisos de administrador (rol ADMIN_INSTITUTIONAL)
+  const [admins, setAdmins] = useState<any[]>([])
+  const [adminCandidates, setAdminCandidates] = useState<any[]>([])
+  const [togglingAdmin, setTogglingAdmin] = useState<string | null>(null)
+  const [grantAdminUserId, setGrantAdminUserId] = useState<string>('')
+
+  const loadAdmins = async () => {
+    try {
+      const res = await staffApi.getAdmins()
+      setAdmins(res.data?.admins || [])
+      setAdminCandidates(res.data?.candidates || [])
+    } catch { /* noop */ }
+  }
+  const handleGrantAdmin = async () => {
+    if (!grantAdminUserId) return
+    setTogglingAdmin(grantAdminUserId)
+    try {
+      await staffApi.grantAdmin(grantAdminUserId)
+      toast.success('Permisos de administrador otorgados.')
+      setGrantAdminUserId('')
+      await loadAdmins()
+    } catch (err: any) { toast.error(err) } finally { setTogglingAdmin(null) }
+  }
+  const handleRevokeAdmin = async (userId: string) => {
+    setTogglingAdmin(userId)
+    try {
+      await staffApi.revokeAdmin(userId)
+      toast.success('Permisos de administrador revocados.')
+      await loadAdmins()
+    } catch (err: any) { toast.error(err) } finally { setTogglingAdmin(null) }
+  }
   // Delegated permissions states - Students
   const [delegatedStudentsUsers, setDelegatedStudentsUsers] = useState<any[]>([])
   const [availableStudentsTeachers, setAvailableStudentsTeachers] = useState<any[]>([])
@@ -240,6 +271,7 @@ export default function StaffManagement() {
       setAvailableTeachers(availableRes.data || [])
       setDelegatedStudentsUsers(delegatedStudRes.data || [])
       setAvailableStudentsTeachers(availableStudRes.data || [])
+      await loadAdmins()
     } catch (error) {
       console.error('Error loading delegated permissions:', error)
     } finally {
@@ -1398,6 +1430,68 @@ export default function StaffManagement() {
 
         {/* Delegated Permissions Tab */}
         {activeTab === 'delegated-permissions' && isAdmin && (
+          <>
+          {/* Permisos de administrador (rol completo) */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-red-600" />
+                Administradores de la institución
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Otorga el rol de <strong>Administrador</strong> a un coordinador o docente (mantiene su rol actual). Un administrador puede configurar toda la institución.
+              </p>
+            </div>
+
+            {/* Otorgar */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <select
+                value={grantAdminUserId}
+                onChange={(e) => setGrantAdminUserId(e.target.value)}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="">Selecciona un coordinador o docente…</option>
+                {adminCandidates.map((u) => (
+                  <option key={u.userId} value={u.userId}>
+                    {u.firstName} {u.lastName} — {u.roles.includes('COORDINADOR') ? 'Coordinador' : 'Docente'} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleGrantAdmin}
+                disabled={!grantAdminUserId || togglingAdmin === grantAdminUserId}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+              >
+                {togglingAdmin === grantAdminUserId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                Otorgar admin
+              </button>
+            </div>
+
+            {/* Admins actuales */}
+            <h3 className="text-sm font-medium text-slate-700 mb-2">Administradores actuales ({admins.length})</h3>
+            {admins.length === 0 ? (
+              <div className="p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">Aún no hay administradores.</div>
+            ) : (
+              <div className="space-y-2">
+                {admins.map((u) => (
+                  <div key={u.userId} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div>
+                      <p className="font-medium text-slate-900">{u.firstName} {u.lastName}</p>
+                      <p className="text-xs text-slate-500">{u.email} · {u.roles.filter((r: string) => r !== 'ADMIN_INSTITUTIONAL').join(', ') || 'Admin'}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRevokeAdmin(u.userId)}
+                      disabled={togglingAdmin === u.userId}
+                      className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                    >
+                      {togglingAdmin === u.userId ? 'Revocando…' : 'Revocar'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
@@ -1618,6 +1712,7 @@ export default function StaffManagement() {
               </p>
             </div>
           </div>
+          </>
         )}
 
         {/* Delete Confirmation Modal */}

@@ -79,7 +79,8 @@ export default function Periods() {
     : 0
   const expectedPeriodWeight = 100 - finalComponentsWeight
   const totalWeight = totalPeriodWeight + finalComponentsWeight
-  const isWeightValid = totalWeight === 100
+  // Tolerancia ±0.5%: 3 períodos de 33.33% suman 99.99 (redondeo válido).
+  const isWeightValid = Math.abs(totalWeight - 100) <= 0.5
 
   // Funciones para períodos
   const openPeriodModal = (period?: AcademicPeriod) => {
@@ -429,10 +430,12 @@ export default function Periods() {
                   type="number"
                   min="1"
                   max="100"
+                  step="0.01"
                   value={periodForm.weight}
-                  onChange={(e) => setPeriodForm({ ...periodForm, weight: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => setPeriodForm({ ...periodForm, weight: parseFloat(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
+                <p className="text-xs text-slate-400 mt-1">Admite decimales (ej. 33.33 para 3 períodos).</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">

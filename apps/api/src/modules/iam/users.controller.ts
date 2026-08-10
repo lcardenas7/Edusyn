@@ -1075,4 +1075,91 @@ export class UsersController {
       email: iu.user.email,
     }));
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMISOS DE ADMINISTRADOR — otorgar/revocar el rol ADMIN_INSTITUTIONAL a
+  // coordinadores y docentes (aditivo: conserva su rol base). Solo un admin puede.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private async getMyInstitutionId(userId: string): Promise<string> {
+    const iu = await this.prisma.institutionUser.findFirst({ where: { userId } });
+    if (!iu) throw new BadRequestException('Usuario no asociado a ninguna institución');
+    return iu.institutionId;
+  }
+
+  /** Lista admins actuales + candidatos (coordinadores y docentes que aún no son admin). */
+  @Get('institution/admins')
+  @Roles('ADMIN_INSTITUTIONAL')
+  async listAdmins(@Request() req: any) {
+    const institutionId = await this.getMyInstitutionId(req.user.id);
+    const users = await this.prisma.user.findMany({
+      where: { institutionUsers: { some: { institutionId } }, isSuperAdmin: false },
+      include: { roles: { include: { role: true } } },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    const rolesOf = (u: any) => u.roles.map((r: any) => r.role.name);
+    const label = (u: any) => ({ userId: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, roles: rolesOf(u) });
+    const admins = users.filter(u => rolesOf(u).includes('ADMIN_INSTITUTIONAL')).map(label);
+    const candidates = users
+      .filter(u => !rolesOf(u).includes('ADMIN_INSTITUTIONAL'))
+      .filter(u => rolesOf(u).some((n: string) => n === 'COORDINADOR' || n === 'DOCENTE'))
+      .map(label);
+    return { admins, candidates };
+  }
+
+  /** Otorga ADMIN_INSTITUTIONAL sin quitar el rol base (docente/coordinador). */
+  @Post('users/:id/grant-admin')
+  @Roles('ADMIN_INSTITUTIONAL')
+  async grantAdmin(@Request() req: any, @Param('id') id: string) {
+    const institutionId = await this.getMyInstitutionId(req.user.id);
+    const target = await this.prisma.institutionUser.findFirst({ where: { userId: id, institutionId } });
+    if (!target) throw new BadRequestException('El usuario no pertenece a tu institución.');
+    const adminRole = await this.prisma.role.findUnique({ where: { name: 'ADMIN_INSTITUTIONAL' } });
+    if (!adminRole) throw new BadRequestException('El rol ADMIN_INSTITUTIONAL no existe en el sistema.');
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userRole.upsert({
+        where: { userId_roleId: { userId: id, roleId: adminRole.id } },
+        create: { userId: id, roleId: adminRole.id },
+        update: {},
+      });
+      await tx.institutionUserRole.upsert({
+        where: { institutionUserId_roleId: { institutionUserId: target.id, roleId: adminRole.id } },
+        create: { institutionUserId: target.id, roleId: adminRole.id },
+        update: {},
+      });
+    });
+    return { ok: true, message: 'Permisos de administrador otorgados.' };
+  }
+
+  /** Revoca ADMIN_INSTITUTIONAL. No permite quitártelo a ti mismo ni al último admin. */
+  @Post('users/:id/revoke-admin')
+  @Roles('ADMIN_INSTITUTIONAL')
+  async revokeAdmin(@Request() req: any, @Param('id') id: string) {
+    if (id === req.user.id) throw new BadRequestException('No puedes quitarte a ti mismo el rol de administrador.');
+    const institutionId = await this.getMyInstitutionId(req.user.id);
+    const adminRole = await this.prisma.role.findUnique({ where: { name: 'ADMIN_INSTITUTIONAL' } });
+    if (!adminRole) throw new BadRequestException('El rol ADMIN_INSTITUTIONAL no existe en el sistema.');
+
+    // No dejar la institución sin ningún administrador.
+    const adminCount = await this.prisma.institutionUserRole.count({
+      where: { roleId: adminRole.id, institutionUser: { institutionId } },
+    });
+    if (adminCount <= 1) throw new BadRequestException('Debe quedar al menos un administrador en la institución.');
+
+    const target = await this.prisma.institutionUser.findFirst({ where: { userId: id, institutionId } });
+    if (!target) throw new BadRequestException('El usuario no pertenece a tu institución.');
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.institutionUserRole.deleteMany({ where: { institutionUserId: target.id, roleId: adminRole.id } });
+      // Quitar el UserRole global solo si el usuario ya no es admin en NINGUNA institución.
+      const stillAdminElsewhere = await tx.institutionUserRole.count({
+        where: { roleId: adminRole.id, institutionUser: { userId: id } },
+      });
+      if (stillAdminElsewhere === 0) {
+        await tx.userRole.deleteMany({ where: { userId: id, roleId: adminRole.id } });
+      }
+    });
+    return { ok: true, message: 'Permisos de administrador revocados.' };
+  }
 }

@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export enum AcademicTermType {
   PERIOD = 'PERIOD',
@@ -19,7 +19,7 @@ export class CreateAcademicTermDto {
   @Min(1)
   order: number;
 
-  @IsInt()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(100)
   weightPercentage: number;
