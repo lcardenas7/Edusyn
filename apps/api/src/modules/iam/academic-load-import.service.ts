@@ -233,14 +233,22 @@ export class AcademicLoadImportService {
     const warnings: Issue[] = [];
 
     // Precarga del CATÁLOGO existente indexado por nombre NORMALIZADO (sin tildes
-    // ni mayúsculas). La búsqueda por texto exacto duplicaba "Inglés" vs "ingles"
-    // entre importaciones o contra áreas/asignaturas creadas a mano.
+    // ni mayúsculas). El catálogo manda: una asignatura pertenece a UN área.
     const [existingAreas, existingSubjects] = await Promise.all([
       this.prisma.area.findMany({ where: { institutionId }, select: { id: true, name: true } }),
       this.prisma.subject.findMany({ where: { area: { institutionId } }, select: { id: true, name: true, areaId: true } }),
     ]);
     const areaByNorm = new Map(existingAreas.map((a) => [norm(a.name), a.id]));
-    const subjectByNorm = new Map(existingSubjects.map((s) => [`${s.areaId}|${norm(s.name)}`, s.id]));
+    const areaNameById = new Map(existingAreas.map((a) => [a.id, a.name]));
+    // Asignatura por nombre GLOBAL (no por área): evita duplicar "Inglés" bajo
+    // dos áreas distintas y que una asignatura quede como área propia.
+    const subjectByNameGlobal = new Map<string, { id: string; areaId: string; areaName: string }>();
+    for (const s of existingSubjects) {
+      const nk = norm(s.name);
+      if (!subjectByNameGlobal.has(nk)) {
+        subjectByNameGlobal.set(nk, { id: s.id, areaId: s.areaId, areaName: areaNameById.get(s.areaId) || '' });
+      }
+    }
 
     const ensureArea = async (name: string): Promise<string> => {
       const key = norm(name);
@@ -248,14 +256,33 @@ export class AcademicLoadImportService {
       if (found) return found;
       const area = await this.prisma.area.create({ data: { institutionId, name }, select: { id: true } });
       areaByNorm.set(key, area.id);
+      areaNameById.set(area.id, name);
       return area.id;
     };
-    const ensureSubject = async (areaId: string, name: string): Promise<string> => {
-      const key = `${areaId}|${norm(name)}`;
-      const found = subjectByNorm.get(key);
-      if (found) return found;
-      const subject = await this.prisma.subject.create({ data: { areaId, name }, select: { id: true } });
-      subjectByNorm.set(key, subject.id);
+    /**
+     * Resuelve la asignatura respetando el CATÁLOGO:
+     *  1) Si ya existe una asignatura con ese nombre (en cualquier área), se reusa
+     *     CON su área — no se crea otra ni se mueve. Si el archivo trae otra área,
+     *     se ignora y se avisa (para no duplicar por inconsistencias de nombre).
+     *  2) Si no existe, se crea bajo el área del archivo (o "General").
+     */
+    const resolveSubject = async (rowArea: string | undefined, subjectName: string): Promise<string> => {
+      const nk = norm(subjectName);
+      const existing = subjectByNameGlobal.get(nk);
+      if (existing) {
+        if (rowArea?.trim() && norm(rowArea) !== norm(existing.areaName)) {
+          warnings.push({
+            severity: 'warning',
+            code: 'SUBJECT_AREA_MISMATCH',
+            message: `"${subjectName}" ya existe en el área "${existing.areaName}"; se ignoró el área "${rowArea.trim()}" del archivo para no duplicarla.`,
+          });
+        }
+        return existing.id;
+      }
+      const areaName = rowArea?.trim() || 'General';
+      const areaId = await ensureArea(areaName);
+      const subject = await this.prisma.subject.create({ data: { areaId, name: subjectName }, select: { id: true } });
+      subjectByNameGlobal.set(nk, { id: subject.id, areaId, areaName: areaNameById.get(areaId) || areaName });
       return subject.id;
     };
 
@@ -269,8 +296,7 @@ export class AcademicLoadImportService {
         const teacherId = await this.findTeacher(institutionId, r);
         if (!teacherId) { skipped++; errors.push({ severity: 'blocking', code: 'TEACHER_NOT_FOUND', message: `Docente no encontrado (${r.docenteCorreo || r.docenteDoc})`, location: { row: r.rowNumber } }); continue; }
 
-        const areaId = await ensureArea(r.area?.trim() || 'General');
-        const subjectId = await ensureSubject(areaId, r.asignatura);
+        const subjectId = await resolveSubject(r.area, r.asignatura);
 
         const key = `${groupId}|${subjectId}|${teacherId}`;
         if (seen.has(key)) { skipped++; continue; } // duplicado en archivo
