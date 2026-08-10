@@ -4,6 +4,7 @@ import type { ApplyResult, ImportAnalysis, Issue, SummaryFact } from '@edusyn/ty
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { parseCourse } from './student-ecosystem-inference.util';
+import { backfillCatalogCodes } from '../../common/utils/catalog-code.util';
 
 /**
  * MÓDULO 5 (Onboarding v2) — Importador de CARGA ACADÉMICA.
@@ -19,6 +20,7 @@ import { parseCourse } from './student-ecosystem-inference.util';
 interface LoadRow {
   rowNumber: number;
   curso: string;
+  codigoAsignatura?: string; // clave preferida: amarra la asignatura por código
   area?: string;
   asignatura: string;
   intensidad?: string;
@@ -43,6 +45,8 @@ export class AcademicLoadImportService {
       const set = (k: string) => { if (map[k] === undefined) map[k] = col; };
       if (h.includes('curso') || h.includes('grupo') || h.includes('grado')
           || h.includes('nivel') || h.includes('salon')) set('curso');
+      // "Código asignatura" ANTES que "Asignatura" (contiene 'asignatura').
+      else if (h.includes('codigo') && (h.includes('asignatura') || h.includes('materia'))) set('codigoAsignatura');
       else if (h.includes('area')) set('area');
       else if (h.includes('asignatura') || h.includes('materia')) set('asignatura');
       else if (h.includes('intensidad') || h.includes('horas') || h === 'ih') set('intensidad');
@@ -58,7 +62,7 @@ export class AcademicLoadImportService {
   private findHeaderRow(sheet: ExcelJS.Worksheet): { cols: Record<string, number>; headerRowNum: number } {
     for (let r = 1; r <= Math.min(10, sheet.rowCount); r++) {
       const cols = this.mapColumns(sheet.getRow(r));
-      if (cols.curso !== undefined && cols.asignatura !== undefined && (cols.docenteDoc !== undefined || cols.docenteCorreo !== undefined)) {
+      if (cols.curso !== undefined && (cols.asignatura !== undefined || cols.codigoAsignatura !== undefined) && (cols.docenteDoc !== undefined || cols.docenteCorreo !== undefined)) {
         return { cols, headerRowNum: r };
       }
     }
@@ -90,13 +94,15 @@ export class AcademicLoadImportService {
     for (let i = headerRowNum + 1; i <= sheet.rowCount; i++) {
       const row = sheet.getRow(i);
       const curso = cell(row, 'curso');
+      const codigoAsignatura = cell(row, 'codigoAsignatura');
       const asignatura = cell(row, 'asignatura');
       const docenteDoc = cell(row, 'docenteDoc');
       const docenteCorreo = cell(row, 'docenteCorreo').toLowerCase();
-      if (!curso && !asignatura && !docenteDoc && !docenteCorreo) continue;
+      if (!curso && !codigoAsignatura && !asignatura && !docenteDoc && !docenteCorreo) continue;
       rows.push({
         rowNumber: i,
         curso,
+        codigoAsignatura: codigoAsignatura || undefined,
         area: cell(row, 'area') || undefined,
         asignatura,
         intensidad: cell(row, 'intensidad') || undefined,
@@ -178,21 +184,30 @@ export class AcademicLoadImportService {
     let invalidas = 0;
     const seen = new Set<string>();
 
-    // Catálogo existente indexado por nombre normalizado (mismo criterio que apply).
+    // Catálogo existente: por código (clave preferida) y por nombre (respaldo).
     const existingSubjects = await this.prisma.subject.findMany({
-      where: { area: { institutionId } }, select: { id: true, name: true },
+      where: { area: { institutionId } }, select: { id: true, name: true, code: true },
     });
     const subjectByNorm = new Map(existingSubjects.map((s) => [norm(s.name), s.id]));
+    const subjectByCode = new Map<string, string>();
+    for (const s of existingSubjects) if (s.code) subjectByCode.set(String(s.code).trim().toUpperCase(), s.id);
 
     for (const r of rows) {
-      if (!r.asignatura) { invalidas++; issues.push({ severity: 'blocking', code: 'ROW_INVALID', message: 'Falta la asignatura', location: { row: r.rowNumber } }); continue; }
+      if (!r.asignatura && !r.codigoAsignatura) { invalidas++; issues.push({ severity: 'blocking', code: 'ROW_INVALID', message: 'Falta la asignatura (código o nombre)', location: { row: r.rowNumber } }); continue; }
       const groupId = await this.findGroup(institutionId, r.curso);
       if (!groupId) { invalidas++; issues.push({ severity: 'blocking', code: 'GROUP_NOT_FOUND', message: `Curso/grupo no encontrado: "${r.curso}" (impórtalo con estudiantes primero)`, location: { row: r.rowNumber, field: 'curso' } }); continue; }
       const teacherId = await this.findTeacher(institutionId, r);
       if (!teacherId) { invalidas++; issues.push({ severity: 'blocking', code: 'TEACHER_NOT_FOUND', message: `Docente no encontrado (${r.docenteCorreo || r.docenteDoc}); impórtalo en el paso de docentes`, location: { row: r.rowNumber } }); continue; }
 
-      // ¿Existe ya la asignatura? (normalizado, sin tildes/mayúsculas). Si no, es nueva.
-      const subjectId = subjectByNorm.get(norm(r.asignatura));
+      // Amarre por CÓDIGO si viene; si el código no existe, error. Si no, por nombre.
+      const code = r.codigoAsignatura?.trim().toUpperCase();
+      let subjectId: string | undefined;
+      if (code) {
+        subjectId = subjectByCode.get(code);
+        if (!subjectId) { invalidas++; issues.push({ severity: 'blocking', code: 'SUBJECT_CODE_NOT_FOUND', message: `Código de asignatura no encontrado: "${r.codigoAsignatura}". Cópialo de la hoja Catálogos.`, location: { row: r.rowNumber } }); continue; }
+      } else {
+        subjectId = subjectByNorm.get(norm(r.asignatura));
+      }
       const key = `${groupId}|${subjectId ?? 'new:' + norm(r.asignatura)}|${teacherId}`;
       if (seen.has(key)) { continue; } // duplicado en archivo
       seen.add(key);
@@ -236,12 +251,15 @@ export class AcademicLoadImportService {
     // ni mayúsculas). El catálogo manda: una asignatura pertenece a UN área.
     const [existingAreas, existingSubjects] = await Promise.all([
       this.prisma.area.findMany({ where: { institutionId }, select: { id: true, name: true } }),
-      this.prisma.subject.findMany({ where: { area: { institutionId } }, select: { id: true, name: true, areaId: true } }),
+      this.prisma.subject.findMany({ where: { area: { institutionId } }, select: { id: true, name: true, areaId: true, code: true } }),
     ]);
     const areaByNorm = new Map(existingAreas.map((a) => [norm(a.name), a.id]));
     const areaNameById = new Map(existingAreas.map((a) => [a.id, a.name]));
-    // Asignatura por nombre GLOBAL (no por área): evita duplicar "Inglés" bajo
-    // dos áreas distintas y que una asignatura quede como área propia.
+    // CLAVE PREFERIDA: código de asignatura (exacto, inmune a tildes/escritura).
+    const subjectByCode = new Map<string, string>();
+    for (const s of existingSubjects) if (s.code) subjectByCode.set(String(s.code).trim().toUpperCase(), s.id);
+    // Respaldo: asignatura por nombre GLOBAL (no por área): evita duplicar "Inglés"
+    // bajo dos áreas distintas y que una asignatura quede como área propia.
     const subjectByNameGlobal = new Map<string, { id: string; areaId: string; areaName: string }>();
     for (const s of existingSubjects) {
       const nk = norm(s.name);
@@ -261,25 +279,34 @@ export class AcademicLoadImportService {
     };
     /**
      * Resuelve la asignatura respetando el CATÁLOGO:
-     *  1) Si ya existe una asignatura con ese nombre (en cualquier área), se reusa
-     *     CON su área — no se crea otra ni se mueve. Si el archivo trae otra área,
-     *     se ignora y se avisa (para no duplicar por inconsistencias de nombre).
+     *  0) Si viene el CÓDIGO, se amarra exacto por código (sin errores de escritura).
+     *     Si el código no existe → error (no se crea nada a ciegas).
+     *  1) Si no hay código: si ya existe una asignatura con ese nombre (en cualquier
+     *     área), se reusa CON su área — no se crea otra ni se mueve; se avisa si el
+     *     área del archivo difiere.
      *  2) Si no existe, se crea bajo el área del archivo (o "General").
      */
-    const resolveSubject = async (rowArea: string | undefined, subjectName: string): Promise<string> => {
+    const resolveSubject = async (r: LoadRow): Promise<string> => {
+      const code = r.codigoAsignatura?.trim().toUpperCase();
+      if (code) {
+        const id = subjectByCode.get(code);
+        if (id) return id;
+        throw new Error(`Código de asignatura no encontrado: "${r.codigoAsignatura}". Cópialo tal cual de la hoja Catálogos.`);
+      }
+      const subjectName = r.asignatura;
       const nk = norm(subjectName);
       const existing = subjectByNameGlobal.get(nk);
       if (existing) {
-        if (rowArea?.trim() && norm(rowArea) !== norm(existing.areaName)) {
+        if (r.area?.trim() && norm(r.area) !== norm(existing.areaName)) {
           warnings.push({
             severity: 'warning',
             code: 'SUBJECT_AREA_MISMATCH',
-            message: `"${subjectName}" ya existe en el área "${existing.areaName}"; se ignoró el área "${rowArea.trim()}" del archivo para no duplicarla.`,
+            message: `"${subjectName}" ya existe en el área "${existing.areaName}"; se ignoró el área "${r.area.trim()}" del archivo para no duplicarla.`,
           });
         }
         return existing.id;
       }
-      const areaName = rowArea?.trim() || 'General';
+      const areaName = r.area?.trim() || 'General';
       const areaId = await ensureArea(areaName);
       const subject = await this.prisma.subject.create({ data: { areaId, name: subjectName }, select: { id: true } });
       subjectByNameGlobal.set(nk, { id: subject.id, areaId, areaName: areaNameById.get(areaId) || areaName });
@@ -290,13 +317,13 @@ export class AcademicLoadImportService {
 
     for (const r of rows) {
       try {
-        if (!r.asignatura) { skipped++; errors.push({ severity: 'blocking', code: 'ROW_INVALID', message: 'Falta la asignatura', location: { row: r.rowNumber } }); continue; }
+        if (!r.asignatura && !r.codigoAsignatura) { skipped++; errors.push({ severity: 'blocking', code: 'ROW_INVALID', message: 'Falta la asignatura (código o nombre)', location: { row: r.rowNumber } }); continue; }
         const groupId = await this.findGroup(institutionId, r.curso);
         if (!groupId) { skipped++; errors.push({ severity: 'blocking', code: 'GROUP_NOT_FOUND', message: `Curso/grupo no encontrado: "${r.curso}"`, location: { row: r.rowNumber, field: 'curso' } }); continue; }
         const teacherId = await this.findTeacher(institutionId, r);
         if (!teacherId) { skipped++; errors.push({ severity: 'blocking', code: 'TEACHER_NOT_FOUND', message: `Docente no encontrado (${r.docenteCorreo || r.docenteDoc})`, location: { row: r.rowNumber } }); continue; }
 
-        const subjectId = await resolveSubject(r.area, r.asignatura);
+        const subjectId = await resolveSubject(r);
 
         const key = `${groupId}|${subjectId}|${teacherId}`;
         if (seen.has(key)) { skipped++; continue; } // duplicado en archivo
@@ -322,6 +349,9 @@ export class AcademicLoadImportService {
         errors.push({ severity: 'blocking', code: 'ROW_FAILED', message: e?.message || String(e), location: { row: r.rowNumber } });
       }
     }
+
+    // Asignar código a las áreas/asignaturas nuevas creadas en este import.
+    if (created > 0) await backfillCatalogCodes(this.prisma, institutionId);
 
     const summary: SummaryFact[] = [
       { key: 'creadas', label: 'Asignaciones creadas', value: String(created) },

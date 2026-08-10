@@ -10,6 +10,7 @@ import {
   ColumnDef,
   CatalogBlock,
 } from './bulk-upload-template.helper';
+import { backfillCatalogCodes } from '../../common/utils/catalog-code.util';
 
 interface TeacherRow {
   firstName: string;
@@ -441,6 +442,10 @@ export class BulkUploadService {
     const inst = await this.prisma.institution.findUnique({ where: { id: institutionId }, select: { name: true } });
     const institutionName = inst?.name;
 
+    // Asegura que cada área/asignatura tenga su código ANTES de descargar la
+    // plantilla: el import se amarra por código (inmune a tildes/escritura).
+    await backfillCatalogCodes(this.prisma, institutionId);
+
     const groups = await this.prisma.group.findMany({
       where: { grade: { institutionId } },
       include: { grade: { select: { name: true, number: true } } },
@@ -454,17 +459,21 @@ export class BulkUploadService {
       orderBy: { lastName: 'asc' },
     });
 
-    // Catálogo de áreas y asignaturas ya existentes: para que el usuario reutilice
-    // los nombres EXACTOS y no genere duplicados ("Inglés" vs "ingles").
+    // Catálogo de áreas y asignaturas con su CÓDIGO: el usuario copia el código en
+    // la carga y el import lo amarra sin errores de escritura/tildes.
     const areas = await this.prisma.area.findMany({
       where: { institutionId },
-      select: { name: true, subjects: { select: { name: true }, orderBy: { name: 'asc' } } },
+      select: { name: true, code: true, subjects: { select: { name: true, code: true }, orderBy: { name: 'asc' } } },
       orderBy: { name: 'asc' },
     });
     const areaSubjectRows: (string | number)[][] = [];
+    let firstSubjectCode = '';
     for (const a of areas) {
-      if (a.subjects.length === 0) { areaSubjectRows.push([a.name, '(sin asignaturas)']); continue; }
-      for (const s of a.subjects) areaSubjectRows.push([a.name, s.name]);
+      if (a.subjects.length === 0) { areaSubjectRows.push([a.code || '', a.name, '(sin asignaturas)']); continue; }
+      for (const s of a.subjects) {
+        if (!firstSubjectCode && s.code) firstSubjectCode = s.code;
+        areaSubjectRows.push([s.code || '', a.name, s.name]);
+      }
     }
 
     buildInicioSheet(workbook, {
@@ -474,11 +483,11 @@ export class BulkUploadService {
         'Esta plantilla te permite asignar docentes a las asignaturas y grupos del año lectivo. Cada fila representa una asignación: qué docente dicta qué materia en qué grupo. Las áreas y asignaturas que no existan se crearán automáticamente.',
       quickSteps: [
         'Ve a la hoja "Carga" y completa una fila por cada asignación (docente + asignatura + grupo).',
-        'Usa la hoja "Catálogos" para ver grupos, docentes y las áreas/asignaturas ya existentes.',
-        'Si la asignatura ya existe, cópiala TAL CUAL del catálogo (mismas tildes y mayúsculas) para no duplicarla.',
+        'Para la asignatura, copia el "Código asignatura" de la hoja Catálogos (ej: MAT01). Así se amarra sin errores de escritura y NO se duplica.',
+        'Solo si la asignatura NO existe aún, déjala sin código y escribe Área + Asignatura: el sistema la crea.',
+        'Usa la hoja "Catálogos" para ver grupos, docentes y los códigos de áreas/asignaturas.',
         'Borra las filas de ejemplo (en gris cursiva) antes de subir el archivo.',
         'Guarda como .xlsx y sube desde Configuración Inicial → Carga Académica.',
-        'Revisa el reporte: las asignaciones duplicadas se omiten automáticamente.',
       ],
     });
 
@@ -499,8 +508,8 @@ export class BulkUploadService {
     }
     if (areaSubjectRows.length > 0) {
       catalogBlocks.push({
-        title: 'Áreas y asignaturas existentes (reutiliza estos nombres exactos)',
-        headers: ['Área', 'Asignatura'],
+        title: 'Áreas y asignaturas existentes — copia el CÓDIGO en la carga',
+        headers: ['Código asignatura', 'Área', 'Asignatura'],
         rows: areaSubjectRows,
       });
     }
@@ -508,8 +517,9 @@ export class BulkUploadService {
 
     const columns: ColumnDef[] = [
       { header: 'Curso', key: 'curso', width: 18, required: true, comment: 'Código del grupo (ej: "6°-A", "TA"). Usa los valores de la hoja Catálogos.' },
-      { header: 'Área', key: 'area', width: 22, comment: 'Nombre del área. Reutiliza los del catálogo si ya existen. Si se omite, se usa "General".' },
-      { header: 'Asignatura', key: 'asignatura', width: 25, required: true, comment: 'Nombre de la asignatura. Si ya existe, cópiala igual del catálogo (tildes/mayúsculas) para no duplicar.' },
+      { header: 'Código asignatura', key: 'codigoAsignatura', width: 18, comment: 'RECOMENDADO: copia el código de la hoja Catálogos (ej: "MAT01"). Amarra la asignatura sin errores de escritura. Si lo llenas, no necesitas Área ni Asignatura.' },
+      { header: 'Área', key: 'area', width: 22, comment: 'Solo si vas a CREAR una asignatura nueva (sin código). Reutiliza los del catálogo.' },
+      { header: 'Asignatura', key: 'asignatura', width: 25, comment: 'Solo si vas a CREAR una asignatura nueva (sin código). Nombre de la asignatura.' },
       { header: 'Intensidad horaria', key: 'intensidad', width: 18, comment: 'Horas semanales (número). Ej: 4' },
       { header: 'Documento docente', key: 'docenteDoc', width: 20, comment: 'Número de documento del docente.' },
       { header: 'Correo docente', key: 'docenteCorreo', width: 30, comment: 'Correo del docente. Se requiere documento O correo.' },
@@ -518,15 +528,17 @@ export class BulkUploadService {
     const exCurso = groupCodes[0] || 'TA';
     const exCorreo = teachers[0]?.email || 'jperez@ejemplo.com';
     const exDoc = teachers[0]?.documentNumber || '12345678';
+    const exCod = firstSubjectCode || 'MAT01';
 
     buildDataSheet(workbook, {
       sheetName: 'Carga',
       theme,
       columns,
       examples: [
-        { curso: exCurso, area: 'Matemáticas', asignatura: 'Aritmética', intensidad: 5, docenteDoc: exDoc, docenteCorreo: exCorreo },
-        { curso: exCurso, area: 'Lenguaje', asignatura: 'Español', intensidad: 4, docenteDoc: '', docenteCorreo: exCorreo },
-        { curso: exCurso, area: 'Ciencias Naturales', asignatura: 'Biología', intensidad: 3, docenteDoc: exDoc, docenteCorreo: '' },
+        // Recomendado: por CÓDIGO (área y asignatura quedan vacías, el sistema las deduce).
+        { curso: exCurso, codigoAsignatura: exCod, area: '', asignatura: '', intensidad: 5, docenteDoc: exDoc, docenteCorreo: exCorreo },
+        // Alternativa: crear una asignatura NUEVA por nombre (sin código).
+        { curso: exCurso, codigoAsignatura: '', area: 'Lenguaje', asignatura: 'Español', intensidad: 4, docenteDoc: '', docenteCorreo: exCorreo },
       ],
       validationRefs: catalogos.ranges,
     });
