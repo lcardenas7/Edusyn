@@ -41,7 +41,8 @@ export class PermissionsService {
           include: {
             institution: {
               include: { modules: true }
-            }
+            },
+            institutionUserRoles: { include: { role: true } }
           }
         },
         extraPermissions: {
@@ -58,6 +59,18 @@ export class PermissionsService {
     // 2. SuperAdmin tiene acceso total
     if (user.isSuperAdmin) {
       return { hasPermission: true, source: 'SUPERADMIN' };
+    }
+
+    // 2.1 Admin Institucional: acceso TOTAL dentro de su institución. Va ANTES del
+    // chequeo de módulo (si no, un módulo inactivo lo bloqueaba) y considera el rol
+    // tanto en UserRole (global) como en InstitutionUserRole (por tenant).
+    const globalRoleNames = user.roles.map(r => r.role.name);
+    const tenantRoleNames = (user.institutionUsers || []).flatMap(
+      (iu: any) => (iu.institutionUserRoles || []).map((r: any) => r.role.name),
+    );
+    const allRoleNames = new Set<string>([...globalRoleNames, ...tenantRoleNames]);
+    if (allRoleNames.has('ADMIN_INSTITUTIONAL')) {
+      return { hasPermission: true, source: 'ROLE' };
     }
 
     // 3. Obtener el permiso del catálogo
@@ -80,12 +93,7 @@ export class PermissionsService {
       }
     }
 
-    // 4.1 Admin Institucional tiene acceso total dentro de su institución
-    // (esto evita bloqueos si el seed de roleBasePermission no se ejecutó)
-    const userRolesQuick = user.roles.map(r => r.role.name);
-    if (userRolesQuick.includes('ADMIN_INSTITUTIONAL')) {
-      return { hasPermission: true, source: 'ROLE' };
-    }
+    // (El acceso total de ADMIN_INSTITUTIONAL ya se resolvió en el paso 2.1.)
 
     // 5. Verificar permisos base del rol (herencia de todos los roles)
     const userRoles = user.roles.map(r => r.role.name);

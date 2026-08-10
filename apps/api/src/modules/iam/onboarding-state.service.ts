@@ -225,7 +225,14 @@ export class OnboardingStateService {
         status: statusFor(loadDone, deps),
         blockedBy: blockersOf(loadDone, deps),
         summary: loadDone ? [{ key: 'assignments', label: 'Asignaciones', value: nf.format(assignmentCount) }] : [],
-        issues: [],
+        issues: loadDone ? [] : [
+          {
+            severity: 'info' as const,
+            code: 'CATALOG_FIRST',
+            message: 'Recomendado: crea antes las áreas y asignaturas (Plan de Estudios). Así la plantilla trae sus CÓDIGOS y la carga se amarra por código, sin duplicar por errores de escritura.',
+            howToFix: 'Abre "Crear áreas y asignaturas", arma el catálogo y luego descarga la plantilla.',
+          },
+        ],
         actions: [
           {
             type: 'analyze',
@@ -235,6 +242,14 @@ export class OnboardingStateService {
             variant: 'primary',
             requiresConfirmation: false,
             intent: { kind: 'upload', path: '/onboarding/academic-load/analyze' },
+          },
+          {
+            type: 'view',
+            label: 'Crear áreas y asignaturas',
+            enabled: true,
+            variant: 'secondary',
+            requiresConfirmation: false,
+            intent: { kind: 'navigate', path: '/academic-templates' },
           },
           {
             type: 'download_template',
