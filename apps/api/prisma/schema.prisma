@@ -2917,12 +2917,39 @@ model AchievementConfig {
   displayFormat    AchievementDisplayFormat @default(LIST) // Formato de visualización
   judgmentPosition JudgmentPosition         @default(END_OF_EACH) // Posición del juicio valorativo
 
+  // ── Aprendizajes y Evidencias de Aprendizaje ──────────────────────────────
+  // Modelo de registro del docente: qué se le pide capturar.
+  //   LEARNING_ONLY         → solo aprendizajes/desempeños.
+  //   LEARNING_AND_EVIDENCE → aprendizajes + una o varias evidencias.
+  // El caso "solo evidencia" NO es un modo de registro: se resuelve en el boletín.
+  registrationModel AcademicRegistrationModel @default(LEARNING_ONLY)
+
+  // Contenido descriptivo del boletín (4 elementos independientes).
+  showLearningInReport        Boolean @default(true)  // Mostrar aprendizaje/desempeño
+  showEvidencesInReport       Boolean @default(false) // Mostrar evidencias de aprendizaje
+  showLevelDescriptorInReport Boolean @default(false) // Mostrar descriptor del nivel alcanzado
+  showJudgmentInReport        Boolean @default(true)  // Mostrar juicio valorativo (solo si existe)
+
+  // Granularidad de aprendizajes en el boletín por asignatura.
+  //   PRIMARY_ONLY → un aprendizaje (el del nivel alcanzado). ALL → todos.
+  reportLearningGranularity ReportLearningGranularity @default(PRIMARY_ONLY)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   institution            Institution             @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   valueJudgmentTemplates ValueJudgmentTemplate[]
   observationTemplates   ObservationTemplate[]
+}
+
+enum AcademicRegistrationModel {
+  LEARNING_ONLY // Solo aprendizajes / desempeños
+  LEARNING_AND_EVIDENCE // Aprendizajes + evidencias de aprendizaje
+}
+
+enum ReportLearningGranularity {
+  PRIMARY_ONLY // Un aprendizaje por asignatura (el del nivel alcanzado)
+  ALL // Todos los aprendizajes del período por asignatura
 }
 
 enum AchievementDescriptorMode {
@@ -3002,6 +3029,7 @@ model Achievement {
   attitudinalAchievements AttitudinalAchievement[]
   pedagogicalSupportPlans PedagogicalSupportPlan[]
   levelDescriptors        AchievementLevelDescriptor[]
+  evidences               AchievementEvidence[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
   @@unique([code, teacherAssignmentId]) // Código único por asignación
@@ -3059,6 +3087,24 @@ model AchievementLevelDescriptor {
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([achievementId, levelCode])
+  @@index([achievementId])
+}
+
+// Evidencia de aprendizaje: acción/producto/manifestación que comprueba el aprendizaje.
+// Un aprendizaje (Achievement) puede tener una o varias evidencias. Siempre cuelga de un
+// aprendizaje (nunca huérfana). NO confundir con AchievementLevelDescriptor (descriptor por nivel).
+model AchievementEvidence {
+  id            String  @id @default(cuid())
+  achievementId String
+  text          String  @db.Text
+  orderNumber   Int     @default(1)
+  isActive      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
   @@index([achievementId])
 }
 

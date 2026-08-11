@@ -52,6 +52,20 @@ interface AchievementConfig {
   displayMode: 'SEPARATE' | 'COMBINED'
   displayFormat: 'LIST' | 'PARAGRAPH'
   judgmentPosition: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE'
+  // Aprendizajes y Evidencias de Aprendizaje
+  registrationModel: 'LEARNING_ONLY' | 'LEARNING_AND_EVIDENCE'
+  showLearningInReport: boolean
+  showEvidencesInReport: boolean
+  showLevelDescriptorInReport: boolean
+  showJudgmentInReport: boolean
+  reportLearningGranularity: 'PRIMARY_ONLY' | 'ALL'
+}
+
+interface Evidence {
+  id: string
+  text: string
+  orderNumber: number
+  isActive: boolean
 }
 
 interface ValueJudgmentTemplate {
@@ -67,6 +81,8 @@ interface Achievement {
   baseDescription: string
   isPromotional: boolean
   studentAchievements?: StudentAchievement[]
+  evidences?: Evidence[]
+  levelDescriptors?: Array<{ id?: string; levelCode: string; text: string }>
 }
 
 interface StudentAchievement {
@@ -117,6 +133,7 @@ export default function Achievements() {
   // Usar el institution del AuthContext que tiene el id real de la BD
   const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('achievements')
+  const [showHelp, setShowHelp] = useState(true)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -143,6 +160,12 @@ export default function Achievements() {
     displayMode: 'SEPARATE',
     displayFormat: 'LIST',
     judgmentPosition: 'END_OF_EACH',
+    registrationModel: 'LEARNING_ONLY',
+    showLearningInReport: true,
+    showEvidencesInReport: false,
+    showLevelDescriptorInReport: false,
+    showJudgmentInReport: true,
+    reportLearningGranularity: 'PRIMARY_ONLY',
   })
   const [templates, setTemplates] = useState<ValueJudgmentTemplate[]>(DEFAULT_TEMPLATES)
 
@@ -151,6 +174,10 @@ export default function Achievements() {
   const [editingAchievement, setEditingAchievement] = useState<string | null>(null)
   const [newAchievementText, setNewAchievementText] = useState('')
   const [attitudinalText, setAttitudinalText] = useState('')
+  // Evidencias
+  const [newEvidenceText, setNewEvidenceText] = useState<Record<string, string>>({})
+  const [editingEvidenceId, setEditingEvidenceId] = useState<string | null>(null)
+  const [savingEvidence, setSavingEvidence] = useState(false)
 
   // Students
   const [students, setStudents] = useState<any[]>([])
@@ -162,13 +189,13 @@ export default function Achievements() {
   const [filterLevel, setFilterLevel] = useState<PerformanceLevel | 'ALL'>('ALL')
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
 
-  // Duplicar logros a otros grupos
+  // Duplicar aprendizajes a otros grupos
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicatingAchievement, setDuplicatingAchievement] = useState<Achievement | null>(null)
   const [duplicateTargetIds, setDuplicateTargetIds] = useState<Set<string>>(new Set())
   const [duplicating, setDuplicating] = useState(false)
 
-  // Banco de logros
+  // Banco de aprendizajes
   const [showBank, setShowBank] = useState(false)
   const [bankItems, setBankItems] = useState<any[]>([])
   const [bankLoading, setBankLoading] = useState(false)
@@ -187,7 +214,7 @@ export default function Achievements() {
 
   const selectedAssignment = teacherAssignments.find(a => a.id === selectedAssignmentId)
 
-  // Cargar banco de logros
+  // Cargar banco de aprendizajes
   const loadBank = async () => {
     setBankLoading(true)
     try {
@@ -204,7 +231,7 @@ export default function Achievements() {
     }
   }
 
-  // Guardar logro actual al banco
+  // Guardar aprendizaje actual al banco
   const saveToBank = async (description: string) => {
     if (!description.trim()) return
     try {
@@ -214,7 +241,7 @@ export default function Achievements() {
         achievementType: 'ACADEMIC',
         isShared: true,
       })
-      setMessage({ type: 'success', text: 'Logro guardado en el banco' })
+      setMessage({ type: 'success', text: 'Aprendizaje guardado en el banco' })
       setTimeout(() => setMessage(null), 2000)
       if (showBank) loadBank()
     } catch (err) {
@@ -357,6 +384,12 @@ export default function Achievements() {
             displayMode: response.data.displayMode || 'SEPARATE',
             displayFormat: response.data.displayFormat || 'LIST',
             judgmentPosition: response.data.judgmentPosition || 'END_OF_EACH',
+            registrationModel: response.data.registrationModel || 'LEARNING_ONLY',
+            showLearningInReport: response.data.showLearningInReport ?? true,
+            showEvidencesInReport: response.data.showEvidencesInReport ?? false,
+            showLevelDescriptorInReport: response.data.showLevelDescriptorInReport ?? false,
+            showJudgmentInReport: response.data.showJudgmentInReport ?? true,
+            reportLearningGranularity: response.data.reportLearningGranularity || 'PRIMARY_ONLY',
           })
         }
         
@@ -511,10 +544,10 @@ export default function Achievements() {
       // Reload achievements
       const response = await achievementsApi.getByAssignment(selectedAssignmentId, selectedTermId)
       setAchievements(response.data || [])
-      setMessage({ type: 'success', text: 'Logro creado correctamente' })
+      setMessage({ type: 'success', text: 'Aprendizaje creado correctamente' })
     } catch (err) {
       console.error('Error creating achievement:', err)
-      setMessage({ type: 'error', text: 'Error al crear el logro' })
+      setMessage({ type: 'error', text: 'Error al crear el aprendizaje' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -530,13 +563,83 @@ export default function Achievements() {
         a.id === id ? { ...a, baseDescription } : a
       ))
       setEditingAchievement(null)
-      setMessage({ type: 'success', text: 'Logro actualizado' })
+      setMessage({ type: 'success', text: 'Aprendizaje actualizado' })
     } catch (err) {
       console.error('Error updating achievement:', err)
-      setMessage({ type: 'error', text: 'Error al actualizar el logro' })
+      setMessage({ type: 'error', text: 'Error al actualizar el aprendizaje' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  // Reload achievements for the current assignment/term.
+  const reloadAchievements = async () => {
+    if (!selectedAssignmentId || !selectedTermId) return
+    const response = await achievementsApi.getByAssignment(selectedAssignmentId, selectedTermId)
+    setAchievements(response.data || [])
+  }
+
+  // ── Evidencias de aprendizaje ──────────────────────────────────────────────
+  const handleAddEvidence = async (achievementId: string) => {
+    const text = (newEvidenceText[achievementId] || '').trim()
+    if (!text) return
+    setSavingEvidence(true)
+    try {
+      await achievementsApi.createEvidence(achievementId, text)
+      setNewEvidenceText(prev => ({ ...prev, [achievementId]: '' }))
+      await reloadAchievements()
+    } catch (err) {
+      console.error('Error creating evidence:', err)
+      setMessage({ type: 'error', text: 'Error al agregar la evidencia' })
+      setTimeout(() => setMessage(null), 3000)
+    } finally {
+      setSavingEvidence(false)
+    }
+  }
+
+  const handleUpdateEvidence = async (evidenceId: string, text: string) => {
+    const clean = text.trim()
+    if (!clean) return
+    setSavingEvidence(true)
+    try {
+      await achievementsApi.updateEvidence(evidenceId, { text: clean })
+      setEditingEvidenceId(null)
+      await reloadAchievements()
+    } catch (err) {
+      console.error('Error updating evidence:', err)
+      setMessage({ type: 'error', text: 'Error al actualizar la evidencia' })
+      setTimeout(() => setMessage(null), 3000)
+    } finally {
+      setSavingEvidence(false)
+    }
+  }
+
+  const handleDeleteEvidence = async (evidenceId: string) => {
+    if (!(await confirmDialog('¿Eliminar esta evidencia?', { danger: true }))) return
+    try {
+      await achievementsApi.deleteEvidence(evidenceId)
+      await reloadAchievements()
+    } catch (err) {
+      console.error('Error deleting evidence:', err)
+      setMessage({ type: 'error', text: 'Error al eliminar la evidencia' })
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  // Reordena una evidencia una posición arriba/abajo dentro de su aprendizaje.
+  const handleMoveEvidence = async (achievement: Achievement, evidenceId: string, direction: 'up' | 'down') => {
+    const list = [...(achievement.evidences || [])].sort((a, b) => a.orderNumber - b.orderNumber)
+    const idx = list.findIndex(e => e.id === evidenceId)
+    if (idx < 0) return
+    const swapWith = direction === 'up' ? idx - 1 : idx + 1
+    if (swapWith < 0 || swapWith >= list.length) return
+    ;[list[idx], list[swapWith]] = [list[swapWith], list[idx]]
+    try {
+      await achievementsApi.reorderEvidences(achievement.id, list.map(e => e.id))
+      await reloadAchievements()
+    } catch (err) {
+      console.error('Error reordering evidences:', err)
     }
   }
 
@@ -568,9 +671,9 @@ export default function Achievements() {
     setDuplicatingAchievement(null)
     setDuplicateTargetIds(new Set())
     if (successCount > 0) {
-      setMessage({ type: 'success', text: `Logro duplicado a ${successCount} grupo(s)${errorCount > 0 ? ` (${errorCount} error(es))` : ''}` })
+      setMessage({ type: 'success', text: `Aprendizaje duplicado a ${successCount} grupo(s)${errorCount > 0 ? ` (${errorCount} error(es))` : ''}` })
     } else {
-      setMessage({ type: 'error', text: 'Error al duplicar el logro' })
+      setMessage({ type: 'error', text: 'Error al duplicar el aprendizaje' })
     }
     setTimeout(() => setMessage(null), 3000)
   }
@@ -610,9 +713,9 @@ export default function Achievements() {
     setDuplicatingAchievement(null)
     setDuplicateTargetIds(new Set())
     if (successCount > 0) {
-      setMessage({ type: 'success', text: `${successCount} logro(s) duplicado(s) a ${duplicateTargetIds.size} grupo(s)${errorCount > 0 ? ` (${errorCount} error(es))` : ''}` })
+      setMessage({ type: 'success', text: `${successCount} aprendizaje(s) duplicado(s) a ${duplicateTargetIds.size} grupo(s)${errorCount > 0 ? ` (${errorCount} error(es))` : ''}` })
     } else {
-      setMessage({ type: 'error', text: 'Error al duplicar los logros' })
+      setMessage({ type: 'error', text: 'Error al duplicar los aprendizajes' })
     }
     setTimeout(() => setMessage(null), 3000)
   }
@@ -627,7 +730,7 @@ export default function Achievements() {
 
   // Delete achievement
   const handleDeleteAchievement = async (id: string) => {
-    if (!(await confirmDialog('¿Estás seguro de eliminar este logro?', { danger: true }))) return
+    if (!(await confirmDialog('¿Estás seguro de eliminar este aprendizaje?', { danger: true }))) return
     setSaving(true)
     try {
       await achievementsApi.delete(id)
@@ -635,10 +738,10 @@ export default function Achievements() {
       if (selectedAchievementId === id) {
         setSelectedAchievementId(null)
       }
-      setMessage({ type: 'success', text: 'Logro eliminado' })
+      setMessage({ type: 'success', text: 'Aprendizaje eliminado' })
     } catch (err) {
       console.error('Error deleting achievement:', err)
-      setMessage({ type: 'error', text: 'Error al eliminar el logro' })
+      setMessage({ type: 'error', text: 'Error al eliminar el aprendizaje' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -705,10 +808,10 @@ export default function Achievements() {
       })
       const response = await achievementsApi.getStudentAchievements(selectedAchievementId)
       setStudentAchievements(response.data || [])
-      setMessage({ type: 'success', text: 'Logro asignado a todos los estudiantes' })
+      setMessage({ type: 'success', text: 'Aprendizaje asignado a todos los estudiantes' })
     } catch (err) {
       console.error('Error bulk assigning:', err)
-      setMessage({ type: 'error', text: 'Error al asignar logro' })
+      setMessage({ type: 'error', text: 'Error al asignar aprendizaje' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -729,10 +832,10 @@ export default function Achievements() {
       const response = await achievementsApi.getStudentAchievements(selectedAchievementId)
       setStudentAchievements(response.data || [])
       setSelectedStudentIds(new Set())
-      setMessage({ type: 'success', text: `Logro asignado a ${selectedStudentIds.size} estudiantes` })
+      setMessage({ type: 'success', text: `Aprendizaje asignado a ${selectedStudentIds.size} estudiantes` })
     } catch (err) {
       console.error('Error assigning to selected:', err)
-      setMessage({ type: 'error', text: 'Error al asignar logro' })
+      setMessage({ type: 'error', text: 'Error al asignar aprendizaje' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -764,10 +867,10 @@ export default function Achievements() {
       setStudentAchievements(prev => prev.map(s => 
         s.id === sa.id ? { ...s, approvedText, approvedJudgment, isTextApproved: true, isJudgmentApproved: !!approvedJudgment } : s
       ))
-      setMessage({ type: 'success', text: 'Logro aprobado' })
+      setMessage({ type: 'success', text: 'Aprendizaje aprobado' })
     } catch (err) {
       console.error('Error approving achievement:', err)
-      setMessage({ type: 'error', text: 'Error al aprobar el logro' })
+      setMessage({ type: 'error', text: 'Error al aprobar el aprendizaje' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -784,10 +887,10 @@ export default function Achievements() {
         academicTermId: selectedTermId,
         description: attitudinalText.trim(),
       })
-      setMessage({ type: 'success', text: 'Logro actitudinal guardado' })
+      setMessage({ type: 'success', text: 'Aprendizaje actitudinal guardado' })
     } catch (err) {
       console.error('Error saving attitudinal:', err)
-      setMessage({ type: 'error', text: 'Error al guardar logro actitudinal' })
+      setMessage({ type: 'error', text: 'Error al guardar aprendizaje actitudinal' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -795,7 +898,7 @@ export default function Achievements() {
   }
 
   const tabs = [
-    { id: 'achievements' as TabType, label: 'Logros Académicos', icon: Target },
+    { id: 'achievements' as TabType, label: 'Aprendizajes y Evidencias', icon: Target },
     ...(isAdmin ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
   ]
 
@@ -811,8 +914,8 @@ export default function Achievements() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Logros y Juicios Valorativos</h1>
-          <p className="text-sm sm:text-base text-slate-500 mt-1">Gestión de logros académicos y juicios por desempeño</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Aprendizajes y Evidencias de Aprendizaje</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Aprendizajes/desempeños, sus evidencias, descriptores por nivel y juicio valorativo</p>
         </div>
       </div>
 
@@ -841,6 +944,40 @@ export default function Achievements() {
             </button>
           ))}
         </nav>
+      </div>
+
+      {/* Panel explicativo: cómo funciona el módulo */}
+      <div className="mb-6 border border-indigo-200 bg-indigo-50/60 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShowHelp(v => !v)}
+          className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-indigo-900">
+            <BookOpen className="w-4 h-4" />
+            ¿Cómo funciona este módulo?
+          </span>
+          <ChevronDown className={`w-4 h-4 text-indigo-500 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+        </button>
+        {showHelp && (
+          <div className="px-4 pb-4 text-sm text-slate-700 space-y-3">
+            <div className="text-xs font-mono bg-white/70 border border-indigo-100 rounded-lg px-3 py-2 text-indigo-900">
+              Asignatura → Aprendizaje → Evidencias → Valoración → Nivel → Descriptor
+              <span className="text-slate-400"> · (Juicio valorativo: opcional)</span>
+            </div>
+            <ul className="space-y-1.5 list-none">
+              <li><b>Aprendizaje / Desempeño</b> — <i>qué</i> se espera desarrollar. <span className="text-slate-500">Ej: "Comprende y aplica la lógica de los algoritmos para solucionar problemas sencillos."</span></li>
+              <li><b>Evidencia de aprendizaje</b> — <i>cómo se comprueba</i>. Un aprendizaje puede tener <b>varias</b>. <span className="text-slate-500">Ej: "Diseña algoritmos con estructuras condicionales."</span></li>
+              <li><b>Valoración + Nivel</b> — la nota y el nivel (Alto, etc.), que vienen del sistema de notas.</li>
+              <li><b>Descriptor del nivel</b> — cómo se manifiesta el aprendizaje en el nivel alcanzado.</li>
+              <li><b>Juicio valorativo</b> <span className="text-slate-400">(opcional)</span> — frase cualitativa por nivel.</li>
+            </ul>
+            <p className="text-xs text-slate-500">
+              {isAdmin
+                ? 'Como coordinador/admin: en la pestaña Configuración defines qué registra el docente y qué elementos aparecen en el boletín.'
+                : 'Como docente: registras los aprendizajes y sus evidencias. Lo que aparece en el boletín lo define el coordinador/admin.'}
+            </p>
+          </div>
+        )}
       </div>
 
       {activeTab === 'achievements' ? (
@@ -916,7 +1053,7 @@ export default function Achievements() {
                 <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Target className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-slate-900">Logros del Período</h3>
+                    <h3 className="font-semibold text-slate-900">Aprendizajes del Período</h3>
                   </div>
                   <div className="flex items-center gap-3">
                     {duplicateTargets.length > 0 && achievements.length > 0 && (
@@ -927,7 +1064,7 @@ export default function Achievements() {
                           setShowDuplicateModal(true)
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                        title="Duplicar todos los logros a otros grupos con la misma asignatura"
+                        title="Duplicar todos los aprendizajes a otros grupos con la misma asignatura"
                       >
                         <Copy className="w-3.5 h-3.5" />
                         Duplicar todos
@@ -954,7 +1091,7 @@ export default function Achievements() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-medium text-slate-500">
-                              Logro {achievement.orderNumber}
+                              Aprendizaje {achievement.orderNumber}
                             </span>
                           </div>
                           {editingAchievement === achievement.id ? (
@@ -999,7 +1136,7 @@ export default function Achievements() {
                                 saveToBank(achievement.baseDescription)
                               }}
                               className="p-1 hover:bg-green-100 rounded"
-                              title="Guardar en banco de logros"
+                              title="Guardar en banco de aprendizajes"
                             >
                               <Library className="w-4 h-4 text-green-500" />
                             </button>
@@ -1038,6 +1175,89 @@ export default function Achievements() {
                           </div>
                         )}
                       </div>
+
+                      {/* Evidencias de aprendizaje */}
+                      {config.registrationModel === 'LEARNING_AND_EVIDENCE' && editingAchievement !== achievement.id && (
+                        <div className="mt-3 pl-3 border-l-2 border-emerald-200" onClick={(e) => e.stopPropagation()}>
+                          <div className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide mb-1">
+                            Evidencias de aprendizaje
+                          </div>
+                          <div className="space-y-1.5">
+                            {[...(achievement.evidences || [])].sort((a, b) => a.orderNumber - b.orderNumber).map((ev, idx, arr) => (
+                              <div key={ev.id} className="flex items-start gap-2">
+                                <span className="text-emerald-400 text-sm leading-6">•</span>
+                                {editingEvidenceId === ev.id ? (
+                                  <div className="flex-1 flex gap-2">
+                                    <input
+                                      defaultValue={ev.text}
+                                      id={`edit-ev-${ev.id}`}
+                                      className="flex-1 px-2 py-1 border border-slate-300 rounded text-sm"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const el = document.getElementById(`edit-ev-${ev.id}`) as HTMLInputElement
+                                        handleUpdateEvidence(ev.id, el.value)
+                                      }}
+                                      disabled={savingEvidence}
+                                      className="px-2 py-1 bg-blue-600 text-white rounded text-xs"
+                                    >
+                                      Guardar
+                                    </button>
+                                    <button onClick={() => setEditingEvidenceId(null)} className="px-2 py-1 border border-slate-300 rounded text-xs">
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="flex-1 text-sm text-slate-700">{ev.text}</span>
+                                    <div className="flex items-center gap-0.5">
+                                      <button
+                                        onClick={() => handleMoveEvidence(achievement, ev.id, 'up')}
+                                        disabled={idx === 0}
+                                        className="p-0.5 hover:bg-slate-100 rounded disabled:opacity-30"
+                                        title="Subir"
+                                      >
+                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 rotate-180" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleMoveEvidence(achievement, ev.id, 'down')}
+                                        disabled={idx === arr.length - 1}
+                                        className="p-0.5 hover:bg-slate-100 rounded disabled:opacity-30"
+                                        title="Bajar"
+                                      >
+                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                      </button>
+                                      <button onClick={() => setEditingEvidenceId(ev.id)} className="p-0.5 hover:bg-slate-100 rounded" title="Editar">
+                                        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                                      </button>
+                                      <button onClick={() => handleDeleteEvidence(ev.id)} className="p-0.5 hover:bg-red-100 rounded" title="Eliminar">
+                                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <input
+                              value={newEvidenceText[achievement.id] || ''}
+                              onChange={(e) => setNewEvidenceText(prev => ({ ...prev, [achievement.id]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleAddEvidence(achievement.id) }}
+                              placeholder="Nueva evidencia de aprendizaje..."
+                              className="flex-1 px-2 py-1 border border-slate-300 rounded text-sm"
+                            />
+                            <button
+                              onClick={() => handleAddEvidence(achievement.id)}
+                              disabled={savingEvidence || !(newEvidenceText[achievement.id] || '').trim()}
+                              className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Agregar evidencia
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -1046,7 +1266,7 @@ export default function Achievements() {
                       <textarea
                         value={newAchievementText}
                         onChange={(e) => setNewAchievementText(e.target.value)}
-                        placeholder="Escriba el texto del logro académico..."
+                        placeholder="Escriba el texto del aprendizaje académico..."
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                         rows={3}
                       />
@@ -1057,14 +1277,14 @@ export default function Achievements() {
                           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
                         >
                           <Plus className="w-4 h-4" />
-                          Agregar Logro
+                          Agregar Aprendizaje
                         </button>
                         <button
                           onClick={() => { setShowBank(!showBank); if (!showBank) loadBank() }}
                           className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-colors ${showBank ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-300 hover:bg-slate-50 text-slate-600'}`}
                         >
                           <Library className="w-4 h-4" />
-                          Banco de Logros
+                          Banco de Aprendizajes
                         </button>
                         {newAchievementText.trim() && (
                           <button
@@ -1078,12 +1298,12 @@ export default function Achievements() {
                         )}
                       </div>
 
-                      {/* Panel Banco de Logros */}
+                      {/* Panel Banco de Aprendizajes */}
                       {showBank && (
                         <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-3">
                           <div className="flex items-center gap-2 mb-1">
                             <Library className="w-4 h-4 text-indigo-600" />
-                            <span className="text-sm font-semibold text-slate-800">Banco de Logros</span>
+                            <span className="text-sm font-semibold text-slate-800">Banco de Aprendizajes</span>
                             <span className="text-xs text-slate-400">Seleccione para usar como texto base</span>
                           </div>
                           <div className="flex gap-2 flex-wrap">
@@ -1117,8 +1337,8 @@ export default function Achievements() {
                           ) : bankItems.length === 0 ? (
                             <div className="text-center py-4">
                               <Library className="w-6 h-6 mx-auto text-slate-300 mb-1" />
-                              <p className="text-xs text-slate-500">No hay logros en el banco</p>
-                              <p className="text-[10px] text-slate-400">Escribe un logro y presiona "Guardar al banco" para agregarlo</p>
+                              <p className="text-xs text-slate-500">No hay aprendizajes en el banco</p>
+                              <p className="text-[10px] text-slate-400">Escribe un aprendizaje y presiona "Guardar al banco" para agregarlo</p>
                             </div>
                           ) : (
                             <div className="max-h-48 overflow-y-auto space-y-1.5">
@@ -1129,7 +1349,7 @@ export default function Achievements() {
                                   onClick={() => {
                                     setNewAchievementText(item.description)
                                     achievementBankApi.markUsed(item.id).catch(() => {})
-                                    setMessage({ type: 'success', text: 'Texto del logro insertado' })
+                                    setMessage({ type: 'success', text: 'Texto del aprendizaje insertado' })
                                     setTimeout(() => setMessage(null), 2000)
                                   }}
                                 >
@@ -1167,12 +1387,12 @@ export default function Achievements() {
                     <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
                       <div className="flex items-center gap-2 mb-2">
                         <Heart className="w-4 h-4 text-amber-600" />
-                        <span className="text-sm font-medium text-amber-800">Logro Actitudinal</span>
+                        <span className="text-sm font-medium text-amber-800">Aprendizaje Actitudinal</span>
                       </div>
                       <textarea
                         value={attitudinalText}
                         onChange={(e) => setAttitudinalText(e.target.value)}
-                        placeholder="Escriba el logro actitudinal del período..."
+                        placeholder="Escriba el aprendizaje actitudinal del período..."
                         className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm mb-2"
                         rows={2}
                       />
@@ -1258,7 +1478,7 @@ export default function Achievements() {
                   {!selectedAchievementId ? (
                     <div className="text-center py-8 text-slate-500">
                       <Target className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-                      <p>Seleccione un logro para ver los estudiantes</p>
+                      <p>Seleccione un aprendizaje para ver los estudiantes</p>
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-[500px] overflow-y-auto">
@@ -1294,21 +1514,21 @@ export default function Achievements() {
           ) : (
             <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
               <BookOpen className="w-12 h-12 mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500">Seleccione un grupo, asignatura y período para gestionar los logros</p>
+              <p className="text-slate-500">Seleccione un grupo, asignatura y período para gestionar los aprendizajes</p>
             </div>
           )}
         </div>
       ) : (
         /* Configuration Tab */
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-6">Configuración de Logros</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-6">Configuración de Aprendizajes y Evidencias</h3>
 
           <div className="space-y-6">
             {/* Basic Config */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Número de logros por período
+                  Número de aprendizajes por período
                 </label>
                 <input
                   type="number"
@@ -1328,7 +1548,7 @@ export default function Achievements() {
                     onChange={(e) => setConfig({ ...config, usePromotionalAchievement: e.target.checked })}
                     className="w-4 h-4 text-blue-600 rounded"
                   />
-                  <span className="text-sm text-slate-700">Usar logro promocional (fin de año)</span>
+                  <span className="text-sm text-slate-700">Usar aprendizaje promocional (fin de año)</span>
                 </label>
 
                 <label className="flex items-center gap-3">
@@ -1361,9 +1581,47 @@ export default function Achievements() {
               </div>
             </div>
 
+            {/* Registration Model */}
+            <div className="border-t border-slate-200 pt-6">
+              <h4 className="font-medium text-slate-800 mb-1">Modelo de registro académico</h4>
+              <p className="text-sm text-slate-500 mb-4">Define qué debe capturar el docente por cada asignatura.</p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="registrationModel"
+                    checked={config.registrationModel === 'LEARNING_ONLY'}
+                    onChange={() => setConfig({ ...config, registrationModel: 'LEARNING_ONLY' })}
+                    className="w-4 h-4 mt-0.5 text-blue-600"
+                  />
+                  <span className="text-sm text-slate-700">
+                    <b>Solo aprendizajes / desempeños</b>
+                    <span className="block text-xs text-slate-500">El docente registra únicamente el aprendizaje esperado.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="registrationModel"
+                    checked={config.registrationModel === 'LEARNING_AND_EVIDENCE'}
+                    onChange={() => setConfig({ ...config, registrationModel: 'LEARNING_AND_EVIDENCE' })}
+                    className="w-4 h-4 mt-0.5 text-blue-600"
+                  />
+                  <span className="text-sm text-slate-700">
+                    <b>Aprendizajes + evidencias de aprendizaje</b>
+                    <span className="block text-xs text-slate-500">Cada aprendizaje puede tener una o varias evidencias.</span>
+                  </span>
+                </label>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                ¿"Solo evidencias" en el boletín? No es un modo de registro: actívalo abajo en
+                "Contenido descriptivo del boletín" mostrando solo las evidencias.
+              </p>
+            </div>
+
             {/* Attitudinal Config */}
             <div className="border-t border-slate-200 pt-6">
-              <h4 className="font-medium text-slate-800 mb-4">Logro Actitudinal</h4>
+              <h4 className="font-medium text-slate-800 mb-4">Aprendizaje Actitudinal</h4>
               
               <label className="flex items-center gap-3 mb-4">
                 <input
@@ -1372,19 +1630,19 @@ export default function Achievements() {
                   onChange={(e) => setConfig({ ...config, useAttitudinalAchievement: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded"
                 />
-                <span className="text-sm text-slate-700">Habilitar logro actitudinal</span>
+                <span className="text-sm text-slate-700">Habilitar aprendizaje actitudinal</span>
               </label>
 
               {config.useAttitudinalAchievement && (
                 <div className="ml-7">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Modo del logro actitudinal</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Modo del aprendizaje actitudinal</label>
                   <select
                     value={config.attitudinalMode}
                     onChange={(e) => setConfig({ ...config, attitudinalMode: e.target.value as any })}
                     className="w-full max-w-md px-3 py-2 border border-slate-300 rounded-lg"
                   >
-                    <option value="GENERAL_PER_PERIOD">Un logro actitudinal general por período</option>
-                    <option value="PER_ACADEMIC_ACHIEVEMENT">Un logro actitudinal por cada logro académico</option>
+                    <option value="GENERAL_PER_PERIOD">Un aprendizaje actitudinal general por período</option>
+                    <option value="PER_ACADEMIC_ACHIEVEMENT">Un aprendizaje actitudinal por cada aprendizaje académico</option>
                   </select>
                 </div>
               )}
@@ -1432,11 +1690,55 @@ export default function Achievements() {
                     onChange={(e) => setConfig({ ...config, judgmentPosition: e.target.value as any })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg"
                   >
-                    <option value="END_OF_EACH">Al final de cada logro</option>
-                    <option value="END_OF_ALL">Al final de todos los logros</option>
+                    <option value="END_OF_EACH">Al final de cada aprendizaje</option>
+                    <option value="END_OF_ALL">Al final de todos los aprendizajes</option>
                     <option value="NONE">No mostrar</option>
                   </select>
                 </div>
+              </div>
+            </div>
+
+            {/* Contenido descriptivo del boletín */}
+            <div className="border-t border-slate-200 pt-6">
+              <h4 className="font-medium text-slate-800 mb-1">Contenido descriptivo del boletín</h4>
+              <p className="text-sm text-slate-500 mb-4">Elige qué elementos aparecen en el boletín. Se pueden combinar libremente.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { key: 'showLearningInReport', label: 'Aprendizaje / desempeño', desc: 'El aprendizaje esperado.' },
+                  { key: 'showEvidencesInReport', label: 'Evidencias de aprendizaje', desc: 'Las evidencias registradas.' },
+                  { key: 'showLevelDescriptorInReport', label: 'Descriptor del nivel', desc: 'El descriptor del nivel alcanzado.' },
+                  { key: 'showJudgmentInReport', label: 'Juicio valorativo', desc: 'La frase cualitativa (si existe).' },
+                ] as const).map((item) => (
+                  <label key={item.key} className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={(config as any)[item.key]}
+                      onChange={(e) => setConfig({ ...config, [item.key]: e.target.checked } as any)}
+                      className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                    />
+                    <span className="text-sm text-slate-700">
+                      <b>{item.label}</b>
+                      <span className="block text-xs text-slate-500">{item.desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Aprendizajes a mostrar por asignatura</label>
+                <select
+                  value={config.reportLearningGranularity}
+                  onChange={(e) => setConfig({ ...config, reportLearningGranularity: e.target.value as any })}
+                  className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="PRIMARY_ONLY">Solo el principal (según el nivel alcanzado)</option>
+                  <option value="ALL">Todos los aprendizajes del período</option>
+                </select>
+              </div>
+
+              <div className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <b>Ejemplo:</b> con Aprendizaje ✓ y Evidencias ✓ (Descriptor y Juicio ✗), el boletín muestra el
+                aprendizaje y su lista de evidencias. Marcando solo Evidencias, muestra únicamente las evidencias.
               </div>
             </div>
 
@@ -1518,13 +1820,13 @@ export default function Achievements() {
         </div>
       )}
 
-      {/* Modal: Duplicar logro(s) a otros grupos */}
+      {/* Modal: Duplicar aprendizaje(s) a otros grupos */}
       {showDuplicateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900">
-                {duplicatingAchievement ? 'Duplicar Logro' : 'Duplicar Todos los Logros'}
+                {duplicatingAchievement ? 'Duplicar Aprendizaje' : 'Duplicar Todos los Aprendizajes'}
               </h2>
               <button onClick={() => setShowDuplicateModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5" />
@@ -1534,12 +1836,12 @@ export default function Achievements() {
             <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
               {duplicatingAchievement ? (
                 <>
-                  <p className="text-xs text-slate-500 mb-1">Logro a duplicar:</p>
+                  <p className="text-xs text-slate-500 mb-1">Aprendizaje a duplicar:</p>
                   <p className="text-sm text-slate-700">{duplicatingAchievement.baseDescription}</p>
                 </>
               ) : (
                 <>
-                  <p className="text-xs text-slate-500 mb-1">Se duplicarán {achievements.length} logro(s):</p>
+                  <p className="text-xs text-slate-500 mb-1">Se duplicarán {achievements.length} aprendizaje(s):</p>
                   <ul className="space-y-1 mt-1">
                     {achievements.map((a, i) => (
                       <li key={a.id} className="text-sm text-slate-700 flex gap-2">
@@ -1689,7 +1991,7 @@ function StudentAchievementCard({
             {LEVEL_LABELS[level]}
           </span>
           {hasAchievement && (
-            <CheckCircle className="w-4 h-4 text-green-500" aria-label="Logro asignado" />
+            <CheckCircle className="w-4 h-4 text-green-500" aria-label="Aprendizaje asignado" />
           )}
         </div>
       </div>
@@ -1791,7 +2093,7 @@ function StudentAchievementCard({
       )}
 
       {!hasAchievement && (
-        <p className="ml-8 text-sm text-slate-400 italic">Sin logro asignado</p>
+        <p className="ml-8 text-sm text-slate-400 italic">Sin aprendizaje asignado</p>
       )}
     </div>
   )

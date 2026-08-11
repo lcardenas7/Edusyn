@@ -33,6 +33,24 @@ export interface TemplateCtx {
   showAttendance: boolean;
   showVerification: boolean;
   verificationCode?: string;
+  // Contenido descriptivo (Aprendizajes y Evidencias). Si no viene, se asume el
+  // comportamiento histórico (solo aprendizaje/narrativa).
+  achievementContent?: {
+    showLearning: boolean;
+    showEvidences: boolean;
+    showLevelDescriptor: boolean;
+    showJudgment: boolean;
+    granularity: 'PRIMARY_ONLY' | 'ALL';
+  };
+}
+
+// Tipo de un bloque descriptivo por asignatura que llega desde el backend.
+export interface LearningBlock {
+  learning: string | null;
+  evidences: string[];
+  levelDescriptor: string | null;
+  judgment: string | null;
+  performanceLevel: string | null;
 }
 
 export interface TemplateMeta {
@@ -62,7 +80,7 @@ export const TEMPLATE_CATALOG: TemplateMeta[] = [
   {
     key: 'multiperiodo-tabular',
     name: 'Multiperíodo Tabular (San José)',
-    description: 'Tabla Área·Asignatura·I.H.·Logro·P1..Pn·DEF·Desempeño, acumulado y recuperaciones. Bachillerato/primaria.',
+    description: 'Tabla Área·Asignatura·I.H.·Aprendizaje·P1..Pn·DEF·Desempeño, acumulado y recuperaciones. Bachillerato/primaria.',
     supportedStructures: ['AREAS_SUBJECTS', 'SUBJECTS_ONLY'],
     multiperiod: true,
   },
@@ -78,6 +96,49 @@ const fmt1 = (n: number | null | undefined): string =>
 const studentName = (s: any): string =>
   [s?.lastName, s?.secondLastName, s?.firstName, s?.secondName].filter(Boolean).join(' ') ||
   [s?.firstName, s?.lastName].filter(Boolean).join(' ');
+
+/**
+ * Renderiza el contenido descriptivo por asignatura (Aprendizaje → Evidencias →
+ * Descriptor del nivel → Juicio valorativo) respetando la configuración institucional.
+ * Cae al comportamiento histórico (mostrar la narrativa/aprendizaje) si no hay flags.
+ */
+function renderLearningBlocks(sub: any, ctx: TemplateCtx): string {
+  const c = ctx.colors;
+  const cfg = ctx.achievementContent;
+  const blocks: LearningBlock[] = (sub?.learningBlocks as LearningBlock[]) || [];
+
+  // Fallback histórico: sin config o sin bloques → narrativa simple (aprendizaje).
+  if (!cfg || blocks.length === 0) {
+    const narrative = sub?.achievement || sub?.qualitativeObservation || sub?.achievementObservation || '';
+    return narrative
+      ? `<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4;">${esc(narrative)}</div>`
+      : '';
+  }
+
+  const label = (t: string) =>
+    `<span style="font-size:9px;font-weight:800;color:${c.primary};text-transform:uppercase;letter-spacing:0.3px;">${esc(t)}</span>`;
+
+  const parts = blocks.map((b) => {
+    const rows: string[] = [];
+    if (cfg.showLearning && b.learning) {
+      rows.push(`<div style="margin-top:3px;">${label('Aprendizaje')}<div style="font-size:10px;color:#334155;line-height:1.4;">${esc(b.learning)}</div></div>`);
+    }
+    if (cfg.showEvidences && b.evidences && b.evidences.length > 0) {
+      const items = b.evidences.map((e) => `<li style="margin:1px 0;">${esc(e)}</li>`).join('');
+      rows.push(`<div style="margin-top:3px;">${label('Evidencias de aprendizaje')}<ul style="margin:2px 0 0 14px;padding:0;font-size:10px;color:#475569;line-height:1.4;">${items}</ul></div>`);
+    }
+    if (cfg.showLevelDescriptor && b.levelDescriptor) {
+      const lvl = b.performanceLevel ? (ctx.performanceLabels[b.performanceLevel] || b.performanceLevel) : '';
+      rows.push(`<div style="margin-top:3px;">${label(`Descriptor del nivel${lvl ? ' ' + lvl : ''}`)}<div style="font-size:10px;color:#475569;line-height:1.4;">${esc(b.levelDescriptor)}</div></div>`);
+    }
+    if (cfg.showJudgment && b.judgment) {
+      rows.push(`<div style="margin-top:3px;">${label('Juicio valorativo')}<div style="font-size:10px;color:#64748b;font-style:italic;line-height:1.4;">${esc(b.judgment)}</div></div>`);
+    }
+    return rows.join('');
+  }).filter(Boolean);
+
+  return parts.join('<div style="height:5px;"></div>');
+}
 
 function headerBlock(ctx: TemplateCtx): string {
   const c = ctx.colors;
@@ -170,14 +231,14 @@ export function buildPreescolarNarrativoHtml(data: any, ctx: TemplateCtx, period
   const dimensions = areas.map(area => {
     const subjects = (area.subjects || []) as any[];
     const rows = subjects.map(sub => {
-      const narrative = sub.achievement || sub.qualitativeObservation || sub.achievementObservation || '';
+      const descriptive = renderLearningBlocks(sub, ctx);
       return `
         <div style="padding:7px 0;border-bottom:1px dashed #e2e8f0;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
             <span style="font-size:11px;font-weight:700;color:${c.text};">${esc(sub.subject)}</span>
             ${levelChip(sub.performanceLevel)}
           </div>
-          ${narrative ? `<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4;">${esc(narrative)}</div>` : ''}
+          ${descriptive}
         </div>`;
     }).join('');
     return `
@@ -290,7 +351,7 @@ export function buildMultiperiodoTabularHtml(year: any, ctx: TemplateCtx, extra?
             <th style="padding:4px;text-align:left;">Área</th>
             <th style="padding:4px;text-align:left;">Asignatura</th>
             <th style="padding:4px;">I.H.</th>
-            <th style="padding:4px;text-align:left;">Logro</th>
+            <th style="padding:4px;text-align:left;">Aprendizaje</th>
             ${periodHeaders}
             <th style="padding:4px;">DEF.</th>
             <th style="padding:4px;">Desemp.</th>

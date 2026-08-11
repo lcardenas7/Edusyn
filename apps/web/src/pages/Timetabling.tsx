@@ -2061,7 +2061,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                       <div className="bg-red-100 rounded p-2 mb-3 text-xs text-red-800">
                         <p>• <strong>{deleteWarning.partialGrades}</strong> calificaciones parciales se perderán permanentemente</p>
                         <p>• <strong>{deleteWarning.assignments}</strong> asignaciones activas serán eliminadas</p>
-                        <p>• Logros, asistencia, desempeños y horarios asociados también se borrarán</p>
+                        <p>• Aprendizajes, asistencia, desempeños y horarios asociados también se borrarán</p>
                       </div>
                       <div className="flex gap-2">
                         <button

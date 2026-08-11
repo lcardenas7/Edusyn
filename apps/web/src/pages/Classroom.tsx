@@ -5679,7 +5679,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-violet-600" /> Valeria
                 </h3>
-                <p className="text-sm text-slate-500">Ayuda general de Edusyn, Classroom, quizzes, exámenes, logros e instructivos</p>
+                <p className="text-sm text-slate-500">Ayuda general de Edusyn, Classroom, quizzes, exámenes, aprendizajes e instructivos</p>
               </div>
               <button onClick={() => setShowValeriaModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-400" />

@@ -54,6 +54,12 @@ export class AchievementController {
       displayMode?: 'SEPARATE' | 'COMBINED';
       displayFormat?: 'LIST' | 'PARAGRAPH';
       judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
+      registrationModel?: 'LEARNING_ONLY' | 'LEARNING_AND_EVIDENCE';
+      showLearningInReport?: boolean;
+      showEvidencesInReport?: boolean;
+      showLevelDescriptorInReport?: boolean;
+      showJudgmentInReport?: boolean;
+      reportLearningGranularity?: 'PRIMARY_ONLY' | 'ALL';
     },
   ) {
     try {
@@ -165,6 +171,7 @@ export class AchievementController {
       baseDescription: string;
       isPromotional?: boolean;
       levelDescriptors?: Array<{ levelCode: string; text: string }>;
+      evidences?: Array<{ text: string }>;
     },
   ) {
     return this.achievementService.createAchievement(body);
@@ -174,15 +181,49 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async updateAchievement(
     @Param('id') id: string,
-    @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> },
+    @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> },
   ) {
     return this.achievementService.updateAchievement(id, body);
+  }
+
+  @Post(':id/duplicate')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async duplicateAchievement(@Param('id') id: string) {
+    return this.achievementService.duplicateAchievement(id);
   }
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async deleteAchievement(@Param('id') id: string) {
     return this.achievementService.deleteAchievement(id);
+  }
+
+  // ============================================
+  // EVIDENCIAS DE APRENDIZAJE
+  // ============================================
+
+  @Post(':id/evidences')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async createEvidence(@Param('id') achievementId: string, @Body() body: { text: string }) {
+    return this.achievementService.createEvidence(achievementId, body.text);
+  }
+
+  @Put(':id/evidences/reorder')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async reorderEvidences(@Param('id') achievementId: string, @Body() body: { orderedIds: string[] }) {
+    return this.achievementService.reorderEvidences(achievementId, body.orderedIds);
+  }
+
+  @Put('evidences/:evidenceId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async updateEvidence(@Param('evidenceId') evidenceId: string, @Body() body: { text?: string; isActive?: boolean }) {
+    return this.achievementService.updateEvidence(evidenceId, body);
+  }
+
+  @Delete('evidences/:evidenceId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async deleteEvidence(@Param('evidenceId') evidenceId: string) {
+    return this.achievementService.deleteEvidence(evidenceId);
   }
 
   // ============================================

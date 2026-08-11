@@ -335,7 +335,7 @@ export default function InstitutionalPortfolio() {
           <SectionHeader icon={Icon.users(C.primary)} title="Beneficios por Rol" subtitle="Cada usuario del sistema obtiene ventajas específicas según sus responsabilidades" color={C.primary} />
           <RoleSection icon={Icon.book(C.primary)} role="Docente" color={C.primary} benefits={[
             'Registro de notas desde cualquier dispositivo', 'Cálculo automático de promedios ponderados',
-            'Observador del estudiante integrado', 'Logros y desempeños por asignatura',
+            'Observador del estudiante integrado', 'Aprendizajes y desempeños por asignatura',
             'Ahorro de 6 a 10 horas semanales', 'Sin Excel, sin fórmulas manuales',
           ]} />
           <RoleSection icon={Icon.target(C.green)} role="Coordinación Académica" color={C.green} benefits={[

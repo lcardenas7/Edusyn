@@ -863,7 +863,7 @@ export default function AcademicTemplates() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Logros por período</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Aprendizajes por período</label>
                   <input
                     type="number"
                     min="1"
@@ -881,7 +881,7 @@ export default function AcademicTemplates() {
                       onChange={(e) => setTemplateForm({ ...templateForm, useAttitudinalAchievement: e.target.checked })}
                       className="w-4 h-4 text-blue-600 rounded"
                     />
-                    <span className="text-sm text-gray-700">Logro actitudinal</span>
+                    <span className="text-sm text-gray-700">Aprendizaje actitudinal</span>
                   </label>
                 </div>
               </div>

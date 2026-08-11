@@ -50,6 +50,7 @@ export class AchievementService {
         },
         attitudinalAchievements: true,
         levelDescriptors: true,
+        evidences: { orderBy: { orderNumber: 'asc' } },
       },
     });
   }
@@ -83,6 +84,7 @@ export class AchievementService {
     isPromotional?: boolean;
     achievementType?: 'ACADEMIC' | 'ATTITUDINAL' | 'PROMOTIONAL';
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
+    evidences?: Array<{ text: string }>;
   }) {
     // Generate code automatically
     const assignment = await this.prisma.teacherAssignment.findUnique({
@@ -105,6 +107,7 @@ export class AchievementService {
 
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     const descriptors = (data.levelDescriptors ?? []).filter((d) => d.levelCode && d.text?.trim());
+    const evidences = (data.evidences ?? []).filter((e) => e.text?.trim());
     return this.prisma.achievement.create({
       data: {
         institutionId: ta!.institutionId,
@@ -118,12 +121,15 @@ export class AchievementService {
         ...(descriptors.length > 0
           ? { levelDescriptors: { create: descriptors.map((d) => ({ levelCode: d.levelCode, text: d.text.trim() })) } }
           : {}),
+        ...(evidences.length > 0
+          ? { evidences: { create: evidences.map((e, i) => ({ text: e.text.trim(), orderNumber: i + 1 })) } }
+          : {}),
       },
-      include: { levelDescriptors: true },
+      include: { levelDescriptors: true, evidences: { orderBy: { orderNumber: 'asc' } } },
     });
   }
 
-  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> }) {
+  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> }) {
     // Reemplazo total de descriptores solo si el cliente los envía (undefined = no tocar).
     if (data.levelDescriptors !== undefined) {
       const descriptors = data.levelDescriptors.filter((d) => d.levelCode && d.text?.trim());
@@ -135,16 +141,116 @@ export class AchievementService {
         });
       }
     }
+    // Reemplazo total de evidencias solo si el cliente las envía (undefined = no tocar).
+    if (data.evidences !== undefined) {
+      const evidences = data.evidences.filter((e) => e.text?.trim());
+      await this.prisma.achievementEvidence.deleteMany({ where: { achievementId: id } });
+      if (evidences.length > 0) {
+        await this.prisma.achievementEvidence.createMany({
+          data: evidences.map((e, i) => ({ achievementId: id, text: e.text.trim(), orderNumber: i + 1 })),
+        });
+      }
+    }
     return this.prisma.achievement.update({
       where: { id },
       data: { baseDescription: data.baseDescription },
-      include: { levelDescriptors: true },
+      include: { levelDescriptors: true, evidences: { orderBy: { orderNumber: 'asc' } } },
     });
   }
 
   async deleteAchievement(id: string) {
     return this.prisma.achievement.delete({
       where: { id },
+    });
+  }
+
+  // ============================================
+  // EVIDENCIAS DE APRENDIZAJE
+  // ============================================
+
+  async createEvidence(achievementId: string, text: string) {
+    const clean = text?.trim();
+    if (!clean) throw new BadRequestException('El texto de la evidencia es obligatorio');
+    const last = await this.prisma.achievementEvidence.findFirst({
+      where: { achievementId },
+      orderBy: { orderNumber: 'desc' },
+      select: { orderNumber: true },
+    });
+    return this.prisma.achievementEvidence.create({
+      data: { achievementId, text: clean, orderNumber: (last?.orderNumber ?? 0) + 1 },
+    });
+  }
+
+  async updateEvidence(id: string, data: { text?: string; isActive?: boolean }) {
+    const updateData: any = {};
+    if (data.text !== undefined) {
+      const clean = data.text.trim();
+      if (!clean) throw new BadRequestException('El texto de la evidencia es obligatorio');
+      updateData.text = clean;
+    }
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    return this.prisma.achievementEvidence.update({ where: { id }, data: updateData });
+  }
+
+  async deleteEvidence(id: string) {
+    return this.prisma.achievementEvidence.delete({ where: { id } });
+  }
+
+  /** Reordena las evidencias de un aprendizaje según el arreglo de IDs recibido. */
+  async reorderEvidences(achievementId: string, orderedIds: string[]) {
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.achievementEvidence.updateMany({
+          where: { id, achievementId },
+          data: { orderNumber: index + 1 },
+        }),
+      ),
+    );
+    return this.prisma.achievementEvidence.findMany({
+      where: { achievementId },
+      orderBy: { orderNumber: 'asc' },
+    });
+  }
+
+  /** Duplica un aprendizaje con sus evidencias y descriptores de nivel (sin las valoraciones de estudiantes). */
+  async duplicateAchievement(id: string) {
+    const source = await this.prisma.achievement.findUnique({
+      where: { id },
+      include: { levelDescriptors: true, evidences: { orderBy: { orderNumber: 'asc' } } },
+    });
+    if (!source) throw new NotFoundException('Aprendizaje no encontrado');
+
+    // Siguiente orderNumber disponible para la misma asignación/período/tipo promocional.
+    const last = await this.prisma.achievement.findFirst({
+      where: {
+        teacherAssignmentId: source.teacherAssignmentId,
+        academicTermId: source.academicTermId,
+        isPromotional: source.isPromotional,
+      },
+      orderBy: { orderNumber: 'desc' },
+      select: { orderNumber: true },
+    });
+    const nextOrder = (last?.orderNumber ?? 0) + 1;
+    const code = `${source.code}-COPIA-${nextOrder}`;
+
+    return this.prisma.achievement.create({
+      data: {
+        institutionId: source.institutionId,
+        code,
+        teacherAssignmentId: source.teacherAssignmentId,
+        academicTermId: source.academicTermId,
+        orderNumber: nextOrder,
+        achievementType: source.achievementType,
+        baseDescription: source.baseDescription,
+        isPromotional: source.isPromotional,
+        ...(source.levelDescriptors.length > 0
+          ? { levelDescriptors: { create: source.levelDescriptors.map((d) => ({ levelCode: d.levelCode, text: d.text })) } }
+          : {}),
+        ...(source.evidences.length > 0
+          ? { evidences: { create: source.evidences.map((e) => ({ text: e.text, orderNumber: e.orderNumber, isActive: e.isActive })) } }
+          : {}),
+      },
+      include: { levelDescriptors: true, evidences: { orderBy: { orderNumber: 'asc' } } },
     });
   }
 

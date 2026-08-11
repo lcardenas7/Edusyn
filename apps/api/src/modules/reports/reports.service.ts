@@ -178,6 +178,7 @@ export class ReportsService {
           term: groupData.term,
           academicStructure: groupData.academicStructure,
           displayConfig: groupData.displayConfig,
+          reportContent: groupData.reportContent,
           student: card.student,
           group: card.group,
           areaGrades: card.areaGrades,
@@ -219,6 +220,7 @@ export class ReportsService {
           term: groupData.term,
           academicStructure: groupData.academicStructure,
           displayConfig: groupData.displayConfig,
+          reportContent: groupData.reportContent,
           student: card.student,
           group: card.group,
           areaGrades: card.areaGrades,
@@ -2598,6 +2600,13 @@ export class ReportsService {
     term: { id: string; name: string; type: string };
     academicStructure: AcademicStructureType;
     displayConfig: ReturnType<typeof getDisplayConfig>;
+    reportContent: {
+      showLearning: boolean;
+      showEvidences: boolean;
+      showLevelDescriptor: boolean;
+      showJudgment: boolean;
+      granularity: 'PRIMARY_ONLY' | 'ALL';
+    };
     cards: Array<{
       enrollmentId: string;
       student: { id: string; firstName: string; lastName: string; documentType: string; documentNumber: string };
@@ -2622,6 +2631,7 @@ export class ReportsService {
           achievementObservation: string | null;
           qualitativeObservation: string | null;
           judgment: string | null;
+          learningBlocks?: Array<{ learning: string | null; evidences: string[]; levelDescriptor: string | null; judgment: string | null; performanceLevel: string | null }>;
         }>;
       }>;
       subjectGrades: Array<{
@@ -2641,6 +2651,7 @@ export class ReportsService {
         achievementObservation: string | null;
         qualitativeObservation: string | null;
         judgment: string | null;
+        learningBlocks?: Array<{ learning: string | null; evidences: string[]; levelDescriptor: string | null; judgment: string | null; performanceLevel: string | null }>;
       }>;
       structureSource: 'snapshot' | 'calculated';
       attendance: { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number };
@@ -2876,6 +2887,8 @@ export class ReportsService {
             teacherAssignment: {
               include: { subject: true },
             },
+            levelDescriptors: true,
+            evidences: { where: { isActive: true }, orderBy: { orderNumber: 'asc' } },
           },
         },
       },
@@ -2889,6 +2902,16 @@ export class ReportsService {
       list.push(sa);
       achievementsMap.set(sa.studentEnrollmentId, list);
     }
+
+    // ─── Configuración del módulo Aprendizajes/Evidencias para el boletín ──
+    const achConfig = await this.prisma.achievementConfig.findUnique({ where: { institutionId } });
+    const reportContent = {
+      showLearning: achConfig?.showLearningInReport ?? true,
+      showEvidences: achConfig?.showEvidencesInReport ?? false,
+      showLevelDescriptor: achConfig?.showLevelDescriptorInReport ?? false,
+      showJudgment: achConfig?.showJudgmentInReport ?? true,
+      granularity: (achConfig?.reportLearningGranularity ?? 'PRIMARY_ONLY') as 'PRIMARY_ONLY' | 'ALL',
+    };
 
     // ─── QUERY 10: StudentObservations de todos los estudiantes (batch) ──
     const obsWhere: any = {
@@ -3104,15 +3127,28 @@ export class ReportsService {
         return normalized || null;
       };
 
-      const achievements = studentAchievements.map(sa => ({
-        subjectId: sa.achievement.teacherAssignment?.subject?.id || null,
-        subject: sa.achievement.teacherAssignment?.subject?.name || '',
-        orderNumber: sa.achievement.orderNumber,
-        description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
-        performanceLevel: normalizePerformanceLevel(sa.performanceLevel),
-        observation: sa.observation || null,
-        judgment: sa.approvedJudgment || sa.suggestedJudgment || null,
-      }));
+      const achievements = studentAchievements.map(sa => {
+        const level = normalizePerformanceLevel(sa.performanceLevel);
+        // Descriptor del nivel alcanzado (empareja levelCode con el nivel, tolerante a mayúsculas).
+        const levelDescriptor = level
+          ? (sa.achievement.levelDescriptors || []).find(
+              (d: any) => (d.levelCode || '').trim().toUpperCase() === level,
+            )?.text || null
+          : null;
+        return {
+          subjectId: sa.achievement.teacherAssignment?.subject?.id || null,
+          subject: sa.achievement.teacherAssignment?.subject?.name || '',
+          orderNumber: sa.achievement.orderNumber,
+          description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
+          // Texto base del aprendizaje (sin modificaciones por nivel), para el bloque "Aprendizaje".
+          learning: sa.achievement.baseDescription || null,
+          evidences: (sa.achievement.evidences || []).map((e: any) => e.text),
+          levelDescriptor,
+          performanceLevel: level,
+          observation: sa.observation || null,
+          judgment: sa.approvedJudgment || sa.suggestedJudgment || null,
+        };
+      });
 
       // Map de logros por asignatura para enriquecer subjectGrades
       const achievementBySubjectId = new Map<string, typeof achievements>();
@@ -3173,6 +3209,24 @@ export class ReportsService {
         return subjectAchievements[0] || null;
       };
 
+      // Bloques descriptivos por asignatura (Aprendizaje → Evidencias → Descriptor + Juicio),
+      // respetando la granularidad institucional. El filtrado por flags (qué se muestra) se
+      // hace en la plantilla usando `reportContent`; aquí entregamos el dato completo.
+      const buildLearningBlocks = (subjectId: string | null, subjectName: string, performanceLevel: string | null) => {
+        const list = resolveSubjectAchievements(subjectId, subjectName);
+        if (list.length === 0) return [];
+        const selected = reportContent.granularity === 'ALL'
+          ? list
+          : [resolveAchievement(subjectId, subjectName, performanceLevel)].filter(Boolean);
+        return selected.map((ach: any) => ({
+          learning: ach.learning || ach.description || null,
+          evidences: ach.evidences || [],
+          levelDescriptor: ach.levelDescriptor || null,
+          judgment: ach.judgment || null,
+          performanceLevel: ach.performanceLevel || null,
+        }));
+      };
+
       // Aplanar subject grades y enriquecer con logros
       const subjectGrades = areaGrades.flatMap(a => a.subjects).map(sg => {
         const ach = resolveAchievement(sg.subjectId, sg.subject, sg.performanceLevel);
@@ -3182,6 +3236,7 @@ export class ReportsService {
           achievementObservation: ach?.observation || null,
           qualitativeObservation: ach?.observation || null,
           judgment: ach?.judgment || null,
+          learningBlocks: buildLearningBlocks(sg.subjectId, sg.subject, sg.performanceLevel),
         };
       });
 
@@ -3193,6 +3248,7 @@ export class ReportsService {
           subj.achievementObservation = ach?.observation || null;
           subj.qualitativeObservation = ach?.observation || null;
           subj.judgment = ach?.judgment || null;
+          (subj as any).learningBlocks = buildLearningBlocks(subj.subjectId, subj.subject, subj.performanceLevel);
         }
       }
 
@@ -3257,6 +3313,7 @@ export class ReportsService {
       },
       academicStructure: gradeStructure,
       displayConfig,
+      reportContent,
       cards,
       generatedAt: new Date(),
     };

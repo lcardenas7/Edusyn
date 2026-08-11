@@ -460,19 +460,38 @@ export default function ReportCards() {
         const recoveryHtml = '' // indicator moved to numCell below
         let achievCell = ''
         if (showAchiev) {
-          let content = '-'
-          if (isQualitative) {
-            // En cualitativo el texto principal es el descriptor del nivel
-            // (achievement); la observación del docente es nota secundaria.
-            content = sg.achievement || sg.qualitativeObservation || '-'
-          } else {
-            content = sg.achievement || '-'
+          const rc = data?.reportContent
+          const blocks = (sg.learningBlocks || []) as any[]
+          let cellHtml = ''
+          // Contenido descriptivo configurable (Aprendizaje → Evidencias → Descriptor → Juicio).
+          if (rc && blocks.length > 0) {
+            cellHtml = blocks.map((b: any) => {
+              const rows: string[] = []
+              if (rc.showLearning && b.learning) rows.push(`<div style="margin-top:2px;"><span style="font-weight:700;color:#1e3a8a;">Aprendizaje:</span> ${b.learning}</div>`)
+              if (rc.showEvidences && b.evidences?.length) rows.push(`<div style="margin-top:2px;"><span style="font-weight:700;color:#1e3a8a;">Evidencias:</span><ul style="margin:1px 0 0 14px;padding:0;">${b.evidences.map((e: string) => `<li>${e}</li>`).join('')}</ul></div>`)
+              if (rc.showLevelDescriptor && b.levelDescriptor) {
+                const lvl = b.performanceLevel ? (performanceConfig[b.performanceLevel]?.label || b.performanceLevel) : ''
+                rows.push(`<div style="margin-top:2px;"><span style="font-weight:700;color:#1e3a8a;">Descriptor${lvl ? ' ' + lvl : ''}:</span> ${b.levelDescriptor}</div>`)
+              }
+              if (rc.showJudgment && b.judgment) rows.push(`<div style="margin-top:2px;color:#b45309;font-style:italic;">${b.judgment}</div>`)
+              return rows.join('')
+            }).filter(Boolean).join('<div style="height:4px;"></div>')
           }
-          let extra = ''
-          if (sg.achievementObservation) extra += `<p style="color:#64748b;margin-top:2px;font-size:9px;">${sg.achievementObservation}</p>`
-          if (sg.judgment) extra += `<p style="color:#b45309;font-style:italic;margin-top:2px;font-size:9px;">${sg.judgment}</p>`
-          if (config.showRecommendations && sg.recommendation) extra += `<p style="color:#dc2626;font-style:italic;margin-top:2px;font-size:9px;">* ${sg.recommendation}</p>`
-          achievCell = `<td style="padding:4px 6px;color:#334155;font-size:10px;">${content}${extra}</td>`
+          // Fallback histórico (períodos cerrados sin bloques o sin config).
+          if (!cellHtml) {
+            let content = '-'
+            if (isQualitative) {
+              content = sg.achievement || sg.qualitativeObservation || '-'
+            } else {
+              content = sg.achievement || '-'
+            }
+            let extra = ''
+            if (sg.achievementObservation) extra += `<p style="color:#64748b;margin-top:2px;font-size:9px;">${sg.achievementObservation}</p>`
+            if (sg.judgment) extra += `<p style="color:#b45309;font-style:italic;margin-top:2px;font-size:9px;">${sg.judgment}</p>`
+            cellHtml = `${content}${extra}`
+          }
+          if (config.showRecommendations && sg.recommendation) cellHtml += `<p style="color:#dc2626;font-style:italic;margin-top:2px;font-size:9px;">* ${sg.recommendation}</p>`
+          achievCell = `<td style="padding:4px 6px;color:#334155;font-size:10px;">${cellHtml}</td>`
         }
         let numCell = ''
         if (showNumeric) {
@@ -618,7 +637,7 @@ export default function ReportCards() {
           <thead>
             <tr style="background:${pc};color:#fff;">
               <th style="padding:6px;text-align:left;font-weight:500;width:120px;">${isQualitative ? 'Dimension' : isFlat ? 'Asignatura' : 'Area / Asignatura'}</th>
-              ${showAchiev ? `<th style="padding:6px;text-align:left;font-weight:500;">${isQualitative ? 'Observacion' : 'Logro'}</th>` : ''}
+              ${showAchiev ? `<th style="padding:6px;text-align:left;font-weight:500;">${isQualitative ? 'Observacion' : 'Aprendizaje'}</th>` : ''}
               ${showNumeric ? '<th style="padding:6px 2px;text-align:center;font-weight:500;width:40px;">Nota</th>' : ''}
               ${showPerf ? '<th style="padding:6px 2px;text-align:center;font-weight:500;width:60px;">Desempeno</th>' : ''}
               ${showAttend ? '<th style="padding:6px 2px;text-align:center;font-weight:500;width:40px;">Fallas</th>' : ''}
@@ -749,6 +768,15 @@ export default function ReportCards() {
       showAttendance: !!config.showAttendance,
       showVerification: true,
       verificationCode: data?.verificationCode || undefined,
+      achievementContent: data?.reportContent
+        ? {
+            showLearning: !!data.reportContent.showLearning,
+            showEvidences: !!data.reportContent.showEvidences,
+            showLevelDescriptor: !!data.reportContent.showLevelDescriptor,
+            showJudgment: !!data.reportContent.showJudgment,
+            granularity: data.reportContent.granularity || 'PRIMARY_ONLY',
+          }
+        : undefined,
     }
   }
 
@@ -1288,7 +1316,7 @@ export default function ReportCards() {
                       <thead className="text-white" style={{ backgroundColor: config.primaryColor || '#1E3A8A' }}>
                         <tr>
                           <th className="px-2 py-2 text-left font-medium w-28">{isQualitative ? 'Dimension' : isFlat ? 'Asignatura' : 'Area / Asignatura'}</th>
-                          {showAchiev && <th className="px-2 py-2 text-left font-medium">{isQualitative ? 'Observacion' : 'Logro'}</th>}
+                          {showAchiev && <th className="px-2 py-2 text-left font-medium">{isQualitative ? 'Observacion' : 'Aprendizaje'}</th>}
                           {showNumeric && <th className="px-1 py-2 text-center font-medium w-10">Nota</th>}
                           {showPerf && <th className="px-1 py-2 text-center font-medium w-16">Desempeno</th>}
                           {showAttend && <th className="px-1 py-2 text-center font-medium w-10">Fallas</th>}
@@ -1610,7 +1638,7 @@ export default function ReportCards() {
                   {[
                     { key: 'showNumericGrade', label: 'Nota numerica' },
                     { key: 'showPerformanceLevel', label: 'Nivel de desempeno' },
-                    { key: 'showAchievements', label: 'Logros por asignatura' },
+                    { key: 'showAchievements', label: 'Aprendizajes por asignatura' },
                     { key: 'showRecommendations', label: 'Recomendaciones' },
                     { key: 'showAttendance', label: 'Asistencia / Fallas' },
                     { key: 'showRanking', label: 'Puesto en el grupo' },

@@ -30,6 +30,13 @@ export class AchievementConfigService {
     displayMode?: 'SEPARATE' | 'COMBINED';
     displayFormat?: 'LIST' | 'PARAGRAPH';
     judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
+    // Aprendizajes y Evidencias de Aprendizaje
+    registrationModel?: 'LEARNING_ONLY' | 'LEARNING_AND_EVIDENCE';
+    showLearningInReport?: boolean;
+    showEvidencesInReport?: boolean;
+    showLevelDescriptorInReport?: boolean;
+    showJudgmentInReport?: boolean;
+    reportLearningGranularity?: 'PRIMARY_ONLY' | 'ALL';
   }) {
     return this.prisma.achievementConfig.upsert({
       where: { institutionId: data.institutionId },
@@ -43,6 +50,12 @@ export class AchievementConfigService {
         displayMode: data.displayMode,
         displayFormat: data.displayFormat,
         judgmentPosition: data.judgmentPosition,
+        registrationModel: data.registrationModel,
+        showLearningInReport: data.showLearningInReport,
+        showEvidencesInReport: data.showEvidencesInReport,
+        showLevelDescriptorInReport: data.showLevelDescriptorInReport,
+        showJudgmentInReport: data.showJudgmentInReport,
+        reportLearningGranularity: data.reportLearningGranularity,
       },
       create: {
         institutionId: data.institutionId,
@@ -55,6 +68,12 @@ export class AchievementConfigService {
         displayMode: data.displayMode ?? 'SEPARATE',
         displayFormat: data.displayFormat ?? 'LIST',
         judgmentPosition: data.judgmentPosition ?? 'END_OF_EACH',
+        registrationModel: data.registrationModel ?? 'LEARNING_ONLY',
+        showLearningInReport: data.showLearningInReport ?? true,
+        showEvidencesInReport: data.showEvidencesInReport ?? false,
+        showLevelDescriptorInReport: data.showLevelDescriptorInReport ?? false,
+        showJudgmentInReport: data.showJudgmentInReport ?? true,
+        reportLearningGranularity: data.reportLearningGranularity ?? 'PRIMARY_ONLY',
       },
       include: {
         valueJudgmentTemplates: true,

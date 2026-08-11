@@ -867,6 +867,12 @@ export const achievementConfigApi = {
     displayMode?: 'SEPARATE' | 'COMBINED';
     displayFormat?: 'LIST' | 'PARAGRAPH';
     judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
+    registrationModel?: 'LEARNING_ONLY' | 'LEARNING_AND_EVIDENCE';
+    showLearningInReport?: boolean;
+    showEvidencesInReport?: boolean;
+    showLevelDescriptorInReport?: boolean;
+    showJudgmentInReport?: boolean;
+    reportLearningGranularity?: 'PRIMARY_ONLY' | 'ALL';
   }) => api.put('/achievements/config', data),
   getTemplates: (institutionId: string) => 
     api.get(`/achievements/config/${institutionId}/templates`),
@@ -907,10 +913,22 @@ export const achievementsApi = {
     baseDescription: string;
     isPromotional?: boolean;
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
+    evidences?: Array<{ text: string }>;
   }) => api.post('/achievements', data),
-  update: (id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }> }) =>
+  update: (id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> }) =>
     api.put(`/achievements/${id}`, data),
   delete: (id: string) => api.delete(`/achievements/${id}`),
+  duplicate: (id: string) => api.post(`/achievements/${id}/duplicate`),
+
+  // Evidencias de aprendizaje (cuelgan de un aprendizaje)
+  createEvidence: (achievementId: string, text: string) =>
+    api.post(`/achievements/${achievementId}/evidences`, { text }),
+  updateEvidence: (evidenceId: string, data: { text?: string; isActive?: boolean }) =>
+    api.put(`/achievements/evidences/${evidenceId}`, data),
+  deleteEvidence: (evidenceId: string) =>
+    api.delete(`/achievements/evidences/${evidenceId}`),
+  reorderEvidences: (achievementId: string, orderedIds: string[]) =>
+    api.put(`/achievements/${achievementId}/evidences/reorder`, { orderedIds }),
   
   // Attitudinal achievements
   getAttitudinal: (teacherAssignmentId: string, academicTermId: string) => 
@@ -1126,10 +1144,15 @@ export const staffApi = {
   getDelegatedStudentsPermissions: () => api.get('/iam/delegated-permissions/students'),
   getAvailableTeachersForStudentsPermission: () => api.get('/iam/delegated-permissions/students/available-teachers'),
   toggleStudentsPermission: (userId: string, allow: boolean) => api.post('/iam/delegated-permissions/students', { userId, allow }),
-  // Permisos de administrador (rol ADMIN_INSTITUTIONAL) para coordinadores/docentes
-  getAdmins: () => api.get('/iam/institution/admins'),
-  grantAdmin: (userId: string) => api.post(`/iam/users/${userId}/grant-admin`),
-  revokeAdmin: (userId: string) => api.post(`/iam/users/${userId}/revoke-admin`),
+  // Permisos de administrador (rol ADMIN_INSTITUTIONAL) para coordinadores/docentes.
+  // institutionId es opcional: solo lo usa un superadmin global para administrar una
+  // institución específica; un admin institucional lo ignora y usa la suya.
+  getAdmins: (institutionId?: string) =>
+    api.get('/iam/institution/admins', { params: institutionId ? { institutionId } : undefined }),
+  grantAdmin: (userId: string, institutionId?: string) =>
+    api.post(`/iam/users/${userId}/grant-admin`, undefined, { params: institutionId ? { institutionId } : undefined }),
+  revokeAdmin: (userId: string, institutionId?: string) =>
+    api.post(`/iam/users/${userId}/revoke-admin`, undefined, { params: institutionId ? { institutionId } : undefined }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

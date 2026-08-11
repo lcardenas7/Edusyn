@@ -267,7 +267,7 @@ function Sidebar({ currentView, gestionExpanded, highlightGestion, highlightReco
             </div>
             <div className="flex items-center gap-2 px-2 py-1 text-slate-500">
               <Target className="w-3 h-3" />
-              Logros y Juicios
+              Aprendizajes y Evidencias
             </div>
             <div className={`flex items-center gap-2 px-2 py-1 rounded-md font-medium transition-all ${
               highlightRecovery ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300 ring-offset-1' 

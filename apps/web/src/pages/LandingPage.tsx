@@ -815,7 +815,7 @@ const DEMO_TABS: Array<{ id: DemoType; label: string; icon: any; color: string; 
   { id: 'aula-virtual', label: 'Aula Virtual', icon: MonitorPlay, color: 'violet', description: 'Crea quizzes con Valeria IA y lanza Live Quiz' },
   { id: 'asistencia', label: 'Asistencia', icon: Calendar, color: 'green', description: 'Registra asistencia en segundos' },
   { id: 'calificaciones', label: 'Calificaciones', icon: BookOpen, color: 'indigo', description: 'Ingresa notas por actividad' },
-  { id: 'logros', label: 'Logros', icon: Trophy, color: 'amber', description: 'Asigna logros y observaciones' },
+  { id: 'logros', label: 'Aprendizajes', icon: Trophy, color: 'amber', description: 'Asigna aprendizajes y evidencias' },
   { id: 'recuperaciones', label: 'Recuperaciones', icon: RefreshCw, color: 'emerald', description: 'Gestiona nivelaciones fácilmente' },
 ]
 

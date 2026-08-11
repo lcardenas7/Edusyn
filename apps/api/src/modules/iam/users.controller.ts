@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Request, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 import * as bcrypt from 'bcryptjs';
 
 // Lista blanca de roles válidos del sistema
@@ -1081,19 +1082,28 @@ export class UsersController {
   // coordinadores y docentes (aditivo: conserva su rol base). Solo un admin puede.
   // ═══════════════════════════════════════════════════════════════════════════
 
-  private async getMyInstitutionId(userId: string): Promise<string> {
-    const iu = await this.prisma.institutionUser.findFirst({ where: { userId } });
-    if (!iu) throw new BadRequestException('Usuario no asociado a ninguna institución');
-    return iu.institutionId;
+  /**
+   * Resuelve la institución objetivo para operaciones de administración de admins.
+   * - Admin institucional: usa SIEMPRE su propia institución (ignora el param por seguridad).
+   * - Superadmin global: puede indicar institutionId explícito para administrar cualquiera.
+   */
+  private async resolveInstitutionForAdmin(req: any, institutionId?: string): Promise<string> {
+    const resolved = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!resolved) {
+      throw new BadRequestException(
+        'No se pudo determinar la institución. Si eres superadmin, indica ?institutionId=... con la institución a administrar.',
+      );
+    }
+    return resolved;
   }
 
   /** Lista admins actuales + candidatos (coordinadores y docentes que aún no son admin). */
   @Get('institution/admins')
   @Roles('ADMIN_INSTITUTIONAL')
-  async listAdmins(@Request() req: any) {
-    const institutionId = await this.getMyInstitutionId(req.user.id);
+  async listAdmins(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const resolvedInstitutionId = await this.resolveInstitutionForAdmin(req, institutionId);
     const users = await this.prisma.user.findMany({
-      where: { institutionUsers: { some: { institutionId } }, isSuperAdmin: false },
+      where: { institutionUsers: { some: { institutionId: resolvedInstitutionId } }, isSuperAdmin: false },
       include: { roles: { include: { role: true } } },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
@@ -1110,10 +1120,14 @@ export class UsersController {
   /** Otorga ADMIN_INSTITUTIONAL sin quitar el rol base (docente/coordinador). */
   @Post('users/:id/grant-admin')
   @Roles('ADMIN_INSTITUTIONAL')
-  async grantAdmin(@Request() req: any, @Param('id') id: string) {
-    const institutionId = await this.getMyInstitutionId(req.user.id);
-    const target = await this.prisma.institutionUser.findFirst({ where: { userId: id, institutionId } });
-    if (!target) throw new BadRequestException('El usuario no pertenece a tu institución.');
+  async grantAdmin(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const targetInstitutionId = await this.resolveInstitutionForAdmin(req, institutionId);
+    const target = await this.prisma.institutionUser.findFirst({ where: { userId: id, institutionId: targetInstitutionId } });
+    if (!target) throw new BadRequestException('El usuario no pertenece a la institución indicada.');
     const adminRole = await this.prisma.role.findUnique({ where: { name: 'ADMIN_INSTITUTIONAL' } });
     if (!adminRole) throw new BadRequestException('El rol ADMIN_INSTITUTIONAL no existe en el sistema.');
 
@@ -1135,20 +1149,24 @@ export class UsersController {
   /** Revoca ADMIN_INSTITUTIONAL. No permite quitártelo a ti mismo ni al último admin. */
   @Post('users/:id/revoke-admin')
   @Roles('ADMIN_INSTITUTIONAL')
-  async revokeAdmin(@Request() req: any, @Param('id') id: string) {
+  async revokeAdmin(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
     if (id === req.user.id) throw new BadRequestException('No puedes quitarte a ti mismo el rol de administrador.');
-    const institutionId = await this.getMyInstitutionId(req.user.id);
+    const targetInstitutionId = await this.resolveInstitutionForAdmin(req, institutionId);
     const adminRole = await this.prisma.role.findUnique({ where: { name: 'ADMIN_INSTITUTIONAL' } });
     if (!adminRole) throw new BadRequestException('El rol ADMIN_INSTITUTIONAL no existe en el sistema.');
 
     // No dejar la institución sin ningún administrador.
     const adminCount = await this.prisma.institutionUserRole.count({
-      where: { roleId: adminRole.id, institutionUser: { institutionId } },
+      where: { roleId: adminRole.id, institutionUser: { institutionId: targetInstitutionId } },
     });
     if (adminCount <= 1) throw new BadRequestException('Debe quedar al menos un administrador en la institución.');
 
-    const target = await this.prisma.institutionUser.findFirst({ where: { userId: id, institutionId } });
-    if (!target) throw new BadRequestException('El usuario no pertenece a tu institución.');
+    const target = await this.prisma.institutionUser.findFirst({ where: { userId: id, institutionId: targetInstitutionId } });
+    if (!target) throw new BadRequestException('El usuario no pertenece a la institución indicada.');
 
     await this.prisma.$transaction(async (tx) => {
       await tx.institutionUserRole.deleteMany({ where: { institutionUserId: target.id, roleId: adminRole.id } });

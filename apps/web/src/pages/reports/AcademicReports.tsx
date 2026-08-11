@@ -681,7 +681,7 @@ export default function AcademicReports() {
         csvContent += `"${yr.yearName}",${yr.average},${yr.avgVariation ?? '-'},${yr.approvalRate}%,${yr.approvalVariation !== null ? yr.approvalVariation + '%' : '-'},${yr.totalStudents},${yr.studentVariation ?? '-'},${yr.totalGroups}\n`
       })
     } else if (selectedReport === 'completeness-status' && reportData?.groups) {
-      csvContent = 'Grupo,Asignatura,Docente,Notas %,Logros %\n'
+      csvContent = 'Grupo,Asignatura,Docente,Notas %,Aprendizajes %\n'
       ;(reportData.groups || []).forEach((g: any) => {
         ;(g.subjects || []).forEach((s: any) => {
           csvContent += `"${g.groupName}","${s.subjectName}","${s.teacherName}",${s.gradeCompleteness}%,${s.achievementCompleteness}%\n`
@@ -1041,7 +1041,7 @@ export default function AcademicReports() {
           `${s.achievementCompleteness}%`,
         ]),
       )
-      addTable([['Grupo', 'Asignatura', 'Docente', 'Notas %', 'Logros %']], body, startY)
+      addTable([['Grupo', 'Asignatura', 'Docente', 'Notas %', 'Aprendizajes %']], body, startY)
     }
 
     const instSlug = (institution?.name || 'edusyn').replace(/\s+/g, '_').substring(0, 20)
@@ -2882,7 +2882,7 @@ export default function AcademicReports() {
               <p className={`text-2xl font-bold ${cSummary.overallGradeCompleteness >= 100 ? 'text-green-700' : cSummary.overallGradeCompleteness >= 75 ? 'text-amber-700' : 'text-red-700'}`}>{cSummary.overallGradeCompleteness}%</p>
             </div>
             <div className={`border rounded-xl p-3 text-center ${cSummary.overallAchievementCompleteness >= 100 ? 'bg-green-50 border-green-200' : cSummary.overallAchievementCompleteness >= 75 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-              <p className="text-xs text-slate-500 uppercase font-medium">Logros</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Aprendizajes</p>
               <p className={`text-2xl font-bold ${cSummary.overallAchievementCompleteness >= 100 ? 'text-green-700' : cSummary.overallAchievementCompleteness >= 75 ? 'text-amber-700' : 'text-red-700'}`}>{cSummary.overallAchievementCompleteness}%</p>
             </div>
           </div>
@@ -2926,7 +2926,7 @@ export default function AcademicReports() {
                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${cColor(g.gradeCompleteness)}`}>{g.gradeCompleteness}%</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-slate-500">Logros:</span>
+                        <span className="text-xs text-slate-500">Aprendizajes:</span>
                         <div className="w-16 bg-slate-200 rounded-full h-2 overflow-hidden"><div className={`h-full rounded-full ${cBar(g.achievementCompleteness)}`} style={{ width: `${Math.min(g.achievementCompleteness, 100)}%` }} /></div>
                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${cColor(g.achievementCompleteness)}`}>{g.achievementCompleteness}%</span>
                       </div>
@@ -2952,7 +2952,7 @@ export default function AcademicReports() {
                               </div>
                               <div className="flex items-center gap-4 text-xs">
                                 <span>Notas: <strong className={subj.gradeCompleteness < 100 ? 'text-red-600' : 'text-green-600'}>{subj.gradesRegistered}/{subj.gradesExpected}</strong></span>
-                                <span>Logros: <strong className={subj.achievementCompleteness < 100 ? 'text-red-600' : 'text-green-600'}>{subj.achievementsRegistered}/{subj.achievementsExpected}</strong></span>
+                                <span>Aprendizajes: <strong className={subj.achievementCompleteness < 100 ? 'text-red-600' : 'text-green-600'}>{subj.achievementsRegistered}/{subj.achievementsExpected}</strong></span>
                               </div>
                             </div>
 

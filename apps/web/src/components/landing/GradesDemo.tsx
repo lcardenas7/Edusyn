@@ -302,7 +302,7 @@ function Sidebar({ currentView, gestionExpanded, highlightGestion, highlightCali
             </div>
             <div className="flex items-center gap-2 px-2 py-1 text-slate-500">
               <UserCheck className="w-3 h-3" />
-              Logros y Juicios
+              Aprendizajes y Evidencias
             </div>
           </div>
         )}

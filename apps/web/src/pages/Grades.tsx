@@ -234,7 +234,7 @@ export default function Grades() {
   const [fcGrades, setFcGrades] = useState<Record<string, number>>({}) // studentId → grade
   const [savingFc, setSavingFc] = useState(false)
   
-  // Estado para logros
+  // Estado para aprendizajes
   const [achievements, setAchievements] = useState<Array<{
     id: string;
     code: string;
@@ -262,7 +262,7 @@ export default function Grades() {
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
 
-  // Banco de logros
+  // Banco de aprendizajes
   const [showBank, setShowBank] = useState(false)
   const [bankItems, setBankItems] = useState<any[]>([])
   const [bankLoading, setBankLoading] = useState(false)
@@ -751,7 +751,7 @@ export default function Grades() {
     return `${level.name}: ${baseDescription}`
   }, [qualitativeLevels])
 
-  // Cargar logros y, en modo cualitativo, precargar los niveles por indicador
+  // Cargar aprendizajes y, en modo cualitativo, precargar los niveles por indicador
   useEffect(() => {
     const loadAchievements = async () => {
       if (!selectedAssignment?.id || !academicTermId) return
@@ -761,7 +761,7 @@ export default function Grades() {
 
       try {
         const requests: Promise<any>[] = [achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)]
-        // La config (incluye descriptorMode) se necesita tanto en modo logros como cualitativo.
+        // La config (incluye descriptorMode) se necesita tanto en modo aprendizajes como cualitativo.
         if ((viewMode === 'achievements' || isQualitative) && institutionId) {
           requests.push(achievementConfigApi.get(institutionId))
         }
@@ -1669,7 +1669,7 @@ export default function Grades() {
             onClick={() => setViewMode('achievements')}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'achievements' ? 'bg-white shadow-sm' : 'text-slate-600'}`}
           >
-            Logros
+            Aprendizajes
           </button>
         </div>
         )}
@@ -2102,9 +2102,9 @@ export default function Grades() {
             </table>
           </div>
         ) : viewMode === 'achievements' ? (
-          /* Vista de Logros - Asociación automática logro-desempeño */
+          /* Vista de Aprendizajes - Asociación automática aprendizaje-desempeño */
           <div className="space-y-4">
-          {/* Banco de Logros Panel */}
+          {/* Banco de Aprendizajes Panel */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <button
               onClick={() => setShowBank(!showBank)}
@@ -2113,7 +2113,7 @@ export default function Grades() {
               <div className="flex items-center gap-3">
                 <Library className="w-5 h-5 text-indigo-600" />
                 <div className="text-left">
-                  <span className="font-semibold text-slate-900">Banco de Logros</span>
+                  <span className="font-semibold text-slate-900">Banco de Aprendizajes</span>
                   <span className="text-sm text-slate-500 ml-2">Plantillas reutilizables para copiar</span>
                 </div>
               </div>
@@ -2128,7 +2128,7 @@ export default function Grades() {
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Buscar logros..."
+                      placeholder="Buscar aprendizajes..."
                       value={bankSearch}
                       onChange={(e) => setBankSearch(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && loadBank()}
@@ -2158,8 +2158,8 @@ export default function Grades() {
                 ) : bankItems.length === 0 ? (
                   <div className="text-center py-6">
                     <Library className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm text-slate-500">No hay logros en el banco</p>
-                    <p className="text-xs text-slate-400 mt-1">Puedes agregar logros desde el módulo de Logros y Juicios</p>
+                    <p className="text-sm text-slate-500">No hay aprendizajes en el banco</p>
+                    <p className="text-xs text-slate-400 mt-1">Puedes agregar aprendizajes desde el módulo de Aprendizajes y Evidencias</p>
                   </div>
                 ) : (
                   <div className="max-h-64 overflow-y-auto space-y-2">
@@ -2189,10 +2189,10 @@ export default function Grades() {
                           onClick={() => {
                             navigator.clipboard.writeText(item.description)
                             achievementBankApi.markUsed(item.id).catch(() => {})
-                            toast.success('Logro copiado al portapapeles')
+                            toast.success('Aprendizaje copiado al portapapeles')
                           }}
                           className="flex-shrink-0 p-2 rounded-lg hover:bg-indigo-100 text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
-                          title="Copiar texto del logro"
+                          title="Copiar texto del aprendizaje"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
@@ -2206,18 +2206,18 @@ export default function Grades() {
 
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <h3 className="font-semibold text-slate-900">Asociación Logros - Desempeño</h3>
+              <h3 className="font-semibold text-slate-900">Asociación Aprendizajes - Desempeño</h3>
               <p className="text-sm text-slate-500 mt-1">
-                Visualización de la asociación automática entre logros y nivel de desempeño según la nota final
+                Visualización de la asociación automática entre aprendizajes y nivel de desempeño según la nota final
               </p>
             </div>
             
             {achievements.length === 0 ? (
               <div className="p-8 text-center">
                 <BookOpen className="w-12 h-12 mx-auto text-slate-300 mb-4" />
-                <p className="text-slate-500">No hay logros creados para este período</p>
+                <p className="text-slate-500">No hay aprendizajes creados para este período</p>
                 <p className="text-sm text-slate-400 mt-1">
-                  Vaya al módulo de Logros y Juicios para crear los logros de esta asignatura
+                  Vaya al módulo de Aprendizajes y Evidencias para crear los aprendizajes de esta asignatura
                 </p>
               </div>
             ) : (
@@ -2233,7 +2233,7 @@ export default function Grades() {
                         <th key={ach.id} className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[200px]">
                           <div className="flex flex-col">
                             <span className="text-blue-600 font-mono text-[10px]">{ach.code}</span>
-                            <span>Logro {ach.orderNumber}</span>
+                            <span>Aprendizaje {ach.orderNumber}</span>
                           </div>
                         </th>
                       ))}
@@ -2296,7 +2296,7 @@ export default function Grades() {
                 <div className="flex items-center gap-2 text-amber-700">
                   <AlertTriangle className="w-4 h-4" />
                   <span className="text-sm">
-                    Faltan {achievementConfig.achievementsPerPeriod - achievements.length} logro(s) por crear. 
+                    Faltan {achievementConfig.achievementsPerPeriod - achievements.length} aprendizaje(s) por crear. 
                     Requeridos: {achievementConfig.achievementsPerPeriod}
                   </span>
                 </div>
