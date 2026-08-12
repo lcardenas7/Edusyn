@@ -435,6 +435,9 @@ export class AchievementService {
       });
       academicTermId = ach?.academicTermId ?? null;
     }
+    if (!academicTermId) {
+      throw new BadRequestException('El período de la valoración es obligatorio para aprendizajes anuales o compartidos');
+    }
 
     const existing = await this.prisma.studentAchievement.findFirst({
       where: {
@@ -521,6 +524,7 @@ export class AchievementService {
       studentEnrollmentId: string;
       finalGrade: number;
     }>,
+    academicTermId?: string,
   ) {
     // Get performance scale
     const scales = await this.prisma.performanceScale.findMany({
@@ -545,6 +549,7 @@ export class AchievementService {
         return this.upsertStudentAchievement({
           studentEnrollmentId: sg.studentEnrollmentId,
           achievementId,
+          academicTermId,
           performanceLevel: level,
           suggestedText: suggestion.suggestedText,
           suggestedJudgment: suggestion.suggestedJudgment,
@@ -578,6 +583,7 @@ export class AchievementService {
     achievementId: string,
     studentEnrollmentIds: string[],
     institutionId: string,
+    academicTermId?: string,
   ) {
     // Get performance scales for the institution
     const scales = await this.prisma.performanceScale.findMany({
@@ -593,6 +599,10 @@ export class AchievementService {
 
     if (!achievement) {
       throw new NotFoundException('Logro no encontrado');
+    }
+    const valuationTermId = academicTermId ?? achievement.academicTermId;
+    if (!valuationTermId) {
+      throw new BadRequestException('El período de la valoración es obligatorio para aprendizajes anuales o compartidos');
     }
 
     // Get existing final grades for these students (solo aplica a aprendizajes por-período
@@ -621,7 +631,7 @@ export class AchievementService {
         return this.upsertStudentAchievement({
           studentEnrollmentId: enrollmentId,
           achievementId,
-          academicTermId: achievement.academicTermId ?? undefined,
+          academicTermId: valuationTermId,
           performanceLevel: level as any,
         });
       }),

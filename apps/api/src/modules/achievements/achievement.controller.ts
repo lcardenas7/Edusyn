@@ -294,12 +294,14 @@ export class AchievementController {
         studentEnrollmentId: string;
         finalGrade: number;
       }>;
+      academicTermId?: string;
     },
   ) {
     return this.achievementService.bulkGenerateSuggestions(
       body.achievementId,
       body.institutionId,
       body.studentGrades,
+      body.academicTermId,
     );
   }
 
@@ -311,12 +313,14 @@ export class AchievementController {
       achievementId: string;
       studentEnrollmentIds: string[];
       institutionId: string;
+      academicTermId?: string;
     },
   ) {
     return this.achievementService.bulkAssignAchievement(
       body.achievementId,
       body.studentEnrollmentIds,
       body.institutionId,
+      body.academicTermId,
     );
   }
 
@@ -352,6 +356,7 @@ export class AchievementController {
     body: {
       studentEnrollmentId: string;
       achievementId: string;
+      academicTermId?: string;
       performanceLevel: 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR';
       suggestedText?: string;
       approvedText?: string;

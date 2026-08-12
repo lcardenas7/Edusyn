@@ -1062,6 +1062,7 @@ export default function Grades() {
           await achievementsApi.upsertStudentAchievement('upsert', {
             studentEnrollmentId: student.enrollmentId,
             achievementId: achievement.id,
+            academicTermId,
             performanceLevel,
             suggestedText: achievementText,
             approvedText: achievementText,

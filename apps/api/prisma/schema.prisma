@@ -3072,6 +3072,7 @@ model Achievement {
   evidences               AchievementEvidence[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
+  @@unique([gradeId, subjectId, academicYearId, orderNumber, isPromotional])
   @@index([teacherAssignmentId])
   @@index([academicTermId])
   @@index([gradeId, subjectId, academicYearId])
@@ -3182,7 +3183,7 @@ model StudentAchievement {
   // Período de ESTA valoración. Necesario cuando el aprendizaje es anual/compartido
   // (Achievement.academicTermId = null): permite una valoración por período.
   // Para aprendizajes por-período se rellena con el término del aprendizaje.
-  academicTermId String?
+  academicTermId String
 
   // El desempeño se calcula automáticamente desde la nota
   performanceLevel PerformanceLevel // BAJO, BASICO, ALTO, SUPERIOR (calculado)

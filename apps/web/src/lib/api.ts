@@ -953,6 +953,7 @@ export const achievementsApi = {
   generateSuggestions: (data: {
     achievementId: string;
     institutionId: string;
+    academicTermId?: string;
     studentGrades: Array<{
       studentEnrollmentId: string;
       finalGrade: number;
@@ -961,6 +962,7 @@ export const achievementsApi = {
   upsertStudentAchievement: (id: string, data: {
     studentEnrollmentId: string;
     achievementId: string;
+    academicTermId?: string;
     performanceLevel: 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR';
     suggestedText?: string;
     approvedText?: string;
@@ -986,6 +988,7 @@ export const achievementsApi = {
     achievementId: string;
     studentEnrollmentIds: string[];
     institutionId: string;
+    academicTermId?: string;
   }) => api.post('/achievements/students/bulk-assign', data),
   autoFillObservations: (data: {
     achievementId: string;
