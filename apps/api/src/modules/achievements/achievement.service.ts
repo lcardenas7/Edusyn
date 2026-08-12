@@ -414,6 +414,7 @@ export class AchievementService {
   async upsertStudentAchievement(data: {
     studentEnrollmentId: string;
     achievementId: string;
+    academicTermId?: string; // período de la valoración (para aprendizajes anuales/compartidos)
     performanceLevel: 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR';
     suggestedText?: string;
     approvedText?: string;
@@ -425,12 +426,21 @@ export class AchievementService {
     observation?: string;
     approvedById?: string;
   }) {
-    const existing = await this.prisma.studentAchievement.findUnique({
+    // Resolver el período de la valoración: explícito, o el del aprendizaje (por-período).
+    let academicTermId = data.academicTermId ?? null;
+    if (!academicTermId) {
+      const ach = await this.prisma.achievement.findUnique({
+        where: { id: data.achievementId },
+        select: { academicTermId: true },
+      });
+      academicTermId = ach?.academicTermId ?? null;
+    }
+
+    const existing = await this.prisma.studentAchievement.findFirst({
       where: {
-        studentEnrollmentId_achievementId: {
-          studentEnrollmentId: data.studentEnrollmentId,
-          achievementId: data.achievementId,
-        },
+        studentEnrollmentId: data.studentEnrollmentId,
+        achievementId: data.achievementId,
+        academicTermId,
       },
     });
 
@@ -466,6 +476,7 @@ export class AchievementService {
         institutionId: enr!.institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         achievementId: data.achievementId,
+        academicTermId,
         performanceLevel: data.performanceLevel,
         suggestedText: data.suggestedText,
         approvedText: data.approvedText,
@@ -584,19 +595,22 @@ export class AchievementService {
       throw new NotFoundException('Logro no encontrado');
     }
 
-    // Get existing final grades for these students
-    const finalGrades = await this.prisma.periodFinalGrade.findMany({
-      where: {
-        studentEnrollment: { id: { in: studentEnrollmentIds } },
-        academicTermId: achievement.academicTermId,
-        subjectId: achievement.teacherAssignment.subjectId,
-      },
-      include: { studentEnrollment: true },
-    });
-
+    // Get existing final grades for these students (solo aplica a aprendizajes por-período
+    // ligados a una asignación/asignatura; los aprendizajes anuales/compartidos no usan nota).
+    const subjectId = achievement.teacherAssignment?.subjectId ?? achievement.subjectId ?? null;
     const gradeMap = new Map<string, number>();
-    for (const fg of finalGrades) {
-      gradeMap.set(fg.studentEnrollmentId, Number(fg.finalScore));
+    if (achievement.academicTermId && subjectId) {
+      const finalGrades = await this.prisma.periodFinalGrade.findMany({
+        where: {
+          studentEnrollment: { id: { in: studentEnrollmentIds } },
+          academicTermId: achievement.academicTermId,
+          subjectId,
+        },
+        include: { studentEnrollment: true },
+      });
+      for (const fg of finalGrades) {
+        gradeMap.set(fg.studentEnrollmentId, Number(fg.finalScore));
+      }
     }
 
     const results = await Promise.all(
@@ -604,22 +618,11 @@ export class AchievementService {
         const grade = gradeMap.get(enrollmentId) || 0;
         const level = this.getPerformanceLevelFromGrade(grade, scales);
 
-        return this.prisma.studentAchievement.upsert({
-          where: {
-            studentEnrollmentId_achievementId: {
-              studentEnrollmentId: enrollmentId,
-              achievementId,
-            },
-          },
-          update: {
-            performanceLevel: level,
-          },
-          create: {
-            institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: enrollmentId }, select: { institutionId: true } }))!.institutionId,
-            studentEnrollmentId: enrollmentId,
-            achievementId,
-            performanceLevel: level,
-          },
+        return this.upsertStudentAchievement({
+          studentEnrollmentId: enrollmentId,
+          achievementId,
+          academicTermId: achievement.academicTermId ?? undefined,
+          performanceLevel: level as any,
         });
       }),
     );

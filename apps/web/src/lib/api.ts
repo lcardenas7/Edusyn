@@ -873,6 +873,11 @@ export const achievementConfigApi = {
     showLevelDescriptorInReport?: boolean;
     showJudgmentInReport?: boolean;
     reportLearningGranularity?: 'PRIMARY_ONLY' | 'ALL';
+    learningLabelSingular?: string;
+    learningLabelPlural?: string;
+    evidenceLabelSingular?: string;
+    evidenceLabelPlural?: string;
+    learningCatalogMode?: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
   }) => api.put('/achievements/config', data),
   getTemplates: (institutionId: string) => 
     api.get(`/achievements/config/${institutionId}/templates`),

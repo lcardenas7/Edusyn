@@ -37,6 +37,11 @@ export class AchievementConfigService {
     showLevelDescriptorInReport?: boolean;
     showJudgmentInReport?: boolean;
     reportLearningGranularity?: 'PRIMARY_ONLY' | 'ALL';
+    learningLabelSingular?: string;
+    learningLabelPlural?: string;
+    evidenceLabelSingular?: string;
+    evidenceLabelPlural?: string;
+    learningCatalogMode?: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
   }) {
     return this.prisma.achievementConfig.upsert({
       where: { institutionId: data.institutionId },
@@ -56,6 +61,11 @@ export class AchievementConfigService {
         showLevelDescriptorInReport: data.showLevelDescriptorInReport,
         showJudgmentInReport: data.showJudgmentInReport,
         reportLearningGranularity: data.reportLearningGranularity,
+        learningLabelSingular: data.learningLabelSingular,
+        learningLabelPlural: data.learningLabelPlural,
+        evidenceLabelSingular: data.evidenceLabelSingular,
+        evidenceLabelPlural: data.evidenceLabelPlural,
+        learningCatalogMode: data.learningCatalogMode,
       },
       create: {
         institutionId: data.institutionId,
@@ -74,6 +84,11 @@ export class AchievementConfigService {
         showLevelDescriptorInReport: data.showLevelDescriptorInReport ?? false,
         showJudgmentInReport: data.showJudgmentInReport ?? true,
         reportLearningGranularity: data.reportLearningGranularity ?? 'PRIMARY_ONLY',
+        learningLabelSingular: data.learningLabelSingular ?? 'Aprendizaje',
+        learningLabelPlural: data.learningLabelPlural ?? 'Aprendizajes',
+        evidenceLabelSingular: data.evidenceLabelSingular ?? 'Evidencia',
+        evidenceLabelPlural: data.evidenceLabelPlural ?? 'Evidencias',
+        learningCatalogMode: data.learningCatalogMode ?? 'TEACHER_MANAGED',
       },
       include: {
         valueJudgmentTemplates: true,

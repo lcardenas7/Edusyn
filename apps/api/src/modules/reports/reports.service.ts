@@ -3415,6 +3415,9 @@ export class ReportsService {
         showRecoveryGrades: data.showRecoveryGrades,
         showComponents: data.showComponents,
         signatureConfig: data.signatureConfig,
+        preschoolShowRank: data.preschoolShowRank,
+        preschoolRankWeights: data.preschoolRankWeights,
+        showZeroAbsences: data.showZeroAbsences,
       },
     });
   }

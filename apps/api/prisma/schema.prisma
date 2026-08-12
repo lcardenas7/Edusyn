@@ -218,6 +218,14 @@ enum SubjectType {
   ELECTIVE // Electiva
   OPTIONAL // Opcional
   TECHNICAL // Técnica (media técnica)
+  PRESCHOOL_DIMENSION // Dimensión de transición/preescolar (evaluación cualitativa por propósito)
+  CONVIVENCIA // Registro convivencial especial (texto libre del docente, sin nota)
+}
+
+// Modo de administración del catálogo de aprendizajes/propósitos por institución.
+enum LearningCatalogMode {
+  TEACHER_MANAGED // El docente crea/edita sus aprendizajes (comportamiento actual)
+  ADMIN_FIXED // El admin precarga el catálogo; el docente solo valora
 }
 
 // Tipo de excepción de grupo
@@ -279,6 +287,7 @@ model User {
   academicActsCreated       AcademicAct[]           @relation("ActCreatedBy")
   academicActsApproved      AcademicAct[]           @relation("ActApprovedBy")
   performanceManualEdits    PerformanceManualEdit[] @relation("PerformanceEditedBy")
+  convivenciaEntries        ConvivenciaEntry[]      @relation("ConvivenciaCreatedBy")
 
   // Instituciones creadas por SuperAdmin
   institutionsCreated Institution[] @relation("InstitutionCreatedBy")
@@ -532,6 +541,7 @@ model Institution {
 
   // Banco de logros
   achievementBank AchievementBank[] @relation("InstitutionAchievementBank")
+  convivenciaEntries ConvivenciaEntry[] @relation("InstitutionConvivencia")
 
   // Componentes finales (pruebas semestrales, etc.)
   finalComponents FinalComponent[] @relation("InstitutionFinalComponents")
@@ -715,6 +725,7 @@ model Grade {
   achievementBank      AchievementBank[]
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
   reportCardTemplateSelections ReportCardTemplateSelection[]
+  catalogAchievements  Achievement[]         @relation("GradeCatalogAchievements")
 
   @@unique([institutionId, stage, name])
   @@index([institutionId])
@@ -791,6 +802,9 @@ model Subject {
   subjectType SubjectType @default(MANDATORY)
   order       Int         @default(0)
   isActive    Boolean     @default(true)
+  // Horas a MOSTRAR en el boletín (independiente de las horas reales de la asignación).
+  // null ⇒ usar las horas reales (TeacherAssignment.weeklyHours). Ej. Convivencia ⇒ 0.
+  displayHours Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -806,6 +820,8 @@ model Subject {
   roomRestrictions       RoomRestriction[]
   achievementBank        AchievementBank[]
   supportPlanSubjects    SupportPlanSubject[]    @relation("SupportPlanSubjects")
+  catalogAchievements    Achievement[]           @relation("SubjectCatalogAchievements")
+  convivenciaEntries     ConvivenciaEntry[]
 
   @@unique([areaId, name])
   @@index([areaId])
@@ -1028,6 +1044,7 @@ model AcademicYear {
   terms              AcademicTerm[]
   teacherAssignments TeacherAssignment[]
   studentEnrollments StudentEnrollment[]
+  catalogAchievements Achievement[]      @relation("YearCatalogAchievements")
   recoveryConfigs    RecoveryConfig[]
   finalRecoveryPlans FinalRecoveryPlan[] @relation("FinalRecoveryYear")
   academicActs       AcademicAct[]
@@ -1130,6 +1147,8 @@ model AcademicTerm {
   reportCardSnapshots     TermReportCardSnapshot[]
   reopeningRecords        TermReopeningRecord[]
   pedagogicalSupportPlans PedagogicalSupportPlan[]
+  studentAchievements     StudentAchievement[]
+  convivenciaEntries      ConvivenciaEntry[]
 
   @@unique([academicYearId, order])
 }
@@ -1639,6 +1658,7 @@ model StudentEnrollment {
   academicActs           AcademicAct[]
   performanceManualEdits PerformanceManualEdit[]
   studentAchievements    StudentAchievement[]
+  convivenciaEntries     ConvivenciaEntry[]
 
   // Observador del estudiante (sub-módulos)
   observerCommitments ObserverCommitment[]
@@ -2924,6 +2944,16 @@ model AchievementConfig {
   // El caso "solo evidencia" NO es un modo de registro: se resuelve en el boletín.
   registrationModel AcademicRegistrationModel @default(LEARNING_ONLY)
 
+  // Etiquetas configurables (por institución). Default "Aprendizaje/Evidencia".
+  // INEDES (transición): "Propósito/Imprescindible".
+  learningLabelSingular String @default("Aprendizaje")
+  learningLabelPlural   String @default("Aprendizajes")
+  evidenceLabelSingular String @default("Evidencia")
+  evidenceLabelPlural   String @default("Evidencias")
+
+  // Quién administra el catálogo de aprendizajes/propósitos.
+  learningCatalogMode LearningCatalogMode @default(TEACHER_MANAGED)
+
   // Contenido descriptivo del boletín (4 elementos independientes).
   showLearningInReport        Boolean @default(true)  // Mostrar aprendizaje/desempeño
   showEvidencesInReport       Boolean @default(false) // Mostrar evidencias de aprendizaje
@@ -3013,8 +3043,15 @@ model Achievement {
   id                  String          @id @default(cuid())
   institutionId       String
   code                String // Código interno (ej: LOG-MAT-P1-01)
-  teacherAssignmentId String
-  academicTermId      String
+  // Alcance por-asignación (comportamiento actual). Ambos nullable para soportar
+  // catálogo compartido por grado (ver gradeId/subjectId/academicYearId).
+  teacherAssignmentId String?
+  academicTermId      String? // null ⇒ aprendizaje ANUAL (vigente en todos los períodos)
+  // Alcance por-grado (catálogo compartido, ej. transición): un aprendizaje por
+  // grado+dimensión+año que aplica a todos los grupos del grado.
+  gradeId             String?
+  subjectId           String?
+  academicYearId      String?
   orderNumber         Int             @default(1) // Número de logro (1, 2, 3...)
   achievementType     AchievementType @default(ACADEMIC) // Tipo de logro
   baseDescription     String          @db.Text // Texto base del logro
@@ -3023,8 +3060,11 @@ model Achievement {
   updatedAt           DateTime        @updatedAt
 
   institution             Institution              @relation("RlsInstitutionACH", fields: [institutionId], references: [id])
-  teacherAssignment       TeacherAssignment        @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
-  academicTerm            AcademicTerm             @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  teacherAssignment       TeacherAssignment?       @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  academicTerm            AcademicTerm?            @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  grade                   Grade?                   @relation("GradeCatalogAchievements", fields: [gradeId], references: [id], onDelete: Cascade)
+  subject                 Subject?                 @relation("SubjectCatalogAchievements", fields: [subjectId], references: [id], onDelete: Cascade)
+  academicYear            AcademicYear?            @relation("YearCatalogAchievements", fields: [academicYearId], references: [id], onDelete: Cascade)
   studentAchievements     StudentAchievement[]
   attitudinalAchievements AttitudinalAchievement[]
   pedagogicalSupportPlans PedagogicalSupportPlan[]
@@ -3032,9 +3072,9 @@ model Achievement {
   evidences               AchievementEvidence[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
-  @@unique([code, teacherAssignmentId]) // Código único por asignación
   @@index([teacherAssignmentId])
   @@index([academicTermId])
+  @@index([gradeId, subjectId, academicYearId])
   @@index([code])
 }
 
@@ -3108,12 +3148,41 @@ model AchievementEvidence {
   @@index([achievementId])
 }
 
+// Registro convivencial de transición: texto libre del docente por estudiante+período
+// para una asignatura especial (SubjectType.CONVIVENCIA). No lleva nota ni nivel.
+model ConvivenciaEntry {
+  id                  String @id @default(cuid())
+  institutionId       String
+  studentEnrollmentId String
+  academicTermId      String
+  subjectId           String // la asignatura Convivencia
+  text                String @db.Text
+  createdById         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution       Institution       @relation("InstitutionConvivencia", fields: [institutionId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdBy         User?             @relation("ConvivenciaCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([studentEnrollmentId, academicTermId, subjectId])
+  @@index([studentEnrollmentId])
+  @@index([academicTermId])
+}
+
 // Logro del estudiante (con nota, texto adaptado y juicio valorativo)
 model StudentAchievement {
   id                  String @id @default(cuid())
   institutionId       String
   studentEnrollmentId String
   achievementId       String
+  // Período de ESTA valoración. Necesario cuando el aprendizaje es anual/compartido
+  // (Achievement.academicTermId = null): permite una valoración por período.
+  // Para aprendizajes por-período se rellena con el término del aprendizaje.
+  academicTermId String?
 
   // El desempeño se calcula automáticamente desde la nota
   performanceLevel PerformanceLevel // BAJO, BASICO, ALTO, SUPERIOR (calculado)
@@ -3142,9 +3211,10 @@ model StudentAchievement {
   institution       Institution       @relation("RlsInstitutionSACH", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   achievement       Achievement       @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm?     @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   approvedBy        User?             @relation("AchievementApprovedBy", fields: [approvedById], references: [id])
 
-  @@unique([studentEnrollmentId, achievementId])
+  @@unique([studentEnrollmentId, achievementId, academicTermId])
   @@index([studentEnrollmentId])
   @@index([achievementId])
 }
@@ -4723,6 +4793,11 @@ model ReportCardConfig {
   showObservations   Boolean @default(true)
   showAreaAverages   Boolean @default(true)
   showGeneralAverage Boolean @default(true)
+
+  // ── Transición / preescolar (boletín cualitativo por propósitos) ──────────
+  preschoolShowRank    Boolean @default(false) // Mostrar "Puesto" en preescolar (off por defecto)
+  preschoolRankWeights Json?   // Pesos por código de nivel para el puesto cualitativo, ej {"L":3,"EP":2,"I":1}
+  showZeroAbsences     Boolean @default(false) // Inas: 0 ⇒ mostrar "0" (on) o dejar vacío (off)
   showScale          Boolean @default(true)
   showRecoveryGrades Boolean @default(true)
   showComponents     Boolean @default(false) // Desglose por componentes (Saber, Hacer, Ser)
