@@ -147,6 +147,94 @@ function buildPerformanceConfig(levels: any[], minGrade: number, maxGrade: numbe
   return result
 }
 
+// ─── Datos de ejemplo para la vista previa de formatos ───────────────────────
+type SampleContent = {
+  showLearning: boolean
+  showEvidences: boolean
+  showLevelDescriptor: boolean
+  showJudgment: boolean
+  granularity: 'PRIMARY_ONLY' | 'ALL'
+}
+const SAMPLE_CONTENT_DEFAULT: SampleContent = {
+  showLearning: true, showEvidences: true, showLevelDescriptor: false, showJudgment: false, granularity: 'PRIMARY_ONLY',
+}
+
+const SAMPLE_LEARNING_BLOCKS = [
+  {
+    learning: 'Comprende y aplica la lógica de los algoritmos para solucionar problemas sencillos.',
+    evidences: [
+      'Diseña algoritmos utilizando estructuras condicionales.',
+      'Representa soluciones mediante diagramas de flujo.',
+      'Implementa algoritmos sencillos en Python.',
+    ],
+    levelDescriptor: 'Aplica correctamente estructuras algorítmicas para resolver las situaciones propuestas.',
+    judgment: 'Demuestra un buen dominio de las competencias y mantiene un desempeño consistente.',
+    performanceLevel: 'ALTO',
+  },
+]
+
+function sampleInstitution(name?: string, nit?: string | null) {
+  return { id: 'sample', name: name || 'Institución Educativa (ejemplo)', nit: nit || null }
+}
+
+/** Data de ejemplo para plantillas de un período (clásico + preescolar-narrativo). */
+function makeSampleReportData(flags: SampleContent, institutionName?: string, nit?: string | null) {
+  const subject = (subjectName: string, grade: number) => ({
+    subjectId: subjectName, subject: subjectName, subjectCode: null, teacher: 'Docente Ejemplo', teacherName: 'Docente Ejemplo',
+    grade, weightPercentage: 100, performanceLevel: 'ALTO', components: [],
+    achievement: SAMPLE_LEARNING_BLOCKS[0].learning, achievementObservation: null, qualitativeObservation: null, judgment: null,
+    learningBlocks: SAMPLE_LEARNING_BLOCKS,
+  })
+  const areaGrades = [
+    { area: 'Tecnología e Informática', areaCode: null, weightPercentage: 100, calculationType: 'AVERAGE', areaAverage: 4.5, areaPerformanceLevel: 'ALTO', subjects: [subject('Tecnología e Informática', 4.5)] },
+    { area: 'Matemáticas', areaCode: null, weightPercentage: 100, calculationType: 'AVERAGE', areaAverage: 4.2, areaPerformanceLevel: 'ALTO', subjects: [subject('Matemáticas', 4.2)] },
+  ]
+  return {
+    institution: sampleInstitution(institutionName, nit),
+    student: { id: 'sample', firstName: 'Ana', secondName: 'María', lastName: 'Ramírez', secondLastName: 'Gómez', documentType: 'TI', documentNumber: '1000123456' },
+    group: { id: 'sample', name: 'A', gradeLevel: 'Transición' },
+    areaGrades,
+    subjectGrades: areaGrades.flatMap(a => a.subjects),
+    structureSource: 'calculated',
+    attendance: { total: 40, present: 38, absent: 2, late: 0, excused: 0, attendanceRate: 95 },
+    achievements: [],
+    observations: [{ date: new Date(), type: 'GENERAL', category: null, description: 'Excelente actitud y participación en clase.', author: 'Director de grupo' }],
+    displayConfig: {},
+    reportContent: flags,
+    rank: 3, totalStudents: 28,
+  }
+}
+
+/** Data de ejemplo para la plantilla multiperíodo-tabular. */
+function makeSampleYear(institutionName?: string, nit?: string | null) {
+  const periods = [
+    { id: 'p1', name: 'Período 1', order: 1 },
+    { id: 'p2', name: 'Período 2', order: 2 },
+    { id: 'p3', name: 'Período 3', order: 3 },
+  ]
+  const cells = (a: number, b: number, c: number) => ({
+    p1: { grade: a, performanceLevel: 'ALTO', hasRecovery: false },
+    p2: { grade: b, performanceLevel: 'ALTO', hasRecovery: false },
+    p3: { grade: c, performanceLevel: 'SUPERIOR', hasRecovery: false },
+  })
+  const subj = (name: string, def: number, cellData: any) => ({
+    subject: name, subjectId: name, weeklyHours: 3, achievement: SAMPLE_LEARNING_BLOCKS[0].learning,
+    cells: cellData, def, defPerformanceLevel: def >= 4.6 ? 'SUPERIOR' : 'ALTO',
+  })
+  return {
+    institution: sampleInstitution(institutionName, nit),
+    student: { id: 'sample', firstName: 'Ana', secondName: 'María', lastName: 'Ramírez', secondLastName: 'Gómez', documentType: 'TI', documentNumber: '1000123456' },
+    group: { id: 'sample', name: 'A', gradeLevel: 'Quinto' },
+    periods,
+    areas: [
+      { area: 'Tecnología e Informática', subjects: [subj('Tecnología e Informática', 4.6, cells(4.5, 4.6, 4.8))] },
+      { area: 'Matemáticas', subjects: [subj('Matemáticas', 4.3, cells(4.0, 4.3, 4.5))] },
+    ],
+    summary: { promedioPeriodo: 4.5, promedioAcumulado: 4.4, inasistencias: 2 },
+    observations: [{ description: 'Excelente actitud y participación en clase.' }],
+  }
+}
+
 export default function ReportCards() {
   const { user, institution } = useAuth()
   const isManager = user?.roles?.some((r: any) => {
@@ -177,6 +265,11 @@ export default function ReportCards() {
   const [previewData, setPreviewData] = useState<any>(null)
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
+  // Vista previa de formatos (config): renderiza cada plantilla con datos de ejemplo.
+  const [formatPreviewKey, setFormatPreviewKey] = useState<string>('edusyn-clasico')
+  const [sampleContent, setSampleContent] = useState<SampleContent>(SAMPLE_CONTENT_DEFAULT)
+  const [formatPreviewHtml, setFormatPreviewHtml] = useState<string>('')
+  const [formatPreviewLoading, setFormatPreviewLoading] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
   const [showBulkDownloadModal, setShowBulkDownloadModal] = useState(false)
@@ -943,7 +1036,44 @@ export default function ReportCards() {
       for (const s of (r.data?.byStructure || [])) if (s.academicStructure) m[s.academicStructure] = s.templateKey
       setTemplateSelByStructure(m)
     }).catch(() => {})
+    // Inicializar la vista previa con el default general elegido.
+    setFormatPreviewKey(configDraft.defaultTemplateKey || 'edusyn-clasico')
   }, [showConfigModal])
+
+  // Regenerar la vista previa del formato con datos de ejemplo.
+  useEffect(() => {
+    if (!showConfigModal) return
+    let cancelled = false
+    const run = async () => {
+      setFormatPreviewLoading(true)
+      try {
+        const instName = institution?.name
+        const nit = (institution as any)?.nit ?? null
+        let html = ''
+        if (formatPreviewKey === 'multiperiodo-tabular') {
+          const year = makeSampleYear(instName, nit)
+          const ctx = await buildTemplateCtx(year)
+          html = buildMultiperiodoTabularHtml(year, ctx, { rank: 3, totalStudents: 28 })
+        } else {
+          const data = makeSampleReportData(sampleContent, instName, nit)
+          const ctx = await buildTemplateCtx(data)
+          if (formatPreviewKey === 'preescolar-narrativo') {
+            html = buildPreescolarNarrativoHtml(data, ctx, 'Período 1')
+          } else {
+            html = await buildReportCardHtml(data, { enrollmentId: 'sample', studentId: 'sample', studentName: 'Ana Ramírez', rank: 3, totalStudents: 28 } as any)
+          }
+        }
+        if (!cancelled) setFormatPreviewHtml(html)
+      } catch (err) {
+        console.error('Error building format preview:', err)
+        if (!cancelled) setFormatPreviewHtml('<p style="color:#dc2626;font-size:13px;">No se pudo generar la vista previa.</p>')
+      } finally {
+        if (!cancelled) setFormatPreviewLoading(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [showConfigModal, formatPreviewKey, sampleContent, configDraft.primaryColor, configDraft.showLogo])
 
   const setStructureTemplate = async (structure: string, templateKey: string) => {
     setTemplateSelByStructure(prev => ({ ...prev, [structure]: templateKey }))
@@ -1559,6 +1689,55 @@ export default function ReportCards() {
                   ))}
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2">El formato por nivel se guarda al seleccionarlo. El default general se guarda con «Guardar Configuración».</p>
+              </div>
+
+              {/* Vista previa del formato (datos de ejemplo) */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/60">
+                <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                  <h4 className="font-medium text-slate-900 flex items-center gap-2"><Eye className="w-4 h-4" /> Vista previa del formato</h4>
+                  <select
+                    value={formatPreviewKey}
+                    onChange={(e) => setFormatPreviewKey(e.target.value)}
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white"
+                  >
+                    {TEMPLATE_CATALOG.map(t => (<option key={t.key} value={t.key}>{t.name}</option>))}
+                  </select>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                  Ejemplo con datos ficticios. Ajusta las casillas para ver cómo se verá el contenido descriptivo según la configuración de Aprendizajes y Evidencias.
+                </p>
+
+                {/* Toggles de contenido descriptivo (solo afectan la vista previa) */}
+                <div className="flex flex-wrap gap-3 mb-3">
+                  {([
+                    { key: 'showLearning', label: 'Aprendizaje' },
+                    { key: 'showEvidences', label: 'Evidencias' },
+                    { key: 'showLevelDescriptor', label: 'Descriptor' },
+                    { key: 'showJudgment', label: 'Juicio' },
+                  ] as const).map(item => (
+                    <label key={item.key} className={`flex items-center gap-1.5 text-xs ${formatPreviewKey === 'multiperiodo-tabular' ? 'opacity-40' : ''}`}>
+                      <input
+                        type="checkbox"
+                        disabled={formatPreviewKey === 'multiperiodo-tabular'}
+                        checked={(sampleContent as any)[item.key]}
+                        onChange={(e) => setSampleContent(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                        className="w-3.5 h-3.5 rounded"
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+                {formatPreviewKey === 'multiperiodo-tabular' && (
+                  <p className="text-[11px] text-amber-600 mb-2">La tabla multiperíodo usa una columna compacta de aprendizaje; no muestra evidencias/descriptor.</p>
+                )}
+
+                <div className="bg-white border border-slate-200 rounded-lg overflow-auto" style={{ maxHeight: 360 }}>
+                  {formatPreviewLoading ? (
+                    <div className="p-6 text-center text-sm text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /> Generando vista previa…</div>
+                  ) : (
+                    <div className="p-2 origin-top" style={{ transform: 'scale(0.82)', transformOrigin: 'top left', width: '122%' }} dangerouslySetInnerHTML={{ __html: formatPreviewHtml }} />
+                  )}
+                </div>
               </div>
 
               {/* Encabezado */}

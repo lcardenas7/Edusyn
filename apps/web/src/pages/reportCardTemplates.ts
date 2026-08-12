@@ -79,8 +79,8 @@ export const TEMPLATE_CATALOG: TemplateMeta[] = [
   },
   {
     key: 'multiperiodo-tabular',
-    name: 'Multiperíodo Tabular (San José)',
-    description: 'Tabla Área·Asignatura·I.H.·Aprendizaje·P1..Pn·DEF·Desempeño, acumulado y recuperaciones. Bachillerato/primaria.',
+    name: 'Multiperíodo Tabular',
+    description: 'Tabla Área·Asignatura·I.H.·Aprendizaje·P1..Pn·DEF·Desempeño, con acumulado y recuperaciones. Para primaria/bachillerato.',
     supportedStructures: ['AREAS_SUBJECTS', 'SUBJECTS_ONLY'],
     multiperiod: true,
   },
