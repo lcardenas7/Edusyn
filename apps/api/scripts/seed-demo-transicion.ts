@@ -545,6 +545,7 @@ async function main() {
             institutionId: institution.id,
             studentEnrollmentId: record.enrollment.id,
             achievementId: achievement.id,
+            academicTermId: term.id,
             performanceLevel: level === 'LOGRADO' ? 'SUPERIOR' : level === 'EN_PROCESO' ? 'BASICO' : 'BAJO',
             suggestedText: baseDescription,
             approvedText: baseDescription,
