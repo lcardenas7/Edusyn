@@ -3415,17 +3415,11 @@ export class ReportsService {
     if (inst?.primaryColor) {
       config = { ...config, primaryColor: inst.primaryColor };
     }
+    // logoUrl efectivo = perfil institucional (fuente canónica) o el guardado en la
+    // config del boletín. Se deja como KEY (no URL firmada): el render usa logoDataUri
+    // y el front resuelve la key vía proxy, así se puede persistir sin corromperse.
     const rawLogo = inst?.logo || config.logoUrl || null;
-    let resolvedLogo = rawLogo;
-    // Resolver a URL firmada solo si es una key de almacenamiento (no una URL http ya lista)
-    if (rawLogo && !/^https?:\/\//i.test(rawLogo)) {
-      try {
-        resolvedLogo = await this.storageService.resolveFileUrl(rawLogo, 3600);
-      } catch (err) {
-        console.error('Error resolving logo:', rawLogo, err);
-      }
-    }
-    config = { ...config, logoUrl: resolvedLogo };
+    config = { ...config, logoUrl: rawLogo };
 
     // Escudos embebidos como data URI (server-side, sin CORS) para el render del
     // boletín/PDF. secondaryLogoUrl se mantiene como key en la DB (no se reescribe,
@@ -3448,11 +3442,11 @@ export class ReportsService {
       data: {
         showLogo: data.showLogo,
         showShield: data.showShield,
-        // logoUrl NO se persiste desde aquí: el escudo es fuente única (Institution.logo).
-        // Antes se guardaba data.logoUrl (a veces una URL firmada temporal) → se "borraba"
-        // al caducar. El logo se administra en el perfil institucional.
-        // secondaryLogoUrl SÍ se persiste aquí (a diferencia de logoUrl, que es
-        // fuente única desde Institution.logo): es un segundo escudo propio del boletín.
+        // logoUrl y secondaryLogoUrl SÍ se persisten (como key). Antes logoUrl no se
+        // guardaba por miedo a URLs firmadas que caducaban → "se borraba" el escudo.
+        // Ahora el render usa data URI + proxy (extraen la key), así que persistir la
+        // key es seguro. Si viene vacío, se limpia; si viene undefined, no cambia.
+        logoUrl: data.logoUrl,
         secondaryLogoUrl: data.secondaryLogoUrl,
         headerResolution: data.headerResolution,
         headerMunicipality: data.headerMunicipality,
