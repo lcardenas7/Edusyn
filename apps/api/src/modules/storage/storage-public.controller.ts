@@ -60,6 +60,12 @@ export class StoragePublicController {
         'Content-Type': contentType,
         'Content-Length': body.length.toString(),
         'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+        // Este endpoint es público (solo galeria/ y firmas/). Helmet fija por defecto
+        // Cross-Origin-Resource-Policy: same-origin, lo que impide que el front
+        // (www.edusyn.co) cargue estas imágenes desde la API (api.edusyn.co) en <img>.
+        // Se relaja SOLO aquí para permitir el uso cross-origin (logos del boletín, etc.).
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+        'Access-Control-Allow-Origin': '*',
       });
       res.send(body);
     } catch (err: any) {
