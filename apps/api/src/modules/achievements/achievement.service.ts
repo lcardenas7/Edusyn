@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -31,15 +31,37 @@ export class AchievementService {
 
   async getAchievementsByAssignment(teacherAssignmentId: string, academicTermId: string) {
     const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
+    const assignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: {
+        academicYearId: true,
+        subjectId: true,
+        group: { select: { gradeId: true } },
+      },
+    });
+    if (!assignment) throw new NotFoundException('Asignación docente no encontrada');
+
     return this.prisma.achievement.findMany({
       where: {
-        teacherAssignmentId: { in: assignmentIds },
-        academicTermId,
         isPromotional: false,
+        OR: [
+          // Flujo tradicional: aprendizajes creados para la asignación y período.
+          { teacherAssignmentId: { in: assignmentIds }, academicTermId },
+          // Catálogo compartido: los propósitos anuales o del período aplican a
+          // todos los grupos del mismo grado y dimensión.
+          {
+            teacherAssignmentId: null,
+            gradeId: assignment.group.gradeId,
+            subjectId: assignment.subjectId,
+            academicYearId: assignment.academicYearId,
+            OR: [{ academicTermId }, { academicTermId: null }],
+          },
+        ],
       },
       orderBy: { orderNumber: 'asc' },
       include: {
         studentAchievements: {
+          where: { academicTermId },
           include: {
             studentEnrollment: {
               include: {
@@ -53,6 +75,120 @@ export class AchievementService {
         evidences: { orderBy: { orderNumber: 'asc' } },
       },
     });
+  }
+
+  // ============================================
+  // CATÁLOGO COMPARTIDO DE TRANSICIÓN (admin)
+  // ============================================
+
+  private async assertCatalogScope(data: {
+    institutionId: string;
+    gradeId: string;
+    subjectId: string;
+    academicYearId: string;
+    academicTermId?: string | null;
+  }) {
+    const [grade, subject, academicYear, term] = await Promise.all([
+      this.prisma.grade.findFirst({ where: { id: data.gradeId, institutionId: data.institutionId }, select: { id: true } }),
+      this.prisma.subject.findFirst({ where: { id: data.subjectId, area: { institutionId: data.institutionId } }, select: { id: true, code: true, subjectType: true } }),
+      this.prisma.academicYear.findFirst({ where: { id: data.academicYearId, institutionId: data.institutionId }, select: { id: true } }),
+      data.academicTermId
+        ? this.prisma.academicTerm.findFirst({ where: { id: data.academicTermId, academicYearId: data.academicYearId }, select: { id: true, order: true } })
+        : Promise.resolve(null),
+    ]);
+
+    if (!grade || !subject || !academicYear) {
+      throw new NotFoundException('El grado, dimensión o año académico no pertenece a la institución');
+    }
+    if (subject.subjectType !== 'PRESCHOOL_DIMENSION') {
+      throw new BadRequestException('El catálogo compartido solo admite dimensiones de preescolar');
+    }
+    if (data.academicTermId && !term) {
+      throw new BadRequestException('El período no pertenece al año académico seleccionado');
+    }
+    return { subject, term };
+  }
+
+  async getCatalogAchievements(data: {
+    institutionId: string;
+    gradeId: string;
+    subjectId: string;
+    academicYearId: string;
+    academicTermId?: string;
+  }) {
+    await this.assertCatalogScope(data);
+    return this.prisma.achievement.findMany({
+      where: {
+        institutionId: data.institutionId,
+        gradeId: data.gradeId,
+        subjectId: data.subjectId,
+        academicYearId: data.academicYearId,
+        academicTermId: data.academicTermId ?? null,
+        teacherAssignmentId: null,
+        isPromotional: false,
+      },
+      orderBy: { orderNumber: 'asc' },
+      include: { evidences: { orderBy: { orderNumber: 'asc' } }, levelDescriptors: true },
+    });
+  }
+
+  async createCatalogAchievement(data: {
+    institutionId: string;
+    gradeId: string;
+    subjectId: string;
+    academicYearId: string;
+    academicTermId?: string;
+    baseDescription: string;
+    evidences?: Array<{ text: string }>;
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
+  }) {
+    const description = data.baseDescription?.trim();
+    if (!description) throw new BadRequestException('El propósito es obligatorio');
+    const { subject, term } = await this.assertCatalogScope(data);
+    const scope = {
+      gradeId: data.gradeId,
+      subjectId: data.subjectId,
+      academicYearId: data.academicYearId,
+      academicTermId: data.academicTermId ?? null,
+      teacherAssignmentId: null,
+      isPromotional: false,
+    };
+    const last = await this.prisma.achievement.findFirst({
+      where: scope,
+      orderBy: { orderNumber: 'desc' },
+      select: { orderNumber: true },
+    });
+    const orderNumber = (last?.orderNumber ?? 0) + 1;
+    const subjectCode = (subject.code || 'DIM').slice(0, 8).toUpperCase();
+    const periodCode = term ? `P${term.order}` : 'ANUAL';
+    const evidences = (data.evidences ?? []).filter((e) => e.text?.trim());
+    const descriptors = (data.levelDescriptors ?? []).filter((d) => d.levelCode && d.text?.trim());
+
+    return this.prisma.achievement.create({
+      data: {
+        institutionId: data.institutionId,
+        code: `PROP-${subjectCode}-${periodCode}-${String(orderNumber).padStart(2, '0')}`,
+        ...scope,
+        orderNumber,
+        achievementType: 'ACADEMIC',
+        baseDescription: description,
+        ...(evidences.length ? { evidences: { create: evidences.map((e, index) => ({ text: e.text.trim(), orderNumber: index + 1 })) } } : {}),
+        ...(descriptors.length ? { levelDescriptors: { create: descriptors.map((d) => ({ levelCode: d.levelCode, text: d.text.trim() })) } } : {}),
+      },
+      include: { evidences: { orderBy: { orderNumber: 'asc' } }, levelDescriptors: true },
+    });
+  }
+
+  private async assertCatalogWritable(achievementId: string, canManageCatalog: boolean) {
+    if (canManageCatalog) return;
+    const achievement = await this.prisma.achievement.findUnique({
+      where: { id: achievementId },
+      select: { gradeId: true, teacherAssignmentId: true },
+    });
+    if (!achievement) throw new NotFoundException('Propósito no encontrado');
+    if (achievement.gradeId && !achievement.teacherAssignmentId) {
+      throw new ForbiddenException('Los propósitos del catálogo de Transición solo los puede editar el administrador o coordinador');
+    }
   }
 
   async getPromotionalAchievements(teacherAssignmentId: string) {
@@ -129,7 +265,8 @@ export class AchievementService {
     });
   }
 
-  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> }) {
+  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> }, canManageCatalog = true) {
+    await this.assertCatalogWritable(id, canManageCatalog);
     // Reemplazo total de descriptores solo si el cliente los envía (undefined = no tocar).
     if (data.levelDescriptors !== undefined) {
       const descriptors = data.levelDescriptors.filter((d) => d.levelCode && d.text?.trim());
@@ -158,7 +295,8 @@ export class AchievementService {
     });
   }
 
-  async deleteAchievement(id: string) {
+  async deleteAchievement(id: string, canManageCatalog = true) {
+    await this.assertCatalogWritable(id, canManageCatalog);
     return this.prisma.achievement.delete({
       where: { id },
     });
@@ -168,7 +306,8 @@ export class AchievementService {
   // EVIDENCIAS DE APRENDIZAJE
   // ============================================
 
-  async createEvidence(achievementId: string, text: string) {
+  async createEvidence(achievementId: string, text: string, canManageCatalog = true) {
+    await this.assertCatalogWritable(achievementId, canManageCatalog);
     const clean = text?.trim();
     if (!clean) throw new BadRequestException('El texto de la evidencia es obligatorio');
     const last = await this.prisma.achievementEvidence.findFirst({
@@ -181,7 +320,10 @@ export class AchievementService {
     });
   }
 
-  async updateEvidence(id: string, data: { text?: string; isActive?: boolean }) {
+  async updateEvidence(id: string, data: { text?: string; isActive?: boolean }, canManageCatalog = true) {
+    const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true } });
+    if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
+    await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
     const updateData: any = {};
     if (data.text !== undefined) {
       const clean = data.text.trim();
@@ -192,12 +334,16 @@ export class AchievementService {
     return this.prisma.achievementEvidence.update({ where: { id }, data: updateData });
   }
 
-  async deleteEvidence(id: string) {
+  async deleteEvidence(id: string, canManageCatalog = true) {
+    const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true } });
+    if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
+    await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
     return this.prisma.achievementEvidence.delete({ where: { id } });
   }
 
   /** Reordena las evidencias de un aprendizaje según el arreglo de IDs recibido. */
-  async reorderEvidences(achievementId: string, orderedIds: string[]) {
+  async reorderEvidences(achievementId: string, orderedIds: string[], canManageCatalog = true) {
+    await this.assertCatalogWritable(achievementId, canManageCatalog);
     await this.prisma.$transaction(
       orderedIds.map((id, index) =>
         this.prisma.achievementEvidence.updateMany({
@@ -333,7 +479,7 @@ export class AchievementService {
     const whereClause: any = { studentEnrollmentId };
     
     if (academicTermId) {
-      whereClause.achievement = { academicTermId };
+      whereClause.academicTermId = academicTermId;
     }
 
     return this.prisma.studentAchievement.findMany({

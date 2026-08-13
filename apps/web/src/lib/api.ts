@@ -907,6 +907,18 @@ export const achievementConfigApi = {
 }
 
 export const achievementsApi = {
+  getCatalog: (params: { institutionId: string; gradeId: string; subjectId: string; academicYearId: string; academicTermId?: string }) =>
+    api.get('/achievements/catalog', { params }),
+  createCatalog: (data: {
+    institutionId: string;
+    gradeId: string;
+    subjectId: string;
+    academicYearId: string;
+    academicTermId?: string;
+    baseDescription: string;
+    evidences?: Array<{ text: string }>;
+    levelDescriptors?: Array<{ levelCode: string; text: string }>;
+  }) => api.post('/achievements/catalog', data),
   getByAssignment: (teacherAssignmentId: string, academicTermId: string) => 
     api.get('/achievements/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
   getPromotional: (teacherAssignmentId: string) => 

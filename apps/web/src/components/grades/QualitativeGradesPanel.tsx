@@ -42,6 +42,7 @@ interface Props {
   currentPeriodOpen: boolean
   achievements: AchievementRow[]
   descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL'
+  catalogLocked?: boolean
   selectedAchievementId: string | null
   onSelectAchievement: (achievementId: string) => void
   qualitativeLevels: QualitativeLevel[]
@@ -60,6 +61,7 @@ export default function QualitativeGradesPanel({
   currentPeriodOpen,
   achievements,
   descriptorMode = 'FREE',
+  catalogLocked = false,
   selectedAchievementId,
   onSelectAchievement,
   qualitativeLevels,
@@ -306,7 +308,7 @@ export default function QualitativeGradesPanel({
                       <button
                         type="button"
                         onClick={() => openEditModal(achievement)}
-                        disabled={!currentPeriodOpen}
+                        disabled={!currentPeriodOpen || catalogLocked}
                         className="p-1 rounded text-slate-400 hover:text-amber-700 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="Editar nombre y descriptores"
                       >
@@ -315,7 +317,7 @@ export default function QualitativeGradesPanel({
                       <button
                         type="button"
                         onClick={() => setDeleteConfirmId(achievement.id)}
-                        disabled={!currentPeriodOpen}
+                        disabled={!currentPeriodOpen || catalogLocked}
                         className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="Eliminar indicador"
                       >
@@ -335,7 +337,7 @@ export default function QualitativeGradesPanel({
         <button
           type="button"
           onClick={openCreateModal}
-          disabled={!currentPeriodOpen}
+          disabled={!currentPeriodOpen || catalogLocked}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -347,6 +349,11 @@ export default function QualitativeGradesPanel({
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
           El período está cerrado para calificaciones. Un administrador debe habilitarlo en
           «Ventanas de Calificación» para poder crear indicadores y valorar estudiantes.
+        </p>
+      )}
+      {catalogLocked && (
+        <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-1.5">
+          El catálogo de Transición está fijado por administración. Aquí solo se registran valoraciones.
         </p>
       )}
 

@@ -24,6 +24,12 @@ export class AchievementController {
     private readonly configService: AchievementConfigService,
   ) {}
 
+  private canManageCatalog(req: any) {
+    if (req.user?.isSuperAdmin) return true;
+    const roles = (req.user?.roles ?? []).map((role: any) => typeof role === 'string' ? role : role?.role?.name ?? role?.name);
+    return roles.some((role: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(role));
+  }
+
   // ============================================
   // CONFIGURATION (Admin/Coordinator only)
   // ============================================
@@ -142,6 +148,35 @@ export class AchievementController {
   }
 
   // ============================================
+  // CATÁLOGO COMPARTIDO DE TRANSICIÓN (Admin)
+  // ============================================
+
+  @Get('catalog')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getCatalogAchievements(
+    @Query() query: { institutionId: string; gradeId: string; subjectId: string; academicYearId: string; academicTermId?: string },
+  ) {
+    return this.achievementService.getCatalogAchievements(query);
+  }
+
+  @Post('catalog')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async createCatalogAchievement(
+    @Body() body: {
+      institutionId: string;
+      gradeId: string;
+      subjectId: string;
+      academicYearId: string;
+      academicTermId?: string;
+      baseDescription: string;
+      evidences?: Array<{ text: string }>;
+      levelDescriptors?: Array<{ levelCode: string; text: string }>;
+    },
+  ) {
+    return this.achievementService.createCatalogAchievement(body);
+  }
+
+  // ============================================
   // ACHIEVEMENTS (Teacher)
   // ============================================
 
@@ -187,8 +222,9 @@ export class AchievementController {
   async updateAchievement(
     @Param('id') id: string,
     @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> },
+    @Request() req: any,
   ) {
-    return this.achievementService.updateAchievement(id, body);
+    return this.achievementService.updateAchievement(id, body, this.canManageCatalog(req));
   }
 
   @Post(':id/duplicate')
@@ -199,8 +235,8 @@ export class AchievementController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async deleteAchievement(@Param('id') id: string) {
-    return this.achievementService.deleteAchievement(id);
+  async deleteAchievement(@Param('id') id: string, @Request() req: any) {
+    return this.achievementService.deleteAchievement(id, this.canManageCatalog(req));
   }
 
   // ============================================
@@ -209,26 +245,26 @@ export class AchievementController {
 
   @Post(':id/evidences')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async createEvidence(@Param('id') achievementId: string, @Body() body: { text: string }) {
-    return this.achievementService.createEvidence(achievementId, body.text);
+  async createEvidence(@Param('id') achievementId: string, @Body() body: { text: string }, @Request() req: any) {
+    return this.achievementService.createEvidence(achievementId, body.text, this.canManageCatalog(req));
   }
 
   @Put(':id/evidences/reorder')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async reorderEvidences(@Param('id') achievementId: string, @Body() body: { orderedIds: string[] }) {
-    return this.achievementService.reorderEvidences(achievementId, body.orderedIds);
+  async reorderEvidences(@Param('id') achievementId: string, @Body() body: { orderedIds: string[] }, @Request() req: any) {
+    return this.achievementService.reorderEvidences(achievementId, body.orderedIds, this.canManageCatalog(req));
   }
 
   @Put('evidences/:evidenceId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async updateEvidence(@Param('evidenceId') evidenceId: string, @Body() body: { text?: string; isActive?: boolean }) {
-    return this.achievementService.updateEvidence(evidenceId, body);
+  async updateEvidence(@Param('evidenceId') evidenceId: string, @Body() body: { text?: string; isActive?: boolean }, @Request() req: any) {
+    return this.achievementService.updateEvidence(evidenceId, body, this.canManageCatalog(req));
   }
 
   @Delete('evidences/:evidenceId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async deleteEvidence(@Param('evidenceId') evidenceId: string) {
-    return this.achievementService.deleteEvidence(evidenceId);
+  async deleteEvidence(@Param('evidenceId') evidenceId: string, @Request() req: any) {
+    return this.achievementService.deleteEvidence(evidenceId, this.canManageCatalog(req));
   }
 
   // ============================================

@@ -256,8 +256,10 @@ export default function Grades() {
     achievementsPerPeriod: number;
     useValueJudgments: boolean;
     descriptorMode: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
+    learningCatalogMode: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
   } | null>(null)
   const descriptorMode = achievementConfig?.descriptorMode ?? 'FREE'
+  const catalogLocked = achievementConfig?.learningCatalogMode === 'ADMIN_FIXED'
 
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
@@ -775,6 +777,7 @@ export default function Grades() {
             achievementsPerPeriod: configRes.data.achievementsPerPeriod || 1,
             useValueJudgments: configRes.data.useValueJudgments ?? true,
             descriptorMode: configRes.data.descriptorMode ?? 'FREE',
+            learningCatalogMode: configRes.data.learningCatalogMode ?? 'TEACHER_MANAGED',
           })
         }
 
@@ -1751,6 +1754,7 @@ export default function Grades() {
             currentPeriodOpen={currentPeriodOpen}
             achievements={achievements}
             descriptorMode={descriptorMode}
+            catalogLocked={catalogLocked}
             selectedAchievementId={selectedQualitativeAchievementId}
             onSelectAchievement={setSelectedQualitativeAchievementId}
             qualitativeLevels={qualitativeLevels}

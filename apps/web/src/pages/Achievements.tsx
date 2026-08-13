@@ -3,6 +3,7 @@ import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
+import PreschoolCatalog from '../components/achievements/PreschoolCatalog'
 import {
   FileText,
   Settings,
@@ -38,7 +39,7 @@ import {
   achievementBankApi,
 } from '../lib/api'
 
-type TabType = 'achievements' | 'config'
+type TabType = 'achievements' | 'config' | 'preschool-catalog'
 type PerformanceLevel = 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR'
 
 interface AchievementConfig {
@@ -899,6 +900,7 @@ export default function Achievements() {
 
   const tabs = [
     { id: 'achievements' as TabType, label: 'Aprendizajes y Evidencias', icon: Target },
+    ...(isAdmin ? [{ id: 'preschool-catalog' as TabType, label: 'Catálogo de Transición', icon: BookOpen }] : []),
     ...(isAdmin ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
   ]
 
@@ -980,7 +982,9 @@ export default function Achievements() {
         )}
       </div>
 
-      {activeTab === 'achievements' ? (
+      {activeTab === 'preschool-catalog' && institutionId ? (
+        <PreschoolCatalog institutionId={institutionId} academicYears={academicYears} selectedYearId={selectedYearId} />
+      ) : activeTab === 'achievements' ? (
         <div className="space-y-6">
           {/* Selectors - Orden: Año (fijo) → Período → Asignatura → Grupo */}
           <div className="flex gap-4 flex-wrap items-center">
