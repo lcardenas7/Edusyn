@@ -851,6 +851,7 @@ export default function ReportCards() {
       headerLines: [
         [config.headerResolution, (institution as any)?.daneCode ? `DANE ${(institution as any).daneCode}` : '', data?.institution?.nit ? `NIT ${data.institution.nit}` : '']
           .filter(Boolean).join(' · '),
+        [config.headerMunicipality, config.headerDepartment].filter(Boolean).join(', '),
         [data?.institution?.address, data?.institution?.phone, data?.institution?.email].filter(Boolean).join(' · '),
       ].filter(Boolean),
       signatures: sigs,

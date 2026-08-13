@@ -408,6 +408,19 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
   const inasCell = (absencesRaw === 0 && !showZero) ? '' : String(absencesRaw);
 
   const norm = (v: any) => String(v ?? '').trim().toUpperCase();
+
+  // El nivel se guarda como enum PerformanceLevel (SUPERIOR/ALTO/BASICO/BAJO),
+  // asignado por posición sobre la escala ordenada de mejor a menor. Para marcar
+  // la columna correcta hay que reconstruir el código de escala (L/EP/I…) desde el enum.
+  const PERF_SLOTS: Record<number, string[]> = {
+    4: ['SUPERIOR', 'ALTO', 'BASICO', 'BAJO'],
+    3: ['SUPERIOR', 'BASICO', 'BAJO'],
+    2: ['SUPERIOR', 'BAJO'],
+  };
+  const perfSlots = PERF_SLOTS[scale.length] || PERF_SLOTS[4] || [];
+  const codeByPerf: Record<string, string> = {};
+  scale.forEach((s, i) => { if (perfSlots[i]) codeByPerf[norm(perfSlots[i])] = norm(s.code); });
+
   const scaleHeaders = scale.map(s => `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join('');
 
   const subjects: any[] = (data.areaGrades || []).flatMap((a: any) => a.subjects || []);
@@ -430,7 +443,9 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     const block = (sub.learningBlocks && sub.learningBlocks[0]) || null;
     const proposito = block?.learning || sub.achievement || '';
     const evidences: string[] = block?.evidences || [];
-    const level = norm(block?.performanceLevel || sub.performanceLevel);
+    const rawLevel = norm(block?.performanceLevel || sub.performanceLevel);
+    // El valor guardado suele ser el enum PerformanceLevel; traducir al código de escala.
+    const level = codeByPerf[rawLevel] || rawLevel;
     const evidencesHtml = (rc.showEvidences !== false && evidences.length)
       ? `<div style="font-size:9.5px;font-weight:700;color:${c.primary};margin-top:3px;">${esc(evidenceLabelPlural)}</div>
          <ul style="margin:2px 0 0 14px;padding:0;font-size:10px;color:#475569;line-height:1.4;">${evidences.map(e => `<li>${esc(e)}</li>`).join('')}</ul>`
