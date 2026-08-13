@@ -78,6 +78,61 @@ export class AchievementService {
   }
 
   // ============================================
+  // CONVIVENCIA (registro textual libre del docente)
+  // ============================================
+
+  /** Entradas de convivencia de todos los estudiantes del grupo, para el período. */
+  async getConvivenciaByAssignment(teacherAssignmentId: string, academicTermId: string) {
+    const ta = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { subjectId: true, groupId: true },
+    });
+    if (!ta) throw new NotFoundException('Asignación docente no encontrada');
+    return this.prisma.convivenciaEntry.findMany({
+      where: {
+        subjectId: ta.subjectId,
+        academicTermId,
+        studentEnrollment: { groupId: ta.groupId },
+      },
+      include: { studentEnrollment: { include: { student: true } } },
+    });
+  }
+
+  /** Crea/actualiza el texto de convivencia de un estudiante en un período. */
+  async upsertConvivenciaEntry(data: {
+    studentEnrollmentId: string;
+    academicTermId: string;
+    subjectId: string;
+    text: string;
+    createdById?: string;
+  }) {
+    const enr = await this.prisma.studentEnrollment.findUnique({
+      where: { id: data.studentEnrollmentId },
+      select: { institutionId: true },
+    });
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
+    const text = (data.text ?? '').trim();
+    return this.prisma.convivenciaEntry.upsert({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
+          studentEnrollmentId: data.studentEnrollmentId,
+          academicTermId: data.academicTermId,
+          subjectId: data.subjectId,
+        },
+      },
+      update: { text, createdById: data.createdById },
+      create: {
+        institutionId: enr.institutionId,
+        studentEnrollmentId: data.studentEnrollmentId,
+        academicTermId: data.academicTermId,
+        subjectId: data.subjectId,
+        text,
+        createdById: data.createdById,
+      },
+    });
+  }
+
+  // ============================================
   // CATÁLOGO COMPARTIDO DE TRANSICIÓN (admin)
   // ============================================
 

@@ -177,6 +177,28 @@ export class AchievementController {
   }
 
   // ============================================
+  // CONVIVENCIA (texto libre del docente)
+  // ============================================
+
+  @Get('convivencia')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getConvivencia(
+    @Query('teacherAssignmentId') teacherAssignmentId: string,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    return this.achievementService.getConvivenciaByAssignment(teacherAssignmentId, academicTermId);
+  }
+
+  @Put('convivencia')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async upsertConvivencia(
+    @Request() req: any,
+    @Body() body: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string },
+  ) {
+    return this.achievementService.upsertConvivenciaEntry({ ...body, createdById: req.user?.id });
+  }
+
+  // ============================================
   // ACHIEVEMENTS (Teacher)
   // ============================================
 

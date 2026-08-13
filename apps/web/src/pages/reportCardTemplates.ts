@@ -84,6 +84,13 @@ export const TEMPLATE_CATALOG: TemplateMeta[] = [
     supportedStructures: ['AREAS_SUBJECTS', 'SUBJECTS_ONLY'],
     multiperiod: true,
   },
+  {
+    key: 'transicion-propositos',
+    name: 'Transición · Propósitos e Imprescindibles',
+    description: 'Cualitativo por dimensiones con Propósito (negrita) + Imprescindibles (viñetas), columnas de escala configurable, I.H. y convivencia. Etiquetas configurables por institución.',
+    supportedStructures: ['DIMENSIONS'],
+    multiperiod: false,
+  },
 ];
 
 // ── Helpers de formato ───────────────────────────────────────────────────────
@@ -377,4 +384,102 @@ function summaryCard(label: string, value: string, c: TemplatePalette): string {
 function shortPeriod(name: string, order: number): string {
   const m = /(\d+)/.exec(name || '');
   return m ? `P${m[1]}` : `P${order}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// transicion-propositos · Boletín de Transición (Propósitos e Imprescindibles)
+// Cualitativo por dimensiones: Propósito (negrita) + Imprescindibles (viñetas),
+// columnas de escala configurable, I.H. (displayHours), convivencia y puesto opcional.
+// ═══════════════════════════════════════════════════════════════════════════
+export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, periodLabel: string): string {
+  const c = ctx.colors;
+  const rc = data.reportContent || {};
+  const learningLabelSingular = rc.learningLabelSingular || 'Aprendizaje';
+  const evidenceLabelPlural = rc.evidenceLabelPlural || 'Evidencias';
+
+  // Escala dinámica: usa los niveles cualitativos configurados; si no, deriva de performanceLabels.
+  let scale: Array<{ code: string; name: string }> = (ctx.qualitativeLevels || []).map(l => ({ code: l.code, name: l.name }));
+  if (scale.length === 0) {
+    scale = Object.entries(ctx.performanceLabels || {}).map(([code, name]) => ({ code, name: String(name) }));
+  }
+
+  const absencesRaw = data.attendance?.absent ?? 0;
+  const showZero = !!rc.showZeroAbsences;
+  const inasCell = (absencesRaw === 0 && !showZero) ? '' : String(absencesRaw);
+
+  const norm = (v: any) => String(v ?? '').trim().toUpperCase();
+  const scaleHeaders = scale.map(s => `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join('');
+
+  const subjects: any[] = (data.areaGrades || []).flatMap((a: any) => a.subjects || []);
+  const rows = subjects.map((sub: any) => {
+    const isConvivencia = sub.subjectType === 'CONVIVENCIA';
+    const ih = sub.displayHours ?? sub.weeklyHours ?? '';
+    if (isConvivencia) {
+      const txt = sub.convivenciaText || '';
+      return `
+        <tr style="border-top:1px solid #e2e8f0;">
+          <td style="text-align:center;font-weight:700;padding:5px 4px;">${esc(String(ih))}</td>
+          <td style="padding:5px 8px;">
+            <div style="font-weight:800;color:${c.text};">${esc(sub.subject)}</div>
+            ${txt ? `<div style="font-size:10px;color:#475569;margin-top:2px;line-height:1.4;">${esc(txt)}</div>` : ''}
+          </td>
+          ${scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join('')}
+          <td style="text-align:center;border-left:1px solid #e2e8f0;">${esc(inasCell)}</td>
+        </tr>`;
+    }
+    const block = (sub.learningBlocks && sub.learningBlocks[0]) || null;
+    const proposito = block?.learning || sub.achievement || '';
+    const evidences: string[] = block?.evidences || [];
+    const level = norm(block?.performanceLevel || sub.performanceLevel);
+    const evidencesHtml = (rc.showEvidences !== false && evidences.length)
+      ? `<div style="font-size:9.5px;font-weight:700;color:${c.primary};margin-top:3px;">${esc(evidenceLabelPlural)}</div>
+         <ul style="margin:2px 0 0 14px;padding:0;font-size:10px;color:#475569;line-height:1.4;">${evidences.map(e => `<li>${esc(e)}</li>`).join('')}</ul>`
+      : '';
+    const descriptorHtml = (rc.showLevelDescriptor && block?.levelDescriptor)
+      ? `<div style="font-size:10px;color:#475569;margin-top:3px;font-style:italic;">${esc(block.levelDescriptor)}</div>` : '';
+    return `
+      <tr style="border-top:1px solid #e2e8f0;">
+        <td style="text-align:center;font-weight:700;padding:5px 4px;vertical-align:top;">${esc(String(ih))}</td>
+        <td style="padding:5px 8px;">
+          <div style="font-weight:800;color:${c.text};line-height:1.35;">${esc(proposito)}</div>
+          ${evidencesHtml}
+          ${descriptorHtml}
+        </td>
+        ${scale.map(s => `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('')}
+        <td style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>
+      </tr>`;
+  }).join('');
+
+  const scaleLegend = scale.map(s => `${esc(s.code)} = ${esc(s.name)}`).join('  ·  ');
+  const rankLine = rc.preschoolShowRank && data.rank
+    ? `<span style="margin-left:12px;"><b>Puesto:</b> ${data.rank}${data.totalStudents ? ' / ' + data.totalStudents : ''}</span>` : '';
+
+  return `
+    <div class="report-card-page" style="font-family:Arial,Helvetica,sans-serif;color:${c.text};padding:6px;">
+      ${headerBlock(ctx)}
+      <div style="text-align:center;font-size:12px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-top:8px;">Informe Académico · ${esc(periodLabel)}</div>
+      <div style="margin-top:8px;font-size:11px;display:flex;flex-wrap:wrap;gap:4px 18px;">
+        <span><b>Estudiante:</b> ${esc(studentName(data.student))}</span>
+        <span><b>Curso:</b> ${esc(data.group?.gradeLevel || '')} ${esc(data.group?.name || '')}</span>
+        ${rankLine}
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:10px;">
+        <thead>
+          <tr style="background:${c.headerBg};color:${c.primary};font-size:9px;text-transform:uppercase;">
+            <th style="padding:4px;width:34px;">I.H.</th>
+            <th style="padding:4px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
+            ${scaleHeaders}
+            <th style="padding:4px;width:34px;border-left:1px solid #e2e8f0;">Inas</th>
+          </tr>
+        </thead>
+        <tbody>${rows || `<tr><td colspan="${scale.length + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
+      </table>
+      <div style="margin-top:8px;font-size:9px;color:#64748b;"><b style="color:${c.primary};">Interpretación de la escala:</b> ${scaleLegend}</div>
+      <div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;min-height:44px;">
+        <div style="font-size:10px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:4px;">Observaciones</div>
+        ${(data.observations || []).slice(0, 4).map((o: any) => `<div style="font-size:10px;color:#475569;margin:2px 0;">${esc(o.description || o)}</div>`).join('')}
+      </div>
+      ${signaturesBlock(ctx)}
+      ${footerBlock(ctx)}
+    </div>`;
 }

@@ -2879,7 +2879,9 @@ export class ReportsService {
     const allAchievements = await this.prisma.studentAchievement.findMany({
       where: {
         studentEnrollmentId: { in: enrollmentIds },
-        achievement: { academicTermId },
+        // La valoración se filtra por SU período (poblado para todos): captura tanto
+        // aprendizajes por-período como los del catálogo compartido anual.
+        academicTermId,
       },
       include: {
         achievement: {
@@ -2887,6 +2889,7 @@ export class ReportsService {
             teacherAssignment: {
               include: { subject: true },
             },
+            subject: true, // dimensión, cuando es catálogo compartido (sin asignación)
             levelDescriptors: true,
             evidences: { where: { isActive: true }, orderBy: { orderNumber: 'asc' } },
           },
@@ -2905,13 +2908,51 @@ export class ReportsService {
 
     // ─── Configuración del módulo Aprendizajes/Evidencias para el boletín ──
     const achConfig = await this.prisma.achievementConfig.findUnique({ where: { institutionId } });
+    const rcConfig = await this.prisma.reportCardConfig.findUnique({ where: { institutionId } });
     const reportContent = {
       showLearning: achConfig?.showLearningInReport ?? true,
       showEvidences: achConfig?.showEvidencesInReport ?? false,
       showLevelDescriptor: achConfig?.showLevelDescriptorInReport ?? false,
       showJudgment: achConfig?.showJudgmentInReport ?? true,
       granularity: (achConfig?.reportLearningGranularity ?? 'PRIMARY_ONLY') as 'PRIMARY_ONLY' | 'ALL',
+      // Etiquetas configurables (Propósito/Imprescindible en INEDES)
+      learningLabelSingular: achConfig?.learningLabelSingular ?? 'Aprendizaje',
+      learningLabelPlural: achConfig?.learningLabelPlural ?? 'Aprendizajes',
+      evidenceLabelSingular: achConfig?.evidenceLabelSingular ?? 'Evidencia',
+      evidenceLabelPlural: achConfig?.evidenceLabelPlural ?? 'Evidencias',
+      // Boletín de transición
+      preschoolShowRank: rcConfig?.preschoolShowRank ?? false,
+      preschoolRankWeights: (rcConfig?.preschoolRankWeights ?? null) as Record<string, number> | null,
+      showZeroAbsences: rcConfig?.showZeroAbsences ?? false,
+      // Escala cualitativa configurada (para columnas dinámicas del boletín de transición).
+      qualitativeLevels: (() => {
+        const levels = ((firstEnrollment.academicYear.institution as any).academicLevelsConfig || []) as any[];
+        const dim = Array.isArray(levels) ? levels.find((l: any) => l?.qualitativeLevels?.length > 0) : null;
+        return (dim?.qualitativeLevels || []) as Array<{ code: string; name: string; color?: string }>;
+      })(),
     };
+
+    // ─── Convivencia (texto libre del docente) del grupo, por período ─────
+    const convivenciaEntries = await this.prisma.convivenciaEntry.findMany({
+      where: { studentEnrollmentId: { in: enrollmentIds }, academicTermId },
+      include: { subject: { select: { id: true, name: true, displayHours: true } } },
+    });
+    const convivenciaMap = new Map<string, typeof convivenciaEntries>();
+    for (const ce of convivenciaEntries) {
+      const list = convivenciaMap.get(ce.studentEnrollmentId) || [];
+      list.push(ce);
+      convivenciaMap.set(ce.studentEnrollmentId, list);
+    }
+
+    // ─── displayHours + tipo por asignatura (para I.H. y detección de dimensiones) ──
+    const groupSubjects = await this.prisma.teacherAssignment.findMany({
+      where: { groupId, academicYearId },
+      select: { subjectId: true, weeklyHours: true, subject: { select: { displayHours: true, subjectType: true } } },
+    });
+    const subjectMetaById = new Map(groupSubjects.map(a => [a.subjectId, {
+      displayHours: a.subject?.displayHours ?? a.weeklyHours ?? null,
+      subjectType: a.subject?.subjectType ?? null,
+    }]));
 
     // ─── QUERY 10: StudentObservations de todos los estudiantes (batch) ──
     const obsWhere: any = {
@@ -3136,8 +3177,9 @@ export class ReportsService {
             )?.text || null
           : null;
         return {
-          subjectId: sa.achievement.teacherAssignment?.subject?.id || null,
-          subject: sa.achievement.teacherAssignment?.subject?.name || '',
+          // Catálogo compartido: la asignatura viene de achievement.subject (sin asignación).
+          subjectId: sa.achievement.teacherAssignment?.subject?.id || sa.achievement.subjectId || null,
+          subject: sa.achievement.teacherAssignment?.subject?.name || (sa.achievement as any).subject?.name || '',
           orderNumber: sa.achievement.orderNumber,
           description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
           // Texto base del aprendizaje (sin modificaciones por nivel), para el bloque "Aprendizaje".
@@ -3249,6 +3291,12 @@ export class ReportsService {
           subj.qualitativeObservation = ach?.observation || null;
           subj.judgment = ach?.judgment || null;
           (subj as any).learningBlocks = buildLearningBlocks(subj.subjectId, subj.subject, subj.performanceLevel);
+          // Transición: horas mostradas + tipo (dimensión/convivencia) + texto de convivencia.
+          const meta = subj.subjectId ? subjectMetaById.get(subj.subjectId) : null;
+          (subj as any).displayHours = meta?.displayHours ?? null;
+          (subj as any).subjectType = meta?.subjectType ?? null;
+          const conv = (convivenciaMap.get(enrollmentId) || []).find(c => c.subjectId === subj.subjectId);
+          (subj as any).convivenciaText = conv?.text ?? null;
         }
       }
 

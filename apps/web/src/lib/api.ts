@@ -919,7 +919,12 @@ export const achievementsApi = {
     evidences?: Array<{ text: string }>;
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
   }) => api.post('/achievements/catalog', data),
-  getByAssignment: (teacherAssignmentId: string, academicTermId: string) => 
+  // Convivencia (texto libre del docente por estudiante+período)
+  getConvivencia: (teacherAssignmentId: string, academicTermId: string) =>
+    api.get('/achievements/convivencia', { params: { teacherAssignmentId, academicTermId } }),
+  upsertConvivencia: (data: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string }) =>
+    api.put('/achievements/convivencia', data),
+  getByAssignment: (teacherAssignmentId: string, academicTermId: string) =>
     api.get('/achievements/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
   getPromotional: (teacherAssignmentId: string) => 
     api.get(`/achievements/promotional/${teacherAssignmentId}`),

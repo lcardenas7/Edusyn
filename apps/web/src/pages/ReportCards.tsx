@@ -25,6 +25,7 @@ import {
   TEMPLATE_CATALOG,
   buildPreescolarNarrativoHtml,
   buildMultiperiodoTabularHtml,
+  buildTransicionPropositosHtml,
   type TemplateCtx,
 } from './reportCardTemplates'
 
@@ -856,7 +857,7 @@ export default function ReportCards() {
       performanceLabels: Object.fromEntries(
         Object.entries(performanceConfig).map(([k, v]: any) => [k, v.label]),
       ),
-      qualitativeLevels: data?.displayConfig?.qualitativeLevels || undefined,
+      qualitativeLevels: (data?.reportContent?.qualitativeLevels?.length ? data.reportContent.qualitativeLevels : data?.displayConfig?.qualitativeLevels) || undefined,
       showRanking: !!config.showRanking,
       showAttendance: !!config.showAttendance,
       showVerification: true,
@@ -886,6 +887,11 @@ export default function ReportCards() {
       const ctx = await buildTemplateCtx(data)
       const periodLabel = data?.term?.name || ''
       return buildPreescolarNarrativoHtml(data, ctx, periodLabel)
+    }
+    if (resolvedTemplateKey === 'transicion-propositos') {
+      const ctx = await buildTemplateCtx(data)
+      const periodLabel = data?.term?.name || ''
+      return buildTransicionPropositosHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, ctx, periodLabel)
     }
     return buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
   }
@@ -1059,6 +1065,8 @@ export default function ReportCards() {
           const ctx = await buildTemplateCtx(data)
           if (formatPreviewKey === 'preescolar-narrativo') {
             html = buildPreescolarNarrativoHtml(data, ctx, 'Período 1')
+          } else if (formatPreviewKey === 'transicion-propositos') {
+            html = buildTransicionPropositosHtml(data, ctx, 'Período 1')
           } else {
             html = await buildReportCardHtml(data, { enrollmentId: 'sample', studentId: 'sample', studentName: 'Ana Ramírez', rank: 3, totalStudents: 28 } as any)
           }
