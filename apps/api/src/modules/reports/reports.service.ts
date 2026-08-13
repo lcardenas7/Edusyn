@@ -2595,7 +2595,7 @@ export class ReportsService {
     groupId: string,
     academicTermId: string,
   ): Promise<{
-    institution: { id: string; name: string; nit: string | null };
+    institution: { id: string; name: string; nit: string | null; address: string | null; phone: string | null; email: string | null };
     academicYear: { id: string; year: number; name: string | null };
     term: { id: string; name: string; type: string };
     academicStructure: AcademicStructureType;
@@ -3350,6 +3350,10 @@ export class ReportsService {
         id: institutionId,
         name: firstEnrollment.academicYear.institution.name,
         nit: firstEnrollment.academicYear.institution.nit,
+        // Datos del perfil institucional para el encabezado (dirección · tel · correo).
+        address: (firstEnrollment.academicYear.institution as any).address ?? null,
+        phone: (firstEnrollment.academicYear.institution as any).phone ?? null,
+        email: (firstEnrollment.academicYear.institution as any).email ?? null,
       },
       academicYear: {
         id: academicYearId,

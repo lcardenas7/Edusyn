@@ -1114,14 +1114,23 @@ export default function ReportCards() {
       try {
         const instName = institution?.name
         const nit = (institution as any)?.nit ?? null
+        // La vista previa debe reflejar los escudos del BORRADOR (aún sin guardar),
+        // no el config guardado. Se usan URLs proxy (cargan cross-origin tras el fix CORP).
+        const applyDraftLogos = (ctx: TemplateCtx) => {
+          const draftSchool = configDraft.showLogo ? (configDraft.logoUrl ? toPublicFileUrl(configDraft.logoUrl) : '') : ''
+          const draftColombia = configDraft.showLogo ? (configDraft.secondaryLogoUrl ? toPublicFileUrl(configDraft.secondaryLogoUrl) : '') : ''
+          ctx.logoSrc = draftSchool || ctx.logoSrc
+          ctx.shieldSrc = draftColombia || draftSchool || ctx.shieldSrc
+          return ctx
+        }
         let html = ''
         if (formatPreviewKey === 'multiperiodo-tabular') {
           const year = makeSampleYear(instName, nit)
-          const ctx = await buildTemplateCtx(year)
+          const ctx = applyDraftLogos(await buildTemplateCtx(year))
           html = buildMultiperiodoTabularHtml(year, ctx, { rank: 3, totalStudents: 28 })
         } else {
           const data = makeSampleReportData(sampleContent, instName, nit)
-          const ctx = await buildTemplateCtx(data)
+          const ctx = applyDraftLogos(await buildTemplateCtx(data))
           if (formatPreviewKey === 'preescolar-narrativo') {
             html = buildPreescolarNarrativoHtml(data, ctx, 'Período 1')
           } else if (formatPreviewKey === 'transicion-propositos') {
@@ -1140,7 +1149,7 @@ export default function ReportCards() {
     }
     run()
     return () => { cancelled = true }
-  }, [showConfigModal, formatPreviewKey, sampleContent, configDraft.primaryColor, configDraft.fontFamily, configDraft.showLogo])
+  }, [showConfigModal, formatPreviewKey, sampleContent, configDraft.primaryColor, configDraft.fontFamily, configDraft.showLogo, configDraft.logoUrl, configDraft.secondaryLogoUrl])
 
   const setStructureTemplate = async (structure: string, templateKey: string) => {
     setTemplateSelByStructure(prev => ({ ...prev, [structure]: templateKey }))

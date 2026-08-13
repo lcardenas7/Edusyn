@@ -488,12 +488,12 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:12px;">
       ${headerBlock(ctx)}
 
-      <div style="text-align:center;background:${c.primary};color:#fff;padding:6px 0;border-radius:4px;margin-top:10px;">
-        <div style="font-size:12px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">Informe Académico</div>
-        <div style="font-size:9px;opacity:0.9;">${esc(periodLabel)}</div>
+      <div style="text-align:center;background:${c.primary};color:#fff;padding:10px 0;border-radius:5px;margin-top:14px;">
+        <div style="font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">Informe Académico</div>
+        <div style="font-size:11px;opacity:0.92;margin-top:1px;">${esc(periodLabel)}</div>
       </div>
 
-      <div style="margin-top:10px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
+      <div style="margin-top:14px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
         <div style="display:grid;grid-template-columns:${showRank ? '2fr 1fr 1.4fr 1fr' : '2fr 1fr 1.4fr'};">
           ${infoCell('Estudiante', studentName(s))}
           ${infoCell('Documento', s.documentNumber || '')}
@@ -502,24 +502,24 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
         </div>
       </div>
 
-      <div style="margin-top:10px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+      <div style="margin-top:14px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
           <thead>
-            <tr style="background:${c.headerBg};color:#334155;font-size:9px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">
-              <th style="padding:5px;width:34px;">I.H.</th>
-              <th style="padding:5px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
+            <tr style="background:${c.headerBg};color:#334155;font-size:9.5px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">
+              <th style="padding:7px 5px;width:36px;">I.H.</th>
+              <th style="padding:7px 6px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
               ${scaleHeaders}
-              <th style="padding:5px;width:34px;border-left:1px solid #e2e8f0;">Inas</th>
+              <th style="padding:7px 5px;width:36px;border-left:1px solid #e2e8f0;">Inas</th>
             </tr>
           </thead>
           <tbody>${rows || `<tr><td colspan="${(valSingle ? 1 : scale.length) + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
         </table>
       </div>
 
-      <div style="margin-top:8px;font-size:9px;color:#64748b;"><b style="color:#475569;">Interpretación de la escala:</b> ${scaleLegend}</div>
-      <div style="margin-top:12px;border:1px solid ${c.primary}55;border-radius:4px;padding:8px 10px;min-height:44px;">
-        <div style="font-size:10px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:4px;">Observaciones</div>
-        ${(data.observations || []).slice(0, 4).map((o: any) => `<div style="font-size:10px;color:#475569;margin:2px 0;">${esc(o.description || o)}</div>`).join('')}
+      <div style="margin-top:10px;font-size:9.5px;color:#64748b;"><b style="color:#475569;">Interpretación de la escala:</b> ${scaleLegend}</div>
+      <div style="margin-top:16px;border:1px solid ${c.primary}55;border-radius:4px;padding:10px 12px;min-height:90px;">
+        <div style="font-size:11px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:5px;letter-spacing:0.5px;">Observaciones</div>
+        ${(data.observations || []).slice(0, 4).map((o: any) => `<div style="font-size:10.5px;color:#475569;margin:3px 0;line-height:1.45;">${esc(o.description || o)}</div>`).join('')}
       </div>
       ${signaturesBlock(ctx)}
       ${footerBlock(ctx)}
