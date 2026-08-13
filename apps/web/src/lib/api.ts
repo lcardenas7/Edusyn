@@ -115,9 +115,9 @@ export const areasApi = {
   getAllSubjects: (institutionId: string, includeInactive?: boolean) => 
     api.get('/areas/subjects/all', { params: { institutionId, includeInactive } }),
   getSubject: (subjectId: string) => api.get(`/areas/subjects/${subjectId}`),
-  addSubject: (areaId: string, data: { name: string; code?: string; description?: string; subjectType?: string; order?: number }) => 
+  addSubject: (areaId: string, data: { name: string; code?: string; description?: string; subjectType?: string; order?: number; displayHours?: number | null }) =>
     api.post(`/areas/${areaId}/subjects`, data),
-  updateSubject: (subjectId: string, data: { name?: string; code?: string; description?: string; subjectType?: string; order?: number; isActive?: boolean }) => 
+  updateSubject: (subjectId: string, data: { name?: string; code?: string; description?: string; subjectType?: string; order?: number; isActive?: boolean; displayHours?: number | null }) =>
     api.put(`/areas/subjects/${subjectId}`, data),
   deleteSubject: (subjectId: string) => api.delete(`/areas/subjects/${subjectId}`),
   moveSubject: (subjectId: string, newAreaId: string) => api.put(`/areas/subjects/${subjectId}/move`, { newAreaId }),

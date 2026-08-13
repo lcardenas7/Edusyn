@@ -12,6 +12,7 @@ interface Subject {
   subjectType: string
   order: number
   isActive: boolean
+  displayHours: number | null
 }
 
 interface Area {
@@ -30,6 +31,8 @@ const subjectTypeLabels: Record<string, { label: string; color: string }> = {
   ELECTIVE: { label: 'Electiva', color: 'green' },
   OPTIONAL: { label: 'Opcional', color: 'yellow' },
   TECHNICAL: { label: 'Técnica', color: 'purple' },
+  PRESCHOOL_DIMENSION: { label: 'Dimensión (Transición)', color: 'amber' },
+  CONVIVENCIA: { label: 'Convivencia', color: 'pink' },
 }
 
 export default function AcademicCatalog() {
@@ -49,7 +52,7 @@ export default function AcademicCatalog() {
 
   // Formularios
   const [areaForm, setAreaForm] = useState({ name: '', code: '', description: '' })
-  const [subjectForm, setSubjectForm] = useState({ name: '', code: '', description: '', subjectType: 'MANDATORY' })
+  const [subjectForm, setSubjectForm] = useState({ name: '', code: '', description: '', subjectType: 'MANDATORY', displayHours: '' })
 
   const loadAreas = useCallback(async () => {
     if (!institution?.id) return
@@ -146,16 +149,19 @@ export default function AcademicCatalog() {
         code: subject.code || '',
         description: subject.description || '',
         subjectType: subject.subjectType,
+        displayHours: subject.displayHours == null ? '' : String(subject.displayHours),
       })
     } else {
       setEditingSubject({ areaId, subject: null })
-      setSubjectForm({ name: '', code: '', description: '', subjectType: 'MANDATORY' })
+      setSubjectForm({ name: '', code: '', description: '', subjectType: 'MANDATORY', displayHours: '' })
     }
     setShowSubjectModal(true)
   }
 
   const saveSubject = async () => {
     if (!editingSubject || !subjectForm.name.trim()) return
+    // I.H. mostrada en el boletín (displayHours): vacío = null (usa horas semanales).
+    const displayHours = subjectForm.displayHours.trim() === '' ? null : Number(subjectForm.displayHours)
     setSaving(true)
     try {
       if (editingSubject.subject) {
@@ -164,6 +170,7 @@ export default function AcademicCatalog() {
           code: subjectForm.code || undefined,
           description: subjectForm.description || undefined,
           subjectType: subjectForm.subjectType,
+          displayHours,
         })
       } else {
         await areasApi.addSubject(editingSubject.areaId, {
@@ -171,6 +178,7 @@ export default function AcademicCatalog() {
           code: subjectForm.code || undefined,
           description: subjectForm.description || undefined,
           subjectType: subjectForm.subjectType,
+          displayHours,
         })
       }
       await loadAreas()
@@ -527,7 +535,35 @@ export default function AcademicCatalog() {
                   <option value="ELECTIVE">Electiva</option>
                   <option value="OPTIONAL">Opcional</option>
                   <option value="TECHNICAL">Técnica</option>
+                  <option value="PRESCHOOL_DIMENSION">Dimensión (Transición/Preescolar)</option>
+                  <option value="CONVIVENCIA">Convivencia (texto libre, sin nota)</option>
                 </select>
+                {subjectForm.subjectType === 'CONVIVENCIA' && (
+                  <p className="mt-1 text-xs text-pink-600">
+                    El docente registrará un texto libre por estudiante (sin escala ni nota). Se recomienda I.H. = 0.
+                  </p>
+                )}
+                {subjectForm.subjectType === 'PRESCHOOL_DIMENSION' && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Dimensión evaluada cualitativamente por propósitos (Logrado / En proceso / Iniciado).
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  I.H. en boletín (opcional)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={subjectForm.displayHours}
+                  onChange={(e) => setSubjectForm({ ...subjectForm, displayHours: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Vacío = usa las horas semanales"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Intensidad horaria que se muestra en el boletín. Usa 0 para Convivencia.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

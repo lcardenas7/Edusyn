@@ -91,6 +91,7 @@ export class AreasController {
       description?: string;
       subjectType?: SubjectType;
       order?: number;
+      displayHours?: number | null;
     },
   ) {
     return this.areasService.createSubject({ areaId, ...body });
@@ -134,6 +135,7 @@ export class AreasController {
       subjectType?: SubjectType;
       order?: number;
       isActive?: boolean;
+      displayHours?: number | null;
     },
   ) {
     return this.areasService.updateSubject(subjectId, body);

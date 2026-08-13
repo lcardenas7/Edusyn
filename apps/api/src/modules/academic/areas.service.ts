@@ -118,6 +118,7 @@ export class AreasService {
     description?: string;
     subjectType?: SubjectType;
     order?: number;
+    displayHours?: number | null;
   }) {
     // Verificar que el área exista
     await this.findAreaById(data.areaId);
@@ -139,6 +140,7 @@ export class AreasService {
         description: data.description,
         subjectType: data.subjectType ?? 'MANDATORY',
         order: data.order ?? 0,
+        displayHours: data.displayHours ?? null,
       },
       include: { area: true },
     });
@@ -160,6 +162,7 @@ export class AreasService {
     subjectType?: SubjectType;
     order?: number;
     isActive?: boolean;
+    displayHours?: number | null;
   }) {
     await this.findSubjectById(id);
     return this.prisma.subject.update({

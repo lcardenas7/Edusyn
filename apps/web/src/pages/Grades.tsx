@@ -10,10 +10,11 @@ import SaveStatusPill from '../components/SaveStatusPill'
 import { buildQualitativeMaps, toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import QualitativeGradesPanel from '../components/grades/QualitativeGradesPanel'
+import ConvivenciaPanel from '../components/grades/ConvivenciaPanel'
 
 interface TeacherAssignment {
   id: string
-  subject: { id: string; name: string; area?: { name: string } }
+  subject: { id: string; name: string; area?: { name: string }; subjectType?: string }
   group: { id: string; name: string; grade?: { name: string; stage?: string; academicStructure?: string } }
   academicYear: { id: string; year: number }
 }
@@ -180,8 +181,12 @@ export default function Grades() {
   // DETECCIÓN DE MODO ESTRUCTURAL: exclusivamente por academicStructure del grado
   // gradingScaleType solo se usa para escala/labels, NUNCA para decidir layout
   const academicStructure = selectedAssignment?.group?.grade?.academicStructure
-  const isQualitative = academicStructure === 'DIMENSIONS'
-  const isNumeric = !isQualitative
+  // Convivencia: asignatura especial (texto libre, sin nota) — se detecta por el
+  // subjectType, no por la estructura del grado. Debe evaluarse ANTES que
+  // isQualitative porque vive en grados DIMENSIONS (Transición).
+  const isConvivencia = selectedAssignment?.subject?.subjectType === 'CONVIVENCIA'
+  const isQualitative = academicStructure === 'DIMENSIONS' && !isConvivencia
+  const isNumeric = !isQualitative && !isConvivencia
   // Escala cualitativa: se lee del resolvedLevel (para labels/dropdown)
   const qualitativeLevels: QualitativeLevel[] = resolvedLevel?.qualitativeLevels || []
 
@@ -263,6 +268,9 @@ export default function Grades() {
 
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
+
+  // Convivencia (asignatura especial CONVIVENCIA): texto libre por estudiante (clave = student.id).
+  const [convivenciaByStudent, setConvivenciaByStudent] = useState<Record<string, string>>({})
 
   // Banco de aprendizajes
   const [showBank, setShowBank] = useState(false)
@@ -814,6 +822,32 @@ export default function Grades() {
     loadAchievements()
   }, [viewMode, selectedAssignment?.id, academicTermId, institutionId, isQualitative, students, toQual])
 
+  // Cargar registros de convivencia guardados (asignatura CONVIVENCIA).
+  useEffect(() => {
+    const loadConvivencia = async () => {
+      if (!isConvivencia || !selectedAssignment?.id || !academicTermId) {
+        setConvivenciaByStudent({})
+        return
+      }
+      try {
+        const res = await achievementsApi.getConvivencia(selectedAssignment.id, academicTermId)
+        // Las entradas vienen por studentEnrollmentId; la grilla se indexa por student.id.
+        const studentIdByEnrollment = new Map<string, string>(
+          students.map((s) => [s.enrollmentId, s.id])
+        )
+        const next: Record<string, string> = {}
+        ;(res.data || []).forEach((entry: any) => {
+          const studentId = studentIdByEnrollment.get(entry.studentEnrollmentId)
+          if (studentId) next[studentId] = entry.text || ''
+        })
+        setConvivenciaByStudent(next)
+      } catch (err) {
+        console.error('Error loading convivencia:', err)
+      }
+    }
+    loadConvivencia()
+  }, [isConvivencia, selectedAssignment?.id, academicTermId, students])
+
   // Todas las columnas para navegación
   const allActivityColumns = useMemo(() => {
     const cols: string[] = []
@@ -1083,6 +1117,39 @@ export default function Grades() {
       toast.info(msg)
     } catch (err: any) {
       console.error('Error saving qualitative grades:', err)
+      TOAST.grades.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Guardar registros de convivencia (asignatura CONVIVENCIA): texto libre por estudiante.
+  const saveConvivencia = async () => {
+    if (!isConvivencia) return
+    const subjectId = selectedAssignment?.subject?.id
+    if (!selectedAssignment?.id || !academicTermId || !subjectId) {
+      toast.warning('No se puede guardar: falta información del período o la asignatura')
+      return
+    }
+
+    setSaving(true)
+    try {
+      let saved = 0
+      for (const student of students) {
+        const text = (convivenciaByStudent[student.id] || '').trim()
+        // Se persiste incluso el vacío para permitir borrar un registro previo.
+        await achievementsApi.upsertConvivencia({
+          studentEnrollmentId: student.enrollmentId,
+          academicTermId,
+          subjectId,
+          text,
+        })
+        if (text) saved++
+      }
+      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      toast.info(`Convivencia guardada · ${saved} con registro`)
+    } catch (err: any) {
+      console.error('Error saving convivencia:', err)
       TOAST.grades.error(err)
     } finally {
       setSaving(false)
@@ -1462,7 +1529,7 @@ export default function Grades() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Calificaciones</h1>
           <p className="text-sm sm:text-base text-slate-500 mt-1">
-            {isQualitative ? 'Evaluación cualitativa por dimensiones' : 'Registro de notas por componente evaluativo'}
+            {isConvivencia ? 'Registro de convivencia (texto libre)' : isQualitative ? 'Evaluación cualitativa por dimensiones' : 'Registro de notas por componente evaluativo'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -1524,7 +1591,7 @@ export default function Grades() {
             </div>
           )}
           <button 
-            onClick={isQualitative ? saveQualitativeGrades : selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
+            onClick={isConvivencia ? saveConvivencia : isQualitative ? saveQualitativeGrades : selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
             disabled={(selectedSourceType === 'period' ? saving : savingFc) || !currentPeriodOpen}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
@@ -1536,7 +1603,7 @@ export default function Grades() {
 
       <div className="mb-4 flex items-center justify-between gap-3">
         {/* Semáforo de completitud */}
-        {completeness && !isQualitative && (
+        {completeness && !isQualitative && !isConvivencia && (
           <div className="flex items-center gap-2 text-sm">
             <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
               completeness.pct >= 80 ? 'bg-green-500' :
@@ -1655,7 +1722,7 @@ export default function Grades() {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
-        {selectedSourceType === 'period' && !isQualitative && (
+        {selectedSourceType === 'period' && !isQualitative && !isConvivencia && (
         <div className="flex flex-wrap bg-slate-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('detailed')}
@@ -1686,7 +1753,7 @@ export default function Grades() {
           </div>
         )}
 
-        {!isQualitative && (
+        {!isQualitative && !isConvivencia && (
         <div className="ml-auto flex gap-2 flex-wrap">
           {selectedSourceType === 'period' ? (
             processConfigs.map((process) => {
@@ -1733,7 +1800,7 @@ export default function Grades() {
           </div>
         )}
 
-        {resolvedLevel?.gradingScaleType === 'QUALITATIVE_DESC' && !isQualitative && (
+        {resolvedLevel?.gradingScaleType === 'QUALITATIVE_DESC' && !isQualitative && !isConvivencia && (
           <div className="mb-4 p-4 bg-orange-50 border border-orange-300 rounded-lg flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -1747,7 +1814,16 @@ export default function Grades() {
           </div>
         )}
 
-        {isQualitative ? (
+        {isConvivencia ? (
+          <ConvivenciaPanel
+            students={students}
+            loadingStudents={loadingStudents}
+            currentPeriodOpen={currentPeriodOpen}
+            subjectName={selectedAssignment.subject.name}
+            valueByStudent={convivenciaByStudent}
+            onChange={(studentId, text) => setConvivenciaByStudent(prev => ({ ...prev, [studentId]: text }))}
+          />
+        ) : isQualitative ? (
           <QualitativeGradesPanel
             students={students}
             loadingStudents={loadingStudents}
