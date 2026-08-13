@@ -22,6 +22,7 @@ export interface TemplatePalette {
 
 export interface TemplateCtx {
   colors: TemplatePalette;
+  fontFamily?: string; // Familia tipográfica configurable (CSS font-family stack)
   logoSrc: string;
   shieldSrc?: string;
   institutionName: string;
@@ -170,10 +171,11 @@ function headerBlock(ctx: TemplateCtx): string {
 function signaturesBlock(ctx: TemplateCtx): string {
   const sigs = ctx.signatures.filter(Boolean);
   if (sigs.length === 0) return '';
+  const single = sigs.length === 1;
   return `
-    <div style="display:flex;justify-content:space-around;margin-top:32px;gap:16px;">
+    <div style="display:flex;justify-content:${single ? 'center' : 'space-around'};margin-top:32px;gap:16px;">
       ${sigs.map(s => `
-        <div style="text-align:center;flex:1;">
+        <div style="text-align:center;flex:${single ? '0 0 220px' : '1'};max-width:240px;">
           ${s.imageSrc ? `<img src="${s.imageSrc}" style="height:34px;object-fit:contain;margin-bottom:2px;" />` : '<div style="height:34px;"></div>'}
           <div style="border-top:1px solid #94a3b8;padding-top:3px;font-size:9px;font-weight:700;color:${ctx.colors.text};">${esc(s.label)}</div>
           <div style="font-size:9px;color:#475569;">${esc(s.name || '')}</div>
@@ -268,7 +270,7 @@ export function buildPreescolarNarrativoHtml(data: any, ctx: TemplateCtx, period
     </div>` : '';
 
   return `
-    <div class="report-card-page" style="font-family:Arial,Helvetica,sans-serif;color:${c.text};padding:6px;">
+    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:6px;">
       ${headerBlock(ctx)}
       ${studentCard(ctx, data, periodLabel)}
       <div style="margin-top:12px;font-size:12px;font-weight:800;color:${c.primary};text-transform:uppercase;letter-spacing:1px;">Valoración por dimensiones del desarrollo</div>
@@ -348,7 +350,7 @@ export function buildMultiperiodoTabularHtml(year: any, ctx: TemplateCtx, extra?
   const curLabel = periods.length ? periods[periods.length - 1].name : '';
 
   return `
-    <div class="report-card-page" style="font-family:Arial,Helvetica,sans-serif;color:${c.text};padding:6px;">
+    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:6px;">
       ${headerBlock(ctx)}
       ${studentCard(ctx, year, curLabel)}
       <div style="margin-top:12px;font-size:12px;font-weight:800;color:${c.primary};text-transform:uppercase;letter-spacing:1px;">Desempeño académico</div>
@@ -421,7 +423,11 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
   const codeByPerf: Record<string, string> = {};
   scale.forEach((s, i) => { if (perfSlots[i]) codeByPerf[norm(perfSlots[i])] = norm(s.code); });
 
-  const scaleHeaders = scale.map(s => `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join('');
+  // Modo de visualización de la valoración: 'SINGLE' = una columna con el código; 'COLUMNS' = ✓ por nivel.
+  const valSingle = rc.preschoolLevelDisplay === 'SINGLE';
+  const scaleHeaders = valSingle
+    ? `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:72px;">Valoración</th>`
+    : scale.map(s => `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join('');
 
   const subjects: any[] = (data.areaGrades || []).flatMap((a: any) => a.subjects || []);
   const rows = subjects.map((sub: any) => {
@@ -436,7 +442,7 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
             <div style="font-weight:800;color:${c.text};">${esc(sub.subject)}</div>
             ${txt ? `<div style="font-size:10px;color:#475569;margin-top:2px;line-height:1.4;">${esc(txt)}</div>` : ''}
           </td>
-          ${scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join('')}
+          ${valSingle ? `<td style="border-left:1px solid #eef2f7;"></td>` : scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join('')}
           <td style="text-align:center;border-left:1px solid #e2e8f0;">${esc(inasCell)}</td>
         </tr>`;
     }
@@ -447,7 +453,7 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     // El valor guardado suele ser el enum PerformanceLevel; traducir al código de escala.
     const level = codeByPerf[rawLevel] || rawLevel;
     const evidencesHtml = (rc.showEvidences !== false && evidences.length)
-      ? `<div style="font-size:9.5px;font-weight:700;color:${c.primary};margin-top:3px;">${esc(evidenceLabelPlural)}</div>
+      ? `<div style="font-size:9.5px;font-weight:700;color:#64748b;margin-top:3px;">${esc(evidenceLabelPlural)}</div>
          <ul style="margin:2px 0 0 14px;padding:0;font-size:10px;color:#475569;line-height:1.4;">${evidences.map(e => `<li>${esc(e)}</li>`).join('')}</ul>`
       : '';
     const descriptorHtml = (rc.showLevelDescriptor && block?.levelDescriptor)
@@ -460,7 +466,9 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
           ${evidencesHtml}
           ${descriptorHtml}
         </td>
-        ${scale.map(s => `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('')}
+        ${valSingle
+          ? `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${esc(level)}</td>`
+          : scale.map(s => `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('')}
         <td style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>
       </tr>`;
   }).join('');
@@ -470,7 +478,7 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     ? `<span style="margin-left:12px;"><b>Puesto:</b> ${data.rank}${data.totalStudents ? ' / ' + data.totalStudents : ''}</span>` : '';
 
   return `
-    <div class="report-card-page" style="font-family:Arial,Helvetica,sans-serif;color:${c.text};padding:6px;">
+    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:6px;">
       ${headerBlock(ctx)}
       <div style="text-align:center;font-size:12px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-top:8px;">Informe Académico · ${esc(periodLabel)}</div>
       <div style="margin-top:8px;font-size:11px;display:flex;flex-wrap:wrap;gap:4px 18px;">
@@ -480,18 +488,18 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
       </div>
       <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:10px;">
         <thead>
-          <tr style="background:${c.headerBg};color:${c.primary};font-size:9px;text-transform:uppercase;">
+          <tr style="background:${c.headerBg};color:#475569;font-size:9px;text-transform:uppercase;">
             <th style="padding:4px;width:34px;">I.H.</th>
             <th style="padding:4px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
             ${scaleHeaders}
             <th style="padding:4px;width:34px;border-left:1px solid #e2e8f0;">Inas</th>
           </tr>
         </thead>
-        <tbody>${rows || `<tr><td colspan="${scale.length + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="${(valSingle ? 1 : scale.length) + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
       </table>
-      <div style="margin-top:8px;font-size:9px;color:#64748b;"><b style="color:${c.primary};">Interpretación de la escala:</b> ${scaleLegend}</div>
+      <div style="margin-top:8px;font-size:9px;color:#64748b;"><b style="color:#475569;">Interpretación de la escala:</b> ${scaleLegend}</div>
       <div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;min-height:44px;">
-        <div style="font-size:10px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:4px;">Observaciones</div>
+        <div style="font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:4px;">Observaciones</div>
         ${(data.observations || []).slice(0, 4).map((o: any) => `<div style="font-size:10px;color:#475569;margin:2px 0;">${esc(o.description || o)}</div>`).join('')}
       </div>
       ${signaturesBlock(ctx)}

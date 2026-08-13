@@ -2924,6 +2924,8 @@ export class ReportsService {
       preschoolShowRank: rcConfig?.preschoolShowRank ?? false,
       preschoolRankWeights: (rcConfig?.preschoolRankWeights ?? null) as Record<string, number> | null,
       showZeroAbsences: rcConfig?.showZeroAbsences ?? false,
+      // Cómo mostrar la valoración: 'COLUMNS' (✓ por columna L/EP/I) o 'SINGLE' (una columna con el código).
+      preschoolLevelDisplay: (rcConfig?.preschoolLevelDisplay ?? 'COLUMNS') as 'COLUMNS' | 'SINGLE',
       // Escala cualitativa configurada (para columnas dinámicas del boletín de transición).
       qualitativeLevels: (() => {
         const levels = ((firstEnrollment.academicYear.institution as any).academicLevelsConfig || []) as any[];
@@ -3445,6 +3447,7 @@ export class ReportsService {
         headerBgColor: data.headerBgColor,
         tableStripeColor: data.tableStripeColor,
         textColor: data.textColor,
+        fontFamily: data.fontFamily,
         defaultTemplateKey: data.defaultTemplateKey,
         evaluationType: data.evaluationType,
         showNumericGrade: data.showNumericGrade,
@@ -3466,6 +3469,7 @@ export class ReportsService {
         preschoolShowRank: data.preschoolShowRank,
         preschoolRankWeights: data.preschoolRankWeights,
         showZeroAbsences: data.showZeroAbsences,
+        preschoolLevelDisplay: data.preschoolLevelDisplay,
       },
     });
   }

@@ -4770,6 +4770,10 @@ model ReportCardConfig {
   headerBgColor    String? // fondo del encabezado
   tableStripeColor String? // filas alternas
   textColor        String? // texto principal
+  fontFamily       String? // clave de fuente del boletín (sans/serif/…) → stack CSS en el front
+
+  // Transición: cómo se muestra la valoración cualitativa — 'COLUMNS' (✓ por nivel) o 'SINGLE' (una columna con el código).
+  preschoolLevelDisplay String? @default("COLUMNS")
 
   // Banco de Formatos de Boletín: default general de la institución (fallback tras
   // la resolución por grado/estructura). Si null → 'edusyn-clasico'.

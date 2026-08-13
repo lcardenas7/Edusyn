@@ -60,6 +60,8 @@ interface ReportConfig {
   headerMunicipality: string
   headerDepartment: string
   primaryColor: string
+  fontFamily: string
+  preschoolLevelDisplay: string
   evaluationType: string
   showNumericGrade: boolean
   showPerformanceLevel: boolean
@@ -88,6 +90,8 @@ const defaultConfig: ReportConfig = {
   headerMunicipality: '',
   headerDepartment: '',
   primaryColor: '#1E3A8A',
+  fontFamily: 'sans',
+  preschoolLevelDisplay: 'COLUMNS',
   evaluationType: 'NUMERIC',
   showNumericGrade: true,
   showPerformanceLevel: true,
@@ -110,6 +114,20 @@ const defaultConfig: ReportConfig = {
     { role: 'TEACHER', label: 'Director(a) de Grupo', name: '', enabled: true, signatureImageUrl: '' },
   ],
   defaultTemplateKey: 'edusyn-clasico',
+}
+
+// Fuentes seleccionables para el boletín. La clave se guarda en config.fontFamily;
+// se resuelve a un stack CSS web-safe (compatible con la generación de PDF).
+const REPORT_FONT_OPTIONS: Array<{ key: string; label: string; stack: string }> = [
+  { key: 'sans', label: 'Arial (sans-serif)', stack: 'Arial, Helvetica, sans-serif' },
+  { key: 'verdana', label: 'Verdana (sans-serif)', stack: 'Verdana, Geneva, sans-serif' },
+  { key: 'trebuchet', label: 'Trebuchet (sans-serif)', stack: '"Trebuchet MS", Tahoma, sans-serif' },
+  { key: 'georgia', label: 'Georgia (serif)', stack: 'Georgia, "Times New Roman", serif' },
+  { key: 'times', label: 'Times (serif)', stack: '"Times New Roman", Times, serif' },
+]
+
+function resolveReportFontStack(key?: string): string {
+  return REPORT_FONT_OPTIONS.find(f => f.key === key)?.stack || REPORT_FONT_OPTIONS[0].stack
 }
 
 const STRUCTURE_LABELS: Array<{ key: string; label: string }> = [
@@ -691,7 +709,7 @@ export default function ReportCards() {
     const sigWidth = sigsWithBase64.length > 0 ? Math.floor(100 / sigsWithBase64.length) : 33
 
     return `
-    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#0f172a;">
+    <div style="font-family:${resolveReportFontStack(config.fontFamily)};max-width:720px;margin:0 auto;padding:20px;color:#0f172a;">
       <!-- Header -->
       <table style="width:100%;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;border-collapse:collapse;">
         <tr>
@@ -845,6 +863,7 @@ export default function ReportCards() {
         tableStripe: (config as any).tableStripeColor || '#f8fafc',
         text: (config as any).textColor || '#0f172a',
       },
+      fontFamily: resolveReportFontStack(config.fontFamily),
       logoSrc: logoBase64 || '',
       shieldSrc: logoBase64 || '',
       institutionName: data?.institution?.name || institution?.name || '',
@@ -1082,7 +1101,7 @@ export default function ReportCards() {
     }
     run()
     return () => { cancelled = true }
-  }, [showConfigModal, formatPreviewKey, sampleContent, configDraft.primaryColor, configDraft.showLogo])
+  }, [showConfigModal, formatPreviewKey, sampleContent, configDraft.primaryColor, configDraft.fontFamily, configDraft.showLogo])
 
   const setStructureTemplate = async (structure: string, templateKey: string) => {
     setTemplateSelByStructure(prev => ({ ...prev, [structure]: templateKey }))
@@ -1789,8 +1808,35 @@ export default function ReportCards() {
                       </div>
                       <p className="text-xs text-slate-400 mt-1">Color de encabezados y barras del boletin</p>
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de letra</label>
+                      <select
+                        value={configDraft.fontFamily || 'sans'}
+                        onChange={(e) => setConfigDraft({ ...configDraft, fontFamily: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        style={{ fontFamily: resolveReportFontStack(configDraft.fontFamily) }}
+                      >
+                        {REPORT_FONT_OPTIONS.map((f) => (
+                          <option key={f.key} value={f.key} style={{ fontFamily: f.stack }}>{f.label}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-400 mt-1">Fuente del texto en todos los boletines</p>
+                    </div>
                   </div>
-                  
+
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <label className="block text-xs font-medium text-amber-900 mb-1">Valoración en boletín de Transición</label>
+                    <select
+                      value={configDraft.preschoolLevelDisplay || 'COLUMNS'}
+                      onChange={(e) => setConfigDraft({ ...configDraft, preschoolLevelDisplay: e.target.value })}
+                      className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white"
+                    >
+                      <option value="COLUMNS">Columnas por nivel (una columna por L/EP/I, con ✓)</option>
+                      <option value="SINGLE">Una sola columna (muestra el código; la leyenda explica cada uno)</option>
+                    </select>
+                    <p className="text-xs text-amber-700 mt-1">Solo aplica al formato de Transición (Propósitos e Imprescindibles).</p>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-1">Resolucion de aprobacion</label>
