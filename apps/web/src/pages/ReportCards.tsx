@@ -1731,12 +1731,16 @@ export default function ReportCards() {
                     {TEMPLATE_CATALOG.map(t => (<option key={t.key} value={t.key}>{t.name}</option>))}
                   </select>
                 </div>
-                <p className="text-xs text-slate-500 mb-3">
-                  Ejemplo con datos ficticios. Ajusta las casillas para ver cómo se verá el contenido descriptivo según la configuración de Aprendizajes y Evidencias.
+                <p className="text-xs text-slate-500 mb-2">
+                  Ejemplo con datos ficticios para ver el diseño del formato.
+                </p>
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-3">
+                  <b>Estas casillas solo cambian esta vista previa.</b> Lo que realmente sale en el boletín (Aprendizaje, Evidencias, Descriptor, Juicio) se activa en <b>Aprendizajes y Evidencias → Configuración</b>.
                 </p>
 
                 {/* Toggles de contenido descriptivo (solo afectan la vista previa) */}
-                <div className="flex flex-wrap gap-3 mb-3">
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Solo vista previa:</span>
                   {([
                     { key: 'showLearning', label: 'Aprendizaje' },
                     { key: 'showEvidences', label: 'Evidencias' },

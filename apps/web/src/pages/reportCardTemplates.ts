@@ -474,32 +474,51 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
   }).join('');
 
   const scaleLegend = scale.map(s => `${esc(s.code)} = ${esc(s.name)}`).join('  ·  ');
-  const rankLine = rc.preschoolShowRank && data.rank
-    ? `<span style="margin-left:12px;"><b>Puesto:</b> ${data.rank}${data.totalStudents ? ' / ' + data.totalStudents : ''}</span>` : '';
+
+  const s = data.student || {};
+  const g = data.group || {};
+  const showRank = !!(rc.preschoolShowRank && data.rank);
+  const infoCell = (label: string, value: string, last = false) =>
+    `<div style="padding:5px 9px;${last ? '' : `border-right:1px solid ${c.primary}33;`}">
+      <div style="font-size:7.5px;letter-spacing:0.5px;color:#94a3b8;text-transform:uppercase;">${esc(label)}</div>
+      <div style="font-size:10.5px;font-weight:700;color:${c.text};">${esc(value) || '—'}</div>
+    </div>`;
 
   return `
-    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:6px;">
+    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:12px;">
       ${headerBlock(ctx)}
-      <div style="text-align:center;font-size:12px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-top:8px;">Informe Académico · ${esc(periodLabel)}</div>
-      <div style="margin-top:8px;font-size:11px;display:flex;flex-wrap:wrap;gap:4px 18px;">
-        <span><b>Estudiante:</b> ${esc(studentName(data.student))}</span>
-        <span><b>Curso:</b> ${esc(data.group?.gradeLevel || '')} ${esc(data.group?.name || '')}</span>
-        ${rankLine}
+
+      <div style="text-align:center;background:${c.primary};color:#fff;padding:6px 0;border-radius:4px;margin-top:10px;">
+        <div style="font-size:12px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">Informe Académico</div>
+        <div style="font-size:9px;opacity:0.9;">${esc(periodLabel)}</div>
       </div>
-      <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:10px;">
-        <thead>
-          <tr style="background:${c.headerBg};color:#475569;font-size:9px;text-transform:uppercase;">
-            <th style="padding:4px;width:34px;">I.H.</th>
-            <th style="padding:4px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
-            ${scaleHeaders}
-            <th style="padding:4px;width:34px;border-left:1px solid #e2e8f0;">Inas</th>
-          </tr>
-        </thead>
-        <tbody>${rows || `<tr><td colspan="${(valSingle ? 1 : scale.length) + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
-      </table>
+
+      <div style="margin-top:10px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:${showRank ? '2fr 1fr 1.4fr 1fr' : '2fr 1fr 1.4fr'};">
+          ${infoCell('Estudiante', studentName(s))}
+          ${infoCell('Documento', s.documentNumber || '')}
+          ${infoCell('Curso', `${g.gradeLevel || g.gradeName || ''} ${g.name || ''}`.trim(), !showRank)}
+          ${showRank ? infoCell('Puesto', `${data.rank}${data.totalStudents ? ' / ' + data.totalStudents : ''}`, true) : ''}
+        </div>
+      </div>
+
+      <div style="margin-top:10px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <thead>
+            <tr style="background:${c.headerBg};color:#334155;font-size:9px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">
+              <th style="padding:5px;width:34px;">I.H.</th>
+              <th style="padding:5px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
+              ${scaleHeaders}
+              <th style="padding:5px;width:34px;border-left:1px solid #e2e8f0;">Inas</th>
+            </tr>
+          </thead>
+          <tbody>${rows || `<tr><td colspan="${(valSingle ? 1 : scale.length) + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
+        </table>
+      </div>
+
       <div style="margin-top:8px;font-size:9px;color:#64748b;"><b style="color:#475569;">Interpretación de la escala:</b> ${scaleLegend}</div>
-      <div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;min-height:44px;">
-        <div style="font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:4px;">Observaciones</div>
+      <div style="margin-top:12px;border:1px solid ${c.primary}55;border-radius:4px;padding:8px 10px;min-height:44px;">
+        <div style="font-size:10px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:4px;">Observaciones</div>
         ${(data.observations || []).slice(0, 4).map((o: any) => `<div style="font-size:10px;color:#475569;margin:2px 0;">${esc(o.description || o)}</div>`).join('')}
       </div>
       ${signaturesBlock(ctx)}
