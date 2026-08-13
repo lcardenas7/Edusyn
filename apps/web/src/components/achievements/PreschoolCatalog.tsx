@@ -34,7 +34,7 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
 
   const selectedYear = academicYears.find((year) => year.id === selectedYearId)
   const terms = selectedYear?.terms || []
-  const preschoolGrades = useMemo(() => grades.filter((grade) => grade.stage === 'PRESCHOOL'), [grades])
+  const preschoolGrades = useMemo(() => grades.filter((grade) => grade.stage === 'PREESCOLAR'), [grades])
   const dimensions = useMemo(() => subjects.filter((subject) => subject.subjectType === 'PRESCHOOL_DIMENSION'), [subjects])
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
         const allGrades = gradesRes.data || []
         setGrades(allGrades)
         setSubjects(subjectsRes.data || [])
-        const initialGrade = allGrades.find((grade: any) => grade.stage === 'PRESCHOOL')
+        const initialGrade = allGrades.find((grade: any) => grade.stage === 'PREESCOLAR')
         if (initialGrade) setGradeId(initialGrade.id)
         if (configRes.data) {
           setLabels({
