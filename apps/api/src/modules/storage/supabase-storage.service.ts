@@ -364,6 +364,27 @@ export class SupabaseStorageService {
   }
 
   /**
+   * Descarga el archivo desde R2 (server-side, sin CORS) y lo devuelve como data URI
+   * base64. Se usa para embeber logos/escudos en el HTML/PDF del boletín: así el
+   * navegador no necesita hacer fetch cross-origin a R2 (que no envía cabeceras CORS).
+   */
+  async resolveToDataUri(storedValue: string): Promise<string | null> {
+    if (!this.isConfigured() || !storedValue) return null;
+    try {
+      let key = storedValue;
+      if (storedValue.startsWith('http')) {
+        key = this.extractKeyFromSignedUrl(storedValue) || '';
+      }
+      if (!key) return null;
+      const { body, contentType } = await this.storage.getObject(key);
+      return `data:${contentType || 'image/png'};base64,${body.toString('base64')}`;
+    } catch (err) {
+      console.error('resolveToDataUri failed for', storedValue, err);
+      return null;
+    }
+  }
+
+  /**
    * Extrae la key del archivo desde una URL firmada de R2.
    * URL: https://xxx.r2.cloudflarestorage.com/edusyn-files/galeria/institucion/xxx/img.jpg?X-Amz-...
    * Key: galeria/institucion/xxx/img.jpg

@@ -3423,15 +3423,14 @@ export class ReportsService {
     }
     config = { ...config, logoUrl: resolvedLogo };
 
-    // Segundo escudo (p. ej. Colombia): resolver a URL firmada si es una key de almacenamiento.
-    if (config.secondaryLogoUrl && !/^https?:\/\//i.test(config.secondaryLogoUrl)) {
-      try {
-        const resolvedSecondary = await this.storageService.resolveFileUrl(config.secondaryLogoUrl, 3600);
-        config = { ...config, secondaryLogoUrl: resolvedSecondary };
-      } catch (err) {
-        console.error('Error resolving secondary logo:', config.secondaryLogoUrl, err);
-      }
-    }
+    // Escudos embebidos como data URI (server-side, sin CORS) para el render del
+    // boletín/PDF. secondaryLogoUrl se mantiene como key en la DB (no se reescribe,
+    // así no se corrompe al reguardar); el data URI va aparte, solo para pintar.
+    const [logoDataUri, secondaryLogoDataUri] = await Promise.all([
+      rawLogo ? this.storageService.resolveToDataUri(rawLogo) : Promise.resolve(null),
+      config.secondaryLogoUrl ? this.storageService.resolveToDataUri(config.secondaryLogoUrl) : Promise.resolve(null),
+    ]);
+    config = { ...config, logoDataUri, secondaryLogoDataUri } as any;
 
     return config;
   }

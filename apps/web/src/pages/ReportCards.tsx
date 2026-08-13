@@ -57,6 +57,8 @@ interface ReportConfig {
   showShield: boolean
   logoUrl: string
   secondaryLogoUrl: string
+  logoDataUri?: string | null // escudo del colegio embebido (base64) — solo lectura desde el backend
+  secondaryLogoDataUri?: string | null // segundo escudo embebido (base64) — solo lectura
   headerResolution: string
   headerMunicipality: string
   headerDepartment: string
@@ -865,8 +867,10 @@ export default function ReportCards() {
     // Fuentes de imagen robustas: base64 (mejor para PDF) con fallback a URL firmada
     // (como el clásico), respetando showLogo. shieldSrc = izquierda (Colombia si hay,
     // si no el del colegio); logoSrc = derecha (colegio).
-    const schoolSrc = config.showLogo ? (logoBase64 || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')) : ''
-    const colombiaSrc = config.showLogo ? (secondaryBase64 || (config.secondaryLogoUrl ? toPublicFileUrl(config.secondaryLogoUrl) : '')) : ''
+    // Preferir el data URI del backend (embebido, sin CORS, sirve para PDF); si no,
+    // caer al base64 del cliente y por último a la URL proxy.
+    const schoolSrc = config.showLogo ? (config.logoDataUri || logoBase64 || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')) : ''
+    const colombiaSrc = config.showLogo ? (config.secondaryLogoDataUri || secondaryBase64 || (config.secondaryLogoUrl ? toPublicFileUrl(config.secondaryLogoUrl) : '')) : ''
     const p = config.primaryColor || '#1E3A8A'
     return {
       colors: {
