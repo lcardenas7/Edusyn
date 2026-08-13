@@ -4759,6 +4759,7 @@ model ReportCardConfig {
   showLogo           Boolean @default(true)
   showShield         Boolean @default(false)
   logoUrl            String? // URL del escudo/logo institucional para el boletín
+  secondaryLogoUrl   String? // Segundo escudo (izquierda, p. ej. escudo de Colombia)
   headerResolution   String?
   headerMunicipality String?
   headerDepartment   String?

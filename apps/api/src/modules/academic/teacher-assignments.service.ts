@@ -240,6 +240,30 @@ export class TeacherAssignmentsService {
   }
 
   /**
+   * Actualiza una asignación existente (por ahora solo la intensidad horaria).
+   * El docente/asignatura/grupo no se cambian aquí: para eso está replaceTeacher
+   * o eliminar+crear (evita conflictos de llave única y orfandad de notas).
+   */
+  async updateAssignment(
+    assignmentId: string,
+    institutionId: string,
+    data: { weeklyHours?: number },
+  ) {
+    const existing = await this.prisma.teacherAssignment.findFirst({
+      where: { id: assignmentId, institutionId },
+    });
+    if (!existing) throw new NotFoundException('Asignación no encontrada');
+
+    return this.prisma.teacherAssignment.update({
+      where: { id: assignmentId },
+      data: {
+        ...(data.weeklyHours != null ? { weeklyHours: Math.max(0, Math.trunc(data.weeklyHours)) } : {}),
+      },
+      include: this.assignmentIncludes,
+    });
+  }
+
+  /**
    * Finalizar una asignación y crear una nueva para el docente reemplazo.
    * La asignación original queda histórica con endDate + endReason.
    * Las notas y la asistencia se transfieren a la nueva asignación para dar

@@ -218,6 +218,7 @@ export const academicTermsApi = {
 export const teacherAssignmentsApi = {
   getAll: (params?: { academicYearId?: string; groupId?: string; teacherId?: string; activeOnly?: boolean }) => api.get('/teacher-assignments', { params }),
   create: (data: { academicYearId: string; groupId: string; subjectId: string; teacherId: string; weeklyHours?: number }) => api.post('/teacher-assignments', data),
+  update: (id: string, data: { weeklyHours?: number }) => api.patch(`/teacher-assignments/${id}`, data),
   delete: (id: string) => api.delete(`/teacher-assignments/${id}`),
   deleteAll: (academicYearId?: string) => api.delete('/teacher-assignments/all', { params: { academicYearId } }),
   activateConvivencia: (data: { institutionId?: string; academicYearId: string; gradeId: string; useTutor: boolean; countInAverage: boolean; teacherId?: string }) =>

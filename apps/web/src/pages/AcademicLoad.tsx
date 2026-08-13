@@ -290,23 +290,12 @@ export default function AcademicLoad() {
     setSaving(true)
     try {
       if (editingLoad) {
-        // Por ahora solo actualizar localmente (API de update no implementada)
-        setLoads(loads.map(l => 
-          l.id === editingLoad.id 
-            ? {
-                ...l,
-                teacherId: form.teacherId,
-                teacherName: teacher.name,
-                groupId: form.groupId,
-                groupName: group.name,
-                grade: group.grade,
-                areaId: subject.areaId,
-                areaName: subject.areaName,
-                subjectId: form.subjectId,
-                subjectName: subject.name,
-                role: form.role,
-                weeklyHours: form.weeklyHours,
-              }
+        // Persistir la intensidad horaria en el backend (docente/asignatura/grupo
+        // no se cambian aquí: para eso, eliminar y crear de nuevo).
+        await teacherAssignmentsApi.update(editingLoad.id, { weeklyHours: form.weeklyHours })
+        setLoads(loads.map(l =>
+          l.id === editingLoad.id
+            ? { ...l, role: form.role, weeklyHours: form.weeklyHours }
             : l
         ))
       } else {
@@ -747,6 +736,11 @@ export default function AcademicLoad() {
             )}
 
             <div className="space-y-4">
+              {editingLoad && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                  En edición solo puedes cambiar las <b>horas semanales</b>. Para cambiar docente, grupo o asignatura, elimina la asignación y créala de nuevo.
+                </p>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Docente <span className="text-red-500">*</span>
@@ -754,7 +748,8 @@ export default function AcademicLoad() {
                 <select
                   value={form.teacherId}
                   onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  disabled={!!editingLoad}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
                   <option value="">Seleccione un docente</option>
                   {teachers.map(t => (
@@ -770,7 +765,8 @@ export default function AcademicLoad() {
                 <select
                   value={form.groupId}
                   onChange={(e) => setForm({ ...form, groupId: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  disabled={!!editingLoad}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
                   <option value="">Seleccione un grupo</option>
                   {groups.map(g => (
@@ -786,7 +782,8 @@ export default function AcademicLoad() {
                 <select
                   value={form.subjectId}
                   onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  disabled={!!editingLoad}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
                   <option value="">Seleccione una asignatura</option>
                   {subjects.map(s => (

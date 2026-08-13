@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, Request } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -171,6 +171,22 @@ export class TeacherAssignmentsController {
       return { deleted: 0, message: 'No se pudo determinar la institución' };
     }
     return this.teacherAssignmentsService.deleteAll(instId, academicYearId);
+  }
+
+  /**
+   * Actualizar una asignación (por ahora solo la intensidad horaria).
+   */
+  @Patch(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async update(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body: { weeklyHours?: number },
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.teacherAssignmentsService.updateAssignment(id, instId, body);
   }
 
   /**

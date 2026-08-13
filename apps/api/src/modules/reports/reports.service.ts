@@ -3438,6 +3438,9 @@ export class ReportsService {
         // logoUrl NO se persiste desde aquí: el escudo es fuente única (Institution.logo).
         // Antes se guardaba data.logoUrl (a veces una URL firmada temporal) → se "borraba"
         // al caducar. El logo se administra en el perfil institucional.
+        // secondaryLogoUrl SÍ se persiste aquí (a diferencia de logoUrl, que es
+        // fuente única desde Institution.logo): es un segundo escudo propio del boletín.
+        secondaryLogoUrl: data.secondaryLogoUrl,
         headerResolution: data.headerResolution,
         headerMunicipality: data.headerMunicipality,
         headerDepartment: data.headerDepartment,

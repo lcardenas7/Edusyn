@@ -56,6 +56,7 @@ interface ReportConfig {
   showLogo: boolean
   showShield: boolean
   logoUrl: string
+  secondaryLogoUrl: string
   headerResolution: string
   headerMunicipality: string
   headerDepartment: string
@@ -86,6 +87,7 @@ const defaultConfig: ReportConfig = {
   showLogo: true,
   showShield: false,
   logoUrl: '',
+  secondaryLogoUrl: '',
   headerResolution: '',
   headerMunicipality: '',
   headerDepartment: '',
@@ -844,6 +846,13 @@ export default function ReportCards() {
       logoBase64 = logoSrc ? await imageUrlToBase64(logoSrc) : ''
       if (logoBase64) setLogoCachedBase64(logoBase64)
     }
+    // Segundo escudo (izquierda, p. ej. Colombia). Si no hay, el slot izquierdo cae al del colegio (look actual).
+    let secondaryBase64 = secondaryLogoCachedBase64
+    if (!secondaryBase64 && config.showLogo && config.secondaryLogoUrl) {
+      const secSrc = secondaryLogoPreviewUrl || toPublicFileUrl(config.secondaryLogoUrl)
+      secondaryBase64 = secSrc ? await imageUrlToBase64(secSrc) : ''
+      if (secondaryBase64) setSecondaryLogoCachedBase64(secondaryBase64)
+    }
     const sigs = await Promise.all(
       ((config.signatureConfig as any[]) || [])
         .filter((s: any) => s?.enabled)
@@ -865,7 +874,7 @@ export default function ReportCards() {
       },
       fontFamily: resolveReportFontStack(config.fontFamily),
       logoSrc: logoBase64 || '',
-      shieldSrc: logoBase64 || '',
+      shieldSrc: (secondaryBase64 || logoBase64) || '',
       institutionName: data?.institution?.name || institution?.name || '',
       headerLines: [
         [config.headerResolution, (institution as any)?.daneCode ? `DANE ${(institution as any).daneCode}` : '', data?.institution?.nit ? `NIT ${data.institution.nit}` : '']
@@ -969,6 +978,8 @@ export default function ReportCards() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
   // Cache de logo en base64 para que funcione en ventanas de impresión sin depender de URLs firmadas
   const [logoCachedBase64, setLogoCachedBase64] = useState<string>('')
+  const [secondaryLogoPreviewUrl, setSecondaryLogoPreviewUrl] = useState<string>('')
+  const [secondaryLogoCachedBase64, setSecondaryLogoCachedBase64] = useState<string>('')
 
   const handleLogoUpload = async (file: File) => {
     if (!institution?.id) return
@@ -982,6 +993,25 @@ export default function ReportCards() {
       if (pathToSave) {
         setConfigDraft({ ...configDraft, logoUrl: pathToSave })
         setLogoPreviewUrl(urlToShow) // URL firmada para mostrar inmediatamente
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  const handleSecondaryLogoUpload = async (file: File) => {
+    if (!institution?.id) return
+    setUploadingLogo(true)
+    try {
+      const res = await storageApi.uploadGalleryImage(file, institution.id, 'report-card-logo')
+      const data = res.data?.data
+      const pathToSave = data?.path || data?.url || ''
+      const urlToShow = data?.url || data?.path || ''
+      if (pathToSave) {
+        setConfigDraft({ ...configDraft, secondaryLogoUrl: pathToSave })
+        setSecondaryLogoPreviewUrl(urlToShow)
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
@@ -1802,7 +1832,26 @@ export default function ReportCards() {
                           e.target.value = ''
                         }} />
                       </label>
-                      <p className="text-xs text-slate-400 mt-1">PNG o JPG. Aparece en el encabezado del boletin</p>
+                      <p className="text-xs text-slate-400 mt-1">PNG o JPG. Va a la <b>derecha</b> del encabezado.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Segundo escudo (izquierda, p. ej. Colombia)</label>
+                      {configDraft.secondaryLogoUrl ? (
+                        <div className="flex items-center gap-3 mb-2">
+                          <img src={secondaryLogoPreviewUrl || toPublicFileUrl(config.secondaryLogoUrl) || toPublicFileUrl(configDraft.secondaryLogoUrl)} alt="Segundo escudo" className="w-14 h-14 object-contain rounded border border-slate-200" />
+                          <button type="button" onClick={() => { setConfigDraft({...configDraft, secondaryLogoUrl: ''}); setSecondaryLogoPreviewUrl(''); }} className="text-xs text-red-500 hover:text-red-700">Eliminar</button>
+                        </div>
+                      ) : null}
+                      <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 transition-colors ${uploadingLogo ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        {configDraft.secondaryLogoUrl ? 'Cambiar escudo' : 'Subir escudo'}
+                        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleSecondaryLogoUpload(file)
+                          e.target.value = ''
+                        }} />
+                      </label>
+                      <p className="text-xs text-slate-400 mt-1">Opcional. Si lo dejas vacío, el encabezado usa solo el del colegio.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-1">Color Principal</label>
