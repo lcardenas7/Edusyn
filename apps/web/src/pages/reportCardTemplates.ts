@@ -23,6 +23,7 @@ export interface TemplatePalette {
 export interface TemplateCtx {
   colors: TemplatePalette;
   fontFamily?: string; // Familia tipográfica configurable (CSS font-family stack)
+  showHeaderTitle?: boolean; // Mostrar el rótulo "Boletín Académico" sobre el nombre de la institución
   logoSrc: string;
   shieldSrc?: string;
   institutionName: string;
@@ -160,7 +161,7 @@ function headerBlock(ctx: TemplateCtx): string {
     <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid ${c.primary};padding-bottom:8px;">
       ${shield}
       <div style="flex:1;text-align:center;">
-        <div style="font-size:9px;letter-spacing:3px;color:#94a3b8;text-transform:uppercase;">Boletín Académico</div>
+        ${ctx.showHeaderTitle === false ? '' : '<div style="font-size:9px;letter-spacing:3px;color:#94a3b8;text-transform:uppercase;">Boletín Académico</div>'}
         <div style="font-size:16px;font-weight:800;color:${c.primary};line-height:1.15;text-transform:uppercase;">${esc(ctx.institutionName)}</div>
         ${ctx.headerLines.map(l => `<div style="font-size:8px;color:#64748b;">${esc(l)}</div>`).join('')}
       </div>
@@ -435,12 +436,17 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     const ih = sub.displayHours ?? sub.weeklyHours ?? '';
     if (isConvivencia) {
       const txt = sub.convivenciaText || '';
+      // Cada línea del registro de convivencia = un desempeño → una viñeta (como los imprescindibles).
+      const convItems = txt.split('\n').map((t: string) => t.trim()).filter(Boolean);
+      const convHtml = convItems.length
+        ? `<ul style="margin:3px 0 0 14px;padding:0;font-size:10px;color:#475569;line-height:1.4;">${convItems.map((t: string) => `<li>${esc(t)}</li>`).join('')}</ul>`
+        : '';
       return `
         <tr style="border-top:1px solid #e2e8f0;">
           <td style="text-align:center;font-weight:700;padding:5px 4px;">${esc(String(ih))}</td>
           <td style="padding:5px 8px;">
             <div style="font-weight:800;color:${c.text};">${esc(sub.subject)}</div>
-            ${txt ? `<div style="font-size:10px;color:#475569;margin-top:2px;line-height:1.4;">${esc(txt)}</div>` : ''}
+            ${convHtml}
           </td>
           ${valSingle ? `<td style="border-left:1px solid #eef2f7;"></td>` : scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join('')}
           <td style="text-align:center;border-left:1px solid #e2e8f0;">${esc(inasCell)}</td>

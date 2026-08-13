@@ -55,6 +55,7 @@ interface SignatureEntry {
 interface ReportConfig {
   showLogo: boolean
   showShield: boolean
+  showHeaderTitle: boolean
   logoUrl: string
   secondaryLogoUrl: string
   logoDataUri?: string | null // escudo del colegio embebido (base64) — solo lectura desde el backend
@@ -88,6 +89,7 @@ interface ReportConfig {
 const defaultConfig: ReportConfig = {
   showLogo: true,
   showShield: false,
+  showHeaderTitle: true,
   logoUrl: '',
   secondaryLogoUrl: '',
   headerResolution: '',
@@ -882,6 +884,7 @@ export default function ReportCards() {
         text: (config as any).textColor || '#0f172a',
       },
       fontFamily: resolveReportFontStack(config.fontFamily),
+      showHeaderTitle: (config as any).showHeaderTitle !== false,
       logoSrc: schoolSrc,
       shieldSrc: colombiaSrc || schoolSrc,
       institutionName: data?.institution?.name || institution?.name || '',
@@ -1824,10 +1827,14 @@ export default function ReportCards() {
               <div>
                 <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Encabezado</h4>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" checked={configDraft.showLogo} onChange={(e) => setConfigDraft({...configDraft, showLogo: e.target.checked})} className="w-4 h-4 rounded" />
                       Mostrar logo/escudo
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={configDraft.showHeaderTitle} onChange={(e) => setConfigDraft({...configDraft, showHeaderTitle: e.target.checked})} className="w-4 h-4 rounded" />
+                      Mostrar rótulo «Boletín Académico»
                     </label>
                   </div>
                   

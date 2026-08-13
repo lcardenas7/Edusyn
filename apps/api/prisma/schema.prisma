@@ -4758,6 +4758,7 @@ model ReportCardConfig {
   // Encabezado
   showLogo           Boolean @default(true)
   showShield         Boolean @default(false)
+  showHeaderTitle    Boolean @default(true) // Rótulo "Boletín Académico" sobre el nombre de la institución
   logoUrl            String? // URL del escudo/logo institucional para el boletín
   secondaryLogoUrl   String? // Segundo escudo (izquierda, p. ej. escudo de Colombia)
   headerResolution   String?

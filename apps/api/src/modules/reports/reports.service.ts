@@ -3442,6 +3442,7 @@ export class ReportsService {
       data: {
         showLogo: data.showLogo,
         showShield: data.showShield,
+        showHeaderTitle: data.showHeaderTitle,
         // logoUrl y secondaryLogoUrl SÍ se persisten (como key). Antes logoUrl no se
         // guardaba por miedo a URLs firmadas que caducaban → "se borraba" el escudo.
         // Ahora el render usa data URI + proxy (extraen la key), así que persistir la
