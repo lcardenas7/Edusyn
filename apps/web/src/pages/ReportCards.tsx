@@ -862,6 +862,11 @@ export default function ReportCards() {
           imageSrc: s.signatureImageUrl ? await imageUrlToBase64(toPublicFileUrl(s.signatureImageUrl)) : undefined,
         })),
     )
+    // Fuentes de imagen robustas: base64 (mejor para PDF) con fallback a URL firmada
+    // (como el clásico), respetando showLogo. shieldSrc = izquierda (Colombia si hay,
+    // si no el del colegio); logoSrc = derecha (colegio).
+    const schoolSrc = config.showLogo ? (logoBase64 || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')) : ''
+    const colombiaSrc = config.showLogo ? (secondaryBase64 || (config.secondaryLogoUrl ? toPublicFileUrl(config.secondaryLogoUrl) : '')) : ''
     const p = config.primaryColor || '#1E3A8A'
     return {
       colors: {
@@ -873,8 +878,8 @@ export default function ReportCards() {
         text: (config as any).textColor || '#0f172a',
       },
       fontFamily: resolveReportFontStack(config.fontFamily),
-      logoSrc: logoBase64 || '',
-      shieldSrc: (secondaryBase64 || logoBase64) || '',
+      logoSrc: schoolSrc,
+      shieldSrc: colombiaSrc || schoolSrc,
       institutionName: data?.institution?.name || institution?.name || '',
       headerLines: [
         [config.headerResolution, (institution as any)?.daneCode ? `DANE ${(institution as any).daneCode}` : '', data?.institution?.nit ? `NIT ${data.institution.nit}` : '']

@@ -3423,6 +3423,16 @@ export class ReportsService {
     }
     config = { ...config, logoUrl: resolvedLogo };
 
+    // Segundo escudo (p. ej. Colombia): resolver a URL firmada si es una key de almacenamiento.
+    if (config.secondaryLogoUrl && !/^https?:\/\//i.test(config.secondaryLogoUrl)) {
+      try {
+        const resolvedSecondary = await this.storageService.resolveFileUrl(config.secondaryLogoUrl, 3600);
+        config = { ...config, secondaryLogoUrl: resolvedSecondary };
+      } catch (err) {
+        console.error('Error resolving secondary logo:', config.secondaryLogoUrl, err);
+      }
+    }
+
     return config;
   }
 
