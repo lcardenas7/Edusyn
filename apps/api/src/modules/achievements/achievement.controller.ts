@@ -178,7 +178,7 @@ export class AchievementController {
   }
 
   // ============================================
-  // CONVIVENCIA (texto libre del docente)
+  // CONVIVENCIA (desempeños libres del docente con valoración individual)
   // ============================================
 
   @Get('convivencia')
@@ -194,7 +194,7 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async upsertConvivencia(
     @Request() req: any,
-    @Body() body: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string },
+    @Body() body: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string; items?: Array<{ text: string; level?: string | null }> },
   ) {
     return this.achievementService.upsertConvivenciaEntry({ ...body, createdById: req.user?.id });
   }

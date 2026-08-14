@@ -2,6 +2,11 @@ import React, { useMemo, useState } from 'react'
 import { HeartHandshake, Users, Check, Wand2 } from 'lucide-react'
 import { DiagnosisBadge } from '../StudentBadges'
 
+export interface ConvivenciaItem {
+  text: string
+  levelCode: string
+}
+
 interface StudentRow {
   id: string
   name: string
@@ -15,15 +20,15 @@ interface Props {
   loadingStudents: boolean
   currentPeriodOpen: boolean
   subjectName: string
-  /** Texto de convivencia por estudiante (clave = student.id). */
-  valueByStudent: Record<string, string>
-  onChange: (studentId: string, text: string) => void
+  /** Desempeños de convivencia por estudiante (clave = student.id). */
+  valueByStudent: Record<string, ConvivenciaItem[]>
+  qualitativeLevels: Array<{ code: string; name: string }>
+  onChange: (studentId: string, items: ConvivenciaItem[]) => void
 }
 
 /**
- * Panel de registro de Convivencia (SubjectType.CONVIVENCIA): texto libre del
- * docente por estudiante y período. Sin escala ni nivel — no lleva nota.
- * Soporta carga masiva (un texto → varios estudiantes) y es responsive.
+ * Panel de Convivencia: el docente registra desempeños libres y asigna una
+ * valoración cualitativa a cada uno. Soporta carga masiva y es responsive.
  */
 export default function ConvivenciaPanel({
   students,
@@ -31,12 +36,13 @@ export default function ConvivenciaPanel({
   currentPeriodOpen,
   subjectName,
   valueByStudent,
+  qualitativeLevels,
   onChange,
 }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkText, setBulkText] = useState('')
 
-  const filled = students.filter((s) => (valueByStudent[s.id] || '').trim()).length
+  const filled = students.filter((s) => (valueByStudent[s.id] || []).some(item => item.text.trim())).length
   const allSelected = students.length > 0 && selected.size === students.length
 
   const toggle = (id: string) => {
@@ -52,9 +58,9 @@ export default function ConvivenciaPanel({
   }
 
   const applyBulk = () => {
-    const text = bulkText.trim()
-    if (!text || selected.size === 0) return
-    selected.forEach((id) => onChange(id, text))
+    const items = bulkText.split('\n').map(text => ({ text: text.trim(), levelCode: '' })).filter(item => item.text)
+    if (!items.length || selected.size === 0) return
+    selected.forEach((id) => onChange(id, items))
     setSelected(new Set())
     setBulkText('')
   }
@@ -70,7 +76,7 @@ export default function ConvivenciaPanel({
           {subjectName || 'Convivencia'}
         </span>
         <span className="flex-1 min-w-[180px] text-xs text-slate-500">
-          Registro textual del docente por estudiante. No lleva nota ni escala; sale como fila especial en el boletín.
+          Registra cada desempeño y su valoración. En el boletín cada uno aparece en su propia fila.
         </span>
         <span className="text-[11px] text-slate-500 whitespace-nowrap">
           {filled}/{students.length} con registro
@@ -94,7 +100,7 @@ export default function ConvivenciaPanel({
           <textarea
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
-            placeholder="Escribe un registro para aplicarlo a los estudiantes que marques abajo…"
+            placeholder="Un desempeño por línea para aplicarlo a los estudiantes que marques abajo…"
             rows={2}
             className="w-full px-2 py-1.5 text-sm border border-rose-300 rounded-lg bg-white outline-none resize-y focus:ring-2 focus:ring-rose-400 focus:border-rose-400"
           />
@@ -119,7 +125,7 @@ export default function ConvivenciaPanel({
             </button>
           </div>
           <p className="text-[11px] text-rose-700/80">
-            Sobrescribe el texto de los estudiantes marcados. Luego puedes ajustar cada uno abajo.
+            Sobrescribe los desempeños de los estudiantes marcados. Luego puedes ajustar texto y valoración abajo.
           </p>
         </div>
       )}
@@ -140,7 +146,12 @@ export default function ConvivenciaPanel({
         <div className="space-y-2">
           {students.map((student, idx) => {
             const isSel = selected.has(student.id)
-            const hasText = !!(valueByStudent[student.id] || '').trim()
+            const items = valueByStudent[student.id] || []
+            const hasText = items.some(item => item.text.trim())
+            const updateItem = (itemIndex: number, patch: Partial<ConvivenciaItem>) => {
+              const next = items.map((item, index) => index === itemIndex ? { ...item, ...patch } : item)
+              onChange(student.id, next)
+            }
             return (
               <div
                 key={student.id}
@@ -165,18 +176,37 @@ export default function ConvivenciaPanel({
                       </span>
                       {hasText && <span className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5"><Check className="w-3 h-3" />Registrado</span>}
                     </div>
-                    <textarea
-                      value={valueByStudent[student.id] || ''}
-                      onChange={(e) => currentPeriodOpen && onChange(student.id, e.target.value)}
-                      disabled={!currentPeriodOpen}
-                      placeholder="Describe cómo se relaciona, participa y convive el estudiante durante el período…"
-                      rows={2}
-                      className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none resize-y ${
-                        currentPeriodOpen
-                          ? 'border-slate-300 bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500'
-                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
-                      }`}
-                    />
+                    <div className="space-y-1.5">
+                      {items.map((item, itemIndex) => (
+                        <div key={itemIndex} className="flex gap-1.5">
+                          <input
+                            value={item.text}
+                            onChange={(e) => currentPeriodOpen && updateItem(itemIndex, { text: e.target.value })}
+                            disabled={!currentPeriodOpen}
+                            placeholder="Describe un desempeño de convivencia…"
+                            className={`min-w-0 flex-1 px-2 py-1.5 text-sm border rounded-lg outline-none ${currentPeriodOpen ? 'border-slate-300 bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500' : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'}`}
+                          />
+                          <select
+                            value={item.levelCode}
+                            onChange={(e) => currentPeriodOpen && updateItem(itemIndex, { levelCode: e.target.value })}
+                            disabled={!currentPeriodOpen}
+                            aria-label="Valoración del desempeño"
+                            className="w-24 shrink-0 px-1.5 py-1 text-xs font-semibold border border-rose-200 rounded-lg bg-rose-50 text-rose-800 disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            <option value="">Valorar</option>
+                            {qualitativeLevels.map(level => <option key={level.code} value={level.code}>{level.code}</option>)}
+                          </select>
+                          {currentPeriodOpen && (
+                            <button type="button" onClick={() => onChange(student.id, items.filter((_, index) => index !== itemIndex))} className="px-2 text-slate-400 hover:text-rose-600" aria-label="Eliminar desempeño">×</button>
+                          )}
+                        </div>
+                      ))}
+                      {currentPeriodOpen && (
+                        <button type="button" onClick={() => onChange(student.id, [...items, { text: '', levelCode: '' }])} className="text-xs font-medium text-rose-700 hover:text-rose-800">
+                          + Agregar desempeño
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

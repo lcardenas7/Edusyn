@@ -219,7 +219,7 @@ enum SubjectType {
   OPTIONAL // Opcional
   TECHNICAL // Técnica (media técnica)
   PRESCHOOL_DIMENSION // Dimensión de transición/preescolar (evaluación cualitativa por propósito)
-  CONVIVENCIA // Registro convivencial especial (texto libre del docente, sin nota)
+  CONVIVENCIA // Registro convivencial especial (desempeños libres con valoración cualitativa)
 }
 
 // Modo de administración del catálogo de aprendizajes/propósitos por institución.
@@ -3183,8 +3183,9 @@ model StudentEvidenceValuation {
   @@index([institutionId])
 }
 
-// Registro convivencial de transición: texto libre del docente por estudiante+período
-// para una asignatura especial (SubjectType.CONVIVENCIA). No lleva nota ni nivel.
+// Registro convivencial de transición: desempeños libres del docente por estudiante+período.
+// `items` conserva el texto y la valoración individual de cada desempeño; `text` se
+// mantiene para compatibilidad con los registros anteriores y las integraciones legadas.
 model ConvivenciaEntry {
   id                  String @id @default(cuid())
   institutionId       String
@@ -3192,6 +3193,7 @@ model ConvivenciaEntry {
   academicTermId      String
   subjectId           String // la asignatura Convivencia
   text                String @db.Text
+  items               Json?
   createdById         String?
 
   createdAt DateTime @default(now())

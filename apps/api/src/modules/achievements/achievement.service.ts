@@ -99,12 +99,13 @@ export class AchievementService {
     });
   }
 
-  /** Crea/actualiza el texto de convivencia de un estudiante en un período. */
+  /** Crea/actualiza los desempeños y valoraciones de convivencia de un estudiante. */
   async upsertConvivenciaEntry(data: {
     studentEnrollmentId: string;
     academicTermId: string;
     subjectId: string;
     text: string;
+    items?: Array<{ text: string; level?: string | null }>;
     createdById?: string;
   }) {
     const enr = await this.prisma.studentEnrollment.findUnique({
@@ -112,7 +113,19 @@ export class AchievementService {
       select: { institutionId: true },
     });
     if (!enr) throw new NotFoundException('Matrícula no encontrada');
-    const text = (data.text ?? '').trim();
+    const validLevels = new Set(['SUPERIOR', 'ALTO', 'BASICO', 'BAJO']);
+    const items = Array.isArray(data.items)
+      ? data.items
+          .map(item => ({
+            text: String(item?.text ?? '').trim(),
+            level: validLevels.has(String(item?.level ?? '').toUpperCase())
+              ? String(item?.level).toUpperCase()
+              : null,
+          }))
+          .filter(item => item.text)
+      : null;
+    // El campo legado sigue siendo una representación legible de los desempeños.
+    const text = items ? items.map(item => item.text).join('\n') : (data.text ?? '').trim();
     return this.prisma.convivenciaEntry.upsert({
       where: {
         studentEnrollmentId_academicTermId_subjectId: {
@@ -121,13 +134,14 @@ export class AchievementService {
           subjectId: data.subjectId,
         },
       },
-      update: { text, createdById: data.createdById },
+      update: { text, items: items as any, createdById: data.createdById },
       create: {
         institutionId: enr.institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         academicTermId: data.academicTermId,
         subjectId: data.subjectId,
         text,
+        items: items as any,
         createdById: data.createdById,
       },
     });

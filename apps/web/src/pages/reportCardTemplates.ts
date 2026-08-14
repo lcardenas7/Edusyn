@@ -451,13 +451,24 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     const ih = sub.displayHours ?? sub.weeklyHours ?? '';
     if (isConvivencia) {
       const txt = sub.convivenciaText || '';
-      // Cada línea del registro de convivencia = un desempeño → una viñeta (como los imprescindibles).
-      const convItems = txt.split('\n').map((t: string) => t.trim()).filter(Boolean);
+      // Cada desempeño libre mantiene su propia valoración. Las entradas antiguas
+      // (solo texto) siguen apareciendo como viñetas sin valoración.
+      const storedItems = Array.isArray(sub.convivenciaItems) ? sub.convivenciaItems : [];
+      const convItems = storedItems.length
+        ? storedItems.map((item: any) => ({ text: String(item?.text || '').trim(), level: norm(item?.level) })).filter((item: any) => item.text)
+        : txt.split('\n').map((text: string) => ({ text: text.trim(), level: '' })).filter((item: any) => item.text);
+      const convValCells = (rawLevel: string) => {
+        const level = codeByPerf[norm(rawLevel)] || norm(rawLevel);
+        if (evidenceMode || valSingle) {
+          return `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};width:72px;">${esc(level)}</td>`;
+        }
+        return scale.map(s => `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('');
+      };
       const rowCount = Math.max(convItems.length + 1, 1);
-      const convRows = convItems.map((item: string) => `
+      const convRows = convItems.map((item: { text: string; level: string }) => `
         <tr style="border-top:1px dotted #eef2f7;">
-          <td style="padding:4px 8px;font-size:10px;color:#475569;line-height:1.4;">• ${esc(item)}</td>
-          ${emptyValCells}
+          <td style="padding:4px 8px;font-size:10px;color:#475569;line-height:1.4;vertical-align:middle;">• ${esc(item.text)}</td>
+          ${convValCells(item.level)}
         </tr>`).join('');
       return `
         <tr style="border-top:1px solid #e2e8f0;">

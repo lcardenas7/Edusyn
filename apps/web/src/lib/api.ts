@@ -921,10 +921,10 @@ export const achievementsApi = {
     evidences?: Array<{ text: string }>;
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
   }) => api.post('/achievements/catalog', data),
-  // Convivencia (texto libre del docente por estudiante+período)
+  // Convivencia (desempeños libres del docente por estudiante+período)
   getConvivencia: (teacherAssignmentId: string, academicTermId: string) =>
     api.get('/achievements/convivencia', { params: { teacherAssignmentId, academicTermId } }),
-  upsertConvivencia: (data: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string }) =>
+  upsertConvivencia: (data: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string; items?: Array<{ text: string; level?: string | null }> }) =>
     api.put('/achievements/convivencia', data),
   // Valoración por imprescindible (modo EVIDENCE)
   getEvidenceValuations: (teacherAssignmentId: string, academicTermId: string) =>

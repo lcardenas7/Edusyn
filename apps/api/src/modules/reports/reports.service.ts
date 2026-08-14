@@ -3352,12 +3352,13 @@ export class ReportsService {
           subj.qualitativeObservation = ach?.observation || null;
           subj.judgment = ach?.judgment || null;
           (subj as any).learningBlocks = buildLearningBlocks(subj.subjectId, subj.subject, subj.performanceLevel);
-          // Transición: horas mostradas + tipo (dimensión/convivencia) + texto de convivencia.
+          // Transición: horas mostradas + tipo (dimensión/convivencia) + desempeños de convivencia.
           const meta = subj.subjectId ? subjectMetaById.get(subj.subjectId) : null;
           (subj as any).displayHours = meta?.displayHours ?? null;
           (subj as any).subjectType = meta?.subjectType ?? null;
           const conv = (convivenciaMap.get(enrollmentId) || []).find(c => c.subjectId === subj.subjectId);
           (subj as any).convivenciaText = conv?.text ?? null;
+          (subj as any).convivenciaItems = conv?.items ?? null;
         }
       }
 

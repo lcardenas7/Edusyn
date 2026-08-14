@@ -10,7 +10,7 @@ import SaveStatusPill from '../components/SaveStatusPill'
 import { buildQualitativeMaps, toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import QualitativeGradesPanel from '../components/grades/QualitativeGradesPanel'
-import ConvivenciaPanel from '../components/grades/ConvivenciaPanel'
+import ConvivenciaPanel, { type ConvivenciaItem } from '../components/grades/ConvivenciaPanel'
 
 interface TeacherAssignment {
   id: string
@@ -293,8 +293,8 @@ export default function Grades() {
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
 
-  // Convivencia (asignatura especial CONVIVENCIA): texto libre por estudiante (clave = student.id).
-  const [convivenciaByStudent, setConvivenciaByStudent] = useState<Record<string, string>>({})
+  // Convivencia: desempeños libres y valoración individual por estudiante.
+  const [convivenciaByStudent, setConvivenciaByStudent] = useState<Record<string, ConvivenciaItem[]>>({})
 
   // Banco de aprendizajes
   const [showBank, setShowBank] = useState(false)
@@ -860,10 +860,14 @@ export default function Grades() {
         const studentIdByEnrollment = new Map<string, string>(
           students.map((s) => [s.enrollmentId, s.id])
         )
-        const next: Record<string, string> = {}
+        const next: Record<string, ConvivenciaItem[]> = {}
         ;(res.data || []).forEach((entry: any) => {
           const studentId = studentIdByEnrollment.get(entry.studentEnrollmentId)
-          if (studentId) next[studentId] = entry.text || ''
+          if (!studentId) return
+          const storedItems = Array.isArray(entry.items) ? entry.items : []
+          next[studentId] = storedItems.length
+            ? storedItems.map((item: any) => ({ text: String(item?.text || ''), levelCode: toQual[String(item?.level || '')] || String(item?.level || '') }))
+            : String(entry.text || '').split('\n').map(text => ({ text: text.trim(), levelCode: '' })).filter(item => item.text)
         })
         setConvivenciaByStudent(next)
       } catch (err) {
@@ -1192,13 +1196,18 @@ export default function Grades() {
     try {
       let saved = 0
       for (const student of students) {
-        const text = (convivenciaByStudent[student.id] || '').trim()
+        const items = (convivenciaByStudent[student.id] || []).map(item => ({
+          text: item.text.trim(),
+          performanceLevel: toPerformanceLevel(item.levelCode, toPerf),
+        })).filter(item => item.text)
+        const text = items.map(item => item.text).join('\n')
         // Se persiste incluso el vacío para permitir borrar un registro previo.
         await achievementsApi.upsertConvivencia({
           studentEnrollmentId: student.enrollmentId,
           academicTermId,
           subjectId,
           text,
+          items: items.map(item => ({ text: item.text, level: item.performanceLevel || null })),
         })
         if (text) saved++
       }
@@ -1914,7 +1923,8 @@ export default function Grades() {
             currentPeriodOpen={currentPeriodOpen}
             subjectName={selectedAssignment.subject.name}
             valueByStudent={convivenciaByStudent}
-            onChange={(studentId, text) => setConvivenciaByStudent(prev => ({ ...prev, [studentId]: text }))}
+            qualitativeLevels={qualitativeLevels}
+            onChange={(studentId, items) => setConvivenciaByStudent(prev => ({ ...prev, [studentId]: items }))}
           />
         ) : isEvidenceMode ? (
           <QualitativeGradesPanel

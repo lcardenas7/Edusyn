@@ -536,11 +536,11 @@ export default function AcademicCatalog() {
                   <option value="OPTIONAL">Opcional</option>
                   <option value="TECHNICAL">Técnica</option>
                   <option value="PRESCHOOL_DIMENSION">Dimensión (Transición/Preescolar)</option>
-                  <option value="CONVIVENCIA">Convivencia (texto libre, sin nota)</option>
+                  <option value="CONVIVENCIA">Convivencia (desempeños libres con valoración)</option>
                 </select>
                 {subjectForm.subjectType === 'CONVIVENCIA' && (
                   <p className="mt-1 text-xs text-pink-600">
-                    El docente registrará un texto libre por estudiante (sin escala ni nota). Se recomienda I.H. = 0.
+                    El docente registrará desempeños libres y una valoración cualitativa por cada uno. Se recomienda I.H. = 0.
                   </p>
                 )}
                 {subjectForm.subjectType === 'PRESCHOOL_DIMENSION' && (
