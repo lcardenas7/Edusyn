@@ -437,18 +437,23 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
   // del largo del texto) y una línea divisoria sólida en el borde con el contenido.
   const COL_DIVIDER = '1px solid #cbd5e1';   // separador entre columnas estructurales
   const SUBCOL_DIVIDER = '1px solid #e2e8f0'; // separador entre niveles de la escala
-  const valColWidth = (evidenceMode || valSingle) ? 68 : 34;
+  // Los anchos dan cabida al rótulo COMPLETO sin bajar el tamaño de letra:
+  // "VALORACIÓN" a 9.5px ocupa ~61px + padding, e "INAS" ~22px + padding. El espacio
+  // sale de la columna de contenido, que es la única elástica.
+  const IH_COL_W = 42;
+  const INAS_COL_W = 48;
+  const valColWidth = (evidenceMode || valSingle) ? 86 : 38;
   const valDivider = (index: number) => (index === 0 ? COL_DIVIDER : SUBCOL_DIVIDER);
   const colGroup = `<colgroup>
-              <col style="width:36px;" />
+              <col style="width:${IH_COL_W}px;" />
               <col />
               ${Array.from({ length: valCols }).map(() => `<col style="width:${valColWidth}px;" />`).join('')}
-              <col style="width:36px;" />
+              <col style="width:${INAS_COL_W}px;" />
             </colgroup>`;
 
   const scaleHeaders = (evidenceMode || valSingle)
-    ? `<th style="padding:4px 3px;text-align:center;border-left:${COL_DIVIDER};">Valoración</th>`
-    : `<th colspan="${scale.length}" style="padding:4px 3px;text-align:center;border-left:${COL_DIVIDER};">Valoración</th>`;
+    ? `<th style="padding:4px 3px;text-align:center;white-space:nowrap;border-left:${COL_DIVIDER};">Valoración</th>`
+    : `<th colspan="${scale.length}" style="padding:4px 3px;text-align:center;white-space:nowrap;border-left:${COL_DIVIDER};">Valoración</th>`;
   const scaleSubheaders = usesScaleColumns
     ? `<tr style="background:${c.headerBg};color:#334155;font-size:9px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">${scale.map((s, i) => `<th style="padding:3px;text-align:center;border-left:${valDivider(i)};">${esc(s.code)}</th>`).join('')}</tr>`
     : '';
@@ -586,10 +591,10 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
           ${colGroup}
           <thead style="display:table-header-group;">
             <tr style="background:${c.headerBg};color:#334155;font-size:9.5px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">
-              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 5px;">I.H.</th>
+              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 4px;white-space:nowrap;">I.H.</th>
               <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 6px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
               ${scaleHeaders}
-              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 5px;border-left:${COL_DIVIDER};">Inas</th>
+              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 4px;white-space:nowrap;border-left:${COL_DIVIDER};">Inas</th>
             </tr>
             ${scaleSubheaders}
           </thead>
