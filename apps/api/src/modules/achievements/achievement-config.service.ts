@@ -42,6 +42,7 @@ export class AchievementConfigService {
     evidenceLabelSingular?: string;
     evidenceLabelPlural?: string;
     learningCatalogMode?: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
+    valuationScope?: 'PURPOSE' | 'EVIDENCE';
   }) {
     return this.prisma.achievementConfig.upsert({
       where: { institutionId: data.institutionId },
@@ -66,6 +67,7 @@ export class AchievementConfigService {
         evidenceLabelSingular: data.evidenceLabelSingular,
         evidenceLabelPlural: data.evidenceLabelPlural,
         learningCatalogMode: data.learningCatalogMode,
+        valuationScope: data.valuationScope,
       },
       create: {
         institutionId: data.institutionId,
@@ -89,6 +91,7 @@ export class AchievementConfigService {
         evidenceLabelSingular: data.evidenceLabelSingular ?? 'Evidencia',
         evidenceLabelPlural: data.evidenceLabelPlural ?? 'Evidencias',
         learningCatalogMode: data.learningCatalogMode ?? 'TEACHER_MANAGED',
+        valuationScope: data.valuationScope ?? 'PURPOSE',
       },
       include: {
         valueJudgmentTemplates: true,

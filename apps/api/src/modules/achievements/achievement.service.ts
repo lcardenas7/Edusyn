@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { PerformanceLevel } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -130,6 +131,75 @@ export class AchievementService {
         createdById: data.createdById,
       },
     });
+  }
+
+  // ============================================
+  // VALORACIÓN POR IMPRESCINDIBLE (modo EVIDENCE)
+  // ============================================
+
+  /** Valoraciones por evidencia de todos los estudiantes del grupo de la asignación, para el período. */
+  async getEvidenceValuationsByAssignment(teacherAssignmentId: string, academicTermId: string) {
+    const ta = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { groupId: true },
+    });
+    if (!ta) throw new NotFoundException('Asignación docente no encontrada');
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { groupId: ta.groupId },
+      select: { id: true },
+    });
+    const enrollmentIds = enrollments.map((e) => e.id);
+    if (enrollmentIds.length === 0) return [];
+    return this.prisma.studentEvidenceValuation.findMany({
+      where: { studentEnrollmentId: { in: enrollmentIds }, academicTermId },
+    });
+  }
+
+  /** Crea/actualiza la valoración de un imprescindible para un estudiante en un período. */
+  async upsertEvidenceValuation(data: {
+    studentEnrollmentId: string;
+    achievementEvidenceId: string;
+    academicTermId: string;
+    performanceLevel: PerformanceLevel;
+    observation?: string | null;
+    createdById?: string;
+  }) {
+    const enr = await this.prisma.studentEnrollment.findUnique({
+      where: { id: data.studentEnrollmentId },
+      select: { institutionId: true },
+    });
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
+    return this.prisma.studentEvidenceValuation.upsert({
+      where: {
+        studentEnrollmentId_achievementEvidenceId_academicTermId: {
+          studentEnrollmentId: data.studentEnrollmentId,
+          achievementEvidenceId: data.achievementEvidenceId,
+          academicTermId: data.academicTermId,
+        },
+      },
+      update: {
+        performanceLevel: data.performanceLevel,
+        observation: data.observation ?? null,
+        createdById: data.createdById,
+      },
+      create: {
+        institutionId: enr.institutionId,
+        studentEnrollmentId: data.studentEnrollmentId,
+        achievementEvidenceId: data.achievementEvidenceId,
+        academicTermId: data.academicTermId,
+        performanceLevel: data.performanceLevel,
+        observation: data.observation ?? null,
+        createdById: data.createdById,
+      },
+    });
+  }
+
+  /** Elimina la valoración de un imprescindible (cuando el docente la quita). */
+  async deleteEvidenceValuation(studentEnrollmentId: string, achievementEvidenceId: string, academicTermId: string) {
+    await this.prisma.studentEvidenceValuation.deleteMany({
+      where: { studentEnrollmentId, achievementEvidenceId, academicTermId },
+    });
+    return { success: true };
   }
 
   // ============================================

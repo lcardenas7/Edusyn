@@ -424,13 +424,33 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
   const codeByPerf: Record<string, string> = {};
   scale.forEach((s, i) => { if (perfSlots[i]) codeByPerf[norm(perfSlots[i])] = norm(s.code); });
 
-  // Modo de visualización de la valoración: 'SINGLE' = una columna con el código; 'COLUMNS' = ✓ por nivel.
+  // Modo de valoración: 'EVIDENCE' = un nivel por imprescindible (inline); 'PURPOSE' = un nivel por propósito.
+  const evidenceMode = rc.valuationScope === 'EVIDENCE';
+  // Modo de visualización (solo PURPOSE): 'SINGLE' = una columna con el código; 'COLUMNS' = ✓ por nivel.
   const valSingle = rc.preschoolLevelDisplay === 'SINGLE';
-  const scaleHeaders = valSingle
-    ? `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:72px;">Valoración</th>`
-    : scale.map(s => `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join('');
+  const valCols = evidenceMode ? 0 : (valSingle ? 1 : scale.length); // columnas de valoración a la derecha
+  const scaleHeaders = evidenceMode
+    ? ''
+    : (valSingle
+      ? `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:72px;">Valoración</th>`
+      : scale.map(s => `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join(''));
+
+  // EVIDENCE: cada imprescindible como viñeta con su valoración a la derecha (asociación clara).
+  const evItemsHtml = (items: any[]) => {
+    if (!items || !items.length) return '';
+    return `<ul style="list-style:none;margin:4px 0 0;padding:0;">${items.map((it: any) => {
+      const lc = codeByPerf[norm(it.level)] || norm(it.level) || '';
+      return `<li style="display:flex;align-items:flex-start;gap:10px;font-size:10px;color:#475569;line-height:1.4;padding:3px 0;border-top:1px dotted #eef2f7;">
+        <span style="flex:1;min-width:0;">• ${esc(it.text)}</span>
+        <span style="flex:0 0 auto;min-width:26px;text-align:center;font-weight:800;color:${c.primary};">${esc(lc)}</span>
+      </li>`;
+    }).join('')}</ul>`;
+  };
 
   const subjects: any[] = (data.areaGrades || []).flatMap((a: any) => a.subjects || []);
+  const emptyValCells = evidenceMode ? '' : (valSingle
+    ? `<td style="border-left:1px solid #eef2f7;"></td>`
+    : scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join(''));
   const rows = subjects.map((sub: any) => {
     const isConvivencia = sub.subjectType === 'CONVIVENCIA';
     const ih = sub.displayHours ?? sub.weeklyHours ?? '';
@@ -448,10 +468,28 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
             <div style="font-weight:800;color:${c.text};">${esc(sub.subject)}</div>
             ${convHtml}
           </td>
-          ${valSingle ? `<td style="border-left:1px solid #eef2f7;"></td>` : scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join('')}
+          ${emptyValCells}
           <td style="text-align:center;border-left:1px solid #e2e8f0;">${esc(inasCell)}</td>
         </tr>`;
     }
+
+    // ─── Modo EVIDENCE: propósito (negrita, sin ✓) + imprescindibles con su valoración ───
+    if (evidenceMode) {
+      const blocks = (sub.learningBlocks || []) as any[];
+      const body = blocks.map((b: any) => `
+        <div style="margin-top:3px;">
+          <div style="font-weight:800;color:${c.text};line-height:1.35;">${esc(b.learning || '')}</div>
+          ${evItemsHtml(b.evidenceItems)}
+        </div>`).join('');
+      return `
+        <tr style="border-top:1px solid #e2e8f0;">
+          <td style="text-align:center;font-weight:700;padding:5px 4px;vertical-align:top;">${esc(String(ih))}</td>
+          <td style="padding:5px 8px;">${body || `<span style="font-size:10px;color:#94a3b8;">Sin registros.</span>`}</td>
+          <td style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>
+        </tr>`;
+    }
+
+    // ─── Modo PURPOSE (actual): un nivel por propósito ───
     const block = (sub.learningBlocks && sub.learningBlocks[0]) || null;
     const proposito = block?.learning || sub.achievement || '';
     const evidences: string[] = block?.evidences || [];
@@ -518,7 +556,7 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
               <th style="padding:7px 5px;width:36px;border-left:1px solid #e2e8f0;">Inas</th>
             </tr>
           </thead>
-          <tbody>${rows || `<tr><td colspan="${(valSingle ? 1 : scale.length) + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
+          <tbody>${rows || `<tr><td colspan="${valCols + 3}" style="padding:8px;color:#94a3b8;text-align:center;">Sin registros.</td></tr>`}</tbody>
         </table>
       </div>
 

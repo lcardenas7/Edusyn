@@ -71,6 +71,7 @@ export class AchievementController {
       evidenceLabelSingular?: string;
       evidenceLabelPlural?: string;
       learningCatalogMode?: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
+      valuationScope?: 'PURPOSE' | 'EVIDENCE';
     },
   ) {
     try {
@@ -196,6 +197,38 @@ export class AchievementController {
     @Body() body: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string },
   ) {
     return this.achievementService.upsertConvivenciaEntry({ ...body, createdById: req.user?.id });
+  }
+
+  // ============================================
+  // VALORACIÓN POR IMPRESCINDIBLE (modo EVIDENCE)
+  // ============================================
+
+  @Get('evidence-valuations')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getEvidenceValuations(
+    @Query('teacherAssignmentId') teacherAssignmentId: string,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    return this.achievementService.getEvidenceValuationsByAssignment(teacherAssignmentId, academicTermId);
+  }
+
+  @Put('evidence-valuations')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async upsertEvidenceValuation(
+    @Request() req: any,
+    @Body() body: { studentEnrollmentId: string; achievementEvidenceId: string; academicTermId: string; performanceLevel: any; observation?: string | null },
+  ) {
+    return this.achievementService.upsertEvidenceValuation({ ...body, createdById: req.user?.id });
+  }
+
+  @Delete('evidence-valuations')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async deleteEvidenceValuation(
+    @Query('studentEnrollmentId') studentEnrollmentId: string,
+    @Query('achievementEvidenceId') achievementEvidenceId: string,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    return this.achievementService.deleteEvidenceValuation(studentEnrollmentId, achievementEvidenceId, academicTermId);
   }
 
   // ============================================

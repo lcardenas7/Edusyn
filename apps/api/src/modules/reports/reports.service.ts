@@ -2631,7 +2631,7 @@ export class ReportsService {
           achievementObservation: string | null;
           qualitativeObservation: string | null;
           judgment: string | null;
-          learningBlocks?: Array<{ learning: string | null; evidences: string[]; levelDescriptor: string | null; judgment: string | null; performanceLevel: string | null }>;
+          learningBlocks?: Array<{ learning: string | null; evidences: string[]; evidenceItems?: Array<{ text: string; level: string | null }>; levelDescriptor: string | null; judgment: string | null; performanceLevel: string | null }>;
         }>;
       }>;
       subjectGrades: Array<{
@@ -2651,7 +2651,7 @@ export class ReportsService {
         achievementObservation: string | null;
         qualitativeObservation: string | null;
         judgment: string | null;
-        learningBlocks?: Array<{ learning: string | null; evidences: string[]; levelDescriptor: string | null; judgment: string | null; performanceLevel: string | null }>;
+        learningBlocks?: Array<{ learning: string | null; evidences: string[]; evidenceItems?: Array<{ text: string; level: string | null }>; levelDescriptor: string | null; judgment: string | null; performanceLevel: string | null }>;
       }>;
       structureSource: 'snapshot' | 'calculated';
       attendance: { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number };
@@ -2926,6 +2926,8 @@ export class ReportsService {
       showZeroAbsences: rcConfig?.showZeroAbsences ?? false,
       // Cómo mostrar la valoración: 'COLUMNS' (✓ por columna L/EP/I) o 'SINGLE' (una columna con el código).
       preschoolLevelDisplay: (rcConfig?.preschoolLevelDisplay ?? 'COLUMNS') as 'COLUMNS' | 'SINGLE',
+      // Modo de valoración: 'PURPOSE' (por propósito) o 'EVIDENCE' (por imprescindible).
+      valuationScope: (achConfig?.valuationScope ?? 'PURPOSE') as 'PURPOSE' | 'EVIDENCE',
       // Escala cualitativa configurada (para columnas dinámicas del boletín de transición).
       qualitativeLevels: (() => {
         const levels = ((firstEnrollment.academicYear.institution as any).academicLevelsConfig || []) as any[];
@@ -2944,6 +2946,47 @@ export class ReportsService {
       const list = convivenciaMap.get(ce.studentEnrollmentId) || [];
       list.push(ce);
       convivenciaMap.set(ce.studentEnrollmentId, list);
+    }
+
+    // ─── Modo EVIDENCE: propósitos del catálogo + valoración por imprescindible ────
+    // En este modo el docente NO crea StudentAchievement (valora imprescindibles), así que
+    // el boletín arma los propósitos desde el catálogo (grado) y adjunta el nivel por evidencia.
+    const evidenceMode = reportContent.valuationScope === 'EVIDENCE';
+    const catalogBySubject = new Map<string, any[]>();
+    const sevByEnrEvidence = new Map<string, Map<string, string>>();
+    if (evidenceMode) {
+      const gradeId = firstEnrollment.group.grade?.id;
+      if (gradeId) {
+        const catalog = await this.prisma.achievement.findMany({
+          where: {
+            institutionId,
+            gradeId,
+            academicYearId,
+            teacherAssignmentId: null,
+            isPromotional: false,
+            OR: [{ academicTermId }, { academicTermId: null }],
+          },
+          include: { evidences: { where: { isActive: true }, orderBy: { orderNumber: 'asc' } } },
+          orderBy: { orderNumber: 'asc' },
+        });
+        for (const a of catalog) {
+          if (!a.subjectId) continue;
+          const list = catalogBySubject.get(a.subjectId) || [];
+          list.push(a);
+          catalogBySubject.set(a.subjectId, list);
+        }
+        const evidenceIds = catalog.flatMap((a) => a.evidences.map((e: any) => e.id));
+        if (evidenceIds.length) {
+          const sevs = await this.prisma.studentEvidenceValuation.findMany({
+            where: { studentEnrollmentId: { in: enrollmentIds }, academicTermId, achievementEvidenceId: { in: evidenceIds } },
+          });
+          for (const sv of sevs) {
+            let m = sevByEnrEvidence.get(sv.studentEnrollmentId);
+            if (!m) { m = new Map(); sevByEnrEvidence.set(sv.studentEnrollmentId, m); }
+            m.set(sv.achievementEvidenceId, sv.performanceLevel);
+          }
+        }
+      }
     }
 
     // ─── displayHours + tipo por asignatura (para I.H. y detección de dimensiones) ──
@@ -3257,6 +3300,22 @@ export class ReportsService {
       // respetando la granularidad institucional. El filtrado por flags (qué se muestra) se
       // hace en la plantilla usando `reportContent`; aquí entregamos el dato completo.
       const buildLearningBlocks = (subjectId: string | null, subjectName: string, performanceLevel: string | null) => {
+        // Modo EVIDENCE: propósitos del catálogo + nivel por imprescindible del estudiante.
+        // No hay valoración por propósito (performanceLevel = null); cada evidencia lleva su nivel.
+        if (evidenceMode) {
+          const cats = subjectId ? (catalogBySubject.get(subjectId) || []) : [];
+          if (cats.length === 0) return [];
+          const sevMap = sevByEnrEvidence.get(enrollmentId);
+          return cats.map((ach: any) => ({
+            learning: ach.baseDescription || null,
+            evidences: (ach.evidences || []).map((e: any) => e.text),
+            // evidenceItems: texto + nivel (enum PerformanceLevel; la plantilla lo traduce a código de escala).
+            evidenceItems: (ach.evidences || []).map((e: any) => ({ text: e.text, level: sevMap?.get(e.id) || null })),
+            levelDescriptor: null,
+            judgment: null,
+            performanceLevel: null,
+          }));
+        }
         const list = resolveSubjectAchievements(subjectId, subjectName);
         if (list.length === 0) return [];
         const selected = reportContent.granularity === 'ALL'

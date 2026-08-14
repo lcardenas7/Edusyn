@@ -879,6 +879,7 @@ export const achievementConfigApi = {
     evidenceLabelSingular?: string;
     evidenceLabelPlural?: string;
     learningCatalogMode?: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
+    valuationScope?: 'PURPOSE' | 'EVIDENCE';
   }) => api.put('/achievements/config', data),
   getTemplates: (institutionId: string) => 
     api.get(`/achievements/config/${institutionId}/templates`),
@@ -925,6 +926,11 @@ export const achievementsApi = {
     api.get('/achievements/convivencia', { params: { teacherAssignmentId, academicTermId } }),
   upsertConvivencia: (data: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string }) =>
     api.put('/achievements/convivencia', data),
+  // Valoración por imprescindible (modo EVIDENCE)
+  getEvidenceValuations: (teacherAssignmentId: string, academicTermId: string) =>
+    api.get('/achievements/evidence-valuations', { params: { teacherAssignmentId, academicTermId } }),
+  upsertEvidenceValuation: (data: { studentEnrollmentId: string; achievementEvidenceId: string; academicTermId: string; performanceLevel: string; observation?: string }) =>
+    api.put('/achievements/evidence-valuations', data),
   getByAssignment: (teacherAssignmentId: string, academicTermId: string) =>
     api.get('/achievements/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
   getPromotional: (teacherAssignmentId: string) => 

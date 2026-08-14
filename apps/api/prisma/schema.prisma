@@ -2954,6 +2954,12 @@ model AchievementConfig {
   // Quién administra el catálogo de aprendizajes/propósitos.
   learningCatalogMode LearningCatalogMode @default(TEACHER_MANAGED)
 
+  // Modo de valoración cualitativa:
+  //   PURPOSE  → un nivel por propósito (StudentAchievement) — comportamiento actual.
+  //   EVIDENCE → un nivel por imprescindible (StudentEvidenceValuation).
+  // Afecta la planilla del docente y el boletín. Nunca se muestran ambos a la vez.
+  valuationScope AchievementValuationScope @default(PURPOSE)
+
   // Contenido descriptivo del boletín (4 elementos independientes).
   showLearningInReport        Boolean @default(true)  // Mostrar aprendizaje/desempeño
   showEvidencesInReport       Boolean @default(false) // Mostrar evidencias de aprendizaje
@@ -2975,6 +2981,12 @@ model AchievementConfig {
 enum AcademicRegistrationModel {
   LEARNING_ONLY // Solo aprendizajes / desempeños
   LEARNING_AND_EVIDENCE // Aprendizajes + evidencias de aprendizaje
+}
+
+// Granularidad de la valoración cualitativa (por institución).
+enum AchievementValuationScope {
+  PURPOSE // Valoración por propósito (StudentAchievement) — default, actual
+  EVIDENCE // Valoración por imprescindible (StudentEvidenceValuation)
 }
 
 enum ReportLearningGranularity {
@@ -3147,6 +3159,28 @@ model AchievementEvidence {
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@index([achievementId])
+}
+
+// Valoración por imprescindible (modo EVIDENCE): un nivel por (estudiante × evidencia × período).
+// Aditivo: NO reemplaza StudentAchievement (valoración por propósito). Se usa solo cuando
+// AchievementConfig.valuationScope = EVIDENCE. Escalares sin relaciones Prisma (se consulta por
+// achievementEvidenceId + academicTermId); los huérfanos tras borrar una evidencia se ignoran.
+model StudentEvidenceValuation {
+  id                    String           @id @default(cuid())
+  institutionId         String
+  studentEnrollmentId   String
+  achievementEvidenceId String
+  academicTermId        String
+  performanceLevel      PerformanceLevel
+  observation           String?          @db.Text
+  createdById           String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@unique([studentEnrollmentId, achievementEvidenceId, academicTermId])
+  @@index([academicTermId])
+  @@index([achievementEvidenceId])
+  @@index([institutionId])
 }
 
 // Registro convivencial de transición: texto libre del docente por estudiante+período

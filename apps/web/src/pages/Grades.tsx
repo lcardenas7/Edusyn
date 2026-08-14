@@ -262,9 +262,33 @@ export default function Grades() {
     useValueJudgments: boolean;
     descriptorMode: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
     learningCatalogMode: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
+    valuationScope: 'PURPOSE' | 'EVIDENCE';
   } | null>(null)
   const descriptorMode = achievementConfig?.descriptorMode ?? 'FREE'
   const catalogLocked = achievementConfig?.learningCatalogMode === 'ADMIN_FIXED'
+  // Modo de valoración por imprescindible (solo cualitativo). El docente valora cada evidencia.
+  const isEvidenceMode = isQualitative && achievementConfig?.valuationScope === 'EVIDENCE'
+
+  // Valoraciones por imprescindible (clave = evidenceId → studentId → {levelCode, observation}).
+  const [evidenceGrades, setEvidenceGrades] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null)
+
+  // Imprescindibles (evidencias) aplanados como "indicadores" para reutilizar el panel cualitativo.
+  const evidenceIndicators = useMemo(() => {
+    if (!isEvidenceMode) return [] as any[]
+    const out: any[] = []
+    ;(achievements as any[]).forEach((ach: any, pi: number) => {
+      ;(ach.evidences || []).forEach((ev: any, ei: number) => {
+        out.push({
+          id: ev.id,
+          code: `${ach.code || pi + 1}.${ei + 1}`,
+          orderNumber: (ach.orderNumber || pi + 1) * 100 + (ev.orderNumber || ei + 1),
+          baseDescription: ev.text,
+        })
+      })
+    })
+    return out
+  }, [isEvidenceMode, achievements])
 
   const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
   const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
@@ -786,6 +810,7 @@ export default function Grades() {
             useValueJudgments: configRes.data.useValueJudgments ?? true,
             descriptorMode: configRes.data.descriptorMode ?? 'FREE',
             learningCatalogMode: configRes.data.learningCatalogMode ?? 'TEACHER_MANAGED',
+            valuationScope: configRes.data.valuationScope ?? 'PURPOSE',
           })
         }
 
@@ -847,6 +872,37 @@ export default function Grades() {
     }
     loadConvivencia()
   }, [isConvivencia, selectedAssignment?.id, academicTermId, students])
+
+  // Cargar valoraciones por imprescindible (modo EVIDENCE).
+  useEffect(() => {
+    const load = async () => {
+      if (!isEvidenceMode || !selectedAssignment?.id || !academicTermId) {
+        setEvidenceGrades({})
+        return
+      }
+      try {
+        const res = await achievementsApi.getEvidenceValuations(selectedAssignment.id, academicTermId)
+        const studentIdByEnrollment = new Map<string, string>(students.map((s) => [s.enrollmentId, s.id]))
+        const next: Record<string, Record<string, { levelCode: string; observation: string }>> = {}
+        ;(res.data || []).forEach((v: any) => {
+          const studentId = studentIdByEnrollment.get(v.studentEnrollmentId)
+          if (!studentId) return
+          if (!next[v.achievementEvidenceId]) next[v.achievementEvidenceId] = {}
+          next[v.achievementEvidenceId][studentId] = {
+            levelCode: toQualitativeCode(v.performanceLevel, toQual),
+            observation: v.observation || '',
+          }
+        })
+        setEvidenceGrades(next)
+        setSelectedEvidenceId((prev) =>
+          prev && evidenceIndicators.some((e) => e.id === prev) ? prev : (evidenceIndicators[0]?.id || null),
+        )
+      } catch (err) {
+        console.error('Error loading evidence valuations:', err)
+      }
+    }
+    load()
+  }, [isEvidenceMode, selectedAssignment?.id, academicTermId, students, toQual, evidenceIndicators])
 
   // Todas las columnas para navegación
   const allActivityColumns = useMemo(() => {
@@ -1150,6 +1206,43 @@ export default function Grades() {
       toast.info(`Convivencia guardada · ${saved} con registro`)
     } catch (err: any) {
       console.error('Error saving convivencia:', err)
+      TOAST.grades.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Guardar valoraciones por imprescindible (modo EVIDENCE).
+  const saveEvidenceValuations = async () => {
+    if (!isEvidenceMode) return
+    if (!selectedAssignment?.id || !academicTermId) {
+      toast.warning('No se puede guardar: falta información del período o dimensión')
+      return
+    }
+    setSaving(true)
+    try {
+      let saved = 0
+      for (const ind of evidenceIndicators) {
+        const grades = evidenceGrades[ind.id] || {}
+        for (const student of students) {
+          const g = grades[student.id]
+          if (!g || !g.levelCode) continue
+          const performanceLevel = toPerformanceLevel(g.levelCode, toPerf)
+          if (!performanceLevel) continue
+          await achievementsApi.upsertEvidenceValuation({
+            studentEnrollmentId: student.enrollmentId,
+            achievementEvidenceId: ind.id,
+            academicTermId,
+            performanceLevel,
+            observation: g.observation?.trim() || undefined,
+          })
+          saved++
+        }
+      }
+      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      toast.info(`Valoración por imprescindible guardada · ${saved} registros`)
+    } catch (err: any) {
+      console.error('Error saving evidence valuations:', err)
       TOAST.grades.error(err)
     } finally {
       setSaving(false)
@@ -1591,7 +1684,7 @@ export default function Grades() {
             </div>
           )}
           <button 
-            onClick={isConvivencia ? saveConvivencia : isQualitative ? saveQualitativeGrades : selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
+            onClick={isConvivencia ? saveConvivencia : isEvidenceMode ? saveEvidenceValuations : isQualitative ? saveQualitativeGrades : selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
             disabled={(selectedSourceType === 'period' ? saving : savingFc) || !currentPeriodOpen}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
@@ -1822,6 +1915,35 @@ export default function Grades() {
             subjectName={selectedAssignment.subject.name}
             valueByStudent={convivenciaByStudent}
             onChange={(studentId, text) => setConvivenciaByStudent(prev => ({ ...prev, [studentId]: text }))}
+          />
+        ) : isEvidenceMode ? (
+          <QualitativeGradesPanel
+            students={students}
+            loadingStudents={loadingStudents}
+            currentPeriodOpen={currentPeriodOpen}
+            achievements={evidenceIndicators}
+            descriptorMode={'FREE'}
+            catalogLocked={true}
+            indicatorLabel="Imprescindible"
+            selectedAchievementId={selectedEvidenceId}
+            onSelectAchievement={setSelectedEvidenceId}
+            qualitativeLevels={qualitativeLevels}
+            gradesByAchievement={evidenceGrades}
+            onUpdateGrade={(evidenceId, studentId, patch) => {
+              setEvidenceGrades(prev => ({
+                ...prev,
+                [evidenceId]: {
+                  ...(prev[evidenceId] || {}),
+                  [studentId]: {
+                    ...(prev[evidenceId]?.[studentId] || { levelCode: '', observation: '' }),
+                    ...patch,
+                  },
+                },
+              }))
+            }}
+            onCreateAchievement={async () => {}}
+            onEditAchievement={async () => {}}
+            onDeleteAchievement={async () => {}}
           />
         ) : isQualitative ? (
           <QualitativeGradesPanel

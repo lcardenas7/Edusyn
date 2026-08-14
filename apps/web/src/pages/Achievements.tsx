@@ -60,6 +60,7 @@ interface AchievementConfig {
   showLevelDescriptorInReport: boolean
   showJudgmentInReport: boolean
   reportLearningGranularity: 'PRIMARY_ONLY' | 'ALL'
+  valuationScope: 'PURPOSE' | 'EVIDENCE'
 }
 
 interface Evidence {
@@ -167,6 +168,7 @@ export default function Achievements() {
     showLevelDescriptorInReport: false,
     showJudgmentInReport: true,
     reportLearningGranularity: 'PRIMARY_ONLY',
+    valuationScope: 'PURPOSE',
   })
   const [templates, setTemplates] = useState<ValueJudgmentTemplate[]>(DEFAULT_TEMPLATES)
 
@@ -391,6 +393,7 @@ export default function Achievements() {
             showLevelDescriptorInReport: response.data.showLevelDescriptorInReport ?? false,
             showJudgmentInReport: response.data.showJudgmentInReport ?? true,
             reportLearningGranularity: response.data.reportLearningGranularity || 'PRIMARY_ONLY',
+            valuationScope: response.data.valuationScope || 'PURPOSE',
           })
         }
         
@@ -1621,6 +1624,40 @@ export default function Achievements() {
                 ¿"Solo evidencias" en el boletín? No es un modo de registro: actívalo abajo en
                 "Contenido descriptivo del boletín" mostrando solo las evidencias.
               </p>
+            </div>
+
+            {/* Modo de valoración (por propósito / por imprescindible) */}
+            <div className="border-t border-slate-200 pt-6">
+              <h4 className="font-medium text-slate-800 mb-1">Modo de valoración</h4>
+              <p className="text-sm text-slate-500 mb-4">Define el nivel de detalle de la valoración cualitativa. Afecta la planilla del docente y el boletín. Nunca se muestran ambos a la vez.</p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="valuationScope"
+                    checked={config.valuationScope === 'PURPOSE'}
+                    onChange={() => setConfig({ ...config, valuationScope: 'PURPOSE' })}
+                    className="w-4 h-4 mt-0.5 text-blue-600"
+                  />
+                  <span className="text-sm text-slate-700">
+                    <b>Por propósito</b>
+                    <span className="block text-xs text-slate-500">Un nivel por aprendizaje/propósito. Los imprescindibles se muestran como texto descriptivo, sin valoración individual. (Actual)</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="valuationScope"
+                    checked={config.valuationScope === 'EVIDENCE'}
+                    onChange={() => setConfig({ ...config, valuationScope: 'EVIDENCE' })}
+                    className="w-4 h-4 mt-0.5 text-blue-600"
+                  />
+                  <span className="text-sm text-slate-700">
+                    <b>Por imprescindible</b>
+                    <span className="block text-xs text-slate-500">El docente valora cada imprescindible/evidencia por separado. El boletín muestra la valoración junto a cada uno, sin valoración del propósito.</span>
+                  </span>
+                </label>
+              </div>
             </div>
 
             {/* Attitudinal Config */}

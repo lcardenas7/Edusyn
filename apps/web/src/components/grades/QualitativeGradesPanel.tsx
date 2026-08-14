@@ -43,6 +43,8 @@ interface Props {
   achievements: AchievementRow[]
   descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL'
   catalogLocked?: boolean
+  /** Etiqueta del "indicador" (p. ej. "Imprescindible" en modo por-evidencia). Default: "indicador". */
+  indicatorLabel?: string
   selectedAchievementId: string | null
   onSelectAchievement: (achievementId: string) => void
   qualitativeLevels: QualitativeLevel[]
@@ -62,6 +64,7 @@ export default function QualitativeGradesPanel({
   achievements,
   descriptorMode = 'FREE',
   catalogLocked = false,
+  indicatorLabel = 'indicador',
   selectedAchievementId,
   onSelectAchievement,
   qualitativeLevels,
@@ -244,7 +247,7 @@ export default function QualitativeGradesPanel({
       <div className="bg-white rounded-xl border border-amber-200 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900">
           <Sparkles className="w-4 h-4 text-amber-600" />
-          Indicadores
+          {indicatorLabel === 'indicador' ? 'Indicadores' : `${indicatorLabel}s`}
         </span>
 
         <div className="flex-1 flex flex-wrap items-center gap-1.5 min-w-[200px]">
