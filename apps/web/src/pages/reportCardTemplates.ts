@@ -431,21 +431,32 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
   // EVIDENCE has one real, independent valuation column for each evidence row.
   const valCols = evidenceMode ? 1 : (valSingle ? 1 : scale.length); // columnas de valoración a la derecha
   const usesScaleColumns = !evidenceMode && !valSingle && scale.length > 0;
-  const scaleHeaders = evidenceMode
-    ? `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:72px;">Valoración</th>`
-    : (valSingle
-      ? `<th style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;width:72px;">Valoración</th>`
-      : `<th colspan="${scale.length}" style="padding:4px 3px;text-align:center;border-left:1px solid #e2e8f0;">Valoración</th>`);
+
+  // La valoración es una columna ESTRUCTURAL, no un texto alineado a la derecha dentro
+  // del contenido: ancho fijo vía <colgroup> + table-layout:fixed (para que no dependa
+  // del largo del texto) y una línea divisoria sólida en el borde con el contenido.
+  const COL_DIVIDER = '1px solid #cbd5e1';   // separador entre columnas estructurales
+  const SUBCOL_DIVIDER = '1px solid #e2e8f0'; // separador entre niveles de la escala
+  const valColWidth = (evidenceMode || valSingle) ? 68 : 34;
+  const valDivider = (index: number) => (index === 0 ? COL_DIVIDER : SUBCOL_DIVIDER);
+  const colGroup = `<colgroup>
+              <col style="width:36px;" />
+              <col />
+              ${Array.from({ length: valCols }).map(() => `<col style="width:${valColWidth}px;" />`).join('')}
+              <col style="width:36px;" />
+            </colgroup>`;
+
+  const scaleHeaders = (evidenceMode || valSingle)
+    ? `<th style="padding:4px 3px;text-align:center;border-left:${COL_DIVIDER};">Valoración</th>`
+    : `<th colspan="${scale.length}" style="padding:4px 3px;text-align:center;border-left:${COL_DIVIDER};">Valoración</th>`;
   const scaleSubheaders = usesScaleColumns
-    ? `<tr style="background:${c.headerBg};color:#334155;font-size:9px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">${scale.map(s => `<th style="padding:3px;text-align:center;border-left:1px solid #e2e8f0;width:34px;">${esc(s.code)}</th>`).join('')}</tr>`
+    ? `<tr style="background:${c.headerBg};color:#334155;font-size:9px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">${scale.map((s, i) => `<th style="padding:3px;text-align:center;border-left:${valDivider(i)};">${esc(s.code)}</th>`).join('')}</tr>`
     : '';
 
   const subjects: any[] = (data.areaGrades || []).flatMap((a: any) => a.subjects || []);
-  const emptyValCells = evidenceMode
-    ? `<td style="border-left:1px solid #eef2f7;"></td>`
-    : (valSingle
-      ? `<td style="border-left:1px solid #eef2f7;"></td>`
-      : scale.map(() => `<td style="border-left:1px solid #eef2f7;"></td>`).join(''));
+  const emptyValCells = (evidenceMode || valSingle)
+    ? `<td style="border-left:${COL_DIVIDER};"></td>`
+    : scale.map((_s, i) => `<td style="border-left:${valDivider(i)};"></td>`).join('');
   const rows = subjects.map((sub: any) => {
     const isConvivencia = sub.subjectType === 'CONVIVENCIA';
     const ih = sub.displayHours ?? sub.weeklyHours ?? '';
@@ -460,9 +471,9 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
       const convValCells = (rawLevel: string) => {
         const level = codeByPerf[norm(rawLevel)] || norm(rawLevel);
         if (evidenceMode || valSingle) {
-          return `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};width:72px;">${esc(level)}</td>`;
+          return `<td style="text-align:center;border-left:${COL_DIVIDER};vertical-align:middle;font-weight:800;color:${c.primary};">${esc(level)}</td>`;
         }
-        return scale.map(s => `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('');
+        return scale.map((s, i) => `<td style="text-align:center;border-left:${valDivider(i)};vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('');
       };
       const rowCount = Math.max(convItems.length + 1, 1);
       const convRows = convItems.map((item: { text: string; level: string }) => `
@@ -475,7 +486,7 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
           <td rowspan="${rowCount}" style="text-align:center;font-weight:700;padding:5px 4px;vertical-align:top;">${esc(String(ih))}</td>
           <td style="padding:5px 8px;"><div style="font-weight:800;color:${c.text};">${esc(sub.subject)}</div></td>
           ${emptyValCells}
-          <td rowspan="${rowCount}" style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>
+          <td rowspan="${rowCount}" style="text-align:center;border-left:${COL_DIVIDER};vertical-align:top;">${esc(inasCell)}</td>
         </tr>${convRows}`;
     }
 
@@ -500,16 +511,16 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
         return `<tr style="border-top:1px solid #e2e8f0;">
           <td style="text-align:center;font-weight:700;padding:5px 4px;vertical-align:top;">${esc(String(ih))}</td>
           <td style="padding:5px 8px;"><span style="font-size:10px;color:#94a3b8;">Sin registros.</span></td>
-          <td style="border-left:1px solid #eef2f7;"></td>
-          <td style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>
+          <td style="border-left:${COL_DIVIDER};"></td>
+          <td style="text-align:center;border-left:${COL_DIVIDER};vertical-align:top;">${esc(inasCell)}</td>
         </tr>`;
       }
       return detailRows.map((item: any, index: number) => `
         <tr style="border-top:${index === 0 ? '1px solid #e2e8f0' : '1px dotted #eef2f7'};">
           ${index === 0 ? `<td rowspan="${rowCount}" style="text-align:center;font-weight:700;padding:5px 4px;vertical-align:top;">${esc(String(ih))}</td>` : ''}
           <td style="padding:${item.purpose ? '5px 8px' : '4px 8px'};vertical-align:middle;">${item.content}</td>
-          <td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};width:72px;">${esc(item.level)}</td>
-          ${index === 0 ? `<td rowspan="${rowCount}" style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>` : ''}
+          <td style="text-align:center;border-left:${COL_DIVIDER};vertical-align:middle;font-weight:800;color:${c.primary};">${esc(item.level)}</td>
+          ${index === 0 ? `<td rowspan="${rowCount}" style="text-align:center;border-left:${COL_DIVIDER};vertical-align:top;">${esc(inasCell)}</td>` : ''}
         </tr>`).join('');
     }
 
@@ -535,9 +546,9 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
           ${descriptorHtml}
         </td>
         ${valSingle
-          ? `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${esc(level)}</td>`
-          : scale.map(s => `<td style="text-align:center;border-left:1px solid #eef2f7;vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('')}
-        <td style="text-align:center;border-left:1px solid #e2e8f0;vertical-align:top;">${esc(inasCell)}</td>
+          ? `<td style="text-align:center;border-left:${COL_DIVIDER};vertical-align:middle;font-weight:800;color:${c.primary};">${esc(level)}</td>`
+          : scale.map((s, i) => `<td style="text-align:center;border-left:${valDivider(i)};vertical-align:middle;font-weight:800;color:${c.primary};">${norm(s.code) === level ? '✓' : ''}</td>`).join('')}
+        <td style="text-align:center;border-left:${COL_DIVIDER};vertical-align:top;">${esc(inasCell)}</td>
       </tr>`;
   }).join('');
 
@@ -571,13 +582,14 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
       </div>
 
       <div style="margin-top:14px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
-          <thead>
+        <table style="width:100%;table-layout:fixed;word-break:break-word;border-collapse:collapse;font-size:10.5px;">
+          ${colGroup}
+          <thead style="display:table-header-group;">
             <tr style="background:${c.headerBg};color:#334155;font-size:9.5px;text-transform:uppercase;border-bottom:2px solid ${c.primary};">
-              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 5px;width:36px;">I.H.</th>
+              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 5px;">I.H.</th>
               <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 6px;text-align:left;">${esc(learningLabelSingular)} / ${esc(evidenceLabelPlural)}</th>
               ${scaleHeaders}
-              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 5px;width:36px;border-left:1px solid #e2e8f0;">Inas</th>
+              <th rowspan="${usesScaleColumns ? 2 : 1}" style="padding:7px 5px;border-left:${COL_DIVIDER};">Inas</th>
             </tr>
             ${scaleSubheaders}
           </thead>

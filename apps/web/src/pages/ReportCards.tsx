@@ -808,6 +808,11 @@ export default function ReportCards() {
     body { margin: 0; padding: 0; background: #fff; }
     .report-card-page { page-break-after: always; }
     .report-card-page:last-child { page-break-after: auto; }
+    /* Si una tabla se pasa de página: no partir filas por la mitad y repetir el
+       encabezado (I.H. · contenido · Valoración · Inas) en la página siguiente. */
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    thead { display: table-header-group; }
     @media print {
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
