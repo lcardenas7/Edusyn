@@ -2951,7 +2951,11 @@ export class ReportsService {
     // ─── Modo EVIDENCE: propósitos del catálogo + valoración por imprescindible ────
     // En este modo el docente NO crea StudentAchievement (valora imprescindibles), así que
     // el boletín arma los propósitos desde el catálogo (grado) y adjunta el nivel por evidencia.
-    const evidenceMode = reportContent.valuationScope === 'EVIDENCE';
+    // La valoración por imprescindible SOLO aplica a grados por dimensiones (Transición/
+    // preescolar). En los demás niveles los aprendizajes los crea cada docente con su
+    // teacherAssignmentId, así que este camino (que lee el catálogo del grado) dejaría el
+    // boletín sin bloque descriptivo, sin juicio y sin descriptor.
+    const evidenceMode = reportContent.valuationScope === 'EVIDENCE' && gradeStructure === 'DIMENSIONS';
     const catalogBySubject = new Map<string, any[]>();
     const sevByEnrEvidence = new Map<string, Map<string, string>>();
     if (evidenceMode) {

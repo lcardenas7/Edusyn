@@ -122,6 +122,56 @@ const LEVEL_COLORS: Record<PerformanceLevel, string> = {
   BAJO: 'bg-red-100 text-red-700 border-red-200',
 }
 
+// ── Alcance de cada opción de configuración ─────────────────────────────────
+// AchievementConfig es una sola configuración POR INSTITUCIÓN, pero no todas sus
+// opciones afectan a todos los grados. Estas etiquetas hacen visible esa diferencia
+// para que el admin/coordinador sepa qué toca antes de cambiarla.
+type OptionScope = 'ALL_LEVELS' | 'DIMENSIONS_ONLY'
+
+const SCOPE_BADGES: Record<OptionScope, { label: string; hint: string; className: string }> = {
+  ALL_LEVELS: {
+    label: 'Todos los niveles',
+    hint: 'Afecta a toda la institución: preescolar, primaria y bachillerato.',
+    className: 'bg-blue-50 text-blue-700 border-blue-200',
+  },
+  DIMENSIONS_ONLY: {
+    label: 'Solo grados por dimensiones',
+    hint: 'Solo afecta a los grados evaluados por dimensiones (Transición y preescolar). Los grados por áreas/asignaturas no cambian.',
+    className: 'bg-violet-50 text-violet-700 border-violet-200',
+  },
+}
+
+function ScopeBadge({ scope }: { scope: OptionScope }) {
+  const badge = SCOPE_BADGES[scope]
+  return (
+    <span
+      title={badge.hint}
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.className}`}
+    >
+      {badge.label}
+    </span>
+  )
+}
+
+/** Encabezado de sección: título + alcance + qué pantallas toca. */
+function SectionHeader({ title, scope, description, affects }: {
+  title: string
+  scope: OptionScope
+  description: string
+  affects: string
+}) {
+  return (
+    <div className="mb-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h4 className="font-semibold text-slate-800">{title}</h4>
+        <ScopeBadge scope={scope} />
+      </div>
+      <p className="mt-1 text-sm text-slate-500">{description}</p>
+      <p className="mt-1 text-xs text-slate-400"><b className="font-semibold text-slate-500">Afecta:</b> {affects}</p>
+    </div>
+  )
+}
+
 const DEFAULT_TEMPLATES: ValueJudgmentTemplate[] = [
   { level: 'BAJO', template: 'Se recomienda reforzar los procesos de aprendizaje con acompañamiento constante.', isActive: true },
   { level: 'BASICO', template: 'Debe continuar fortaleciendo sus habilidades para consolidar los aprendizajes.', isActive: true },
@@ -1553,15 +1603,28 @@ export default function Achievements() {
             ))}
           </nav>
 
+          <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+            <b className="text-slate-700">Esta configuración es única para toda la institución</b>, pero no todas las opciones
+            afectan a todos los grados. Cada bloque indica su alcance:
+            <span className="mx-1 inline-flex align-middle"><ScopeBadge scope="ALL_LEVELS" /></span>
+            aplica a preescolar, primaria y bachillerato;
+            <span className="mx-1 inline-flex align-middle"><ScopeBadge scope="DIMENSIONS_ONLY" /></span>
+            solo a los grados evaluados por dimensiones (Transición y preescolar).
+          </div>
+
           <div className="space-y-6">
             {configSection === 'general' && (
               <>
                 {/* Estructura del registro */}
                 <section className="rounded-xl border border-slate-200 p-5">
-                  <h4 className="font-semibold text-slate-800">Estructura del registro</h4>
-                  <p className="mt-1 text-sm text-slate-500">Cuántos aprendizajes se gestionan por período y si existe uno promocional de fin de año.</p>
+                  <SectionHeader
+                    title="Estructura del registro"
+                    scope="ALL_LEVELS"
+                    description="Cuántos aprendizajes se gestionan por período y si existe uno promocional de fin de año."
+                    affects="el módulo de Aprendizajes de todos los grados."
+                  />
 
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
                         Número de aprendizajes por período
@@ -1593,9 +1656,13 @@ export default function Achievements() {
 
                 {/* Modelo de registro académico */}
                 <section className="rounded-xl border border-slate-200 p-5">
-                  <h4 className="font-semibold text-slate-800">Modelo de registro académico</h4>
-                  <p className="mt-1 text-sm text-slate-500">Qué debe capturar el docente por cada asignatura.</p>
-                  <div className="mt-4 space-y-2">
+                  <SectionHeader
+                    title="Modelo de registro académico"
+                    scope="ALL_LEVELS"
+                    description="Qué debe capturar el docente por cada asignatura."
+                    affects="la pantalla de Aprendizajes de todos los docentes."
+                  />
+                  <div className="space-y-2">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="radio"
@@ -1635,9 +1702,13 @@ export default function Achievements() {
               <>
                 {/* Modo de valoración (por propósito / por imprescindible) */}
                 <section className="rounded-xl border border-slate-200 p-5">
-                  <h4 className="font-semibold text-slate-800">Modo de valoración</h4>
-                  <p className="mt-1 text-sm text-slate-500">Nivel de detalle de la valoración cualitativa. Afecta la planilla del docente y el boletín. Nunca se muestran ambos a la vez.</p>
-                  <div className="mt-4 space-y-2">
+                  <SectionHeader
+                    title="Modo de valoración"
+                    scope="DIMENSIONS_ONLY"
+                    description="Nivel de detalle de la valoración cualitativa. Nunca se muestran ambos a la vez."
+                    affects="la planilla de calificación y el boletín de los grados por dimensiones. Primaria y bachillerato conservan su valoración por aprendizaje."
+                  />
+                  <div className="space-y-2">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="radio"
@@ -1648,7 +1719,7 @@ export default function Achievements() {
                       />
                       <span className="text-sm text-slate-700">
                         <b>Por propósito</b>
-                        <span className="block text-xs text-slate-500">Un nivel por aprendizaje/propósito. Los imprescindibles se muestran como texto descriptivo, sin valoración individual. (Actual)</span>
+                        <span className="block text-xs text-slate-500">Un nivel por aprendizaje/propósito. Los imprescindibles se muestran como texto descriptivo, sin valoración individual. (Por defecto)</span>
                       </span>
                     </label>
                     <label className="flex items-start gap-3 cursor-pointer">
@@ -1661,7 +1732,7 @@ export default function Achievements() {
                       />
                       <span className="text-sm text-slate-700">
                         <b>Por imprescindible</b>
-                        <span className="block text-xs text-slate-500">El docente valora cada imprescindible/evidencia por separado. El boletín muestra la valoración junto a cada uno, sin valoración del propósito.</span>
+                        <span className="block text-xs text-slate-500">El docente valora cada imprescindible/evidencia por separado. El boletín muestra la valoración junto a cada uno, sin valoración del propósito. Los grados por áreas/asignaturas ignoran esta opción y siguen valorando por aprendizaje.</span>
                       </span>
                     </label>
                   </div>
@@ -1670,10 +1741,16 @@ export default function Achievements() {
                 {/* Descriptores y juicios valorativos */}
                 <section className="rounded-xl border border-slate-200 p-5">
                   <h4 className="font-semibold text-slate-800">Descriptores y juicios valorativos</h4>
-                  <p className="mt-1 text-sm text-slate-500">Cómo se redacta el resultado cualitativo de cada desempeño.</p>
+                  <p className="mt-1 text-sm text-slate-500">Cómo se redacta el resultado de cada desempeño. Ojo: estas dos opciones no tienen el mismo alcance.</p>
                   <div className="mt-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Modo de descriptor</label>
+                    <div className="rounded-lg border border-slate-200 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="block text-sm font-medium text-slate-700">Modo de descriptor</label>
+                        <ScopeBadge scope="DIMENSIONS_ONLY" />
+                      </div>
+                      <p className="mb-2 mt-1 text-xs text-slate-400">
+                        <b className="font-semibold text-slate-500">Afecta:</b> solo la planilla cualitativa por dimensiones. En primaria y bachillerato no se usa.
+                      </p>
                       <select
                         value={config.descriptorMode}
                         onChange={(e) => setConfig({ ...config, descriptorMode: e.target.value as any })}
@@ -1684,35 +1761,48 @@ export default function Achievements() {
                       </select>
                       <p className="text-xs text-slate-500 mt-1">El descriptor por escala autocompleta el resultado al calificar; es especialmente útil en preescolar.</p>
                     </div>
-                    <label className="flex items-start gap-3 rounded-lg bg-slate-50 p-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.useValueJudgments}
-                        onChange={(e) => setConfig({ ...config, useValueJudgments: e.target.checked })}
-                        className="w-4 h-4 mt-0.5 text-blue-600 rounded"
-                      />
-                      <span className="text-sm text-slate-700">
-                        <b>Habilitar juicios valorativos por desempeño</b>
-                        <span className="block text-xs text-slate-500">Habilita las plantillas de redacción por nivel. Para que aparezcan en el boletín, márcalo también en la pestaña <b>Boletín</b>.</span>
-                      </span>
-                    </label>
+                    <div className="rounded-lg border border-slate-200 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-slate-700">Juicios valorativos</span>
+                        <ScopeBadge scope="ALL_LEVELS" />
+                      </div>
+                      <p className="mb-2 mt-1 text-xs text-slate-400">
+                        <b className="font-semibold text-slate-500">Afecta:</b> el juicio de todos los grados, no solo los cualitativos. Si lo desactivas, primaria y bachillerato también dejan de tenerlo.
+                      </p>
+                      <label className="flex items-start gap-3 rounded-lg bg-slate-50 p-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={config.useValueJudgments}
+                          onChange={(e) => setConfig({ ...config, useValueJudgments: e.target.checked })}
+                          className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                        />
+                        <span className="text-sm text-slate-700">
+                          <b>Habilitar juicios valorativos por desempeño</b>
+                          <span className="block text-xs text-slate-500">Habilita las plantillas de redacción por nivel. Para que aparezcan en el boletín, márcalo también en la pestaña <b>Boletín</b>.</span>
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </section>
 
                 {/* Plantillas de juicios valorativos */}
                 {config.useValueJudgments && (
                   <section className="rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold text-slate-800">Plantillas de juicios valorativos</h4>
+                    <div className="flex items-start justify-between gap-4 mb-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-slate-800">Plantillas de juicios valorativos</h4>
+                        <ScopeBadge scope="ALL_LEVELS" />
+                      </div>
                       <button
                         onClick={handleCreateDefaultTemplates}
                         disabled={saving}
-                        className="text-sm text-blue-600 hover:text-blue-700"
+                        className="shrink-0 text-sm text-blue-600 hover:text-blue-700"
                       >
                         Restaurar por defecto
                       </button>
                     </div>
-                    <p className="mb-4 text-sm text-slate-500">Frase que se propone automáticamente según el nivel alcanzado.</p>
+                    <p className="text-sm text-slate-500">Frase que se propone automáticamente según el nivel alcanzado.</p>
+                    <p className="mb-4 mt-1 text-xs text-slate-400"><b className="font-semibold text-slate-500">Afecta:</b> el juicio sugerido en todos los grados.</p>
 
                     <div className="space-y-4">
                       {(['BAJO', 'BASICO', 'ALTO', 'SUPERIOR'] as PerformanceLevel[]).map((level) => {
@@ -1746,10 +1836,14 @@ export default function Achievements() {
 
                 {/* Aprendizaje actitudinal */}
                 <section className="rounded-xl border border-slate-200 p-5">
-                  <h4 className="font-semibold text-slate-800">Aprendizaje actitudinal</h4>
-                  <p className="mt-1 text-sm text-slate-500">Valoración del ser (actitud, convivencia) además del aprendizaje académico.</p>
+                  <SectionHeader
+                    title="Aprendizaje actitudinal"
+                    scope="ALL_LEVELS"
+                    description="Valoración del ser (actitud, convivencia) además del aprendizaje académico."
+                    affects="el módulo de Aprendizajes de todos los grados: habilita el tipo Actitudinal."
+                  />
 
-                  <label className="mt-4 flex items-center gap-3 cursor-pointer">
+                  <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={config.useAttitudinalAchievement}
@@ -1780,8 +1874,12 @@ export default function Achievements() {
               <>
                 {/* Contenido descriptivo del boletín */}
                 <section className="rounded-xl border border-slate-200 p-5">
-                  <h4 className="font-semibold text-slate-800">Contenido descriptivo del boletín</h4>
-                  <p className="mt-1 mb-4 text-sm text-slate-500">Qué elementos aparecen en el boletín. Se pueden combinar libremente.</p>
+                  <SectionHeader
+                    title="Contenido descriptivo del boletín"
+                    scope="ALL_LEVELS"
+                    description="Qué elementos aparecen en el boletín. Se pueden combinar libremente."
+                    affects="el boletín de todos los grados, siempre que la plantilla asignada muestre contenido descriptivo (la tabular multiperíodo no lo hace)."
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {([
                       { key: 'showLearningInReport', label: 'Aprendizaje / desempeño', desc: 'El aprendizaje esperado.' },
@@ -1826,8 +1924,12 @@ export default function Achievements() {
                 <section className="rounded-xl border border-slate-200 p-5">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-semibold text-slate-800">Observaciones por estudiante</h4>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-slate-800">Observaciones por estudiante</h4>
+                        <ScopeBadge scope="ALL_LEVELS" />
+                      </div>
                       <p className="mt-1 text-sm text-slate-500">Permite al docente escribir una observación adicional por cada estudiante en el boletín.</p>
+                      <p className="mt-1 text-xs text-slate-400"><b className="font-semibold text-slate-500">Afecta:</b> el boletín de todos los grados.</p>
                     </div>
                     <label className="relative inline-flex shrink-0 items-center cursor-pointer">
                       <input
