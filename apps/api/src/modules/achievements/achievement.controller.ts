@@ -57,6 +57,7 @@ export class AchievementController {
       attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
       useValueJudgments?: boolean;
       descriptorMode?: 'FREE' | 'DESCRIPTOR_PER_LEVEL';
+      useObservations?: boolean;
       displayMode?: 'SEPARATE' | 'COMBINED';
       displayFormat?: 'LIST' | 'PARAGRAPH';
       judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';

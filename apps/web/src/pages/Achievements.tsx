@@ -40,6 +40,7 @@ import {
 } from '../lib/api'
 
 type TabType = 'achievements' | 'config' | 'preschool-catalog'
+type ConfigSection = 'general' | 'evaluation' | 'report'
 type PerformanceLevel = 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR'
 
 interface AchievementConfig {
@@ -135,6 +136,7 @@ export default function Achievements() {
   // Usar el institution del AuthContext que tiene el id real de la BD
   const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('achievements')
+  const [configSection, setConfigSection] = useState<ConfigSection>('general')
   const [showHelp, setShowHelp] = useState(true)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1528,326 +1530,373 @@ export default function Achievements() {
       ) : (
         /* Configuration Tab */
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-6">Configuración de Aprendizajes y Evidencias</h3>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Configuración de Aprendizajes y Evidencias</h3>
+            <p className="mt-1 text-sm text-slate-500">Organiza el registro, la valoración y la información que verá la familia en el boletín.</p>
+          </div>
+
+          <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Secciones de configuración">
+            {([
+              { id: 'general' as const, label: 'General', description: 'Cómo se estructura el registro' },
+              { id: 'evaluation' as const, label: 'Evaluación', description: 'Cómo se valora' },
+              { id: 'report' as const, label: 'Boletín', description: 'Qué verá la familia' },
+            ]).map(section => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setConfigSection(section.id)}
+                className={`shrink-0 border-b-2 px-4 py-3 text-left transition-colors ${configSection === section.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              >
+                <span className="block text-sm font-semibold">{section.label}</span>
+                <span className="block text-[11px]">{section.description}</span>
+              </button>
+            ))}
+          </nav>
 
           <div className="space-y-6">
-            {/* Basic Config */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Número de aprendizajes por período
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={config.achievementsPerPeriod}
-                  onChange={(e) => setConfig({ ...config, achievementsPerPeriod: parseInt(e.target.value) || 1 })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-                />
-              </div>
+            {configSection === 'general' && (
+              <>
+                {/* Estructura del registro */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-800">Estructura del registro</h4>
+                  <p className="mt-1 text-sm text-slate-500">Cuántos aprendizajes se gestionan por período y si existe uno promocional de fin de año.</p>
 
-              <div className="space-y-3">
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={config.usePromotionalAchievement}
-                    onChange={(e) => setConfig({ ...config, usePromotionalAchievement: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
-                  <span className="text-sm text-slate-700">Usar aprendizaje promocional (fin de año)</span>
-                </label>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Número de aprendizajes por período
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={config.achievementsPerPeriod}
+                        onChange={(e) => setConfig({ ...config, achievementsPerPeriod: parseInt(e.target.value) || 1 })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                      />
+                    </div>
 
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={config.useValueJudgments}
-                    onChange={(e) => setConfig({ ...config, useValueJudgments: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
-                  <span className="text-sm text-slate-700">Habilitar juicios valorativos por desempeño</span>
-                </label>
+                    <label className="flex items-start gap-3 self-end rounded-lg bg-slate-50 p-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.usePromotionalAchievement}
+                        onChange={(e) => setConfig({ ...config, usePromotionalAchievement: e.target.checked })}
+                        className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                      />
+                      <span className="text-sm text-slate-700">
+                        <b>Usar aprendizaje promocional</b>
+                        <span className="block text-xs text-slate-500">Un aprendizaje adicional que se valora al cierre del año.</span>
+                      </span>
+                    </label>
+                  </div>
+                </section>
 
-                <div className="pt-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Modo de descriptor (evaluación cualitativa / preescolar)
-                  </label>
-                  <select
-                    value={config.descriptorMode}
-                    onChange={(e) => setConfig({ ...config, descriptorMode: e.target.value as any })}
-                    className="w-full sm:w-auto px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="FREE">Libre — el nivel etiqueta; la observación es libre</option>
-                    <option value="DESCRIPTOR_PER_LEVEL">Descriptor por escala — redactas un texto por cada nivel del indicador</option>
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Con "Descriptor por escala", cada indicador guarda un texto por nivel (ej: Logrado / En Proceso / Iniciando)
-                    que autocompleta el boletín al calificar. Ideal para preescolar (Decreto 1411).
+                {/* Modelo de registro académico */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-800">Modelo de registro académico</h4>
+                  <p className="mt-1 text-sm text-slate-500">Qué debe capturar el docente por cada asignatura.</p>
+                  <div className="mt-4 space-y-2">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="registrationModel"
+                        checked={config.registrationModel === 'LEARNING_ONLY'}
+                        onChange={() => setConfig({ ...config, registrationModel: 'LEARNING_ONLY' })}
+                        className="w-4 h-4 mt-0.5 text-blue-600"
+                      />
+                      <span className="text-sm text-slate-700">
+                        <b>Solo aprendizajes / desempeños</b>
+                        <span className="block text-xs text-slate-500">El docente registra únicamente el aprendizaje esperado.</span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="registrationModel"
+                        checked={config.registrationModel === 'LEARNING_AND_EVIDENCE'}
+                        onChange={() => setConfig({ ...config, registrationModel: 'LEARNING_AND_EVIDENCE' })}
+                        className="w-4 h-4 mt-0.5 text-blue-600"
+                      />
+                      <span className="text-sm text-slate-700">
+                        <b>Aprendizajes + evidencias de aprendizaje</b>
+                        <span className="block text-xs text-slate-500">Cada aprendizaje puede tener una o varias evidencias.</span>
+                      </span>
+                    </label>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    ¿"Solo evidencias" en el boletín? No es un modo de registro: se configura en la pestaña
+                    <b> Boletín</b> → "Contenido descriptivo", dejando marcadas solo las evidencias.
                   </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Registration Model */}
-            <div className="border-t border-slate-200 pt-6">
-              <h4 className="font-medium text-slate-800 mb-1">Modelo de registro académico</h4>
-              <p className="text-sm text-slate-500 mb-4">Define qué debe capturar el docente por cada asignatura.</p>
-              <div className="space-y-2">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="registrationModel"
-                    checked={config.registrationModel === 'LEARNING_ONLY'}
-                    onChange={() => setConfig({ ...config, registrationModel: 'LEARNING_ONLY' })}
-                    className="w-4 h-4 mt-0.5 text-blue-600"
-                  />
-                  <span className="text-sm text-slate-700">
-                    <b>Solo aprendizajes / desempeños</b>
-                    <span className="block text-xs text-slate-500">El docente registra únicamente el aprendizaje esperado.</span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="registrationModel"
-                    checked={config.registrationModel === 'LEARNING_AND_EVIDENCE'}
-                    onChange={() => setConfig({ ...config, registrationModel: 'LEARNING_AND_EVIDENCE' })}
-                    className="w-4 h-4 mt-0.5 text-blue-600"
-                  />
-                  <span className="text-sm text-slate-700">
-                    <b>Aprendizajes + evidencias de aprendizaje</b>
-                    <span className="block text-xs text-slate-500">Cada aprendizaje puede tener una o varias evidencias.</span>
-                  </span>
-                </label>
-              </div>
-              <p className="text-xs text-slate-400 mt-2">
-                ¿"Solo evidencias" en el boletín? No es un modo de registro: actívalo abajo en
-                "Contenido descriptivo del boletín" mostrando solo las evidencias.
-              </p>
-            </div>
-
-            {/* Modo de valoración (por propósito / por imprescindible) */}
-            <div className="border-t border-slate-200 pt-6">
-              <h4 className="font-medium text-slate-800 mb-1">Modo de valoración</h4>
-              <p className="text-sm text-slate-500 mb-4">Define el nivel de detalle de la valoración cualitativa. Afecta la planilla del docente y el boletín. Nunca se muestran ambos a la vez.</p>
-              <div className="space-y-2">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="valuationScope"
-                    checked={config.valuationScope === 'PURPOSE'}
-                    onChange={() => setConfig({ ...config, valuationScope: 'PURPOSE' })}
-                    className="w-4 h-4 mt-0.5 text-blue-600"
-                  />
-                  <span className="text-sm text-slate-700">
-                    <b>Por propósito</b>
-                    <span className="block text-xs text-slate-500">Un nivel por aprendizaje/propósito. Los imprescindibles se muestran como texto descriptivo, sin valoración individual. (Actual)</span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="valuationScope"
-                    checked={config.valuationScope === 'EVIDENCE'}
-                    onChange={() => setConfig({ ...config, valuationScope: 'EVIDENCE' })}
-                    className="w-4 h-4 mt-0.5 text-blue-600"
-                  />
-                  <span className="text-sm text-slate-700">
-                    <b>Por imprescindible</b>
-                    <span className="block text-xs text-slate-500">El docente valora cada imprescindible/evidencia por separado. El boletín muestra la valoración junto a cada uno, sin valoración del propósito.</span>
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Attitudinal Config */}
-            <div className="border-t border-slate-200 pt-6">
-              <h4 className="font-medium text-slate-800 mb-4">Aprendizaje Actitudinal</h4>
-              
-              <label className="flex items-center gap-3 mb-4">
-                <input
-                  type="checkbox"
-                  checked={config.useAttitudinalAchievement}
-                  onChange={(e) => setConfig({ ...config, useAttitudinalAchievement: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <span className="text-sm text-slate-700">Habilitar aprendizaje actitudinal</span>
-              </label>
-
-              {config.useAttitudinalAchievement && (
-                <div className="ml-7">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Modo del aprendizaje actitudinal</label>
-                  <select
-                    value={config.attitudinalMode}
-                    onChange={(e) => setConfig({ ...config, attitudinalMode: e.target.value as any })}
-                    className="w-full max-w-md px-3 py-2 border border-slate-300 rounded-lg"
-                  >
-                    <option value="GENERAL_PER_PERIOD">Un aprendizaje actitudinal general por período</option>
-                    <option value="PER_ACADEMIC_ACHIEVEMENT">Un aprendizaje actitudinal por cada aprendizaje académico</option>
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Display Configuration for Report Card */}
-            <div className="border-t border-slate-200 pt-6">
-              <h4 className="font-medium text-slate-800 mb-4">Visualización en Boletín</h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Modo de visualización
-                  </label>
-                  <select
-                    value={config.displayMode}
-                    onChange={(e) => setConfig({ ...config, displayMode: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-                  >
-                    <option value="SEPARATE">Académico y Actitudinal separados</option>
-                    <option value="COMBINED">Todo en un solo texto combinado</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Formato de visualización
-                  </label>
-                  <select
-                    value={config.displayFormat}
-                    onChange={(e) => setConfig({ ...config, displayFormat: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-                  >
-                    <option value="LIST">Lista numerada</option>
-                    <option value="PARAGRAPH">Párrafo continuo</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Posición del juicio valorativo
-                  </label>
-                  <select
-                    value={config.judgmentPosition}
-                    onChange={(e) => setConfig({ ...config, judgmentPosition: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-                  >
-                    <option value="END_OF_EACH">Al final de cada aprendizaje</option>
-                    <option value="END_OF_ALL">Al final de todos los aprendizajes</option>
-                    <option value="NONE">No mostrar</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Contenido descriptivo del boletín */}
-            <div className="border-t border-slate-200 pt-6">
-              <h4 className="font-medium text-slate-800 mb-1">Contenido descriptivo del boletín</h4>
-              <p className="text-sm text-slate-500 mb-4">Elige qué elementos aparecen en el boletín. Se pueden combinar libremente.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { key: 'showLearningInReport', label: 'Aprendizaje / desempeño', desc: 'El aprendizaje esperado.' },
-                  { key: 'showEvidencesInReport', label: 'Evidencias de aprendizaje', desc: 'Las evidencias registradas.' },
-                  { key: 'showLevelDescriptorInReport', label: 'Descriptor del nivel', desc: 'El descriptor del nivel alcanzado.' },
-                  { key: 'showJudgmentInReport', label: 'Juicio valorativo', desc: 'La frase cualitativa (si existe).' },
-                ] as const).map((item) => (
-                  <label key={item.key} className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={(config as any)[item.key]}
-                      onChange={(e) => setConfig({ ...config, [item.key]: e.target.checked } as any)}
-                      className="w-4 h-4 mt-0.5 text-blue-600 rounded"
-                    />
-                    <span className="text-sm text-slate-700">
-                      <b>{item.label}</b>
-                      <span className="block text-xs text-slate-500">{item.desc}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Aprendizajes a mostrar por asignatura</label>
-                <select
-                  value={config.reportLearningGranularity}
-                  onChange={(e) => setConfig({ ...config, reportLearningGranularity: e.target.value as any })}
-                  className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                >
-                  <option value="PRIMARY_ONLY">Solo el principal (según el nivel alcanzado)</option>
-                  <option value="ALL">Todos los aprendizajes del período</option>
-                </select>
-              </div>
-
-              <div className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <b>Ejemplo:</b> con Aprendizaje ✓ y Evidencias ✓ (Descriptor y Juicio ✗), el boletín muestra el
-                aprendizaje y su lista de evidencias. Marcando solo Evidencias, muestra únicamente las evidencias.
-              </div>
-            </div>
-
-            {/* Value Judgment Templates */}
-            {config.useValueJudgments && (
-              <div className="border-t border-slate-200 pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium text-slate-800">Plantillas de Juicios Valorativos</h4>
-                  <button
-                    onClick={handleCreateDefaultTemplates}
-                    disabled={saving}
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    Restaurar por defecto
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {(['BAJO', 'BASICO', 'ALTO', 'SUPERIOR'] as PerformanceLevel[]).map((level) => {
-                    const template = templates.find(t => t.level === level) || { level, template: '', isActive: true }
-                    return (
-                      <div key={level} className="flex items-start gap-4">
-                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${LEVEL_COLORS[level]} min-w-[80px] text-center`}>
-                          {LEVEL_LABELS[level]}
-                        </span>
-                        <textarea
-                          value={template.template}
-                          onChange={(e) => {
-                            setTemplates(prev => {
-                              const exists = prev.find(t => t.level === level)
-                              if (exists) {
-                                return prev.map(t => t.level === level ? { ...t, template: e.target.value } : t)
-                              }
-                              return [...prev, { level, template: e.target.value, isActive: true }]
-                            })
-                          }}
-                          className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                          rows={2}
-                          placeholder={`Juicio valorativo para desempeño ${LEVEL_LABELS[level]}...`}
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+                </section>
+              </>
             )}
 
-            {/* Observaciones */}
-            <div className="border-t border-slate-200 pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-slate-800">Observaciones por Estudiante</h4>
-                  <p className="text-sm text-slate-500 mt-1">Permite al docente escribir una observación adicional por cada estudiante en el boletín</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={config.useObservations}
-                    onChange={(e) => setConfig({ ...config, useObservations: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
+            {configSection === 'evaluation' && (
+              <>
+                {/* Modo de valoración (por propósito / por imprescindible) */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-800">Modo de valoración</h4>
+                  <p className="mt-1 text-sm text-slate-500">Nivel de detalle de la valoración cualitativa. Afecta la planilla del docente y el boletín. Nunca se muestran ambos a la vez.</p>
+                  <div className="mt-4 space-y-2">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="valuationScope"
+                        checked={config.valuationScope === 'PURPOSE'}
+                        onChange={() => setConfig({ ...config, valuationScope: 'PURPOSE' })}
+                        className="w-4 h-4 mt-0.5 text-blue-600"
+                      />
+                      <span className="text-sm text-slate-700">
+                        <b>Por propósito</b>
+                        <span className="block text-xs text-slate-500">Un nivel por aprendizaje/propósito. Los imprescindibles se muestran como texto descriptivo, sin valoración individual. (Actual)</span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="valuationScope"
+                        checked={config.valuationScope === 'EVIDENCE'}
+                        onChange={() => setConfig({ ...config, valuationScope: 'EVIDENCE' })}
+                        className="w-4 h-4 mt-0.5 text-blue-600"
+                      />
+                      <span className="text-sm text-slate-700">
+                        <b>Por imprescindible</b>
+                        <span className="block text-xs text-slate-500">El docente valora cada imprescindible/evidencia por separado. El boletín muestra la valoración junto a cada uno, sin valoración del propósito.</span>
+                      </span>
+                    </label>
+                  </div>
+                </section>
+
+                {/* Descriptores y juicios valorativos */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-800">Descriptores y juicios valorativos</h4>
+                  <p className="mt-1 text-sm text-slate-500">Cómo se redacta el resultado cualitativo de cada desempeño.</p>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Modo de descriptor</label>
+                      <select
+                        value={config.descriptorMode}
+                        onChange={(e) => setConfig({ ...config, descriptorMode: e.target.value as any })}
+                        className="w-full sm:w-auto px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="FREE">Libre — el nivel etiqueta; la observación es libre</option>
+                        <option value="DESCRIPTOR_PER_LEVEL">Descriptor por escala — un texto por nivel del indicador</option>
+                      </select>
+                      <p className="text-xs text-slate-500 mt-1">El descriptor por escala autocompleta el resultado al calificar; es especialmente útil en preescolar.</p>
+                    </div>
+                    <label className="flex items-start gap-3 rounded-lg bg-slate-50 p-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.useValueJudgments}
+                        onChange={(e) => setConfig({ ...config, useValueJudgments: e.target.checked })}
+                        className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                      />
+                      <span className="text-sm text-slate-700">
+                        <b>Habilitar juicios valorativos por desempeño</b>
+                        <span className="block text-xs text-slate-500">Habilita las plantillas de redacción por nivel. Para que aparezcan en el boletín, márcalo también en la pestaña <b>Boletín</b>.</span>
+                      </span>
+                    </label>
+                  </div>
+                </section>
+
+                {/* Plantillas de juicios valorativos */}
+                {config.useValueJudgments && (
+                  <section className="rounded-xl border border-slate-200 p-5">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-semibold text-slate-800">Plantillas de juicios valorativos</h4>
+                      <button
+                        onClick={handleCreateDefaultTemplates}
+                        disabled={saving}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        Restaurar por defecto
+                      </button>
+                    </div>
+                    <p className="mb-4 text-sm text-slate-500">Frase que se propone automáticamente según el nivel alcanzado.</p>
+
+                    <div className="space-y-4">
+                      {(['BAJO', 'BASICO', 'ALTO', 'SUPERIOR'] as PerformanceLevel[]).map((level) => {
+                        const template = templates.find(t => t.level === level) || { level, template: '', isActive: true }
+                        return (
+                          <div key={level} className="flex items-start gap-4">
+                            <span className={`px-3 py-1 rounded-lg text-sm font-medium ${LEVEL_COLORS[level]} min-w-[80px] text-center`}>
+                              {LEVEL_LABELS[level]}
+                            </span>
+                            <textarea
+                              value={template.template}
+                              onChange={(e) => {
+                                setTemplates(prev => {
+                                  const exists = prev.find(t => t.level === level)
+                                  if (exists) {
+                                    return prev.map(t => t.level === level ? { ...t, template: e.target.value } : t)
+                                  }
+                                  return [...prev, { level, template: e.target.value, isActive: true }]
+                                })
+                              }}
+                              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                              rows={2}
+                              placeholder={`Juicio valorativo para desempeño ${LEVEL_LABELS[level]}...`}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Aprendizaje actitudinal */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-800">Aprendizaje actitudinal</h4>
+                  <p className="mt-1 text-sm text-slate-500">Valoración del ser (actitud, convivencia) además del aprendizaje académico.</p>
+
+                  <label className="mt-4 flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.useAttitudinalAchievement}
+                      onChange={(e) => setConfig({ ...config, useAttitudinalAchievement: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm text-slate-700">Habilitar aprendizaje actitudinal</span>
+                  </label>
+
+                  {config.useAttitudinalAchievement && (
+                    <div className="mt-4 ml-7">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Modo del aprendizaje actitudinal</label>
+                      <select
+                        value={config.attitudinalMode}
+                        onChange={(e) => setConfig({ ...config, attitudinalMode: e.target.value as any })}
+                        className="w-full max-w-md px-3 py-2 border border-slate-300 rounded-lg"
+                      >
+                        <option value="GENERAL_PER_PERIOD">Un aprendizaje actitudinal general por período</option>
+                        <option value="PER_ACADEMIC_ACHIEVEMENT">Un aprendizaje actitudinal por cada aprendizaje académico</option>
+                      </select>
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
+
+            {configSection === 'report' && (
+              <>
+                {/* Contenido descriptivo del boletín */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-800">Contenido descriptivo del boletín</h4>
+                  <p className="mt-1 mb-4 text-sm text-slate-500">Qué elementos aparecen en el boletín. Se pueden combinar libremente.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {([
+                      { key: 'showLearningInReport', label: 'Aprendizaje / desempeño', desc: 'El aprendizaje esperado.' },
+                      { key: 'showEvidencesInReport', label: 'Evidencias de aprendizaje', desc: 'Las evidencias registradas.' },
+                      { key: 'showLevelDescriptorInReport', label: 'Descriptor del nivel', desc: 'El descriptor del nivel alcanzado.' },
+                      { key: 'showJudgmentInReport', label: 'Juicio valorativo', desc: 'La frase cualitativa (si existe).' },
+                    ] as const).map((item) => (
+                      <label key={item.key} className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={(config as any)[item.key]}
+                          onChange={(e) => setConfig({ ...config, [item.key]: e.target.checked } as any)}
+                          className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                        />
+                        <span className="text-sm text-slate-700">
+                          <b>{item.label}</b>
+                          <span className="block text-xs text-slate-500">{item.desc}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Aprendizajes a mostrar por asignatura</label>
+                    <select
+                      value={config.reportLearningGranularity}
+                      onChange={(e) => setConfig({ ...config, reportLearningGranularity: e.target.value as any })}
+                      className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="PRIMARY_ONLY">Solo el principal (según el nivel alcanzado)</option>
+                      <option value="ALL">Todos los aprendizajes del período</option>
+                    </select>
+                  </div>
+
+                  <div className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <b>Ejemplo:</b> con Aprendizaje ✓ y Evidencias ✓ (Descriptor y Juicio ✗), el boletín muestra el
+                    aprendizaje y su lista de evidencias. Marcando solo Evidencias, muestra únicamente las evidencias.
+                  </div>
+                </section>
+
+                {/* Observaciones por estudiante */}
+                <section className="rounded-xl border border-slate-200 p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold text-slate-800">Observaciones por estudiante</h4>
+                      <p className="mt-1 text-sm text-slate-500">Permite al docente escribir una observación adicional por cada estudiante en el boletín.</p>
+                    </div>
+                    <label className="relative inline-flex shrink-0 items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.useObservations}
+                        onChange={(e) => setConfig({ ...config, useObservations: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </section>
+
+                {/* Opciones heredadas: se guardan, pero ninguna plantilla del banco de formatos las lee hoy. */}
+                <details className="rounded-xl border border-slate-200 bg-slate-50/60 p-5">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-600">
+                    Opciones heredadas de presentación
+                    <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">Sin efecto</span>
+                  </summary>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Estas tres opciones se conservan por compatibilidad: se guardan, pero los formatos de boletín
+                    actuales no las utilizan. Lo que sí controla la presentación es "Contenido descriptivo" arriba y
+                    la plantilla asignada en <b>Boletines</b>.
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">Modo de visualización</label>
+                      <select
+                        value={config.displayMode}
+                        onChange={(e) => setConfig({ ...config, displayMode: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="SEPARATE">Académico y Actitudinal separados</option>
+                        <option value="COMBINED">Todo en un solo texto combinado</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">Formato de visualización</label>
+                      <select
+                        value={config.displayFormat}
+                        onChange={(e) => setConfig({ ...config, displayFormat: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="LIST">Lista numerada</option>
+                        <option value="PARAGRAPH">Párrafo continuo</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">Posición del juicio valorativo</label>
+                      <select
+                        value={config.judgmentPosition}
+                        onChange={(e) => setConfig({ ...config, judgmentPosition: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="END_OF_EACH">Al final de cada aprendizaje</option>
+                        <option value="END_OF_ALL">Al final de todos los aprendizajes</option>
+                        <option value="NONE">No mostrar</option>
+                      </select>
+                    </div>
+                  </div>
+                </details>
+              </>
+            )}
 
             {/* Save Button */}
-            <div className="border-t border-slate-200 pt-6">
+            <div className="sticky bottom-0 -mx-6 -mb-6 flex items-center gap-3 border-t border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
               <button
                 onClick={handleSaveConfig}
                 disabled={saving}
@@ -1856,6 +1905,7 @@ export default function Achievements() {
                 <Save className="w-4 h-4" />
                 {saving ? 'Guardando...' : 'Guardar Configuración'}
               </button>
+              <span className="text-xs text-slate-500">Guarda la configuración completa, no solo la pestaña abierta.</span>
             </div>
           </div>
         </div>
