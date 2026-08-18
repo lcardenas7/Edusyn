@@ -334,7 +334,15 @@ export class AchievementService {
         gradeId: data.gradeId,
         subjectId: data.subjectId,
         academicYearId: data.academicYearId,
-        academicTermId: data.academicTermId ?? null,
+        // El catálogo de un período incluye TAMBIÉN los propósitos anuales
+        // (academicTermId = null), que por definición aplican a todos los períodos.
+        // Mismo criterio que el boletín (reports.service.ts, buildGroupReportCards),
+        // que ya los incluye: tener dos filtros distintos sobre el mismo catálogo hacía
+        // que el editor los ocultara justo al seleccionar período — y el retiro lógico
+        // (D-12) EXIGE seleccionar período, así que un catálogo anual era irretirable.
+        ...(data.academicTermId
+          ? { OR: [{ academicTermId: data.academicTermId }, { academicTermId: null }] }
+          : { academicTermId: null }),
         teacherAssignmentId: null,
         isPromotional: false,
       },
