@@ -945,7 +945,9 @@ export const achievementsApi = {
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
     evidences?: Array<{ text: string }>;
   }) => api.post('/achievements', data),
-  update: (id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> }) =>
+  // `evidences[].id` conserva la identidad de la evidencia al editarla: sin él, el backend
+  // no puede distinguir "cambié el texto" de "creé otra" y las valoraciones quedan huérfanas.
+  update: (id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ id?: string; text: string }> }) =>
     api.put(`/achievements/${id}`, data),
   delete: (id: string) => api.delete(`/achievements/${id}`),
   duplicate: (id: string) => api.post(`/achievements/${id}/duplicate`),
@@ -953,8 +955,14 @@ export const achievementsApi = {
   // Evidencias de aprendizaje (cuelgan de un aprendizaje)
   createEvidence: (achievementId: string, text: string) =>
     api.post(`/achievements/${achievementId}/evidences`, { text }),
-  updateEvidence: (evidenceId: string, data: { text?: string; isActive?: boolean }) =>
+  updateEvidence: (evidenceId: string, data: { text?: string }) =>
     api.put(`/achievements/evidences/${evidenceId}`, data),
+  // Retiro lógico y prospectivo (D-12). El período va explícito: no existe concepto
+  // de "período en curso" en el modelo, siempre lo elige el usuario.
+  retireEvidence: (evidenceId: string, data: { academicTermId: string; reason?: string }) =>
+    api.put(`/achievements/evidences/${evidenceId}/retire`, data),
+  reactivateEvidence: (evidenceId: string, data: { reason?: string } = {}) =>
+    api.put(`/achievements/evidences/${evidenceId}/reactivate`, data),
   deleteEvidence: (evidenceId: string) =>
     api.delete(`/achievements/evidences/${evidenceId}`),
   reorderEvidences: (achievementId: string, orderedIds: string[]) =>

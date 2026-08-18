@@ -24,6 +24,15 @@ export class AchievementController {
     private readonly configService: AchievementConfigService,
   ) {}
 
+  /** Extrae el actor (quién hace el cambio) del JWT para la auditoría E-5. */
+  private actorFrom(req: any): { userId?: string; name?: string; role?: string } {
+    const roles = req?.user?.roles;
+    const role = Array.isArray(roles)
+      ? roles.map((r: any) => (typeof r === 'string' ? r : r?.role?.name || r?.roleName || r?.name)).filter(Boolean).join(', ')
+      : undefined;
+    return { userId: req?.user?.id, name: req?.user?.email, role: role || undefined };
+  }
+
   private canManageCatalog(req: any) {
     if (req.user?.isSuperAdmin) return true;
     const roles = (req.user?.roles ?? []).map((role: any) => typeof role === 'string' ? role : role?.role?.name ?? role?.name);
@@ -277,7 +286,9 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async updateAchievement(
     @Param('id') id: string,
-    @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> },
+    // `evidences[].id` es la clave de la reconciliación: si viene, la evidencia se
+    // actualiza conservando su id (y con él las valoraciones históricas que la referencian).
+    @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ id?: string; text: string }> },
     @Request() req: any,
   ) {
     return this.achievementService.updateAchievement(id, body, this.canManageCatalog(req));
@@ -311,10 +322,36 @@ export class AchievementController {
     return this.achievementService.reorderEvidences(achievementId, body.orderedIds, this.canManageCatalog(req));
   }
 
+  // Corrección de contenido. El estado de retiro NO se toca aquí: `isActive` dejó de
+  // aceptarse (D-12); para retirar o reactivar hay acciones explícitas más abajo.
   @Put('evidences/:evidenceId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async updateEvidence(@Param('evidenceId') evidenceId: string, @Body() body: { text?: string; isActive?: boolean }, @Request() req: any) {
+  async updateEvidence(@Param('evidenceId') evidenceId: string, @Body() body: { text?: string }, @Request() req: any) {
     return this.achievementService.updateEvidence(evidenceId, body, this.canManageCatalog(req));
+  }
+
+  // ── Retiro lógico y prospectivo (D-12) ────────────────────────────────────
+  // El período se recibe EXPLÍCITAMENTE del cliente: el modelo no tiene concepto de
+  // "período en curso" y toda la aplicación trabaja con un período seleccionado.
+
+  @Put('evidences/:evidenceId/retire')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async retireEvidence(
+    @Param('evidenceId') evidenceId: string,
+    @Body() body: { academicTermId: string; reason?: string },
+    @Request() req: any,
+  ) {
+    return this.achievementService.retireEvidence(evidenceId, body, this.actorFrom(req), this.canManageCatalog(req));
+  }
+
+  @Put('evidences/:evidenceId/reactivate')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async reactivateEvidence(
+    @Param('evidenceId') evidenceId: string,
+    @Body() body: { reason?: string },
+    @Request() req: any,
+  ) {
+    return this.achievementService.reactivateEvidence(evidenceId, body ?? {}, this.actorFrom(req), this.canManageCatalog(req));
   }
 
   @Delete('evidences/:evidenceId')

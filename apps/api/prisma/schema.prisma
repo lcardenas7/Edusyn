@@ -613,6 +613,7 @@ model Institution {
   rlsAbpLogEntries      AbpLogEntry[]          @relation("RlsInstitutionABPL")
   rlsAbpResources       AbpResource[]          @relation("RlsInstitutionABPR")
   rlsAbpAnnouncements   AbpAnnouncement[]      @relation("RlsInstitutionABPAN")
+  evidenceValuations StudentEvidenceValuation[] @relation("RlsInstitutionSEV")
 }
 
 // Módulos habilitados por institución
@@ -1149,8 +1150,10 @@ model AcademicTerm {
   pedagogicalSupportPlans PedagogicalSupportPlan[]
   studentAchievements     StudentAchievement[]
   convivenciaEntries      ConvivenciaEntry[]
+  retiredEvidences        AchievementEvidence[] @relation("EvidenceRetiredFromTerm")
 
   @@unique([academicYearId, order])
+  evidenceValuations StudentEvidenceValuation[]
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1709,6 +1712,7 @@ model StudentEnrollment {
   abpLogEntries      AbpLogEntry[]        @relation("AbpLogAuthor")
 
   @@unique([studentId, academicYearId])
+  evidenceValuations StudentEvidenceValuation[]
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3151,12 +3155,27 @@ model AchievementEvidence {
   achievementId String
   text          String  @db.Text
   orderNumber   Int     @default(1)
+  // DEPRECADO (D-12). Ya no se lee ni se escribe: el estado de retiro vive en
+  // retiredFromTermId. Se elimina en la migración de contracción (F6).
   isActive      Boolean @default(true)
+
+  // ── Retiro lógico (D-12) ─────────────────────────────────────────────────
+  // FUENTE DE VERDAD del retiro. null ⇒ evidencia activa.
+  // Regla de vigencia: una evidencia retirada desde el período T sigue vigente en
+  // todo período P del mismo año con P.order < T.order, y deja de serlo desde T.
+  // NO se usa startDate/endDate (41 % de los períodos no las tienen) ni la
+  // existencia de valoraciones (sería un proxy inestable).
+  retiredFromTermId String?
+  // Metadato temporal de trazabilidad. NUNCA participa en la lógica de vigencia.
+  retiredAt         DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  achievement     Achievement   @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  // Restrict: borrar un período no puede reactivar evidencias en silencio.
+  retiredFromTerm AcademicTerm? @relation("EvidenceRetiredFromTerm", fields: [retiredFromTermId], references: [id], onDelete: Restrict)
+  valuations      StudentEvidenceValuation[]
 
   @@index([achievementId])
 }
@@ -3176,6 +3195,24 @@ model StudentEvidenceValuation {
   createdById           String?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
+
+  // FK de integridad (F2). Restrict: una evidencia con valoraciones NO puede
+  // borrarse. Para sacarla del catálogo existe el retiro lógico (D-12), que
+  // conserva la fila y su historia. Cascade destruiría esa historia; SET NULL es
+  // imposible porque la columna es obligatoria.
+  // Es la red de seguridad estructural de la guarda de F1, no su sustituto.
+  achievementEvidence AchievementEvidence @relation(fields: [achievementEvidenceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  // Relaciones de alcance (F2). Política derivada de las cinco tablas de historia
+  // académica del sistema —StudentAchievement, PeriodFinalGrade, PartialGrade,
+  // ConvivenciaEntry, TermReportCardSnapshot—, no elegida de forma independiente:
+  //  · matrícula y período: Cascade en las cinco. Borrar una matrícula o un período
+  //    borra su historia; una valoración sin sujeto o sin período no significa nada.
+  //  · institución: Restrict, como las tres tablas de notas. Impide borrar una
+  //    institución que todavía conserva historia académica.
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  institution       Institution       @relation("RlsInstitutionSEV", fields: [institutionId], references: [id])
 
   @@unique([studentEnrollmentId, achievementEvidenceId, academicTermId])
   @@index([academicTermId])

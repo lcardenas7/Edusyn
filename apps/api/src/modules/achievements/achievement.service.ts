@@ -1,10 +1,57 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, Optional, Logger } from '@nestjs/common';
 import { PerformanceLevel } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GradeAuditService, GradeAuditActor } from '../evaluation/grade-audit.service';
+import { RetirableEvidence, isEvidenceVigente, collectRetirementTermIds } from './evidence-vigencia.util';
+
+/** Origen de auditoría E-5 para el catálogo de evidencias/imprescindibles (D-12). */
+export const EVIDENCE_AUDIT_SOURCE = 'ACHIEVEMENT_EVIDENCE';
 
 @Injectable()
 export class AchievementService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(AchievementService.name);
+
+  // `gradeAudit` es opcional a propósito: auditar nunca debe ser requisito para
+  // construir el servicio ni para que una operación de catálogo funcione.
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private readonly gradeAudit?: GradeAuditService,
+  ) {}
+
+  // ============================================
+  // VIGENCIA DE EVIDENCIAS POR PERÍODO (D-12)
+  // ============================================
+
+  /**
+   * Regla canónica de vigencia (D-12).
+   *
+   * Una evidencia retirada desde el período `T` sigue vigente en todo período `P`
+   * del mismo año académico con `P.order < T.order`, y deja de serlo desde `T`.
+   *
+   * NO se usan `startDate`/`endDate` — el 41 % de los períodos en producción no las
+   * tiene — ni la existencia de valoraciones, que sería un proxy inestable.
+   * `retiredAt` no participa: es sólo trazabilidad.
+   *
+   * Ante un dato inconsistente (período desconocido) se falla ABIERTO, conservando la
+   * evidencia: ocultar información de un boletín es peor que mostrarla de más.
+   */
+  private async keepVigentes<T extends RetirableEvidence>(
+    evidences: T[],
+    academicTermId: string,
+  ): Promise<T[]> {
+    if (evidences.length === 0) return evidences;
+    const retiredTermIds = collectRetirementTermIds(evidences);
+    if (retiredTermIds.length === 0) return evidences; // ninguna retirada → nada que filtrar
+
+    const terms = await this.prisma.academicTerm.findMany({
+      where: { id: { in: [...retiredTermIds, academicTermId] } },
+      select: { id: true, order: true },
+    });
+    const orderById = new Map(terms.map((t) => [t.id, t.order]));
+    const currentOrder = orderById.get(academicTermId);
+
+    return evidences.filter((e) => isEvidenceVigente(e, currentOrder, orderById));
+  }
 
   // ============================================
   // LOGROS ACADÉMICOS
@@ -42,7 +89,7 @@ export class AchievementService {
     });
     if (!assignment) throw new NotFoundException('Asignación docente no encontrada');
 
-    return this.prisma.achievement.findMany({
+    const achievements = await this.prisma.achievement.findMany({
       where: {
         isPromotional: false,
         OR: [
@@ -76,6 +123,14 @@ export class AchievementService {
         evidences: { orderBy: { orderNumber: 'asc' } },
       },
     });
+
+    // D-12 / H-18: la planilla del docente sólo ofrece las evidencias VIGENTES en el
+    // período consultado. Una evidencia retirada desde un período anterior o igual no
+    // puede recibir valoraciones nuevas, así que no debe siquiera aparecer.
+    for (const achievement of achievements) {
+      achievement.evidences = await this.keepVigentes(achievement.evidences, academicTermId);
+    }
+    return achievements;
   }
 
   // ============================================
@@ -183,6 +238,23 @@ export class AchievementService {
       select: { institutionId: true },
     });
     if (!enr) throw new NotFoundException('Matrícula no encontrada');
+
+    // D-12 / H-19: una evidencia retirada no admite valoraciones nuevas ni
+    // actualizaciones en los períodos desde los que fue retirada. Las valoraciones de
+    // períodos anteriores siguen siendo editables porque allí la evidencia es vigente.
+    const evidence = await this.prisma.achievementEvidence.findUnique({
+      where: { id: data.achievementEvidenceId },
+      select: { id: true, text: true, retiredFromTermId: true },
+    });
+    if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
+    const vigentes = await this.keepVigentes([evidence], data.academicTermId);
+    if (vigentes.length === 0) {
+      throw new ConflictException(
+        `«${evidence.text}» fue retirado del catálogo y no admite valoraciones en este período. ` +
+        'Las valoraciones de períodos anteriores se conservan intactas.',
+      );
+    }
+
     return this.prisma.studentEvidenceValuation.upsert({
       where: {
         studentEnrollmentId_achievementEvidenceId_academicTermId: {
@@ -404,9 +476,11 @@ export class AchievementService {
     });
   }
 
-  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ text: string }> }, canManageCatalog = true) {
+  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ id?: string; text: string }> }, canManageCatalog = true) {
     await this.assertCatalogWritable(id, canManageCatalog);
     // Reemplazo total de descriptores solo si el cliente los envía (undefined = no tocar).
+    // Los descriptores NO llevan histórico colgando (nadie los referencia), así que el
+    // reemplazo total sigue siendo seguro aquí.
     if (data.levelDescriptors !== undefined) {
       const descriptors = data.levelDescriptors.filter((d) => d.levelCode && d.text?.trim());
       await this.prisma.achievementLevelDescriptor.deleteMany({ where: { achievementId: id } });
@@ -417,15 +491,9 @@ export class AchievementService {
         });
       }
     }
-    // Reemplazo total de evidencias solo si el cliente las envía (undefined = no tocar).
+    // Evidencias: reconciliación por id (undefined = no tocar). Ver reconcileEvidences.
     if (data.evidences !== undefined) {
-      const evidences = data.evidences.filter((e) => e.text?.trim());
-      await this.prisma.achievementEvidence.deleteMany({ where: { achievementId: id } });
-      if (evidences.length > 0) {
-        await this.prisma.achievementEvidence.createMany({
-          data: evidences.map((e, i) => ({ achievementId: id, text: e.text.trim(), orderNumber: i + 1 })),
-        });
-      }
+      await this.reconcileEvidences(id, data.evidences);
     }
     return this.prisma.achievement.update({
       where: { id },
@@ -434,8 +502,207 @@ export class AchievementService {
     });
   }
 
+  /**
+   * Reconciliación de evidencias por id.
+   *
+   * REGLA: editar el texto de una evidencia NO es crear una evidencia nueva.
+   * El id debe sobrevivir a la edición porque `StudentEvidenceValuation` lo referencia
+   * por escalar (sin FK): si el id cambia, las valoraciones históricas del docente
+   * quedan huérfanas e invisibles, sin error y sin forma de recuperarlas.
+   *
+   * Antes esto era `deleteMany` + `createMany`, que regeneraba TODOS los ids en cada
+   * guardado del catálogo — bastaba corregir una tilde para perder el período completo.
+   *
+   *   item con id conocido → UPDATE (texto y orden), conserva el id
+   *   item sin id          → se empareja por texto exacto con una evidencia existente
+   *                          aún no emparejada (tolerancia a clientes que no envían id);
+   *                          si no hay coincidencia → CREATE
+   *   existente ausente    → baja SOLO si no tiene valoraciones registradas.
+   *                          Si las tiene, se aborta toda la operación: borrarla
+   *                          destruiría historia académica.
+   *
+   * El plan se calcula completo ANTES de escribir, y se aplica en una transacción,
+   * para que un guardado bloqueado no quede aplicado a medias.
+   */
+  private async reconcileEvidences(achievementId: string, incoming: Array<{ id?: string; text: string }>) {
+    const items = incoming
+      .filter((e) => e.text?.trim())
+      .map((e) => ({ id: e.id, text: e.text.trim() }));
+
+    const existing = await this.prisma.achievementEvidence.findMany({
+      where: { achievementId },
+      select: { id: true, text: true, orderNumber: true },
+      orderBy: { orderNumber: 'asc' },
+    });
+    const existingById = new Map(existing.map((e) => [e.id, e]));
+
+    const matchedIds = new Set<string>();
+    const toUpdate: Array<{ id: string; text: string; orderNumber: number }> = [];
+    const toCreate: Array<{ text: string; orderNumber: number }> = [];
+
+    items.forEach((item, index) => {
+      const orderNumber = index + 1;
+      // 1) Emparejar por id explícito (camino normal).
+      if (item.id && existingById.has(item.id) && !matchedIds.has(item.id)) {
+        matchedIds.add(item.id);
+        const prev = existingById.get(item.id)!;
+        if (prev.text !== item.text || prev.orderNumber !== orderNumber) {
+          toUpdate.push({ id: item.id, text: item.text, orderNumber });
+        }
+        return;
+      }
+      // 2) Sin id: emparejar por texto exacto con una existente aún libre. Evita que un
+      //    cliente que no envía ids duplique el catálogo y provoque bajas masivas.
+      const byText = existing.find((e) => !matchedIds.has(e.id) && e.text === item.text);
+      if (byText) {
+        matchedIds.add(byText.id);
+        if (byText.orderNumber !== orderNumber) {
+          toUpdate.push({ id: byText.id, text: item.text, orderNumber });
+        }
+        return;
+      }
+      // 3) Realmente nueva.
+      toCreate.push({ text: item.text, orderNumber });
+    });
+
+    const removed = existing.filter((e) => !matchedIds.has(e.id));
+
+    // Guarda de integridad: nunca borrar una evidencia con valoraciones registradas.
+    if (removed.length > 0) {
+      const valuations = await this.prisma.studentEvidenceValuation.findMany({
+        where: { achievementEvidenceId: { in: removed.map((e) => e.id) } },
+        select: { achievementEvidenceId: true },
+      });
+      if (valuations.length > 0) {
+        const countById = new Map<string, number>();
+        for (const v of valuations) {
+          countById.set(v.achievementEvidenceId, (countById.get(v.achievementEvidenceId) ?? 0) + 1);
+        }
+        const detail = removed
+          .filter((e) => countById.has(e.id))
+          .map((e) => `«${e.text}» (${countById.get(e.id)} valoración(es))`)
+          .join(', ');
+        throw new ConflictException(
+          `No se puede quitar del catálogo: ${detail}. ` +
+          'Ya tiene valoraciones registradas por los docentes y eliminarla borraría esa historia académica. ' +
+          'Edite su texto en lugar de quitarla, o solicite su retiro explícito.',
+        );
+      }
+    }
+
+    const ops: any[] = [
+      ...toUpdate.map((u) =>
+        this.prisma.achievementEvidence.update({
+          where: { id: u.id },
+          data: { text: u.text, orderNumber: u.orderNumber },
+        }),
+      ),
+      ...toCreate.map((c) =>
+        this.prisma.achievementEvidence.create({
+          data: { achievementId, text: c.text, orderNumber: c.orderNumber },
+        }),
+      ),
+    ];
+    if (removed.length > 0) {
+      ops.push(
+        this.prisma.achievementEvidence.deleteMany({ where: { id: { in: removed.map((e) => e.id) } } }),
+      );
+    }
+    if (ops.length > 0) {
+      await this.prisma.$transaction(ops);
+    }
+  }
+
+  /**
+   * Borra un propósito/aprendizaje completo.
+   *
+   * Guarda de integridad (F2): borrar el propósito **cascadea** a sus
+   * `AchievementEvidence`. Si alguno tiene valoraciones, la FK
+   * `StudentEvidenceValuation_achievementEvidenceId_fkey` (ON DELETE RESTRICT)
+   * aborta la operación con un `23503` crudo que el usuario vería como un 500.
+   *
+   * Aquí se detecta antes: ni siquiera se intenta el DELETE. La FK sigue siendo la
+   * última barrera —si esta guarda no viera la valoración, la base seguiría
+   * rechazando—, pero deja de ser la primera.
+   *
+   * Basta UNA valoración en UN imprescindible para proteger el propósito entero:
+   * no existe borrado parcial. El conteo no se limita al período en curso.
+   *
+   * Guarda de historia académica (F2): el propósito cascadea además a
+   * `StudentAchievement` —nivel de desempeño, texto y juicio aprobados por el
+   * docente, observación del boletín—. Ahí la base de datos **no** opone resistencia:
+   * su FK es `Cascade`, así que sin esta guarda la pérdida sería silenciosa.
+   *
+   * Guarda de contenido actitudinal (F2): `AttitudinalAchievement` también cascadea
+   * y también guarda texto redactado por el docente que llega al boletín. No lleva
+   * `studentEnrollmentId` —no es historia por estudiante—, pero se pierde igual.
+   *
+   * Las tres se comprueban ANTES de cualquier operación destructiva, en este orden:
+   * permisos → historia académica → valoraciones por imprescindible → actitudinal.
+   */
   async deleteAchievement(id: string, canManageCatalog = true) {
     await this.assertCatalogWritable(id, canManageCatalog);
+
+    const academicHistory = await this.prisma.studentAchievement.count({
+      where: { achievementId: id },
+    });
+    if (academicHistory > 0) {
+      const achievement = await this.prisma.achievement.findUnique({
+        where: { id },
+        select: { baseDescription: true },
+      });
+      throw new ConflictException(
+        `No se puede eliminar este propósito «${achievement?.baseDescription ?? ''}»: ` +
+        `tiene ${academicHistory} registro(s) de historia académica. ` +
+        'Eliminarlo borraría también los desempeños, textos y juicios ya aprobados por los ' +
+        'docentes. Edite su texto en lugar de eliminarlo.',
+      );
+    }
+
+    const evidences = await this.prisma.achievementEvidence.findMany({
+      where: { achievementId: id },
+      select: { id: true, text: true },
+    });
+
+    if (evidences.length > 0) {
+      const valuations = await this.prisma.studentEvidenceValuation.findMany({
+        where: { achievementEvidenceId: { in: evidences.map((e) => e.id) } },
+        select: { achievementEvidenceId: true },
+      });
+      if (valuations.length > 0) {
+        const countById = new Map<string, number>();
+        for (const v of valuations) {
+          countById.set(v.achievementEvidenceId, (countById.get(v.achievementEvidenceId) ?? 0) + 1);
+        }
+        const detail = evidences
+          .filter((e) => countById.has(e.id))
+          .map((e) => `«${e.text}» (${countById.get(e.id)} valoración(es))`)
+          .join(', ');
+        throw new ConflictException(
+          `No se puede eliminar este propósito: ${detail}. ` +
+          'Eliminarlo borraría también sus imprescindibles y con ellos la historia académica ' +
+          'ya registrada por los docentes. Edite su texto en lugar de eliminarlo, o retire los ' +
+          'imprescindibles que ya no apliquen.',
+        );
+      }
+    }
+
+    const attitudinal = await this.prisma.attitudinalAchievement.count({
+      where: { achievementId: id },
+    });
+    if (attitudinal > 0) {
+      const achievement = await this.prisma.achievement.findUnique({
+        where: { id },
+        select: { baseDescription: true },
+      });
+      throw new ConflictException(
+        `No se puede eliminar este propósito «${achievement?.baseDescription ?? ''}»: ` +
+        `tiene ${attitudinal} registro(s) de contenido actitudinal. ` +
+        'Eliminarlo borraría también el texto redactado por el docente. ' +
+        'Edite su texto en lugar de eliminarlo.',
+      );
+    }
+
     return this.prisma.achievement.delete({
       where: { id },
     });
@@ -459,7 +726,11 @@ export class AchievementService {
     });
   }
 
-  async updateEvidence(id: string, data: { text?: string; isActive?: boolean }, canManageCatalog = true) {
+  /**
+   * Corrección de contenido. NO cambia el estado de retiro: para eso existen
+   * `retireEvidence` / `reactivateEvidence` (D-12). `isActive` ya no se acepta.
+   */
+  async updateEvidence(id: string, data: { text?: string }, canManageCatalog = true) {
     const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true } });
     if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
     await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
@@ -469,14 +740,261 @@ export class AchievementService {
       if (!clean) throw new BadRequestException('El texto de la evidencia es obligatorio');
       updateData.text = clean;
     }
-    if (data.isActive !== undefined) updateData.isActive = data.isActive;
     return this.prisma.achievementEvidence.update({ where: { id }, data: updateData });
   }
 
-  async deleteEvidence(id: string, canManageCatalog = true) {
-    const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true } });
+  // ============================================
+  // RETIRO Y REACTIVACIÓN (D-12)
+  // ============================================
+
+  /** Contexto común de retiro/reactivación: evidencia + aprendizaje + año académico. */
+  private async loadEvidenceContext(evidenceId: string, canManageCatalog: boolean) {
+    const evidence = await this.prisma.achievementEvidence.findUnique({
+      where: { id: evidenceId },
+      select: { id: true, text: true, achievementId: true, retiredFromTermId: true, retiredAt: true },
+    });
     if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
     await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
+
+    const achievement = await this.prisma.achievement.findUnique({
+      where: { id: evidence.achievementId },
+      select: {
+        id: true,
+        institutionId: true,
+        baseDescription: true,
+        academicYearId: true,
+        teacherAssignment: { select: { academicYearId: true } },
+      },
+    });
+    if (!achievement) throw new NotFoundException('Aprendizaje no encontrado');
+
+    const yearId = achievement.academicYearId ?? achievement.teacherAssignment?.academicYearId ?? null;
+    return { evidence, achievement, yearId };
+  }
+
+  /**
+   * Auditoría E-5. Nunca puede impedir la operación de catálogo.
+   *
+   * El retiro ya está persistido cuando se llama a este método: si la auditoría
+   * fallara y la excepción se propagara, el cliente recibiría un error mientras el
+   * cambio quedó aplicado, dejando estado y respuesta divergentes. Por eso el fallo
+   * se atrapa aquí y se registra en el log, en lugar de confiar en que el servicio
+   * de auditoría trague siempre sus propios errores.
+   *
+   * No se silencia: queda constancia en el log del sistema.
+   */
+  private async auditEvidenceStateChange(params: {
+    institutionId: string;
+    academicTermId: string | null;
+    evidence: { id: string; text: string };
+    achievement: { id: string; baseDescription: string };
+    operation: 'RETIRE' | 'REACTIVATE';
+    reason?: string | null;
+    valuationCount: number;
+    previous: Record<string, unknown>;
+    next: Record<string, unknown>;
+    actor?: GradeAuditActor;
+  }) {
+    try {
+      await this.recordEvidenceAudit(params);
+    } catch (err: any) {
+      this.logger.error(
+        `No se pudo auditar ${params.operation} del imprescindible ${params.evidence.id} ` +
+        `(aprendizaje ${params.achievement.id}): ${err?.message || err}. ` +
+        'La operación de catálogo SÍ se aplicó.',
+      );
+    }
+  }
+
+  private async recordEvidenceAudit(params: {
+    institutionId: string;
+    academicTermId: string | null;
+    evidence: { id: string; text: string };
+    achievement: { id: string; baseDescription: string };
+    operation: 'RETIRE' | 'REACTIVATE';
+    reason?: string | null;
+    valuationCount: number;
+    previous: Record<string, unknown>;
+    next: Record<string, unknown>;
+    actor?: GradeAuditActor;
+  }) {
+    await this.gradeAudit?.record(
+      {
+        institutionId: params.institutionId,
+        source: EVIDENCE_AUDIT_SOURCE,
+        action: 'UPDATE',
+        academicTermId: params.academicTermId,
+        activityName: params.evidence.text,
+        previousValue: {
+          operation: params.operation,
+          evidenceId: params.evidence.id,
+          achievementId: params.achievement.id,
+          achievement: params.achievement.baseDescription,
+          valuationCount: params.valuationCount,
+          ...params.previous,
+        },
+        newValue: {
+          operation: params.operation,
+          evidenceId: params.evidence.id,
+          reason: params.reason ?? null,
+          ...params.next,
+        },
+      },
+      params.actor,
+    );
+  }
+
+  /**
+   * Retira una evidencia del catálogo desde un período concreto (D-12).
+   *
+   * El período se recibe EXPLÍCITAMENTE: el modelo no tiene ningún concepto de
+   * "período en curso" y toda la aplicación trabaja con un período seleccionado por
+   * el usuario. No se infiere por fechas.
+   *
+   * Conserva el id, el registro y todas las valoraciones. No toca ninguna
+   * `StudentEvidenceValuation`, ni ningún snapshot.
+   */
+  async retireEvidence(
+    evidenceId: string,
+    data: { academicTermId: string; reason?: string },
+    actor?: GradeAuditActor,
+    canManageCatalog = true,
+  ) {
+    const { evidence, achievement, yearId } = await this.loadEvidenceContext(evidenceId, canManageCatalog);
+
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: data.academicTermId },
+      select: { id: true, name: true, status: true, order: true, academicYearId: true },
+    });
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    // Mismo contexto académico: no se retira apuntando al período de otro año.
+    if (yearId && term.academicYearId !== yearId) {
+      throw new BadRequestException(
+        'El período indicado no pertenece al año académico de este aprendizaje.',
+      );
+    }
+
+    // No se puede alterar retrospectivamente una estructura ya cerrada o finalizada.
+    if (term.status !== 'OPEN') {
+      throw new ConflictException(
+        `No se puede retirar desde «${term.name}»: el período está en estado ${term.status}. ` +
+        'Retirar desde un período cerrado o finalizado eliminaría obligaciones ya consolidadas. ' +
+        'Elija un período abierto.',
+      );
+    }
+
+    const valuationCount = await this.prisma.studentEvidenceValuation.count({
+      where: { achievementEvidenceId: evidenceId },
+    });
+
+    const updated = await this.prisma.achievementEvidence.update({
+      where: { id: evidenceId },
+      data: { retiredFromTermId: term.id, retiredAt: new Date() },
+    });
+
+    await this.auditEvidenceStateChange({
+      institutionId: achievement.institutionId,
+      academicTermId: term.id,
+      evidence,
+      achievement,
+      operation: 'RETIRE',
+      reason: data.reason,
+      valuationCount,
+      previous: { retiredFromTermId: evidence.retiredFromTermId, retiredAt: evidence.retiredAt },
+      next: { retiredFromTermId: term.id, retiredFromTermName: term.name, retiredAt: updated.retiredAt },
+      actor,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Reactiva una evidencia retirada (D-12). Efecto exclusivamente prospectivo:
+   * no modifica valoraciones históricas ni snapshots, y no reescribe el pasado.
+   */
+  async reactivateEvidence(
+    evidenceId: string,
+    data: { reason?: string } = {},
+    actor?: GradeAuditActor,
+    canManageCatalog = true,
+  ) {
+    const { evidence, achievement } = await this.loadEvidenceContext(evidenceId, canManageCatalog);
+
+    if (!evidence.retiredFromTermId) {
+      throw new BadRequestException('El imprescindible ya está activo.');
+    }
+
+    // El período desde el que se retiró debe seguir siendo modificable: reactivar
+    // repondría la obligación en un período que ya fue cerrado o finalizado.
+    const retiredTerm = await this.prisma.academicTerm.findUnique({
+      where: { id: evidence.retiredFromTermId },
+      select: { id: true, name: true, status: true },
+    });
+    if (retiredTerm && retiredTerm.status !== 'OPEN') {
+      throw new ConflictException(
+        `No se puede reactivar: fue retirado desde «${retiredTerm.name}», que está en estado ${retiredTerm.status}. ` +
+        'Reactivarlo repondría una obligación en un período ya consolidado.',
+      );
+    }
+
+    const valuationCount = await this.prisma.studentEvidenceValuation.count({
+      where: { achievementEvidenceId: evidenceId },
+    });
+
+    const updated = await this.prisma.achievementEvidence.update({
+      where: { id: evidenceId },
+      data: { retiredFromTermId: null, retiredAt: null },
+    });
+
+    await this.auditEvidenceStateChange({
+      institutionId: achievement.institutionId,
+      academicTermId: evidence.retiredFromTermId,
+      evidence,
+      achievement,
+      operation: 'REACTIVATE',
+      reason: data.reason,
+      valuationCount,
+      previous: { retiredFromTermId: evidence.retiredFromTermId, retiredAt: evidence.retiredAt },
+      next: { retiredFromTermId: null, retiredAt: null },
+      actor,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Baja de una evidencia del catálogo.
+   *
+   * Misma guarda de integridad que `reconcileEvidences`: una evidencia que ya tiene
+   * valoraciones académicas NO puede eliminarse físicamente, porque
+   * `StudentEvidenceValuation.achievementEvidenceId` es un escalar sin FK y las
+   * valoraciones quedarían huérfanas e invisibles.
+   *
+   * El conteo NO se limita al período en curso: una valoración de cualquier período
+   * anterior es historia académica y basta para bloquear la eliminación.
+   *
+   * D-12: retiro y eliminación son ORTOGONALES. Para sacar del catálogo una evidencia
+   * ya evaluada existe `retireEvidence` (retiro lógico y prospectivo). El estado de
+   * retiro NO sustituye ni debilita esta guarda: una evidencia retirada que tenga
+   * valoraciones sigue siendo indestructible.
+   */
+  async deleteEvidence(id: string, canManageCatalog = true) {
+    const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true, text: true } });
+    if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
+    await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
+
+    const valuations = await this.prisma.studentEvidenceValuation.count({
+      where: { achievementEvidenceId: id },
+    });
+    if (valuations > 0) {
+      throw new ConflictException(
+        `No se puede eliminar «${evidence.text}»: ya tiene ${valuations} valoración(es) académica(s) registrada(s) ` +
+        'por los docentes, en este período o en períodos anteriores. Eliminarla borraría esa historia. ' +
+        'Puede editar su texto; para retirarla del catálogo se requiere una decisión institucional.',
+      );
+    }
+
     return this.prisma.achievementEvidence.delete({ where: { id } });
   }
 
@@ -531,8 +1049,10 @@ export class AchievementService {
         ...(source.levelDescriptors.length > 0
           ? { levelDescriptors: { create: source.levelDescriptors.map((d) => ({ levelCode: d.levelCode, text: d.text })) } }
           : {}),
+        // D-12: una copia nace SIEMPRE activa. No se arrastra el estado de retiro del
+        // original: retirar es una decisión sobre un objeto concreto, no sobre su texto.
         ...(source.evidences.length > 0
-          ? { evidences: { create: source.evidences.map((e) => ({ text: e.text, orderNumber: e.orderNumber, isActive: e.isActive })) } }
+          ? { evidences: { create: source.evidences.map((e) => ({ text: e.text, orderNumber: e.orderNumber })) } }
           : {}),
       },
       include: { levelDescriptors: true, evidences: { orderBy: { orderNumber: 'asc' } } },

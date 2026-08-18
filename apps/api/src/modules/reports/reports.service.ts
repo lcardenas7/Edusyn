@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef, ConflictException } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
-import { EnrollmentStatus } from '@prisma/client';
+import { EnrollmentStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
@@ -13,6 +13,7 @@ import { getReportCardMode, getDisplayConfig } from '../../engines/report-card.e
 import type { AcademicStructureType } from '../../engines/AcademicStructure';
 import { SupabaseStorageService } from '../storage/supabase-storage.service';
 import { AcademicDataSourceService, ReportMode } from './academic-data-source.service';
+import { RetirableEvidence, isEvidenceVigente, collectRetirementTermIds } from '../achievements/evidence-vigencia.util';
 
 /** Fila común de nota para el reporte de reprobadas (parcial o final). grade=null = sin datos. */
 interface FailedRow {
@@ -148,6 +149,22 @@ export class ReportsService {
     }
 
     return result;
+  }
+
+  /**
+   * D-12: resuelve el `order` de los períodos desde los que se retiraron las evidencias
+   * citadas. Devuelve un mapa vacío si ninguna está retirada, para no consultar de más.
+   */
+  private async resolveRetirementTermOrders(
+    evidences: RetirableEvidence[],
+  ): Promise<Map<string, number>> {
+    const ids = collectRetirementTermIds(evidences);
+    if (ids.length === 0) return new Map();
+    const terms = await this.prisma.academicTerm.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, order: true },
+    });
+    return new Map(terms.map((t) => [t.id, t.order]));
   }
 
   private average(values: number[]): number {
@@ -380,14 +397,36 @@ export class ReportsService {
     const promedioAcumulado = defGrades.length ? round2(defGrades.reduce((a, b) => a + b, 0) / defGrades.length) : null;
 
     const att = current.attendance || { absent: 0, excused: 0 } as any;
+
+    // C-4 · criterio 7: el documento anual representa VARIOS períodos, y cada uno pudo
+    // congelar un contrato de publicación distinto. Tomarlos sólo del último período
+    // los perdía por completo cuando ése era un snapshot histórico sin los campos.
+    // Cada período conserva el suyo; el nivel superior usa el más reciente que lo tenga.
+    const masReciente = (campo: 'reportContent' | 'academicStructure' | 'displayConfig') => {
+      for (let i = perPeriod.length - 1; i >= 0; i--) {
+        const valor = (perPeriod[i].data as any)?.[campo];
+        if (valor !== undefined && valor !== null) return valor;
+      }
+      return undefined;
+    };
+
     return {
       institution: current.institution,
       academicYear: current.academicYear,
       student: current.student,
       group: current.group,
-      academicStructure: current.academicStructure,
-      displayConfig: current.displayConfig,
-      periods: periodsUpTo.map(p => ({ id: p.id, name: p.name, order: p.order })),
+      academicStructure: masReciente('academicStructure'),
+      displayConfig: masReciente('displayConfig'),
+      reportContent: masReciente('reportContent'),
+      periods: periodsUpTo.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        order: p.order,
+        // Contrato de publicación vigente en ESE período.
+        reportContent: (perPeriod[i].data as any)?.reportContent,
+        academicStructure: (perPeriod[i].data as any)?.academicStructure,
+        displayConfig: (perPeriod[i].data as any)?.displayConfig,
+      })),
       currentTermId: academicTermId,
       areas,
       summary: {
@@ -2891,12 +2930,28 @@ export class ReportsService {
             },
             subject: true, // dimensión, cuando es catálogo compartido (sin asignación)
             levelDescriptors: true,
-            evidences: { where: { isActive: true }, orderBy: { orderNumber: 'asc' } },
+            // D-12 / H-20: NO se filtra por `isActive` (deprecado). La vigencia se
+            // resuelve por período justo debajo, para que una evidencia retirada
+            // siga apareciendo en los períodos en los que sí estuvo vigente.
+            evidences: { orderBy: { orderNumber: 'asc' } },
           },
         },
       },
       orderBy: { achievement: { orderNumber: 'asc' } },
     });
+
+    // D-12: filtrado por vigencia del período que se está construyendo.
+    {
+      const allEvidences = allAchievements.flatMap((sa) => sa.achievement.evidences);
+      const orderById = await this.resolveRetirementTermOrders(allEvidences);
+      if (orderById.size > 0) {
+        for (const sa of allAchievements) {
+          sa.achievement.evidences = sa.achievement.evidences.filter((e) =>
+            isEvidenceVigente(e, term.order, orderById),
+          );
+        }
+      }
+    }
 
     // Map<enrollmentId, Achievement[]>
     const achievementsMap = new Map<string, typeof allAchievements>();
@@ -2970,9 +3025,22 @@ export class ReportsService {
             isPromotional: false,
             OR: [{ academicTermId }, { academicTermId: null }],
           },
-          include: { evidences: { where: { isActive: true }, orderBy: { orderNumber: 'asc' } } },
+          // D-12 / H-20: sin filtro `isActive` (deprecado); la vigencia se resuelve
+          // por período debajo, para no borrar retroactivamente del boletín una
+          // evidencia que sí fue evaluada en este período.
+          include: { evidences: { orderBy: { orderNumber: 'asc' } } },
           orderBy: { orderNumber: 'asc' },
         });
+
+        const retirementOrders = await this.resolveRetirementTermOrders(
+          catalog.flatMap((a) => a.evidences),
+        );
+        if (retirementOrders.size > 0) {
+          for (const a of catalog) {
+            a.evidences = a.evidences.filter((e) => isEvidenceVigente(e, term.order, retirementOrders));
+          }
+        }
+
         for (const a of catalog) {
           if (!a.subjectId) continue;
           const list = catalogBySubject.get(a.subjectId) || [];
@@ -3763,8 +3831,21 @@ export class ReportsService {
           some: { academicYearId: term.academicYearId, status: 'ACTIVE' },
         },
       },
-      select: { id: true, name: true },
+      // C-1: se añade la estructura del grado para poder despachar por modalidad.
+      // Es aditivo: no cambia el filtro ni el conjunto de grupos devuelto.
+      select: { id: true, name: true, grade: { select: { id: true, academicStructure: true } } },
     });
+
+    // C-1: los grupos por dimensiones se resuelven en un pase aparte, DESPUÉS del
+    // bucle, para no alterar en nada el camino cuantitativo y para poder consultar
+    // sus obligaciones en lote en lugar de grupo a grupo.
+    const dimensionPending: Array<{
+      group: { id: string; name: string };
+      gradeId: string | null;
+      subjectIds: string[];
+      subjectNames: Map<string, string>;
+      enrollments: Array<{ id: string; student: any }>;
+    }> = [];
 
     const missing: Array<{
       group: string;
@@ -3791,6 +3872,21 @@ export class ReportsService {
 
       if (enrollments.length === 0 || subjectIds.length === 0) continue;
 
+      // ── C-1 · DESPACHO POR ESTRUCTURA ACADÉMICA ────────────────────────────
+      // DIMENSIONS no produce PeriodFinalGrade: medirlo con el predicado cuantitativo
+      // dejaba el período imposible de cerrar. Se aparta para el pase cualitativo.
+      if ((group.grade as any)?.academicStructure === 'DIMENSIONS') {
+        dimensionPending.push({
+          group,
+          gradeId: (group.grade as any)?.id ?? null,
+          subjectIds,
+          subjectNames,
+          enrollments,
+        });
+        continue;
+      }
+
+      // ── CAMINO CUANTITATIVO (AREAS_SUBJECTS / SUBJECTS_ONLY) — sin cambios ──
       // Notas finales existentes para este grupo/período
       const existingGrades = await this.prisma.periodFinalGrade.findMany({
         where: {
@@ -3817,6 +3913,49 @@ export class ReportsService {
               student: [enrollment.student.lastName, (enrollment.student as any).secondLastName, enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
               subject: subjectNames.get(subjectId) || subjectId,
             });
+          }
+        }
+      }
+    }
+
+    // ── C-1 · PASE CUALITATIVO (grados DIMENSIONS) ──────────────────────────
+    // Usa el MISMO helper que `getCompletenessStatus` (C-2): panel y cierre deben
+    // decidir con idéntico criterio, o el coordinador vería un 100 % que el cierre
+    // rechaza. El contrato de `missing[]` no cambia.
+    if (dimensionPending.length > 0) {
+      const dimGroupIds = dimensionPending.map(d => d.group.id);
+      const dimAssignments = await this.prisma.teacherAssignment.findMany({
+        where: { groupId: { in: dimGroupIds }, academicYearId: term.academicYearId },
+        select: { id: true },
+      });
+
+      const qualitativeIndex = await this.buildQualitativeCompletenessIndex({
+        institutionId: term.academicYear.institutionId,
+        academicYearId: term.academicYearId,
+        terms: [{ id: term.id, order: term.order }],
+        teacherAssignmentIds: dimAssignments.map(ta => ta.id),
+        groups: dimensionPending.map(d => ({
+          id: d.group.id,
+          gradeId: d.gradeId,
+          subjectIds: d.subjectIds,
+          enrollmentIds: d.enrollments.map(e => e.id),
+        })),
+      });
+
+      for (const pending of dimensionPending) {
+        for (const enrollment of pending.enrollments) {
+          for (const subjectId of pending.subjectIds) {
+            totalExpected++;
+            const key = `${pending.group.id}|${subjectId}|${term.id}`;
+            if (qualitativeIndex.get(key)?.has(enrollment.id)) {
+              totalFound++;
+            } else {
+              missing.push({
+                group: pending.group.name,
+                student: [enrollment.student.lastName, (enrollment.student as any).secondLastName, enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
+                subject: pending.subjectNames.get(subjectId) || subjectId,
+              });
+            }
           }
         }
       }
@@ -3978,6 +4117,12 @@ export class ReportsService {
               institution: groupData.institution,
               academicYear: groupData.academicYear,
               term: groupData.term,
+              // C-4: contrato de PUBLICACIÓN congelado. Sin esto, un período FINALIZED
+              // pierde estos campos y el documento oficial cambia de aspecto respecto
+              // al que se aprobó (etiquetas, flags de contenido, layout).
+              reportContent: groupData.reportContent as unknown as Prisma.InputJsonValue,
+              academicStructure: groupData.academicStructure as unknown as Prisma.InputJsonValue,
+              displayConfig: groupData.displayConfig as unknown as Prisma.InputJsonValue,
               student: card.student,
               group: card.group,
               areaGrades: card.areaGrades,
@@ -4189,6 +4334,12 @@ export class ReportsService {
                 institution: groupData.institution,
                 academicYear: groupData.academicYear,
                 term: groupData.term,
+                // C-4: contrato de PUBLICACIÓN congelado. Sin esto, un período FINALIZED
+                // pierde estos campos y el documento oficial cambia de aspecto respecto
+                // al que se aprobó (etiquetas, flags de contenido, layout).
+                reportContent: groupData.reportContent as unknown as Prisma.InputJsonValue,
+                academicStructure: groupData.academicStructure as unknown as Prisma.InputJsonValue,
+                displayConfig: groupData.displayConfig as unknown as Prisma.InputJsonValue,
                 student: card.student,
                 group: card.group,
                 areaGrades: card.areaGrades,
@@ -4242,6 +4393,189 @@ export class ReportsService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
+   * Índice de completitud CUALITATIVA para grados DIMENSIONS.
+   *
+   * Fuente única de las reglas de obligación cualitativa. La comparten
+   * `getCompletenessStatus` (C-2, panel) y `validateTermGrades` (C-1, cierre): ambos
+   * deben decidir con EXACTAMENTE el mismo criterio, o el coordinador vería un 100 %
+   * que el cierre rechaza.
+   *
+   * Reglas (docs/PLAN_TRANSICION_CORRECCION_Y_DISENO.md §5.2):
+   *   PURPOSE  → obligación = propósito       · satisfecha por StudentAchievement
+   *   EVIDENCE → obligación = imprescindible  · satisfecha por StudentEvidenceValuation,
+   *              filtrado por `isEvidenceVigente()` (D-12)
+   * Catálogo esperado: propósitos por-asignación + catálogo compartido por grado
+   * (`teacherAssignmentId = null`). Un propósito anual (`academicTermId = null`) aplica
+   * a todos los períodos; uno por-período, sólo al suyo.
+   *
+   * Un estudiante cuenta como diligenciado en una celda sólo si cubrió TODAS sus
+   * obligaciones. Una celda sin obligaciones configuradas no exige nada.
+   *
+   * NO conoce nada cuantitativo: ni PeriodFinalGrade, ni EnrollmentSubject, ni cierre.
+   *
+   * @returns Map<"groupId|subjectId|termId", Set<enrollmentId diligenciados>>
+   */
+  private async buildQualitativeCompletenessIndex(params: {
+    institutionId: string;
+    academicYearId: string;
+    terms: Array<{ id: string; order: number }>;
+    teacherAssignmentIds: string[];
+    groups: Array<{ id: string; gradeId: string | null; subjectIds: string[]; enrollmentIds: string[] }>;
+  }): Promise<Map<string, Set<string>>> {
+    const index = new Map<string, Set<string>>();
+    const { institutionId, academicYearId, terms, groups } = params;
+    if (groups.length === 0 || terms.length === 0) return index;
+
+    const termIds = terms.map(t => t.id);
+    const gradeIds = [...new Set(groups.map(g => g.gradeId).filter((id): id is string => !!id))];
+    const enrollmentIds = groups.flatMap(g => g.enrollmentIds);
+    const groupOfEnrollment = new Map<string, string>();
+    for (const g of groups) for (const e of g.enrollmentIds) groupOfEnrollment.set(e, g.id);
+
+    const achConfig = await this.prisma.achievementConfig.findUnique({
+      where: { institutionId },
+      select: { valuationScope: true },
+    });
+    const evidenceMode = (achConfig?.valuationScope ?? 'PURPOSE') === 'EVIDENCE';
+
+    // Catálogo esperado: propósitos por-asignación (flujo tradicional) + catálogo
+    // compartido por grado. Mismo criterio que `getAchievementsByAssignment`.
+    const expectedAchievements = await this.prisma.achievement.findMany({
+      where: {
+        institutionId,
+        isPromotional: false,
+        OR: [
+          { teacherAssignmentId: { in: params.teacherAssignmentIds }, academicTermId: { in: termIds } },
+          {
+            teacherAssignmentId: null,
+            gradeId: { in: gradeIds },
+            academicYearId,
+            OR: [{ academicTermId: { in: termIds } }, { academicTermId: null }],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        subjectId: true,
+        academicTermId: true,
+        teacherAssignment: { select: { subjectId: true } },
+        evidences: { select: { id: true, retiredFromTermId: true } },
+      },
+    });
+
+    const subjectOf = (a: (typeof expectedAchievements)[0]) => a.subjectId ?? a.teacherAssignment?.subjectId ?? null;
+
+    // Órdenes de período: los consultados MÁS los de retiro. Sin estos últimos, validar
+    // un solo período dejaría a `isEvidenceVigente` sin el orden del término de retiro,
+    // fallando ABIERTO y manteniendo como obligación una evidencia ya retirada.
+    const termOrderById = new Map(terms.map(t => [t.id, t.order]));
+    const ordenesDeRetiro = await this.resolveRetirementTermOrders(
+      expectedAchievements.flatMap(a => a.evidences),
+    );
+    for (const [id, order] of ordenesDeRetiro) if (!termOrderById.has(id)) termOrderById.set(id, order);
+
+    // Obligaciones esperadas por "groupId|subjectId|termId".
+    const expectedByCell = new Map<string, Set<string>>();
+    for (const group of groups) {
+      for (const term of terms) {
+        for (const a of expectedAchievements) {
+          // Un propósito por-período sólo aplica a SU período; uno anual, a todos.
+          if (a.academicTermId && a.academicTermId !== term.id) continue;
+          const subjectId = subjectOf(a);
+          if (!subjectId) continue;
+          const key = `${group.id}|${subjectId}|${term.id}`;
+          if (!expectedByCell.has(key)) expectedByCell.set(key, new Set());
+          const bucket = expectedByCell.get(key)!;
+          if (evidenceMode) {
+            // D-12: sólo las evidencias VIGENTES en ese período son obligación.
+            for (const ev of a.evidences) {
+              if (isEvidenceVigente(ev, termOrderById.get(term.id), termOrderById)) bucket.add(ev.id);
+            }
+          } else {
+            bucket.add(a.id);
+          }
+        }
+      }
+    }
+
+    // Valoraciones registradas, según el modo configurado.
+    const doneByCell = new Map<string, Map<string, Set<string>>>();
+    const addDone = (cellKey: string, enrollmentId: string, obligationId: string) => {
+      if (!doneByCell.has(cellKey)) doneByCell.set(cellKey, new Map());
+      const perEnrollment = doneByCell.get(cellKey)!;
+      if (!perEnrollment.has(enrollmentId)) perEnrollment.set(enrollmentId, new Set());
+      perEnrollment.get(enrollmentId)!.add(obligationId);
+    };
+
+    if (evidenceMode) {
+      const evidenceToSubject = new Map<string, string>();
+      for (const a of expectedAchievements) {
+        const subjectId = subjectOf(a);
+        if (!subjectId) continue;
+        for (const ev of a.evidences) evidenceToSubject.set(ev.id, subjectId);
+      }
+      const valuations = await this.prisma.studentEvidenceValuation.findMany({
+        where: {
+          studentEnrollmentId: { in: enrollmentIds },
+          academicTermId: { in: termIds },
+          achievementEvidenceId: { in: [...evidenceToSubject.keys()] },
+        },
+        select: { studentEnrollmentId: true, achievementEvidenceId: true, academicTermId: true },
+      });
+      for (const v of valuations) {
+        const subjectId = evidenceToSubject.get(v.achievementEvidenceId);
+        const groupId = groupOfEnrollment.get(v.studentEnrollmentId);
+        if (!subjectId || !groupId) continue;
+        addDone(`${groupId}|${subjectId}|${v.academicTermId}`, v.studentEnrollmentId, v.achievementEvidenceId);
+      }
+    } else {
+      const achievementToSubject = new Map<string, string>();
+      for (const a of expectedAchievements) {
+        const subjectId = subjectOf(a);
+        if (subjectId) achievementToSubject.set(a.id, subjectId);
+      }
+      const valuations = await this.prisma.studentAchievement.findMany({
+        where: {
+          studentEnrollmentId: { in: enrollmentIds },
+          academicTermId: { in: termIds },
+          achievementId: { in: [...achievementToSubject.keys()] },
+        },
+        select: { studentEnrollmentId: true, achievementId: true, academicTermId: true },
+      });
+      for (const v of valuations) {
+        const subjectId = achievementToSubject.get(v.achievementId);
+        const groupId = groupOfEnrollment.get(v.studentEnrollmentId);
+        if (!subjectId || !groupId) continue;
+        addDone(`${groupId}|${subjectId}|${v.academicTermId}`, v.studentEnrollmentId, v.achievementId);
+      }
+    }
+
+    // Un estudiante está diligenciado en la celda cuando cubrió TODAS sus obligaciones.
+    for (const group of groups) {
+      for (const subjectId of group.subjectIds) {
+        for (const term of terms) {
+          const key = `${group.id}|${subjectId}|${term.id}`;
+          const expected = expectedByCell.get(key);
+          const done = doneByCell.get(key);
+          const complete = new Set<string>();
+          for (const enrollmentId of group.enrollmentIds) {
+            if (!expected || expected.size === 0) {
+              // Sin obligaciones configuradas no hay nada que exigir.
+              complete.add(enrollmentId);
+              continue;
+            }
+            const cubiertas = done?.get(enrollmentId);
+            if (cubiertas && [...expected].every(id => cubiertas.has(id))) complete.add(enrollmentId);
+          }
+          index.set(key, complete);
+        }
+      }
+    }
+
+    return index;
+  }
+
+  /**
    * Reporte de completitud: qué grupos/asignaturas tienen notas y logros completos.
    * Identifica faltantes sin necesidad de revisar estudiante por estudiante.
    */
@@ -4270,7 +4604,9 @@ export class ReportsService {
         },
       },
       include: {
-        grade: { select: { name: true, stage: true } },
+        // C-2: `academicStructure` y `gradeId` se añaden para poder despachar el eje
+        // cualitativo. Es aditivo: no altera el filtro ni el orden de los grupos.
+        grade: { select: { id: true, name: true, stage: true, academicStructure: true } },
         _count: {
           select: {
             studentEnrollments: {
@@ -4390,6 +4726,27 @@ export class ReportsService {
       enrollmentsByGroup.set(e.groupId, list);
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // C-2 · EJE CUALITATIVO (sólo grados DIMENSIONS).
+    // La lógica vive en `buildQualitativeCompletenessIndex`, compartida con
+    // `validateTermGrades` (C-1): ambos deben aplicar EXACTAMENTE las mismas reglas de
+    // obligación cualitativa. Los índices cuantitativos de arriba no se tocan.
+    const dimensionGroups = groups.filter(g => (g.grade as any)?.academicStructure === 'DIMENSIONS');
+    const qualitativeIndex = await this.buildQualitativeCompletenessIndex({
+      institutionId,
+      academicYearId,
+      terms,
+      teacherAssignmentIds: teacherAssignments
+        .filter(ta => dimensionGroups.some(g => g.id === ta.groupId))
+        .map(ta => ta.id),
+      groups: dimensionGroups.map(g => ({
+        id: g.id,
+        gradeId: (g.grade as any)?.id ?? null,
+        subjectIds: (taByGroup.get(g.id) || []).map(ta => ta.subjectId),
+        enrollmentIds: (enrollmentsByGroup.get(g.id) || []).map(e => e.id),
+      })),
+    });
+
     // 7. Construir resultado por grupo
     let totalGradeCells = 0;
     let filledGradeCells = 0;
@@ -4401,12 +4758,18 @@ export class ReportsService {
       const groupEnrollments = enrollmentsByGroup.get(group.id) || [];
       const studentCount = groupEnrollments.length;
 
+      // C-2: los grados por dimensiones se miden con el índice cualitativo; el resto
+      // conserva EXACTAMENTE el índice cuantitativo de siempre.
+      const isDimensions = (group.grade as any)?.academicStructure === 'DIMENSIONS';
+      const achievementSetFor = (key: string) =>
+        isDimensions ? qualitativeIndex.get(key) : achievementIndex.get(key);
+
       const subjects = groupTAs.map(ta => {
         const termResults = terms.map(term => {
           const gradeKey = `${group.id}|${ta.subjectId}|${term.id}`;
           const achievementKey = `${group.id}|${ta.subjectId}|${term.id}`;
           const studentsWithGrade = gradeIndex.get(gradeKey)?.size ?? 0;
-          const studentsWithAchievement = achievementIndex.get(achievementKey)?.size ?? 0;
+          const studentsWithAchievement = achievementSetFor(achievementKey)?.size ?? 0;
 
           totalGradeCells += studentCount;
           filledGradeCells += studentsWithGrade;
@@ -4420,7 +4783,7 @@ export class ReportsService {
 
           // Estudiantes faltantes de logro
           const missingAchievementStudents = groupEnrollments
-            .filter(e => !achievementIndex.get(achievementKey)?.has(e.id))
+            .filter(e => !achievementSetFor(achievementKey)?.has(e.id))
             .map(e => ({ enrollmentId: e.id, name: [e.student.lastName, (e.student as any).secondLastName, e.student.firstName, (e.student as any).secondName].filter(Boolean).join(' ') }));
 
           return {

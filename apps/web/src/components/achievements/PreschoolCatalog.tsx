@@ -3,7 +3,8 @@ import { BookOpen, Plus, Save, Trash2 } from 'lucide-react'
 import { confirmDialog } from '../ui/confirm'
 import { achievementConfigApi, achievementsApi, areasApi, gradesConfigApi } from '../../lib/api'
 
-type Evidence = { id?: string; text: string; orderNumber?: number }
+// `retiredFromTermId` es la fuente de verdad del retiro (D-12). `isActive` está deprecado.
+type Evidence = { id?: string; text: string; orderNumber?: number; retiredFromTermId?: string | null }
 type Purpose = { id: string; baseDescription: string; orderNumber: number; evidences: Evidence[] }
 
 type Props = {
@@ -136,13 +137,52 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
     try {
       const response = await achievementsApi.update(purpose.id, {
         baseDescription,
-        evidences: evidences.map((evidence) => ({ text: evidence.text })),
+        // El id viaja SIEMPRE que exista: es lo que permite al backend reconocer que la
+        // evidencia es la misma y conservar las valoraciones ya registradas por los docentes.
+        evidences: evidences.map((evidence) => ({ id: evidence.id, text: evidence.text })),
       })
       setPurposes((current) => current.map((item) => item.id === purpose.id ? response.data : item))
       setMessage('Propósito actualizado.')
     } catch (error) {
       console.error('Error updating purpose:', error)
       setMessage('No se pudo actualizar el propósito.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Retiro lógico (D-12) ────────────────────────────────────────────────────
+  // El período viaja explícito: el modelo no tiene "período en curso". Si el admin
+  // está en la vista "Anual" hay que pedirle que elija uno.
+  const retireEvidence = async (evidence: Evidence) => {
+    if (!evidence.id) return
+    if (!termId) {
+      setMessage(`Para retirar un ${labels.evidenceLabelSingular.toLowerCase()} debe elegir primero el período desde el que deja de aplicar.`)
+      return
+    }
+    const termName = terms.find((t: any) => t.id === termId)?.name || 'el período seleccionado'
+    if (!(await confirmDialog(`¿Retirar “${evidence.text}” a partir de ${termName}? Se conservan todas las valoraciones ya registradas y seguirá apareciendo en los períodos anteriores.`, { danger: true }))) return
+    setSaving(true)
+    try {
+      await achievementsApi.retireEvidence(evidence.id, { academicTermId: termId })
+      setPurposes((current) => current.map((p) => ({ ...p, evidences: p.evidences.map((e) => e.id === evidence.id ? { ...e, retiredFromTermId: termId } : e) })))
+      setMessage(`${labels.evidenceLabelSingular} retirado a partir de ${termName}.`)
+    } catch (error: any) {
+      setMessage(error?.response?.data?.message || 'No se pudo retirar.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const reactivateEvidence = async (evidence: Evidence) => {
+    if (!evidence.id) return
+    setSaving(true)
+    try {
+      await achievementsApi.reactivateEvidence(evidence.id)
+      setPurposes((current) => current.map((p) => ({ ...p, evidences: p.evidences.map((e) => e.id === evidence.id ? { ...e, retiredFromTermId: null } : e) })))
+      setMessage(`${labels.evidenceLabelSingular} reactivado. El efecto es sólo hacia adelante.`)
+    } catch (error: any) {
+      setMessage(error?.response?.data?.message || 'No se pudo reactivar.')
     } finally {
       setSaving(false)
     }
@@ -221,13 +261,13 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
       <section className="space-y-3">
         {loading && <p className="text-sm text-slate-500">Cargando catálogo…</p>}
         {!loading && gradeId && subjectId && purposes.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aún no hay propósitos en esta dimensión y vigencia.</p>}
-        {purposes.map((purpose) => <PurposeCard key={purpose.id} purpose={purpose} labels={labels} saving={saving} onSave={savePurpose} onDelete={deletePurpose} />)}
+        {purposes.map((purpose) => <PurposeCard key={purpose.id} purpose={purpose} labels={labels} saving={saving} termId={termId} onSave={savePurpose} onDelete={deletePurpose} onRetire={retireEvidence} onReactivate={reactivateEvidence} />)}
       </section>
     </div>
   )
 }
 
-function PurposeCard({ purpose, labels, saving, onSave, onDelete }: { purpose: Purpose; labels: any; saving: boolean; onSave: (purpose: Purpose, description: string, evidences: Evidence[]) => void; onDelete: (purpose: Purpose) => void }) {
+function PurposeCard({ purpose, labels, saving, termId, onSave, onDelete, onRetire, onReactivate }: { purpose: Purpose; labels: any; saving: boolean; termId: string; onSave: (purpose: Purpose, description: string, evidences: Evidence[]) => void; onDelete: (purpose: Purpose) => void; onRetire: (evidence: Evidence) => void; onReactivate: (evidence: Evidence) => void }) {
   const [description, setDescription] = useState(purpose.baseDescription)
   const [evidences, setEvidences] = useState<Evidence[]>(purpose.evidences || [])
 
@@ -239,7 +279,28 @@ function PurposeCard({ purpose, labels, saving, onSave, onDelete }: { purpose: P
   return <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex items-start justify-between gap-4"><span className="rounded bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">{labels.learningLabelSingular} {purpose.orderNumber}</span><button onClick={() => onDelete(purpose)} className="rounded p-2 text-rose-600 hover:bg-rose-50" title="Eliminar propósito"><Trash2 className="h-4 w-4" /></button></div>
     <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} className="mt-3 w-full rounded-lg border border-slate-300 p-3 text-sm font-medium" />
-    <div className="mt-3 space-y-2">{evidences.map((evidence, index) => <div key={evidence.id || index} className="flex gap-2"><input value={evidence.text} onChange={(event) => setEvidences(evidences.map((item, itemIndex) => itemIndex === index ? { ...item, text: event.target.value } : item))} className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" /><button onClick={() => setEvidences(evidences.filter((_, itemIndex) => itemIndex !== index))} className="rounded px-2 text-slate-500 hover:bg-slate-100" aria-label="Quitar imprescindible">×</button></div>)}</div>
+    {/* D-12: las evidencias retiradas SIGUEN en la lista y en el payload. Ocultarlas
+        haría que reconcileEvidences las interpretara como baja. Se marcan visualmente
+        y se editan sólo mediante Retirar/Reactivar. */}
+    <div className="mt-3 space-y-2">{evidences.map((evidence, index) => {
+      const retired = !!evidence.retiredFromTermId
+      return <div key={evidence.id || index} className="flex items-center gap-2">
+        <input
+          value={evidence.text}
+          onChange={(event) => setEvidences(evidences.map((item, itemIndex) => itemIndex === index ? { ...item, text: event.target.value } : item))}
+          className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${retired ? 'border-slate-200 bg-slate-50 text-slate-400 line-through' : 'border-slate-300'}`}
+        />
+        {retired
+          ? <>
+              <span className="shrink-0 rounded bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700">Retirada</span>
+              <button onClick={() => onReactivate(evidence)} disabled={saving} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">Reactivar</button>
+            </>
+          : <>
+              {evidence.id && <button onClick={() => onRetire(evidence)} disabled={saving} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50" title={termId ? 'Retirar del catálogo desde el período seleccionado' : 'Seleccione un período para poder retirar'}>Retirar</button>}
+              <button onClick={() => setEvidences(evidences.filter((_, itemIndex) => itemIndex !== index))} className="shrink-0 rounded px-2 text-slate-500 hover:bg-slate-100" aria-label="Quitar imprescindible">×</button>
+            </>}
+      </div>
+    })}</div>
     <button onClick={() => setEvidences([...evidences, { text: '' }])} className="mt-2 text-sm font-medium text-indigo-700 hover:text-indigo-900">+ Añadir {labels.evidenceLabelSingular.toLowerCase()}</button>
     <div className="mt-4"><button onClick={() => onSave(purpose, description, evidences.filter((evidence) => evidence.text.trim()))} disabled={saving || !description.trim()} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Save className="h-4 w-4" />Guardar cambios</button></div>
   </article>

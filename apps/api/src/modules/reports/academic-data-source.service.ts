@@ -141,6 +141,11 @@ export class AcademicDataSourceService {
         term: firstSnapshot.term,
         academicStructure: firstSnapshot.academicStructure,
         displayConfig: firstSnapshot.displayConfig,
+        // C-4: el contrato de publicación congelado también viaja en la reconstrucción.
+        // Sin esta línea, un snapshot que SÍ lo contiene lo perdería por este camino.
+        // Se pasa tal cual: si el snapshot es histórico y no lo tiene, queda undefined
+        // y el degradado lo resuelven las plantillas.
+        reportContent: firstSnapshot.reportContent,
         cards: Array.from(groupSnapshots.entries()).map(([enrollmentId, snap]) => ({
           enrollmentId,
           student: snap.student,
