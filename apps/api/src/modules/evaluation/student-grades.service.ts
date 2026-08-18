@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertStudentGradeDto } from './dto/upsert-student-grade.dto';
+import { componentApplies } from './final-component-scope.util';
 
 @Injectable()
 export class StudentGradesService {
@@ -343,11 +344,15 @@ export class StudentGradesService {
 
     // A-11 / INV-10: PeriodFinalGrade se indexa por subjectId (no por asignación).
     // Resolvemos el subjectId una sola vez para leer la nota canónica del período.
+    // `group.gradeId` se añade para resolver el alcance de las fuentes finales
+    // (D-19): una prueba semestral puede no aplicar a un grado o a una
+    // asignatura concreta de ese grado.
     const assignment = await this.prisma.teacherAssignment.findUnique({
       where: { id: teacherAssignmentId },
-      select: { subjectId: true },
+      select: { subjectId: true, group: { select: { gradeId: true } } },
     });
     const subjectId = assignment?.subjectId ?? null;
+    const gradeId = assignment?.group?.gradeId ?? null;
 
     const termSources = await Promise.all(
       terms.map(async (term) => {
@@ -377,10 +382,31 @@ export class StudentGradesService {
     );
 
     // Fuente 2: Componentes finales (pruebas semestrales, proyecto final, etc.)
-    const finalComponents = await this.prisma.finalComponent.findMany({
+    const allFinalComponents = await this.prisma.finalComponent.findMany({
       where: { academicYearId },
       orderBy: { order: 'asc' },
     });
+
+    // D-19 · Alcance explícito. Las exclusiones declaran qué fuente NO aplica a
+    // este grado/asignatura. Sin filas —el caso de todas las instituciones que
+    // no configuren nada— esto es un no-op y el conjunto de fuentes es idéntico
+    // al histórico, así que ninguna nota anual existente cambia.
+    //
+    // Se consulta UNA vez, no por componente. Y sólo si hay componentes: las
+    // instituciones sin pruebas semestrales ni siquiera tocan la tabla.
+    const exclusions = allFinalComponents.length
+      ? await this.prisma.finalComponentExclusion.findMany({
+          where: {
+            finalComponentId: { in: allFinalComponents.map((fc) => fc.id) },
+            ...(gradeId ? { gradeId } : {}),
+          },
+          select: { finalComponentId: true, gradeId: true, subjectId: true },
+        })
+      : [];
+
+    const finalComponents = allFinalComponents.filter((fc) =>
+      componentApplies(fc.id, gradeId, subjectId, exclusions),
+    );
 
     const componentSources = await Promise.all(
       finalComponents.map(async (fc) => {

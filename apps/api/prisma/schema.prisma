@@ -288,6 +288,7 @@ model User {
   academicActsApproved      AcademicAct[]           @relation("ActApprovedBy")
   performanceManualEdits    PerformanceManualEdit[] @relation("PerformanceEditedBy")
   convivenciaEntries        ConvivenciaEntry[]      @relation("ConvivenciaCreatedBy")
+  finalComponentExclusions  FinalComponentExclusion[] @relation("FinalComponentExclusionCreatedBy")
 
   // Instituciones creadas por SuperAdmin
   institutionsCreated Institution[] @relation("InstitutionCreatedBy")
@@ -545,6 +546,7 @@ model Institution {
 
   // Componentes finales (pruebas semestrales, etc.)
   finalComponents FinalComponent[] @relation("InstitutionFinalComponents")
+  finalComponentExclusions FinalComponentExclusion[] @relation("RlsInstitutionFCE")
 
   // ═══════ RLS Multi-tenant isolation relations ═══════
   rlsStudentEnrollments      StudentEnrollment[]      @relation("RlsInstitutionSE")
@@ -727,6 +729,7 @@ model Grade {
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
   reportCardTemplateSelections ReportCardTemplateSelection[]
   catalogAchievements  Achievement[]         @relation("GradeCatalogAchievements")
+  finalComponentExclusions FinalComponentExclusion[]
 
   @@unique([institutionId, stage, name])
   @@index([institutionId])
@@ -823,6 +826,7 @@ model Subject {
   supportPlanSubjects    SupportPlanSubject[]    @relation("SupportPlanSubjects")
   catalogAchievements    Achievement[]           @relation("SubjectCatalogAchievements")
   convivenciaEntries     ConvivenciaEntry[]
+  finalComponentExclusions FinalComponentExclusion[]
 
   @@unique([areaId, name])
   @@index([areaId])
@@ -2011,6 +2015,7 @@ model FinalComponent {
   institution  Institution           @relation("InstitutionFinalComponents", fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear AcademicYear          @relation("AcademicYearFinalComponents", fields: [academicYearId], references: [id], onDelete: Cascade)
   grades       FinalComponentGrade[]
+  exclusions   FinalComponentExclusion[]
 
   @@unique([academicYearId, order])
 }
@@ -2032,6 +2037,61 @@ model FinalComponentGrade {
 
   @@unique([studentEnrollmentId, teacherAssignmentId, finalComponentId])
   @@index([teacherAssignmentId, finalComponentId])
+}
+
+/// Alcance de una fuente de evaluación final (p. ej. una prueba semestral).
+///
+/// Es una tabla de EXCLUSIONES, no de inclusiones: existir una fila significa
+/// «este componente NO aplica». La ausencia total de filas equivale al
+/// comportamiento histórico —el componente aplica a todo el mundo—, así que la
+/// migración no necesita ningún backfill y las instituciones que no configuren
+/// nada no cambian en absoluto.
+///
+/// PRECEDENCIA (de más específica a menos):
+///   1. (componente, grado, asignatura) → no aplica a esa asignatura de ese grado
+///   2. (componente, grado, NULL)       → no aplica a ningún subject de ese grado
+///   3. sin fila                        → APLICA
+///
+/// No existe regla de re-inclusión: excluir siempre resta, nunca suma. Si un
+/// grado presenta el semestral solo en algunas asignaturas, se excluyen las
+/// demás de forma explícita. Más filas, cero ambigüedad de resolución.
+///
+/// `gradeId` es NOT NULL a propósito: el alcance institucional ya lo da la
+/// existencia del propio FinalComponent, así que no hace falta una fila
+/// «general». Eso elimina un nivel de la jerarquía y, con él, el problema de
+/// que en PostgreSQL NULL != NULL dentro de un índice UNIQUE (defecto real y
+/// observable hoy en ReportCardTemplateSelection, que tiene 3 filas con
+/// gradeId = NULL pese a su @@unique).
+///
+/// El @@unique de abajo NO cubre las filas con subjectId = NULL por ese mismo
+/// motivo; la migración añade a mano un índice único PARCIAL para ese caso.
+model FinalComponentExclusion {
+  id               String  @id @default(cuid())
+  institutionId    String
+  finalComponentId String
+  gradeId          String
+  subjectId        String? // null ⇒ el grado completo queda excluido
+
+  reason      String? // por qué no aplica (trazabilidad)
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution    Institution    @relation("RlsInstitutionFCE", fields: [institutionId], references: [id])
+  finalComponent FinalComponent @relation(fields: [finalComponentId], references: [id], onDelete: Cascade)
+  grade          Grade          @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdBy      User?          @relation("FinalComponentExclusionCreatedBy", fields: [createdById], references: [id])
+
+  // Nombres FIJADOS a mano: los autogenerados rozan el límite de 63 caracteres
+  // de PostgreSQL y ese truncamiento es justo el origen de 6 de las 8 sentencias
+  // de drift que arrastra esta base. Con `map` el nombre es el mismo en el
+  // esquema y en el motor.
+  @@unique([finalComponentId, gradeId, subjectId], map: "FCE_component_grade_subject_key")
+  @@index([finalComponentId], map: "FCE_component_idx")
+  @@index([institutionId], map: "FCE_institution_idx")
+  @@index([gradeId], map: "FCE_grade_idx")
 }
 
 enum PreventiveAlertStatus {

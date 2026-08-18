@@ -40,6 +40,40 @@ export class FinalComponentsController {
     return this.service.bulkSync(institutionId!, body.academicYearId, body.components);
   }
 
+  // ── D-19 · Alcance: qué grados/asignaturas NO presentan una fuente final ──
+  // Van ANTES de las rutas con `:id` para que Nest no interprete "scope" como
+  // un identificador de componente.
+
+  @Get('scope')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getScope(@Query('academicYearId') academicYearId: string) {
+    return this.service.getScope(academicYearId);
+  }
+
+  @Post('scope/exclusions')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async addExclusion(
+    @Body() body: { finalComponentId: string; gradeId: string; subjectId?: string | null; reason?: string },
+    @Req() req: any,
+  ) {
+    const institutionId = await resolveInstitutionId(this.prisma as any, req);
+    return this.service.addExclusion({
+      institutionId: institutionId!,
+      finalComponentId: body.finalComponentId,
+      gradeId: body.gradeId,
+      subjectId: body.subjectId ?? null,
+      reason: body.reason,
+      createdById: req?.user?.id,
+    });
+  }
+
+  @Delete('scope/exclusions/:exclusionId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async removeExclusion(@Param('exclusionId') exclusionId: string, @Req() req: any) {
+    const institutionId = await resolveInstitutionId(this.prisma as any, req);
+    return this.service.removeExclusion(exclusionId, institutionId!);
+  }
+
   @Put(':id/toggle-open')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async toggleOpen(@Param('id') id: string, @Body() body: { isOpen: boolean }) {
