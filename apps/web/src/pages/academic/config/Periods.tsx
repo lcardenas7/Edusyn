@@ -402,11 +402,7 @@ export default function Periods() {
           )}
 
           {gradingConfig.useFinalComponents && (
-            <FinalComponentScopeMatrix
-              academicYearId={academicYearId}
-              institutionId={authInstitution?.id ?? null}
-              canEdit={canEditPeriods}
-            />
+            <FinalComponentScopeMatrix academicYearId={academicYearId} canEdit={canEditPeriods} />
           )}
         </div>
       </div>

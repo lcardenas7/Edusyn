@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Info, Loader2 } from 'lucide-react'
-import { academicGradesApi, areasApi, finalComponentsApi } from '../../lib/api'
+import { finalComponentsApi } from '../../lib/api'
 import { toast } from '../../lib/toast'
 
 /**
@@ -17,7 +17,8 @@ import { toast } from '../../lib/toast'
  *
  * La UI nunca calcula la aplicabilidad por su cuenta: si lo hiciera, podría
  * divergir del cálculo real y mostrar una casilla marcada que el backend
- * rechaza al guardar una nota.
+ * rechaza al guardar una nota. Por lo mismo, los grados y las asignaturas de
+ * cada grado también salen de `getScope`: una sola llamada, una sola verdad.
  */
 
 type ScopeMode = 'ALL_GRADES' | 'SELECTED_GRADES'
@@ -43,6 +44,7 @@ interface Grade {
   id: string
   name: string
   stage: string
+  number: number | null
 }
 
 interface Subject {
@@ -52,17 +54,19 @@ interface Subject {
 
 export default function FinalComponentScopeMatrix({
   academicYearId,
-  institutionId,
   canEdit,
 }: {
   academicYearId: string | null
-  institutionId: string | null
   canEdit: boolean
 }) {
   const [components, setComponents] = useState<Component[]>([])
   const [rules, setRules] = useState<Rule[]>([])
   const [grades, setGrades] = useState<Grade[]>([])
-  const [subjects, setSubjects] = useState<Subject[]>([])
+  // Asignaturas POR GRADO: las que de verdad se dictan allí. Ofrecer el
+  // catálogo completo hacía que en Undécimo aparecieran las dimensiones de
+  // preescolar, y una excepción sobre una asignatura que ese grado no cursa
+  // no significa nada.
+  const [subjectsByGrade, setSubjectsByGrade] = useState<Record<string, Subject[]>>({})
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null) // `${componentId}|${gradeId}`
@@ -71,38 +75,22 @@ export default function FinalComponentScopeMatrix({
     if (!academicYearId) return
     setLoading(true)
     try {
-      const [scopeRes, gradesRes] = await Promise.all([
-        finalComponentsApi.getScope(academicYearId),
-        academicGradesApi.getAll(institutionId || undefined),
-      ])
-      setComponents(scopeRes.data?.components || [])
-      setRules(scopeRes.data?.rules || [])
-      setGrades((gradesRes.data || []).map((g: any) => ({ id: g.id, name: g.name, stage: g.stage })))
+      const { data } = await finalComponentsApi.getScope(academicYearId)
+      setComponents(data?.components || [])
+      setRules(data?.rules || [])
+      setGrades(data?.grades || [])
+      const mapa: Record<string, Subject[]> = {}
+      for (const fila of data?.gradeSubjects || []) mapa[fila.gradeId] = fila.subjects
+      setSubjectsByGrade(mapa)
     } catch (err) {
       console.error('Error cargando el alcance de fuentes finales:', err)
       toast.error('No se pudo cargar el alcance de las evaluaciones.')
     } finally {
       setLoading(false)
     }
-  }, [academicYearId, institutionId])
+  }, [academicYearId])
 
   useEffect(() => { load() }, [load])
-
-  // Las asignaturas sólo hacen falta al abrir el nivel 2 (excepción por
-  // asignatura), así que se cargan la primera vez que se despliega un grado.
-  const loadSubjects = useCallback(async () => {
-    if (subjects.length || !institutionId) return
-    try {
-      const res = await areasApi.getAll(institutionId)
-      const list: Subject[] = []
-      for (const area of res.data || []) {
-        for (const s of area.subjects || []) list.push({ id: s.id, name: s.name })
-      }
-      setSubjects(list.sort((a, b) => a.name.localeCompare(b.name)))
-    } catch (err) {
-      console.error('Error cargando asignaturas:', err)
-    }
-  }, [subjects.length, institutionId])
 
   const ruleFor = (componentId: string, gradeId: string, subjectId: string | null) =>
     rules.find(r => r.finalComponentId === componentId && r.gradeId === gradeId && r.subjectId === subjectId)
@@ -118,13 +106,6 @@ export default function FinalComponentScopeMatrix({
   const exceptionCount = (componentId: string, gradeId: string) =>
     rules.filter(r => r.finalComponentId === componentId && r.gradeId === gradeId && r.subjectId !== null).length
 
-  const gradesByStage = useMemo(() => {
-    const orden = ['PREESCOLAR', 'BASICA_PRIMARIA', 'BASICA_SECUNDARIA', 'MEDIA']
-    return [...grades].sort((a, b) => {
-      const d = orden.indexOf(a.stage) - orden.indexOf(b.stage)
-      return d !== 0 ? d : a.name.localeCompare(b.name, 'es', { numeric: true })
-    })
-  }, [grades])
 
   const withBusy = async (key: string, fn: () => Promise<any>) => {
     setBusy(key)
@@ -236,7 +217,7 @@ export default function FinalComponentScopeMatrix({
             </div>
 
             <div className="divide-y divide-slate-100">
-              {gradesByStage.map(g => {
+              {grades.map(g => {
                 const aplica = gradeApplies(comp, g.id)
                 const key = `${comp.id}|${g.id}`
                 const abierto = expanded === key
@@ -265,7 +246,7 @@ export default function FinalComponentScopeMatrix({
 
                       <button
                         type="button"
-                        onClick={() => { setExpanded(abierto ? null : key); if (!abierto) loadSubjects() }}
+                        onClick={() => setExpanded(abierto ? null : key)}
                         className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
                       >
                         {abierto ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -279,11 +260,13 @@ export default function FinalComponentScopeMatrix({
                           <Info className="w-3 h-3 mt-0.5 shrink-0" />
                           Solo si alguna asignatura se aparta de lo marcado arriba. Lo que no toque, hereda del grado.
                         </p>
-                        {subjects.length === 0 ? (
-                          <p className="text-xs text-slate-400">Cargando asignaturas…</p>
+                        {(subjectsByGrade[g.id] || []).length === 0 ? (
+                          <p className="text-xs text-slate-400">
+                            Este grado aún no tiene asignaturas con docente asignado.
+                          </p>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
-                            {subjects.map(s => {
+                            {(subjectsByGrade[g.id] || []).map(s => {
                               const r = ruleFor(comp.id, g.id, s.id)
                               const efectivo = r ? r.applies : aplica
                               const sKey = `${comp.id}|${g.id}|${s.id}`

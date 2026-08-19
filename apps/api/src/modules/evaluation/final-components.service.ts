@@ -68,7 +68,7 @@ export class FinalComponentsService {
       orderBy: { order: 'asc' },
       select: { id: true, name: true, weightPercentage: true, order: true, scopeMode: true },
     });
-    if (components.length === 0) return { components: [], rules: [] };
+    if (components.length === 0) return { components: [], rules: [], grades: [], gradeSubjects: [] };
 
     const rules = await this.prisma.finalComponentScope.findMany({
       where: { finalComponentId: { in: components.map((c) => c.id) } },
@@ -86,7 +86,42 @@ export class FinalComponentsService {
       orderBy: [{ gradeId: 'asc' }, { subjectId: 'asc' }],
     });
 
-    return { components, rules };
+    // La matriz necesita además los grados y, por grado, las asignaturas que
+    // REALMENTE se dictan allí. Sin esto la excepción por asignatura ofrecía el
+    // catálogo entero de la institución: a un coordinador de Undécimo le
+    // aparecían las dimensiones de preescolar.
+    const year = await this.prisma.academicYear.findUnique({
+      where: { id: academicYearId },
+      select: { institutionId: true },
+    });
+
+    const grades = year
+      ? await this.prisma.grade.findMany({
+          where: { institutionId: year.institutionId },
+          select: { id: true, name: true, stage: true, number: true },
+          orderBy: [{ stage: 'asc' }, { number: 'asc' }, { name: 'asc' }],
+        })
+      : [];
+
+    const asignaciones = await this.prisma.teacherAssignment.findMany({
+      where: { academicYearId },
+      select: { group: { select: { gradeId: true } }, subject: { select: { id: true, name: true } } },
+    });
+    const porGrado = new Map<string, Map<string, string>>();
+    for (const a of asignaciones) {
+      const gid = a.group?.gradeId;
+      if (!gid || !a.subject) continue;
+      if (!porGrado.has(gid)) porGrado.set(gid, new Map());
+      porGrado.get(gid)!.set(a.subject.id, a.subject.name);
+    }
+    const gradeSubjects = [...porGrado.entries()].map(([gradeId, subs]) => ({
+      gradeId,
+      subjects: [...subs.entries()]
+        .map(([id, name]) => ({ id, name }))
+        .sort((x, y) => x.name.localeCompare(y.name, 'es')),
+    }));
+
+    return { components, rules, grades, gradeSubjects };
   }
 
   /** Cambia el modo por defecto de una fuente. */
