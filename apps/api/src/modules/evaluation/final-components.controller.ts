@@ -40,7 +40,7 @@ export class FinalComponentsController {
     return this.service.bulkSync(institutionId!, body.academicYearId, body.components);
   }
 
-  // ── D-19 · Alcance: qué grados/asignaturas NO presentan una fuente final ──
+  // ── D-19 · Alcance: qué grados/asignaturas presentan una fuente final ──
   // Van ANTES de las rutas con `:id` para que Nest no interprete "scope" como
   // un identificador de componente.
 
@@ -50,28 +50,40 @@ export class FinalComponentsController {
     return this.service.getScope(academicYearId);
   }
 
-  @Post('scope/exclusions')
+  @Put('scope/:finalComponentId/mode')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async addExclusion(
-    @Body() body: { finalComponentId: string; gradeId: string; subjectId?: string | null; reason?: string },
+  async setScopeMode(
+    @Param('finalComponentId') finalComponentId: string,
+    @Body() body: { scopeMode: 'ALL_GRADES' | 'SELECTED_GRADES' },
     @Req() req: any,
   ) {
     const institutionId = await resolveInstitutionId(this.prisma as any, req);
-    return this.service.addExclusion({
+    return this.service.setScopeMode(finalComponentId, body.scopeMode, institutionId!);
+  }
+
+  @Post('scope/rules')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async upsertScopeRule(
+    @Body() body: { finalComponentId: string; gradeId: string; subjectId?: string | null; applies: boolean; reason?: string },
+    @Req() req: any,
+  ) {
+    const institutionId = await resolveInstitutionId(this.prisma as any, req);
+    return this.service.upsertScopeRule({
       institutionId: institutionId!,
       finalComponentId: body.finalComponentId,
       gradeId: body.gradeId,
       subjectId: body.subjectId ?? null,
+      applies: body.applies,
       reason: body.reason,
       createdById: req?.user?.id,
     });
   }
 
-  @Delete('scope/exclusions/:exclusionId')
+  @Delete('scope/rules/:ruleId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async removeExclusion(@Param('exclusionId') exclusionId: string, @Req() req: any) {
+  async removeScopeRule(@Param('ruleId') ruleId: string, @Req() req: any) {
     const institutionId = await resolveInstitutionId(this.prisma as any, req);
-    return this.service.removeExclusion(exclusionId, institutionId!);
+    return this.service.removeScopeRule(ruleId, institutionId!);
   }
 
   @Put(':id/toggle-open')

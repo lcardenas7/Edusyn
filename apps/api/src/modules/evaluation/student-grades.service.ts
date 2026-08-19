@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertStudentGradeDto } from './dto/upsert-student-grade.dto';
-import { componentApplies } from './final-component-scope.util';
+import { filterApplicableComponents } from './final-component-scope.util';
 
 @Injectable()
 export class StudentGradesService {
@@ -387,25 +387,28 @@ export class StudentGradesService {
       orderBy: { order: 'asc' },
     });
 
-    // D-19 · Alcance explícito. Las exclusiones declaran qué fuente NO aplica a
-    // este grado/asignatura. Sin filas —el caso de todas las instituciones que
-    // no configuren nada— esto es un no-op y el conjunto de fuentes es idéntico
-    // al histórico, así que ninguna nota anual existente cambia.
+    // D-19 · Alcance explícito, resuelto por la regla canónica compartida.
+    // Con scopeMode = ALL_GRADES (el DEFAULT) y sin reglas —el caso de todas las
+    // instituciones que no configuren nada— esto es un no-op: el conjunto de
+    // fuentes es idéntico al histórico y ninguna nota anual cambia.
     //
     // Se consulta UNA vez, no por componente. Y sólo si hay componentes: las
     // instituciones sin pruebas semestrales ni siquiera tocan la tabla.
-    const exclusions = allFinalComponents.length
-      ? await this.prisma.finalComponentExclusion.findMany({
+    const scopeRules = allFinalComponents.length
+      ? await this.prisma.finalComponentScope.findMany({
           where: {
             finalComponentId: { in: allFinalComponents.map((fc) => fc.id) },
             ...(gradeId ? { gradeId } : {}),
           },
-          select: { finalComponentId: true, gradeId: true, subjectId: true },
+          select: { finalComponentId: true, gradeId: true, subjectId: true, applies: true },
         })
       : [];
 
-    const finalComponents = allFinalComponents.filter((fc) =>
-      componentApplies(fc.id, gradeId, subjectId, exclusions),
+    const finalComponents = filterApplicableComponents(
+      allFinalComponents,
+      gradeId,
+      subjectId,
+      scopeRules,
     );
 
     const componentSources = await Promise.all(

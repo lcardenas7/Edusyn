@@ -20,35 +20,36 @@ export class FinalComponentsService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // D-19 · ALCANCE: qué grados/asignaturas NO presentan una fuente final
+  // D-19 · ALCANCE: qué grados/asignaturas presentan una fuente final
   // ═══════════════════════════════════════════════════════════════════════════
   //
-  // Modelo de EXCLUSIONES: sin filas, el componente aplica a todo el mundo, que
-  // es el comportamiento histórico. Por eso no hubo backfill y por eso una
-  // institución que no configure nada no cambia en absoluto.
+  // El modo por defecto vive en el propio componente (`scopeMode`); esta tabla
+  // guarda sólo las reglas que se apartan de él. Con ALL_GRADES —el DEFAULT— y
+  // sin reglas, el comportamiento es idéntico al histórico.
   //
-  // Regla de precedencia (en `final-component-scope.util.ts`, función pura
-  // compartida con el cálculo de la nota anual):
-  //     (componente, grado, asignatura) → no aplica a esa asignatura
-  //     (componente, grado, null)       → no aplica a todo el grado
-  //     sin fila                        → aplica
+  // Resolución (en `final-component-scope.util.ts`, función pura compartida con
+  // el cálculo anual, las proyecciones y la captura):
+  //     (componente, grado, asignatura) → su `applies`
+  //     (componente, grado, null)       → su `applies`
+  //     sin regla                       → scopeMode === ALL_GRADES
 
   /** Alcance declarado de todas las fuentes finales de un año. */
   async getScope(academicYearId: string) {
     const components = await this.prisma.finalComponent.findMany({
       where: { academicYearId },
       orderBy: { order: 'asc' },
-      select: { id: true, name: true, weightPercentage: true, order: true },
+      select: { id: true, name: true, weightPercentage: true, order: true, scopeMode: true },
     });
-    if (components.length === 0) return { components: [], exclusions: [] };
+    if (components.length === 0) return { components: [], rules: [] };
 
-    const exclusions = await this.prisma.finalComponentExclusion.findMany({
+    const rules = await this.prisma.finalComponentScope.findMany({
       where: { finalComponentId: { in: components.map((c) => c.id) } },
       select: {
         id: true,
         finalComponentId: true,
         gradeId: true,
         subjectId: true,
+        applies: true,
         reason: true,
         createdAt: true,
         grade: { select: { id: true, name: true, stage: true } },
@@ -57,24 +58,42 @@ export class FinalComponentsService {
       orderBy: [{ gradeId: 'asc' }, { subjectId: 'asc' }],
     });
 
-    return { components, exclusions };
+    return { components, rules };
+  }
+
+  /** Cambia el modo por defecto de una fuente. */
+  async setScopeMode(finalComponentId: string, scopeMode: 'ALL_GRADES' | 'SELECTED_GRADES', institutionId: string) {
+    const component = await this.prisma.finalComponent.findUnique({
+      where: { id: finalComponentId },
+      select: { id: true, institutionId: true },
+    });
+    if (!component) throw new NotFoundException('Componente final no encontrado');
+    if (component.institutionId !== institutionId) {
+      throw new BadRequestException('El componente no pertenece a esta institución');
+    }
+    return this.prisma.finalComponent.update({
+      where: { id: finalComponentId },
+      data: { scopeMode },
+    });
   }
 
   /**
-   * Declara que un componente NO aplica a un grado (o a una asignatura de ese
-   * grado). Idempotente: repetir la misma exclusión no falla ni duplica.
+   * Declara una regla de alcance. `applies=false` excluye; `applies=true`
+   * incluye (y sirve como EXCEPCIÓN por asignatura sobre un grado excluido).
+   * Idempotente: repetirla actualiza en vez de duplicar.
    */
-  async addExclusion(data: {
+  async upsertScopeRule(data: {
     institutionId: string;
     finalComponentId: string;
     gradeId: string;
     subjectId?: string | null;
+    applies: boolean;
     reason?: string;
     createdById?: string;
   }) {
     const component = await this.prisma.finalComponent.findUnique({
       where: { id: data.finalComponentId },
-      select: { id: true, institutionId: true, name: true },
+      select: { id: true, institutionId: true },
     });
     if (!component) throw new NotFoundException('Componente final no encontrado');
     if (component.institutionId !== data.institutionId) {
@@ -83,7 +102,7 @@ export class FinalComponentsService {
 
     const grade = await this.prisma.grade.findFirst({
       where: { id: data.gradeId, institutionId: data.institutionId },
-      select: { id: true, name: true },
+      select: { id: true },
     });
     if (!grade) throw new BadRequestException('El grado no pertenece a esta institución');
 
@@ -97,38 +116,45 @@ export class FinalComponentsService {
 
     const subjectId = data.subjectId ?? null;
 
-    // Idempotencia. No uso `upsert` porque el @@unique incluye una columna
-    // anulable y en PostgreSQL NULL != NULL: el upsert no reconocería la fila
-    // existente cuando subjectId es null (el índice único PARCIAL de la
-    // migración sí la protege, pero devolvería un 500 en vez de ser idempotente).
-    const existing = await this.prisma.finalComponentExclusion.findFirst({
+    // No uso `upsert` de Prisma porque el @@unique incluye una columna anulable
+    // y en PostgreSQL NULL != NULL: no reconocería la fila existente cuando
+    // subjectId es null. El índice único PARCIAL de la migración sí la protege,
+    // pero devolvería un 500 en vez de comportarse de forma idempotente.
+    const existing = await this.prisma.finalComponentScope.findFirst({
       where: { finalComponentId: data.finalComponentId, gradeId: data.gradeId, subjectId },
+      select: { id: true },
     });
-    if (existing) return existing;
+    if (existing) {
+      return this.prisma.finalComponentScope.update({
+        where: { id: existing.id },
+        data: { applies: data.applies, reason: data.reason ?? null },
+      });
+    }
 
-    return this.prisma.finalComponentExclusion.create({
+    return this.prisma.finalComponentScope.create({
       data: {
         institutionId: data.institutionId,
         finalComponentId: data.finalComponentId,
         gradeId: data.gradeId,
         subjectId,
+        applies: data.applies,
         reason: data.reason ?? null,
         createdById: data.createdById ?? null,
       },
     });
   }
 
-  /** Vuelve a incluir: la fuente pasa a aplicar de nuevo a esa coordenada. */
-  async removeExclusion(id: string, institutionId: string) {
-    const ex = await this.prisma.finalComponentExclusion.findUnique({
+  /** Retira una regla: la coordenada vuelve a decidirse por el `scopeMode`. */
+  async removeScopeRule(id: string, institutionId: string) {
+    const rule = await this.prisma.finalComponentScope.findUnique({
       where: { id },
       select: { id: true, institutionId: true },
     });
-    if (!ex) throw new NotFoundException('Exclusión no encontrada');
-    if (ex.institutionId !== institutionId) {
-      throw new BadRequestException('La exclusión no pertenece a esta institución');
+    if (!rule) throw new NotFoundException('Regla de alcance no encontrada');
+    if (rule.institutionId !== institutionId) {
+      throw new BadRequestException('La regla no pertenece a esta institución');
     }
-    return this.prisma.finalComponentExclusion.delete({ where: { id } });
+    return this.prisma.finalComponentScope.delete({ where: { id } });
   }
 
   async create(data: {

@@ -288,7 +288,7 @@ model User {
   academicActsApproved      AcademicAct[]           @relation("ActApprovedBy")
   performanceManualEdits    PerformanceManualEdit[] @relation("PerformanceEditedBy")
   convivenciaEntries        ConvivenciaEntry[]      @relation("ConvivenciaCreatedBy")
-  finalComponentExclusions  FinalComponentExclusion[] @relation("FinalComponentExclusionCreatedBy")
+  finalComponentScopes      FinalComponentScope[]     @relation("FinalComponentScopeCreatedBy")
 
   // Instituciones creadas por SuperAdmin
   institutionsCreated Institution[] @relation("InstitutionCreatedBy")
@@ -546,7 +546,7 @@ model Institution {
 
   // Componentes finales (pruebas semestrales, etc.)
   finalComponents FinalComponent[] @relation("InstitutionFinalComponents")
-  finalComponentExclusions FinalComponentExclusion[] @relation("RlsInstitutionFCE")
+  finalComponentScopes FinalComponentScope[] @relation("RlsInstitutionFCS")
 
   // ═══════ RLS Multi-tenant isolation relations ═══════
   rlsStudentEnrollments      StudentEnrollment[]      @relation("RlsInstitutionSE")
@@ -729,7 +729,7 @@ model Grade {
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
   reportCardTemplateSelections ReportCardTemplateSelection[]
   catalogAchievements  Achievement[]         @relation("GradeCatalogAchievements")
-  finalComponentExclusions FinalComponentExclusion[]
+  finalComponentScopes FinalComponentScope[]
 
   @@unique([institutionId, stage, name])
   @@index([institutionId])
@@ -826,7 +826,7 @@ model Subject {
   supportPlanSubjects    SupportPlanSubject[]    @relation("SupportPlanSubjects")
   catalogAchievements    Achievement[]           @relation("SubjectCatalogAchievements")
   convivenciaEntries     ConvivenciaEntry[]
-  finalComponentExclusions FinalComponentExclusion[]
+  finalComponentScopes FinalComponentScope[]
 
   @@unique([areaId, name])
   @@index([areaId])
@@ -2009,13 +2009,16 @@ model FinalComponent {
   weightPercentage Int // Peso en la nota anual (ej: 10)
   order            Int
   isOpen           Boolean  @default(false) // Controla si el ingreso de notas está habilitado
+  /// Alcance por defecto. Las filas de FinalComponentScope declaran las
+  /// excepciones. ALL_GRADES conserva el comportamiento histórico.
+  scopeMode        FinalComponentScopeMode @default(ALL_GRADES)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   institution  Institution           @relation("InstitutionFinalComponents", fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear AcademicYear          @relation("AcademicYearFinalComponents", fields: [academicYearId], references: [id], onDelete: Cascade)
   grades       FinalComponentGrade[]
-  exclusions   FinalComponentExclusion[]
+  scopes       FinalComponentScope[]
 
   @@unique([academicYearId, order])
 }
@@ -2039,59 +2042,81 @@ model FinalComponentGrade {
   @@index([teacherAssignmentId, finalComponentId])
 }
 
+/// Modo de alcance por defecto de una fuente de evaluación final.
+/// ALL_GRADES      → aplica a todos los grados salvo excepción explícita.
+///                   Es el DEFAULT, y por eso los componentes existentes
+///                   conservan su comportamiento sin necesidad de backfill.
+/// SELECTED_GRADES → NO aplica a nadie salvo inclusión explícita. Obliga a
+///                   declarar la población, de modo que una fuente nueva nunca
+///                   entra en el cálculo por descuido.
+enum FinalComponentScopeMode {
+  ALL_GRADES
+  SELECTED_GRADES
+}
+
 /// Alcance de una fuente de evaluación final (p. ej. una prueba semestral).
 ///
-/// Es una tabla de EXCLUSIONES, no de inclusiones: existir una fila significa
-/// «este componente NO aplica». La ausencia total de filas equivale al
-/// comportamiento histórico —el componente aplica a todo el mundo—, así que la
-/// migración no necesita ningún backfill y las instituciones que no configuren
-/// nada no cambian en absoluto.
+/// EL PROBLEMA
+///   Una institución puede tener semestrales sin que TODOS sus grados o
+///   asignaturas los presenten. Hasta ahora «no aplica» sólo podía INFERIRSE de
+///   que no hubiera nota, y eso es indistinguible de «al docente le falta
+///   subirla» — el mismo proxy inestable que D-12 rechazó al negarse a deducir
+///   el retiro de un imprescindible desde sus valoraciones.
 ///
-/// PRECEDENCIA (de más específica a menos):
-///   1. (componente, grado, asignatura) → no aplica a esa asignatura de ese grado
-///   2. (componente, grado, NULL)       → no aplica a ningún subject de ese grado
-///   3. sin fila                        → APLICA
+/// CÓMO SE DECLARA
+///   El modo por defecto vive en el propio componente (`scopeMode`), y esta
+///   tabla guarda las reglas que se apartan de él. Separar el modo del acto de
+///   declararlo resuelve dos exigencias que de otro modo chocan:
+///     · una fuente NUEVA no aplica a nadie por descuido: su modo es una
+///       decisión explícita del administrador al crearla;
+///     · las fuentes EXISTENTES heredan ALL_GRADES por el DEFAULT de la columna,
+///       así que conservan exactamente el comportamiento histórico sin backfill.
 ///
-/// No existe regla de re-inclusión: excluir siempre resta, nunca suma. Si un
-/// grado presenta el semestral solo en algunas asignaturas, se excluyen las
-/// demás de forma explícita. Más filas, cero ambigüedad de resolución.
+/// RESOLUCIÓN — determinista, de más específica a menos:
+///     1. fila (componente, grado, asignatura) → su `applies`
+///     2. fila (componente, grado, null)       → su `applies`
+///     3. sin fila                             → scopeMode == ALL_GRADES
+///
+///   `applies` permite la EXCEPCIÓN: excluir 8.º entero y rescatar Matemáticas
+///   es (8.º, null, false) + (8.º, Matemáticas, true). Una lista negra pura no
+///   sabría expresarlo.
 ///
 /// `gradeId` es NOT NULL a propósito: el alcance institucional ya lo da la
-/// existencia del propio FinalComponent, así que no hace falta una fila
-/// «general». Eso elimina un nivel de la jerarquía y, con él, el problema de
-/// que en PostgreSQL NULL != NULL dentro de un índice UNIQUE (defecto real y
-/// observable hoy en ReportCardTemplateSelection, que tiene 3 filas con
-/// gradeId = NULL pese a su @@unique).
-///
-/// El @@unique de abajo NO cubre las filas con subjectId = NULL por ese mismo
-/// motivo; la migración añade a mano un índice único PARCIAL para ese caso.
-model FinalComponentExclusion {
+/// existencia del componente, así que no hace falta una fila «general». Eso
+/// elimina un nivel de la jerarquía y con él el problema de que en PostgreSQL
+/// NULL != NULL dentro de un índice UNIQUE — defecto real y observable hoy en
+/// ReportCardTemplateSelection, con 3 filas de gradeId = NULL pese a su
+/// @@unique. El caso «grado completo» (subjectId = NULL) lo protege un índice
+/// único PARCIAL que añade la migración, no expresable en Prisma.
+model FinalComponentScope {
   id               String  @id @default(cuid())
   institutionId    String
   finalComponentId String
   gradeId          String
-  subjectId        String? // null ⇒ el grado completo queda excluido
+  subjectId        String? // null ⇒ la regla cubre todas las asignaturas del grado
 
-  reason      String? // por qué no aplica (trazabilidad)
+  /// true = esa población SÍ presenta la fuente · false = NO la presenta.
+  applies Boolean
+
+  reason      String? // por qué, para poder explicarlo (trazabilidad)
   createdById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  institution    Institution    @relation("RlsInstitutionFCE", fields: [institutionId], references: [id])
+  institution    Institution    @relation("RlsInstitutionFCS", fields: [institutionId], references: [id])
   finalComponent FinalComponent @relation(fields: [finalComponentId], references: [id], onDelete: Cascade)
   grade          Grade          @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  createdBy      User?          @relation("FinalComponentExclusionCreatedBy", fields: [createdById], references: [id])
+  createdBy      User?          @relation("FinalComponentScopeCreatedBy", fields: [createdById], references: [id])
 
   // Nombres FIJADOS a mano: los autogenerados rozan el límite de 63 caracteres
-  // de PostgreSQL y ese truncamiento es justo el origen de 6 de las 8 sentencias
-  // de drift que arrastra esta base. Con `map` el nombre es el mismo en el
-  // esquema y en el motor.
-  @@unique([finalComponentId, gradeId, subjectId], map: "FCE_component_grade_subject_key")
-  @@index([finalComponentId], map: "FCE_component_idx")
-  @@index([institutionId], map: "FCE_institution_idx")
-  @@index([gradeId], map: "FCE_grade_idx")
+  // de PostgreSQL, y ese truncamiento origina 6 de las 8 sentencias de drift
+  // que arrastra esta base.
+  @@unique([finalComponentId, gradeId, subjectId], map: "FCS_component_grade_subject_key")
+  @@index([finalComponentId], map: "FCS_component_idx")
+  @@index([institutionId], map: "FCS_institution_idx")
+  @@index([gradeId], map: "FCS_grade_idx")
 }
 
 enum PreventiveAlertStatus {

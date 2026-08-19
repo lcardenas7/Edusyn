@@ -1,4 +1,10 @@
-import { componentApplies, exclusionReason } from './final-component-scope.util';
+import {
+  componentApplies,
+  resolveComponentScope,
+  filterApplicableComponents,
+  scopeReasonLabel,
+  ScopedComponent,
+} from './final-component-scope.util';
 import { StudentGradesService } from './student-grades.service';
 
 /**
@@ -9,8 +15,9 @@ import { StudentGradesService } from './student-grades.service';
  * asignaturas las presenten. Hasta ahora eso sólo podía inferirse de la
  * ausencia de nota, lo cual es indistinguible de «al docente le falta subirla».
  *
- * Estas pruebas fijan la regla y, sobre todo, fijan la GARANTÍA DE NO
- * REGRESIÓN: sin exclusiones configuradas, el cálculo es idéntico al histórico.
+ * Estas pruebas fijan la resolución jerárquica y, sobre todo, la GARANTÍA DE NO
+ * REGRESIÓN: con `scopeMode = ALL_GRADES` (el DEFAULT) y sin reglas, el cálculo
+ * es idéntico al histórico.
  */
 
 const FC1 = 'fc-semestral-1';
@@ -20,72 +27,116 @@ const G9 = 'grado-noveno';
 const MAT = 'subj-matematicas';
 const EDF = 'subj-edu-fisica';
 
-describe('D-19 · regla de alcance (función pura)', () => {
-  it('sin exclusiones, TODO aplica — el comportamiento histórico', () => {
-    expect(componentApplies(FC1, G8, MAT, [])).toBe(true);
-    expect(componentApplies(FC2, G9, EDF, [])).toBe(true);
-  });
+const todos = (id: string): ScopedComponent => ({ id, scopeMode: 'ALL_GRADES' });
+const selectivo = (id: string): ScopedComponent => ({ id, scopeMode: 'SELECTED_GRADES' });
 
-  describe('precedencia 2 · exclusión de GRADO completo (subjectId = null)', () => {
-    const exclusiones = [{ finalComponentId: FC1, gradeId: G8, subjectId: null }];
-
-    it('ninguna asignatura de ese grado presenta esa fuente', () => {
-      expect(componentApplies(FC1, G8, MAT, exclusiones)).toBe(false);
-      expect(componentApplies(FC1, G8, EDF, exclusiones)).toBe(false);
+describe('D-19 · resolución de alcance (función pura)', () => {
+  describe('precedencia 3 · el modo del componente decide cuando no hay reglas', () => {
+    it('ALL_GRADES sin reglas ⇒ aplica — el comportamiento histórico', () => {
+      const d = resolveComponentScope(todos(FC1), G8, MAT, []);
+      expect(d).toEqual({ applies: true, source: 'DEFAULT_MODE' });
     });
 
-    it('no contamina a otros grados', () => {
-      expect(componentApplies(FC1, G9, MAT, exclusiones)).toBe(true);
-    });
-
-    it('no contamina a otras fuentes', () => {
-      expect(componentApplies(FC2, G8, MAT, exclusiones)).toBe(true);
+    it('SELECTED_GRADES sin reglas ⇒ NO aplica a nadie, de forma explícita', () => {
+      const d = resolveComponentScope(selectivo(FC1), G8, MAT, []);
+      expect(d).toEqual({ applies: false, source: 'DEFAULT_MODE' });
     });
   });
 
-  describe('precedencia 1 · exclusión de GRADO + ASIGNATURA', () => {
-    const exclusiones = [{ finalComponentId: FC1, gradeId: G8, subjectId: EDF }];
+  describe('precedencia 2 · regla de GRADO (subjectId = null)', () => {
+    const reglas = [{ finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false }];
 
-    it('sólo esa asignatura de ese grado queda fuera', () => {
-      expect(componentApplies(FC1, G8, EDF, exclusiones)).toBe(false);
-      expect(componentApplies(FC1, G8, MAT, exclusiones)).toBe(true);
+    it('excluye todas las asignaturas de ese grado', () => {
+      expect(componentApplies(todos(FC1), G8, MAT, reglas)).toBe(false);
+      expect(componentApplies(todos(FC1), G8, EDF, reglas)).toBe(false);
     });
 
-    it('la misma asignatura en otro grado sigue aplicando', () => {
-      expect(componentApplies(FC1, G9, EDF, exclusiones)).toBe(true);
+    it('no contamina a otros grados ni a otras fuentes', () => {
+      expect(componentApplies(todos(FC1), G9, MAT, reglas)).toBe(true);
+      expect(componentApplies(todos(FC2), G8, MAT, reglas)).toBe(true);
+    });
+
+    it('en modo SELECTED_GRADES, una regla con applies=true INCLUYE ese grado', () => {
+      const incluir = [{ finalComponentId: FC1, gradeId: G9, subjectId: null, applies: true }];
+      expect(componentApplies(selectivo(FC1), G9, MAT, incluir)).toBe(true);
+      expect(componentApplies(selectivo(FC1), G8, MAT, incluir)).toBe(false);
     });
   });
 
-  describe('excluir siempre RESTA, nunca suma', () => {
-    it('una exclusión de grado no se “rescata” con una de asignatura', () => {
-      // Ambas filas coexisten; la de grado manda porque ninguna re-incluye.
-      const exclusiones = [
-        { finalComponentId: FC1, gradeId: G8, subjectId: null },
-        { finalComponentId: FC1, gradeId: G8, subjectId: MAT },
+  describe('precedencia 1 · la EXCEPCIÓN por asignatura gana al grado', () => {
+    // El caso que una lista negra pura NO sabía expresar:
+    // 8.º no presenta el semestral, EXCEPTO en Matemáticas.
+    const reglas = [
+      { finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false },
+      { finalComponentId: FC1, gradeId: G8, subjectId: MAT, applies: true },
+    ];
+
+    it('Matemáticas se rescata del grado excluido', () => {
+      expect(resolveComponentScope(todos(FC1), G8, MAT, reglas)).toEqual({
+        applies: true,
+        source: 'SUBJECT_RULE',
+      });
+    });
+
+    it('el resto del grado sigue excluido', () => {
+      expect(resolveComponentScope(todos(FC1), G8, EDF, reglas)).toEqual({
+        applies: false,
+        source: 'GRADE_RULE',
+      });
+    });
+
+    it('y al revés: grado incluido con una asignatura exceptuada', () => {
+      const inverso = [
+        { finalComponentId: FC1, gradeId: G8, subjectId: null, applies: true },
+        { finalComponentId: FC1, gradeId: G8, subjectId: EDF, applies: false },
       ];
-      expect(componentApplies(FC1, G8, MAT, exclusiones)).toBe(false);
-      expect(componentApplies(FC1, G8, EDF, exclusiones)).toBe(false);
+      expect(componentApplies(todos(FC1), G8, MAT, inverso)).toBe(true);
+      expect(componentApplies(todos(FC1), G8, EDF, inverso)).toBe(false);
+    });
+
+    it('el orden de las filas no altera el resultado', () => {
+      const alReves = [...reglas].reverse();
+      expect(componentApplies(todos(FC1), G8, MAT, alReves)).toBe(true);
+      expect(componentApplies(todos(FC1), G8, EDF, alReves)).toBe(false);
     });
   });
 
   describe('fail-open ante datos incompletos', () => {
-    it('sin grado conocido, la fuente APLICA (no se descarta en silencio)', () => {
-      const exclusiones = [{ finalComponentId: FC1, gradeId: G8, subjectId: null }];
-      expect(componentApplies(FC1, null, MAT, exclusiones)).toBe(true);
-      expect(componentApplies(FC1, undefined, MAT, exclusiones)).toBe(true);
+    it('sin grado conocido la fuente APLICA, aunque el modo sea selectivo', () => {
+      const reglas = [{ finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false }];
+      expect(resolveComponentScope(todos(FC1), null, MAT, reglas)).toEqual({ applies: true, source: 'FAIL_OPEN' });
+      expect(resolveComponentScope(selectivo(FC1), undefined, MAT, [])).toEqual({ applies: true, source: 'FAIL_OPEN' });
     });
 
-    it('sin asignatura conocida, sólo cae por exclusión de grado completo', () => {
-      expect(componentApplies(FC1, G8, null, [{ finalComponentId: FC1, gradeId: G8, subjectId: null }])).toBe(false);
-      expect(componentApplies(FC1, G8, null, [{ finalComponentId: FC1, gradeId: G8, subjectId: EDF }])).toBe(true);
+    it('sin asignatura conocida sólo decide la regla de grado', () => {
+      expect(componentApplies(todos(FC1), G8, null, [{ finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false }])).toBe(false);
+      expect(componentApplies(todos(FC1), G8, null, [{ finalComponentId: FC1, gradeId: G8, subjectId: EDF, applies: false }])).toBe(true);
     });
   });
 
-  describe('motivo de la exclusión, para poder explicarla', () => {
-    it('distingue grado completo de asignatura concreta', () => {
-      expect(exclusionReason(FC1, G8, MAT, [{ finalComponentId: FC1, gradeId: G8, subjectId: null }])).toBe('GRADE');
-      expect(exclusionReason(FC1, G8, EDF, [{ finalComponentId: FC1, gradeId: G8, subjectId: EDF }])).toBe('GRADE_SUBJECT');
-      expect(exclusionReason(FC1, G8, MAT, [])).toBeNull();
+  describe('motivo legible, para poder explicarlo', () => {
+    it('distingue quién tomó la decisión', () => {
+      expect(scopeReasonLabel(resolveComponentScope(todos(FC1), G8, MAT, [{ finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false }])))
+        .toBe('Este grado no presenta esta evaluación.');
+      expect(scopeReasonLabel(resolveComponentScope(todos(FC1), G8, EDF, [{ finalComponentId: FC1, gradeId: G8, subjectId: EDF, applies: false }])))
+        .toBe('Esta asignatura no presenta esta evaluación.');
+      expect(scopeReasonLabel(resolveComponentScope(selectivo(FC1), G8, MAT, []))).toBe('Esta evaluación sólo aplica a los grados seleccionados.');
+      expect(scopeReasonLabel(resolveComponentScope(todos(FC1), G8, MAT, []))).toBeNull();
+    });
+  });
+
+  describe('filtrado de listas', () => {
+    it('sin reglas y todo en ALL_GRADES devuelve la MISMA lista', () => {
+      const comps = [todos(FC1), todos(FC2)];
+      expect(filterApplicableComponents(comps, G8, MAT, [])).toBe(comps); // misma referencia: atajo
+    });
+
+    it('descarta sólo las fuentes que no aplican', () => {
+      const comps = [todos(FC1), todos(FC2)];
+      const r = filterApplicableComponents(comps, G8, MAT, [
+        { finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false },
+      ]);
+      expect(r.map((c) => c.id)).toEqual([FC2]);
     });
   });
 });
@@ -95,13 +146,15 @@ describe('D-19 · regla de alcance (función pura)', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 describe('D-19 · efecto en calculateAnnualGrade', () => {
   function makeService(opts: {
-    exclusiones?: Array<{ finalComponentId: string; gradeId: string; subjectId: string | null }>;
+    scopeMode?: 'ALL_GRADES' | 'SELECTED_GRADES';
+    reglas?: Array<{ finalComponentId: string; gradeId: string; subjectId: string | null; applies: boolean }>;
     notasPorTermino?: Record<string, number | null>;
     notasPorComponente?: Record<string, number | null>;
   }) {
+    const mode = opts.scopeMode ?? 'ALL_GRADES';
     const notasT = opts.notasPorTermino ?? {};
     const notasC = opts.notasPorComponente ?? {};
-    const exclusionFindMany = jest.fn().mockResolvedValue(opts.exclusiones ?? []);
+    const scopeFindMany = jest.fn().mockResolvedValue(opts.reglas ?? []);
 
     const prisma: any = {
       academicTerm: {
@@ -115,11 +168,11 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
       teacherAssignment: { findUnique: jest.fn().mockResolvedValue({ subjectId: MAT, group: { gradeId: G8 } }) },
       finalComponent: {
         findMany: jest.fn().mockResolvedValue([
-          { id: FC1, name: 'Prueba Semestral I', weightPercentage: 10, order: 1 },
-          { id: FC2, name: 'Prueba Semestral II', weightPercentage: 10, order: 2 },
+          { id: FC1, name: 'Prueba Semestral I', weightPercentage: 10, order: 1, scopeMode: mode },
+          { id: FC2, name: 'Prueba Semestral II', weightPercentage: 10, order: 2, scopeMode: mode },
         ]),
       },
-      finalComponentExclusion: { findMany: exclusionFindMany },
+      finalComponentScope: { findMany: scopeFindMany },
       periodFinalGrade: {
         findUnique: jest.fn(async (a: any) => {
           const n = notasT[a.where.studentEnrollmentId_academicTermId_subjectId.academicTermId];
@@ -135,83 +188,79 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
     };
     const svc = new StudentGradesService(prisma);
     jest.spyOn(svc as any, 'calculateTermGrade').mockResolvedValue({ grade: null, components: [] });
-    return { svc, prisma, exclusionFindMany };
+    return { svc, prisma, scopeFindMany };
   }
 
   const NOTAS_PERIODOS = { p1: 4.0, p2: 4.0, p3: 4.0, p4: 4.0 };
 
-  it('GARANTÍA DE NO REGRESIÓN: sin exclusiones el resultado es el histórico', async () => {
+  it('GARANTÍA DE NO REGRESIÓN: ALL_GRADES sin reglas ⇒ resultado histórico', async () => {
     const { svc } = makeService({
       notasPorTermino: NOTAS_PERIODOS,
       notasPorComponente: { [FC1]: 3.0, [FC2]: 3.0 },
     });
-    // (4×80 + 3×20)/100 = 3.8 — idéntico a la línea base
     const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
-    expect(annualGrade).toBe(3.8);
+    expect(annualGrade).toBe(3.8); // (4×80 + 3×20)/100
     expect(sources).toHaveLength(6);
   });
 
-  it('el grado excluido no ve las fuentes: desaparecen de `sources`, no cuentan como nota faltante', async () => {
+  it('el grado excluido no ve las fuentes: no cuentan como nota faltante', async () => {
     const { svc } = makeService({
-      exclusiones: [
-        { finalComponentId: FC1, gradeId: G8, subjectId: null },
-        { finalComponentId: FC2, gradeId: G8, subjectId: null },
+      reglas: [
+        { finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false },
+        { finalComponentId: FC2, gradeId: G8, subjectId: null, applies: false },
       ],
       notasPorTermino: NOTAS_PERIODOS,
     });
     const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
-
-    expect(sources).toHaveLength(4); // sólo los 4 períodos
+    expect(sources).toHaveLength(4);
     expect(sources.some((s) => s.type === 'final_component')).toBe(false);
     expect(annualGrade).toBe(4.0); // renormalizado sobre 80
   });
 
   it('excluir una fuente NUNCA la convierte en 0', async () => {
-    const conExclusion = makeService({
-      exclusiones: [{ finalComponentId: FC1, gradeId: G8, subjectId: null }, { finalComponentId: FC2, gradeId: G8, subjectId: null }],
+    const { svc } = makeService({
+      reglas: [
+        { finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false },
+        { finalComponentId: FC2, gradeId: G8, subjectId: null, applies: false },
+      ],
       notasPorTermino: { p1: 5.0, p2: 5.0, p3: 5.0, p4: 5.0 },
     });
-    const { annualGrade } = await conExclusion.svc.calculateAnnualGrade('e1', 'ta1', 'y1');
     // Con 0 saldría (5×80 + 0×20)/100 = 4.0. Excluyendo: 5.0.
-    expect(annualGrade).toBe(5.0);
+    expect((await svc.calculateAnnualGrade('e1', 'ta1', 'y1')).annualGrade).toBe(5.0);
   });
 
-  it('excluir sólo una de las dos fuentes deja la otra viva', async () => {
+  it('la EXCEPCIÓN por asignatura rescata la fuente para Matemáticas', async () => {
     const { svc } = makeService({
-      exclusiones: [{ finalComponentId: FC1, gradeId: G8, subjectId: null }],
+      reglas: [
+        { finalComponentId: FC1, gradeId: G8, subjectId: null, applies: false },
+        { finalComponentId: FC1, gradeId: G8, subjectId: MAT, applies: true },
+        { finalComponentId: FC2, gradeId: G8, subjectId: null, applies: false },
+      ],
       notasPorTermino: NOTAS_PERIODOS,
-      notasPorComponente: { [FC2]: 3.0 },
+      notasPorComponente: { [FC1]: 3.0 },
     });
     const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
     expect(sources.filter((s) => s.type === 'final_component')).toHaveLength(1);
-    // (4×80 + 3×10)/90 = 3.888… → 3.9
-    expect(annualGrade).toBe(3.9);
+    expect(annualGrade).toBe(3.9); // (4×80 + 3×10)/90
   });
 
-  it('la exclusión por asignatura respeta a las demás asignaturas del grado', async () => {
-    // La asignación es de MATEMÁTICAS; se excluye EDUCACIÓN FÍSICA.
-    const { svc } = makeService({
-      exclusiones: [{ finalComponentId: FC1, gradeId: G8, subjectId: EDF }],
-      notasPorTermino: NOTAS_PERIODOS,
-      notasPorComponente: { [FC1]: 3.0, [FC2]: 3.0 },
-    });
-    const { sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
-    expect(sources.filter((s) => s.type === 'final_component')).toHaveLength(2);
+  it('SELECTED_GRADES sin reglas: ninguna fuente entra en el cálculo', async () => {
+    const { svc } = makeService({ scopeMode: 'SELECTED_GRADES', notasPorTermino: NOTAS_PERIODOS });
+    const { sources, annualGrade } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    expect(sources.filter((s) => s.type === 'final_component')).toHaveLength(0);
+    expect(annualGrade).toBe(4.0);
   });
 
-  it('no consulta la tabla de exclusiones si la institución no tiene componentes', async () => {
-    const { svc, prisma, exclusionFindMany } = makeService({ notasPorTermino: NOTAS_PERIODOS });
+  it('no consulta el alcance si la institución no tiene componentes', async () => {
+    const { svc, prisma, scopeFindMany } = makeService({ notasPorTermino: NOTAS_PERIODOS });
     prisma.finalComponent.findMany.mockResolvedValue([]);
-
     await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
-
-    // Las 4 instituciones sin pruebas semestrales ni rozan la tabla nueva.
-    expect(exclusionFindMany).not.toHaveBeenCalled();
+    expect(scopeFindMany).not.toHaveBeenCalled();
   });
 
-  it('consulta las exclusiones UNA sola vez, no una por componente', async () => {
-    const { svc, exclusionFindMany } = makeService({ notasPorTermino: NOTAS_PERIODOS });
+  it('consulta el alcance UNA sola vez, no una por componente', async () => {
+    const { svc, scopeFindMany } = makeService({ notasPorTermino: NOTAS_PERIODOS });
     await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
-    expect(exclusionFindMany).toHaveBeenCalledTimes(1);
+    expect(scopeFindMany).toHaveBeenCalledTimes(1);
   });
 });

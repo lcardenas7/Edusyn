@@ -14,6 +14,7 @@ import type { AcademicStructureType } from '../../engines/AcademicStructure';
 import { SupabaseStorageService } from '../storage/supabase-storage.service';
 import { AcademicDataSourceService, ReportMode } from './academic-data-source.service';
 import { RetirableEvidence, isEvidenceVigente, collectRetirementTermIds } from '../achievements/evidence-vigencia.util';
+import { filterApplicableComponents, ScopeRuleRow } from '../evaluation/final-component-scope.util';
 
 /** Fila común de nota para el reporte de reprobadas (parcial o final). grade=null = sin datos. */
 interface FailedRow {
@@ -165,6 +166,38 @@ export class ReportsService {
       select: { id: true, order: true },
     });
     return new Map(terms.map((t) => [t.id, t.order]));
+  }
+
+  /**
+   * D-19 · Grado del grupo, para resolver el alcance de las fuentes finales.
+   * Devuelve null si no se puede determinar: la regla es fail-open y en ese
+   * caso todas las fuentes aplican, que es el comportamiento histórico.
+   */
+  private async resolveGradeIdForGroup(groupId: string | null | undefined): Promise<string | null> {
+    if (!groupId) return null;
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { gradeId: true },
+    });
+    return group?.gradeId ?? null;
+  }
+
+  /**
+   * D-19 · Reglas de alcance de un conjunto de fuentes finales, acotadas al
+   * grado cuando se conoce. Una sola consulta; vacío si no hay componentes.
+   */
+  private async loadComponentScopeRules(
+    finalComponentIds: string[],
+    gradeId: string | null,
+  ): Promise<ScopeRuleRow[]> {
+    if (!finalComponentIds.length) return [];
+    return this.prisma.finalComponentScope.findMany({
+      where: {
+        finalComponentId: { in: finalComponentIds },
+        ...(gradeId ? { gradeId } : {}),
+      },
+      select: { finalComponentId: true, gradeId: true, subjectId: true, applies: true },
+    });
   }
 
   private average(values: number[]): number {
@@ -713,10 +746,16 @@ export class ReportsService {
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
 
     // 3b. Obtener componentes finales (pruebas semestrales, etc.)
-    const finalComponents = await this.prisma.finalComponent.findMany({
+    const allFinalComponents = await this.prisma.finalComponent.findMany({
       where: { academicYearId },
       orderBy: { order: 'asc' },
     });
+
+    // D-19 · Alcance. Sin esto, una fuente que este grado NO presenta aparecería
+    // como «pendiente» y el informe le exigiría al estudiante una nota en un
+    // examen que nunca va a presentar — llegando incluso a declarar `impossible`.
+    const scopeGradeId = await this.resolveGradeIdForGroup(enrollment.group.id);
+    const scopeRules = await this.loadComponentScopeRules(allFinalComponents.map((fc) => fc.id), scopeGradeId);
 
     // 4. Obtener estructura de asignaturas del estudiante
     const enrollmentStructure = await this.getEnrollmentSubjects(
@@ -785,9 +824,16 @@ export class ReportsService {
           }),
         );
 
-        // Fuente 2: Notas de componentes finales (pruebas semestrales, etc.)
+        // Fuente 2: Notas de componentes finales (pruebas semestrales, etc.),
+        // acotadas al alcance de este grado/asignatura (D-19).
+        const applicableComponents = filterApplicableComponents(
+          allFinalComponents,
+          scopeGradeId,
+          subject.subjectId ?? null,
+          scopeRules,
+        );
         const fcGrades = await Promise.all(
-          finalComponents.map(async (fc) => {
+          applicableComponents.map(async (fc) => {
             const gradeRecord = await this.prisma.finalComponentGrade.findUnique({
               where: {
                 studentEnrollmentId_teacherAssignmentId_finalComponentId: {
@@ -1008,10 +1054,25 @@ export class ReportsService {
 
     // ── Períodos y componentes finales ──
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
-    const finalComponents = await this.prisma.finalComponent.findMany({
+    const allFinalComponentsCons = await this.prisma.finalComponent.findMany({
       where: { academicYearId },
       orderBy: { order: 'asc' },
     });
+
+    // D-19 · El grupo pertenece a UN grado, así que las columnas de fuentes
+    // finales se acotan a lo que ese grado presenta. Sin filtro, la sábana
+    // mostraría una columna que nadie de ese grupo va a rellenar nunca.
+    const consGradeId = await this.resolveGradeIdForGroup(groupId);
+    const consScopeRules = await this.loadComponentScopeRules(
+      allFinalComponentsCons.map((fc) => fc.id),
+      consGradeId,
+    );
+    const finalComponents = filterApplicableComponents(
+      allFinalComponentsCons,
+      consGradeId,
+      null,
+      consScopeRules,
+    );
 
     // ── Estudiantes del grupo ──
     const enrollments = await this.studentsService.getEnrollmentsForGroupReport({

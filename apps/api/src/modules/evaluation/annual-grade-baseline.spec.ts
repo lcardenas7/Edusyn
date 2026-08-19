@@ -45,11 +45,13 @@ describe('calculateAnnualGrade — línea base antes del alcance por grado', () 
       teacherAssignment: {
         findUnique: jest.fn().mockResolvedValue({ subjectId: 'subj-1', group: { gradeId: 'grade-1' } }),
       },
-      finalComponent: { findMany: jest.fn().mockResolvedValue(opts.componentes ?? []) },
-      // D-19: alcance de las fuentes finales. SIN exclusiones, que es el estado
-      // de todas las instituciones tras la migración (la tabla nace vacía) y el
-      // que debe reproducir exactamente el comportamiento histórico.
-      finalComponentExclusion: { findMany: jest.fn().mockResolvedValue([]) },
+      finalComponent: {
+        findMany: jest.fn().mockResolvedValue((opts.componentes ?? []).map((c) => ({ ...c, scopeMode: 'ALL_GRADES' }))),
+      },
+      // D-19: alcance de las fuentes finales. SIN reglas y con scopeMode
+      // ALL_GRADES (el DEFAULT), que es el estado de todas las instituciones
+      // tras la migración y el que debe reproducir el comportamiento histórico.
+      finalComponentScope: { findMany: jest.fn().mockResolvedValue([]) },
       periodFinalGrade: {
         findUnique: jest.fn(async (args: any) => {
           const termId = args.where.studentEnrollmentId_academicTermId_subjectId.academicTermId;
