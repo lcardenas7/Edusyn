@@ -1773,8 +1773,11 @@ export const achievementBankApi = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const finalComponentsApi = {
-  getByAcademicYear: (academicYearId: string) =>
-    api.get('/final-components', { params: { academicYearId } }),
+  // `teacherAssignmentId` hace que el backend devuelva solo las fuentes que ese
+  // grado/asignatura presenta (D-19). El recorte lo hace el servidor a propósito:
+  // así la planilla nunca muestra una fuente cuyo guardado sería rechazado.
+  getByAcademicYear: (academicYearId: string, teacherAssignmentId?: string) =>
+    api.get('/final-components', { params: { academicYearId, teacherAssignmentId } }),
   create: (data: { academicYearId: string; name: string; weightPercentage: number; order: number }) =>
     api.post('/final-components', data),
   sync: (academicYearId: string, components: Array<{ id?: string; name: string; weightPercentage: number; order: number }>) =>
@@ -1784,6 +1787,25 @@ export const finalComponentsApi = {
   toggleOpen: (id: string, isOpen: boolean) =>
     api.put(`/final-components/${id}/toggle-open`, { isOpen }),
   delete: (id: string) => api.delete(`/final-components/${id}`),
+
+  // ── D-19 · Alcance: qué grados/asignaturas presentan cada fuente ──
+  // El backend es la autoridad: la UI pinta lo que devuelve `getScope` y nunca
+  // resuelve la regla por su cuenta (evita que UI y cálculo diverjan).
+  getScope: (academicYearId: string) =>
+    api.get('/final-components/scope', { params: { academicYearId } }),
+  /** ALL_GRADES = aplica salvo excepción · SELECTED_GRADES = solo lo declarado. */
+  setScopeMode: (finalComponentId: string, scopeMode: 'ALL_GRADES' | 'SELECTED_GRADES') =>
+    api.put(`/final-components/scope/${finalComponentId}/mode`, { scopeMode }),
+  /** `subjectId` nulo ⇒ la regla cubre el grado completo. */
+  upsertScopeRule: (data: {
+    finalComponentId: string
+    gradeId: string
+    subjectId?: string | null
+    applies: boolean
+    reason?: string
+  }) => api.post('/final-components/scope/rules', data),
+  removeScopeRule: (ruleId: string) =>
+    api.delete(`/final-components/scope/rules/${ruleId}`),
 }
 
 export const finalComponentGradesApi = {

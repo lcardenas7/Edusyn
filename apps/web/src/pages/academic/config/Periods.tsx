@@ -20,6 +20,7 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
 import { finalComponentsApi, academicYearLifecycleApi } from '../../../lib/api'
+import FinalComponentScopeMatrix from '../../../components/academic/FinalComponentScopeMatrix'
 
 export default function Periods() {
   const { 
@@ -42,12 +43,15 @@ export default function Periods() {
   const [savingPeriods, setSavingPeriods] = useState(false)
   const [dbFinalComponents, setDbFinalComponents] = useState<Array<{ id: string; name: string; isOpen: boolean }>>([])
   const [togglingFc, setTogglingFc] = useState<string | null>(null)
+  // El alcance de las fuentes finales (D-19) vive por año lectivo.
+  const [academicYearId, setAcademicYearId] = useState<string | null>(null)
 
   // Cargar estado real de componentes finales desde la BD
   const loadDbFinalComponents = useCallback(async () => {
     if (!authInstitution?.id) return
     try {
       const yearRes = await academicYearLifecycleApi.getCurrent(authInstitution.id)
+      setAcademicYearId(yearRes.data?.id ?? null)
       if (yearRes.data?.id) {
         const res = await finalComponentsApi.getByAcademicYear(yearRes.data.id)
         setDbFinalComponents((res.data || []).map((fc: any) => ({ id: fc.id, name: fc.name, isOpen: fc.isOpen })))
@@ -395,6 +399,14 @@ export default function Periods() {
                 {savingPeriods || isSaving ? 'Guardando...' : 'Guardar Configuración'}
               </button>
             </div>
+          )}
+
+          {gradingConfig.useFinalComponents && (
+            <FinalComponentScopeMatrix
+              academicYearId={academicYearId}
+              institutionId={authInstitution?.id ?? null}
+              canEdit={canEditPeriods}
+            />
           )}
         </div>
       </div>

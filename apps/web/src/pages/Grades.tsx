@@ -467,7 +467,9 @@ export default function Grades() {
         return
       }
       try {
-        const res = await finalComponentsApi.getByAcademicYear(selectedAssignment.academicYear.id)
+        // Con la asignación, el backend recorta las fuentes que este grado /
+        // asignatura no presenta, en vez de mostrarlas y rechazarlas al guardar.
+        const res = await finalComponentsApi.getByAcademicYear(selectedAssignment.academicYear.id, selectedAssignment.id)
         setFinalComponents(res.data || [])
       } catch (err) {
         console.error('Error loading final components:', err)
@@ -475,7 +477,17 @@ export default function Grades() {
       }
     }
     fetchFinalComponents()
-  }, [selectedAssignment?.academicYear?.id])
+  }, [selectedAssignment?.academicYear?.id, selectedAssignment?.id])
+
+  // Si la fuente final seleccionada deja de aplicar a la asignación actual
+  // (otro grado, o el coordinador cambió el alcance), se vuelve a períodos en
+  // vez de quedar apuntando a una columna que ya no existe.
+  useEffect(() => {
+    if (selectedSourceType !== 'final_component' || !selectedFinalComponentId) return
+    if (finalComponents.some(fc => fc.id === selectedFinalComponentId)) return
+    setSelectedSourceType('period')
+    setSelectedFinalComponentId(null)
+  }, [finalComponents, selectedSourceType, selectedFinalComponentId])
 
   // Estudiantes
   const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; hasDiagnosis?: boolean; diagnosisType?: string }>>([])

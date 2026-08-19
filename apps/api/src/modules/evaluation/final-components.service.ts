@@ -1,16 +1,44 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { filterApplicableComponents } from './final-component-scope.util';
 
 @Injectable()
 export class FinalComponentsService {
   private readonly logger = new Logger(FinalComponentsService.name);
   constructor(private prisma: PrismaService) {}
 
-  async findByAcademicYear(academicYearId: string) {
-    return this.prisma.finalComponent.findMany({
+  /**
+   * Fuentes finales del año.
+   *
+   * Con `teacherAssignmentId` devuelve SÓLO las que ese grado/asignatura
+   * presenta realmente (D-19). Se filtra aquí, y no en la planilla, para que
+   * la lista que ve el docente sea exactamente la misma que acepta
+   * `FinalComponentGradesService`: si la UI filtrara por su cuenta, un cambio
+   * de reglas dejaría casillas visibles que el guardado rechaza.
+   *
+   * Sin ese parámetro el comportamiento es el de siempre: devuelve todas.
+   */
+  async findByAcademicYear(academicYearId: string, teacherAssignmentId?: string) {
+    const components = await this.prisma.finalComponent.findMany({
       where: { academicYearId },
       orderBy: { order: 'asc' },
     });
+    if (!teacherAssignmentId || components.length === 0) return components;
+
+    const assignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { subjectId: true, group: { select: { gradeId: true } } },
+    });
+    const gradeId = assignment?.group?.gradeId ?? null;
+    // Fail-open: sin grado conocido no se recorta nada.
+    if (!gradeId) return components;
+
+    const rules = await this.prisma.finalComponentScope.findMany({
+      where: { finalComponentId: { in: components.map((c) => c.id) }, gradeId },
+      select: { finalComponentId: true, gradeId: true, subjectId: true, applies: true },
+    });
+
+    return filterApplicableComponents(components, gradeId, assignment?.subjectId ?? null, rules);
   }
 
   async findOne(id: string) {

@@ -16,8 +16,12 @@ export class FinalComponentsController {
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async findByAcademicYear(@Query('academicYearId') academicYearId: string) {
-    return this.service.findByAcademicYear(academicYearId);
+  async findByAcademicYear(
+    @Query('academicYearId') academicYearId: string,
+    // Opcional: recorta la lista al alcance real de esa asignación (D-19).
+    @Query('teacherAssignmentId') teacherAssignmentId?: string,
+  ) {
+    return this.service.findByAcademicYear(academicYearId, teacherAssignmentId);
   }
 
   @Post()
