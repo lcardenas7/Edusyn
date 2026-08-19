@@ -1,0 +1,195 @@
+PATCH · Endurecimiento de resolveInstitutionId()
+================================================
+
+Estado      : PROPUESTO, NO APLICADO.
+Archivo     : apps/api/src/common/utils/institution-resolver.ts
+Derivado de : docs/security/RLS-AUDIT-FASE0.3.md §5.4 y §11 (paso P1-6)
+Prioridad   : PRERREQUISITO de la corrección de las 20 escrituras cross-tenant.
+
+MOTIVO
+------
+Este helper es hoy la ÚNICA barrera real de aislamiento multi-tenant: protege 102 endpoints
+(el TenantGuard está inerte, ver FASE 0.1 §3). Antes de extenderlo a 20 endpoints más hay que
+corregir sus dos defectos, o se multiplican por veinte.
+
+DEFECTO 1 — Escalada por nombre de rol (paso 1)
+  isSuperAdmin se acepta si el array `roles` del JWT contiene la cadena 'SUPERADMIN' o
+  'SUPER_ADMIN'. Esos roles provienen de InstitutionUserRole y Role.name es único GLOBAL.
+  Si un administrador de tenant puede asignar ese rol dentro de su institución, obtiene la
+  capacidad de indicar ?institutionId= de CUALQUIER institución. El claim booleano
+  `isSuperAdmin` del JWT proviene de User.isSuperAdmin y NO es asignable por un admin de
+  tenant: es la única fuente fiable.
+
+DEFECTO 2 — findFirst sin orden determinista (paso 3, antes numerado 4)
+  Para un usuario multi-institución sin institutionId en el JWT, elige una institución
+  ARBITRARIA. Peor: puede no coincidir con la que eligió el login, que sí ordena
+  (auth.service.ts:66 usa `orderBy: { joinedAt: 'asc' }`).
+
+  ⚠️ CORRECCIÓN A LA PROPUESTA ORIGINAL: se sugirió `orderBy: { createdAt: 'desc' }`.
+     El modelo InstitutionUser NO TIENE el campo `createdAt` — solo `joinedAt`.
+     Ese orderBy NO COMPILA. Además `desc` daría la institución MÁS RECIENTE, mientras que
+     el login usa `asc` (la primera). Usar criterios distintos produce el bug sutil de que
+     un mismo usuario resuelva a instituciones distintas según la ruta.
+     Se usa `joinedAt: 'asc'` + `isActive: true`, igual que el login.
+
+DEFECTO 3 (detectado al escribir el patch) — el fallback ignora `isActive`
+  `institutionUser.findFirst({ where: { userId } })` no filtra por `isActive`. Un usuario
+  desvinculado de una institución podría seguir resolviendo a ella.
+
+
+DIFF
+----
+
+--- a/apps/api/src/common/utils/institution-resolver.ts
++++ b/apps/api/src/common/utils/institution-resolver.ts
+@@
+ /**
+  * Resuelve el institutionId de forma SEGURA respetando roles.
+- *
+- * REGLA CRÍTICA DE SEGURIDAD:
+- * - SUPERADMIN puede usar institutionId del query (para administrar cualquier institución)
+- * - Usuarios normales SIEMPRE usan el institutionId del JWT o InstitutionUser
+- * - NUNCA se permite que un usuario no privilegiado acceda a datos de otra institución
++ *
++ * REGLA CRÍTICA DE SEGURIDAD:
++ * - SuperAdmin (User.isSuperAdmin) puede indicar institutionId explícito.
++ * - Usuarios normales SIEMPRE usan el institutionId del JWT. El valor que llegue en
++ *   query/body/params se IGNORA.
++ * - El fallback a InstitutionUser es determinista y coherente con el login.
++ *
++ * ⚠️ Este helper es la única barrera efectiva de aislamiento multi-tenant mientras
++ *    TenantGuard siga inerte (docs/security/RLS-AUDIT-FASE0.1.md §3). No relajarlo.
+  */
+ export async function resolveInstitutionId(
+   prisma: PrismaClient,
+   req: any,
+   queryInstitutionId?: string
+ ): Promise<string | undefined> {
+   const user = req.user;
+
+   if (!user) {
+     return undefined;
+   }
+
+-  // 0. Si TenantGuard ya resolvió el institutionId, usarlo directamente
+-  if (req.resolvedInstitutionId) {
+-    return req.resolvedInstitutionId;
+-  }
+-
+-  // 1. SUPERADMIN puede enviar institutionId explícito (para administrar cualquier institución)
+-  const isSuperAdmin = user.isSuperAdmin === true ||
+-    (Array.isArray(user.roles) && user.roles.some((r: any) =>
+-      r === 'SUPERADMIN' || r === 'SUPER_ADMIN' ||
+-      r?.role?.name === 'SUPERADMIN' || r?.role?.name === 'SUPER_ADMIN' ||
+-      r?.roleName === 'SUPERADMIN' || r?.roleName === 'SUPER_ADMIN'
+-    ));
+-
+-  if (isSuperAdmin && queryInstitutionId) {
++  // 1. SuperAdmin puede indicar institutionId explícito.
++  //    Solo se acepta el claim booleano `isSuperAdmin`, que proviene de User.isSuperAdmin.
++  //    NO se infiere del array `roles`: esos roles vienen de InstitutionUserRole y un
++  //    administrador de tenant podría asignar un rol llamado 'SUPERADMIN' dentro de su
++  //    institución, obteniendo así acceso cross-tenant.
++  if (user.isSuperAdmin === true && queryInstitutionId) {
+     return queryInstitutionId;
+   }
+
+   // 2. Usuarios normales → SIEMPRE usar JWT (ignorar query param por seguridad)
+   if (user.institutionId) {
+     if (queryInstitutionId && queryInstitutionId !== user.institutionId) {
+-      console.warn(`[InstitutionResolver] SEGURIDAD: Usuario ${user.id} intentó acceder a institución ${queryInstitutionId} pero pertenece a ${user.institutionId}`);
++      console.warn(
++        `[InstitutionResolver] CROSS-TENANT BLOQUEADO: usuario ${user.id} ` +
++        `(institución ${user.institutionId}) solicitó ${queryInstitutionId}. Se usa la del JWT.`,
++      );
+     }
+     return user.institutionId;
+   }
+
+-  // 3. Fallback: buscar en InstitutionUser (casos legacy o JWT incompleto)
++  // 3. Fallback: buscar en InstitutionUser (casos legacy o JWT incompleto).
++  //    Determinista y coherente con auth.service.login(), que ordena por joinedAt asc
++  //    y filtra por isActive. Sin esto, un usuario multi-institución podía resolver a
++  //    una institución distinta según la ruta invocada.
+   if (user.id) {
+     const institutionUser = await prisma.institutionUser.findFirst({
+-      where: { userId: user.id },
+-      select: { institutionId: true }
++      where: { userId: user.id, isActive: true },
++      orderBy: { joinedAt: 'asc' },
++      select: { institutionId: true },
+     });
+
+     if (institutionUser?.institutionId) {
+       return institutionUser.institutionId;
+     }
+   }
+
+   return undefined;
+ }
+
+ /**
+  * Verifica si el usuario es SUPERADMIN
+  */
+ export function isSuperAdmin(user: any): boolean {
+   if (!user) return false;
+-
+-  return user.isSuperAdmin === true ||
+-    (Array.isArray(user.roles) && user.roles.some((r: any) =>
+-      r === 'SUPERADMIN' || r === 'SUPER_ADMIN' ||
+-      r?.role?.name === 'SUPERADMIN' || r?.role?.name === 'SUPER_ADMIN' ||
+-      r?.roleName === 'SUPERADMIN' || r?.roleName === 'SUPER_ADMIN'
+-    ));
++  // Solo el claim booleano, por el mismo motivo que en resolveInstitutionId().
++  return user.isSuperAdmin === true;
+ }
+
+
+NOTA SOBRE LA ELIMINACIÓN DEL PASO 0
+------------------------------------
+`req.resolvedInstitutionId` es hoy CÓDIGO MUERTO: lo asignaría TenantGuard, que nunca se
+ejecuta con `req.user` (FASE 0.1 §3). Se elimina para que el helper tenga una única fuente
+de verdad. Si más adelante se corrige TenantGuard (o su lógica se traslada al interceptor),
+debe decidirse explícitamente si se reintroduce — y NO reintroducirlo como atajo silencioso.
+
+
+IMPACTO Y RIESGO DE REGRESIÓN
+-----------------------------
+BAJO, con una excepción que hay que verificar antes de desplegar:
+
+  · Si algún SuperAdmin real tiene `User.isSuperAdmin = false` pero el rol 'SUPERADMIN'
+    asignado vía UserRole/InstitutionUserRole, PERDERÁ la capacidad de indicar
+    ?institutionId=. Es exactamente el agujero que se cierra, pero podría afectar a una
+    cuenta legítima mal configurada.
+
+  VERIFICACIÓN OBLIGATORIA antes de desplegar (solo lectura):
+
+    SELECT u.id, u.email, u."isSuperAdmin"
+    FROM "User" u
+    JOIN "UserRole" ur ON ur."userId" = u.id
+    JOIN "Role" r ON r.id = ur."roleId"
+    WHERE r.name IN ('SUPERADMIN','SUPER_ADMIN') AND u."isSuperAdmin" = false;
+
+    Resultado esperado: 0 filas.
+    Si devuelve filas → decidir caso por caso ANTES de aplicar el patch (probablemente
+    corregir el dato: poner isSuperAdmin = true en esas cuentas legítimas).
+
+  · El cambio de `isSuperAdmin()` (función exportada) afecta a todos sus consumidores.
+    Revisar los usos antes de mezclar:
+        grep -rn "isSuperAdmin(" apps/api/src --include=*.ts
+
+
+PRUEBAS QUE ACOMPAÑAN AL PATCH
+------------------------------
+Nuevo archivo: apps/api/src/common/utils/institution-resolver.spec.ts
+
+  1. Usuario normal con institutionId=A y ?institutionId=B  → devuelve A
+  2. SuperAdmin (isSuperAdmin=true) con ?institutionId=B    → devuelve B
+  3. Usuario con roles=['SUPERADMIN'] pero isSuperAdmin=false
+     y ?institutionId=B                                      → devuelve su propia institución
+                                                                (NO B)  ← prueba de regresión
+                                                                del defecto 1
+  4. Usuario sin institutionId en el JWT, con dos InstitutionUser
+     → devuelve la de menor joinedAt, igual que el login      ← defecto 2
+  5. Usuario cuyo único InstitutionUser tiene isActive=false  → devuelve undefined ← defecto 3
+  6. req.user ausente                                          → devuelve undefined

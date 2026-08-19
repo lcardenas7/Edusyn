@@ -10,6 +10,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Subject } from 'rxjs';
+import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
 
 // SSE event types
 export type LiveEventType =
@@ -368,32 +369,71 @@ export class LiveSessionService implements OnModuleDestroy {
   }
 
   /**
-   * Limpia streams huérfanos: sesiones que ya terminaron en BD
-   * o que llevan más de 2 horas abiertas sin actividad.
-   * Llamado por LiveSessionCronService cada 5 minutos.
+   * Limpia streams huérfanos: sesiones TERMINADAS en BD (hecho confirmado) o streams
+   * que llevan más de 2 horas abiertos. Llamado por LiveSessionCronService cada 5 min.
+   *
+   * ⚠️ REGLA DE SEGURIDAD — no inferir "terminada" a partir de una ausencia.
+   * La versión anterior cerraba el stream de toda sesión que NO apareciera como
+   * ACTIVE/WAITING, confundiendo tres hechos distintos:
+   *   1. la sesión terminó                    → cerrar es correcto
+   *   2. la fila no existe (borrada)          → ambiguo
+   *   3. la fila existe pero no la vemos      → cerrar es DESTRUCTIVO
+   * El caso 3 se vuelve real en cuanto haya RLS: este cron corre fuera de toda petición
+   * y no tiene `app.current_institution`, así que la consulta devolvería 0 filas y el
+   * cron cerraría TODOS los quizzes en vivo del sistema cada 5 minutos, en clase y sin
+   * un solo error en los registros (docs/security/RLS-AUDIT-FASE0.3.md §7).
+   * Ahora solo se cierra por estado FINISHED confirmado; el resto queda cubierto por la
+   * red de seguridad de las 2 horas, que no depende de la base de datos.
    */
   async cleanupOrphanedStreams() {
     const sessionIds = [...this.streams.keys()];
     if (sessionIds.length === 0) return;
 
     const TWO_HOURS = 2 * 60 * 60 * 1000;
+    const now = Date.now();
     let cleaned = 0;
 
-    // Check which sessions are still ACTIVE/WAITING in DB
-    const activeSessions = await this.prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM "LiveSession"
-      WHERE id = ANY(${sessionIds})
-        AND status IN ('ACTIVE', 'WAITING')
-    `;
-    const activeIds = new Set(activeSessions.map(s => s.id));
+    // Se piden TODAS las filas, no solo las activas: "no aparece" y "terminó" son
+    // hechos distintos y deben poder distinguirse.
+    let rows: { id: string; status: string }[] = [];
+    let statusIsTrustworthy = true;
+    try {
+      rows = await this.prisma.$queryRaw<{ id: string; status: string }[]>`
+        SELECT id, status::text AS status FROM "LiveSession" WHERE id = ANY(${sessionIds})
+      `;
+    } catch (error) {
+      statusIsTrustworthy = false;
+      this.logger.error(
+        `No se pudo consultar el estado de las sesiones en vivo; no se cierra ningún ` +
+        `stream por estado en esta pasada. ${error}`,
+      );
+    }
+
+    // Guarda anti-catástrofe: si hay streams abiertos y la consulta no devuelve NINGUNA
+    // fila, lo probable no es que todas hayan terminado a la vez, sino que hemos perdido
+    // visibilidad sobre la tabla (filtro RLS sin contexto, permisos, réplica rezagada).
+    if (statusIsTrustworthy && rows.length === 0) {
+      statusIsTrustworthy = false;
+      this.logger.error(
+        `ANOMALÍA: ${sessionIds.length} streams SSE abiertos y la consulta de estado ` +
+        `devolvió 0 filas. No se cierra nada por estado (posible pérdida de visibilidad ` +
+        `sobre "LiveSession"). Revisar contexto de tenant / permisos.`,
+      );
+    }
+
+    const statusById = new Map(rows.map((r) => [r.id, r.status]));
 
     for (const sessionId of sessionIds) {
-      const isActive = activeIds.has(sessionId);
       const createdAt = this.streamCreatedAt.get(sessionId) || 0;
-      const age = Date.now() - createdAt;
+      const age = now - createdAt;
 
-      // Clean if: session finished/doesn't exist in DB, OR stream older than 2h
-      if (!isActive || age > TWO_HOURS) {
+      // 1) Terminación CONFIRMADA por la base de datos.
+      const finished = statusIsTrustworthy && statusById.get(sessionId) === 'FINISHED';
+      // 2) Red de seguridad independiente de la BD: evita fugas de memoria aunque la
+      //    consulta falle o la sesión ya no exista. Cubre el caso ambiguo.
+      const tooOld = age > TWO_HOURS;
+
+      if (finished || tooOld) {
         this.cleanupStream(sessionId);
         cleaned++;
       }
@@ -2289,20 +2329,14 @@ export class LiveSessionService implements OnModuleDestroy {
       }
 
       case 'SHORT_ANSWER':
-        return given === correct;
+        // Juez compartido con lecciones y quiz en casa: tolera tildes,
+        // mayúsculas y puntuación, y admite alternativas separadas por "|".
+        return textMatches(question.correctAnswer, answer);
 
-      case 'FILL_BLANK': {
-        try {
-          const correctBlanks = JSON.parse(correct) as string[];
-          const givenBlanks = JSON.parse(given) as string[];
-          return (
-            correctBlanks.length === givenBlanks.length &&
-            correctBlanks.every((c, i) => c.trim().toLowerCase() === (givenBlanks[i] || '').trim().toLowerCase())
-          );
-        } catch {
-          return false;
-        }
-      }
+      case 'FILL_BLANK':
+        // Ojo: se comparan los valores CRUDOS, no `correct`/`given` (ya
+        // minusculizados), porque el juez normaliza por su cuenta.
+        return fillBlankMatches(question.correctAnswer, answer);
 
       case 'ORDERING': {
         try {

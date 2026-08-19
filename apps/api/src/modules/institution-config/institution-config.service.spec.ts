@@ -10,7 +10,10 @@ describe('InstitutionConfigService — configuración base (Módulo 2)', () => {
       institution: { findUnique: jest.fn() },
       performanceScale: { count: jest.fn().mockResolvedValue(0) },
       evaluationComponent: { findMany: jest.fn().mockResolvedValue([]) },
-      academicYear: { count: jest.fn().mockResolvedValue(0) },
+      // getConfigCompleteness cae a AcademicTerm cuando periodsConfig no suma 100:
+      // sin estos dos mocks el servicio revienta con "findFirst is not a function".
+      academicYear: { count: jest.fn().mockResolvedValue(0), findFirst: jest.fn().mockResolvedValue(null) },
+      academicTerm: { findMany: jest.fn().mockResolvedValue([]) },
       ...prismaOver,
     };
     return new InstitutionConfigService(prisma as any);

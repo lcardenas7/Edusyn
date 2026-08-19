@@ -2,11 +2,16 @@ import { PrismaClient } from '@prisma/client';
 
 /**
  * Resuelve el institutionId de forma SEGURA respetando roles.
- * 
+ *
  * REGLA CRÍTICA DE SEGURIDAD:
- * - SUPERADMIN puede usar institutionId del query (para administrar cualquier institución)
- * - Usuarios normales SIEMPRE usan el institutionId del JWT o InstitutionUser
- * - NUNCA se permite que un usuario no privilegiado acceda a datos de otra institución
+ * - SuperAdmin (User.isSuperAdmin) puede indicar institutionId explícito.
+ * - Usuarios normales SIEMPRE usan el institutionId del JWT. El valor que llegue por
+ *   query/body/params se IGNORA.
+ * - El fallback a InstitutionUser es determinista y coherente con el login.
+ *
+ * ⚠️ Este helper es hoy la ÚNICA barrera efectiva de aislamiento multi-tenant: el
+ *    TenantGuard global se ejecuta antes que JwtAuthGuard y nunca ve `req.user`
+ *    (docs/security/RLS-AUDIT-FASE0.1.md §3). No relajar sin leer esa auditoría.
  */
 export async function resolveInstitutionId(
   prisma: PrismaClient,
@@ -14,43 +19,42 @@ export async function resolveInstitutionId(
   queryInstitutionId?: string
 ): Promise<string | undefined> {
   const user = req.user;
-  
+
   if (!user) {
     return undefined;
   }
 
-  // 0. Si TenantGuard ya resolvió el institutionId, usarlo directamente
-  if (req.resolvedInstitutionId) {
-    return req.resolvedInstitutionId;
-  }
-
-  // 1. SUPERADMIN puede enviar institutionId explícito (para administrar cualquier institución)
-  const isSuperAdmin = user.isSuperAdmin === true ||
-    (Array.isArray(user.roles) && user.roles.some((r: any) =>
-      r === 'SUPERADMIN' || r === 'SUPER_ADMIN' ||
-      r?.role?.name === 'SUPERADMIN' || r?.role?.name === 'SUPER_ADMIN' ||
-      r?.roleName === 'SUPERADMIN' || r?.roleName === 'SUPER_ADMIN'
-    ));
-
-  if (isSuperAdmin && queryInstitutionId) {
+  // 1. SuperAdmin puede indicar institutionId explícito.
+  //    Solo se acepta el claim booleano `isSuperAdmin`, que proviene de User.isSuperAdmin.
+  //    NO se infiere del array `roles`: esos roles vienen de InstitutionUserRole y un
+  //    administrador de tenant que pudiera asignar un rol llamado 'SUPERADMIN' dentro de
+  //    su institución obtendría acceso cross-tenant.
+  if (user.isSuperAdmin === true && queryInstitutionId) {
     return queryInstitutionId;
   }
 
   // 2. Usuarios normales → SIEMPRE usar JWT (ignorar query param por seguridad)
   if (user.institutionId) {
     if (queryInstitutionId && queryInstitutionId !== user.institutionId) {
-      console.warn(`[InstitutionResolver] SEGURIDAD: Usuario ${user.id} intentó acceder a institución ${queryInstitutionId} pero pertenece a ${user.institutionId}`);
+      console.warn(
+        `[InstitutionResolver] CROSS-TENANT BLOQUEADO: usuario ${user.id} ` +
+        `(institución ${user.institutionId}) solicitó ${queryInstitutionId}. Se usa la del JWT.`,
+      );
     }
     return user.institutionId;
   }
 
-  // 3. Fallback: buscar en InstitutionUser (casos legacy o JWT incompleto)
+  // 3. Fallback: buscar en InstitutionUser (casos legacy o JWT incompleto).
+  //    Determinista y coherente con auth.service.login(), que ordena por joinedAt asc y
+  //    filtra por isActive. Sin esto, un usuario multi-institución podía resolver a una
+  //    institución distinta según la ruta invocada.
   if (user.id) {
     const institutionUser = await prisma.institutionUser.findFirst({
-      where: { userId: user.id },
-      select: { institutionId: true }
+      where: { userId: user.id, isActive: true },
+      orderBy: { joinedAt: 'asc' },
+      select: { institutionId: true },
     });
-    
+
     if (institutionUser?.institutionId) {
       return institutionUser.institutionId;
     }
@@ -60,17 +64,13 @@ export async function resolveInstitutionId(
 }
 
 /**
- * Verifica si el usuario es SUPERADMIN
+ * Verifica si el usuario es SUPERADMIN.
+ * Solo el claim booleano, por el mismo motivo que en resolveInstitutionId().
  */
 export function isSuperAdmin(user: any): boolean {
   if (!user) return false;
-  
-  return user.isSuperAdmin === true ||
-    (Array.isArray(user.roles) && user.roles.some((r: any) =>
-      r === 'SUPERADMIN' || r === 'SUPER_ADMIN' ||
-      r?.role?.name === 'SUPERADMIN' || r?.role?.name === 'SUPER_ADMIN' ||
-      r?.roleName === 'SUPERADMIN' || r?.roleName === 'SUPER_ADMIN'
-    ));
+
+  return user.isSuperAdmin === true;
 }
 
 /**
