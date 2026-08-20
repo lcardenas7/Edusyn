@@ -347,3 +347,127 @@ describe('CommunicationsController · resolución de institución', () => {
     },
   );
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3) MATRIZ DE ENTREGA — semántica, no forma
+// ═══════════════════════════════════════════════════════════════════════════════
+/**
+ * Las pruebas anteriores comprueban la FORMA del `where` generado. Estas comprueban su
+ * SEMÁNTICA: dado el filtro que produce `getInbox`, ¿qué filas reales casarían?
+ *
+ * `evaluar` interpreta exactamente las claves que este `where` usa (`message.institutionId`,
+ * `recipientId`, `recipientType`) sobre filas candidatas en memoria. No sustituye a Prisma
+ * ni a una prueba de integración: demuestra la lógica del predicado, que es donde estaba el
+ * defecto (docs/security/RLS-AUDIT-COMMUNICATIONS.md).
+ */
+describe('CommunicationsService · matriz de entrega de la bandeja', () => {
+  type Fila = { institutionId: string; recipientType: string; recipientId?: string | null };
+
+  function evaluar(where: any, fila: Fila): boolean {
+    const casaRama = (r: any) =>
+      (r.message?.institutionId === undefined || r.message.institutionId === fila.institutionId) &&
+      (r.recipientId === undefined || r.recipientId === fila.recipientId) &&
+      (r.recipientType === undefined || r.recipientType === fila.recipientType);
+
+    const casaNivelSuperior =
+      where.message?.institutionId === undefined ||
+      where.message.institutionId === fila.institutionId;
+
+    return casaNivelSuperior && (where.OR ?? []).some(casaRama);
+  }
+
+  /** Ejecuta getInbox y devuelve el `where` con el que consultó (o null si no consultó). */
+  async function whereDe(institutionId: string | null, roles: string[]) {
+    const prisma: any = { messageRecipient: { findMany: jest.fn().mockResolvedValue([]) } };
+    const service = new CommunicationsService(prisma, {} as any);
+    await service.getInbox(USER_A, institutionId, roles);
+    const call = prisma.messageRecipient.findMany.mock.calls[0];
+    return call ? call[0].where : null;
+  }
+
+  const propia = (recipientType: string, recipientId: string | null = null): Fila =>
+    ({ institutionId: INST_A, recipientType, recipientId });
+  const ajena = (recipientType: string, recipientId: string | null = null): Fila =>
+    ({ institutionId: INST_B, recipientType, recipientId });
+
+  it.each([
+    // actor            destinatario      misma inst.  otra inst.
+    ['DOCENTE',        'ALL_TEACHERS',    true,        false],
+    ['ESTUDIANTE',     'ALL_TEACHERS',    false,       false],
+    ['ESTUDIANTE',     'ALL_STUDENTS',    true,        false],
+    ['DOCENTE',        'ALL_STUDENTS',    false,       false],
+    ['ACUDIENTE',      'ALL_TEACHERS',    false,       false],
+    ['ACUDIENTE',      'ALL_STUDENTS',    false,       false],
+    // Categorías que hoy NO se entregan (deuda funcional declarada, §15.4)
+    ['ACUDIENTE',      'ALL_PARENTS',     false,       false],
+    ['DOCENTE',        'GROUP',           false,       false],
+  ])('%s + %s → propia=%s · ajena=%s', async (rol, tipo, esperaPropia, esperaAjena) => {
+    const where = await whereDe(INST_A, [rol]);
+    expect(evaluar(where, propia(tipo))).toBe(esperaPropia);
+    expect(evaluar(where, ajena(tipo))).toBe(esperaAjena);
+  });
+
+  it('INDIVIDUAL dirigido al actor → lo recibe en su institución, nunca en la ajena', async () => {
+    const where = await whereDe(INST_A, ['ACUDIENTE']);
+    expect(evaluar(where, propia('USER', USER_A))).toBe(true);
+    expect(evaluar(where, ajena('USER', USER_A))).toBe(false);
+  });
+
+  it('INDIVIDUAL dirigido a otro usuario → no lo recibe, ni propia ni ajena', async () => {
+    for (const rol of ['DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'ADMIN_INSTITUTIONAL']) {
+      const where = await whereDe(INST_A, [rol]);
+      expect(evaluar(where, propia('USER', 'otro-usuario'))).toBe(false);
+      expect(evaluar(where, ajena('USER', 'otro-usuario'))).toBe(false);
+    }
+  });
+
+  it('SuperAdmin sin institución → ninguna difusión, de ninguna institución', async () => {
+    const where = await whereDe(null, ['SUPERADMIN']);
+    expect(where).toBeNull(); // no llegó siquiera a consultar
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4) ADJUNTOS — conocer el messageId NO basta
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('CommunicationsService · adjuntos: pertenencia + categoría', () => {
+  function build(adjunto: any) {
+    const prisma: any = {
+      messageAttachment: { findFirst: jest.fn().mockResolvedValue(adjunto) },
+    };
+    const storage: any = {
+      buckets: { mensajes: 'mensajes' },
+      getSignedUrlForBucket: jest.fn().mockResolvedValue('https://firmada'),
+    };
+    return { service: new CommunicationsService(prisma, storage), prisma };
+  }
+  const adj = (recipients: any[], authorId = 'otro') => ({
+    id: 'a1', storagePath: 'p', fileName: 'f', mimeType: 'application/pdf',
+    message: { authorId, recipients },
+  });
+
+  it('conocer el identificador no basta: la consulta exige pertenencia institucional', async () => {
+    // La consulta acotada no encuentra el adjunto ajeno aunque el id sea correcto.
+    const { service, prisma } = build(null);
+    await expect(
+      service.getAttachmentDownloadUrl('id-valido-de-B', USER_A, INST_A, ['DOCENTE']),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.messageAttachment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'id-valido-de-B', message: { institutionId: INST_A } } }),
+    );
+  });
+
+  it.each([
+    ['DOCENTE',    'ALL_TEACHERS', true],
+    ['ESTUDIANTE', 'ALL_TEACHERS', false],
+    ['ESTUDIANTE', 'ALL_STUDENTS', true],
+    ['DOCENTE',    'ALL_STUDENTS', false],
+    ['ACUDIENTE',  'ALL_TEACHERS', false],
+    ['ACUDIENTE',  'ALL_STUDENTS', false],
+  ])('dentro de la institución, %s + difusión %s → acceso=%s', async (rol, tipo, permitido) => {
+    const { service } = build(adj([{ recipientType: tipo, recipientId: null }]));
+    const intento = service.getAttachmentDownloadUrl('a1', USER_A, INST_A, [rol]);
+    if (permitido) await expect(intento).resolves.toBeDefined();
+    else await expect(intento).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
