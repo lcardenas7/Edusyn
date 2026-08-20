@@ -11,10 +11,36 @@ export class CommunicationsService {
     private readonly storage: SupabaseStorageService,
   ) {}
 
-  async create(authorId: string, dto: CreateMessageDto) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO MULTI-TENANT — punto único de control
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // `Message` tiene `institutionId` directo. `MessageRecipient` y `MessageAttachment` NO
+  // lo tienen: derivan su pertenencia de `messageId -> Message.institutionId`, que es su
+  // ÚNICA ruta de tenant (verificado en el schema). Por eso todas las comprobaciones
+  // pasan por el mensaje (docs/security/RLS-AUDIT-COMMUNICATIONS.md).
+  //
+  // Seis operaciones —update, send, delete, reply, getById, getReplies— repetían
+  // `findUnique({ where: { id } })` sin comprobar institución. La guarda vive en el
+  // SERVICIO, no en el controlador: la lección de guardians es que pueden existir
+  // caminos alternativos hacia el servicio.
+
+  /** El mensaje debe existir DENTRO de la institución resuelta. */
+  private async assertMessage(messageId: string, institutionId: string) {
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId, institutionId },
+    });
+    // Consulta acotada + el NotFoundException que este servicio ya usaba: no inventa
+    // semántica nueva y no revela la existencia del mensaje ajeno.
+    if (!message) throw new NotFoundException('Message not found');
+    return message;
+  }
+
+  async create(authorId: string, dto: CreateMessageDto, institutionId: string) {
     return this.prisma.message.create({
       data: {
-        institutionId: dto.institutionId,
+        // Institución resuelta por el servidor; dto.institutionId se ignora.
+        institutionId,
         authorId,
         type: dto.type,
         subject: dto.subject,
@@ -36,9 +62,8 @@ export class CommunicationsService {
     });
   }
 
-  async update(id: string, dto: UpdateMessageDto) {
-    const message = await this.prisma.message.findUnique({ where: { id } });
-    if (!message) throw new NotFoundException('Message not found');
+  async update(id: string, dto: UpdateMessageDto, institutionId: string) {
+    await this.assertMessage(id, institutionId);
 
     return this.prisma.message.update({
       where: { id },
@@ -54,9 +79,8 @@ export class CommunicationsService {
     });
   }
 
-  async send(id: string) {
-    const message = await this.prisma.message.findUnique({ where: { id } });
-    if (!message) throw new NotFoundException('Message not found');
+  async send(id: string, institutionId: string) {
+    await this.assertMessage(id, institutionId);
 
     return this.prisma.message.update({
       where: { id },
@@ -67,9 +91,8 @@ export class CommunicationsService {
     });
   }
 
-  async delete(id: string) {
-    const message = await this.prisma.message.findUnique({ where: { id } });
-    if (!message) throw new NotFoundException('Message not found');
+  async delete(id: string, institutionId: string) {
+    await this.assertMessage(id, institutionId);
 
     return this.prisma.message.delete({ where: { id } });
   }
@@ -94,9 +117,9 @@ export class CommunicationsService {
     });
   }
 
-  async getById(id: string) {
-    const message = await this.prisma.message.findUnique({
-      where: { id },
+  async getById(id: string, institutionId: string) {
+    const message = await this.prisma.message.findFirst({
+      where: { id, institutionId },
       include: {
         author: {
           select: { id: true, firstName: true, lastName: true },
@@ -120,9 +143,11 @@ export class CommunicationsService {
     return message;
   }
 
-  async reply(parentId: string, authorId: string, content: string) {
-    const parent = await this.prisma.message.findUnique({
-      where: { id: parentId },
+  async reply(parentId: string, authorId: string, content: string, institutionId: string) {
+    // Sin esta guarda se podia inyectar un mensaje en la bandeja del autor de otra
+    // institucion: la respuesta hereda parent.institutionId.
+    const parent = await this.prisma.message.findFirst({
+      where: { id: parentId, institutionId },
       include: { author: true },
     });
     if (!parent) throw new NotFoundException('Mensaje original no encontrado');
@@ -151,9 +176,10 @@ export class CommunicationsService {
     return reply;
   }
 
-  async getReplies(messageId: string) {
+  async getReplies(messageId: string, institutionId: string) {
+    await this.assertMessage(messageId, institutionId);
     return this.prisma.message.findMany({
-      where: { parentId: messageId, status: 'SENT' },
+      where: { parentId: messageId, status: 'SENT', institutionId },
       include: {
         author: { select: { id: true, firstName: true, lastName: true } },
         attachments: { select: { id: true, fileName: true, fileSize: true, mimeType: true } },
@@ -387,14 +413,48 @@ export class CommunicationsService {
     return [...new Set(assignments.map(a => a.teacherId))];
   }
 
-  async getInbox(userId: string) {
+  /**
+   * Bandeja de entrada.
+   *
+   * ⚠️ P0 CORREGIDO. La version anterior emparejaba por
+   * `recipientType: 'ALL_TEACHERS' | 'ALL_STUDENTS'` SIN filtrar por institucion ni por
+   * rol, asi que toda comunicacion masiva de TODA institucion entraba en la bandeja de
+   * TODOS los usuarios. No era una vulnerabilidad que hubiera que explotar: ocurria en
+   * operacion normal, y ademas en cada carga de pagina, porque el contador de no leidos
+   * de la barra de navegacion consume este mismo endpoint.
+   *
+   * Cada rama del OR lleva ahora su propio aislamiento Y su condicion de destinatario.
+   * El filtro de institucion se repite ademas a nivel superior: esa es la garantia
+   * estructural que protege cualquier rama que se anada en el futuro.
+   *
+   * ALCANCE DELIBERADO: no se anaden `ALL_PARENTS` ni `GROUP`. Hoy no se entregan a
+   * nadie, y hacerlo funcionar seria un cambio de comportamiento del producto, no una
+   * correccion de aislamiento. Queda documentado como deuda funcional.
+   *
+   * SuperAdmin: su token no trae institucion. Devuelve bandeja VACIA por diseno; no se
+   * inventa un alcance global, porque convertiria la ausencia de tenant en privilegio de
+   * lectura universal — el mismo patron de puerta trasera que ya corregimos en otros
+   * modulos.
+   */
+  async getInbox(userId: string, institutionId: string | null, userRoles: string[] = []) {
+    if (!institutionId) return [];
+
+    const isTeacher = userRoles.includes('DOCENTE');
+    const isStudent = userRoles.includes('ESTUDIANTE');
+
+    const scope = { message: { institutionId } };
+    const branches: any[] = [
+      // Individual: dirigido explicitamente a este usuario.
+      { ...scope, recipientId: userId },
+      // Colectivos: solo si el rol del usuario corresponde a la categoria.
+      ...(isTeacher ? [{ ...scope, recipientType: 'ALL_TEACHERS' as const }] : []),
+      ...(isStudent ? [{ ...scope, recipientType: 'ALL_STUDENTS' as const }] : []),
+    ];
+
     return this.prisma.messageRecipient.findMany({
       where: {
-        OR: [
-          { recipientId: userId },
-          { recipientType: 'ALL_TEACHERS' },
-          { recipientType: 'ALL_STUDENTS' },
-        ],
+        ...scope,
+        OR: branches,
       },
       include: {
         message: {
@@ -473,19 +533,41 @@ export class CommunicationsService {
     return this.prisma.messageAttachment.delete({ where: { id: attachmentId } });
   }
 
-  async getAttachmentDownloadUrl(attachmentId: string, userId: string) {
-    const attachment = await this.prisma.messageAttachment.findUnique({
-      where: { id: attachmentId },
+  /**
+   * ⚠️ Vulnerabilidad INDEPENDIENTE de la de getInbox, con el mismo error de modelo.
+   * El predicado anterior daba por destinatario a cualquiera en cuanto el mensaje tuviera
+   * UNA sola fila de difusion: `r.recipientType === 'ALL_TEACHERS'` es cierto sin mirar
+   * quien pregunta. Era una comprobacion de autorizacion que no comprobaba nada.
+   */
+  async getAttachmentDownloadUrl(
+    attachmentId: string,
+    userId: string,
+    institutionId: string | null,
+    userRoles: string[] = [],
+  ) {
+    if (!institutionId) throw new NotFoundException('Adjunto no encontrado');
+
+    // Consulta acotada: un adjunto de otra institucion no existe.
+    const attachment = await this.prisma.messageAttachment.findFirst({
+      where: { id: attachmentId, message: { institutionId } },
       include: { message: { include: { recipients: true } } },
     });
     if (!attachment) throw new NotFoundException('Adjunto no encontrado');
 
-    // Verificar acceso: autor o destinatario
+    const isTeacher = userRoles.includes('DOCENTE');
+    const isStudent = userRoles.includes('ESTUDIANTE');
+
+    // Verificar acceso: autor, destinatario individual, o difusion QUE CORRESPONDE A SU ROL.
     const isAuthor = attachment.message.authorId === userId;
     const isRecipient = attachment.message.recipients.some(
-      r => r.recipientId === userId || r.recipientType === 'ALL_TEACHERS' || r.recipientType === 'ALL_STUDENTS',
+      r =>
+        r.recipientId === userId ||
+        (r.recipientType === 'ALL_TEACHERS' && isTeacher) ||
+        (r.recipientType === 'ALL_STUDENTS' && isStudent),
     );
     if (!isAuthor && !isRecipient) {
+      // Mismo error que antes para el caso "de mi institucion pero no soy destinatario":
+      // no se cambia la semantica existente.
       throw new BadRequestException('No tienes acceso a este adjunto');
     }
 
