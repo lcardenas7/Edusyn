@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
@@ -6,6 +6,52 @@ import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
 @Injectable()
 export class AcademicTermsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO MULTI-TENANT (E-1)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AcademicTerm NO tiene columna institutionId. Su unica FK saliente es
+  // academicYearId, de modo que la ruta al tenant es unica y no puede divergir:
+  //
+  //   AcademicTerm.academicYearId -> AcademicYear.institutionId -> Institution.id
+  //
+  // Esa es la fuente autoritativa para autorizar. Ver
+  // docs/security/DISENO-CIERRE-E1-ACADEMIC-TERMS.md §3.
+
+  /**
+   * Verifica que el periodo pertenezca a la institucion del actor.
+   * Un periodo inexistente y uno de otra institucion son indistinguibles para el
+   * cliente: no se revela la existencia de recursos ajenos.
+   */
+  private async assertTermInInstitution(termId: string, institutionId: string) {
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: termId, academicYear: { institutionId } },
+      select: { id: true },
+    });
+    if (!term) {
+      throw new NotFoundException('Período académico no encontrado');
+    }
+    return term;
+  }
+
+  /**
+   * Verifica que el ano lectivo pertenezca a la institucion del actor.
+   *
+   * Lanza BadRequestException, no NotFoundException, de forma deliberada: es la
+   * semantica de "no encontrado" que syncPeriods ya tenia antes de este cambio.
+   * Convertirla en 404 alteraria el contrato de una ruta viva, y esta fase solo
+   * autoriza impedir que un actor opere sobre un ano ajeno.
+   */
+  private async assertYearInInstitution(academicYearId: string, institutionId: string) {
+    const year = await this.prisma.academicYear.findFirst({
+      where: { id: academicYearId, institutionId },
+      select: { id: true },
+    });
+    if (!year) {
+      throw new BadRequestException('Año académico no encontrado');
+    }
+    return year;
+  }
 
   async listYears(institutionId?: string) {
     const years = await this.prisma.academicYear.findMany({
@@ -76,7 +122,10 @@ export class AcademicTermsService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, institutionId: string) {
+    await this.assertTermInInstitution(id, institutionId);
+    // Eliminacion IDENTICA a la anterior: mismas cascadas, mismo where, sin
+    // transaccion nueva ni efectos secundarios anadidos.
     return this.prisma.academicTerm.delete({ where: { id } });
   }
 
@@ -87,14 +136,12 @@ export class AcademicTermsService {
     order?: number;
     startDate?: string;
     endDate?: string;
-  }>) {
-    // Verificar que el año existe
-    const year = await this.prisma.academicYear.findUnique({
-      where: { id: academicYearId },
-    });
-    if (!year) {
-      throw new BadRequestException('Año académico no encontrado');
-    }
+  }>, institutionId: string) {
+    // Verificar que el año existe Y pertenece a la institucion del actor.
+    // El academicYearId llega del cliente, asi que no puede servir como prueba de
+    // pertenencia: la institucion la resuelve el servidor a partir del actor.
+    // Sustituye al findUnique anterior conservando su misma excepcion.
+    await this.assertYearInInstitution(academicYearId, institutionId);
 
     // Obtener términos existentes
     const existingTerms = await this.prisma.academicTerm.findMany({

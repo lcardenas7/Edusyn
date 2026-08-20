@@ -46,8 +46,12 @@ export class AcademicTermsController {
   async syncPeriods(@Body() data: {
     academicYearId: string;
     periods: Array<{ name: string; weight: number; order?: number; startDate?: string; endDate?: string }>;
-  }) {
-    return this.academicTermsService.syncPeriods(data.academicYearId, data.periods);
+    institutionId?: string;
+  }, @Request() req: any) {
+    // data.institutionId se conserva en el contrato pero NO autoriza: resolveInstitutionId
+    // solo lo honra para SuperAdmin; a un usuario normal se le impone la del JWT.
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
+    return this.academicTermsService.syncPeriods(data.academicYearId, data.periods, instId);
   }
 
   @Post()
@@ -79,8 +83,13 @@ export class AcademicTermsController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async delete(@Param('id') id: string) {
-    return this.academicTermsService.delete(id);
+  async delete(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.academicTermsService.delete(id, instId);
   }
 
   @Patch(':id/toggle-bulletins')
