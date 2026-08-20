@@ -27,11 +27,15 @@ export interface CreateAcademicYearDto {
 export interface ActivateYearDto {
   yearId: string;
   userId: string;
+  /** Institución resuelta por el servidor (requireInstitutionId). No viene del cliente. */
+  institutionId: string;
 }
 
 export interface CloseYearDto {
   yearId: string;
   userId: string;
+  /** Institución resuelta por el servidor (requireInstitutionId). No viene del cliente. */
+  institutionId: string;
   calculatePromotions?: boolean;
 }
 
@@ -39,6 +43,8 @@ export interface PromoteStudentsDto {
   fromYearId: string;
   toYearId: string;
   userId: string;
+  /** Institución resuelta por el servidor (requireInstitutionId). No viene del cliente. */
+  institutionId: string;
 }
 
 export interface PromotionPreview {
@@ -92,8 +98,9 @@ export class AcademicYearLifecycleService {
   // CREAR AÑO LECTIVO (en estado DRAFT)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createYear(dto: CreateAcademicYearDto) {
-    if (!dto.institutionId) {
+  async createYear(dto: CreateAcademicYearDto, institutionId: string) {
+    // La institución la resuelve el servidor; dto.institutionId se ignora.
+    if (!institutionId) {
       throw new BadRequestException('institutionId es requerido');
     }
     if (!dto.year || dto.year < 2000 || dto.year > 2100) {
@@ -103,7 +110,7 @@ export class AcademicYearLifecycleService {
     const existingYear = await this.prisma.academicYear.findUnique({
       where: {
         institutionId_year: {
-          institutionId: dto.institutionId,
+          institutionId,
           year: Number(dto.year),
         },
       },
@@ -115,7 +122,7 @@ export class AcademicYearLifecycleService {
 
     const academicYear = await this.prisma.academicYear.create({
       data: {
-        institutionId: dto.institutionId,
+        institutionId,
         year: Number(dto.year),
         name: dto.name || `Año Lectivo ${dto.year}`,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
@@ -127,7 +134,7 @@ export class AcademicYearLifecycleService {
     // Materializar los períodos del año desde la configuración institucional (SIEE).
     try {
       const inst = await this.prisma.institution.findUnique({
-        where: { id: dto.institutionId },
+        where: { id: institutionId },
         select: { periodsConfig: true },
       });
       const periods = Array.isArray(inst?.periodsConfig) ? (inst!.periodsConfig as any[]) : [];
@@ -228,9 +235,25 @@ export class AcademicYearLifecycleService {
   // OBTENER UN AÑO POR ID
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getYearById(yearId: string) {
-    const year = await this.prisma.academicYear.findUnique({
-      where: { id: yearId },
+  /**
+   * ⚠️ PUNTO ÚNICO DE CONTROL MULTI-TENANT del módulo.
+   *
+   * `institutionId` lo resuelve el servidor (`requireInstitutionId`); el `yearId` lo
+   * controla el cliente. Todas las mutaciones del ciclo de vida —activate, close,
+   * promote-to, update, delete— invocan este método primero, así que acotar aquí la
+   * consulta cierra de una vez las escrituras y las lecturas
+   * (docs/security/RLS-AUDIT-ACADEMIC-YEARS.md).
+   *
+   * Antes hacía `findUnique({ where: { id } })`: un ADMIN de A que conociera el `yearId`
+   * de B podía cerrar su año lectivo, lo que dispara el cálculo de promociones y reescribe
+   * el estado de matrícula de todos sus estudiantes.
+   *
+   * Consulta acotada + el NotFoundException que este método ya lanzaba: no inventa
+   * semántica nueva y no revela la existencia del año ajeno.
+   */
+  async getYearById(yearId: string, institutionId: string) {
+    const year = await this.prisma.academicYear.findFirst({
+      where: { id: yearId, institutionId },
       include: {
         calendar: true,
         terms: {
@@ -257,7 +280,7 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async activateYear(dto: ActivateYearDto) {
-    const year = await this.getYearById(dto.yearId);
+    const year = await this.getYearById(dto.yearId, dto.institutionId);
 
     // Validar que el año esté en DRAFT
     if (year.status !== 'DRAFT') {
@@ -284,7 +307,7 @@ export class AcademicYearLifecycleService {
     // Bloqueantes: sin esto el año activado sería inoperable (sin dónde matricular,
     // sin cómo clasificar notas). Advertencias: incompleto pero operable — no bloquean
     // para no romper el onboarding real de instituciones que cargan datos en días.
-    const { errors: validationErrors, warnings } = await this.validateYearForActivation(dto.yearId);
+    const { errors: validationErrors, warnings } = await this.validateYearForActivation(dto.yearId, dto.institutionId);
     if (validationErrors.length > 0) {
       throw new BadRequestException({
         message: 'El año lectivo no cumple con los requisitos mínimos para ser activado',
@@ -309,11 +332,11 @@ export class AcademicYearLifecycleService {
   // VALIDAR AÑO PARA ACTIVACIÓN
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async validateYearForActivation(yearId: string): Promise<{ errors: string[]; warnings: string[] }> {
+  async validateYearForActivation(yearId: string, institutionId: string): Promise<{ errors: string[]; warnings: string[] }> {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    const year = await this.getYearById(yearId);
+    const year = await this.getYearById(yearId, institutionId);
 
     // BLOQUEANTE — al menos un período académico (ya existía).
     const termsCount = await this.prisma.academicTerm.count({
@@ -359,7 +382,10 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async closeYear(dto: CloseYearDto): Promise<CloseYearResult> {
-    const year = await this.getYearById(dto.yearId);
+    // El año debe pertenecer a la institución resuelta. A partir de aquí la cascada es
+    // internamente coherente: computePromotions deriva todo del año, y el institutionId de
+    // cada evento sale de la propia matrícula. La lógica académica no se toca.
+    const year = await this.getYearById(dto.yearId, dto.institutionId);
 
     // Validar que el año esté en ACTIVE
     if (year.status !== 'ACTIVE') {
@@ -369,7 +395,7 @@ export class AcademicYearLifecycleService {
     }
 
     // Validaciones antes de cerrar
-    const validationErrors = await this.validateYearForClosure(dto.yearId);
+    const validationErrors = await this.validateYearForClosure(dto.yearId, dto.institutionId);
     if (validationErrors.length > 0) {
       throw new BadRequestException({
         message: 'El año lectivo no puede ser cerrado',
@@ -388,7 +414,7 @@ export class AcademicYearLifecycleService {
     let withdrawnCount = 0;
 
     if (dto.calculatePromotions) {
-      const computed = await this.computePromotions(dto.yearId);
+      const computed = await this.computePromotions(dto.yearId, dto.institutionId);
       promotionWrites = computed.writes;
       promotedCount = computed.promotedCount;
       repeatedCount = computed.repeatedCount;
@@ -447,7 +473,7 @@ export class AcademicYearLifecycleService {
   // VALIDAR AÑO PARA CIERRE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async validateYearForClosure(yearId: string): Promise<string[]> {
+  async validateYearForClosure(yearId: string, institutionId: string): Promise<string[]> {
     const errors: string[] = [];
 
     // REGLA: No se puede cerrar el año si hay recuperaciones FINALES sin decidir.
@@ -504,7 +530,7 @@ export class AcademicYearLifecycleService {
    * a cada estudiante activo del año. NO escribe nada — ver closeYear() para la
    * fase de escritura atómica (G-2).
    */
-  private async computePromotions(yearId: string): Promise<{
+  private async computePromotions(yearId: string, institutionId: string): Promise<{
     writes: PromotionWrite[];
     promotedCount: number;
     repeatedCount: number;
@@ -517,7 +543,7 @@ export class AcademicYearLifecycleService {
     let graduatedCount = 0;
     let reviewPendingCount = 0;
 
-    const year = await this.getYearById(yearId);
+    const year = await this.getYearById(yearId, institutionId);
     const rulesCtx = await this.institutionContext.getContext(year.institutionId);
 
     // YC-1: la secuencia de grados DEBE limitarse a la institución del año.
@@ -697,8 +723,10 @@ export class AcademicYearLifecycleService {
   // PREVISUALIZAR PROMOCIONES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async previewPromotions(yearId: string): Promise<PromotionPreview[]> {
-    const yearData = await this.prisma.academicYear.findUnique({ where: { id: yearId }, select: { institutionId: true } });
+  async previewPromotions(yearId: string, institutionId: string): Promise<PromotionPreview[]> {
+    // Consulta acotada: expone la proyección académica de los estudiantes del año, así que
+    // un año ajeno no debe resolver.
+    const yearData = await this.prisma.academicYear.findFirst({ where: { id: yearId, institutionId }, select: { institutionId: true } });
     const rulesCtx = await this.institutionContext.getContext(yearData?.institutionId || '');
     // YC-1: limitar la secuencia de grados a la institución del año (nunca global).
     const gradeSequence = await this.prisma.grade.findMany({
@@ -780,8 +808,14 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async promoteStudents(dto: PromoteStudentsDto): Promise<PromotionResult> {
-    const fromYear = await this.getYearById(dto.fromYearId);
-    const toYear = await this.getYearById(dto.toYearId);
+    // ⚠️ DOS identificadores del cliente y AMBOS deben pertenecer a la institución
+    // resuelta. Validar solo uno dejaba crear una StudentEnrollment con institutionId de A
+    // y academicYearId de B: una fila estructuralmente incoherente entre tenants, el mismo
+    // patrón que el vínculo StudentGuardian cruzado y una mina para la futura política RLS
+    // (docs/security/RLS-AUDIT-ACADEMIC-YEARS.md §6).
+    // getYearById va acotado, así que cualquier año ajeno no resuelve.
+    const fromYear = await this.getYearById(dto.fromYearId, dto.institutionId);
+    const toYear = await this.getYearById(dto.toYearId, dto.institutionId);
     // YC-1: la secuencia de grados se limita a la institución del año de origen
     // (evita promover a un grado/grupo de otra institución).
     const grades = await this.prisma.grade.findMany({
@@ -907,6 +941,9 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async canEditStructure(yearId: string): Promise<boolean> {
+    // Lector de estado interno: NO acota por institución a propósito. Lo consumen
+    // enrollment.service y el controlador; en el controlador el año ya se validó con
+    // getYearById antes de llegar aquí. Solo devuelve un enum de estado.
     const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
       select: { status: true },
@@ -915,6 +952,9 @@ export class AcademicYearLifecycleService {
   }
 
   async canRecordGrades(yearId: string): Promise<boolean> {
+    // Lector de estado interno: NO acota por institución a propósito. Lo consumen
+    // enrollment.service y el controlador; en el controlador el año ya se validó con
+    // getYearById antes de llegar aquí. Solo devuelve un enum de estado.
     const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
       select: { status: true },
@@ -923,6 +963,9 @@ export class AcademicYearLifecycleService {
   }
 
   async canEnrollStudents(yearId: string): Promise<boolean> {
+    // Lector de estado interno: NO acota por institución a propósito. Lo consumen
+    // enrollment.service y el controlador; en el controlador el año ya se validó con
+    // getYearById antes de llegar aquí. Solo devuelve un enum de estado.
     const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
       select: { status: true },
@@ -931,6 +974,9 @@ export class AcademicYearLifecycleService {
   }
 
   async canModify(yearId: string): Promise<boolean> {
+    // Lector de estado interno: NO acota por institución a propósito. Lo consumen
+    // enrollment.service y el controlador; en el controlador el año ya se validó con
+    // getYearById antes de llegar aquí. Solo devuelve un enum de estado.
     const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
       select: { status: true },
@@ -942,8 +988,9 @@ export class AcademicYearLifecycleService {
   // ACTUALIZAR AÑO (solo en DRAFT)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async updateYear(yearId: string, data: Partial<CreateAcademicYearDto>) {
-    const year = await this.getYearById(yearId);
+  async updateYear(yearId: string, data: Partial<CreateAcademicYearDto>, institutionId: string) {
+    // `data` no admite institutionId, así que un año no puede migrar de institución.
+    const year = await this.getYearById(yearId, institutionId);
 
     if (year.status !== 'DRAFT') {
       throw new ForbiddenException('Solo se pueden editar años en estado DRAFT');
@@ -963,8 +1010,8 @@ export class AcademicYearLifecycleService {
   // ELIMINAR AÑO (solo en DRAFT sin datos)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async deleteYear(yearId: string) {
-    const year = await this.getYearById(yearId);
+  async deleteYear(yearId: string, institutionId: string) {
+    const year = await this.getYearById(yearId, institutionId);
 
     if (year.status !== 'DRAFT') {
       throw new ForbiddenException('Solo se pueden eliminar años en estado DRAFT');

@@ -36,8 +36,9 @@ export class AcademicTermsController {
 
   @Post('years')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async createYear(@Body() data: { institutionId: string; year: number; startDate?: Date; endDate?: Date }) {
-    return this.academicTermsService.createYear(data);
+  async createYear(@Request() req: any, @Body() data: { institutionId: string; year: number; startDate?: Date; endDate?: Date }) {
+    const instId = await requireInstitutionId(this.prisma as any, req, data.institutionId);
+    return this.academicTermsService.createYear(data, instId);
   }
 
   @Post('sync')

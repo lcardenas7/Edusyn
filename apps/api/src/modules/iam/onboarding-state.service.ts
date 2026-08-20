@@ -281,7 +281,7 @@ export class OnboardingStateService {
         activationReason = 'Completa la importación de estudiantes';
       } else if (year) {
         // Estudiantes listos y año en DRAFT: preguntar al backend si de verdad se puede activar.
-        const val = await this.yearLifecycle.validateYearForActivation(year.id);
+        const val = await this.yearLifecycle.validateYearForActivation(year.id, institutionId);
         activationIssues = [
           ...val.errors.map((e): Issue => ({
             severity: 'blocking',

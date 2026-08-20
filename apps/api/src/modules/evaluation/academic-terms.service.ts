@@ -20,10 +20,13 @@ export class AcademicTermsService {
     return years;
   }
 
-  async createYear(data: { institutionId: string; year: number; startDate?: Date; endDate?: Date }) {
+  async createYear(data: { institutionId: string; year: number; startDate?: Date; endDate?: Date }, institutionId: string) {
+    // Segunda ruta de creacion de anos lectivos, y la que usa realmente el frontend
+    // (academicYearsApi.create). La institucion la resuelve el servidor; data.institutionId
+    // se ignora (docs/security/RLS-AUDIT-ACADEMIC-YEARS.md).
     return this.prisma.academicYear.create({
       data: {
-        institutionId: data.institutionId,
+        institutionId,
         year: data.year,
         startDate: data.startDate,
         endDate: data.endDate,
