@@ -1271,9 +1271,14 @@ export class StudentsService {
    * Obtiene una matrícula con todos los detalles necesarios para reportes.
    * Retorna DTO de dominio, NO modelo Prisma.
    */
-  async getEnrollmentForReport(enrollmentId: string): Promise<EnrollmentForReport | null> {
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: enrollmentId },
+  /**
+   * ⚠️ `institutionId` es OBLIGATORIO: este helper lo consumen otros módulos (reports),
+   * y no puede depender de que el llamador haya filtrado antes. La consulta va acotada,
+   * así que una matrícula ajena simplemente "no existe" (devuelve null).
+   */
+  async getEnrollmentForReport(enrollmentId: string, institutionId: string): Promise<EnrollmentForReport | null> {
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: enrollmentId, institutionId },
       include: {
         student: true,
         group: {
@@ -1331,15 +1336,21 @@ export class StudentsService {
    * Obtiene matrículas de un grupo para reportes masivos.
    * Retorna DTO de dominio, NO modelo Prisma.
    */
+  /**
+   * ⚠️ `institutionId` obligatorio. No basta con confiar en `groupId`: un grupo de otra
+   * institución debe devolver vacío, no sus matrículas.
+   */
   async getEnrollmentsForGroupReport(params: {
     groupId: string;
     academicYearId: string;
+    institutionId: string;
     status?: EnrollmentStatus;
   }): Promise<EnrollmentForGroupList[]> {
-    const { groupId, academicYearId, status = EnrollmentStatus.ACTIVE } = params;
+    const { groupId, academicYearId, institutionId, status = EnrollmentStatus.ACTIVE } = params;
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         groupId,
         academicYearId,
         status,
@@ -1380,13 +1391,19 @@ export class StudentsService {
    * Obtiene matrículas para reportes MEN (SIMAT, estadísticas).
    * Retorna DTO de dominio, NO modelo Prisma.
    */
+  /**
+   * ⚠️ `institutionId` obligatorio. Nota: sus rutas HTTP (men-reports) siguen tomando la
+   * institución del cuerpo sin resolverla — eso queda fuera de esta intervención y está
+   * catalogado como hallazgo latente. El helper ya no puede filtrar "todas".
+   */
   async getEnrollmentsForMenReport(params: {
     academicYearId: string;
+    institutionId: string;
     gradeId?: string;
     campusId?: string;
     status?: EnrollmentStatus;
   }): Promise<EnrollmentForMenReport[]> {
-    const { academicYearId, gradeId, campusId, status } = params;
+    const { academicYearId, institutionId, gradeId, campusId, status } = params;
 
     // Construir filtro de grupo dinámicamente
     const groupFilter: { gradeId?: string; campusId?: string } = {};
@@ -1395,6 +1412,7 @@ export class StudentsService {
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         academicYearId,
         ...(Object.keys(groupFilter).length > 0 && { group: groupFilter }),
         ...(status && { status }),
@@ -1441,9 +1459,13 @@ export class StudentsService {
    * Obtiene el snapshot de estructura académica de una matrícula.
    * Retorna DTO de dominio, NO modelo Prisma.
    */
-  async getEnrollmentAcademicStructure(enrollmentId: string): Promise<EnrollmentAreaSnapshot[]> {
+  /**
+   * ⚠️ `institutionId` obligatorio. `EnrollmentArea` tiene columna propia de institución,
+   * así que la consulta se acota directamente.
+   */
+  async getEnrollmentAcademicStructure(enrollmentId: string, institutionId: string): Promise<EnrollmentAreaSnapshot[]> {
     const areas = await this.prisma.enrollmentArea.findMany({
-      where: { enrollmentId },
+      where: { enrollmentId, institutionId },
       include: {
         enrollmentSubjects: {
           include: { subject: true },
@@ -1475,16 +1497,23 @@ export class StudentsService {
    * Obtiene observaciones de un estudiante en un rango de fechas.
    * Retorna DTO de dominio, NO modelo Prisma.
    */
+  /**
+   * ⚠️ `institutionId` obligatorio. Sin consumidor confirmado hoy, pero se endurece igual
+   * para que no nazca inseguro el día que se use. `StudentObservation` tiene columna
+   * propia de institución.
+   */
   async getStudentObservationsForReport(params: {
     studentEnrollmentId: string;
+    institutionId: string;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
   }): Promise<StudentObservationForReport[]> {
-    const { studentEnrollmentId, startDate, endDate, limit = 10 } = params;
+    const { studentEnrollmentId, institutionId, startDate, endDate, limit = 10 } = params;
 
     const observations = await this.prisma.studentObservation.findMany({
       where: {
+        institutionId,
         studentEnrollmentId,
         ...(startDate || endDate ? {
           date: {

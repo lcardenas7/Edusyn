@@ -19,6 +19,7 @@ export class MenReportsService {
     // Delegar a StudentsService para obtener matrículas
     const students = await this.studentsService.getEnrollmentsForMenReport({
       academicYearId: dto.academicYearId,
+      institutionId: dto.institutionId,
       gradeId: dto.gradeId,
       campusId: dto.campusId,
     });
@@ -71,6 +72,7 @@ export class MenReportsService {
     // Delegar a StudentsService para obtener matrículas
     const enrollments = await this.studentsService.getEnrollmentsForMenReport({
       academicYearId: dto.academicYearId,
+      institutionId: dto.institutionId,
     });
 
     const byStatus: Record<string, number> = {};
@@ -110,6 +112,7 @@ export class MenReportsService {
     // Delegar a StudentsService para obtener matrículas activas
     const enrollments = await this.studentsService.getEnrollmentsForMenReport({
       academicYearId: dto.academicYearId,
+      institutionId: dto.institutionId,
       status: EnrollmentStatus.ACTIVE,
     });
 
@@ -257,6 +260,7 @@ export class MenReportsService {
     // Delegar a StudentsService para obtener matrículas activas
     const enrollments = await this.studentsService.getEnrollmentsForMenReport({
       academicYearId: dto.academicYearId,
+      institutionId: dto.institutionId,
       status: EnrollmentStatus.ACTIVE,
     });
 

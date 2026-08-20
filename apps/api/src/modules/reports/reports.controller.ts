@@ -11,6 +11,7 @@ import type { ReportMode } from './academic-data-source.service';
 import { GenerateReportCardDto, GenerateBulkReportCardsDto } from './dto/generate-report-card.dto';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -140,12 +141,17 @@ export class ReportsController {
   @Get('minimum-grade/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getMinimumGradeRequired(
+    @Request() req,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
+    // El enrollmentId llega del cliente: la institución la resuelve el servidor y acota
+    // la consulta aguas abajo (docs/security/RLS-VALIDACION-CENSO.md).
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.reportsService.calculateMinimumGradeRequired(
       studentEnrollmentId,
       academicYearId,
+      institutionId,
     );
   }
 
@@ -178,9 +184,13 @@ export class ReportsController {
         }
       }
     }
+    // Tenant isolation, independiente del control de capability de arriba: son
+    // controles distintos y ninguno sustituye al otro.
+    const resolvedInstitutionId = await requireInstitutionId(this.prisma as any, req);
     return this.reportsService.calculateMinimumGradeForGroup(
       groupId,
       academicYearId,
+      resolvedInstitutionId,
     );
   }
 

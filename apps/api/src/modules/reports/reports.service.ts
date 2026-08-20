@@ -48,9 +48,9 @@ export class ReportsService {
    * Usa el snapshot (EnrollmentSubject) si existe, o calcula desde TeacherAssignment como fallback.
    * Esto protege contra cambios en plantillas que afectarían históricos.
    */
-  private async getEnrollmentSubjects(enrollmentId: string, groupId: string, academicYearId: string) {
+  private async getEnrollmentSubjects(enrollmentId: string, groupId: string, academicYearId: string, institutionId: string) {
     // Intentar obtener snapshot de la matrícula - delegar a StudentsService
-    const enrollmentAreas = await this.studentsService.getEnrollmentAcademicStructure(enrollmentId);
+    const enrollmentAreas = await this.studentsService.getEnrollmentAcademicStructure(enrollmentId, institutionId);
 
     if (enrollmentAreas.length > 0) {
       // Usar snapshot: obtener TeacherAssignments solo para las asignaturas del snapshot
@@ -133,13 +133,14 @@ export class ReportsService {
   private async getExpectedSubjectIdsByEnrollment(
     enrollments: Array<{ id: string; groupId: string }>,
     academicYearId: string,
+    institutionId: string,
   ): Promise<Map<string, string[]>> {
     const cacheByGroup = new Map<string, string[]>();
     const result = new Map<string, string[]>();
 
     for (const enrollment of enrollments) {
       if (!cacheByGroup.has(enrollment.groupId)) {
-        const structure = await this.getEnrollmentSubjects(enrollment.id, enrollment.groupId, academicYearId);
+        const structure = await this.getEnrollmentSubjects(enrollment.id, enrollment.groupId, academicYearId, institutionId);
         const subjectIds = structure.areas
           .flatMap(area => area.subjects.map(subject => subject.id))
           .filter((id): id is string => Boolean(id));
@@ -703,6 +704,7 @@ export class ReportsService {
   async calculateMinimumGradeRequired(
     studentEnrollmentId: string,
     academicYearId: string,
+    institutionId: string,
   ): Promise<{
     student: { id: string; firstName: string; secondName: string | null; lastName: string; secondLastName: string | null };
     group: { id: string; name: string; gradeName: string };
@@ -733,7 +735,7 @@ export class ReportsService {
   }> {
     // 1. Obtener datos del estudiante y matrícula
     // 1. Delegar a StudentsService para obtener matrícula
-    const enrollment = await this.studentsService.getEnrollmentForReport(studentEnrollmentId);
+    const enrollment = await this.studentsService.getEnrollmentForReport(studentEnrollmentId, institutionId);
 
     if (!enrollment) {
       throw new NotFoundException('Matrícula no encontrada');
@@ -762,6 +764,7 @@ export class ReportsService {
       studentEnrollmentId,
       enrollment.group.id,
       academicYearId,
+      institutionId,
     );
 
     // 5. Calcular nota mínima para cada asignatura
@@ -962,6 +965,7 @@ export class ReportsService {
   async calculateMinimumGradeForGroup(
     groupId: string,
     academicYearId: string,
+    institutionId: string,
   ): Promise<Array<{
     studentId: string;
     studentName: string;
@@ -982,6 +986,7 @@ export class ReportsService {
     const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
       groupId,
       academicYearId,
+      institutionId,
       status: EnrollmentStatus.ACTIVE,
     });
 
@@ -1004,7 +1009,7 @@ export class ReportsService {
 
     for (const enrollment of enrollments) {
       try {
-        const data = await this.calculateMinimumGradeRequired(enrollment.id, academicYearId);
+        const data = await this.calculateMinimumGradeRequired(enrollment.id, academicYearId, institutionId);
         
         // Filtrar solo asignaturas críticas (at_risk o impossible)
         const criticalSubjects = data.subjects
@@ -1078,6 +1083,7 @@ export class ReportsService {
     const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
       groupId,
       academicYearId,
+      institutionId,
       status: EnrollmentStatus.ACTIVE,
     });
 
@@ -1096,7 +1102,7 @@ export class ReportsService {
     }> = [];
 
     if (enrollments.length > 0) {
-      const structure = await this.getEnrollmentSubjects(enrollments[0].id, groupId, academicYearId);
+      const structure = await this.getEnrollmentSubjects(enrollments[0].id, groupId, academicYearId, institutionId);
       for (const area of structure.areas) {
         const areaId = area.id || area.name;
         areaGroups.push({ areaId, areaName: area.name, subjectCount: area.subjects.length });
@@ -1129,7 +1135,7 @@ export class ReportsService {
 
     for (const enrollment of enrollments) {
       try {
-        const data = await this.calculateMinimumGradeRequired(enrollment.id, academicYearId);
+        const data = await this.calculateMinimumGradeRequired(enrollment.id, academicYearId, institutionId);
 
         // Mapear cada asignatura en el orden de subjectColumns
         const subjectMap = new Map<string, typeof data.subjects[0]>();
@@ -1472,6 +1478,7 @@ export class ReportsService {
     const expectedSubjectsByEnrollment = await this.getExpectedSubjectIdsByEnrollment(
       enrollments.map(enrollment => ({ id: enrollment.id, groupId: enrollment.groupId })),
       academicYearId,
+      institutionId,
     );
 
     const scoresByStudentSubject = new Map<string, Map<string, number[]>>();
@@ -1553,6 +1560,7 @@ export class ReportsService {
     const expectedSubjectsByEnrollment = await this.getExpectedSubjectIdsByEnrollment(
       enrollments.map(enrollment => ({ id: enrollment.id, groupId: enrollment.groupId })),
       academicYearId,
+      institutionId,
     );
 
     // Obtener notas finales de período para estas matrículas
