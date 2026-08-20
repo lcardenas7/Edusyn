@@ -40,11 +40,77 @@ export class ObserverService {
   // OBSERVACIONES (CRUD principal)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async create(authorId: string, dto: CreateObservationDto) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO MULTI-TENANT — punto de control del servicio
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // Este modulo guarda el observador del estudiante: faltas, actas, compromisos,
+  // citaciones, remisiones y medidas. Es PII sensible de menores y material con valor
+  // probatorio en procesos de convivencia (docs/security/RLS-AUDIT-OBSERVER.md).
+  //
+  // ⚠️ LECCION DE ESTE MODULO: las cinco entidades principales TIENEN institutionId y lo
+  // rellenaban correctamente... derivandolo de la matricula que elegia el cliente. El dato
+  // quedaba bien formado y el aislamiento roto. Por eso la institucion se resuelve ahora
+  // desde el contexto autenticado y se VALIDA que la matricula le pertenezca antes de
+  // escribir. Tener institutionId nunca es evidencia suficiente.
+  //
+  // Todas las comprobaciones usan consultas ACOTADAS y lanzan el NotFoundException que
+  // este servicio ya usaba: no inventan semantica nueva ni revelan la existencia del
+  // recurso ajeno.
+
+  /** Comprobacion generica de pertenencia por `id + institutionId`. */
+  private async assertOwned(
+    delegate: { findFirst: (args: any) => Promise<any> },
+    id: string,
+    institutionId: string,
+    notFoundMessage: string,
+  ) {
+    const row = await delegate.findFirst({ where: { id, institutionId }, select: { id: true } });
+    if (!row) throw new NotFoundException(notFoundMessage);
+    return row;
+  }
+
+  /** La matricula sobre la que se registra debe pertenecer a la institucion del actor. */
+  private async assertEnrollment(studentEnrollmentId: string, institutionId: string) {
+    return this.assertOwned(
+      this.prisma.studentEnrollment as any,
+      studentEnrollmentId,
+      institutionId,
+      'Matricula no encontrada',
+    );
+  }
+
+  private assertObservation(id: string, institutionId: string) {
+    return this.assertOwned(this.prisma.studentObservation as any, id, institutionId, 'Observacion no encontrada');
+  }
+  private assertCommitment(id: string, institutionId: string) {
+    return this.assertOwned(this.prisma.observerCommitment as any, id, institutionId, 'Compromiso no encontrado');
+  }
+  private assertCitation(id: string, institutionId: string) {
+    return this.assertOwned(this.prisma.guardianCitation as any, id, institutionId, 'Citacion no encontrada');
+  }
+  private assertReferral(id: string, institutionId: string) {
+    return this.assertOwned(this.prisma.observerReferral as any, id, institutionId, 'Remision no encontrada');
+  }
+  private assertMeasure(id: string, institutionId: string) {
+    return this.assertOwned(this.prisma.pedagogicalMeasure as any, id, institutionId, 'Medida no encontrada');
+  }
+
+  /** ActaRecord no tiene institutionId: deriva de su observacion (ruta unica, @unique). */
+  private async assertActa(id: string, institutionId: string) {
+    const acta = await this.prisma.actaRecord.findFirst({
+      where: { id, observation: { institutionId } },
+      select: { id: true },
+    });
+    if (!acta) throw new NotFoundException('Acta no encontrada');
+    return acta;
+  }
+
+  async create(authorId: string, dto: CreateObservationDto, institutionId: string) {
+    await this.assertEnrollment(dto.studentEnrollmentId, institutionId);
     return this.prisma.studentObservation.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
         date: new Date(dto.date),
@@ -60,9 +126,8 @@ export class ObserverService {
     });
   }
 
-  async update(id: string, dto: UpdateObservationDto) {
-    const observation = await this.prisma.studentObservation.findUnique({ where: { id } });
-    if (!observation) throw new NotFoundException('Observación no encontrada');
+  async update(id: string, dto: UpdateObservationDto, institutionId: string) {
+    await this.assertObservation(id, institutionId);
 
     return this.prisma.studentObservation.update({
       where: { id },
@@ -82,15 +147,15 @@ export class ObserverService {
     });
   }
 
-  async delete(id: string) {
-    const observation = await this.prisma.studentObservation.findUnique({ where: { id } });
-    if (!observation) throw new NotFoundException('Observación no encontrada');
+  async delete(id: string, institutionId: string) {
+    await this.assertObservation(id, institutionId);
     return this.prisma.studentObservation.delete({ where: { id } });
   }
 
-  async getByStudent(studentEnrollmentId: string, filters?: { startDate?: string; endDate?: string; type?: string; category?: string; status?: string }) {
+  async getByStudent(studentEnrollmentId: string, institutionId: string, filters?: { startDate?: string; endDate?: string; type?: string; category?: string; status?: string }) {
     return this.prisma.studentObservation.findMany({
       where: {
+        institutionId,
         studentEnrollmentId,
         ...(filters?.startDate && filters?.endDate ? { date: { gte: new Date(filters.startDate), lte: new Date(filters.endDate) } } : {}),
         ...(filters?.type ? { type: filters.type as any } : {}),
@@ -102,9 +167,9 @@ export class ObserverService {
     });
   }
 
-  async getById(id: string) {
-    const observation = await this.prisma.studentObservation.findUnique({
-      where: { id },
+  async getById(id: string, institutionId: string) {
+    const observation = await this.prisma.studentObservation.findFirst({
+      where: { id, institutionId },
       include: observationFullInclude,
     });
     if (!observation) throw new NotFoundException('Observación no encontrada');
@@ -112,25 +177,25 @@ export class ObserverService {
   }
 
   // Timeline completa del estudiante (todas las entradas de todos los tipos)
-  async getStudentTimeline(studentEnrollmentId: string) {
+  async getStudentTimeline(studentEnrollmentId: string, institutionId: string) {
     const [observations, commitments, citations, referrals, measures] = await Promise.all([
       this.prisma.studentObservation.findMany({
-        where: { studentEnrollmentId },
+        where: { institutionId, studentEnrollmentId },
         include: observationFullInclude,
         orderBy: { date: 'desc' },
       }),
       this.prisma.observerCommitment.findMany({
-        where: { studentEnrollmentId },
+        where: { institutionId, studentEnrollmentId },
         include: { author: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.guardianCitation.findMany({
-        where: { studentEnrollmentId },
+        where: { institutionId, studentEnrollmentId },
         include: { author: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: { scheduledDate: 'desc' },
       }),
       this.prisma.observerReferral.findMany({
-        where: { studentEnrollmentId },
+        where: { institutionId, studentEnrollmentId },
         include: {
           author: { select: { id: true, firstName: true, lastName: true } },
           referredToUser: { select: { id: true, firstName: true, lastName: true } },
@@ -138,7 +203,7 @@ export class ObserverService {
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.pedagogicalMeasure.findMany({
-        where: { studentEnrollmentId },
+        where: { institutionId, studentEnrollmentId },
         include: { appliedBy: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: { createdAt: 'desc' },
       }),
@@ -147,9 +212,20 @@ export class ObserverService {
     return { observations, commitments, citations, referrals, measures };
   }
 
-  async getPendingFollowUps(authorId?: string) {
+  /**
+   * ⚠️ P0 CORREGIDO. El unico filtro era el autor, y era OPCIONAL: con `?all=true` el
+   * controlador pasaba `undefined` y la consulta quedaba sin filtro de autor Y sin filtro
+   * de institucion, devolviendo el expediente disciplinario abierto de TODA la plataforma
+   * a cualquier DOCENTE (docs/security/RLS-AUDIT-OBSERVER.md).
+   *
+   * `institutionId` es ahora OBLIGATORIO y no depende de ningun parametro del cliente:
+   * `all=true` significa "todos los seguimientos pendientes DE MI INSTITUCION", nunca
+   * "de toda la plataforma". La semantica de `all=false` (solo los mios) no cambia.
+   */
+  async getPendingFollowUps(institutionId: string, authorId?: string) {
     return this.prisma.studentObservation.findMany({
       where: {
+        institutionId,
         requiresFollowUp: true,
         status: { not: 'CLOSED' },
         ...(authorId ? { authorId } : {}),
@@ -159,12 +235,12 @@ export class ObserverService {
     });
   }
 
-  async getStudentSummary(studentEnrollmentId: string) {
+  async getStudentSummary(studentEnrollmentId: string, institutionId: string) {
     const [observations, commitments, citations, referrals] = await Promise.all([
-      this.prisma.studentObservation.findMany({ where: { studentEnrollmentId } }),
-      this.prisma.observerCommitment.findMany({ where: { studentEnrollmentId } }),
-      this.prisma.guardianCitation.findMany({ where: { studentEnrollmentId } }),
-      this.prisma.observerReferral.findMany({ where: { studentEnrollmentId } }),
+      this.prisma.studentObservation.findMany({ where: { institutionId, studentEnrollmentId } }),
+      this.prisma.observerCommitment.findMany({ where: { institutionId, studentEnrollmentId } }),
+      this.prisma.guardianCitation.findMany({ where: { institutionId, studentEnrollmentId } }),
+      this.prisma.observerReferral.findMany({ where: { institutionId, studentEnrollmentId } }),
     ]);
 
     return {
@@ -198,7 +274,8 @@ export class ObserverService {
     };
   }
 
-  async markParentNotified(id: string) {
+  async markParentNotified(id: string, institutionId: string) {
+    await this.assertObservation(id, institutionId);
     return this.prisma.studentObservation.update({
       where: { id },
       data: { parentNotified: true, parentNotifiedAt: new Date() },
@@ -209,7 +286,9 @@ export class ObserverService {
   // ACTAS FORMALES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createActa(dto: CreateActaDto) {
+  async createActa(dto: CreateActaDto, institutionId: string) {
+    // El acta cuelga de una observacion: esa observacion debe ser de la institucion del actor.
+    await this.assertObservation(dto.observationId, institutionId);
     return this.prisma.actaRecord.create({
       data: {
         observationId: dto.observationId,
@@ -225,7 +304,8 @@ export class ObserverService {
     });
   }
 
-  async updateActa(id: string, data: Partial<CreateActaDto> & { digitalSignatures?: string }) {
+  async updateActa(id: string, data: Partial<CreateActaDto> & { digitalSignatures?: string }, institutionId: string) {
+    await this.assertActa(id, institutionId);
     return this.prisma.actaRecord.update({
       where: { id },
       data: {
@@ -243,11 +323,11 @@ export class ObserverService {
   // COMPROMISOS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createCommitment(authorId: string, dto: CreateCommitmentDto) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
+  async createCommitment(authorId: string, dto: CreateCommitmentDto, institutionId: string) {
+    await this.assertEnrollment(dto.studentEnrollmentId, institutionId);
     return this.prisma.observerCommitment.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
@@ -259,7 +339,8 @@ export class ObserverService {
     });
   }
 
-  async updateCommitment(id: string, userId: string, dto: UpdateCommitmentDto) {
+  async updateCommitment(id: string, userId: string, dto: UpdateCommitmentDto, institutionId: string) {
+    await this.assertCommitment(id, institutionId);
     const data: any = {};
     if (dto.status) {
       data.status = dto.status as ObserverEntryStatus;
@@ -277,9 +358,9 @@ export class ObserverService {
     });
   }
 
-  async getCommitmentsByStudent(studentEnrollmentId: string) {
+  async getCommitmentsByStudent(studentEnrollmentId: string, institutionId: string) {
     return this.prisma.observerCommitment.findMany({
-      where: { studentEnrollmentId },
+      where: { institutionId, studentEnrollmentId },
       include: {
         author: { select: { id: true, firstName: true, lastName: true } },
         closedBy: { select: { id: true, firstName: true, lastName: true } },
@@ -292,11 +373,11 @@ export class ObserverService {
   // CITACIONES A ACUDIENTES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createCitation(authorId: string, dto: CreateCitationDto) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
+  async createCitation(authorId: string, dto: CreateCitationDto, institutionId: string) {
+    await this.assertEnrollment(dto.studentEnrollmentId, institutionId);
     return this.prisma.guardianCitation.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
@@ -307,7 +388,8 @@ export class ObserverService {
     });
   }
 
-  async updateCitation(id: string, dto: UpdateCitationDto) {
+  async updateCitation(id: string, dto: UpdateCitationDto, institutionId: string) {
+    await this.assertCitation(id, institutionId);
     return this.prisma.guardianCitation.update({
       where: { id },
       data: {
@@ -319,9 +401,9 @@ export class ObserverService {
     });
   }
 
-  async getCitationsByStudent(studentEnrollmentId: string) {
+  async getCitationsByStudent(studentEnrollmentId: string, institutionId: string) {
     return this.prisma.guardianCitation.findMany({
-      where: { studentEnrollmentId },
+      where: { institutionId, studentEnrollmentId },
       include: { author: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { scheduledDate: 'desc' },
     });
@@ -331,11 +413,11 @@ export class ObserverService {
   // REMISIONES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createReferral(authorId: string, dto: CreateReferralDto) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
+  async createReferral(authorId: string, dto: CreateReferralDto, institutionId: string) {
+    await this.assertEnrollment(dto.studentEnrollmentId, institutionId);
     return this.prisma.observerReferral.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
@@ -350,7 +432,8 @@ export class ObserverService {
     });
   }
 
-  async updateReferral(id: string, userId: string, dto: UpdateReferralDto) {
+  async updateReferral(id: string, userId: string, dto: UpdateReferralDto, institutionId: string) {
+    await this.assertReferral(id, institutionId);
     const data: any = {};
     if (dto.status) {
       data.status = dto.status as ObserverEntryStatus;
@@ -371,9 +454,9 @@ export class ObserverService {
     });
   }
 
-  async getReferralsByStudent(studentEnrollmentId: string) {
+  async getReferralsByStudent(studentEnrollmentId: string, institutionId: string) {
     return this.prisma.observerReferral.findMany({
-      where: { studentEnrollmentId },
+      where: { institutionId, studentEnrollmentId },
       include: {
         author: { select: { id: true, firstName: true, lastName: true } },
         referredToUser: { select: { id: true, firstName: true, lastName: true } },
@@ -386,11 +469,11 @@ export class ObserverService {
   // MEDIDAS PEDAGÓGICAS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createMeasure(userId: string, dto: CreateMeasureDto) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
+  async createMeasure(userId: string, dto: CreateMeasureDto, institutionId: string) {
+    await this.assertEnrollment(dto.studentEnrollmentId, institutionId);
     return this.prisma.pedagogicalMeasure.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         measureType: dto.measureType,
@@ -403,7 +486,8 @@ export class ObserverService {
     });
   }
 
-  async updateMeasure(id: string, dto: UpdateMeasureDto) {
+  async updateMeasure(id: string, dto: UpdateMeasureDto, institutionId: string) {
+    await this.assertMeasure(id, institutionId);
     const data: any = {};
     if (dto.status) data.status = dto.status as ObserverEntryStatus;
     if (dto.result) data.result = dto.result;
@@ -414,9 +498,10 @@ export class ObserverService {
   // BÚSQUEDA POR GRUPO (para coordinadores/docentes)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getByGroup(groupId: string, academicYearId: string, filters?: { type?: string; status?: string; authorId?: string }) {
+  async getByGroup(groupId: string, academicYearId: string, institutionId: string, filters?: { type?: string; status?: string; authorId?: string }) {
     return this.prisma.studentObservation.findMany({
       where: {
+        institutionId,
         studentEnrollment: { groupId, academicYearId },
         ...(filters?.type ? { type: filters.type as any } : {}),
         ...(filters?.status ? { status: filters.status as ObserverEntryStatus } : {}),
