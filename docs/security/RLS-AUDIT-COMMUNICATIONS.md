@@ -507,7 +507,7 @@ corresponder al rol.
 baseline   553/553  (f0a6901)
 final      608/608  (+55)
 typecheck  limpio
-commit     070ef1a  (código) + 8d43c4b (matriz de entrega)
+commit     070ef1a  (código) + 1ca7d4b (matriz de entrega)
 ```
 
 **Búsqueda repo-wide final:** 0 operaciones sobre las tres entidades fuera de
@@ -547,8 +547,15 @@ consciente y no un efecto colateral.
 
 | | |
 |---|---|
-| Commit | `070ef1a` |
-| Rama | `security/fase0.3-contencion` → `staging` |
+| Commit (código) | `070ef1a` |
+| Commit (matriz de entrega) | `1ca7d4b` |
+| Despliegue en staging | **SUCCESS** sobre `1ca7d4b` |
+| `/api/health` | **200** |
+| Rutas críticas sin token | **401** — inbox, POST, :id, descarga, reply, replies, PUT, DELETE |
+| Logs de arranque | sin `error`, `exception`, `P1000`, `P1001`, `P2024`, `25P02` |
+| Login | `/auth/institutions/search` → 200 · `/auth/login` → 400 (ruta viva) |
+| Suite sobre el commit desplegado | **608/608**, typecheck limpio |
+| Repo-wide final | **0** operaciones sobre las tres entidades fuera de `communications.service.ts` |
 | Producción | `a00b3f5` — **intacta** |
 
 ---
