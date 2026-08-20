@@ -8,7 +8,7 @@ import { StudentsGuard } from '../auth/guards/students.guard';
 import { StudentsService } from './students.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { resolveInstitutionId, requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,8 +20,9 @@ export class StudentsController {
 
   @Post()
   @UseGuards(StudentsGuard)
-  async create(@Body() dto: CreateStudentDto) {
-    return this.studentsService.create(dto);
+  async create(@Request() req: any, @Body() dto: CreateStudentDto) {
+    const instId = await requireInstitutionId(this.prisma as any, req, dto.institutionId);
+    return this.studentsService.create(dto, instId);
   }
 
   @Get()
@@ -32,7 +33,7 @@ export class StudentsController {
     @Query('groupId') groupId?: string,
     @Query('academicYearId') academicYearId?: string,
   ) {
-    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.studentsService.list({ institutionId: instId, groupId, academicYearId });
   }
 
@@ -51,30 +52,34 @@ export class StudentsController {
 
   @Post('enroll')
   @UseGuards(StudentsGuard)
-  async enroll(@Body() dto: EnrollStudentDto) {
-    return this.studentsService.enroll(dto);
+  async enroll(@Request() req: any, @Body() dto: EnrollStudentDto) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.enroll(dto, instId);
   }
 
   @Post('bulk-import')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async bulkImport(@Body() data: {
+  async bulkImport(@Request() req: any, @Body() data: {
     institutionId: string;
     academicYearId: string;
     students: any[];
   }) {
-    return this.studentsService.bulkImport(data);
+    const instId = await requireInstitutionId(this.prisma as any, req, data.institutionId);
+    return this.studentsService.bulkImport(data, instId);
   }
 
   @Post('bulk-activate-access')
   @UseGuards(CredentialsGuard)
-  async bulkActivateAccess(@Body() data: { studentIds: string[] }) {
-    return this.studentsService.bulkActivateAccess(data.studentIds);
+  async bulkActivateAccess(@Request() req: any, @Body() data: { studentIds: string[] }) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.bulkActivateAccess(data.studentIds, instId);
   }
 
   @Post('bulk-reset-password')
   @UseGuards(CredentialsGuard)
-  async bulkResetPassword(@Body() data: { studentIds: string[] }) {
-    return this.studentsService.bulkResetPassword(data.studentIds);
+  async bulkResetPassword(@Request() req: any, @Body() data: { studentIds: string[] }) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.bulkResetPassword(data.studentIds, instId);
   }
 
   /**
@@ -83,8 +88,9 @@ export class StudentsController {
    */
   @Post('bulk-password-equals-username')
   @UseGuards(CredentialsGuard)
-  async bulkPasswordEqualsUsername(@Body() data: { studentIds: string[] }) {
-    return this.studentsService.bulkSetPasswordToUsername(data.studentIds);
+  async bulkPasswordEqualsUsername(@Request() req: any, @Body() data: { studentIds: string[] }) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.bulkSetPasswordToUsername(data.studentIds, instId);
   }
 
   /**
@@ -95,14 +101,16 @@ export class StudentsController {
    */
   @Post('bulk-regenerate-credentials')
   @UseGuards(CredentialsGuard)
-  async bulkRegenerateCredentials(@Body() data: { studentIds: string[] }) {
-    return this.studentsService.bulkRegenerateCredentials(data.studentIds);
+  async bulkRegenerateCredentials(@Request() req: any, @Body() data: { studentIds: string[] }) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.bulkRegenerateCredentials(data.studentIds, instId);
   }
 
   @Post('bulk-delete-without-records')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async bulkDeleteWithoutRecords(@Body() data: { institutionId: string }) {
-    return this.studentsService.bulkDeleteWithoutRecords(data.institutionId);
+  async bulkDeleteWithoutRecords(@Request() req: any, @Body() data: { institutionId: string }) {
+    const instId = await requireInstitutionId(this.prisma as any, req, data.institutionId);
+    return this.studentsService.bulkDeleteWithoutRecords(instId);
   }
 
   /**
@@ -142,51 +150,60 @@ export class StudentsController {
   @Put('enrollment/:enrollmentId/status')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateEnrollmentStatus(
+    @Request() req: any,
     @Param('enrollmentId') enrollmentId: string,
     @Body() dto: UpdateEnrollmentStatusDto,
   ) {
-    return this.studentsService.updateEnrollmentStatus(enrollmentId, dto);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.updateEnrollmentStatus(enrollmentId, dto, instId);
   }
 
   @Get(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async findById(@Param('id') id: string) {
-    return this.studentsService.findById(id);
+  async findById(@Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.findById(id, instId);
   }
 
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async update(@Param('id') id: string, @Body() dto: UpdateStudentDto) {
-    return this.studentsService.update(id, dto);
+  async update(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateStudentDto) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.update(id, dto, instId);
   }
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async delete(@Param('id') id: string) {
-    return this.studentsService.delete(id);
+  async delete(@Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.delete(id, instId);
   }
 
   @Get(':studentId/enrollments')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getEnrollments(@Param('studentId') studentId: string) {
-    return this.studentsService.getEnrollmentsByStudent(studentId);
+  async getEnrollments(@Request() req: any, @Param('studentId') studentId: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.getEnrollmentsByStudent(studentId, instId);
   }
 
   @Post(':id/activate-access')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async activateAccess(@Param('id') id: string) {
-    return this.studentsService.activateAccess(id);
+  async activateAccess(@Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.activateAccess(id, instId);
   }
 
   @Post(':id/deactivate-access')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async deactivateAccess(@Param('id') id: string) {
-    return this.studentsService.deactivateAccess(id);
+  async deactivateAccess(@Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.deactivateAccess(id, instId);
   }
 
   @Post(':id/reset-password')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async resetPassword(@Param('id') id: string) {
-    return this.studentsService.resetPassword(id);
+  async resetPassword(@Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.studentsService.resetPassword(id, instId);
   }
 }

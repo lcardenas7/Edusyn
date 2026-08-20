@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
@@ -15,10 +15,82 @@ import * as bcrypt from 'bcryptjs';
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateStudentDto) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO MULTI-TENANT — punto de control del servicio
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // Todos los métodos de escritura reciben `institutionId` YA RESUELTO POR EL SERVIDOR
+  // (`requireInstitutionId` en el controlador). El valor que llegue en un DTO o en el
+  // cuerpo NO es fuente de autoridad.
+  //
+  // ⚠️ El aislamiento NO se agota comprobando `institutionId`. Este módulo recibe del
+  // cliente identificadores de OTRAS entidades —`academicYearId`, `groupId`, `studentId`,
+  // `enrollmentId`— y un identificador válido de otra institución sigue siendo un ataque
+  // cross-tenant. La regla es: TODO objeto relacionado que controle el cliente debe
+  // pertenecer al mismo tenant que el actor
+  // (docs/security/RLS-VALIDACION-CENSO.md §C.2).
+  //
+  // Las comprobaciones usan consultas ACOTADAS y lanzan NotFoundException: no revelan la
+  // existencia del recurso ajeno.
+
+  /** El estudiante debe pertenecer a la institución resuelta. */
+  private async assertStudent(studentId: string, institutionId: string) {
+    const found = await this.prisma.student.findFirst({
+      where: { id: studentId, institutionId },
+      select: { id: true, institutionId: true },
+    });
+    if (!found) throw new NotFoundException('Estudiante no encontrado');
+    return found;
+  }
+
+  /** TODOS los estudiantes de la lista deben pertenecer a la institución resuelta. */
+  private async assertStudents(studentIds: string[], institutionId: string) {
+    if (!studentIds?.length) return [];
+    const found = await this.prisma.student.findMany({
+      where: { id: { in: studentIds }, institutionId },
+      select: { id: true },
+    });
+    if (found.length !== new Set(studentIds).size) {
+      throw new NotFoundException('Uno o más estudiantes no pertenecen a la institución');
+    }
+    return found;
+  }
+
+  /** El año lectivo debe pertenecer a la institución resuelta. */
+  private async assertAcademicYear(academicYearId: string, institutionId: string) {
+    const found = await this.prisma.academicYear.findFirst({
+      where: { id: academicYearId, institutionId },
+      select: { id: true },
+    });
+    if (!found) throw new NotFoundException('Año lectivo no encontrado');
+    return found;
+  }
+
+  /** El grupo pertenece a la institución a través de su sede (Group no tiene institutionId). */
+  private async assertGroup(groupId: string, institutionId: string) {
+    const found = await this.prisma.group.findFirst({
+      where: { id: groupId, campus: { institutionId } },
+      select: { id: true },
+    });
+    if (!found) throw new NotFoundException('Grupo no encontrado');
+    return found;
+  }
+
+  /** La matrícula debe pertenecer a la institución resuelta. */
+  private async assertEnrollment(enrollmentId: string, institutionId: string) {
+    const found = await this.prisma.studentEnrollment.findFirst({
+      where: { id: enrollmentId, institutionId },
+      select: { id: true },
+    });
+    if (!found) throw new NotFoundException('Matrícula no encontrada');
+    return found;
+  }
+
+  async create(dto: CreateStudentDto, institutionId: string) {
     return this.prisma.student.create({
       data: {
-        institutionId: dto.institutionId,
+        // Institución resuelta por el servidor; se ignora dto.institutionId.
+        institutionId,
         documentType: dto.documentType,
         documentNumber: dto.documentNumber,
         firstName: dto.firstName,
@@ -56,13 +128,20 @@ export class StudentsService {
     });
   }
 
-  async list(params: { institutionId?: string; groupId?: string; academicYearId?: string; includeInactive?: boolean }) {
+  async list(params: { institutionId: string; groupId?: string; academicYearId?: string; includeInactive?: boolean }) {
     const { institutionId, groupId, academicYearId, includeInactive } = params;
+
+    // Omitir la institución NO puede significar "todas": era la misma fuga que en
+    // guardians.list (docs/security/RLS-AUDIT-FASE0.3.md).
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución.');
+    }
 
     if (groupId || academicYearId) {
       // Get students with enrollments
       return this.prisma.studentEnrollment.findMany({
         where: {
+          institutionId,
           ...(groupId && { groupId }),
           ...(academicYearId && { academicYearId }),
           // Filtrar estudiantes inactivos por defecto
@@ -90,7 +169,7 @@ export class StudentsService {
 
     return this.prisma.student.findMany({
       where: {
-        ...(institutionId && { institutionId }),
+        institutionId,
         // Filtrar estudiantes inactivos por defecto
         ...(!includeInactive && { isActive: true }),
       },
@@ -125,9 +204,9 @@ export class StudentsService {
     });
   }
 
-  async findById(id: string) {
-    return this.prisma.student.findUnique({
-      where: { id },
+  async findById(id: string, institutionId: string) {
+    return this.prisma.student.findFirst({
+      where: { id, institutionId },
       include: {
         enrollments: {
           include: {
@@ -159,7 +238,9 @@ export class StudentsService {
     });
   }
 
-  async update(id: string, dto: UpdateStudentDto) {
+  async update(id: string, dto: UpdateStudentDto, institutionId: string) {
+    await this.assertStudent(id, institutionId);
+
     const updated = await this.prisma.student.update({
       where: { id },
       data: {
@@ -276,7 +357,9 @@ export class StudentsService {
    * - Si tiene historial académico (notas, asistencias, observaciones): soft delete
    * - Si no tiene relaciones: borrado físico
    */
-  async delete(id: string, reason?: string) {
+  async delete(id: string, institutionId: string, reason?: string) {
+    await this.assertStudent(id, institutionId);
+
     // Verificar si tiene historial académico
     const student = await this.prisma.student.findUnique({
       where: { id },
@@ -323,11 +406,18 @@ export class StudentsService {
     }
   }
 
-  async enroll(dto: EnrollStudentDto) {
-    const student = await this.prisma.student.findUnique({ where: { id: dto.studentId }, select: { institutionId: true } });
+  async enroll(dto: EnrollStudentDto, institutionId: string) {
+    // Las tres dimensiones del tenant: el estudiante, el año lectivo y el grupo deben
+    // pertenecer a la institución resuelta. Un id válido de otra institución sigue
+    // siendo un ataque cross-tenant.
+    await Promise.all([
+      this.assertStudent(dto.studentId, institutionId),
+      this.assertAcademicYear(dto.academicYearId, institutionId),
+      this.assertGroup(dto.groupId, institutionId),
+    ]);
     return this.prisma.studentEnrollment.create({
       data: {
-        institutionId: student!.institutionId,
+        institutionId,
         studentId: dto.studentId,
         academicYearId: dto.academicYearId,
         groupId: dto.groupId,
@@ -344,7 +434,9 @@ export class StudentsService {
     });
   }
 
-  async updateEnrollmentStatus(enrollmentId: string, dto: UpdateEnrollmentStatusDto) {
+  async updateEnrollmentStatus(enrollmentId: string, dto: UpdateEnrollmentStatusDto, institutionId: string) {
+    await this.assertEnrollment(enrollmentId, institutionId);
+
     return this.prisma.studentEnrollment.update({
       where: { id: enrollmentId },
       data: {
@@ -353,9 +445,10 @@ export class StudentsService {
     });
   }
 
-  async getEnrollmentsByStudent(studentId: string) {
+  async getEnrollmentsByStudent(studentId: string, institutionId: string) {
+    await this.assertStudent(studentId, institutionId);
     return this.prisma.studentEnrollment.findMany({
-      where: { studentId },
+      where: { studentId, institutionId },
       include: {
         group: {
           include: {
@@ -404,12 +497,20 @@ export class StudentsService {
       guardianDocumentNumber?: string;
       guardianRelationship?: string;
     }>;
-  }) {
+  }, institutionId: string) {
     const results = {
       created: 0,
       updated: 0,
       errors: [] as { row: number; error: string }[],
     };
+
+    // Las TRES dimensiones del tenant se validan ANTES de escribir nada. Corregir solo
+    // institutionId dejaría abierto el traversal por clave foránea: un actor de A podría
+    // matricular contra el año lectivo o el grupo de B
+    // (docs/security/RLS-VALIDACION-CENSO.md §C.2).
+    await this.assertAcademicYear(data.academicYearId, institutionId);
+    const groupIds = [...new Set(data.students.map((x) => x.groupId).filter(Boolean))];
+    await Promise.all(groupIds.map((g) => this.assertGroup(g, institutionId)));
 
     for (let i = 0; i < data.students.length; i++) {
       const studentData = data.students[i];
@@ -419,7 +520,7 @@ export class StudentsService {
         let student = await this.prisma.student.findUnique({
           where: {
             institutionId_documentNumber: {
-              institutionId: data.institutionId,
+              institutionId,
               documentNumber: studentData.documentNumber,
             },
           },
@@ -448,7 +549,7 @@ export class StudentsService {
           // Crear nuevo estudiante
           student = await this.prisma.student.create({
             data: {
-              institutionId: data.institutionId,
+              institutionId,
               documentType: studentData.documentType,
               documentNumber: studentData.documentNumber,
               firstName: studentData.firstName,
@@ -503,7 +604,7 @@ export class StudentsService {
           let guardian = await this.prisma.guardian.findUnique({
             where: {
               institutionId_documentNumber: {
-                institutionId: data.institutionId,
+                institutionId,
                 documentNumber: guardianDocNumber,
               },
             },
@@ -512,7 +613,7 @@ export class StudentsService {
           if (!guardian) {
             guardian = await this.prisma.guardian.create({
               data: {
-                institutionId: data.institutionId,
+                institutionId,
                 documentType: 'CC',
                 documentNumber: guardianDocNumber,
                 firstName: guardianFirstName,
@@ -571,7 +672,9 @@ export class StudentsService {
    * Activa acceso al sistema para un estudiante
    * Crea un User asociado con rol ESTUDIANTE
    */
-  async activateAccess(studentId: string) {
+  async activateAccess(studentId: string, institutionId: string) {
+    await this.assertStudent(studentId, institutionId);
+
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       include: { user: true },
@@ -648,7 +751,9 @@ export class StudentsService {
   /**
    * Desactiva acceso al sistema para un estudiante
    */
-  async deactivateAccess(studentId: string) {
+  async deactivateAccess(studentId: string, institutionId: string) {
+    await this.assertStudent(studentId, institutionId);
+
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -677,7 +782,9 @@ export class StudentsService {
   /**
    * Activa acceso masivo para múltiples estudiantes
    */
-  async bulkActivateAccess(studentIds: string[]) {
+  async bulkActivateAccess(studentIds: string[], institutionId: string) {
+    await this.assertStudents(studentIds, institutionId);
+
     const results = {
       activated: 0,
       errors: [] as { studentId: string; error: string }[],
@@ -685,7 +792,7 @@ export class StudentsService {
 
     for (const studentId of studentIds) {
       try {
-        await this.activateAccess(studentId);
+        await this.activateAccess(studentId, institutionId);
         results.activated++;
       } catch (error: any) {
         results.errors.push({
@@ -701,7 +808,9 @@ export class StudentsService {
   /**
    * Resetea la contraseña de un estudiante a su número de documento
    */
-  async resetPassword(studentId: string) {
+  async resetPassword(studentId: string, institutionId: string) {
+    await this.assertStudent(studentId, institutionId);
+
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       include: { user: true },
@@ -737,7 +846,9 @@ export class StudentsService {
   /**
    * Resetea contraseñas masivamente para múltiples estudiantes
    */
-  async bulkResetPassword(studentIds: string[]) {
+  async bulkResetPassword(studentIds: string[], institutionId: string) {
+    await this.assertStudents(studentIds, institutionId);
+
     const results = {
       reset: 0,
       errors: [] as { studentId: string; error: string }[],
@@ -745,7 +856,7 @@ export class StudentsService {
 
     for (const studentId of studentIds) {
       try {
-        await this.resetPassword(studentId);
+        await this.resetPassword(studentId, institutionId);
         results.reset++;
       } catch (error: any) {
         results.errors.push({
@@ -763,7 +874,9 @@ export class StudentsService {
    * Pensado para entregar credenciales simples: el estudiante entra con su
    * usuario como contraseña. No fuerza cambio en el primer inicio de sesión.
    */
-  async bulkSetPasswordToUsername(studentIds: string[]) {
+  async bulkSetPasswordToUsername(studentIds: string[], institutionId: string) {
+    await this.assertStudents(studentIds, institutionId);
+
     const results = {
       updated: 0,
       errors: [] as { studentId: string; error: string }[],
@@ -806,7 +919,9 @@ export class StudentsService {
    * Solo afecta estudiantes que nunca han iniciado sesión (mustChangePassword=true).
    * Útil cuando se actualizaron documentos pero los usernames quedaron con datos viejos.
    */
-  async bulkRegenerateCredentials(studentIds: string[]) {
+  async bulkRegenerateCredentials(studentIds: string[], institutionId: string) {
+    await this.assertStudents(studentIds, institutionId);
+
     const results = {
       regenerated: 0,
       skipped: 0,
