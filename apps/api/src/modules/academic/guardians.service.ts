@@ -1,20 +1,74 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { 
-  CreateGuardianDto, 
-  UpdateGuardianDto, 
+import {
+  CreateGuardianDto,
+  UpdateGuardianDto,
   LinkGuardianToStudentDto,
-  CreateGuardianWithLinkDto 
+  CreateGuardianWithLinkDto
 } from './dto/guardian.dto';
 
+/**
+ * Acudientes (PII) y su vínculo con estudiantes.
+ *
+ * ⚠️ AISLAMIENTO MULTI-TENANT — punto único de control.
+ * Todos los métodos reciben `institutionId` YA RESUELTO POR EL SERVIDOR
+ * (`requireInstitutionId` en el controlador). El `institutionId` que llegue en un DTO,
+ * una query o un parámetro de ruta NO es una fuente de autoridad: para un usuario normal
+ * se ignora, y solo el SuperAdmin puede indicar una institución explícita.
+ *
+ * Antes de este endurecimiento (docs/security/RLS-AUDIT-FASE0.3.md):
+ *   · `list()` construía `where: { ...(institutionId && { institutionId }) }`, así que
+ *     OMITIR el parámetro eliminaba el filtro y devolvía los acudientes de TODA la
+ *     plataforma, con sus estudiantes, a cualquier usuario autenticado.
+ *   · Los métodos por id no comprobaban pertenencia: conocer un id bastaba para leer,
+ *     editar o borrar el acudiente de otra institución.
+ *   · `linkToStudent`/`createWithLink` permitían unir un acudiente de A con un estudiante
+ *     de B. `StudentGuardian` no tiene `institutionId` propio y deriva su pertenencia de
+ *     ambos extremos, así que un vínculo cruzado deja esos extremos en desacuerdo
+ *     permanente — una fila que la futura política RLS vería desde un lado y no desde el
+ *     otro. Por eso el vínculo cruzado se rechaza aquí, en la capa de aplicación.
+ *
+ * Las comprobaciones de pertenencia usan consultas ACOTADAS (`findFirst` con
+ * `institutionId`) y lanzan el `NotFoundException` que este servicio ya usaba: no
+ * inventan semántica nueva y no revelan la existencia del recurso ajeno.
+ */
 @Injectable()
 export class GuardiansService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateGuardianDto) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Comprobaciones de pertenencia
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** El acudiente debe existir DENTRO de la institución resuelta. */
+  private async assertGuardianInInstitution(guardianId: string, institutionId: string) {
+    const guardian = await this.prisma.guardian.findFirst({
+      where: { id: guardianId, institutionId },
+      select: { id: true },
+    });
+    if (!guardian) throw new NotFoundException('Acudiente no encontrado');
+    return guardian;
+  }
+
+  /** El estudiante debe existir DENTRO de la institución resuelta. */
+  private async assertStudentInInstitution(studentId: string, institutionId: string) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, institutionId },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException('Estudiante no encontrado');
+    return student;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Alta
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async create(dto: CreateGuardianDto, institutionId: string) {
     return this.prisma.guardian.create({
       data: {
-        institutionId: dto.institutionId,
+        // Institución resuelta por el servidor; se ignora dto.institutionId.
+        institutionId,
         documentType: dto.documentType,
         documentNumber: dto.documentNumber,
         firstName: dto.firstName,
@@ -35,12 +89,16 @@ export class GuardiansService {
     });
   }
 
-  async createWithLink(dto: CreateGuardianWithLinkDto) {
+  async createWithLink(dto: CreateGuardianWithLinkDto, institutionId: string) {
+    // El estudiante debe pertenecer a la institución resuelta: impide crear el vínculo
+    // cruzado A↔B por la vía del alta.
+    await this.assertStudentInInstitution(dto.studentId, institutionId);
+
     // Verificar si el acudiente ya existe por documento
     let guardian = await this.prisma.guardian.findUnique({
       where: {
         institutionId_documentNumber: {
-          institutionId: dto.institutionId,
+          institutionId,
           documentNumber: dto.documentNumber,
         },
       },
@@ -49,7 +107,7 @@ export class GuardiansService {
     if (!guardian) {
       guardian = await this.prisma.guardian.create({
         data: {
-          institutionId: dto.institutionId,
+          institutionId,
           documentType: dto.documentType,
           documentNumber: dto.documentNumber,
           firstName: dto.firstName,
@@ -109,12 +167,24 @@ export class GuardiansService {
     return link;
   }
 
-  async list(params: { institutionId?: string; search?: string }) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Consulta
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * `institutionId` es OBLIGATORIO y no admite `undefined`: omitirlo era exactamente el
+   * fallo que permitía volcar los acudientes de toda la plataforma.
+   */
+  async list(params: { institutionId: string; search?: string }) {
     const { institutionId, search } = params;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución.');
+    }
 
     return this.prisma.guardian.findMany({
       where: {
-        ...(institutionId && { institutionId }),
+        institutionId,
         ...(search && {
           OR: [
             { firstName: { contains: search, mode: 'insensitive' } },
@@ -142,9 +212,10 @@ export class GuardiansService {
     });
   }
 
-  async findById(id: string) {
-    const guardian = await this.prisma.guardian.findUnique({
-      where: { id },
+  async findById(id: string, institutionId: string) {
+    // Consulta acotada: un acudiente de otra institución simplemente "no existe".
+    const guardian = await this.prisma.guardian.findFirst({
+      where: { id, institutionId },
       include: {
         students: {
           include: {
@@ -178,7 +249,9 @@ export class GuardiansService {
     return guardian;
   }
 
-  async findByStudent(studentId: string) {
+  async findByStudent(studentId: string, institutionId: string) {
+    await this.assertStudentInInstitution(studentId, institutionId);
+
     return this.prisma.studentGuardian.findMany({
       where: { studentId },
       include: {
@@ -191,7 +264,13 @@ export class GuardiansService {
     });
   }
 
-  async update(id: string, dto: UpdateGuardianDto) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Modificación y baja
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async update(id: string, dto: UpdateGuardianDto, institutionId: string) {
+    await this.assertGuardianInInstitution(id, institutionId);
+
     return this.prisma.guardian.update({
       where: { id },
       data: {
@@ -215,17 +294,30 @@ export class GuardiansService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, institutionId: string) {
+    await this.assertGuardianInInstitution(id, institutionId);
+
     return this.prisma.guardian.delete({
       where: { id },
     });
   }
 
-  async linkToStudent(dto: LinkGuardianToStudentDto) {
-    // Verificar que existan
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Vínculo estudiante ↔ acudiente
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async linkToStudent(dto: LinkGuardianToStudentDto, institutionId: string) {
+    // AMBOS extremos deben pertenecer a la institución resuelta. Un vínculo A↔B queda
+    // rechazado aquí; ver la nota sobre StudentGuardian en la cabecera del servicio.
     const [student, guardian] = await Promise.all([
-      this.prisma.student.findUnique({ where: { id: dto.studentId } }),
-      this.prisma.guardian.findUnique({ where: { id: dto.guardianId } }),
+      this.prisma.student.findFirst({
+        where: { id: dto.studentId, institutionId },
+        select: { id: true },
+      }),
+      this.prisma.guardian.findFirst({
+        where: { id: dto.guardianId, institutionId },
+        select: { id: true },
+      }),
     ]);
 
     if (!student) throw new NotFoundException('Estudiante no encontrado');
@@ -271,7 +363,12 @@ export class GuardiansService {
     });
   }
 
-  async unlinkFromStudent(studentId: string, guardianId: string) {
+  async unlinkFromStudent(studentId: string, guardianId: string, institutionId: string) {
+    await Promise.all([
+      this.assertStudentInInstitution(studentId, institutionId),
+      this.assertGuardianInInstitution(guardianId, institutionId),
+    ]);
+
     return this.prisma.studentGuardian.delete({
       where: {
         studentId_guardianId: {
@@ -282,11 +379,23 @@ export class GuardiansService {
     });
   }
 
-  async updateLink(studentId: string, guardianId: string, data: Partial<LinkGuardianToStudentDto>) {
+  async updateLink(
+    studentId: string,
+    guardianId: string,
+    data: Partial<LinkGuardianToStudentDto>,
+    institutionId: string,
+  ) {
+    // `updateLink` puede activar receivesGrades/receivesNotifications: sin esta guarda,
+    // se podía encaminar el boletín de un estudiante ajeno hacia un tercero.
+    await Promise.all([
+      this.assertStudentInInstitution(studentId, institutionId),
+      this.assertGuardianInInstitution(guardianId, institutionId),
+    ]);
+
     // Si se marca como principal, quitar de otros
     if (data.isPrimary) {
       await this.prisma.studentGuardian.updateMany({
-        where: { 
+        where: {
           studentId,
           guardianId: { not: guardianId },
         },
