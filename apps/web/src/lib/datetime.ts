@@ -39,3 +39,18 @@ export function formatBogota(
   if (isNaN(date.getTime())) return '—'
   return date.toLocaleString('es-CO', { timeZone: BOGOTA_TZ, ...opts })
 }
+
+// Fecha/ISO → valor para <input type="date"> ("YYYY-MM-DD") con la fecha de
+// pared de Colombia. Evita que un registro guardado a las 8pm aparezca con la
+// fecha del día siguiente en dispositivos con otra zona horaria.
+export function isoToBogotaDateInput(d?: string | Date | null): string {
+  if (!d) return ''
+  const date = typeof d === 'string' ? new Date(d) : d
+  if (isNaN(date.getTime())) return ''
+  return date.toLocaleString('sv-SE', { timeZone: BOGOTA_TZ }).slice(0, 10)
+}
+
+// "Hoy" en Colombia, en formato "YYYY-MM-DD".
+export function todayBogotaInput(): string {
+  return isoToBogotaDateInput(new Date())
+}

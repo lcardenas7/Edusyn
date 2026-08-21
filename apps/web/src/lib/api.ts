@@ -348,6 +348,8 @@ export const tutoringAttendanceApi = {
     api.get('/tutoring-attendance/student-summary', { params: { studentEnrollmentId, ...params } }),
   getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string }) =>
     api.get('/tutoring-attendance/report-by-group', { params: { groupId, academicYearId, ...params } }),
+  getDetailedReport: (params: { academicYearId: string; groupId?: string; studentEnrollmentId?: string; startDate?: string; endDate?: string; status?: string }) =>
+    api.get('/tutoring-attendance/detailed-report', { params }),
   toggle: (enabled: boolean) => api.post('/tutoring-attendance/toggle', { enabled }),
 }
 
