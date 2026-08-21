@@ -113,12 +113,66 @@ export class TutoringAttendanceController {
   @Get('report-by-group')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getReportByGroup(
+    @Request() req: any,
     @Query('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    if (!groupId || !academicYearId) {
+      throw new BadRequestException('Se requiere grupo y año académico');
+    }
+    await this.tutoringService.assertCanReadGroupReport(groupId, req.user.id, this.rolesOf(req));
     return this.tutoringService.getReportByGroup(groupId, academicYearId, { startDate, endDate });
+  }
+
+  /**
+   * Reporte detallado (día a día) de tutoría, para consultar por estudiante
+   */
+  @Get('detailed-report')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  async getDetailedReport(
+    @Request() req: any,
+    @Query('academicYearId') academicYearId: string,
+    @Query('institutionId') institutionId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('studentEnrollmentId') studentEnrollmentId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('status') status?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new BadRequestException('No se pudo determinar la institución');
+    if (!academicYearId) throw new BadRequestException('Se requiere el año académico');
+
+    const roles = this.rolesOf(req);
+    const isAdmin = roles.some((r) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+
+    if (groupId) {
+      await this.tutoringService.assertCanReadGroupReport(groupId, req.user.id, roles);
+      return this.tutoringService.getDetailedReport({
+        institutionId: instId, academicYearId, groupId, studentEnrollmentId, startDate, endDate, status,
+      });
+    }
+
+    // Sin grupo: el docente queda acotado a los grupos que dirige; si no dirige
+    // ninguno no ve nada (en vez de ver toda la institución).
+    let groupIds: string[] | undefined;
+    if (!isAdmin) {
+      const directed = await this.tutoringService.getDirectedGroups(req.user.id, instId);
+      groupIds = directed.map((g: any) => g.id);
+      if (groupIds.length === 0) return [];
+    }
+
+    return this.tutoringService.getDetailedReport({
+      institutionId: instId, academicYearId, groupIds, studentEnrollmentId, startDate, endDate, status,
+    });
+  }
+
+  private rolesOf(req: any): string[] {
+    return (req.user?.roles || []).map((r: any) =>
+      typeof r === 'string' ? r : r.role?.name || r.name || '',
+    );
   }
 
   /**

@@ -169,6 +169,27 @@ export class TutoringAttendanceService {
   }
 
   /**
+   * Verifica que el usuario pueda consultar reportes de tutoría del grupo.
+   * Admin/Rector/Coordinador: cualquier grupo de su institución.
+   * Docente: solo los grupos que dirige.
+   */
+  async assertCanReadGroupReport(groupId: string, userId: string, userRoles: string[]) {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      include: { campus: true },
+    });
+    if (!group) throw new BadRequestException('Grupo no encontrado');
+
+    const isAdmin = (userRoles || []).some((r) =>
+      ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r),
+    );
+    if (!isAdmin && group.directorId !== userId) {
+      throw new ForbiddenException('Solo el director de grupo puede consultar la tutoría de este grupo');
+    }
+    return group;
+  }
+
+  /**
    * Reporte de asistencia de tutoría por grupo (para reportes administrativos)
    */
   async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string }) {
@@ -188,11 +209,13 @@ export class TutoringAttendanceService {
     const enrollmentIds = enrollments.map(e => e.id);
     if (enrollmentIds.length === 0) return [];
 
+    // Cada extremo del rango se aplica por separado: exigir ambos hacía que
+    // "desde X" sin "hasta" se ignorara en silencio.
     const dateFilter: any = {};
-    if (params?.startDate && params?.endDate) {
+    if (params?.startDate || params?.endDate) {
       dateFilter.date = {
-        gte: new Date(params.startDate),
-        lte: new Date(params.endDate),
+        ...(params?.startDate && { gte: new Date(params.startDate) }),
+        ...(params?.endDate && { lte: new Date(params.endDate) }),
       };
     }
 
@@ -232,5 +255,76 @@ export class TutoringAttendanceService {
         status: attendanceRate < 70 ? 'Riesgo' : attendanceRate < 85 ? 'Alerta' : 'Normal',
       };
     });
+  }
+
+  /**
+   * Reporte detallado (dia a dia) de asistencia de tutoria.
+   * Es el equivalente de attendance.getDetailedReport pero sobre TutoringAttendance:
+   * permite consultar la tutoria de un estudiante concreto, no solo el consolidado
+   * del grupo.
+   */
+  async getDetailedReport(params: {
+    institutionId: string;
+    academicYearId: string;
+    groupIds?: string[];
+    groupId?: string;
+    studentEnrollmentId?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }) {
+    const enrollmentWhere: any = { academicYearId: params.academicYearId };
+    if (params.groupId) enrollmentWhere.groupId = params.groupId;
+    else if (params.groupIds?.length) enrollmentWhere.groupId = { in: params.groupIds };
+
+    const whereClause: any = {
+      institutionId: params.institutionId,
+      studentEnrollment: enrollmentWhere,
+    };
+
+    if (params.studentEnrollmentId) whereClause.studentEnrollmentId = params.studentEnrollmentId;
+    if (params.status) whereClause.status = params.status;
+
+    if (params.startDate || params.endDate) {
+      whereClause.date = {
+        ...(params.startDate && { gte: new Date(params.startDate) }),
+        ...(params.endDate && { lte: new Date(params.endDate) }),
+      };
+    }
+
+    const records = await this.prisma.tutoringAttendance.findMany({
+      where: whereClause,
+      include: {
+        studentEnrollment: {
+          include: {
+            student: true,
+            group: { include: { grade: true } },
+          },
+        },
+        teacher: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: [
+        { date: 'desc' },
+        { studentEnrollment: { student: { lastName: 'asc' } } },
+      ],
+      take: 1000,
+    });
+
+    return records.map((record) => ({
+      id: record.id,
+      date: record.date,
+      status: record.status,
+      observations: record.observations,
+      studentName: [
+        record.studentEnrollment.student.lastName,
+        (record.studentEnrollment.student as any).secondLastName,
+        record.studentEnrollment.student.firstName,
+        (record.studentEnrollment.student as any).secondName,
+      ]
+        .filter(Boolean)
+        .join(' '),
+      groupName: `${record.studentEnrollment.group.grade?.name || ''} ${record.studentEnrollment.group.name}`.trim(),
+      teacherName: record.teacher ? `${record.teacher.firstName} ${record.teacher.lastName}` : '',
+    }));
   }
 }

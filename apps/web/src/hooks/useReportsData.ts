@@ -226,14 +226,27 @@ export function useReportsData() {
       try {
         const response = await studentsApi.getAll({ groupId: filterGrade })
         const raw = response.data || []
-        // Normalizar: si viene de StudentEnrollment, aplanar student data
-        const normalized = raw.map((s: any) => ({
-          id: s.student?.id || s.id,
-          enrollmentId: s.id, // El ID del enrollment es el top-level id
-          firstName: s.student?.firstName || s.firstName || '',
-          lastName: s.student?.lastName || s.lastName || '',
-          group: s.group,
-        }))
+        // Normalizar: si viene de StudentEnrollment, aplanar student data.
+        // Se conservan los 4 componentes del nombre (primer/segundo nombre y
+        // apellido): los selectores de reportes arman el nombre completo con
+        // ellos y si se pierden aquí el filtro muestra nombres truncados.
+        const normalized = raw.map((s: any) => {
+          const st = s.student || s
+          const fullName = [st.lastName, st.secondLastName, st.firstName, st.secondName]
+            .filter(Boolean)
+            .join(' ')
+          return {
+            id: st.id || s.id,
+            enrollmentId: s.id, // El ID del enrollment es el top-level id
+            firstName: st.firstName || '',
+            secondName: st.secondName || '',
+            lastName: st.lastName || '',
+            secondLastName: st.secondLastName || '',
+            documentNumber: st.documentNumber || '',
+            fullName,
+            group: s.group,
+          }
+        })
         setStudents(normalized)
       } catch (err) {
         console.error('Error loading students:', err)

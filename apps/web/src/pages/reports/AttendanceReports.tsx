@@ -13,6 +13,7 @@ import AttendanceReportLayout, {
   getPctColor, EmptyState, THRESHOLDS, setAttendanceThresholds,
 } from '../../components/reports/AttendanceReportLayout'
 import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
+import { isoToBogotaDateInput, todayBogotaInput } from '../../lib/datetime'
 
 // ─── Types & constants ─────────────────────────────────────────────────
 interface ReportItem { id: string; name: string; description: string; icon: any; feature?: string }
@@ -24,8 +25,12 @@ const attendanceReports: ReportItem[] = [
   { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck },
   { id: 'att-critical', name: 'Inasistencias criticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle },
   { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3 },
-  { id: 'att-tutoring', name: 'Asistencia de tutoría', description: 'Reporte de asistencia diaria por dirección de grupo (tutoría)', icon: Calendar },
+  { id: 'att-tutoring', name: 'Asistencia de tutoría', description: 'Consolidado de asistencia diaria por dirección de grupo (tutoría)', icon: Calendar },
+  { id: 'att-tutoring-student', name: 'Tutoría por estudiante', description: 'Detalle día a día de la asistencia de tutoría de un estudiante', icon: Users },
 ]
+
+// Reportes que dependen de la feature TUTORING_ATTENDANCE
+const TUTORING_REPORTS = ['att-tutoring', 'att-tutoring-student']
 
 // ─── Shared filter components ──────────────────────────────────────────
 function FSelect({ label, value, onChange, options, required }: {
@@ -41,15 +46,53 @@ function FSelect({ label, value, onChange, options, required }: {
     </div>
   )
 }
-function FDate({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function FDate({ label, value, onChange, min, max }: { label: string; value: string; onChange: (v: string) => void; min?: string; max?: string }) {
   return (
     <div>
       <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
-      <input type="date" value={value} onChange={e => onChange(e.target.value)}
+      <input type="date" value={value} onChange={e => onChange(e.target.value)} min={min} max={max}
         className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" />
     </div>
   )
 }
+// Contenedor de filtros. IMPORTANTE: debe vivir a nivel de módulo. Cuando se
+// definía dentro de renderFilters, cada render creaba un tipo de componente
+// nuevo y React desmontaba/remontaba todo el bloque: al escribir el año en un
+// <input type="date"> el valor queda momentáneamente vacío, eso dispara un
+// render y el input perdía el foco y lo tecleado.
+function FilterCard({ children }: { children: React.ReactNode }) {
+  return <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">{children}</div>
+}
+
+// ─── Rangos rápidos de fecha ───────────────────────────────────────────
+export interface DatePreset { key: string; label: string; from: string; to: string }
+
+function DateQuickRanges({ presets, from, to, onApply, onClear }: {
+  presets: DatePreset[]; from: string; to: string; onApply: (p: DatePreset) => void; onClear: () => void
+}) {
+  if (!presets.length) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-medium text-slate-500 mr-1">Rango rápido:</span>
+      {presets.map(p => {
+        const active = from === p.from && to === p.to
+        return (
+          <button key={p.key} type="button" onClick={() => onApply(p)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-300 hover:border-amber-400 hover:text-amber-700'}`}>
+            {p.label}
+          </button>
+        )
+      })}
+      {(from || to) && (
+        <button type="button" onClick={onClear}
+          className="px-2.5 py-1 rounded-full text-xs font-medium text-slate-500 hover:text-red-600 underline">
+          Limpiar fechas
+        </button>
+      )}
+    </div>
+  )
+}
+
 function SearchBtn({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
   return (
     <div className="flex items-end">
@@ -60,6 +103,23 @@ function SearchBtn({ onClick, loading }: { onClick: () => void; loading?: boolea
       </button>
     </div>
   )
+}
+
+// ─── Date helpers (se opera sobre "YYYY-MM-DD" en UTC para no correr días) ──
+function shiftDays(day: string, n: number): string {
+  const d = new Date(`${day}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+function weekdayOf(day: string): number {
+  return new Date(`${day}T00:00:00Z`).getUTCDay() // 0 = domingo
+}
+function monthBounds(day: string): { from: string; to: string } {
+  const from = `${day.slice(0, 7)}-01`
+  const d = new Date(`${from}T00:00:00Z`)
+  d.setUTCMonth(d.getUTCMonth() + 1)
+  d.setUTCDate(0)
+  return { from, to: d.toISOString().slice(0, 10) }
 }
 
 // ─── CSV helpers ────────────────────────────────────────────────────────
@@ -122,14 +182,39 @@ export default function AttendanceReports() {
   const [criticalAbsencesData, setCriticalAbsencesData] = useState<any[]>([])
   const [consolidatedData, setConsolidatedData] = useState<{ byGrade: any[]; bySubject: any[]; byPeriod: any[] }>({ byGrade: [], bySubject: [], byPeriod: [] })
   const [tutoringData, setTutoringData] = useState<any[]>([])
+  const [tutoringDetailData, setTutoringDetailData] = useState<any[]>([])
+
+  // Estado de la feature de tutoría + grupos consultables (para docentes, solo los que dirigen)
+  const [tutoringEnabled, setTutoringEnabled] = useState(false)
+  const [tutoringGroups, setTutoringGroups] = useState<Array<{ id: string; name: string; gradeName?: string }>>([])
+
+  useEffect(() => {
+    let cancelled = false
+    tutoringAttendanceApi.getStatus()
+      .then(res => {
+        if (cancelled) return
+        setTutoringEnabled(!!res.data?.enabled)
+        setTutoringGroups(res.data?.directedGroups || [])
+      })
+      .catch(() => {
+        if (cancelled) return
+        setTutoringEnabled(false)
+        setTutoringGroups([])
+      })
+    return () => { cancelled = true }
+  }, [institution?.id])
+
+  // Un docente puede consultar tutoría si dirige al menos un grupo
+  const canViewTutoring = tutoringEnabled && (!isTeacherOnly || tutoringGroups.length > 0)
 
   const filteredReports = attendanceReports.filter(r => !r.feature || hasFeature(r.feature))
   // Docentes pueden ver: asistencia por grupo, por asignatura, por docente (su cumplimiento), e inasistencias críticas
-  // Pero NO: consolidado institucional, asistencia por estudiante individual, tutoría (esos son admin/coordinador)
-  const teacherAllowedReports = ['att-group', 'att-subject', 'att-teacher', 'att-critical']
-  const visibleReports = isTeacherOnly
-    ? filteredReports.filter(r => teacherAllowedReports.includes(r.id))
-    : filteredReports
+  // Pero NO: consolidado institucional ni asistencia por estudiante individual (esos son admin/coordinador).
+  // La tutoría sí, pero acotada a los grupos que dirigen (el backend lo valida).
+  const teacherAllowedReports = ['att-group', 'att-subject', 'att-teacher', 'att-critical', ...TUTORING_REPORTS]
+  const visibleReports = filteredReports
+    .filter(r => (isTeacherOnly ? teacherAllowedReports.includes(r.id) : true))
+    .filter(r => (TUTORING_REPORTS.includes(r.id) ? canViewTutoring : true))
 
   useEffect(() => {
     if (!isTeacherOnly || !filterYear || !user?.id) {
@@ -201,6 +286,54 @@ export default function AttendanceReports() {
   }, [teacherAssignments])
   const groupOpts = isTeacherOnly ? teacherGroupOpts : baseGroupOpts
   const subjOpts = isTeacherOnly ? teacherSubjectOpts : baseSubjOpts
+  // Los reportes de tutoría se consultan sobre los grupos con dirección de grupo
+  // que el backend autoriza para este usuario.
+  const tutoringGroupOpts = useMemo(() => [
+    { value: 'all', label: isTeacherOnly ? 'Todos mis grupos dirigidos' : 'Todos los grupos' },
+    ...tutoringGroups.map(g => ({ value: g.id, label: `${g.gradeName || ''} ${g.name}`.trim() })),
+  ], [tutoringGroups, isTeacherOnly])
+  const studentOpts = useMemo(() => [
+    { value: 'all', label: filterGrade === 'all' ? 'Selecciona un grupo primero' : 'Todos los estudiantes' },
+    ...students.map(s => ({
+      value: s.enrollmentId || s.id,
+      label: s.fullName || [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' '),
+    })),
+  ], [students, filterGrade])
+
+  // ─── Rango de fechas: límites del año lectivo y atajos ────────────────
+  const yearBounds = useMemo(() => {
+    const y = academicYears.find((a: any) => a.id === filterYear)
+    if (!y) return { min: undefined as string | undefined, max: undefined as string | undefined }
+    return {
+      min: y.startDate ? isoToBogotaDateInput(y.startDate) : (y.year ? `${y.year}-01-01` : undefined),
+      max: y.endDate ? isoToBogotaDateInput(y.endDate) : (y.year ? `${y.year}-12-31` : undefined),
+    }
+  }, [academicYears, filterYear])
+
+  const datePresets = useMemo<DatePreset[]>(() => {
+    const today = todayBogotaInput()
+    const monday = shiftDays(today, -((weekdayOf(today) + 6) % 7))
+    const month = monthBounds(today)
+    const list: DatePreset[] = [
+      { key: 'today', label: 'Hoy', from: today, to: today },
+      { key: 'week', label: 'Esta semana', from: monday, to: shiftDays(monday, 6) },
+      { key: 'month', label: 'Este mes', from: month.from, to: month.to },
+    ]
+    terms.forEach((t: any) => {
+      if (!t.startDate || !t.endDate) return
+      list.push({ key: t.id, label: t.name, from: isoToBogotaDateInput(t.startDate), to: isoToBogotaDateInput(t.endDate) })
+    })
+    if (yearBounds.min && yearBounds.max) {
+      list.push({ key: 'year', label: 'Todo el año', from: yearBounds.min, to: yearBounds.max })
+    }
+    return list
+  }, [terms, yearBounds])
+
+  const applyPreset = (p: DatePreset) => { setFilterDateFrom(p.from); setFilterDateTo(p.to) }
+  const clearDates = () => { setFilterDateFrom(''); setFilterDateTo('') }
+  const dateChips = (
+    <DateQuickRanges presets={datePresets} from={filterDateFrom} to={filterDateTo} onApply={applyPreset} onClear={clearDates} />
+  )
   const statOpts = [{ value: 'all', label: 'Todos' }, { value: 'Normal', label: `Normal (>= ${THRESHOLDS.NORMAL_MIN}%)` }, { value: 'Alerta', label: `Alerta (${THRESHOLDS.ALERT_MIN}-${THRESHOLDS.NORMAL_MIN - 1}%)` }, { value: 'Riesgo', label: `Riesgo (< ${THRESHOLDS.ALERT_MIN}%)` }]
   const attStatOpts = [{ value: 'all', label: 'Todos' }, { value: 'PRESENT', label: 'Presente' }, { value: 'ABSENT', label: 'Ausente' }, { value: 'LATE', label: 'Tarde' }, { value: 'EXCUSED', label: 'Excusa' }]
 
@@ -306,18 +439,52 @@ export default function AttendanceReports() {
         setConsolidatedData({ byGrade: (res.data?.byGrade || []).map(mr), bySubject: (res.data?.bySubject || []).map(mr), byPeriod: [] })
       }
       if (reportId === 'att-tutoring') {
-        if (filterGrade && filterGrade !== 'all') {
-          const res = await tutoringAttendanceApi.getReportByGroup(filterGrade, filterYear, { startDate: bp.startDate, endDate: bp.endDate })
-          const mapped = (res.data || []).map((item: any, idx: number) => ({ nro: idx + 1, name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal' }))
-          setTutoringData(sortByRisk(mapped))
-        } else {
-          const gRes = await groupsApi.getAll()
-          const allData: any[] = []
-          const results = await Promise.allSettled((gRes.data || []).map((g: any) => tutoringAttendanceApi.getReportByGroup(g.id, filterYear, { startDate: bp.startDate, endDate: bp.endDate })))
-          results.forEach(r => { if (r.status === 'fulfilled') allData.push(...(r.value.data || [])) })
-          const mapped = allData.map((item: any, idx: number) => ({ nro: idx + 1, name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal' }))
-          setTutoringData(sortByRisk(mapped))
+        if (!tutoringEnabled) {
+          setTutoringData([])
+          setReportError('La asistencia de tutoría no está habilitada para esta institución.')
+          return
         }
+        // Los grupos consultables vienen de /tutoring-attendance/status: para admin
+        // son todos los de la institución y para el docente solo los que dirige.
+        const targetGroups = filterGrade !== 'all' ? [filterGrade] : tutoringGroups.map(g => g.id)
+        if (targetGroups.length === 0) {
+          setTutoringData([])
+          setReportError('No hay grupos con dirección de grupo asignada para consultar tutoría.')
+          return
+        }
+        const raw: any[] = []
+        const results = await Promise.allSettled(
+          targetGroups.map((gId: string) => tutoringAttendanceApi.getReportByGroup(gId, filterYear, { startDate: bp.startDate, endDate: bp.endDate })),
+        )
+        results.forEach(r => { if (r.status === 'fulfilled') raw.push(...(r.value.data || [])) })
+        let mapped = raw.map((item: any) => ({ name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal' }))
+        if (filterStatus !== 'all') mapped = mapped.filter(i => i.status === filterStatus)
+        setTutoringData(sortByRisk(mapped).map((item, idx) => ({ ...item, nro: idx + 1 })))
+      }
+      if (reportId === 'att-tutoring-student') {
+        if (!tutoringEnabled) {
+          setTutoringDetailData([])
+          setReportError('La asistencia de tutoría no está habilitada para esta institución.')
+          return
+        }
+        const res = await tutoringAttendanceApi.getDetailedReport({
+          academicYearId: filterYear,
+          groupId: filterGrade !== 'all' ? filterGrade : undefined,
+          studentEnrollmentId: filterStudentId !== 'all' ? filterStudentId : undefined,
+          startDate: bp.startDate,
+          endDate: bp.endDate,
+          status: filterStatus !== 'all' ? filterStatus : undefined,
+        })
+        setTutoringDetailData((res.data || []).map((item: any, idx: number) => ({
+          nro: idx + 1,
+          date: isoToBogotaDateInput(item.date),
+          dateLabel: item.date ? new Date(item.date).toLocaleDateString('es-CO', { timeZone: 'UTC' }) : '',
+          student: item.studentName || '',
+          group: item.groupName || '',
+          teacher: item.teacherName || '',
+          status: item.status || '',
+          observations: item.observations || '',
+        })))
       }
     } catch (err) {
       console.error('Error loading report data:', err)
@@ -336,6 +503,7 @@ export default function AttendanceReports() {
     else if (selectedReport === 'att-critical') { fn = 'criticas'; csv = buildCSV(instName, 'Inasistencias Criticas', 'Nro,Estudiante,Grupo,Total,Fallas,%,Estado', criticalAbsencesData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.absent},${r.pct}%,${r.status}`).join('\n')) }
     else if (selectedReport === 'att-consolidated') { fn = 'consolidado'; let body = 'POR GRADO\nNro,Grado,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.byGrade.map((g, i) => `${i+1},"${g.grade}",${g.totalClasses},${g.totalAttended},${g.totalAbsent},${g.totalLate},${g.totalExcused},${g.pct}%`).join('\n') + '\n\nPOR ASIGNATURA\nNro,Asignatura,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.bySubject.map((s, i) => `${i+1},"${s.subject}",${s.totalClasses},${s.totalAttended},${s.totalAbsent},${s.totalLate},${s.totalExcused},${s.pct}%`).join('\n'); csv = buildCSV(instName, 'Consolidado Institucional', '', body) }
     else if (selectedReport === 'att-tutoring') { fn = 'tutoria'; csv = buildCSV(instName, 'Asistencia de Tutoria', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', tutoringData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-tutoring-student') { fn = 'tutoria_por_estudiante'; const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'; csv = buildCSV(instName, 'Tutoria por Estudiante', 'Nro,Fecha,Estudiante,Grupo,Director de grupo,Estado,Obs', tutoringDetailData.map((r, i) => `${i+1},"${r.dateLabel}","${r.student}","${r.group}","${r.teacher}",${sl(r.status)},"${r.observations}"`).join('\n')) }
     if (!csv) { toast.warning('No hay datos para exportar'); return }
     downloadCSV(csv, fn)
   }
@@ -434,6 +602,22 @@ export default function AttendanceReports() {
     </>)
   }, [tutoringData])
 
+  const tutoringDetailKPIs = useMemo(() => {
+    if (!tutoringDetailData.length) return null
+    const t = tutoringDetailData.length
+    const pr = tutoringDetailData.filter(r => r.status === 'PRESENT').length
+    const ab = tutoringDetailData.filter(r => r.status === 'ABSENT').length
+    const lt = tutoringDetailData.filter(r => r.status === 'LATE').length
+    const ex = tutoringDetailData.filter(r => r.status === 'EXCUSED').length
+    const pct = t > 0 ? Math.round(((pr + lt + ex) / t) * 100) : 0
+    return (<>
+      <KPICard label="% Asistencia" value={`${pct}%`} color={kpiColorFromPct(pct)} sub={`${t} dias registrados`} />
+      <KPICard label="Total fallas" value={ab} color={ab > 5 ? 'red' : 'slate'} sub="ausencias" />
+      <KPICard label="Total tardanzas" value={lt} color={lt > 5 ? 'amber' : 'slate'} sub="llegadas tarde" />
+      <KPICard label="Excusas" value={ex} color="blue" sub="justificadas" />
+    </>)
+  }, [tutoringDetailData])
+
   const consolidatedKPIs = useMemo(() => {
     const g = consolidatedData.byGrade; if (!g.length) return null
     const tR = g.reduce((s, x) => s + x.totalClasses, 0), tP = g.reduce((s, x) => s + x.totalAttended, 0), tA = g.reduce((s, x) => s + x.totalAbsent, 0)
@@ -451,14 +635,159 @@ export default function AttendanceReports() {
   // FILTERS
   // ═══════════════════════════════════════════════════════════════════════
   const renderFilters = () => {
-    const W = ({ children }: { children: React.ReactNode }) => <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">{children}</div>
-    if (selectedReport === 'att-group') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => loadReportData('att-group')} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-student') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={v => { setFilterGrade(v); setFilterStudentId('all') }} options={groupOpts} /><FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={[{ value: 'all', label: 'Todos' }, ...students.map(s => ({ value: s.enrollmentId || s.id, label: [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ') }))]} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><SearchBtn onClick={() => loadReportData('att-student')} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-subject') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={[{ value: 'all', label: isTeacherOnly ? 'Selecciona una asignatura...' : 'Seleccionar asignatura...' }, ...subjOpts.filter(o => o.value !== 'all')]} required={!isTeacherOnly} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => { if (filterSubject === 'all') { toast.warning('Debe seleccionar una asignatura'); return }; loadReportData('att-subject') }} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-teacher') return <W>{isTeacherOnly && <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">Solo verás tu propia carga académica.</div>}<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />{!isTeacherOnly ? <FSelect label="Docente" value={filterTeacher} onChange={setFilterTeacher} options={teachOpts} /> : <div className="flex items-end"><div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Se mostrará tu propia carga académica</div></div>}<FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div /><SearchBtn onClick={() => loadReportData('att-teacher')} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-critical') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><div><label className="block text-xs font-medium text-slate-600 mb-1">% Umbral</label><input type="number" value={filterMinPercent} onChange={e => setFilterMinPercent(e.target.value)} className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={[{ value: 'all', label: 'Todos' }, { value: 'Alerta', label: 'Alerta' }, { value: 'Riesgo', label: 'Riesgo' }]} /><SearchBtn onClick={() => loadReportData('att-critical')} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-consolidated') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><SearchBtn onClick={() => loadReportData('att-consolidated')} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-tutoring') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /><div /><div /><SearchBtn onClick={() => loadReportData('att-tutoring')} loading={loadingReport} /></div></W>
+    const bounds = { min: yearBounds.min, max: yearBounds.max }
+    const searchBox = (
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label>
+        <input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre o apellido..."
+          className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" />
+      </div>
+    )
+    const row = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
+
+    if (selectedReport === 'att-group') return (
+      <FilterCard>
+        <div className={row}>
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} />
+          <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} />
+          <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} />
+        </div>
+        {dateChips}
+        <div className={row}>
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          {searchBox}
+          <SearchBtn onClick={() => loadReportData('att-group')} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-student') return (
+      <FilterCard>
+        <div className={row}>
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Grupo" value={filterGrade} onChange={v => { setFilterGrade(v); setFilterStudentId('all') }} options={groupOpts} />
+          <FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={studentOpts} />
+          <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} />
+        </div>
+        {dateChips}
+        <div className={row}>
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} />
+          <SearchBtn onClick={() => loadReportData('att-student')} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-subject') return (
+      <FilterCard>
+        <div className={row}>
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject}
+            options={[{ value: 'all', label: isTeacherOnly ? 'Selecciona una asignatura...' : 'Seleccionar asignatura...' }, ...subjOpts.filter(o => o.value !== 'all')]}
+            required={!isTeacherOnly} />
+          <FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} />
+          <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} />
+        </div>
+        {dateChips}
+        <div className={row}>
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          {searchBox}
+          <SearchBtn onClick={() => { if (filterSubject === 'all') { toast.warning('Debe seleccionar una asignatura'); return }; loadReportData('att-subject') }} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-teacher') return (
+      <FilterCard>
+        {isTeacherOnly && <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">Solo veras tu propia carga academica.</div>}
+        <div className={row}>
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          {!isTeacherOnly
+            ? <FSelect label="Docente" value={filterTeacher} onChange={setFilterTeacher} options={teachOpts} />
+            : <div className="flex items-end"><div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Se mostrara tu propia carga academica</div></div>}
+          <FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} />
+          <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} />
+        </div>
+        {dateChips}
+        <div className={row}>
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          <div />
+          <SearchBtn onClick={() => loadReportData('att-teacher')} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-critical') return (
+      <FilterCard>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} />
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">% Umbral</label>
+            <input type="number" value={filterMinPercent} onChange={e => setFilterMinPercent(e.target.value)}
+              className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" />
+          </div>
+          <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus}
+            options={[{ value: 'all', label: 'Todos' }, { value: 'Alerta', label: 'Alerta' }, { value: 'Riesgo', label: 'Riesgo' }]} />
+          <SearchBtn onClick={() => loadReportData('att-critical')} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-consolidated') return (
+      <FilterCard>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} />
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          <SearchBtn onClick={() => loadReportData('att-consolidated')} loading={loadingReport} />
+        </div>
+        {dateChips}
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-tutoring') return (
+      <FilterCard>
+        <div className={row}>
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Grupo (direccion de grupo)" value={filterGrade} onChange={setFilterGrade} options={tutoringGroupOpts} />
+          <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} />
+          {searchBox}
+        </div>
+        {dateChips}
+        <div className={row}>
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          <div />
+          <SearchBtn onClick={() => loadReportData('att-tutoring')} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
+    if (selectedReport === 'att-tutoring-student') return (
+      <FilterCard>
+        <div className={row}>
+          <FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />
+          <FSelect label="Grupo (direccion de grupo)" value={filterGrade} onChange={v => { setFilterGrade(v); setFilterStudentId('all') }} options={tutoringGroupOpts} />
+          <FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={studentOpts} />
+          <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} />
+        </div>
+        {dateChips}
+        <div className={row}>
+          <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
+          <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
+          {searchBox}
+          <SearchBtn onClick={() => loadReportData('att-tutoring-student')} loading={loadingReport} />
+        </div>
+      </FilterCard>
+    )
+
     return null
   }
 
@@ -580,8 +909,25 @@ export default function AttendanceReports() {
     }
 
     if (selectedReport === 'att-tutoring') {
-      if (!tutoringData.length) return <EmptyState icon={<Calendar className="w-12 h-12" />} message="No se encontraron registros de asistencia de tutoría" />
-      return <GroupTable data={tutoringData} />
+      const d = searchStudent ? tutoringData.filter(r => r.name?.toLowerCase().includes(searchStudent.toLowerCase())) : tutoringData
+      if (!d.length) return <EmptyState icon={<Calendar className="w-12 h-12" />} message="No se encontraron registros de asistencia de tutoría" />
+      return <GroupTable data={d} />
+    }
+
+    if (selectedReport === 'att-tutoring-student') {
+      const d = searchStudent ? tutoringDetailData.filter(r => r.student?.toLowerCase().includes(searchStudent.toLowerCase())) : tutoringDetailData
+      if (!d.length) return <EmptyState icon={<Users className="w-12 h-12" />} message="No se encontraron registros de tutoría para el filtro aplicado" />
+      const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'
+      const sc = (s: string) => ({ PRESENT: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200', ABSENT: 'bg-red-100 text-red-700 ring-1 ring-red-200', LATE: 'bg-amber-100 text-amber-700 ring-1 ring-amber-200', EXCUSED: 'bg-blue-100 text-blue-700 ring-1 ring-blue-200' }[s] || 'bg-slate-100 text-slate-700')
+      return (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
+        <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Fecha</th><th className={`${th} text-left`}>Estudiante</th><th className={`${th} text-left`}>Grupo</th><th className={`${th} text-left`}>Director de grupo</th><th className={`${th} text-center`}>Estado</th><th className={`${th} text-left`}>Obs.</th>
+      </tr></thead><tbody className="divide-y divide-slate-100">
+        {d.map((r, i) => (<tr key={i} className={`${r.status === 'ABSENT' ? 'bg-red-50/40' : r.status === 'LATE' ? 'bg-amber-50/40' : ''} hover:bg-slate-50/80 transition-colors`}>
+          <td className={`${td} text-slate-400`}>{i + 1}</td><td className={td}>{r.dateLabel}</td><td className={`${td} font-medium text-slate-800`}>{r.student}</td><td className={td}>{r.group}</td><td className={td}>{r.teacher}</td>
+          <td className={`${td} text-center`}><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${sc(r.status)}`}>{sl(r.status)}</span></td>
+          <td className={`${td} text-slate-500 max-w-[200px] truncate`}>{r.observations}</td>
+        </tr>))}
+      </tbody></table>{tfoot(d.length)}</div>)
     }
 
     return <EmptyState icon={<Calendar className="w-12 h-12" />} />
@@ -598,6 +944,7 @@ export default function AttendanceReports() {
     'att-critical': criticalKPIs,
     'att-consolidated': consolidatedKPIs,
     'att-tutoring': tutoringKPIs,
+    'att-tutoring-student': tutoringDetailKPIs,
   }
   const selectedKpis = selectedReport && selectedReport in kpiMap
     ? kpiMap[selectedReport as keyof typeof kpiMap]
@@ -645,7 +992,7 @@ export default function AttendanceReports() {
       onExport={exportToCSV}
       filters={renderFilters()}
       kpis={selectedKpis}
-      hasData={!loadingReport && (attendanceData.length > 0 || attendanceDetailData.length > 0 || attendanceBySubjectData.length > 0 || teacherComplianceData.length > 0 || criticalAbsencesData.length > 0 || consolidatedData.byGrade.length > 0 || tutoringData.length > 0)}
+      hasData={!loadingReport && (attendanceData.length > 0 || attendanceDetailData.length > 0 || attendanceBySubjectData.length > 0 || teacherComplianceData.length > 0 || criticalAbsencesData.length > 0 || consolidatedData.byGrade.length > 0 || tutoringData.length > 0 || tutoringDetailData.length > 0)}
     >
       {renderTable()}
     </AttendanceReportLayout>
