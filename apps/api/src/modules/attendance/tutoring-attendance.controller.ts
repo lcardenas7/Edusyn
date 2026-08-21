@@ -27,7 +27,7 @@ export class TutoringAttendanceController {
 
     // Admin/Rector/Coordinador ven TODOS los grupos; docentes solo sus grupos dirigidos
     const userRoles: string[] = (req.user.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
-    const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+    const isAdmin = req.user?.isSuperAdmin === true || userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
 
     let groups: any[] = [];
     if (enabled) {
@@ -118,12 +118,13 @@ export class TutoringAttendanceController {
     @Query('academicYearId') academicYearId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('includeWithdrawn') includeWithdrawn?: string,
   ) {
     if (!groupId || !academicYearId) {
       throw new BadRequestException('Se requiere grupo y año académico');
     }
-    await this.tutoringService.assertCanReadGroupReport(groupId, req.user.id, this.rolesOf(req));
-    return this.tutoringService.getReportByGroup(groupId, academicYearId, { startDate, endDate });
+    await this.tutoringService.assertCanReadGroupReport(groupId, req.user.id, this.rolesOf(req), req.user?.isSuperAdmin === true);
+    return this.tutoringService.getReportByGroup(groupId, academicYearId, { startDate, endDate, includeWithdrawn: includeWithdrawn === 'true' });
   }
 
   /**
@@ -140,18 +141,20 @@ export class TutoringAttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('status') status?: string,
+    @Query('includeWithdrawn') includeWithdrawnRaw?: string,
   ) {
+    const includeWithdrawn = includeWithdrawnRaw === 'true';
     const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     if (!instId) throw new BadRequestException('No se pudo determinar la institución');
     if (!academicYearId) throw new BadRequestException('Se requiere el año académico');
 
     const roles = this.rolesOf(req);
-    const isAdmin = roles.some((r) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+    const isAdmin = req.user?.isSuperAdmin === true || roles.some((r) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
 
     if (groupId) {
-      await this.tutoringService.assertCanReadGroupReport(groupId, req.user.id, roles);
+      await this.tutoringService.assertCanReadGroupReport(groupId, req.user.id, roles, req.user?.isSuperAdmin === true);
       return this.tutoringService.getDetailedReport({
-        institutionId: instId, academicYearId, groupId, studentEnrollmentId, startDate, endDate, status,
+        institutionId: instId, academicYearId, groupId, studentEnrollmentId, startDate, endDate, status, includeWithdrawn,
       });
     }
 
@@ -165,7 +168,7 @@ export class TutoringAttendanceController {
     }
 
     return this.tutoringService.getDetailedReport({
-      institutionId: instId, academicYearId, groupIds, studentEnrollmentId, startDate, endDate, status,
+      institutionId: instId, academicYearId, groupIds, studentEnrollmentId, startDate, endDate, status, includeWithdrawn,
     });
   }
 

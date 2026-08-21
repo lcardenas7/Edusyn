@@ -141,10 +141,10 @@ export class TutoringAttendanceService {
   async getStudentSummary(studentEnrollmentId: string, startDate?: string, endDate?: string) {
     const whereClause: any = { studentEnrollmentId };
 
-    if (startDate && endDate) {
+    if (startDate || endDate) {
       whereClause.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate) }),
       };
     }
 
@@ -173,14 +173,17 @@ export class TutoringAttendanceService {
    * Admin/Rector/Coordinador: cualquier grupo de su institución.
    * Docente: solo los grupos que dirige.
    */
-  async assertCanReadGroupReport(groupId: string, userId: string, userRoles: string[]) {
+  async assertCanReadGroupReport(groupId: string, userId: string, userRoles: string[], isSuperAdmin = false) {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
       include: { campus: true },
     });
     if (!group) throw new BadRequestException('Grupo no encontrado');
 
-    const isAdmin = (userRoles || []).some((r) =>
+    // `isSuperAdmin` es imprescindible: el superadmin de plataforma NO tiene
+    // roles en InstitutionUserRole (pasa el RolesGuard por su propio flag), así
+    // que mirar solo los nombres de rol lo trataría como docente y lo bloquearía.
+    const isAdmin = isSuperAdmin || (userRoles || []).some((r) =>
       ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r),
     );
     if (!isAdmin && group.directorId !== userId) {
@@ -192,12 +195,12 @@ export class TutoringAttendanceService {
   /**
    * Reporte de asistencia de tutoría por grupo (para reportes administrativos)
    */
-  async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string }) {
+  async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; includeWithdrawn?: boolean }) {
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         groupId,
         academicYearId,
-        status: 'ACTIVE',
+        ...(params?.includeWithdrawn ? {} : { status: 'ACTIVE' }),
       },
       include: {
         student: true,
@@ -253,6 +256,8 @@ export class TutoringAttendanceService {
         excused,
         attendanceRate,
         status: attendanceRate < 70 ? 'Riesgo' : attendanceRate < 85 ? 'Alerta' : 'Normal',
+        enrollmentStatus: enrollment.status,
+        isWithdrawn: enrollment.status !== 'ACTIVE',
       };
     });
   }
@@ -272,8 +277,12 @@ export class TutoringAttendanceService {
     startDate?: string;
     endDate?: string;
     status?: string;
+    includeWithdrawn?: boolean;
   }) {
-    const enrollmentWhere: any = { academicYearId: params.academicYearId };
+    const enrollmentWhere: any = {
+      academicYearId: params.academicYearId,
+      ...(params.includeWithdrawn ? {} : { status: 'ACTIVE' }),
+    };
     if (params.groupId) enrollmentWhere.groupId = params.groupId;
     else if (params.groupIds?.length) enrollmentWhere.groupId = { in: params.groupIds };
 
@@ -283,7 +292,11 @@ export class TutoringAttendanceService {
     };
 
     if (params.studentEnrollmentId) whereClause.studentEnrollmentId = params.studentEnrollmentId;
-    if (params.status) whereClause.status = params.status;
+    // Solo estados válidos: el filtro "Estado" se comparte entre reportes con
+    // vocabularios distintos y un valor ajeno vaciaba el reporte sin explicación.
+    if (params.status && ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'].includes(params.status)) {
+      whereClause.status = params.status;
+    }
 
     if (params.startDate || params.endDate) {
       whereClause.date = {
@@ -325,6 +338,8 @@ export class TutoringAttendanceService {
         .join(' '),
       groupName: `${record.studentEnrollment.group.grade?.name || ''} ${record.studentEnrollment.group.name}`.trim(),
       teacherName: record.teacher ? `${record.teacher.firstName} ${record.teacher.lastName}` : '',
+      enrollmentStatus: record.studentEnrollment.status,
+      isWithdrawn: record.studentEnrollment.status !== 'ACTIVE',
     }));
   }
 }

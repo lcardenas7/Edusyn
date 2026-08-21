@@ -93,6 +93,21 @@ function DateQuickRanges({ presets, from, to, onApply, onClear }: {
   )
 }
 
+function WithdrawnToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer select-none">
+      <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)}
+        className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-400" />
+      Incluir estudiantes retirados
+      <span className="text-slate-400 font-normal">(su asistencia existe pero queda fuera por defecto)</span>
+    </label>
+  )
+}
+
+function WithdrawnBadge() {
+  return <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-200 text-slate-600 align-middle">RETIRADO</span>
+}
+
 function SearchBtn({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
   return (
     <div className="flex items-end">
@@ -123,6 +138,12 @@ function monthBounds(day: string): { from: string; to: string } {
 }
 
 // ─── CSV helpers ────────────────────────────────────────────────────────
+/** "RETIRADO" junto al nombre: al exportar con retirados incluidos, el CSV debe
+ *  conservar la distincion o los porcentajes se malinterpretan fuera del sistema. */
+function nameCSV(r: any): string {
+  return `${r.name || r.student || ''}${r.isWithdrawn ? ' [RETIRADO]' : ''}`
+}
+
 function buildCSV(inst: string, title: string, headers: string, rows: string): string {
   const now = new Date().toLocaleString('es-CO')
   return `"Institucion","${inst}"\n"Reporte","${title}"\n"Generado","${now}"\n"Criterios","Normal >= ${THRESHOLDS.NORMAL_MIN}% | Alerta ${THRESHOLDS.ALERT_MIN}-${THRESHOLDS.NORMAL_MIN - 1}% | Riesgo < ${THRESHOLDS.ALERT_MIN}%"\n"Calculo","El porcentaje incluye asistencias, tardanzas y excusas justificadas."\n\n${headers}\n${rows}`
@@ -171,6 +192,10 @@ export default function AttendanceReports() {
   const [reportError, setReportError] = useState<string | null>(null)
   const [searchStudent, setSearchStudent] = useState('')
   const [filterMinPercent, setFilterMinPercent] = useState('80')
+  // Retirados fuera por defecto: incluirlos cambia los porcentajes del grupo,
+  // asi que es una decision explicita del usuario, no el comportamiento normal.
+  const [filterIncludeWithdrawn, setFilterIncludeWithdrawn] = useState(false)
+  const [detailTruncated, setDetailTruncated] = useState<{ shown: number; total: number } | null>(null)
   const [teacherAssignments, setTeacherAssignments] = useState<any[]>([])
   const [loadingAssignments, setLoadingAssignments] = useState(false)
   const { sortData, sortState } = useSortable<any>()
@@ -184,28 +209,34 @@ export default function AttendanceReports() {
   const [tutoringData, setTutoringData] = useState<any[]>([])
   const [tutoringDetailData, setTutoringDetailData] = useState<any[]>([])
 
-  // Estado de la feature de tutoría + grupos consultables (para docentes, solo los que dirigen)
-  const [tutoringEnabled, setTutoringEnabled] = useState(false)
+  // Estado de la feature de tutoría + grupos consultables (para docentes, solo los que dirigen).
+  // 'unknown' mientras no haya respuesta fiable: NUNCA se esconde el reporte por
+  // no saber. Esconderlo ante un fallo de /status dejaba al usuario sin reporte y
+  // sin explicación, que es peor que mostrarlo y que el reporte diga qué pasa.
+  const [tutoringStatus, setTutoringStatus] = useState<'unknown' | 'enabled' | 'disabled'>('unknown')
   const [tutoringGroups, setTutoringGroups] = useState<Array<{ id: string; name: string; gradeName?: string }>>([])
 
   useEffect(() => {
     let cancelled = false
-    tutoringAttendanceApi.getStatus()
+    tutoringAttendanceApi.getStatus(institution?.id)
       .then(res => {
         if (cancelled) return
-        setTutoringEnabled(!!res.data?.enabled)
+        setTutoringStatus(res.data?.enabled ? 'enabled' : 'disabled')
         setTutoringGroups(res.data?.directedGroups || [])
       })
-      .catch(() => {
+      .catch(err => {
         if (cancelled) return
-        setTutoringEnabled(false)
+        console.error('No se pudo consultar el estado de tutoría:', err)
+        setTutoringStatus('unknown')
         setTutoringGroups([])
       })
     return () => { cancelled = true }
   }, [institution?.id])
 
-  // Un docente puede consultar tutoría si dirige al menos un grupo
-  const canViewTutoring = tutoringEnabled && (!isTeacherOnly || tutoringGroups.length > 0)
+  // Solo se oculta cuando SABEMOS que está deshabilitada. Para un docente sin
+  // grupos dirigidos tampoco se oculta: el reporte le explica que necesita
+  // dirección de grupo, en vez de desaparecer sin motivo visible.
+  const canViewTutoring = tutoringStatus !== 'disabled'
 
   const filteredReports = attendanceReports.filter(r => !r.feature || hasFeature(r.feature))
   // Docentes pueden ver: asistencia por grupo, por asignatura, por docente (su cumplimiento), e inasistencias críticas
@@ -370,12 +401,18 @@ export default function AttendanceReports() {
     return raw
   }
   function mapRow(item: any) {
-    return { name: item.studentName || item.name, group: item.groupName || item.group, totalClasses: item.totalClasses || 0, attended: item.present || item.attended || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || item.pct || 0, status: item.status || 'Normal' }
+    return { name: item.studentName || item.name, group: item.groupName || item.group, totalClasses: item.totalClasses || 0, attended: item.present || item.attended || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || item.pct || 0, status: item.status || 'Normal', isWithdrawn: !!item.isWithdrawn }
   }
 
   // ─── Load report data ────────────────────────────────────────────────
   const handleSelectReport = async (id: string) => {
     if (!visibleReports.some(r => r.id === id)) return
+    // El filtro Estado se comparte entre reportes con vocabularios distintos
+    // (Normal/Alerta/Riesgo vs Presente/Ausente/...). Arrastrar el valor de un
+    // reporte a otro devolvia cero filas sin decir por que.
+    setFilterStatus('all')
+    setSearchStudent('')
+    setDetailTruncated(null)
     setSelectedReport(id)
     setShowReport(true)
     await loadReportData(id)
@@ -394,7 +431,7 @@ export default function AttendanceReports() {
     setLoadingReport(true)
     setReportError(null)
     try {
-      const bp: any = { startDate: filterDateFrom || undefined, endDate: filterDateTo || undefined, subjectId: filterSubject !== 'all' ? filterSubject : undefined }
+      const bp: any = { startDate: filterDateFrom || undefined, endDate: filterDateTo || undefined, subjectId: filterSubject !== 'all' ? filterSubject : undefined, includeWithdrawn: filterIncludeWithdrawn || undefined }
 
       if (reportId === 'att-group') {
         let d = (await fetchGroupData(bp)).map(mapRow)
@@ -402,9 +439,14 @@ export default function AttendanceReports() {
         setAttendanceData(sortByRisk(d).map((item, idx) => ({ ...item, nro: idx + 1 })))
       }
       if (reportId === 'att-student') {
-        const p = { academicYearId: filterYear, groupId: filterGrade !== 'all' ? filterGrade : undefined, subjectId: bp.subjectId, startDate: bp.startDate, endDate: bp.endDate, status: filterStatus !== 'all' ? filterStatus : undefined, studentEnrollmentId: filterStudentId !== 'all' ? filterStudentId : undefined }
+        const p = { academicYearId: filterYear, groupId: filterGrade !== 'all' ? filterGrade : undefined, subjectId: bp.subjectId, startDate: bp.startDate, endDate: bp.endDate, status: filterStatus !== 'all' ? filterStatus : undefined, studentEnrollmentId: filterStudentId !== 'all' ? filterStudentId : undefined, includeWithdrawn: filterIncludeWithdrawn || undefined }
         const res = await attendanceApi.getDetailedReport(p)
-        setAttendanceDetailData((res.data || []).map((item: any, idx: number) => ({ nro: idx + 1, date: item.date ? new Date(item.date).toLocaleDateString('es-CO') : '', student: item.studentName || item.student || '', group: item.groupName || item.group || '', subject: item.subjectName || item.subject || '', teacher: item.teacherName || item.teacher || '', status: item.status || '', observations: item.observations || '' })))
+        // El endpoint ahora devuelve { rows, total, truncated }; se tolera el
+        // formato antiguo (array) por si queda alguna version cacheada.
+        const payload: any = res.data
+        const rows: any[] = Array.isArray(payload) ? payload : (payload?.rows || [])
+        setDetailTruncated(payload?.truncated ? { shown: rows.length, total: payload.total } : null)
+        setAttendanceDetailData(rows.map((item: any, idx: number) => ({ nro: idx + 1, date: item.date ? new Date(item.date).toLocaleDateString('es-CO', { timeZone: 'UTC' }) : '', student: item.studentName || item.student || '', group: item.groupName || item.group || '', subject: item.subjectName || item.subject || '', teacher: item.teacherName || item.teacher || '', status: item.status || '', observations: item.observations || '', isWithdrawn: !!item.isWithdrawn })))
       }
       if (reportId === 'att-subject') {
         let d = (await fetchGroupData(bp)).map(mapRow)
@@ -439,41 +481,51 @@ export default function AttendanceReports() {
         setConsolidatedData({ byGrade: (res.data?.byGrade || []).map(mr), bySubject: (res.data?.bySubject || []).map(mr), byPeriod: [] })
       }
       if (reportId === 'att-tutoring') {
-        if (!tutoringEnabled) {
+        if (tutoringStatus === 'disabled') {
           setTutoringData([])
-          setReportError('La asistencia de tutoría no está habilitada para esta institución.')
+          setReportError('La asistencia de tutoría no está habilitada para esta institución. Actívala en Configuración → Módulos → Asistencia.')
           return
         }
-        // Los grupos consultables vienen de /tutoring-attendance/status: para admin
-        // son todos los de la institución y para el docente solo los que dirige.
-        const targetGroups = filterGrade !== 'all' ? [filterGrade] : tutoringGroups.map(g => g.id)
+        // Grupos consultables: los de /tutoring-attendance/status (para admin, todos
+        // los de la institución; para el docente, los que dirige). Si esa llamada
+        // falló, un admin cae a la lista general de grupos en vez de quedarse sin
+        // reporte.
+        let targetGroups = filterGrade !== 'all' ? [filterGrade] : tutoringGroups.map(g => g.id)
+        if (targetGroups.length === 0 && !isTeacherOnly) {
+          const gRes = await groupsApi.getAll()
+          targetGroups = (gRes.data || []).map((g: any) => g.id)
+        }
         if (targetGroups.length === 0) {
           setTutoringData([])
-          setReportError('No hay grupos con dirección de grupo asignada para consultar tutoría.')
+          setReportError(isTeacherOnly
+            ? 'No apareces como director de grupo en ningún grupo, así que no hay tutoría que consultar. Pídele a coordinación que te asigne la dirección de grupo.'
+            : 'No se encontraron grupos para consultar tutoría.')
           return
         }
         const raw: any[] = []
         const results = await Promise.allSettled(
-          targetGroups.map((gId: string) => tutoringAttendanceApi.getReportByGroup(gId, filterYear, { startDate: bp.startDate, endDate: bp.endDate })),
+          targetGroups.map((gId: string) => tutoringAttendanceApi.getReportByGroup(gId, filterYear, { startDate: bp.startDate, endDate: bp.endDate, includeWithdrawn: filterIncludeWithdrawn || undefined })),
         )
         results.forEach(r => { if (r.status === 'fulfilled') raw.push(...(r.value.data || [])) })
-        let mapped = raw.map((item: any) => ({ name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal' }))
+        let mapped = raw.map((item: any) => ({ name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal', isWithdrawn: !!item.isWithdrawn }))
         if (filterStatus !== 'all') mapped = mapped.filter(i => i.status === filterStatus)
         setTutoringData(sortByRisk(mapped).map((item, idx) => ({ ...item, nro: idx + 1 })))
       }
       if (reportId === 'att-tutoring-student') {
-        if (!tutoringEnabled) {
+        if (tutoringStatus === 'disabled') {
           setTutoringDetailData([])
-          setReportError('La asistencia de tutoría no está habilitada para esta institución.')
+          setReportError('La asistencia de tutoría no está habilitada para esta institución. Actívala en Configuración → Módulos → Asistencia.')
           return
         }
         const res = await tutoringAttendanceApi.getDetailedReport({
           academicYearId: filterYear,
+          institutionId: institution?.id,
           groupId: filterGrade !== 'all' ? filterGrade : undefined,
           studentEnrollmentId: filterStudentId !== 'all' ? filterStudentId : undefined,
           startDate: bp.startDate,
           endDate: bp.endDate,
           status: filterStatus !== 'all' ? filterStatus : undefined,
+          includeWithdrawn: filterIncludeWithdrawn || undefined,
         })
         setTutoringDetailData((res.data || []).map((item: any, idx: number) => ({
           nro: idx + 1,
@@ -484,6 +536,7 @@ export default function AttendanceReports() {
           teacher: item.teacherName || '',
           status: item.status || '',
           observations: item.observations || '',
+          isWithdrawn: !!item.isWithdrawn,
         })))
       }
     } catch (err) {
@@ -496,14 +549,14 @@ export default function AttendanceReports() {
   // ─── CSV export ──────────────────────────────────────────────────────
   const exportToCSV = () => {
     let csv = '', fn = 'general'
-    if (selectedReport === 'att-group') { fn = 'por_grupo'; csv = buildCSV(instName, 'Asistencia por Grupo', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', attendanceData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
-    else if (selectedReport === 'att-student') { fn = 'por_estudiante'; const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'; csv = buildCSV(instName, 'Asistencia por Estudiante', 'Nro,Fecha,Estudiante,Grupo,Asignatura,Docente,Estado,Obs', attendanceDetailData.map((r, i) => `${i+1},"${r.date}","${r.student}","${r.group}","${r.subject}","${r.teacher}",${sl(r.status)},"${r.observations}"`).join('\n')) }
-    else if (selectedReport === 'att-subject') { fn = 'por_asignatura'; csv = buildCSV(instName, 'Asistencia por Asignatura', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', attendanceBySubjectData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late||0},${r.excused||0},${r.pct}%,${r.status}`).join('\n')) }
+    if (selectedReport === 'att-group') { fn = 'por_grupo'; csv = buildCSV(instName, 'Asistencia por Grupo', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', attendanceData.map((r, i) => `${i+1},"${nameCSV(r)}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-student') { fn = 'por_estudiante'; const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'; csv = buildCSV(instName, 'Asistencia por Estudiante', 'Nro,Fecha,Estudiante,Grupo,Asignatura,Docente,Estado,Obs', attendanceDetailData.map((r, i) => `${i+1},"${r.date}","${nameCSV(r)}","${r.group}","${r.subject}","${r.teacher}",${sl(r.status)},"${r.observations}"`).join('\n')) }
+    else if (selectedReport === 'att-subject') { fn = 'por_asignatura'; csv = buildCSV(instName, 'Asistencia por Asignatura', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', attendanceBySubjectData.map((r, i) => `${i+1},"${nameCSV(r)}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late||0},${r.excused||0},${r.pct}%,${r.status}`).join('\n')) }
     else if (selectedReport === 'att-teacher') { fn = 'por_docente'; csv = buildCSV(instName, 'Asistencia por Docente', 'Nro,Docente,Programadas,Registradas,Faltantes,% Cumplimiento', teacherComplianceData.map((r, i) => `${i+1},"${r.teacher}",${r.classesScheduled},${r.classesRegistered},${r.classesNotRegistered},${r.complianceRate}%`).join('\n')) }
-    else if (selectedReport === 'att-critical') { fn = 'criticas'; csv = buildCSV(instName, 'Inasistencias Criticas', 'Nro,Estudiante,Grupo,Total,Fallas,%,Estado', criticalAbsencesData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.absent},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-critical') { fn = 'criticas'; csv = buildCSV(instName, 'Inasistencias Criticas', 'Nro,Estudiante,Grupo,Total,Fallas,%,Estado', criticalAbsencesData.map((r, i) => `${i+1},"${nameCSV(r)}","${r.group}",${r.totalClasses},${r.absent},${r.pct}%,${r.status}`).join('\n')) }
     else if (selectedReport === 'att-consolidated') { fn = 'consolidado'; let body = 'POR GRADO\nNro,Grado,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.byGrade.map((g, i) => `${i+1},"${g.grade}",${g.totalClasses},${g.totalAttended},${g.totalAbsent},${g.totalLate},${g.totalExcused},${g.pct}%`).join('\n') + '\n\nPOR ASIGNATURA\nNro,Asignatura,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.bySubject.map((s, i) => `${i+1},"${s.subject}",${s.totalClasses},${s.totalAttended},${s.totalAbsent},${s.totalLate},${s.totalExcused},${s.pct}%`).join('\n'); csv = buildCSV(instName, 'Consolidado Institucional', '', body) }
-    else if (selectedReport === 'att-tutoring') { fn = 'tutoria'; csv = buildCSV(instName, 'Asistencia de Tutoria', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', tutoringData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
-    else if (selectedReport === 'att-tutoring-student') { fn = 'tutoria_por_estudiante'; const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'; csv = buildCSV(instName, 'Tutoria por Estudiante', 'Nro,Fecha,Estudiante,Grupo,Director de grupo,Estado,Obs', tutoringDetailData.map((r, i) => `${i+1},"${r.dateLabel}","${r.student}","${r.group}","${r.teacher}",${sl(r.status)},"${r.observations}"`).join('\n')) }
+    else if (selectedReport === 'att-tutoring') { fn = 'tutoria'; csv = buildCSV(instName, 'Asistencia de Tutoria', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', tutoringData.map((r, i) => `${i+1},"${nameCSV(r)}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-tutoring-student') { fn = 'tutoria_por_estudiante'; const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'; csv = buildCSV(instName, 'Tutoria por Estudiante', 'Nro,Fecha,Estudiante,Grupo,Director de grupo,Estado,Obs', tutoringDetailData.map((r, i) => `${i+1},"${r.dateLabel}","${nameCSV(r)}","${r.group}","${r.teacher}",${sl(r.status)},"${r.observations}"`).join('\n')) }
     if (!csv) { toast.warning('No hay datos para exportar'); return }
     downloadCSV(csv, fn)
   }
@@ -644,6 +697,8 @@ export default function AttendanceReports() {
       </div>
     )
     const row = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
+    const withdrawn = <WithdrawnToggle value={filterIncludeWithdrawn} onChange={setFilterIncludeWithdrawn} />
+    const extras = <div className="flex flex-wrap items-center justify-between gap-3">{dateChips}{withdrawn}</div>
 
     if (selectedReport === 'att-group') return (
       <FilterCard>
@@ -653,7 +708,7 @@ export default function AttendanceReports() {
           <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} />
           <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} />
         </div>
-        {dateChips}
+        {extras}
         <div className={row}>
           <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
@@ -671,7 +726,7 @@ export default function AttendanceReports() {
           <FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={studentOpts} />
           <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} />
         </div>
-        {dateChips}
+        {extras}
         <div className={row}>
           <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
@@ -691,7 +746,7 @@ export default function AttendanceReports() {
           <FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} />
           <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} />
         </div>
-        {dateChips}
+        {extras}
         <div className={row}>
           <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
@@ -712,7 +767,7 @@ export default function AttendanceReports() {
           <FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} />
           <FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} />
         </div>
-        {dateChips}
+        {extras}
         <div className={row}>
           <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
@@ -736,6 +791,7 @@ export default function AttendanceReports() {
             options={[{ value: 'all', label: 'Todos' }, { value: 'Alerta', label: 'Alerta' }, { value: 'Riesgo', label: 'Riesgo' }]} />
           <SearchBtn onClick={() => loadReportData('att-critical')} loading={loadingReport} />
         </div>
+        {extras}
       </FilterCard>
     )
 
@@ -748,7 +804,7 @@ export default function AttendanceReports() {
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
           <SearchBtn onClick={() => loadReportData('att-consolidated')} loading={loadingReport} />
         </div>
-        {dateChips}
+        {extras}
       </FilterCard>
     )
 
@@ -760,7 +816,7 @@ export default function AttendanceReports() {
           <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} />
           {searchBox}
         </div>
-        {dateChips}
+        {extras}
         <div className={row}>
           <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
@@ -778,7 +834,7 @@ export default function AttendanceReports() {
           <FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={studentOpts} />
           <FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} />
         </div>
-        {dateChips}
+        {extras}
         <div className={row}>
           <FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} {...bounds} />
           <FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} {...bounds} />
@@ -818,7 +874,7 @@ export default function AttendanceReports() {
       </tr></thead><tbody className="divide-y divide-slate-100">
         {sorted.map((r, i) => (<tr key={i} className={`${getRowBg(r.status)} hover:bg-slate-50/80 transition-colors`}>
           <td className={`${td} text-slate-400`}>{i + 1}</td>
-          <td className={`${td} font-medium text-slate-800`}>{r.name}</td>
+          <td className={`${td} font-medium text-slate-800`}>{r.name}{r.isWithdrawn && <WithdrawnBadge />}</td>
           <td className={td}>{r.group}</td>
           <td className={`${td} text-center font-medium`}>{r.totalClasses}</td>
           <td className={`${td} text-center text-emerald-600`}>{r.attended}</td>
@@ -843,13 +899,18 @@ export default function AttendanceReports() {
 
     if (selectedReport === 'att-student') {
       if (!attendanceDetailData.length) return <EmptyState icon={<Users className="w-12 h-12" />} />
+      const aviso = detailTruncated ? (
+        <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
+          Mostrando los <strong>{detailTruncated.shown}</strong> registros mas recientes de <strong>{detailTruncated.total}</strong>. Acota el rango de fechas, el grupo o el estudiante para ver el resto.
+        </div>
+      ) : null
       const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'
       const sc = (s: string) => ({ PRESENT: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200', ABSENT: 'bg-red-100 text-red-700 ring-1 ring-red-200', LATE: 'bg-amber-100 text-amber-700 ring-1 ring-amber-200', EXCUSED: 'bg-blue-100 text-blue-700 ring-1 ring-blue-200' }[s] || 'bg-slate-100 text-slate-700')
-      return (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
+      return (<div className="overflow-x-auto">{aviso}<table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
         <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Fecha</th><th className={`${th} text-left`}>Estudiante</th><th className={`${th} text-left`}>Grupo</th><th className={`${th} text-left`}>Asignatura</th><th className={`${th} text-left`}>Docente</th><th className={`${th} text-center`}>Estado</th><th className={`${th} text-left`}>Obs.</th>
       </tr></thead><tbody className="divide-y divide-slate-100">
         {attendanceDetailData.map((r, i) => (<tr key={i} className={`${r.status === 'ABSENT' ? 'bg-red-50/40' : r.status === 'LATE' ? 'bg-amber-50/40' : ''} hover:bg-slate-50/80 transition-colors`}>
-          <td className={`${td} text-slate-400`}>{r.nro}</td><td className={td}>{r.date}</td><td className={`${td} font-medium text-slate-800`}>{r.student}</td><td className={td}>{r.group}</td><td className={td}>{r.subject}</td><td className={td}>{r.teacher}</td>
+          <td className={`${td} text-slate-400`}>{r.nro}</td><td className={td}>{r.date}</td><td className={`${td} font-medium text-slate-800`}>{r.student}{r.isWithdrawn && <WithdrawnBadge />}</td><td className={td}>{r.group}</td><td className={td}>{r.subject}</td><td className={td}>{r.teacher}</td>
           <td className={`${td} text-center`}><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${sc(r.status)}`}>{sl(r.status)}</span></td>
           <td className={`${td} text-slate-500 max-w-[200px] truncate`}>{r.observations}</td>
         </tr>))}
@@ -923,7 +984,7 @@ export default function AttendanceReports() {
         <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Fecha</th><th className={`${th} text-left`}>Estudiante</th><th className={`${th} text-left`}>Grupo</th><th className={`${th} text-left`}>Director de grupo</th><th className={`${th} text-center`}>Estado</th><th className={`${th} text-left`}>Obs.</th>
       </tr></thead><tbody className="divide-y divide-slate-100">
         {d.map((r, i) => (<tr key={i} className={`${r.status === 'ABSENT' ? 'bg-red-50/40' : r.status === 'LATE' ? 'bg-amber-50/40' : ''} hover:bg-slate-50/80 transition-colors`}>
-          <td className={`${td} text-slate-400`}>{i + 1}</td><td className={td}>{r.dateLabel}</td><td className={`${td} font-medium text-slate-800`}>{r.student}</td><td className={td}>{r.group}</td><td className={td}>{r.teacher}</td>
+          <td className={`${td} text-slate-400`}>{i + 1}</td><td className={td}>{r.dateLabel}</td><td className={`${td} font-medium text-slate-800`}>{r.student}{r.isWithdrawn && <WithdrawnBadge />}</td><td className={td}>{r.group}</td><td className={td}>{r.teacher}</td>
           <td className={`${td} text-center`}><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${sc(r.status)}`}>{sl(r.status)}</span></td>
           <td className={`${td} text-slate-500 max-w-[200px] truncate`}>{r.observations}</td>
         </tr>))}

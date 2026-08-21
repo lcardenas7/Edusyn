@@ -5,11 +5,16 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AttendanceService } from './attendance.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('attendance')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AttendanceController {
-  constructor(private readonly attendanceService: AttendanceService) {}
+  constructor(
+    private readonly attendanceService: AttendanceService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /** Actor (quién hace el cambio) del JWT para la auditoría forense. */
   private actorFrom(req: any): { userId?: string; name?: string; role?: string } {
@@ -62,17 +67,23 @@ export class AttendanceController {
 
   @Get('report/consolidated')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
-  getConsolidatedReport(
+  async getConsolidatedReport(
+    @Request() req: any,
     @Query('academicYearId') academicYearId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('subjectId') subjectId?: string,
+    @Query('includeWithdrawn') includeWithdrawn?: string,
+    @Query('institutionId') institutionId?: string,
   ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     return this.attendanceService.getConsolidatedReport({
       academicYearId,
+      institutionId: instId,
       startDate,
       endDate,
       subjectId,
+      includeWithdrawn: includeWithdrawn === 'true',
     });
   }
 
@@ -118,11 +129,13 @@ export class AttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('subjectId') subjectId?: string,
+    @Query('includeWithdrawn') includeWithdrawn?: string,
   ) {
     return this.attendanceService.getReportByGroup(groupId, academicYearId, {
       startDate,
       endDate,
       subjectId,
+      includeWithdrawn: includeWithdrawn === 'true',
     });
   }
 
@@ -137,6 +150,8 @@ export class AttendanceController {
     @Query('teacherId') teacherId?: string,
     @Query('studentEnrollmentId') studentEnrollmentId?: string,
     @Query('status') status?: string,
+    @Query('includeWithdrawn') includeWithdrawn?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.attendanceService.getDetailedReport({
       academicYearId,
@@ -147,6 +162,8 @@ export class AttendanceController {
       teacherId,
       studentEnrollmentId,
       status,
+      includeWithdrawn: includeWithdrawn === 'true',
+      limit: limit ? Number(limit) : undefined,
     });
   }
 }
