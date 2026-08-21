@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { confirmDialog } from '../components/ui/confirm'
 import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { todayBogotaInput } from '../lib/datetime'
 import { useAuth } from '../contexts/AuthContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi, storageApi } from '../lib/api'
@@ -25,7 +26,7 @@ const statusConfig = {
 }
 
 export default function Attendance() {
-  const { user } = useAuth()
+  const { user, institution } = useAuth()
   
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -56,7 +57,7 @@ export default function Attendance() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('')
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(todayBogotaInput())
   
   // Docente puede modificar asistencia para cualquier fecha seleccionada
   const canEdit = isAdmin || isTeacher
@@ -108,7 +109,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchTutoringStatus = async () => {
       try {
-        const response = await tutoringAttendanceApi.getStatus()
+        const response = await tutoringAttendanceApi.getStatus(institution?.id)
         setTutoringEnabled(response.data.enabled)
         setDirectedGroups(response.data.directedGroups || [])
         if (response.data.directedGroups?.length > 0) {
@@ -370,7 +371,7 @@ export default function Attendance() {
               try {
                 await tutoringAttendanceApi.toggle(true)
                 setTutoringEnabled(true)
-                const res = await tutoringAttendanceApi.getStatus()
+                const res = await tutoringAttendanceApi.getStatus(institution?.id)
                 setDirectedGroups(res.data.directedGroups || [])
                 if (res.data.directedGroups?.length > 0) setSelectedTutoringGroupId(res.data.directedGroups[0].id)
               } catch (err: any) {

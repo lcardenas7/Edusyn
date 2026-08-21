@@ -663,8 +663,12 @@ export default function Reports() {
           }
           
           const response = await attendanceApi.getDetailedReport(params)
+          // El endpoint devuelve { rows, total, truncated }; se tolera el formato
+          // antiguo (array plano) por compatibilidad.
+          const payload: any = response.data
+          const rawRows: any[] = Array.isArray(payload) ? payload : (payload?.rows || [])
           // Mapear campos del backend a los esperados por el frontend
-          const mappedData = (response.data || []).map((item: any, idx: number) => ({
+          const mappedData = rawRows.map((item: any, idx: number) => ({
             nro: idx + 1,
             date: item.date ? new Date(item.date).toLocaleDateString('es-CO') : '',
             student: item.studentName || item.student || '',

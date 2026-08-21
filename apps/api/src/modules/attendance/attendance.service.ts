@@ -158,11 +158,11 @@ export class AttendanceService {
     return this.prisma.attendanceRecord.findMany({
       where: {
         studentEnrollmentId,
-        ...(startDate && endDate
+        ...(startDate || endDate
           ? {
               date: {
-                gte: new Date(startDate),
-                lte: new Date(endDate),
+                ...(startDate && { gte: new Date(startDate) }),
+                ...(endDate && { lte: new Date(endDate) }),
               },
             }
           : {}),
@@ -283,13 +283,15 @@ export class AttendanceService {
 
   // Reporte de asistencia por grupo (para reportes administrativos)
   // OPTIMIZADO: 2 queries batch + agrupación en memoria (antes: N+1)
-  async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string }) {
-    // QUERY 1: Obtener todos los estudiantes del grupo
+  async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string; includeWithdrawn?: boolean }) {
+    // QUERY 1: Obtener todos los estudiantes del grupo.
+    // Por defecto solo matrículas ACTIVE. `includeWithdrawn` suma las retiradas:
+    // su asistencia existe en la base y sin esta opción era invisible en todo reporte.
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         groupId,
         academicYearId,
-        status: 'ACTIVE',
+        ...(params?.includeWithdrawn ? {} : { status: 'ACTIVE' }),
       },
       include: {
         student: true,
@@ -306,11 +308,13 @@ export class AttendanceService {
     if (enrollmentIds.length === 0) return [];
 
     // QUERY 2: Batch — TODOS los registros de asistencia del grupo
+    // Cada extremo se aplica por separado: exigir ambos hacía que "desde X" sin
+    // "hasta" se ignorara en silencio y el reporte saliera con todo el año.
     const dateFilter: any = {};
-    if (params?.startDate && params?.endDate) {
+    if (params?.startDate || params?.endDate) {
       dateFilter.date = {
-        gte: new Date(params.startDate),
-        lte: new Date(params.endDate),
+        ...(params?.startDate && { gte: new Date(params.startDate) }),
+        ...(params?.endDate && { lte: new Date(params.endDate) }),
       };
     }
 
@@ -354,6 +358,8 @@ export class AttendanceService {
         excused,
         attendanceRate,
         status,
+        enrollmentStatus: enrollment.status,
+        isWithdrawn: enrollment.status !== 'ACTIVE',
       };
     });
   }
@@ -362,13 +368,21 @@ export class AttendanceService {
   // OPTIMIZADO: 3 queries batch + agrupación en memoria (antes: N+1 doble por grupo y asignatura)
   async getConsolidatedReport(params: {
     academicYearId: string;
+    institutionId?: string;
     startDate?: string;
     endDate?: string;
     subjectId?: string;
+    includeWithdrawn?: boolean;
   }) {
-    // QUERY 1: Obtener enrollments con grupo y grado (para mapear groupId → gradeName)
+    // QUERY 1: Obtener enrollments con grupo y grado (para mapear groupId → gradeName).
+    // El academicYearId ya acota a una institución, pero se filtra también por
+    // institutionId cuando el controlador lo resuelve: defensa en profundidad.
     const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { academicYearId: params.academicYearId, status: 'ACTIVE' },
+      where: {
+        academicYearId: params.academicYearId,
+        ...(params.institutionId ? { institutionId: params.institutionId } : {}),
+        ...(params.includeWithdrawn ? {} : { status: 'ACTIVE' }),
+      },
       select: {
         id: true,
         groupId: true,
@@ -391,11 +405,12 @@ export class AttendanceService {
     const enrollmentIds = enrollments.map(e => e.id);
 
     // QUERY 2: Batch — TODOS los registros de asistencia del año con teacherAssignment.subjectId
+    // Cada extremo del rango se aplica por separado (ver getReportByGroup).
     const dateFilter: any = {};
-    if (params.startDate && params.endDate) {
+    if (params.startDate || params.endDate) {
       dateFilter.date = {
-        gte: new Date(params.startDate),
-        lte: new Date(params.endDate),
+        ...(params.startDate && { gte: new Date(params.startDate) }),
+        ...(params.endDate && { lte: new Date(params.endDate) }),
       };
     }
 
@@ -510,10 +525,10 @@ export class AttendanceService {
 
     // QUERY 2: Batch — TODOS los registros de asistencia de todas las asignaciones
     const dateFilter: any = {};
-    if (params.startDate && params.endDate) {
+    if (params.startDate || params.endDate) {
       dateFilter.date = {
-        gte: new Date(params.startDate),
-        lte: new Date(params.endDate),
+        ...(params.startDate && { gte: new Date(params.startDate) }),
+        ...(params.endDate && { lte: new Date(params.endDate) }),
       };
     }
 
@@ -537,11 +552,17 @@ export class AttendanceService {
     }
 
     // ─── Calcular clases programadas usando AttendanceSchedulingEngine ───
+    // Cada extremo se resuelve por separado: con solo "desde" se tomaba todo el
+    // año, y las clases programadas dejaban de cuadrar con las registradas.
     let rangeStart: Date;
     let rangeEnd: Date;
-    if (params.startDate && params.endDate) {
-      rangeStart = new Date(params.startDate);
-      rangeEnd = new Date(params.endDate);
+    if (params.startDate || params.endDate) {
+      const yearForRange = await this.prisma.academicYear.findUnique({
+        where: { id: params.academicYearId },
+        select: { startDate: true, endDate: true },
+      });
+      rangeStart = params.startDate ? new Date(params.startDate) : (yearForRange?.startDate || new Date(new Date().getFullYear(), 0, 1));
+      rangeEnd = params.endDate ? new Date(params.endDate) : (yearForRange?.endDate || new Date());
     } else {
       const academicYear = await this.prisma.academicYear.findUnique({
         where: { id: params.academicYearId },
@@ -647,24 +668,23 @@ export class AttendanceService {
     teacherId?: string;
     studentEnrollmentId?: string;
     status?: string;
+    includeWithdrawn?: boolean;
+    limit?: number;
   }) {
     const whereClause: any = {};
 
-    if (params.groupId) {
-      whereClause.studentEnrollment = {
-        groupId: params.groupId,
-        academicYearId: params.academicYearId,
-      };
-    } else {
-      whereClause.studentEnrollment = {
-        academicYearId: params.academicYearId,
-      };
-    }
+    whereClause.studentEnrollment = {
+      academicYearId: params.academicYearId,
+      ...(params.groupId ? { groupId: params.groupId } : {}),
+      // Coherente con el resto de reportes: por defecto solo matrículas ACTIVE.
+      ...(params.includeWithdrawn ? {} : { status: 'ACTIVE' }),
+    };
 
-    if (params.startDate && params.endDate) {
+    // Cada extremo del rango se aplica por separado (ver getReportByGroup).
+    if (params.startDate || params.endDate) {
       whereClause.date = {
-        gte: new Date(params.startDate),
-        lte: new Date(params.endDate),
+        ...(params.startDate && { gte: new Date(params.startDate) }),
+        ...(params.endDate && { lte: new Date(params.endDate) }),
       };
     }
 
@@ -686,9 +706,17 @@ export class AttendanceService {
       whereClause.studentEnrollmentId = params.studentEnrollmentId;
     }
 
-    if (params.status) {
+    // Solo estados válidos de AttendanceStatus. El filtro "Estado" se comparte
+    // entre reportes cuyos vocabularios difieren (Normal/Alerta/Riesgo vs
+    // PRESENT/ABSENT/...), y un valor del otro reporte devolvía cero filas sin
+    // explicación. Un valor desconocido se ignora en vez de vaciar el reporte.
+    const VALID_STATUS = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'];
+    if (params.status && VALID_STATUS.includes(params.status)) {
       whereClause.status = params.status;
     }
+
+    const total = await this.prisma.attendanceRecord.count({ where: whereClause });
+    const limit = Math.min(Math.max(params.limit ?? 2000, 1), 10000);
 
     const records = await this.prisma.attendanceRecord.findMany({
       where: whereClause,
@@ -712,10 +740,10 @@ export class AttendanceService {
         { date: 'desc' },
         { studentEnrollment: { student: { lastName: 'asc' } } },
       ],
-      take: 1000, // Limitar resultados
+      take: limit,
     });
 
-    return records.map((record) => ({
+    const rows = records.map((record) => ({
       id: record.id,
       date: record.date,
       status: record.status,
@@ -724,6 +752,12 @@ export class AttendanceService {
       groupName: `${record.studentEnrollment.group.grade?.name || ''} ${record.studentEnrollment.group.name}`,
       subjectName: record.teacherAssignment.subject.name,
       teacherName: `${record.teacherAssignment.teacher.firstName} ${record.teacherAssignment.teacher.lastName}`,
+      enrollmentStatus: record.studentEnrollment.status,
+      isWithdrawn: record.studentEnrollment.status !== 'ACTIVE',
     }));
+
+    // Se devuelve `total` y `truncated` porque antes el corte era mudo: con 8.946
+    // registros el usuario veía 1.000 y creía estar viéndolo todo.
+    return { rows, total, limit, truncated: total > rows.length };
   }
 }

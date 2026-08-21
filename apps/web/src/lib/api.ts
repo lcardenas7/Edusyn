@@ -326,9 +326,9 @@ export const attendanceApi = {
     api.get(`/attendance/by-assignment/${assignmentId}`, { params: { date } }),
   getByStudent: (studentEnrollmentId: string, params?: { startDate?: string; endDate?: string }) =>
     api.get(`/attendance/by-student/${studentEnrollmentId}`, { params }),
-  getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string }) =>
+  getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string; includeWithdrawn?: boolean }) =>
     api.get(`/attendance/report-by-group/${groupId}`, { params: { academicYearId, ...params } }),
-  getDetailedReport: (params: { academicYearId: string; groupId?: string; date?: string; startDate?: string; endDate?: string; subjectId?: string; teacherId?: string; studentEnrollmentId?: string; status?: string }) =>
+  getDetailedReport: (params: { academicYearId: string; groupId?: string; date?: string; startDate?: string; endDate?: string; subjectId?: string; teacherId?: string; studentEnrollmentId?: string; status?: string; includeWithdrawn?: boolean; limit?: number }) =>
     api.get('/attendance/detailed-report', { params }),
   getTeacherComplianceReport: (params: { academicYearId: string; teacherId?: string; groupId?: string; subjectId?: string; startDate?: string; endDate?: string }) =>
     api.get('/attendance/report/teacher-compliance', { params }),
@@ -339,16 +339,20 @@ export const attendanceApi = {
 
 // Tutoring Attendance (Asistencia de tutoría / dirección de grupo)
 export const tutoringAttendanceApi = {
-  getStatus: () => api.get('/tutoring-attendance/status'),
+  // institutionId explicito: para un SUPERADMIN el backend no puede deducir la
+  // institucion del JWT (no tiene vinculo InstitutionUser) y respondia 400, lo que
+  // dejaba la tutoria invisible. Para usuarios normales el backend lo ignora y usa
+  // el JWT, asi que no abre ninguna puerta cross-tenant.
+  getStatus: (institutionId?: string) => api.get('/tutoring-attendance/status', { params: { institutionId } }),
   record: (data: { groupId: string; date: string; records: Array<{ studentEnrollmentId: string; status: string; observations?: string }> }) =>
     api.post('/tutoring-attendance/record', data),
   getByGroup: (groupId: string, date: string) =>
     api.get('/tutoring-attendance/by-group', { params: { groupId, date } }),
   getStudentSummary: (studentEnrollmentId: string, params?: { startDate?: string; endDate?: string }) =>
     api.get('/tutoring-attendance/student-summary', { params: { studentEnrollmentId, ...params } }),
-  getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string }) =>
+  getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; includeWithdrawn?: boolean }) =>
     api.get('/tutoring-attendance/report-by-group', { params: { groupId, academicYearId, ...params } }),
-  getDetailedReport: (params: { academicYearId: string; groupId?: string; studentEnrollmentId?: string; startDate?: string; endDate?: string; status?: string }) =>
+  getDetailedReport: (params: { academicYearId: string; institutionId?: string; groupId?: string; studentEnrollmentId?: string; startDate?: string; endDate?: string; status?: string; includeWithdrawn?: boolean }) =>
     api.get('/tutoring-attendance/detailed-report', { params }),
   toggle: (enabled: boolean) => api.post('/tutoring-attendance/toggle', { enabled }),
 }
