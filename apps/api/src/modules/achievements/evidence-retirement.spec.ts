@@ -33,6 +33,9 @@ function makeService(opts: {
           ? { id: 'ev-1', text: 'Reconoce su nombre', achievementId: 'ach-1', retiredFromTermId: null, retiredAt: null }
           : opts.evidence,
       ),
+      // A-1/A-2: assertOwnership resuelve la pertenencia con findFirst acotado por
+      // `achievement: { institutionId }`. En estas pruebas todo pertenece a inst-1.
+      findFirst: jest.fn().mockResolvedValue({ id: 'ev-1' }),
       update: evidenceUpdate,
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -47,6 +50,7 @@ function makeService(opts: {
     },
     academicTerm: {
       findUnique: jest.fn().mockResolvedValue(opts.term === undefined ? TERM('t2', 2) : opts.term),
+      findFirst: jest.fn().mockResolvedValue({ id: 't2' }),
       findMany: jest.fn().mockResolvedValue([]),
     },
     studentEvidenceValuation: {
@@ -55,7 +59,11 @@ function makeService(opts: {
       deleteMany: valuationDelete,
       findMany: jest.fn().mockResolvedValue([]),
     },
-    studentEnrollment: { findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1' }) },
+    studentEnrollment: {
+      findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1' }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'se-1' }),
+    },
+    subject: { findFirst: jest.fn().mockResolvedValue({ id: 'sub-1' }) },
     teacherAssignment: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn().mockResolvedValue([]),
   };
@@ -200,7 +208,7 @@ describe('D-12 · valoración sobre evidencia retirada (H-19)', () => {
     await expect(
       t.svc.upsertEvidenceValuation({
         studentEnrollmentId: 'se-1', achievementEvidenceId: 'ev-1', academicTermId: 't2', performanceLevel: 'ALTO' as any,
-      }),
+      }, 'inst-1'),
     ).rejects.toThrow(/retirado del catálogo/i);
 
     expect(t.valuationUpsert).not.toHaveBeenCalled();
@@ -211,7 +219,7 @@ describe('D-12 · valoración sobre evidencia retirada (H-19)', () => {
 
     await t.svc.upsertEvidenceValuation({
       studentEnrollmentId: 'se-1', achievementEvidenceId: 'ev-1', academicTermId: 't1', performanceLevel: 'ALTO' as any,
-    });
+    }, 'inst-1');
 
     expect(t.valuationUpsert).toHaveBeenCalledTimes(1);
   });
@@ -221,7 +229,7 @@ describe('D-12 · valoración sobre evidencia retirada (H-19)', () => {
 
     await t.svc.upsertEvidenceValuation({
       studentEnrollmentId: 'se-1', achievementEvidenceId: 'ev-1', academicTermId: 't2', performanceLevel: 'BASICO' as any,
-    });
+    }, 'inst-1');
 
     expect(t.valuationUpsert).toHaveBeenCalledTimes(1);
   });

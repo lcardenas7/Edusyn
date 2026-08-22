@@ -15,6 +15,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AchievementService } from './achievement.service';
 import { AchievementConfigService } from './achievement-config.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('achievements')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,6 +24,8 @@ export class AchievementController {
   constructor(
     private readonly achievementService: AchievementService,
     private readonly configService: AchievementConfigService,
+    // A-1/A-2/A-3: necesario para resolver la institución del actor en servidor.
+    private readonly prisma: PrismaService,
   ) {}
 
   /** Extrae el actor (quién hace el cambio) del JWT para la auditoría E-5. */
@@ -206,7 +210,8 @@ export class AchievementController {
     @Request() req: any,
     @Body() body: { studentEnrollmentId: string; academicTermId: string; subjectId: string; text: string; items?: Array<{ text: string; level?: string | null }> },
   ) {
-    return this.achievementService.upsertConvivenciaEntry({ ...body, createdById: req.user?.id });
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.upsertConvivenciaEntry({ ...body, createdById: req.user?.id }, instId);
   }
 
   // ============================================
@@ -228,17 +233,25 @@ export class AchievementController {
     @Request() req: any,
     @Body() body: { studentEnrollmentId: string; achievementEvidenceId: string; academicTermId: string; performanceLevel: any; observation?: string | null },
   ) {
-    return this.achievementService.upsertEvidenceValuation({ ...body, createdById: req.user?.id });
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.upsertEvidenceValuation({ ...body, createdById: req.user?.id }, instId);
   }
 
   @Delete('evidence-valuations')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async deleteEvidenceValuation(
+    @Request() req: any,
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('achievementEvidenceId') achievementEvidenceId: string,
     @Query('academicTermId') academicTermId: string,
   ) {
-    return this.achievementService.deleteEvidenceValuation(studentEnrollmentId, achievementEvidenceId, academicTermId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.deleteEvidenceValuation(
+      studentEnrollmentId,
+      achievementEvidenceId,
+      academicTermId,
+      instId,
+    );
   }
 
   // ============================================

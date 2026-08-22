@@ -18,6 +18,75 @@ export class AchievementService {
     @Optional() private readonly gradeAudit?: GradeAuditService,
   ) {}
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO MULTI-TENANT (A-1 / A-2 / A-3)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Un `institutionId` correcto en la fila NO demuestra aislamiento si se derivó
+  // de un FK que eligió el cliente. Antes, estas escrituras hacían
+  // `institutionId: enr.institutionId` a partir del `studentEnrollmentId` del
+  // cuerpo: la fila quedaba coherente y el actor nunca se comprobaba.
+  //
+  // Rutas canónicas verificadas contra schema.prisma
+  // (docs/security/DISENO-ACHIEVEMENTS-A1-A3.md §5):
+  //
+  //   studentEnrollmentId   -> StudentEnrollment.institutionId      (columna directa)
+  //   achievementEvidenceId -> achievement.institutionId            (FK obligatoria, D-5)
+  //   academicTermId        -> academicYear.institutionId           (sin columna propia)
+  //   subjectId            -> area.institutionId                    (sin columna propia)
+
+  /**
+   * Exige que TODOS los identificadores recibidos del cliente pertenezcan a
+   * `institutionId` (el tenant efectivo del actor).
+   *
+   * No basta comprobarlos por separado: al anclarlos todos al mismo tenant queda
+   * implicada su coherencia mutua, de modo que una combinación como
+   * `enrollment(A) + evidence(A) + term(B)` se rechaza aunque el actor sea de A.
+   *
+   * Cada mensaje conserva el que la ruta ya devolvía, y un recurso inexistente es
+   * indistinguible de uno ajeno: no se revela la existencia de datos de otro tenant.
+   */
+  private async assertOwnership(
+    institutionId: string,
+    ids: {
+      studentEnrollmentId?: string;
+      achievementEvidenceId?: string;
+      academicTermId?: string;
+      subjectId?: string;
+    },
+  ) {
+    if (ids.studentEnrollmentId !== undefined) {
+      const row = await this.prisma.studentEnrollment.findFirst({
+        where: { id: ids.studentEnrollmentId, institutionId },
+        select: { id: true },
+      });
+      if (!row) throw new NotFoundException('Matrícula no encontrada');
+    }
+
+    if (ids.achievementEvidenceId !== undefined) {
+      const row = await this.prisma.achievementEvidence.findFirst({
+        where: { id: ids.achievementEvidenceId, achievement: { institutionId } },
+        select: { id: true },
+      });
+      if (!row) throw new NotFoundException('Imprescindible no encontrado');
+    }
+
+    if (ids.academicTermId !== undefined) {
+      const row = await this.prisma.academicTerm.findFirst({
+        where: { id: ids.academicTermId, academicYear: { institutionId } },
+        select: { id: true },
+      });
+      if (!row) throw new NotFoundException('Período académico no encontrado');
+    }
+
+    if (ids.subjectId !== undefined) {
+      const row = await this.prisma.subject.findFirst({
+        where: { id: ids.subjectId, area: { institutionId } },
+        select: { id: true },
+      });
+      if (!row) throw new NotFoundException('Asignatura no encontrada');
+    }
+  }
+
   // ============================================
   // VIGENCIA DE EVIDENCIAS POR PERÍODO (D-12)
   // ============================================
@@ -162,12 +231,14 @@ export class AchievementService {
     text: string;
     items?: Array<{ text: string; level?: string | null }>;
     createdById?: string;
-  }) {
-    const enr = await this.prisma.studentEnrollment.findUnique({
-      where: { id: data.studentEnrollmentId },
-      select: { institutionId: true },
+  }, institutionId: string) {
+    // A-3: los tres identificadores vienen del cliente. Se exige que los tres
+    // pertenezcan al tenant del actor ANTES de cualquier escritura.
+    await this.assertOwnership(institutionId, {
+      studentEnrollmentId: data.studentEnrollmentId,
+      academicTermId: data.academicTermId,
+      subjectId: data.subjectId,
     });
-    if (!enr) throw new NotFoundException('Matrícula no encontrada');
     const validLevels = new Set(['SUPERIOR', 'ALTO', 'BASICO', 'BAJO']);
     const items = Array.isArray(data.items)
       ? data.items
@@ -191,7 +262,7 @@ export class AchievementService {
       },
       update: { text, items: items as any, createdById: data.createdById },
       create: {
-        institutionId: enr.institutionId,
+        institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         academicTermId: data.academicTermId,
         subjectId: data.subjectId,
@@ -232,12 +303,16 @@ export class AchievementService {
     performanceLevel: PerformanceLevel;
     observation?: string | null;
     createdById?: string;
-  }) {
-    const enr = await this.prisma.studentEnrollment.findUnique({
-      where: { id: data.studentEnrollmentId },
-      select: { institutionId: true },
+  }, institutionId: string) {
+    // A-1: los tres identificadores vienen del cliente. El aserto corre ANTES de la
+    // guarda D-12/H-19 a propósito: si la evidencia fuese de otro tenant y estuviese
+    // retirada, devolver el ConflictException revelaría que existe y en qué estado.
+    // Con este orden, un recurso ajeno siempre responde NotFoundException.
+    await this.assertOwnership(institutionId, {
+      studentEnrollmentId: data.studentEnrollmentId,
+      achievementEvidenceId: data.achievementEvidenceId,
+      academicTermId: data.academicTermId,
     });
-    if (!enr) throw new NotFoundException('Matrícula no encontrada');
 
     // D-12 / H-19: una evidencia retirada no admite valoraciones nuevas ni
     // actualizaciones en los períodos desde los que fue retirada. Las valoraciones de
@@ -269,7 +344,7 @@ export class AchievementService {
         createdById: data.createdById,
       },
       create: {
-        institutionId: enr.institutionId,
+        institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         achievementEvidenceId: data.achievementEvidenceId,
         academicTermId: data.academicTermId,
@@ -281,7 +356,20 @@ export class AchievementService {
   }
 
   /** Elimina la valoración de un imprescindible (cuando el docente la quita). */
-  async deleteEvidenceValuation(studentEnrollmentId: string, achievementEvidenceId: string, academicTermId: string) {
+  async deleteEvidenceValuation(
+    studentEnrollmentId: string,
+    achievementEvidenceId: string,
+    academicTermId: string,
+    institutionId: string,
+  ) {
+    // A-2: el índice único (studentEnrollmentId, achievementEvidenceId, academicTermId)
+    // acota el borrado a UNA fila como máximo, pero sin este aserto bastaba un solo
+    // identificador ajeno para borrar la valoración de otra institución.
+    await this.assertOwnership(institutionId, {
+      studentEnrollmentId,
+      achievementEvidenceId,
+      academicTermId,
+    });
     await this.prisma.studentEvidenceValuation.deleteMany({
       where: { studentEnrollmentId, achievementEvidenceId, academicTermId },
     });
