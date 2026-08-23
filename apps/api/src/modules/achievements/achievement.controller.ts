@@ -438,10 +438,13 @@ export class AchievementController {
       }>;
       academicTermId?: string;
     },
+    @Request() req: any,
   ) {
+    // body.institutionId se conserva en el contrato pero NO autoriza.
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.bulkGenerateSuggestions(
       body.achievementId,
-      body.institutionId,
+      instId,
       body.studentGrades,
       body.academicTermId,
     );
@@ -457,11 +460,13 @@ export class AchievementController {
       institutionId: string;
       academicTermId?: string;
     },
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.bulkAssignAchievement(
       body.achievementId,
       body.studentEnrollmentIds,
-      body.institutionId,
+      instId,
       body.academicTermId,
     );
   }
@@ -474,10 +479,12 @@ export class AchievementController {
       achievementId: string;
       institutionId: string;
     },
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.autoFillObservations(
       body.achievementId,
-      body.institutionId,
+      instId,
     );
   }
 
@@ -486,8 +493,10 @@ export class AchievementController {
   async updateStudentObservation(
     @Param('id') id: string,
     @Body() body: { observation: string },
+    @Request() req: any,
   ) {
-    return this.achievementService.updateStudentObservation(id, body.observation);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.updateStudentObservation(id, body.observation, instId);
   }
 
   @Put('students/:id')
@@ -511,10 +520,11 @@ export class AchievementController {
     },
     @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.upsertStudentAchievement({
       ...body,
       approvedById: req.user?.id,
-    });
+    }, instId);
   }
 
   @Post('students/:id/approve')
@@ -528,7 +538,8 @@ export class AchievementController {
     },
     @Request() req: any,
   ) {
-    return this.achievementService.approveStudentAchievement(id, req.user.id, body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.approveStudentAchievement(id, req.user.id, body, instId);
   }
 
   // ============================================

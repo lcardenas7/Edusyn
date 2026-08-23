@@ -49,11 +49,46 @@ export class AchievementService {
     institutionId: string,
     ids: {
       studentEnrollmentId?: string;
+      /** A-4: lote completo. Se resuelve en UNA consulta, no una por elemento. */
+      studentEnrollmentIds?: string[];
       achievementEvidenceId?: string;
       academicTermId?: string;
       subjectId?: string;
+      achievementId?: string;
+      studentAchievementId?: string;
     },
   ) {
+    if (ids.studentEnrollmentIds !== undefined) {
+      const unicos = [...new Set(ids.studentEnrollmentIds)];
+      if (unicos.length > 0) {
+        const filas = await this.prisma.studentEnrollment.findMany({
+          where: { id: { in: unicos }, institutionId },
+          select: { id: true },
+        });
+        // Basta que UNA matrícula sea ajena o inexistente para rechazar el lote entero,
+        // y se comprueba ANTES de escribir nada: sin escrituras parciales.
+        if (filas.length !== unicos.length) {
+          throw new NotFoundException('Matrícula no encontrada');
+        }
+      }
+    }
+
+    if (ids.achievementId !== undefined) {
+      const row = await this.prisma.achievement.findFirst({
+        where: { id: ids.achievementId, institutionId },
+        select: { id: true },
+      });
+      if (!row) throw new NotFoundException('Aprendizaje no encontrado');
+    }
+
+    if (ids.studentAchievementId !== undefined) {
+      const row = await this.prisma.studentAchievement.findFirst({
+        where: { id: ids.studentAchievementId, institutionId },
+        select: { id: true },
+      });
+      if (!row) throw new NotFoundException('Valoración no encontrada');
+    }
+
     if (ids.studentEnrollmentId !== undefined) {
       const row = await this.prisma.studentEnrollment.findFirst({
         where: { id: ids.studentEnrollmentId, institutionId },
@@ -1305,7 +1340,9 @@ export class AchievementService {
     };
   }
 
-  async updateStudentObservation(id: string, observation: string) {
+  async updateStudentObservation(id: string, observation: string, institutionId: string) {
+    // A-5: operaba por id sin ninguna referencia a institución.
+    await this.assertOwnership(institutionId, { studentAchievementId: id });
     return this.prisma.studentAchievement.update({
       where: { id },
       data: { observation },
@@ -1326,7 +1363,37 @@ export class AchievementService {
     attitudinalText?: string;
     observation?: string;
     approvedById?: string;
-  }) {
+  }, institutionId: string) {
+    // A-4/A-5: los tres identificadores vienen del cliente y deben pertenecer TODOS
+    // al tenant del actor. Va antes de resolver el período, que ya lee el aprendizaje.
+    await this.assertOwnership(institutionId, {
+      studentEnrollmentId: data.studentEnrollmentId,
+      achievementId: data.achievementId,
+      ...(data.academicTermId ? { academicTermId: data.academicTermId } : {}),
+    });
+    return this.upsertStudentAchievementCore(data, institutionId);
+  }
+
+  /**
+   * Núcleo de la escritura. NO comprueba pertenencia: presupone que el llamador ya
+   * ejecutó `assertOwnership`. Existe para que las operaciones por lote validen el
+   * conjunto UNA sola vez en lugar de repetir las consultas por cada estudiante.
+   */
+  private async upsertStudentAchievementCore(data: {
+    studentEnrollmentId: string;
+    achievementId: string;
+    academicTermId?: string;
+    performanceLevel: 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR';
+    suggestedText?: string;
+    approvedText?: string;
+    isTextApproved?: boolean;
+    suggestedJudgment?: string;
+    approvedJudgment?: string;
+    isJudgmentApproved?: boolean;
+    attitudinalText?: string;
+    observation?: string;
+    approvedById?: string;
+  }, institutionId: string) {
     // Resolver el período de la valoración: explícito, o el del aprendizaje (por-período).
     let academicTermId = data.academicTermId ?? null;
     if (!academicTermId) {
@@ -1368,16 +1435,23 @@ export class AchievementService {
     }
 
     if (existing) {
+      // A-4/A-5 · escenario E. La terna (matrícula, aprendizaje, período) ya está
+      // validada contra el tenant del actor, pero la fila que la ocupa podría llevar
+      // otro `institutionId`: el índice único admite UNA fila por terna, y una
+      // matrícula que cambió de institución deja atrás valoraciones con el tenant
+      // antiguo. Actualizarla en silencio escribiría sobre datos de otra institución.
+      if (existing.institutionId !== institutionId) {
+        throw new NotFoundException('Valoración no encontrada');
+      }
       return this.prisma.studentAchievement.update({
         where: { id: existing.id },
         data: updateData,
       });
     }
 
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.studentAchievement.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         achievementId: data.achievementId,
         academicTermId,
@@ -1400,7 +1474,10 @@ export class AchievementService {
       approvedText: string;
       approvedJudgment?: string;
     },
+    institutionId: string,
   ) {
+    // A-5: aprobar una valoración ajena era posible con solo conocer su id.
+    await this.assertOwnership(institutionId, { studentAchievementId: id });
     return this.prisma.studentAchievement.update({
       where: { id },
       data: {
@@ -1427,6 +1504,15 @@ export class AchievementService {
     }>,
     academicTermId?: string,
   ) {
+    // A-4: `institutionId` ya llega resuelto del actor (el controlador ignora el del
+    // cuerpo). Se valida el aprendizaje y TODAS las matrículas del lote de una vez,
+    // antes de escribir nada.
+    await this.assertOwnership(institutionId, {
+      achievementId,
+      studentEnrollmentIds: studentGrades.map((sg) => sg.studentEnrollmentId),
+      ...(academicTermId ? { academicTermId } : {}),
+    });
+
     // Get performance scale
     const scales = await this.prisma.performanceScale.findMany({
       where: { institutionId },
@@ -1446,15 +1532,15 @@ export class AchievementService {
           institutionId,
         );
 
-        // Save to database
-        return this.upsertStudentAchievement({
+        // Save to database — el lote ya fue validado al entrar en el método.
+        return this.upsertStudentAchievementCore({
           studentEnrollmentId: sg.studentEnrollmentId,
           achievementId,
           academicTermId,
           performanceLevel: level,
           suggestedText: suggestion.suggestedText,
           suggestedJudgment: suggestion.suggestedJudgment,
-        });
+        }, institutionId);
       }),
     );
 
@@ -1486,6 +1572,15 @@ export class AchievementService {
     institutionId: string,
     academicTermId?: string,
   ) {
+    // A-4: aprendizaje + lote completo de matrículas, en una sola validación previa.
+    // Si una sola matrícula es ajena o inexistente, se rechaza el lote entero y no se
+    // escribe ninguna fila (el bucle de abajo es Promise.all sin transacción).
+    await this.assertOwnership(institutionId, {
+      achievementId,
+      studentEnrollmentIds,
+      ...(academicTermId ? { academicTermId } : {}),
+    });
+
     // Get performance scales for the institution
     const scales = await this.prisma.performanceScale.findMany({
       where: { institutionId },
@@ -1529,12 +1624,12 @@ export class AchievementService {
         const grade = gradeMap.get(enrollmentId) || 0;
         const level = this.getPerformanceLevelFromGrade(grade, scales);
 
-        return this.upsertStudentAchievement({
+        return this.upsertStudentAchievementCore({
           studentEnrollmentId: enrollmentId,
           achievementId,
           academicTermId: valuationTermId,
           performanceLevel: level as any,
-        });
+        }, institutionId);
       }),
     );
 
@@ -1545,6 +1640,10 @@ export class AchievementService {
     achievementId: string,
     institutionId: string,
   ) {
+    // A-4: el aprendizaje debe pertenecer al actor. Sus valoraciones se resuelven
+    // luego por `achievementId`, así que basta anclar el aprendizaje.
+    await this.assertOwnership(institutionId, { achievementId });
+
     // Get observation templates for this institution
     const config = await this.prisma.achievementConfig.findUnique({
       where: { institutionId },
