@@ -89,9 +89,12 @@ export class AchievementController {
       learningCatalogMode?: 'TEACHER_MANAGED' | 'ADMIN_FIXED';
       valuationScope?: 'PURPOSE' | 'EVIDENCE';
     },
+    @Request() req: any,
   ) {
+    // A-13: body.institutionId permanece en el contrato pero NO autoriza.
+    const instId = await requireInstitutionId(this.prisma as any, req);
     try {
-      return await this.configService.upsertConfig(body);
+      return await this.configService.upsertConfig({ ...body, institutionId: instId });
     } catch (error) {
       console.error('[AchievementController] Error upserting config:', error);
       throw error;
@@ -117,17 +120,20 @@ export class AchievementController {
         isActive?: boolean;
       }>;
     },
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.configService.bulkUpsertValueJudgmentTemplates(
-      body.institutionId,
+      instId,
       body.templates,
     );
   }
 
   @Post('config/:institutionId/templates/defaults')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async createDefaultTemplates(@Param('institutionId') institutionId: string) {
-    return this.configService.createDefaultTemplates(institutionId);
+  async createDefaultTemplates(@Param('institutionId') institutionId: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.configService.createDefaultTemplates(instId);
   }
 
   // ============================================
@@ -153,17 +159,20 @@ export class AchievementController {
         isActive?: boolean;
       }>;
     },
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.configService.bulkUpsertObservationTemplates(
-      body.institutionId,
+      instId,
       body.templates,
     );
   }
 
   @Post('config/:institutionId/observation-templates/defaults')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async createDefaultObservationTemplates(@Param('institutionId') institutionId: string) {
-    return this.configService.createDefaultObservationTemplates(institutionId);
+  async createDefaultObservationTemplates(@Param('institutionId') institutionId: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.configService.createDefaultObservationTemplates(instId);
   }
 
   // ============================================
@@ -193,8 +202,10 @@ export class AchievementController {
       evidences?: Array<{ text: string }>;
       levelDescriptors?: Array<{ levelCode: string; text: string }>;
     },
+    @Request() req: any,
   ) {
-    return this.achievementService.createCatalogAchievement(body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.createCatalogAchievement(body, instId);
   }
 
   // ============================================

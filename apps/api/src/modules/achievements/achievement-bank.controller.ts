@@ -15,7 +15,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AchievementBankService } from './achievement-bank.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { resolveInstitutionId, requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('achievement-bank')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -92,7 +92,8 @@ export class AchievementBankController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async update(@Request() req, @Param('id') id: string, @Body() body: any) {
     const userId = req.user.sub || req.user.id;
-    return this.bankService.update(id, userId, body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.bankService.update(id, userId, body, instId);
   }
 
   @Delete(':id')
@@ -103,12 +104,14 @@ export class AchievementBankController {
     const isAdmin = userRoles.some((r: string) =>
       r.includes('ADMIN') || r.includes('SUPERADMIN') || r.includes('COORDINADOR'),
     );
-    return this.bankService.delete(id, userId, isAdmin);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.bankService.delete(id, userId, isAdmin, instId);
   }
 
   @Post(':id/use')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async incrementUsage(@Param('id') id: string) {
-    return this.bankService.incrementUsage(id);
+  async incrementUsage(@Param('id') id: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.bankService.incrementUsage(id, instId);
   }
 }

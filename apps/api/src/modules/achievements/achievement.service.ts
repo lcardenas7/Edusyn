@@ -507,10 +507,14 @@ export class AchievementService {
     baseDescription: string;
     evidences?: Array<{ text: string }>;
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
-  }) {
+  }, institutionId: string) {
+    // A-15: assertCatalogScope conserva INTACTA su validacion de coherencia entre
+    // gradeId, subjectId, academicYearId y academicTermId. Lo unico que cambia es el
+    // ancla: la institucion resuelta del actor sustituye a data.institutionId, que
+    // permanece en el contrato HTTP pero deja de autorizar.
     const description = data.baseDescription?.trim();
     if (!description) throw new BadRequestException('El propósito es obligatorio');
-    const { subject, term } = await this.assertCatalogScope(data);
+    const { subject, term } = await this.assertCatalogScope({ ...data, institutionId });
     const scope = {
       gradeId: data.gradeId,
       subjectId: data.subjectId,
@@ -532,7 +536,7 @@ export class AchievementService {
 
     return this.prisma.achievement.create({
       data: {
-        institutionId: data.institutionId,
+        institutionId,
         code: `PROP-${subjectCode}-${periodCode}-${String(orderNumber).padStart(2, '0')}`,
         ...scope,
         orderNumber,

@@ -158,6 +158,27 @@ export class AchievementBankService {
   /**
    * Actualizar entrada del banco
    */
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO MULTI-TENANT (A-16)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // El banco se acotaba SOLO por autoria (createdById) y, en delete, por isAdmin.
+  // Ninguna de las dos cosas comprueba la institucion: un admin de A podia borrar
+  // una entrada de B, y incrementUsage no comprobaba nada en absoluto.
+  //
+  // La regla nueva es tenant AND autoria, nunca tenant OR autoria: el aserto de
+  // institucion se ANADE, no sustituye. isAdmin sigue siendo una capacidad
+  // administrativa DENTRO de la institucion del actor, no un bypass de tenant.
+  //
+  // AchievementBank.institutionId es columna directa, asi que el aserto vive aqui
+  // en lugar de reutilizar el de AchievementService: son dos servicios con modelos
+  // de autorizacion distintos y no conviene acoplarlos.
+
+  /** Devuelve la entrada solo si pertenece al tenant del actor; si no, null. */
+  private async findInInstitution(id: string, institutionId: string) {
+    return this.prisma.achievementBank.findFirst({ where: { id, institutionId } });
+  }
+
   async update(id: string, userId: string, data: {
     description?: string;
     achievementType?: string;
@@ -168,9 +189,11 @@ export class AchievementBankService {
     subjectId?: string;
     areaId?: string;
     gradeId?: string;
-  }) {
-    // Solo el autor puede editar
-    const entry = await this.prisma.achievementBank.findUnique({ where: { id } });
+  }, institutionId: string) {
+    // A-16: tenant primero; despues la regla de autoria, que NO se relaja.
+    // Devolver null para ambos casos mantiene el contrato actual y hace que un
+    // recurso ajeno sea indistinguible de uno inexistente o de uno no propio.
+    const entry = await this.findInInstitution(id, institutionId);
     if (!entry || entry.createdById !== userId) {
       return null;
     }
@@ -200,8 +223,11 @@ export class AchievementBankService {
   /**
    * Eliminar entrada del banco
    */
-  async delete(id: string, userId: string, isAdmin: boolean) {
-    const entry = await this.prisma.achievementBank.findUnique({ where: { id } });
+  async delete(id: string, userId: string, isAdmin: boolean, institutionId: string) {
+    // A-16: el tenant se comprueba SIEMPRE, tambien para isAdmin. Un admin de A no
+    // puede borrar una entrada de B: su capacidad administrativa vive dentro de su
+    // institucion. La regla de autoria/rol se conserva tal cual, en AND con el tenant.
+    const entry = await this.findInInstitution(id, institutionId);
     if (!entry) return null;
     // Solo el autor o un admin puede eliminar
     if (entry.createdById !== userId && !isAdmin) return null;
@@ -213,7 +239,11 @@ export class AchievementBankService {
   /**
    * Incrementar contador de uso cuando se selecciona un logro del banco
    */
-  async incrementUsage(id: string) {
+  async incrementUsage(id: string, institutionId: string) {
+    // A-16: no tenia comprobacion alguna. Se ancla al tenant conservando el
+    // contrato: una entrada ajena se comporta como inexistente.
+    const entry = await this.findInInstitution(id, institutionId);
+    if (!entry) return null;
     return this.prisma.achievementBank.update({
       where: { id },
       data: { usageCount: { increment: 1 } },
