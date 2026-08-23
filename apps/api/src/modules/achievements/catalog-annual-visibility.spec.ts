@@ -45,7 +45,7 @@ describe('AchievementService.getCatalogAchievements — visibilidad de los prop�
 
   it('sin período: devuelve SOLO los anuales (comportamiento de la vista "Anual")', async () => {
     const { svc, findMany } = makeService();
-    await svc.getCatalogAchievements({ ...base });
+    await svc.getCatalogAchievements({ ...base }, 'inst-1');
 
     const where = findMany.mock.calls[0][0].where;
     expect(where.academicTermId).toBeNull();
@@ -54,7 +54,7 @@ describe('AchievementService.getCatalogAchievements — visibilidad de los prop�
 
   it('con período: incluye los de ESE período Y los anuales', async () => {
     const { svc, findMany } = makeService();
-    await svc.getCatalogAchievements({ ...base, academicTermId: 't-3' });
+    await svc.getCatalogAchievements({ ...base, academicTermId: 't-3' }, 'inst-1');
 
     const where = findMany.mock.calls[0][0].where;
     expect(where.OR).toEqual([{ academicTermId: 't-3' }, { academicTermId: null }]);
@@ -65,7 +65,7 @@ describe('AchievementService.getCatalogAchievements — visibilidad de los prop�
   it('el mismo criterio que el boletín: un propósito anual es visible en cualquier período', async () => {
     for (const termId of ['t-1', 't-2', 't-3', 't-4']) {
       const { svc, findMany } = makeService();
-      await svc.getCatalogAchievements({ ...base, academicTermId: termId });
+      await svc.getCatalogAchievements({ ...base, academicTermId: termId }, 'inst-1');
 
       const where = findMany.mock.calls[0][0].where;
       expect(where.OR).toContainEqual({ academicTermId: null });
@@ -75,7 +75,7 @@ describe('AchievementService.getCatalogAchievements — visibilidad de los prop�
 
   it('el resto del acotamiento del catálogo no cambia', async () => {
     const { svc, findMany } = makeService();
-    await svc.getCatalogAchievements({ ...base, academicTermId: 't-3' });
+    await svc.getCatalogAchievements({ ...base, academicTermId: 't-3' }, 'inst-1');
 
     const where = findMany.mock.calls[0][0].where;
     expect(where).toMatchObject({

@@ -56,8 +56,20 @@ export class AchievementService {
       subjectId?: string;
       achievementId?: string;
       studentAchievementId?: string;
+      /** A-17: entrada dominante de las lecturas del módulo. */
+      teacherAssignmentId?: string;
     },
   ) {
+    if (ids.teacherAssignmentId !== undefined) {
+      const row = await this.prisma.teacherAssignment.findFirst({
+        where: { id: ids.teacherAssignmentId, institutionId },
+        select: { id: true },
+      });
+      // Mismo mensaje que ya devolvían getConvivenciaByAssignment y
+      // getEvidenceValuationsByAssignment: el contrato no cambia.
+      if (!row) throw new NotFoundException('Asignación docente no encontrada');
+    }
+
     if (ids.studentEnrollmentIds !== undefined) {
       const unicos = [...new Set(ids.studentEnrollmentIds)];
       if (unicos.length > 0) {
@@ -181,7 +193,9 @@ export class AchievementService {
     return all.map(a => a.id);
   }
 
-  async getAchievementsByAssignment(teacherAssignmentId: string, academicTermId: string) {
+  async getAchievementsByAssignment(teacherAssignmentId: string, academicTermId: string, institutionId: string) {
+    // A-17: acotar ANTES de expandir a las asignaciones hermanas.
+    await this.assertOwnership(institutionId, { teacherAssignmentId, academicTermId });
     const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     const assignment = await this.prisma.teacherAssignment.findUnique({
       where: { id: teacherAssignmentId },
@@ -242,7 +256,10 @@ export class AchievementService {
   // ============================================
 
   /** Entradas de convivencia de todos los estudiantes del grupo, para el período. */
-  async getConvivenciaByAssignment(teacherAssignmentId: string, academicTermId: string) {
+  async getConvivenciaByAssignment(teacherAssignmentId: string, academicTermId: string, institutionId: string) {
+    // A-17: la asignacion y, si viene, el periodo deben ser del tenant del actor.
+    // Va ANTES de resolver ta/groupId o de expandir con getAllAssignmentIds.
+    await this.assertOwnership(institutionId, { teacherAssignmentId, academicTermId });
     const ta = await this.prisma.teacherAssignment.findUnique({
       where: { id: teacherAssignmentId },
       select: { subjectId: true, groupId: true },
@@ -313,7 +330,10 @@ export class AchievementService {
   // ============================================
 
   /** Valoraciones por evidencia de todos los estudiantes del grupo de la asignación, para el período. */
-  async getEvidenceValuationsByAssignment(teacherAssignmentId: string, academicTermId: string) {
+  async getEvidenceValuationsByAssignment(teacherAssignmentId: string, academicTermId: string, institutionId: string) {
+    // A-17: la asignacion y, si viene, el periodo deben ser del tenant del actor.
+    // Va ANTES de resolver ta/groupId o de expandir con getAllAssignmentIds.
+    await this.assertOwnership(institutionId, { teacherAssignmentId, academicTermId });
     const ta = await this.prisma.teacherAssignment.findUnique({
       where: { id: teacherAssignmentId },
       select: { groupId: true },
@@ -449,11 +469,15 @@ export class AchievementService {
     subjectId: string;
     academicYearId: string;
     academicTermId?: string;
-  }) {
-    await this.assertCatalogScope(data);
+  }, institutionId: string) {
+    // A-17 · Grupo A. assertCatalogScope YA coteja grado/dimension/anio entre si y el
+    // periodo contra el anio; lo unico que fallaba era el ancla, que venia del cliente.
+    // Se sustituye por la institucion resuelta del actor: data.institutionId se conserva
+    // en el contrato HTTP pero deja de autorizar.
+    await this.assertCatalogScope({ ...data, institutionId });
     return this.prisma.achievement.findMany({
       where: {
-        institutionId: data.institutionId,
+        institutionId,
         gradeId: data.gradeId,
         subjectId: data.subjectId,
         academicYearId: data.academicYearId,
@@ -533,7 +557,9 @@ export class AchievementService {
     }
   }
 
-  async getPromotionalAchievements(teacherAssignmentId: string) {
+  async getPromotionalAchievements(teacherAssignmentId: string, institutionId: string) {
+    // A-17: acotar ANTES de expandir a las asignaciones hermanas.
+    await this.assertOwnership(institutionId, { teacherAssignmentId });
     const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.achievement.findMany({
       where: {
@@ -1194,7 +1220,10 @@ export class AchievementService {
   // LOGROS ACTITUDINALES
   // ============================================
 
-  async getAttitudinalAchievements(teacherAssignmentId: string, academicTermId: string) {
+  async getAttitudinalAchievements(teacherAssignmentId: string, academicTermId: string, institutionId: string) {
+    // A-17: la asignacion y, si viene, el periodo deben ser del tenant del actor.
+    // Va ANTES de resolver ta/groupId o de expandir con getAllAssignmentIds.
+    await this.assertOwnership(institutionId, { teacherAssignmentId, academicTermId });
     const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.attitudinalAchievement.findMany({
       where: {
@@ -1245,7 +1274,9 @@ export class AchievementService {
   // LOGROS DE ESTUDIANTES
   // ============================================
 
-  async getStudentAchievements(achievementId: string) {
+  async getStudentAchievements(achievementId: string, institutionId: string) {
+    // A-17 · Grupo C: basta la pertenencia del aprendizaje (columna directa).
+    await this.assertOwnership(institutionId, { achievementId });
     return this.prisma.studentAchievement.findMany({
       where: { achievementId },
       include: {
@@ -1265,7 +1296,12 @@ export class AchievementService {
     });
   }
 
-  async getStudentAchievementsByEnrollment(studentEnrollmentId: string, academicTermId?: string) {
+  async getStudentAchievementsByEnrollment(studentEnrollmentId: string, academicTermId: string | undefined, institutionId: string) {
+    // A-17 · Grupo C: matricula y, si viene, periodo.
+    await this.assertOwnership(institutionId, {
+      studentEnrollmentId,
+      ...(academicTermId ? { academicTermId } : {}),
+    });
     const whereClause: any = { studentEnrollmentId };
     
     if (academicTermId) {
@@ -1688,7 +1724,11 @@ export class AchievementService {
     teacherAssignmentId: string,
     academicTermId: string,
     requiredCount: number,
+    institutionId: string,
   ) {
+    // A-17: la asignacion y, si viene, el periodo deben ser del tenant del actor.
+    // Va ANTES de resolver ta/groupId o de expandir con getAllAssignmentIds.
+    await this.assertOwnership(institutionId, { teacherAssignmentId, academicTermId });
     const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     const achievements = await this.prisma.achievement.findMany({
       where: {
@@ -1708,7 +1748,10 @@ export class AchievementService {
     };
   }
 
-  async getUnapprovedStudentAchievements(teacherAssignmentId: string, academicTermId: string) {
+  async getUnapprovedStudentAchievements(teacherAssignmentId: string, academicTermId: string, institutionId: string) {
+    // A-17: la asignacion y, si viene, el periodo deben ser del tenant del actor.
+    // Va ANTES de resolver ta/groupId o de expandir con getAllAssignmentIds.
+    await this.assertOwnership(institutionId, { teacherAssignmentId, academicTermId });
     const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.studentAchievement.findMany({
       where: {

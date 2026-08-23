@@ -49,9 +49,11 @@ export class AchievementController {
 
   @Get('config/:institutionId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getConfig(@Param('institutionId') institutionId: string) {
+  async getConfig(@Param('institutionId') institutionId: string, @Request() req: any) {
+    // A-17: el institutionId del path se conserva en el contrato pero NO autoriza.
+    const instId = await requireInstitutionId(this.prisma as any, req);
     try {
-      return await this.configService.getConfig(institutionId);
+      return await this.configService.getConfig(instId);
     } catch (error) {
       console.error('[AchievementController] Error getting config:', error);
       throw error;
@@ -98,8 +100,9 @@ export class AchievementController {
 
   @Get('config/:institutionId/templates')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async getValueJudgmentTemplates(@Param('institutionId') institutionId: string) {
-    return this.configService.getValueJudgmentTemplates(institutionId);
+  async getValueJudgmentTemplates(@Param('institutionId') institutionId: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.configService.getValueJudgmentTemplates(instId);
   }
 
   @Put('config/templates')
@@ -133,8 +136,9 @@ export class AchievementController {
 
   @Get('config/:institutionId/observation-templates')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getObservationTemplates(@Param('institutionId') institutionId: string) {
-    return this.configService.getObservationTemplates(institutionId);
+  async getObservationTemplates(@Param('institutionId') institutionId: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.configService.getObservationTemplates(instId);
   }
 
   @Put('config/observation-templates')
@@ -170,8 +174,10 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async getCatalogAchievements(
     @Query() query: { institutionId: string; gradeId: string; subjectId: string; academicYearId: string; academicTermId?: string },
+    @Request() req: any,
   ) {
-    return this.achievementService.getCatalogAchievements(query);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.getCatalogAchievements(query, instId);
   }
 
   @Post('catalog')
@@ -200,8 +206,10 @@ export class AchievementController {
   async getConvivencia(
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
+    @Request() req: any,
   ) {
-    return this.achievementService.getConvivenciaByAssignment(teacherAssignmentId, academicTermId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.getConvivenciaByAssignment(teacherAssignmentId, academicTermId, instId);
   }
 
   @Put('convivencia')
@@ -223,8 +231,10 @@ export class AchievementController {
   async getEvidenceValuations(
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
+    @Request() req: any,
   ) {
-    return this.achievementService.getEvidenceValuationsByAssignment(teacherAssignmentId, academicTermId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.getEvidenceValuationsByAssignment(teacherAssignmentId, academicTermId, instId);
   }
 
   @Put('evidence-valuations')
@@ -263,10 +273,13 @@ export class AchievementController {
   async getAchievementsByAssignment(
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.getAchievementsByAssignment(
       teacherAssignmentId,
       academicTermId,
+      instId,
     );
   }
 
@@ -274,8 +287,10 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getPromotionalAchievements(
     @Param('teacherAssignmentId') teacherAssignmentId: string,
+    @Request() req: any,
   ) {
-    return this.achievementService.getPromotionalAchievements(teacherAssignmentId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.getPromotionalAchievements(teacherAssignmentId, instId);
   }
 
   @Post()
@@ -382,10 +397,13 @@ export class AchievementController {
   async getAttitudinalAchievements(
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.getAttitudinalAchievements(
       teacherAssignmentId,
       academicTermId,
+      instId,
     );
   }
 
@@ -409,19 +427,23 @@ export class AchievementController {
 
   @Get('students/:achievementId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getStudentAchievements(@Param('achievementId') achievementId: string) {
-    return this.achievementService.getStudentAchievements(achievementId);
+  async getStudentAchievements(@Param('achievementId') achievementId: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.getStudentAchievements(achievementId, instId);
   }
 
   @Get('by-enrollment/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getStudentAchievementsByEnrollment(
     @Param('studentEnrollmentId') studentEnrollmentId: string,
+    @Request() req: any,
     @Query('academicTermId') academicTermId?: string,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.getStudentAchievementsByEnrollment(
       studentEnrollmentId,
       academicTermId,
+      instId,
     );
   }
 
@@ -552,11 +574,14 @@ export class AchievementController {
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
     @Query('requiredCount') requiredCount: string,
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.validatePeriodAchievements(
       teacherAssignmentId,
       academicTermId,
       parseInt(requiredCount) || 1,
+      instId,
     );
   }
 
@@ -565,10 +590,13 @@ export class AchievementController {
   async getUnapprovedStudentAchievements(
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
+    @Request() req: any,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.getUnapprovedStudentAchievements(
       teacherAssignmentId,
       academicTermId,
+      instId,
     );
   }
 }

@@ -64,7 +64,12 @@ function makeService(opts: {
       findFirst: jest.fn().mockResolvedValue({ id: 'se-1' }),
     },
     subject: { findFirst: jest.fn().mockResolvedValue({ id: 'sub-1' }) },
-    teacherAssignment: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    teacherAssignment: {
+      findUnique: jest.fn().mockResolvedValue({ academicYearId: 'year-1', groupId: 'g-1', subjectId: 'sub-1', group: { gradeId: 'gr-1' } }),
+      // A-17: assertOwnership acota la asignacion por institucion. Todo es de inst-1.
+      findFirst: jest.fn().mockResolvedValue({ id: 'ta-1' }),
+      findMany: jest.fn().mockResolvedValue([{ id: 'ta-1' }]),
+    },
     $transaction: jest.fn().mockResolvedValue([]),
   };
   const gradeAudit: any = { record: auditRecord, recordMany: jest.fn() };
@@ -252,7 +257,7 @@ describe('D-12 · planilla del docente (H-18)', () => {
     ]);
     t.prisma.academicTerm.findMany.mockResolvedValue([{ id: 't2', order: 2 }]);
 
-    const result: any[] = await t.svc.getAchievementsByAssignment('ta-1', 't2');
+    const result: any[] = await t.svc.getAchievementsByAssignment('ta-1', 't2', 'inst-1');
 
     expect(result[0].evidences.map((e: any) => e.id)).toEqual(['ev-1']);
   });
