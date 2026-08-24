@@ -593,7 +593,15 @@ export class AchievementService {
     achievementType?: 'ACADEMIC' | 'ATTITUDINAL' | 'PROMOTIONAL';
     levelDescriptors?: Array<{ levelCode: string; text: string }>;
     evidences?: Array<{ text: string }>;
-  }) {
+  }, institutionId: string) {
+    // A-6: la asignacion y el periodo deben pertenecer al actor. Despues, el
+    // institutionId ESCRITO es el del actor, no el derivado de teacherAssignmentId:
+    // asi una futura inconsistencia de datos no vuelve a convertir una FK del cliente
+    // en fuente de autoridad.
+    await this.assertOwnership(institutionId, {
+      teacherAssignmentId: data.teacherAssignmentId,
+      academicTermId: data.academicTermId,
+    });
     // Generate code automatically
     const assignment = await this.prisma.teacherAssignment.findUnique({
       where: { id: data.teacherAssignmentId },
@@ -613,12 +621,12 @@ export class AchievementService {
     const typePrefix = data.isPromotional ? 'PROM' : (data.achievementType === 'ATTITUDINAL' ? 'ACT' : 'LOG');
     const code = `${typePrefix}-${subjectCode}-P${periodOrder}-${String(data.orderNumber).padStart(2, '0')}`;
 
-    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
+
     const descriptors = (data.levelDescriptors ?? []).filter((d) => d.levelCode && d.text?.trim());
     const evidences = (data.evidences ?? []).filter((e) => e.text?.trim());
     return this.prisma.achievement.create({
       data: {
-        institutionId: ta!.institutionId,
+        institutionId,
         code,
         teacherAssignmentId: data.teacherAssignmentId,
         academicTermId: data.academicTermId,
@@ -637,7 +645,12 @@ export class AchievementService {
     });
   }
 
-  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ id?: string; text: string }> }, canManageCatalog = true) {
+  async updateAchievement(id: string, data: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ id?: string; text: string }> }, canManageCatalog = true, institutionId?: string) {
+    // A-6..A-12: el aserto de tenant va ANTES de assertCatalogWritable y de toda
+    // consulta al recurso. Estas rutas construyen mensajes de error con el texto del
+    // aprendizaje, el de sus evidencias o el nombre del periodo: si la comprobacion
+    // corriera despues, un id ajeno filtraria ese contenido por la excepcion.
+    if (institutionId) await this.assertOwnership(institutionId, { achievementId: id });
     await this.assertCatalogWritable(id, canManageCatalog);
     // Reemplazo total de descriptores solo si el cliente los envía (undefined = no tocar).
     // Los descriptores NO llevan histórico colgando (nadie los referencia), así que el
@@ -801,7 +814,12 @@ export class AchievementService {
    * Las tres se comprueban ANTES de cualquier operación destructiva, en este orden:
    * permisos → historia académica → valoraciones por imprescindible → actitudinal.
    */
-  async deleteAchievement(id: string, canManageCatalog = true) {
+  async deleteAchievement(id: string, canManageCatalog = true, institutionId?: string) {
+    // A-6..A-12: el aserto de tenant va ANTES de assertCatalogWritable y de toda
+    // consulta al recurso. Estas rutas construyen mensajes de error con el texto del
+    // aprendizaje, el de sus evidencias o el nombre del periodo: si la comprobacion
+    // corriera despues, un id ajeno filtraria ese contenido por la excepcion.
+    if (institutionId) await this.assertOwnership(institutionId, { achievementId: id });
     await this.assertCatalogWritable(id, canManageCatalog);
 
     const academicHistory = await this.prisma.studentAchievement.count({
@@ -873,7 +891,8 @@ export class AchievementService {
   // EVIDENCIAS DE APRENDIZAJE
   // ============================================
 
-  async createEvidence(achievementId: string, text: string, canManageCatalog = true) {
+  async createEvidence(achievementId: string, text: string, canManageCatalog = true, institutionId?: string) {
+    if (institutionId) await this.assertOwnership(institutionId, { achievementId });
     await this.assertCatalogWritable(achievementId, canManageCatalog);
     const clean = text?.trim();
     if (!clean) throw new BadRequestException('El texto de la evidencia es obligatorio');
@@ -891,7 +910,8 @@ export class AchievementService {
    * Corrección de contenido. NO cambia el estado de retiro: para eso existen
    * `retireEvidence` / `reactivateEvidence` (D-12). `isActive` ya no se acepta.
    */
-  async updateEvidence(id: string, data: { text?: string }, canManageCatalog = true) {
+  async updateEvidence(id: string, data: { text?: string }, canManageCatalog = true, institutionId?: string) {
+    if (institutionId) await this.assertOwnership(institutionId, { achievementEvidenceId: id });
     const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true } });
     if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
     await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
@@ -1020,7 +1040,17 @@ export class AchievementService {
     data: { academicTermId: string; reason?: string },
     actor?: GradeAuditActor,
     canManageCatalog = true,
+    institutionId?: string,
   ) {
+    // A-10: el aserto va ANTES de loadEvidenceContext y del ConflictException, que
+    // interpola el nombre y el estado del periodo. La regla academica de coherencia
+    // anio<->periodo se conserva INTACTA mas abajo; deja de ser la unica barrera.
+    if (institutionId) {
+      await this.assertOwnership(institutionId, {
+        achievementEvidenceId: evidenceId,
+        academicTermId: data.academicTermId,
+      });
+    }
     const { evidence, achievement, yearId } = await this.loadEvidenceContext(evidenceId, canManageCatalog);
 
     const term = await this.prisma.academicTerm.findUnique({
@@ -1079,7 +1109,10 @@ export class AchievementService {
     data: { reason?: string } = {},
     actor?: GradeAuditActor,
     canManageCatalog = true,
+    institutionId?: string,
   ) {
+    // El ConflictException interpola el nombre del periodo desde el que se retiro.
+    if (institutionId) await this.assertOwnership(institutionId, { achievementEvidenceId: evidenceId });
     const { evidence, achievement } = await this.loadEvidenceContext(evidenceId, canManageCatalog);
 
     if (!evidence.retiredFromTermId) {
@@ -1140,7 +1173,12 @@ export class AchievementService {
    * retiro NO sustituye ni debilita esta guarda: una evidencia retirada que tenga
    * valoraciones sigue siendo indestructible.
    */
-  async deleteEvidence(id: string, canManageCatalog = true) {
+  async deleteEvidence(id: string, canManageCatalog = true, institutionId?: string) {
+    // A-6..A-12: el aserto de tenant va ANTES de assertCatalogWritable y de toda
+    // consulta al recurso. Estas rutas construyen mensajes de error con el texto del
+    // aprendizaje, el de sus evidencias o el nombre del periodo: si la comprobacion
+    // corriera despues, un id ajeno filtraria ese contenido por la excepcion.
+    if (institutionId) await this.assertOwnership(institutionId, { achievementEvidenceId: id });
     const evidence = await this.prisma.achievementEvidence.findUnique({ where: { id }, select: { achievementId: true, text: true } });
     if (!evidence) throw new NotFoundException('Imprescindible no encontrado');
     await this.assertCatalogWritable(evidence.achievementId, canManageCatalog);
@@ -1160,7 +1198,10 @@ export class AchievementService {
   }
 
   /** Reordena las evidencias de un aprendizaje según el arreglo de IDs recibido. */
-  async reorderEvidences(achievementId: string, orderedIds: string[], canManageCatalog = true) {
+  async reorderEvidences(achievementId: string, orderedIds: string[], canManageCatalog = true, institutionId?: string) {
+    // Los orderedIds NO se validan uno a uno a proposito: el updateMany ya esta
+    // acotado por achievementId, asi que una evidencia ajena no casa y afecta 0 filas.
+    if (institutionId) await this.assertOwnership(institutionId, { achievementId });
     await this.assertCatalogWritable(achievementId, canManageCatalog);
     await this.prisma.$transaction(
       orderedIds.map((id, index) =>
@@ -1177,7 +1218,8 @@ export class AchievementService {
   }
 
   /** Duplica un aprendizaje con sus evidencias y descriptores de nivel (sin las valoraciones de estudiantes). */
-  async duplicateAchievement(id: string) {
+  async duplicateAchievement(id: string, institutionId?: string) {
+    if (institutionId) await this.assertOwnership(institutionId, { achievementId: id });
     const source = await this.prisma.achievement.findUnique({
       where: { id },
       include: { levelDescriptors: true, evidences: { orderBy: { orderNumber: 'asc' } } },
@@ -1245,7 +1287,13 @@ export class AchievementService {
     academicTermId: string;
     achievementId?: string; // null = general per period
     description: string;
-  }) {
+  }, institutionId: string) {
+    // A-12: los tres identificadores del cliente deben ser del actor.
+    await this.assertOwnership(institutionId, {
+      teacherAssignmentId: data.teacherAssignmentId,
+      academicTermId: data.academicTermId,
+      ...(data.achievementId ? { achievementId: data.achievementId } : {}),
+    });
     // Check if exists
     const existing = await this.prisma.attitudinalAchievement.findFirst({
       where: {
@@ -1256,16 +1304,21 @@ export class AchievementService {
     });
 
     if (existing) {
+      // Escenario E (mismo criterio que A-4/A-5): la terna esta validada, pero la fila
+      // que la ocupa podria llevar otro institutionId. Actualizarla en silencio
+      // escribiria sobre datos de otra institucion.
+      if (existing.institutionId !== institutionId) {
+        throw new NotFoundException('Logro actitudinal no encontrado');
+      }
       return this.prisma.attitudinalAchievement.update({
         where: { id: existing.id },
         data: { description: data.description },
       });
     }
 
-    const ta2 = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.attitudinalAchievement.create({
       data: {
-        institutionId: ta2!.institutionId,
+        institutionId,
         teacherAssignmentId: data.teacherAssignmentId,
         academicTermId: data.academicTermId,
         achievementId: data.achievementId,

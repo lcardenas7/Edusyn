@@ -317,8 +317,10 @@ export class AchievementController {
       levelDescriptors?: Array<{ levelCode: string; text: string }>;
       evidences?: Array<{ text: string }>;
     },
+    @Request() req: any,
   ) {
-    return this.achievementService.createAchievement(body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.createAchievement(body, instId);
   }
 
   @Put(':id')
@@ -330,19 +332,22 @@ export class AchievementController {
     @Body() body: { baseDescription: string; levelDescriptors?: Array<{ levelCode: string; text: string }>; evidences?: Array<{ id?: string; text: string }> },
     @Request() req: any,
   ) {
-    return this.achievementService.updateAchievement(id, body, this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.updateAchievement(id, body, this.canManageCatalog(req), instId);
   }
 
   @Post(':id/duplicate')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async duplicateAchievement(@Param('id') id: string) {
-    return this.achievementService.duplicateAchievement(id);
+  async duplicateAchievement(@Param('id') id: string, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.duplicateAchievement(id, instId);
   }
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async deleteAchievement(@Param('id') id: string, @Request() req: any) {
-    return this.achievementService.deleteAchievement(id, this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.deleteAchievement(id, this.canManageCatalog(req), instId);
   }
 
   // ============================================
@@ -352,13 +357,15 @@ export class AchievementController {
   @Post(':id/evidences')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async createEvidence(@Param('id') achievementId: string, @Body() body: { text: string }, @Request() req: any) {
-    return this.achievementService.createEvidence(achievementId, body.text, this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.createEvidence(achievementId, body.text, this.canManageCatalog(req), instId);
   }
 
   @Put(':id/evidences/reorder')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async reorderEvidences(@Param('id') achievementId: string, @Body() body: { orderedIds: string[] }, @Request() req: any) {
-    return this.achievementService.reorderEvidences(achievementId, body.orderedIds, this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.reorderEvidences(achievementId, body.orderedIds, this.canManageCatalog(req), instId);
   }
 
   // Corrección de contenido. El estado de retiro NO se toca aquí: `isActive` dejó de
@@ -366,7 +373,8 @@ export class AchievementController {
   @Put('evidences/:evidenceId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async updateEvidence(@Param('evidenceId') evidenceId: string, @Body() body: { text?: string }, @Request() req: any) {
-    return this.achievementService.updateEvidence(evidenceId, body, this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.updateEvidence(evidenceId, body, this.canManageCatalog(req), instId);
   }
 
   // ── Retiro lógico y prospectivo (D-12) ────────────────────────────────────
@@ -380,7 +388,8 @@ export class AchievementController {
     @Body() body: { academicTermId: string; reason?: string },
     @Request() req: any,
   ) {
-    return this.achievementService.retireEvidence(evidenceId, body, this.actorFrom(req), this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.retireEvidence(evidenceId, body, this.actorFrom(req), this.canManageCatalog(req), instId);
   }
 
   @Put('evidences/:evidenceId/reactivate')
@@ -390,13 +399,15 @@ export class AchievementController {
     @Body() body: { reason?: string },
     @Request() req: any,
   ) {
-    return this.achievementService.reactivateEvidence(evidenceId, body ?? {}, this.actorFrom(req), this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.reactivateEvidence(evidenceId, body ?? {}, this.actorFrom(req), this.canManageCatalog(req), instId);
   }
 
   @Delete('evidences/:evidenceId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async deleteEvidence(@Param('evidenceId') evidenceId: string, @Request() req: any) {
-    return this.achievementService.deleteEvidence(evidenceId, this.canManageCatalog(req));
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.deleteEvidence(evidenceId, this.canManageCatalog(req), instId);
   }
 
   // ============================================
@@ -428,8 +439,10 @@ export class AchievementController {
       achievementId?: string;
       description: string;
     },
+    @Request() req: any,
   ) {
-    return this.achievementService.upsertAttitudinalAchievement(body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.achievementService.upsertAttitudinalAchievement(body, instId);
   }
 
   // ============================================
