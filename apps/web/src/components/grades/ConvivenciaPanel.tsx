@@ -22,7 +22,7 @@ interface Props {
   subjectName: string
   /** Desempeños de convivencia por estudiante (clave = student.id). */
   valueByStudent: Record<string, ConvivenciaItem[]>
-  qualitativeLevels: Array<{ code: string; name: string }>
+  qualitativeLevels: Array<{ code: string; name: string; order?: number; color?: string }>
   onChange: (studentId: string, items: ConvivenciaItem[]) => void
 }
 
@@ -44,6 +44,12 @@ export default function ConvivenciaPanel({
 
   const filled = students.filter((s) => (valueByStudent[s.id] || []).some(item => item.text.trim())).length
   const allSelected = students.length > 0 && selected.size === students.length
+
+  // Escala ordenada (L / EP / I…), igual que en las demás dimensiones.
+  const sortedLevels = useMemo(
+    () => [...qualitativeLevels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [qualitativeLevels],
+  )
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -148,8 +154,10 @@ export default function ConvivenciaPanel({
             const isSel = selected.has(student.id)
             const items = valueByStudent[student.id] || []
             const hasText = items.some(item => item.text.trim())
+            // Siempre mostramos al menos una fila lista para calificar (sin "Agregar" previo).
+            const rows = items.length ? items : [{ text: '', levelCode: '' }]
             const updateItem = (itemIndex: number, patch: Partial<ConvivenciaItem>) => {
-              const next = items.map((item, index) => index === itemIndex ? { ...item, ...patch } : item)
+              const next = rows.map((item, index) => index === itemIndex ? { ...item, ...patch } : item)
               onChange(student.id, next)
             }
             return (
@@ -176,34 +184,57 @@ export default function ConvivenciaPanel({
                       </span>
                       {hasText && <span className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5"><Check className="w-3 h-3" />Registrado</span>}
                     </div>
-                    <div className="space-y-1.5">
-                      {items.map((item, itemIndex) => (
-                        <div key={itemIndex} className="flex gap-1.5">
-                          <input
-                            value={item.text}
-                            onChange={(e) => currentPeriodOpen && updateItem(itemIndex, { text: e.target.value })}
-                            disabled={!currentPeriodOpen}
-                            placeholder="Describe un desempeño de convivencia…"
-                            className={`min-w-0 flex-1 px-2 py-1.5 text-sm border rounded-lg outline-none ${currentPeriodOpen ? 'border-slate-300 bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500' : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'}`}
-                          />
-                          <select
-                            value={item.levelCode}
-                            onChange={(e) => currentPeriodOpen && updateItem(itemIndex, { levelCode: e.target.value })}
-                            disabled={!currentPeriodOpen}
-                            aria-label="Valoración del desempeño"
-                            className="w-24 shrink-0 px-1.5 py-1 text-xs font-semibold border border-rose-200 rounded-lg bg-rose-50 text-rose-800 disabled:bg-slate-100 disabled:text-slate-400"
-                          >
-                            <option value="">Valorar</option>
-                            {qualitativeLevels.map(level => <option key={level.code} value={level.code}>{level.code}</option>)}
-                          </select>
-                          {currentPeriodOpen && (
-                            <button type="button" onClick={() => onChange(student.id, items.filter((_, index) => index !== itemIndex))} className="px-2 text-slate-400 hover:text-rose-600" aria-label="Eliminar desempeño">×</button>
-                          )}
-                        </div>
-                      ))}
+                    <div className="space-y-2">
+                      {rows.map((item, itemIndex) => {
+                        const canDelete = currentPeriodOpen && items.length > 0
+                        return (
+                          <div key={itemIndex} className="space-y-1">
+                            <div className="flex gap-1.5">
+                              <input
+                                value={item.text}
+                                onChange={(e) => currentPeriodOpen && updateItem(itemIndex, { text: e.target.value })}
+                                disabled={!currentPeriodOpen}
+                                placeholder="Describe un desempeño de convivencia…"
+                                className={`min-w-0 flex-1 px-2 py-1.5 text-sm border rounded-lg outline-none ${currentPeriodOpen ? 'border-slate-300 bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500' : 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'}`}
+                              />
+                              {canDelete && (
+                                <button type="button" onClick={() => onChange(student.id, items.filter((_, index) => index !== itemIndex))} className="px-2 text-slate-400 hover:text-rose-600" aria-label="Eliminar desempeño">×</button>
+                              )}
+                            </div>
+                            {/* Valoración directa: un clic sobre el nivel, igual que las demás dimensiones. */}
+                            <div className="flex flex-wrap items-center gap-1 pl-0.5">
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 mr-0.5">Valoración</span>
+                              {sortedLevels.length === 0 ? (
+                                <span className="text-[11px] text-amber-600">Escala no configurada</span>
+                              ) : sortedLevels.map(level => {
+                                const active = item.levelCode === level.code
+                                return (
+                                  <button
+                                    key={level.code}
+                                    type="button"
+                                    disabled={!currentPeriodOpen}
+                                    onClick={() => currentPeriodOpen && updateItem(itemIndex, { levelCode: active ? '' : level.code })}
+                                    title={level.name}
+                                    className={`min-w-[2.25rem] h-8 px-2 rounded-lg text-xs font-bold border transition-all disabled:cursor-not-allowed ${
+                                      active
+                                        ? 'text-white shadow-sm border-transparent'
+                                        : currentPeriodOpen
+                                          ? 'bg-white text-slate-500 border-slate-200 hover:border-rose-300 hover:text-rose-700'
+                                          : 'bg-slate-100 text-slate-300 border-slate-200'
+                                    }`}
+                                    style={active ? { backgroundColor: level.color || '#e11d48' } : undefined}
+                                  >
+                                    {level.code}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
                       {currentPeriodOpen && (
                         <button type="button" onClick={() => onChange(student.id, [...items, { text: '', levelCode: '' }])} className="text-xs font-medium text-rose-700 hover:text-rose-800">
-                          + Agregar desempeño
+                          + Agregar otro desempeño
                         </button>
                       )}
                     </div>
