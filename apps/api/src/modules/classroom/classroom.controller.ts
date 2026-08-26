@@ -448,6 +448,14 @@ export class ClassroomController {
     return this.service.addQuestion(activityId, userId, body);
   }
 
+  // Importar un banco de preguntas desde un JSON "limpio" (el que produce una IA).
+  @Post('activities/:activityId/questions/import')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async importQuestions(@Param('activityId') activityId: string, @Request() req: any, @Body() body: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.importQuestions(activityId, userId, body);
+  }
+
   @Get('activities/:activityId/questions')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async listQuestions(@Param('activityId') activityId: string, @Request() req: any) {

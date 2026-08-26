@@ -2133,6 +2133,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [questions, setQuestions] = useState<any[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
+  // Importar preguntas desde un JSON generado por una IA.
+  const [showImportQuestions, setShowImportQuestions] = useState(false)
+  const [importQText, setImportQText] = useState('')
+  const [importingQ, setImportingQ] = useState(false)
+  const [promptCopied, setPromptCopied] = useState(false)
+  const importQFileRef = useRef<HTMLInputElement>(null)
   const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
@@ -3061,6 +3067,73 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     setShowContextForm(true)
   }
 
+  // Prompt listo para copiar y pegar en cualquier IA (ChatGPT, Claude, Gemini…).
+  // Produce el JSON "limpio" que entiende el importador del backend.
+  const AI_QUIZ_PROMPT = `Genera un quiz en formato JSON que pueda importarse en una plataforma educativa.
+
+Devuélveme ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin bloque de código markdown) con esta estructura:
+
+{
+  "questions": [
+    { "type": "MULTIPLE_CHOICE", "text": "Enunciado de la pregunta", "options": ["Opción A", "Opción B", "Opción C", "Opción D"], "correct": "Opción A", "points": 1, "explanation": "Por qué es correcta (opcional)" },
+    { "type": "TRUE_FALSE", "text": "Afirmación a evaluar", "correct": true },
+    { "type": "MULTIPLE_SELECT", "text": "Selecciona todas las correctas", "options": ["A", "B", "C", "D"], "correct": ["A", "C"] },
+    { "type": "SHORT_ANSWER", "text": "Pregunta de respuesta corta", "correct": "respuesta esperada" },
+    { "type": "FILL_BLANK", "text": "El cielo es de color ___", "answers": ["azul"] },
+    { "type": "ORDERING", "text": "Ordena de menor a mayor", "items": ["1", "2", "3", "4"] },
+    { "type": "MATCHING", "text": "Une cada país con su capital", "pairs": [{ "left": "Perú", "right": "Lima" }, { "left": "Chile", "right": "Santiago" }] }
+  ]
+}
+
+Reglas:
+- En MULTIPLE_CHOICE, "correct" debe ser exactamente igual a una de las opciones.
+- En ORDERING, "items" ya deben estar en el orden CORRECTO.
+- "points" y "explanation" son opcionales.
+- Usa solo los tipos que necesites; no es obligatorio incluir todos.
+
+TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de preguntas que quieres]`
+
+  const handleCopyAiPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(AI_QUIZ_PROMPT)
+      setPromptCopied(true)
+      setTimeout(() => setPromptCopied(false), 2000)
+    } catch { setError('No se pudo copiar. Selecciona y copia el texto manualmente.') }
+  }
+
+  const handleImportQFile = async (file: File) => {
+    try {
+      const text = await file.text()
+      setImportQText(text)
+    } catch { setError('No se pudo leer el archivo.') }
+  }
+
+  const handleImportQuestions = async () => {
+    if (!selectedActivity || !importQText.trim()) return
+    let payload: any
+    try {
+      payload = JSON.parse(importQText)
+    } catch {
+      setError('El texto no es un JSON válido. Revisa que empiece con { y termine con }.')
+      return
+    }
+    try {
+      setImportingQ(true)
+      const { data } = await classroomApi.importQuestions(selectedActivity.id, payload)
+      setShowImportQuestions(false)
+      setImportQText('')
+      await loadQuestions(selectedActivity.id)
+      const skipped = data?.skipped?.length || 0
+      const msg = skipped > 0
+        ? `Se importaron ${data.created} preguntas. ${skipped} se omitieron:\n\n` +
+          data.skipped.map((s: any) => `• Pregunta ${s.index + 1}: ${s.reason}`).join('\n')
+        : `Se importaron ${data.created} preguntas correctamente. 🎉`
+      await alertDialog(msg, { title: 'Importación completada' })
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudieron importar las preguntas.')
+    } finally { setImportingQ(false) }
+  }
+
   const handleAddQuestion = async () => {
     if (!selectedActivity || !qForm.text.trim()) return
     try {
@@ -3075,7 +3148,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       } else if (qForm.type === 'SHORT_ANSWER') {
         payload.correctAnswer = qForm.correctAnswer
       } else if (qForm.type === 'FILL_BLANK') {
-        payload.correctAnswer = JSON.stringify(qForm.blanks.filter(b => b.trim()))
+        // Posicional: el hueco i-ésimo con su respuesta i-ésima. Filtrar los vacíos
+        // corría los índices y el alumno acertaba pero salía error.
+        payload.correctAnswer = JSON.stringify(qForm.blanks.map(b => b.trim()))
       } else if (qForm.type === 'ORDERING') {
         payload.options = qForm.options.filter(o => o.trim())
       } else if (qForm.type === 'MATCHING') {
@@ -3776,12 +3851,61 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-teal-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-teal-600">
                     <FileText className="w-4 h-4" /> <span className="hidden sm:inline">+</span> Contexto
                   </button>
+                  <button onClick={() => { setImportQText(''); setShowImportQuestions(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-indigo-700" title="Importar preguntas desde un JSON generado por IA">
+                    <FileUp className="w-4 h-4" /> <span className="hidden sm:inline">Importar IA</span><span className="sm:hidden">IA</span>
+                  </button>
                   <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-purple-700">
                     <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Agregar</span><span className="sm:hidden">+</span>
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* Import questions from AI-generated JSON */}
+            {showImportQuestions && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !importingQ && setShowImportQuestions(false)}>
+                <div className="bg-surface-1 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-hairline sticky top-0 bg-surface-1">
+                    <h4 className="text-base font-bold text-slate-800 flex items-center gap-2"><FileUp className="w-5 h-5 text-indigo-600" /> Importar preguntas con IA</h4>
+                    <button onClick={() => !importingQ && setShowImportQuestions(false)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+                  </div>
+                  <div className="p-5 sm:p-6 space-y-4">
+                    {/* Paso 1: copiar el prompt */}
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                      <p className="text-sm font-semibold text-indigo-900 mb-1">1. Copia el prompt y pídeselo a una IA</p>
+                      <p className="text-xs text-indigo-700 mb-3">Pega esto en ChatGPT, Claude o Gemini, escribe tu tema al final y copia el JSON que te devuelva.</p>
+                      <button onClick={handleCopyAiPrompt} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700">
+                        {promptCopied ? <><Check className="w-4 h-4" /> ¡Copiado!</> : <><Copy className="w-4 h-4" /> Copiar prompt para la IA</>}
+                      </button>
+                    </div>
+                    {/* Paso 2: pegar/subir el JSON */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-semibold text-slate-700">2. Pega aquí el JSON (o sube el archivo)</label>
+                        <button onClick={() => importQFileRef.current?.click()} className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                          <Upload className="w-3.5 h-3.5" /> Subir .json
+                        </button>
+                        <input ref={importQFileRef} type="file" accept=".json,application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImportQFile(f); e.currentTarget.value = '' }} />
+                      </div>
+                      <textarea
+                        value={importQText}
+                        onChange={e => setImportQText(e.target.value)}
+                        placeholder={'{\n  "questions": [\n    { "type": "MULTIPLE_CHOICE", "text": "...", "options": ["A","B"], "correct": "A" }\n  ]\n}'}
+                        rows={10}
+                        className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                      />
+                      <p className="text-xs text-slate-500 mt-1.5">Las preguntas se agregan al final de las que ya tiene este quiz. No se borra nada.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 px-5 sm:px-6 py-4 border-t border-hairline sticky bottom-0 bg-surface-1">
+                    <button onClick={() => setShowImportQuestions(false)} disabled={importingQ} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50" style={{ minHeight: '44px' }}>Cancelar</button>
+                    <button onClick={handleImportQuestions} disabled={importingQ || !importQText.trim()} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50" style={{ minHeight: '44px' }}>
+                      {importingQ ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando…</> : <><FileUp className="w-4 h-4" /> Importar preguntas</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Context form (create/edit) */}
             {showContextForm && (
@@ -4104,6 +4228,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     {qForm.blanks.length > 0 && (
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-slate-700">Respuestas correctas (en orden)</label>
+                        <p className="text-xs text-slate-400">No distingue mayúsculas ni tildes. ¿Varias válidas? Sepáralas con <code className="text-purple-600">|</code> (ej. <code className="text-purple-600">Bogotá|Bogota D.C.</code>). Completa todos los huecos.</p>
                         {qForm.blanks.map((blank, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
@@ -4176,7 +4301,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
                 <div className="flex justify-end gap-3">
                   <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? qForm.blanks.filter(b => b.trim()).length === 0 : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? (qForm.blanks.length === 0 || qForm.blanks.some(b => !b.trim())) : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                     {savingQuestion && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingQuestion ? 'Guardar cambios' : 'Agregar'}
                   </button>

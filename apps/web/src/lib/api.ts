@@ -2279,6 +2279,8 @@ export const classroomApi = {
     api.post(`/classrooms/activities/${activityId}/questions`, data),
   listQuestions: (activityId: string) =>
     api.get(`/classrooms/activities/${activityId}/questions`),
+  importQuestions: (activityId: string, payload: any) =>
+    api.post(`/classrooms/activities/${activityId}/questions/import`, payload),
   updateQuestion: (questionId: string, data: any) =>
     api.put(`/classrooms/questions/${questionId}`, data),
   deleteQuestion: (questionId: string) =>
