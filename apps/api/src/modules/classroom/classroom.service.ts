@@ -1500,6 +1500,211 @@ export class ClassroomService {
     });
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Importar preguntas desde un JSON "limpio" (el que produce una IA).
+  //
+  // El docente le pide a una IA un banco de preguntas y lo pega/sube aquí. El
+  // formato interno de ActivityQuestion es incómodo para una IA (correctAnswer a
+  // veces es un JSON stringificado, options tiene forma distinta por tipo), así
+  // que aceptamos un esquema humano y tolerante y lo traducimos nosotros:
+  //
+  //   { "questions": [
+  //     { "type":"MULTIPLE_CHOICE", "text":"...", "options":["a","b"], "correct":"a" },
+  //     { "type":"TRUE_FALSE", "text":"...", "correct":true },
+  //     { "type":"MULTIPLE_SELECT", "text":"...", "options":[...], "correct":["a","c"] },
+  //     { "type":"SHORT_ANSWER", "text":"...", "correct":"respuesta" },
+  //     { "type":"FILL_BLANK", "text":"El {{}} es azul", "answers":["cielo"] },
+  //     { "type":"ORDERING", "text":"...", "items":["1","2","3"] },
+  //     { "type":"MATCHING", "text":"...", "pairs":[{"left":"Perú","right":"Lima"}] }
+  //   ] }
+  //
+  // También acepta un array suelto en la raíz y sinónimos en español (pregunta,
+  // opciones, respuesta, puntos, explicacion). Devuelve las creadas y las que se
+  // omitieron con el motivo, para que el docente corrija sin perder el resto.
+  async importQuestions(activityId: string, teacherId: string, payload: any) {
+    await this.validateActivityOwnership(activityId, teacherId);
+
+    const rawList: any[] = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.questions)
+        ? payload.questions
+        : Array.isArray(payload?.preguntas)
+          ? payload.preguntas
+          : [];
+    if (!rawList.length) {
+      throw new BadRequestException('No se encontraron preguntas. Esperaba { "questions": [...] } o un arreglo de preguntas.');
+    }
+    if (rawList.length > 200) {
+      throw new BadRequestException('Máximo 200 preguntas por importación.');
+    }
+
+    const pick = (o: any, ...keys: string[]) => {
+      for (const k of keys) if (o?.[k] !== undefined && o?.[k] !== null) return o[k];
+      return undefined;
+    };
+    const norm = (s: any) => String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    // Resuelve un "correct" que puede venir como texto, índice (0/1..) o letra (A/B..)
+    // contra la lista de opciones. Devuelve el TEXTO exacto de la opción, o null.
+    const resolveOption = (value: any, options: string[]): string | null => {
+      if (value === undefined || value === null) return null;
+      // Índice numérico (0-based o 1-based si el 0-based no existe pero el 1-based sí)
+      if (typeof value === 'number' && Number.isInteger(value)) {
+        if (options[value] !== undefined) return options[value];
+        if (options[value - 1] !== undefined) return options[value - 1];
+        return null;
+      }
+      const s = String(value).trim();
+      // Letra sola: A/B/C...
+      if (/^[a-zA-Z]$/.test(s)) {
+        const idx = s.toUpperCase().charCodeAt(0) - 65;
+        if (idx >= 0 && options[idx] !== undefined) return options[idx];
+      }
+      // Número como string
+      if (/^\d+$/.test(s)) {
+        const idx = parseInt(s, 10);
+        if (options[idx] !== undefined) return options[idx];
+        if (options[idx - 1] !== undefined) return options[idx - 1];
+      }
+      // Coincidencia de texto (exacta y luego normalizada)
+      const exact = options.find(o => o === s);
+      if (exact !== undefined) return exact;
+      const fuzzy = options.find(o => norm(o) === norm(s));
+      return fuzzy ?? null;
+    };
+
+    const TYPE_ALIASES: Record<string, string> = {
+      multiple_choice: 'MULTIPLE_CHOICE', multiplechoice: 'MULTIPLE_CHOICE', mc: 'MULTIPLE_CHOICE',
+      single: 'MULTIPLE_CHOICE', opcion_multiple: 'MULTIPLE_CHOICE', opcionmultiple: 'MULTIPLE_CHOICE', unica: 'MULTIPLE_CHOICE',
+      multiple_select: 'MULTIPLE_SELECT', multipleselect: 'MULTIPLE_SELECT', multi: 'MULTIPLE_SELECT', checkbox: 'MULTIPLE_SELECT',
+      seleccion_multiple: 'MULTIPLE_SELECT', seleccionmultiple: 'MULTIPLE_SELECT', varias: 'MULTIPLE_SELECT',
+      true_false: 'TRUE_FALSE', truefalse: 'TRUE_FALSE', boolean: 'TRUE_FALSE', vf: 'TRUE_FALSE',
+      verdadero_falso: 'TRUE_FALSE', verdaderofalso: 'TRUE_FALSE',
+      short_answer: 'SHORT_ANSWER', shortanswer: 'SHORT_ANSWER', short: 'SHORT_ANSWER', text: 'SHORT_ANSWER',
+      abierta: 'SHORT_ANSWER', respuesta_corta: 'SHORT_ANSWER', respuestacorta: 'SHORT_ANSWER',
+      fill_blank: 'FILL_BLANK', fillblank: 'FILL_BLANK', fill: 'FILL_BLANK', blank: 'FILL_BLANK',
+      completar: 'FILL_BLANK', huecos: 'FILL_BLANK', rellenar: 'FILL_BLANK',
+      ordering: 'ORDERING', order: 'ORDERING', ordenar: 'ORDERING', secuencia: 'ORDERING', orden: 'ORDERING',
+      matching: 'MATCHING', match: 'MATCHING', emparejar: 'MATCHING', relacionar: 'MATCHING', pares: 'MATCHING', unir: 'MATCHING',
+    };
+
+    const created: any[] = [];
+    const skipped: Array<{ index: number; reason: string }> = [];
+    const toCreate: any[] = [];
+
+    // sortOrder continúa después de las preguntas existentes.
+    const maxSort = await this.prisma.activityQuestion.aggregate({
+      where: { activityId }, _max: { sortOrder: true },
+    });
+    let sort = (maxSort._max.sortOrder ?? -1) + 1;
+
+    rawList.forEach((raw, index) => {
+      try {
+        const text = String(pick(raw, 'text', 'pregunta', 'question', 'enunciado') ?? '').trim();
+        if (!text) { skipped.push({ index, reason: 'Sin enunciado (text).' }); return; }
+
+        const rawType = pick(raw, 'type', 'tipo');
+        let type = rawType ? TYPE_ALIASES[norm(rawType).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')] || TYPE_ALIASES[norm(rawType).replace(/[^a-z0-9]+/g, '')] : undefined;
+
+        const rawOptions = pick(raw, 'options', 'opciones', 'items', 'choices');
+        const optionsArr: string[] = Array.isArray(rawOptions)
+          ? rawOptions.map((o: any) => String(o).trim()).filter(Boolean)
+          : [];
+        const correct = pick(raw, 'correct', 'correctAnswer', 'answer', 'respuesta', 'correcta');
+        const pairs = pick(raw, 'pairs', 'pares', 'matches');
+
+        // Inferir el tipo si no vino o no se reconoció.
+        if (!type) {
+          if (pairs) type = 'MATCHING';
+          else if (Array.isArray(correct)) type = 'MULTIPLE_SELECT';
+          else if (optionsArr.length) type = 'MULTIPLE_CHOICE';
+          else type = 'SHORT_ANSWER';
+        }
+
+        const base: any = {
+          activityId,
+          type,
+          text,
+          points: (() => { const p = Number(pick(raw, 'points', 'puntos')); return Number.isFinite(p) && p > 0 ? p : 1; })(),
+          explanation: (() => { const e = pick(raw, 'explanation', 'explicacion', 'feedback'); return e ? String(e) : null; })(),
+          imageUrl: (() => { const i = pick(raw, 'imageUrl', 'imagen', 'image'); return i ? String(i) : null; })(),
+          subjectArea: (() => { const s = pick(raw, 'subjectArea', 'area', 'materia'); return s ? String(s) : null; })(),
+          contextId: null,
+          sortOrder: sort++,
+          options: undefined as any,
+          correctAnswer: null as any,
+        };
+
+        if (type === 'MULTIPLE_CHOICE') {
+          if (optionsArr.length < 2) { skipped.push({ index, reason: 'Opción múltiple necesita al menos 2 opciones.' }); return; }
+          const resolved = resolveOption(correct, optionsArr);
+          if (resolved === null) { skipped.push({ index, reason: 'La respuesta correcta no coincide con ninguna opción.' }); return; }
+          base.options = optionsArr;
+          base.correctAnswer = resolved;
+        } else if (type === 'TRUE_FALSE') {
+          const s = norm(correct);
+          let val: string | null = null;
+          if (correct === true || ['true', 'verdadero', 'v', 't', 'si', 'sí', '1'].includes(s)) val = 'Verdadero';
+          else if (correct === false || ['false', 'falso', 'f', 'no', '0'].includes(s)) val = 'Falso';
+          if (!val) { skipped.push({ index, reason: 'Verdadero/Falso necesita "correct" true o false.' }); return; }
+          base.options = ['Verdadero', 'Falso'];
+          base.correctAnswer = val;
+        } else if (type === 'MULTIPLE_SELECT') {
+          if (optionsArr.length < 2) { skipped.push({ index, reason: 'Selección múltiple necesita al menos 2 opciones.' }); return; }
+          const correctList = Array.isArray(correct) ? correct : (correct !== undefined ? [correct] : []);
+          const resolved = correctList.map((c: any) => resolveOption(c, optionsArr)).filter((v): v is string => v !== null);
+          if (!resolved.length) { skipped.push({ index, reason: 'Ninguna respuesta correcta coincide con las opciones.' }); return; }
+          base.options = optionsArr;
+          base.correctAnswer = JSON.stringify([...new Set(resolved)]);
+        } else if (type === 'SHORT_ANSWER') {
+          const ans = String(correct ?? '').trim();
+          if (!ans) { skipped.push({ index, reason: 'Respuesta corta necesita "correct".' }); return; }
+          base.correctAnswer = ans;
+        } else if (type === 'FILL_BLANK') {
+          const rawAns = pick(raw, 'answers', 'respuestas', 'blanks', 'correct', 'correctAnswer');
+          const list = Array.isArray(rawAns) ? rawAns.map((a: any) => String(a).trim()) : (rawAns !== undefined ? [String(rawAns).trim()] : []);
+          if (!list.length || list.every((a) => !a)) { skipped.push({ index, reason: 'Completar necesita al menos una respuesta.' }); return; }
+          base.correctAnswer = JSON.stringify(list);
+        } else if (type === 'ORDERING') {
+          if (optionsArr.length < 2) { skipped.push({ index, reason: 'Ordenar necesita al menos 2 elementos (en el orden correcto).' }); return; }
+          base.options = optionsArr;
+        } else if (type === 'MATCHING') {
+          let pairList: Array<{ left: string; right: string }> = [];
+          if (Array.isArray(pairs)) {
+            pairList = pairs
+              .map((p: any) => ({ left: String(pick(p, 'left', 'izquierda', 'a') ?? '').trim(), right: String(pick(p, 'right', 'derecha', 'b') ?? '').trim() }))
+              .filter((p) => p.left && p.right);
+          } else if (correct && typeof correct === 'object' && !Array.isArray(correct)) {
+            pairList = Object.entries(correct).map(([k, v]) => ({ left: String(k).trim(), right: String(v).trim() })).filter((p) => p.left && p.right);
+          }
+          if (pairList.length < 1) { skipped.push({ index, reason: 'Emparejar necesita al menos un par {left, right}.' }); return; }
+          const map: Record<string, string> = {};
+          pairList.forEach((p) => { map[p.left] = p.right; });
+          base.options = { left: pairList.map((p) => p.left), right: [...new Set(pairList.map((p) => p.right))] };
+          base.correctAnswer = JSON.stringify(map);
+        } else {
+          skipped.push({ index, reason: `Tipo no reconocido: ${rawType ?? '(vacío)'}.` });
+          return;
+        }
+
+        toCreate.push(base);
+      } catch (e: any) {
+        skipped.push({ index, reason: e?.message || 'Pregunta inválida.' });
+      }
+    });
+
+    if (!toCreate.length) {
+      throw new BadRequestException(`No se pudo importar ninguna pregunta. ${skipped.length} con errores. Primer error: ${skipped[0]?.reason ?? ''}`);
+    }
+
+    // Creación atómica: o entran todas las válidas, o ninguna.
+    await this.prisma.$transaction(
+      toCreate.map((data) => this.prisma.activityQuestion.create({ data })),
+    ).then((rows) => created.push(...rows));
+
+    return { created: created.length, skipped, total: rawList.length, questions: created };
+  }
+
   async updateQuestion(questionId: string, teacherId: string, dto: {
     text?: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string;
