@@ -169,12 +169,12 @@ function headerBlock(ctx: TemplateCtx): string {
     </div>`;
 }
 
-function signaturesBlock(ctx: TemplateCtx): string {
+function signaturesBlock(ctx: TemplateCtx, marginTop = 32): string {
   const sigs = ctx.signatures.filter(Boolean);
   if (sigs.length === 0) return '';
   const single = sigs.length === 1;
   return `
-    <div style="display:flex;justify-content:${single ? 'center' : 'space-around'};margin-top:32px;gap:16px;">
+    <div style="display:flex;justify-content:${single ? 'center' : 'space-around'};margin-top:${marginTop}px;gap:16px;">
       ${sigs.map(s => `
         <div style="text-align:center;flex:${single ? '0 0 220px' : '1'};max-width:240px;">
           ${s.imageSrc ? `<img src="${s.imageSrc}" style="height:34px;object-fit:contain;margin-bottom:2px;" />` : '<div style="height:34px;"></div>'}
@@ -184,12 +184,12 @@ function signaturesBlock(ctx: TemplateCtx): string {
     </div>`;
 }
 
-function footerBlock(ctx: TemplateCtx): string {
+function footerBlock(ctx: TemplateCtx, marginTop = 16): string {
   const date = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
   const verif = ctx.showVerification && ctx.verificationCode
     ? `<span>Código de verificación: <b>${esc(ctx.verificationCode)}</b></span>` : '';
   return `
-    <div style="margin-top:16px;padding-top:6px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:8px;color:#94a3b8;">
+    <div style="margin-top:${marginTop}px;padding-top:6px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:8px;color:#94a3b8;">
       <span>Fecha de expedición: <b>${date}</b></span>
       ${verif}
       <span>Edusyn</span>
@@ -569,15 +569,15 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
     </div>`;
 
   return `
-    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:12px;">
+    <div class="report-card-page" style="font-family:${ctx.fontFamily || 'Arial, Helvetica, sans-serif'};color:${c.text};padding:9px;">
       ${headerBlock(ctx)}
 
-      <div style="text-align:center;background:${c.primary};color:#fff;padding:10px 0;border-radius:5px;margin-top:14px;">
+      <div style="text-align:center;background:${c.primary};color:#fff;padding:8px 0;border-radius:5px;margin-top:10px;">
         <div style="font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">Informe Académico</div>
         <div style="font-size:11px;opacity:0.92;margin-top:1px;">${esc(periodLabel)}</div>
       </div>
 
-      <div style="margin-top:14px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
+      <div style="margin-top:10px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
         <div style="display:grid;grid-template-columns:${showRank ? '2fr 1fr 1.4fr 1fr' : '2fr 1fr 1.4fr'};">
           ${infoCell('Estudiante', studentName(s))}
           ${infoCell('Documento', s.documentNumber || '')}
@@ -586,7 +586,7 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
         </div>
       </div>
 
-      <div style="margin-top:14px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
+      <div style="margin-top:10px;border:1px solid ${c.primary};border-radius:4px;overflow:hidden;">
         <table style="width:100%;table-layout:fixed;word-break:break-word;border-collapse:collapse;font-size:10.5px;">
           ${colGroup}
           <thead style="display:table-header-group;">
@@ -602,12 +602,12 @@ export function buildTransicionPropositosHtml(data: any, ctx: TemplateCtx, perio
         </table>
       </div>
 
-      <div style="margin-top:10px;font-size:9.5px;color:#64748b;"><b style="color:#475569;">Interpretación de la escala:</b> ${scaleLegend}</div>
-      <div style="margin-top:16px;border:1px solid ${c.primary}55;border-radius:4px;padding:10px 12px;min-height:90px;">
-        <div style="font-size:11px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:5px;letter-spacing:0.5px;">Observaciones</div>
+      <div style="margin-top:7px;font-size:9.5px;color:#64748b;"><b style="color:#475569;">Interpretación de la escala:</b> ${scaleLegend}</div>
+      <div style="margin-top:10px;border:1px solid ${c.primary}55;border-radius:4px;padding:8px 12px;min-height:60px;">
+        <div style="font-size:11px;font-weight:800;color:${c.primary};text-transform:uppercase;margin-bottom:4px;letter-spacing:0.5px;">Observaciones</div>
         ${(data.observations || []).slice(0, 4).map((o: any) => `<div style="font-size:10.5px;color:#475569;margin:3px 0;line-height:1.45;">${esc(o.description || o)}</div>`).join('')}
       </div>
-      ${signaturesBlock(ctx)}
-      ${footerBlock(ctx)}
+      ${signaturesBlock(ctx, 18)}
+      ${footerBlock(ctx, 8)}
     </div>`;
 }

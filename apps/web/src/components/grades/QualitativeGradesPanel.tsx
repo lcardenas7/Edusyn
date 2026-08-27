@@ -360,6 +360,17 @@ export default function QualitativeGradesPanel({
         </p>
       )}
 
+      {/* Texto COMPLETO del indicador seleccionado: los chips van truncados, pero al
+          hacer clic en uno se lee aquí completo (para no calificar "adivinando"). */}
+      {activeAchievement && (
+        <div className="bg-white rounded-xl border border-amber-200 shadow-sm px-4 py-2.5">
+          <div className="flex items-start gap-2">
+            <span className="text-[10px] font-mono text-amber-700 mt-0.5 shrink-0">{activeAchievement.code}</span>
+            <p className="text-sm text-slate-800 leading-snug">{activeAchievement.baseDescription}</p>
+          </div>
+        </div>
+      )}
+
       <div id="qualitative-grid" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div
           className="grid items-stretch bg-amber-50 border-b border-amber-100 text-xs font-semibold uppercase text-slate-500"
