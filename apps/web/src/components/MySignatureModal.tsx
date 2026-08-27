@@ -36,12 +36,14 @@ export default function MySignatureModal({ open, onClose, initialUrl, onUploaded
       const res = await storageApi.uploadMySignature(file)
       const url = res.data?.data?.url || res.data?.data?.path || ''
       if (url) {
-        setPreviewUrl(url)
+        // El backend devuelve la clave/URL cruda; para mostrarla hay que pasarla
+        // por el proxy público (igual que el boletín), o el <img> sale roto.
+        setPreviewUrl(toPublicFileUrl(url))
         onUploaded?.(url)
         toast.success('Firma guardada. Aparecerá en tus boletines automáticamente.')
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'No se pudo subir la firma. Debe ser PNG/JPG/WebP y menor a 200KB.')
+      toast.error(err?.response?.data?.message || 'No se pudo subir la firma. Debe ser PNG o JPG y menor a 200KB.')
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -88,7 +90,7 @@ export default function MySignatureModal({ open, onClose, initialUrl, onUploaded
           <input
             ref={inputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0]
