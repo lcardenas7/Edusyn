@@ -862,14 +862,25 @@ export default function ReportCards() {
       secondaryBase64 = secSrc ? await imageUrlToBase64(secSrc) : ''
       if (secondaryBase64) setSecondaryLogoCachedBase64(secondaryBase64)
     }
+    // Firma dinámica del Director(a) de Grupo: el rol TEACHER toma la firma
+    // personal del director del grupo (subida en «Mi firma»), igual que el
+    // generador clásico. Sin esto, las plantillas del banco (p. ej. transición)
+    // no adjuntaban la firma del docente.
+    const director = data?.group?.director
+    const directorShortName = director ? `${director.firstName.split(' ')[0]} ${director.lastName.split(' ')[0]}`.toUpperCase() : ''
     const sigs = await Promise.all(
       ((config.signatureConfig as any[]) || [])
         .filter((s: any) => s?.enabled)
-        .map(async (s: any) => ({
-          label: s.label || '',
-          name: s.name || '',
-          imageSrc: s.signatureImageUrl ? await imageUrlToBase64(toPublicFileUrl(s.signatureImageUrl)) : undefined,
-        })),
+        .map(async (s: any) => {
+          const resolved = (s.role === 'TEACHER' && director)
+            ? { ...s, name: directorShortName, signatureImageUrl: director.signatureImageUrl || s.signatureImageUrl }
+            : s
+          return {
+            label: resolved.label || '',
+            name: resolved.name || '',
+            imageSrc: resolved.signatureImageUrl ? await imageUrlToBase64(toPublicFileUrl(resolved.signatureImageUrl)) : undefined,
+          }
+        }),
     )
     // Fuentes de imagen robustas: base64 (mejor para PDF) con fallback a URL firmada
     // (como el clásico), respetando showLogo. shieldSrc = izquierda (Colombia si hay,
