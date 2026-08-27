@@ -54,7 +54,9 @@ import {
   MonitorPlay,
   Sparkles,
   ExternalLink,
+  PenLine,
 } from 'lucide-react'
+import MySignatureModal from './MySignatureModal'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA' | 'AUXILIAR_CONTABLE' | 'ORIENTADOR' | 'BIBLIOTECARIO' | 'AUXILIAR'
 
@@ -299,6 +301,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   
   // Estado para modal de cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -660,6 +663,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               <p className="text-xs text-slate-500 truncate">{user?.email}</p>
             </div>
           </div>
+          {/* Mi firma: personal, para quienes firman boletines (director de grupo). */}
+          {(userRoles.includes('DOCENTE') || userRoles.includes('COORDINADOR')) && (
+            <button
+              onClick={() => setShowSignatureModal(true)}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <PenLine className="w-4 h-4" />
+              Mi firma
+            </button>
+          )}
           {/* Hide password change for students if institution disabled it */}
           {!(userRoles.includes('ESTUDIANTE') && (institution as any)?.allowStudentPasswordChange === false) && (
             <button
@@ -679,6 +692,13 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </aside>
+
+      {/* Modal Mi Firma (personal) */}
+      <MySignatureModal
+        open={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        initialUrl={(user as any)?.signatureImageUrl}
+      />
 
       {/* Modal Cambiar Contraseña */}
       {showPasswordModal && (
