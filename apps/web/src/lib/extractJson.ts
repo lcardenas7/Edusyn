@@ -1,20 +1,41 @@
 // Extrae un objeto/array JSON de un texto pegado por el docente.
 //
 // Las IA (ChatGPT, Gemini, Claude) casi nunca devuelven JSON "puro": lo envuelven
-// en cercas de código ```json ... ```, añaden una frase antes/después ("Aquí tienes
-// tu quiz:"), o incluso devuelven CÓDIGO (p. ej. Python: `quiz = { ... }` con
-// booleanos `True`/`False`/`None` y líneas extra al final). Un JSON.parse directo
-// revienta con todo eso. Este helper es tolerante: quita cercas, recorta desde el
-// primer { o [ hasta el último } o ], normaliza literales de Python fuera de las
-// comillas y limpia comas colgantes.
+// en cercas ```json ... ```, añaden prosa antes/después, o devuelven CÓDIGO
+// (p. ej. Python: `quiz = { ... }` con booleanos `True`/`False`/`None` y líneas
+// al final como `print(f"...{len(quiz['questions'])}")` que también traen llaves).
+// Por eso NO basta con "del primer { al último }": hay que emparejar llaves
+// balanceadas (respetando comillas) para tomar exactamente el primer objeto/arreglo
+// y descartar lo que venga después. Luego se traducen literales de Python.
 
 function tryParse(s: string): any | undefined {
   try { return JSON.parse(s) } catch { return undefined }
 }
 
+// Desde el { o [ en startIdx, devuelve la subcadena hasta su cierre emparejado.
+// Ignora llaves dentro de cadenas y respeta los escapes.
+function sliceBalanced(s: string, startIdx: number): string {
+  const open = s[startIdx]
+  const close = open === '{' ? '}' : ']'
+  let depth = 0
+  let inStr = false
+  let quote = ''
+  for (let i = startIdx; i < s.length; i++) {
+    const ch = s[i]
+    if (inStr) {
+      if (ch === '\\') { i++; continue }
+      if (ch === quote) inStr = false
+      continue
+    }
+    if (ch === '"' || ch === "'") { inStr = true; quote = ch; continue }
+    if (ch === open) depth++
+    else if (ch === close) { depth--; if (depth === 0) return s.slice(startIdx, i + 1) }
+  }
+  return s.slice(startIdx) // sin cierre: devuelve el resto
+}
+
 // Convierte literales estilo Python a JSON (True→true, False→false, None→null)
-// SOLO fuera de las cadenas, para no tocar el texto de las preguntas. Recorre el
-// texto respetando comillas simples/dobles y los escapes.
+// SOLO fuera de las cadenas, para no tocar el texto de las preguntas.
 function jsonifyPythonLiterals(s: string): string {
   let out = ''
   let inStr = false
@@ -28,7 +49,6 @@ function jsonifyPythonLiterals(s: string): string {
       continue
     }
     if (ch === '"' || ch === "'") { inStr = true; quote = ch; out += ch; continue }
-    // Fuera de cadena: si empieza una palabra, léela completa y traduce si aplica.
     if (/[A-Za-z_]/.test(ch)) {
       let j = i
       while (j < s.length && /[A-Za-z_]/.test(s[j])) j++
@@ -54,22 +74,20 @@ export function extractJson(raw: string): any {
     .replace(/~~~/g, '')
     .trim()
 
-  // Intentos directos.
+  // Intentos directos (JSON ya limpio).
   for (const candidate of [text, noFences]) {
     const parsed = tryParse(candidate)
     if (parsed !== undefined) return parsed
   }
 
-  // Recortar desde el primer { o [ hasta el último } o ] (descarta prosa/código alrededor).
+  // Tomar el primer objeto/arreglo balanceado (ignora `quiz =` y código posterior).
   const start = noFences.search(/[{[]/)
-  const end = Math.max(noFences.lastIndexOf('}'), noFences.lastIndexOf(']'))
-  if (start >= 0 && end > start) {
-    const candidate = noFences.slice(start, end + 1)
-    // 1) tal cual  2) sin comas colgantes  3) literales Python + comas colgantes
+  if (start >= 0) {
+    const block = sliceBalanced(noFences, start)
     const attempts = [
-      candidate,
-      candidate.replace(/,(\s*[}\]])/g, '$1'),
-      jsonifyPythonLiterals(candidate).replace(/,(\s*[}\]])/g, '$1'),
+      block,                                              // tal cual
+      block.replace(/,(\s*[}\]])/g, '$1'),                // sin comas colgantes
+      jsonifyPythonLiterals(block).replace(/,(\s*[}\]])/g, '$1'), // literales Python
     ]
     for (const a of attempts) {
       const parsed = tryParse(a)
