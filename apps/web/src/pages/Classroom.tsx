@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
 import { PrerequisitesEditor, type PrereqRule } from '../components/classroom/PrerequisitesEditor'
+import CrearConIAModal from '../components/classroom/CrearConIAModal'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -2440,6 +2441,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   // Importar una lección desde un archivo .json exportado (misma institución: incluye
   // multimedia; entre instituciones, la multimedia subida no resuelve).
   const [importing, setImporting] = useState(false)
+  const [showCrearIA, setShowCrearIA] = useState(false)
   const importFileRef = useRef<HTMLInputElement>(null)
   const handleImportLesson = async (file: File) => {
     setImporting(true)
@@ -5718,12 +5720,26 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
+            <button onClick={() => setShowCrearIA(true)} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors" style={{ minHeight: '44px' }} title="Genera contenido con una IA externa (ChatGPT, Gemini…) y tráelo a Edusyn">
+              <Sparkles className="w-5 h-5" /> Crear con IA
+            </button>
             <button onClick={() => { setShowCreate(true); setIntention(null); setCreatePrereqs([]); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
         )}
       </div>
+
+      {/* Flujo guiado "Crear con IA": genera el prompt, el docente usa una IA externa
+          y trae el resultado. Reutiliza los importadores existentes por tipo. */}
+      {showCrearIA && (
+        <CrearConIAModal
+          classroomId={classroom.id}
+          academicTermId={(periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : undefined}
+          onClose={() => setShowCrearIA(false)}
+          onCreated={() => { setShowCrearIA(false); loadActivities(); onReload() }}
+        />
+      )}
 
       {/* ORGANIZADOR PRIMARIO por período — pestañas de los períodos reales de la
           institución (SEMESTER_EXAM ocultos; sin "Todos"). Crear actividad hereda el
