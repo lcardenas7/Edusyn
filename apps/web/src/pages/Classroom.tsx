@@ -34,6 +34,7 @@ import {
 import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
 import { PrerequisitesEditor, type PrereqRule } from '../components/classroom/PrerequisitesEditor'
 import CrearConIAModal from '../components/classroom/CrearConIAModal'
+import { extractJson } from '../lib/extractJson'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -3093,6 +3094,10 @@ Reglas:
 - "points" y "explanation" son opcionales.
 - Usa solo los tipos que necesites; no es obligatorio incluir todos.
 
+IMPORTANTE — cómo entregarlo:
+- Si tu herramienta puede generar archivos, entrégame además un archivo .json DESCARGABLE (nómbralo quiz.json).
+- Muéstrame también el JSON como texto plano para copiarlo, SIN cercas de código y sin comentarios.
+
 TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de preguntas que quieres]`
 
   const handleCopyAiPrompt = async () => {
@@ -3114,9 +3119,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
     if (!selectedActivity || !importQText.trim()) return
     let payload: any
     try {
-      payload = JSON.parse(importQText)
-    } catch {
-      setError('El texto no es un JSON válido. Revisa que empiece con { y termine con }.')
+      payload = extractJson(importQText)
+    } catch (e: any) {
+      setError(e?.message || 'No se pudo leer el JSON. Revisa que hayas copiado el resultado completo de la IA.')
       return
     }
     try {

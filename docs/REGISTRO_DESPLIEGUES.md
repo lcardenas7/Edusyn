@@ -42,6 +42,7 @@
 - **Migración:** ninguna. Solo frontend.
 - **Verificación:** `tsc` limpio (web); Vite compila y renderiza sin errores; click-through autenticado pendiente de prueba del docente en staging.
 - **Solo en staging** hasta validación visual; producción tras confirmar.
+- **Follow-up (mismo día):** parser tolerante `lib/extractJson.ts` — el pegado ahora acepta el JSON con cercas ```json```, texto alrededor o comas colgantes (antes fallaba con "no es JSON válido"). Aplicado también al importador del editor de Quiz. Los prompts ahora piden además un archivo .json descargable.
 
 ### 2026-08-29 — Importador de preguntas de quiz desde JSON de IA
 - **Qué:** botón "Importar IA" en el editor de Quiz/Examen. El docente pide a una IA un JSON "limpio"
