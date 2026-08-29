@@ -24,7 +24,7 @@
 
 | Fecha | Entorno | Commit | Migración | Cambio |
 |-------|---------|--------|-----------|--------|
-| 2026-08-29 | `staging` | (pendiente) | No | Flujo guiado "Crear con IA" (Lección/Quiz/Tarea) en Actividades |
+| 2026-08-29 | `staging` | `8b84d43` | No | Flujo guiado "Crear con IA" (Lección/Quiz/Tarea) en Actividades |
 | 2026-08-29 | `main` (prod) | `ed0032b` | No | Importador de preguntas de quiz desde JSON de IA |
 | 2026-08-29 | `staging` | `a0131a5` | No | Importador de preguntas de quiz desde JSON de IA |
 
