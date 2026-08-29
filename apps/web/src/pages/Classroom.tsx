@@ -3091,6 +3091,7 @@ Devuélveme ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin bloque 
 Reglas:
 - En MULTIPLE_CHOICE, "correct" debe ser exactamente igual a una de las opciones.
 - En ORDERING, "items" ya deben estar en el orden CORRECTO.
+- En FILL_BLANK marca cada hueco con exactamente tres guiones bajos (___) dentro del "text" y pon una respuesta por hueco en "answers", en el mismo orden. El número de "___" debe ser igual al número de respuestas.
 - "points" y "explanation" son opcionales.
 - Usa solo los tipos que necesites; no es obligatorio incluir todos.
 

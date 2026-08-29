@@ -1543,6 +1543,7 @@ export class ClassroomService {
       return undefined;
     };
     const norm = (s: any) => String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     // Resuelve un "correct" que puede venir como texto, índice (0/1..) o letra (A/B..)
     // contra la lista de opciones. Devuelve el TEXTO exacto de la opción, o null.
@@ -1662,8 +1663,29 @@ export class ClassroomService {
           base.correctAnswer = ans;
         } else if (type === 'FILL_BLANK') {
           const rawAns = pick(raw, 'answers', 'respuestas', 'blanks', 'correct', 'correctAnswer');
-          const list = Array.isArray(rawAns) ? rawAns.map((a: any) => String(a).trim()) : (rawAns !== undefined ? [String(rawAns).trim()] : []);
-          if (!list.length || list.every((a) => !a)) { skipped.push({ index, reason: 'Completar necesita al menos una respuesta.' }); return; }
+          const list = (Array.isArray(rawAns) ? rawAns.map((a: any) => String(a).trim()) : (rawAns !== undefined ? [String(rawAns).trim()] : [])).filter((a) => a !== '');
+          if (!list.length) { skipped.push({ index, reason: 'Completar necesita al menos una respuesta.' }); return; }
+          // El alumno ve los huecos partiendo el texto por "___". Si la IA no puso
+          // marcadores (o usó otros), el hueco no aparece y no se puede responder.
+          // Normalizamos: rachas de guiones bajos y {{...}} → "___".
+          let blankText = String(text).replace(/_{2,}/g, '___').replace(/\{\{[^}]*\}\}/g, '___');
+          let count = (blankText.match(/___/g) || []).length;
+          // Sin marcadores: intentar incrustar cada respuesta dentro del enunciado.
+          if (count === 0) {
+            for (const ans of list) {
+              if (!ans) continue;
+              const re = new RegExp(escapeRegExp(ans), 'i');
+              if (re.test(blankText)) blankText = blankText.replace(re, '___');
+            }
+            count = (blankText.match(/___/g) || []).length;
+            // Última opción: una sola respuesta → añadir un hueco al final.
+            if (count === 0 && list.length === 1) { blankText = blankText.replace(/\s*$/, ' ___'); count = 1; }
+          }
+          if (count !== list.length) {
+            skipped.push({ index, reason: `Completar: el texto tiene ${count} hueco(s) “___” pero hay ${list.length} respuesta(s); deben coincidir.` });
+            return;
+          }
+          base.text = blankText;
           base.correctAnswer = JSON.stringify(list);
         } else if (type === 'ORDERING') {
           if (optionsArr.length < 2) { skipped.push({ index, reason: 'Ordenar necesita al menos 2 elementos (en el orden correcto).' }); return; }
