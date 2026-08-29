@@ -3327,6 +3327,45 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
     }
   }
 
+  // Formatea la respuesta del ALUMNO de forma legible en la vista de resultados.
+  // Sin esto, emparejar/completar/ordenar mostraban el JSON crudo ({"Perú":"Lima"})
+  // y selección múltiple salía como "—" (su respuesta va en selectedOptions, no en answer).
+  const fmtStudentAnswer = (a: any): string => {
+    const q = a?.question
+    try {
+      if (q?.type === 'MULTIPLE_SELECT') {
+        const sel = Array.isArray(a.selectedOptions) ? a.selectedOptions : []
+        return sel.length ? sel.join(', ') : '—'
+      }
+      if (q?.type === 'FILL_BLANK') {
+        const arr = JSON.parse(a.answer || '[]'); return Array.isArray(arr) && arr.length ? arr.filter(Boolean).join(', ') : (a.answer || '—')
+      }
+      if (q?.type === 'ORDERING') {
+        const arr = JSON.parse(a.answer || '[]'); return Array.isArray(arr) && arr.length ? arr.join(' → ') : (a.answer || '—')
+      }
+      if (q?.type === 'MATCHING') {
+        const m = JSON.parse(a.answer || '{}'); const ks = Object.keys(m); return ks.length ? ks.map(k => `${k} → ${m[k] || '—'}`).join(' · ') : '—'
+      }
+    } catch { /* cae al texto plano */ }
+    return a?.answer || '—'
+  }
+
+  // Respuesta CORRECTA legible (ORDERING la guarda en options; el resto en correctAnswer).
+  const fmtCorrectAnswer = (q: any): string => {
+    try {
+      if (q?.type === 'ORDERING') {
+        const opts = Array.isArray(q.options) ? q.options : []; return opts.join(' → ')
+      }
+      if (q?.type === 'MULTIPLE_SELECT' || q?.type === 'FILL_BLANK') {
+        const arr = JSON.parse(q.correctAnswer || '[]'); return Array.isArray(arr) ? arr.join(', ') : String(q.correctAnswer || '')
+      }
+      if (q?.type === 'MATCHING') {
+        const m = JSON.parse(q.correctAnswer || '{}'); return Object.keys(m).map(k => `${k} → ${m[k]}`).join(' · ')
+      }
+    } catch { /* cae al texto plano */ }
+    return String(q?.correctAnswer || '')
+  }
+
   const handleSubmitQuiz = async () => {
     if (!quizSubmission) return
     if (!(await confirmDialog('¿Enviar el quiz? No podrás cambiar tus respuestas.', { confirmLabel: 'Enviar' }))) return
@@ -4673,9 +4712,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   </span>
                   <div className="flex-1">
                     <p className="text-base font-medium text-slate-800">{a.question?.text}</p>
-                    <p className="text-sm mt-1"><span className="text-slate-400">Tu respuesta:</span> <span className={a.isCorrect ? 'text-green-700 font-medium' : 'text-red-600'}>{a.answer || '—'}</span></p>
-                    {!a.isCorrect && a.question?.correctAnswer && (
-                      <p className="text-sm mt-0.5"><span className="text-slate-400">Correcta:</span> <span className="text-green-700 font-medium">{a.question.correctAnswer}</span></p>
+                    <p className="text-sm mt-1"><span className="text-slate-400">Tu respuesta:</span> <span className={a.isCorrect ? 'text-green-700 font-medium' : 'text-red-600'}>{fmtStudentAnswer(a)}</span></p>
+                    {!a.isCorrect && fmtCorrectAnswer(a.question) && (
+                      <p className="text-sm mt-0.5"><span className="text-slate-400">Correcta:</span> <span className="text-green-700 font-medium">{fmtCorrectAnswer(a.question)}</span></p>
                     )}
                     {a.question?.explanation && (
                       <p className="text-sm mt-2 text-blue-600 italic">{a.question.explanation}</p>

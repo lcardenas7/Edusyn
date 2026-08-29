@@ -43,6 +43,7 @@
 - **Verificación:** `tsc` limpio (web); Vite compila y renderiza sin errores; click-through autenticado pendiente de prueba del docente en staging.
 - **Solo en staging** hasta validación visual; producción tras confirmar.
 - **Follow-up (mismo día):** parser tolerante `lib/extractJson.ts` — el pegado ahora acepta el JSON con cercas ```json```, texto alrededor o comas colgantes (antes fallaba con "no es JSON válido"). Aplicado también al importador del editor de Quiz. Los prompts ahora piden además un archivo .json descargable.
+- **Fix vista de resultados (emparejar/completar/ordenar/selección múltiple):** el alumno veía el JSON crudo (`{"Perú":"Lima"}`) como "tu respuesta", y en selección múltiple salía "—". Ahora `fmtStudentAnswer`/`fmtCorrectAnswer` formatean legible (pares con →, listas con comas, orden con →). Era el "error de emparejar" reportado (display, no calificación; la calificación estaba bien). Solo frontend.
 - **Fix FILL_BLANK importado:** el alumno ve los huecos partiendo el texto por `___`. `importQuestions` ahora normaliza marcadores (`_____`, `{{}}` → `___`), incrusta la respuesta si falta el marcador, y omite con motivo claro si el nº de huecos ≠ nº de respuestas. Los prompts refuerzan la convención `___`. (Los demás tipos —SHORT_ANSWER, MULTIPLE_SELECT, ORDERING, MATCHING— se auditaron y quedaron consistentes crear→responder→calificar.)
 
 ### 2026-08-29 — Importador de preguntas de quiz desde JSON de IA
