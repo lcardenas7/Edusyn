@@ -5964,6 +5964,8 @@ enum QuestionType {
   FILL_BLANK
   ORDERING
   MATCHING
+  NUMERIC // Respuesta numérica con tolerancia (options.tolerance)
+  CATEGORIZE // Clasificar ítems en categorías (misma estructura que MATCHING: item→categoría)
 }
 
 enum SubmissionStatus {

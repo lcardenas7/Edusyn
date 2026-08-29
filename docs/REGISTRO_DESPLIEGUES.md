@@ -32,6 +32,14 @@
 
 ## Notas por despliegue
 
+### 2026-08-29 — Tipos de pregunta nuevos (Numérica, Categorizar) + mejoras Crear con IA
+- **Migración:** `20260829120000_quiz_numeric_categorize` — agrega `NUMERIC` y `CATEGORIZE` al enum `QuestionType` (aditivo, `ADD VALUE IF NOT EXISTS`).
+- **NUMERIC (Respuesta numérica):** número + tolerancia (`options.tolerance`); se acepta si |respuesta−esperada| ≤ tolerancia. Formulario, alumno (input numérico), calificación, resultados, importador.
+- **CATEGORIZE (Categorizar):** clasificar ítems en categorías. Reutiliza la mecánica de MATCHING (options {left:ítems, right:categorías}, correctAnswer {ítem:categoría}); comparte render, shuffle, calificación y resultados. Formulario propio (categorías + ítems con su categoría) e importador.
+- **Crear con IA:** (a) selector de tipos de pregunta (checkboxes: el docente marca cuáles usar; el prompt se arma solo con esos); (b) campo de **contexto** libre del docente que se inyecta en el prompt. Ambos prompts (Crear con IA y editor de Quiz) incluyen ejemplos de NUMERIC/CATEGORIZE.
+- **Archivos:** `schema.prisma` + migración; `classroom.service.ts` (import + grading); `Classroom.tsx` (form/taking/results/prompt); `CrearConIAModal.tsx`.
+- **Verificación:** `tsc` limpio (API+web); smoke-test de grading NUMERIC y import/grading CATEGORIZE. Click-through pendiente en staging.
+
 ### 2026-08-29 — Flujo guiado "Crear con IA" (Actividades)
 - **Qué:** botón **"Crear con IA"** en la cabecera de Actividades. Modal de 4 pasos:
   elegir tipo (Lección/Quiz/Tarea) → parámetros + prompt copiable generado a medida →

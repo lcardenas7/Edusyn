@@ -1587,6 +1587,8 @@ export class ClassroomService {
       completar: 'FILL_BLANK', huecos: 'FILL_BLANK', rellenar: 'FILL_BLANK',
       ordering: 'ORDERING', order: 'ORDERING', ordenar: 'ORDERING', secuencia: 'ORDERING', orden: 'ORDERING',
       matching: 'MATCHING', match: 'MATCHING', emparejar: 'MATCHING', relacionar: 'MATCHING', pares: 'MATCHING', unir: 'MATCHING',
+      numeric: 'NUMERIC', number: 'NUMERIC', numero: 'NUMERIC', numerica: 'NUMERIC', num: 'NUMERIC',
+      categorize: 'CATEGORIZE', categorise: 'CATEGORIZE', categorizar: 'CATEGORIZE', clasificar: 'CATEGORIZE', clasificacion: 'CATEGORIZE', grupos: 'CATEGORIZE',
     };
 
     const created: any[] = [];
@@ -1703,6 +1705,42 @@ export class ClassroomService {
           const map: Record<string, string> = {};
           pairList.forEach((p) => { map[p.left] = p.right; });
           base.options = { left: pairList.map((p) => p.left), right: [...new Set(pairList.map((p) => p.right))] };
+          base.correctAnswer = JSON.stringify(map);
+        } else if (type === 'NUMERIC') {
+          // Respuesta numérica con tolerancia. correctAnswer = número; options.tolerance = ±.
+          const numRaw = pick(raw, 'correct', 'correctAnswer', 'answer', 'respuesta', 'value', 'valor');
+          const num = Number(String(numRaw ?? '').replace(',', '.'));
+          if (!Number.isFinite(num)) { skipped.push({ index, reason: 'Respuesta numérica: "correct" debe ser un número.' }); return; }
+          const tolRaw = pick(raw, 'tolerance', 'tolerancia', 'margen');
+          const tol = Number(String(tolRaw ?? '0').replace(',', '.'));
+          base.correctAnswer = String(num);
+          base.options = { tolerance: Number.isFinite(tol) && tol >= 0 ? tol : 0 };
+        } else if (type === 'CATEGORIZE') {
+          // Clasificar ítems en categorías. Mismo formato que MATCHING: item→categoría.
+          // Acepta items:[{text, category}] o correct/pairs como { item: categoria }.
+          const items = pick(raw, 'items', 'elementos');
+          let pairList: Array<{ left: string; right: string }> = [];
+          if (Array.isArray(items)) {
+            pairList = items
+              .map((it: any) => ({ left: String(pick(it, 'text', 'item', 'elemento', 'left') ?? '').trim(), right: String(pick(it, 'category', 'categoria', 'grupo', 'right') ?? '').trim() }))
+              .filter((p) => p.left && p.right);
+          } else if (correct && typeof correct === 'object' && !Array.isArray(correct)) {
+            pairList = Object.entries(correct).map(([k, v]) => ({ left: String(k).trim(), right: String(v).trim() })).filter((p) => p.left && p.right);
+          } else if (Array.isArray(pairs)) {
+            pairList = pairs
+              .map((p: any) => ({ left: String(pick(p, 'item', 'elemento', 'left', 'text') ?? '').trim(), right: String(pick(p, 'category', 'categoria', 'right', 'grupo') ?? '').trim() }))
+              .filter((p) => p.left && p.right);
+          }
+          if (pairList.length < 2) { skipped.push({ index, reason: 'Categorizar necesita al menos 2 ítems con su categoría.' }); return; }
+          // Categorías declaradas (para incluir vacías) o derivadas de los ítems.
+          const declared = pick(raw, 'categories', 'categorias', 'grupos');
+          const cats = Array.isArray(declared) && declared.length
+            ? [...new Set(declared.map((c: any) => String(c).trim()).filter(Boolean))]
+            : [...new Set(pairList.map((p) => p.right))];
+          if (cats.length < 2) { skipped.push({ index, reason: 'Categorizar necesita al menos 2 categorías distintas.' }); return; }
+          const map: Record<string, string> = {};
+          pairList.forEach((p) => { map[p.left] = p.right; });
+          base.options = { left: pairList.map((p) => p.left), right: cats };
           base.correctAnswer = JSON.stringify(map);
         } else {
           skipped.push({ index, reason: `Tipo no reconocido: ${rawType ?? '(vacío)'}.` });
@@ -1953,9 +1991,16 @@ export class ClassroomService {
           isCorrect = false;
           pointsEarned = 0;
         }
-      } else if (q.type === 'MATCHING') {
-        // MATCHING: correctAnswer is JSON object { leftItem: rightItem, ... }
-        // answer is JSON object with student's matches
+      } else if (q.type === 'NUMERIC') {
+        // Respuesta numérica: correcta si |respuesta - esperada| <= tolerancia.
+        const expected = parseFloat(String(q.correctAnswer ?? '').replace(',', '.'));
+        const given = parseFloat(String(ans.answer ?? '').replace(',', '.'));
+        const tol = Number((q.options as any)?.tolerance) || 0;
+        isCorrect = Number.isFinite(expected) && Number.isFinite(given) && Math.abs(given - expected) <= tol;
+        pointsEarned = isCorrect ? Number(q.points) : 0;
+      } else if (q.type === 'MATCHING' || q.type === 'CATEGORIZE') {
+        // MATCHING/CATEGORIZE: correctAnswer is JSON object { leftItem: rightItem, ... }
+        // (CATEGORIZE = item -> categoría). answer is JSON object con las respuestas.
         try {
           const correctPairs = JSON.parse(q.correctAnswer || '{}') as Record<string, string>;
           const studentPairs = JSON.parse(ans.answer || '{}') as Record<string, string>;

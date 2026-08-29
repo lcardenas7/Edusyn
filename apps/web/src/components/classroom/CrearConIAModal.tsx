@@ -39,6 +39,20 @@ const TYPES: { key: ContentType; label: string; desc: string; icon: any; iconWra
 
 const DIFICULTADES = ['Básica', 'Media', 'Alta']
 
+// Catálogo de tipos de pregunta que el docente puede pedir a la IA (para Quiz).
+// El "example" alimenta el prompt generado; el docente marca/desmarca los que quiere.
+const QUIZ_TYPES: { key: string; label: string; example: string }[] = [
+  { key: 'MULTIPLE_CHOICE', label: 'Opción múltiple', example: '{ "type": "MULTIPLE_CHOICE", "text": "Enunciado", "options": ["A", "B", "C", "D"], "correct": "A", "explanation": "Por qué" }' },
+  { key: 'TRUE_FALSE', label: 'Verdadero / Falso', example: '{ "type": "TRUE_FALSE", "text": "Afirmación", "correct": true }' },
+  { key: 'MULTIPLE_SELECT', label: 'Selección múltiple', example: '{ "type": "MULTIPLE_SELECT", "text": "Selecciona las correctas", "options": ["A", "B", "C", "D"], "correct": ["A", "C"] }' },
+  { key: 'SHORT_ANSWER', label: 'Respuesta corta', example: '{ "type": "SHORT_ANSWER", "text": "Pregunta abierta breve", "correct": "respuesta esperada" }' },
+  { key: 'NUMERIC', label: 'Respuesta numérica', example: '{ "type": "NUMERIC", "text": "¿Cuánto es 6 x 7?", "correct": 42, "tolerance": 0 }' },
+  { key: 'FILL_BLANK', label: 'Completar', example: '{ "type": "FILL_BLANK", "text": "El cielo es de color ___", "answers": ["azul"] }' },
+  { key: 'ORDERING', label: 'Ordenar', example: '{ "type": "ORDERING", "text": "Ordena de menor a mayor", "items": ["1", "2", "3", "4"] }' },
+  { key: 'MATCHING', label: 'Emparejar', example: '{ "type": "MATCHING", "text": "Une cada país con su capital", "pairs": [{ "left": "Perú", "right": "Lima" }, { "left": "Chile", "right": "Santiago" }] }' },
+  { key: 'CATEGORIZE', label: 'Categorizar', example: '{ "type": "CATEGORIZE", "text": "Clasifica cada elemento", "categories": ["Fruta", "Animal"], "items": [{ "text": "Manzana", "category": "Fruta" }, { "text": "Perro", "category": "Animal" }] }' },
+]
+
 export default function CrearConIAModal({ classroomId, academicTermId, onClose, onCreated }: Props) {
   const [step, setStep] = useState<Step>('type')
   const [type, setType] = useState<ContentType | null>(null)
@@ -46,7 +60,9 @@ export default function CrearConIAModal({ classroomId, academicTermId, onClose, 
   const [grado, setGrado] = useState('')
   const [asignatura, setAsignatura] = useState('')
   const [dificultad, setDificultad] = useState('Media')
+  const [contexto, setContexto] = useState('') // contexto libre del docente (qué han visto en clase, enfoque, etc.)
   const [cantidad, setCantidad] = useState('5')
+  const [quizTypes, setQuizTypes] = useState<string[]>(QUIZ_TYPES.map(t => t.key)) // tipos que la IA debe generar (quiz)
   const [copied, setCopied] = useState(false)
   const [raw, setRaw] = useState('')
   const [busy, setBusy] = useState(false)
@@ -57,7 +73,7 @@ export default function CrearConIAModal({ classroomId, academicTermId, onClose, 
   const cantidadLabel = type === 'lesson' ? 'Número de actividades' : type === 'quiz' ? 'Número de preguntas' : ''
 
   // ── Prompt generado a la medida (se copia hacia la IA externa) ────────────────
-  const prompt = useMemo(() => buildPrompt(type, { tema, grado, asignatura, dificultad, cantidad }), [type, tema, grado, asignatura, dificultad, cantidad])
+  const prompt = useMemo(() => buildPrompt(type, { tema, grado, asignatura, dificultad, cantidad, contexto }, quizTypes), [type, tema, grado, asignatura, dificultad, cantidad, contexto, quizTypes])
 
   const copyPrompt = async () => {
     try {
@@ -184,6 +200,41 @@ export default function CrearConIAModal({ classroomId, academicTermId, onClose, 
                 {cantidadLabel && <Field label={cantidadLabel} value={cantidad} onChange={setCantidad} placeholder="Ej. 5" type="number" />}
               </div>
 
+              {/* Contexto libre del docente: qué han visto en clase, enfoque, ejemplos a usar, etc. */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600">Contexto (opcional)</label>
+                <textarea value={contexto} onChange={e => setContexto(e.target.value)} rows={3}
+                  placeholder="Cuéntale a la IA lo que han visto en clase, el enfoque que quieres, ejemplos o palabras clave, el nivel del grupo… Mientras más contexto, mejor el resultado."
+                  className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-y" />
+              </div>
+
+              {/* Selector de tipos de pregunta (solo Quiz): marca los que quieras que la IA use. */}
+              {type === 'quiz' && (
+                <div className="border border-hairline rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-600">Tipos de pregunta que puede usar la IA</span>
+                    <div className="flex gap-2 text-xs">
+                      <button onClick={() => setQuizTypes(QUIZ_TYPES.map(t => t.key))} className="text-indigo-600 hover:text-indigo-700 font-medium">Todos</button>
+                      <span className="text-slate-300">·</span>
+                      <button onClick={() => setQuizTypes([])} className="text-slate-500 hover:text-slate-700 font-medium">Ninguno</button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {QUIZ_TYPES.map(t => {
+                      const on = quizTypes.includes(t.key)
+                      return (
+                        <button key={t.key} onClick={() => setQuizTypes(on ? quizTypes.filter(k => k !== t.key) : [...quizTypes, t.key])}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors text-left ${on ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-surface-1 border-hairline text-slate-500 hover:border-slate-300'}`}>
+                          <span className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${on ? 'bg-indigo-600 text-white' : 'border border-slate-300'}`}>{on && <Check className="w-3 h-3" />}</span>
+                          {t.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {quizTypes.length === 0 && <p className="text-xs text-amber-600 mt-2">Marca al menos un tipo.</p>}
+                </div>
+              )}
+
               <div className="bg-slate-50 border border-hairline rounded-xl p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-slate-600">Instrucciones para la IA</span>
@@ -196,7 +247,7 @@ export default function CrearConIAModal({ classroomId, academicTermId, onClose, 
               <p className="text-xs text-slate-500">Pégalas en ChatGPT, Gemini o Claude. Cuando la IA responda, copia su resultado y vuelve aquí.</p>
 
               <div className="flex justify-end">
-                <button onClick={() => { setError(''); setRaw(''); setStep('bring') }} disabled={!tema.trim()} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">
+                <button onClick={() => { setError(''); setRaw(''); setStep('bring') }} disabled={!tema.trim() || (type === 'quiz' && quizTypes.length === 0)} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">
                   Ya tengo el resultado →
                 </button>
               </div>
@@ -286,41 +337,44 @@ function defaultTitle(type: ContentType): string {
 }
 
 // ── Generadores de prompt (derivados del formato real que entiende el importador) ──
-function paramsBlock(p: { tema: string; grado: string; asignatura: string; dificultad: string; cantidad: string }, incluirCantidad: boolean, cantidadLabel: string): string {
+type PromptParams = { tema: string; grado: string; asignatura: string; dificultad: string; cantidad: string; contexto: string }
+
+function paramsBlock(p: PromptParams, incluirCantidad: boolean, cantidadLabel: string): string {
   const lines = [
     `- Tema: ${p.tema || '[especifica el tema]'}`,
     p.grado ? `- Grado: ${p.grado}` : '',
     p.asignatura ? `- Asignatura: ${p.asignatura}` : '',
     `- Dificultad: ${p.dificultad}`,
     incluirCantidad ? `- ${cantidadLabel}: ${p.cantidad || '5'}` : '',
+    p.contexto.trim() ? `\nContexto del docente (tenlo muy en cuenta):\n${p.contexto.trim()}` : '',
   ].filter(Boolean)
   return lines.join('\n')
 }
 
-function buildPrompt(type: ContentType | null, p: { tema: string; grado: string; asignatura: string; dificultad: string; cantidad: string }): string {
+function buildPrompt(type: ContentType | null, p: PromptParams, quizTypes: string[] = QUIZ_TYPES.map(t => t.key)): string {
   if (type === 'quiz') {
+    const chosen = QUIZ_TYPES.filter(t => quizTypes.includes(t.key))
+    const examples = (chosen.length ? chosen : QUIZ_TYPES).map(t => `    ${t.example}`).join(',\n')
+    const labels = (chosen.length ? chosen : QUIZ_TYPES).map(t => t.label).join(', ')
     return `Genera un quiz en formato JSON para importarlo en la plataforma educativa Edusyn.
 
 Devuelve ÚNICAMENTE un objeto JSON válido (sin texto adicional y sin bloque de código markdown) con esta estructura:
 
 {
   "questions": [
-    { "type": "MULTIPLE_CHOICE", "text": "Enunciado", "options": ["A", "B", "C", "D"], "correct": "A", "explanation": "Por qué es correcta" },
-    { "type": "TRUE_FALSE", "text": "Afirmación", "correct": true },
-    { "type": "MULTIPLE_SELECT", "text": "Selecciona todas las correctas", "options": ["A", "B", "C", "D"], "correct": ["A", "C"] },
-    { "type": "SHORT_ANSWER", "text": "Pregunta de respuesta corta", "correct": "respuesta esperada" },
-    { "type": "FILL_BLANK", "text": "Completa: el cielo es ___", "answers": ["azul"] },
-    { "type": "ORDERING", "text": "Ordena de menor a mayor", "items": ["1", "2", "3"] },
-    { "type": "MATCHING", "text": "Une cada elemento", "pairs": [{ "left": "Perú", "right": "Lima" }] }
+${examples}
   ]
 }
+
+Usa ÚNICAMENTE estos tipos de pregunta: ${labels}.
 
 Reglas:
 - En MULTIPLE_CHOICE, "correct" debe ser exactamente igual a una de las opciones.
 - En ORDERING, "items" deben estar ya en el orden correcto.
 - En FILL_BLANK marca cada hueco con exactamente tres guiones bajos (___) dentro del "text" y pon una respuesta por hueco en "answers", en el mismo orden. El número de "___" debe ser igual al número de respuestas.
-- Incluye "explanation" en cada pregunta cuando ayude a aprender.
-- Usa solo los tipos que necesites (no es obligatorio incluir todos).
+- En NUMERIC, "correct" es un número y "tolerance" es el margen aceptado (0 = exacto).
+- En CATEGORIZE, lista las "categories" y en "items" pon cada elemento con su "category".
+- Incluye "explanation" cuando ayude a aprender.
 
 IMPORTANTE — cómo entregarlo:
 - Si tu herramienta puede generar archivos, entrégame además un archivo .json DESCARGABLE con este contenido (nómbralo quiz.json).

@@ -2141,7 +2141,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [importingQ, setImportingQ] = useState(false)
   const [promptCopied, setPromptCopied] = useState(false)
   const importQFileRef = useRef<HTMLInputElement>(null)
-  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], tolerance: '', categories: [] as string[], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const questionFormRef = useRef<HTMLDivElement>(null)
@@ -3035,7 +3035,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }, [reviewingSubmission, submissions])
 
   // Quiz question handlers (teacher)
-  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], tolerance: '', categories: [], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
 
   // Context handlers (teacher)
   const resetCtxForm = () => { setCtxForm({ title: '', text: '', imageUrl: '', viewPolicy: 'ALWAYS' }); setEditingContextId(null); setShowContextForm(false) }
@@ -3082,9 +3082,11 @@ Devuélveme ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin bloque 
     { "type": "TRUE_FALSE", "text": "Afirmación a evaluar", "correct": true },
     { "type": "MULTIPLE_SELECT", "text": "Selecciona todas las correctas", "options": ["A", "B", "C", "D"], "correct": ["A", "C"] },
     { "type": "SHORT_ANSWER", "text": "Pregunta de respuesta corta", "correct": "respuesta esperada" },
+    { "type": "NUMERIC", "text": "¿Cuánto es 6 x 7?", "correct": 42, "tolerance": 0 },
     { "type": "FILL_BLANK", "text": "El cielo es de color ___", "answers": ["azul"] },
     { "type": "ORDERING", "text": "Ordena de menor a mayor", "items": ["1", "2", "3", "4"] },
-    { "type": "MATCHING", "text": "Une cada país con su capital", "pairs": [{ "left": "Perú", "right": "Lima" }, { "left": "Chile", "right": "Santiago" }] }
+    { "type": "MATCHING", "text": "Une cada país con su capital", "pairs": [{ "left": "Perú", "right": "Lima" }, { "left": "Chile", "right": "Santiago" }] },
+    { "type": "CATEGORIZE", "text": "Clasifica cada elemento", "categories": ["Fruta", "Animal"], "items": [{ "text": "Manzana", "category": "Fruta" }, { "text": "Perro", "category": "Animal" }] }
   ]
 }
 
@@ -3092,6 +3094,8 @@ Reglas:
 - En MULTIPLE_CHOICE, "correct" debe ser exactamente igual a una de las opciones.
 - En ORDERING, "items" ya deben estar en el orden CORRECTO.
 - En FILL_BLANK marca cada hueco con exactamente tres guiones bajos (___) dentro del "text" y pon una respuesta por hueco en "answers", en el mismo orden. El número de "___" debe ser igual al número de respuestas.
+- En NUMERIC, "correct" es un número y "tolerance" es el margen aceptado (0 = exacto).
+- En CATEGORIZE, lista las "categories" y en "items" pon cada elemento con su "category".
 - "points" y "explanation" son opcionales.
 - Usa solo los tipos que necesites; no es obligatorio incluir todos.
 
@@ -3155,6 +3159,18 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         payload.correctAnswer = JSON.stringify(qForm.correctAnswers)
       } else if (qForm.type === 'SHORT_ANSWER') {
         payload.correctAnswer = qForm.correctAnswer
+      } else if (qForm.type === 'NUMERIC') {
+        payload.correctAnswer = String(qForm.correctAnswer).replace(',', '.').trim()
+        const tol = parseFloat(String(qForm.tolerance).replace(',', '.'))
+        payload.options = { tolerance: Number.isFinite(tol) && tol >= 0 ? tol : 0 }
+      } else if (qForm.type === 'CATEGORIZE') {
+        // item → categoría. Mismo formato que MATCHING (left=ítem, right=categoría).
+        const validPairs = qForm.matchPairs.filter(p => p.left.trim() && p.right.trim())
+        const cats = qForm.categories.map(c => c.trim()).filter(Boolean)
+        const pairs: Record<string, string> = {}
+        validPairs.forEach(p => { pairs[p.left] = p.right })
+        payload.options = { left: validPairs.map(p => p.left), right: cats.length ? [...new Set(cats)] : [...new Set(validPairs.map(p => p.right))] }
+        payload.correctAnswer = JSON.stringify(pairs)
       } else if (qForm.type === 'FILL_BLANK') {
         // Posicional: el hueco i-ésimo con su respuesta i-ésima. Filtrar los vacíos
         // corría los índices y el alumno acertaba pero salía error.
@@ -3203,22 +3219,33 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
     if (q.type === 'FILL_BLANK' && q.correctAnswer) {
       try { blanks = JSON.parse(q.correctAnswer) } catch { blanks = [] }
     }
-    if (q.type === 'MATCHING' && q.correctAnswer) {
-      try { 
+    let categories: string[] = []
+    let tolerance = ''
+    if ((q.type === 'MATCHING' || q.type === 'CATEGORIZE') && q.correctAnswer) {
+      try {
         const pairs = JSON.parse(q.correctAnswer) as Record<string, string>
         matchPairs = Object.entries(pairs).map(([left, right]) => ({ left, right }))
         if (matchPairs.length === 0) matchPairs = [{ left: '', right: '' }]
       } catch { matchPairs = [{ left: '', right: '' }] }
     }
+    if (q.type === 'CATEGORIZE' && q.options && typeof q.options === 'object' && 'right' in q.options) {
+      categories = ((q.options as any).right || []).map((c: any) => String(c))
+    }
+    if (q.type === 'NUMERIC' && q.options && typeof q.options === 'object') {
+      const t = (q.options as any).tolerance
+      tolerance = t !== undefined && t !== null ? String(t) : ''
+    }
     setQForm({
       type: q.type,
       text: q.text,
       imageUrl: q.imageUrl || '',
-      options: q.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : (q.options || ['', '', '', '']),
+      options: q.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : (Array.isArray(q.options) ? q.options : ['', '', '', '']),
       correctAnswer: q.correctAnswer || '',
       correctAnswers,
       blanks,
       matchPairs,
+      tolerance,
+      categories,
       points: String(q.points ? Number(q.points) : 1),
       explanation: q.explanation || '',
       subjectArea: q.subjectArea || '',
@@ -3244,9 +3271,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
       // Pre-shuffle right-side items for MATCHING questions (once, stable)
       const shuffled: Record<string, string[]> = {}
       for (const q of data.questions) {
-        if (q.type === 'MATCHING') {
+        if (q.type === 'MATCHING' || q.type === 'CATEGORIZE') {
           let rightItems: string[] = []
-          if (q.options && typeof q.options === 'object' && 'left' in q.options) {
+          if (q.options && typeof q.options === 'object' && 'right' in q.options) {
             rightItems = (q.options as any).right || []
           } else if (q.correctAnswer) {
             try { rightItems = [...new Set(Object.values(JSON.parse(q.correctAnswer)) as string[])] } catch {}
@@ -3343,7 +3370,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
       if (q?.type === 'ORDERING') {
         const arr = JSON.parse(a.answer || '[]'); return Array.isArray(arr) && arr.length ? arr.join(' → ') : (a.answer || '—')
       }
-      if (q?.type === 'MATCHING') {
+      if (q?.type === 'MATCHING' || q?.type === 'CATEGORIZE') {
         const m = JSON.parse(a.answer || '{}'); const ks = Object.keys(m); return ks.length ? ks.map(k => `${k} → ${m[k] || '—'}`).join(' · ') : '—'
       }
     } catch { /* cae al texto plano */ }
@@ -3359,7 +3386,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
       if (q?.type === 'MULTIPLE_SELECT' || q?.type === 'FILL_BLANK') {
         const arr = JSON.parse(q.correctAnswer || '[]'); return Array.isArray(arr) ? arr.join(', ') : String(q.correctAnswer || '')
       }
-      if (q?.type === 'MATCHING') {
+      if (q?.type === 'MATCHING' || q?.type === 'CATEGORIZE') {
         const m = JSON.parse(q.correctAnswer || '{}'); return Object.keys(m).map(k => `${k} → ${m[k]}`).join(' · ')
       }
     } catch { /* cae al texto plano */ }
@@ -4047,14 +4074,16 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
+                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], tolerance: '', categories: [] })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
                       <option value="MULTIPLE_CHOICE">Opción múltiple</option>
                       <option value="MULTIPLE_SELECT">Selección múltiple</option>
                       <option value="TRUE_FALSE">Verdadero/Falso</option>
                       <option value="SHORT_ANSWER">Respuesta corta</option>
+                      <option value="NUMERIC">Respuesta numérica</option>
                       <option value="FILL_BLANK">Completar espacios</option>
                       <option value="ORDERING">Ordenar elementos</option>
                       <option value="MATCHING">Emparejar</option>
+                      <option value="CATEGORIZE">Categorizar</option>
                     </select>
                   </div>
                   <div>
@@ -4341,6 +4370,63 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   </div>
                 )}
 
+                {/* NUMERIC */}
+                {qForm.type === 'NUMERIC' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Respuesta correcta (número)</label>
+                      <input type="number" step="any" value={qForm.correctAnswer} onChange={e => setQForm({ ...qForm, correctAnswer: e.target.value })} placeholder="Ej. 42" className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Tolerancia (±)</label>
+                      <input type="number" step="any" min="0" value={qForm.tolerance} onChange={e => setQForm({ ...qForm, tolerance: e.target.value })} placeholder="0 = exacto; ej. 0.5" className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                      <p className="text-xs text-slate-400 mt-1">Se acepta si la respuesta está dentro de ± este margen.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* CATEGORIZE */}
+                {qForm.type === 'CATEGORIZE' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700">Categorías (grupos)</label>
+                      <p className="text-xs text-slate-400">Define los grupos donde el estudiante clasificará cada elemento.</p>
+                      {(qForm.categories.length ? qForm.categories : ['']).map((cat, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+                          <input value={cat} onChange={e => { const cats = [...(qForm.categories.length ? qForm.categories : [''])]; cats[i] = e.target.value; setQForm({ ...qForm, categories: cats }) }} placeholder={`Categoría ${i + 1}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 outline-none" />
+                          {(qForm.categories.length ? qForm.categories : ['']).length > 1 && (
+                            <button onClick={() => { const cats = qForm.categories.filter((_, j) => j !== i); setQForm({ ...qForm, categories: cats.length ? cats : [''] }) }} className="p-1.5 rounded-lg hover:bg-red-50"><X className="w-4 h-4 text-red-400" /></button>
+                          )}
+                        </div>
+                      ))}
+                      {(qForm.categories.length ? qForm.categories : ['']).length < 6 && (
+                        <button onClick={() => setQForm({ ...qForm, categories: [...(qForm.categories.length ? qForm.categories : ['']), ''] })} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Agregar categoría</button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700">Elementos y su categoría correcta</label>
+                      <p className="text-xs text-slate-400">El estudiante verá los elementos y elegirá a qué grupo pertenece cada uno.</p>
+                      {qForm.matchPairs.map((pair, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input value={pair.left} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], left: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder={`Elemento ${i + 1}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 outline-none" />
+                          <span className="text-slate-400">→</span>
+                          <select value={pair.right} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], right: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} className="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-surface-1">
+                            <option value="">Categoría…</option>
+                            {qForm.categories.map(c => c.trim()).filter(Boolean).map((c, j) => <option key={j} value={c}>{c}</option>)}
+                          </select>
+                          {qForm.matchPairs.length > 1 && (
+                            <button onClick={() => { const pairs = qForm.matchPairs.filter((_, j) => j !== i); setQForm({ ...qForm, matchPairs: pairs }) }} className="p-1.5 rounded-lg hover:bg-red-50"><X className="w-4 h-4 text-red-400" /></button>
+                          )}
+                        </div>
+                      ))}
+                      {qForm.matchPairs.length < 12 && (
+                        <button onClick={() => setQForm({ ...qForm, matchPairs: [...qForm.matchPairs, { left: '', right: '' }] })} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Agregar elemento</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Explicación (opcional)</label>
                   <input value={qForm.explanation} onChange={e => setQForm({ ...qForm, explanation: e.target.value })} placeholder="Se muestra al estudiante después de enviar..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
@@ -4348,7 +4434,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
                 <div className="flex justify-end gap-3">
                   <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? (qForm.blanks.length === 0 || qForm.blanks.some(b => !b.trim())) : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? (qForm.blanks.length === 0 || qForm.blanks.some(b => !b.trim())) : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : qForm.type === 'CATEGORIZE' ? (qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 || qForm.categories.map(c => c.trim()).filter(Boolean).length < 2) : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                     {savingQuestion && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingQuestion ? 'Guardar cambios' : 'Agregar'}
                   </button>
@@ -4373,7 +4459,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       <div className="flex-1 min-w-0">
                         <p className="text-sm sm:text-base font-medium text-slate-800">{q.text}</p>
                         <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-slate-400 flex-wrap">
-                          <span className="px-1.5 sm:px-2 py-0.5 bg-slate-100 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
+                          <span className="px-1.5 sm:px-2 py-0.5 bg-slate-100 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : q.type === 'NUMERIC' ? 'Numérica' : q.type === 'CATEGORIZE' ? 'Categorizar' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
                           {q.subjectArea && <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
                           {q.context && <span className="px-1.5 sm:px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] sm:text-xs border border-amber-200">{q.context.title || 'Contexto'}</span>}
@@ -4561,6 +4647,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   {q.type === 'SHORT_ANSWER' && (
                     <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-hairline rounded-xl px-3 sm:px-5 py-3 sm:py-3.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
                   )}
+                  {q.type === 'NUMERIC' && (
+                    <input type="number" step="any" inputMode="decimal" value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe un número..." className="w-full border-2 border-hairline rounded-xl px-3 sm:px-5 py-3 sm:py-3.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
+                  )}
                   {q.type === 'FILL_BLANK' && (() => {
                     const parts = q.text.split('___')
                     const blankCount = parts.length - 1
@@ -4616,8 +4705,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       </div>
                     )
                   })()}
-                  {q.type === 'MATCHING' && (() => {
-                    // options puede ser { left: [...], right: [...] } o legacy (parsear de correctAnswer)
+                  {(q.type === 'MATCHING' || q.type === 'CATEGORIZE') && (() => {
+                    // options { left: [...], right: [...] } o legacy (parsear de correctAnswer).
+                    // CATEGORIZE reutiliza esta interfaz: left = elementos, right = categorías.
                     let leftItems: string[] = []
                     if (q.options && typeof q.options === 'object' && 'left' in q.options) {
                       leftItems = (q.options as any).left || []
@@ -4627,11 +4717,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     // Usar opciones pre-shuffled (estables entre re-renders)
                     const shuffledRight = quizShuffledRight[q.id] || []
                     const matches = quizMatchAnswers[q.id] || {}
+                    const isCat = q.type === 'CATEGORIZE'
                     return (
                       <div className="space-y-4">
-                        <p className="text-sm text-slate-500">Selecciona el elemento que corresponde a cada ítem</p>
+                        <p className="text-sm text-slate-500">{isCat ? 'Elige a qué categoría pertenece cada elemento' : 'Selecciona el elemento que corresponde a cada ítem'}</p>
                         {leftItems.length === 0 ? (
-                          <p className="text-sm text-red-500">Error: No hay elementos para emparejar</p>
+                          <p className="text-sm text-red-500">Error: No hay elementos para {isCat ? 'clasificar' : 'emparejar'}</p>
                         ) : leftItems.map((left, i) => (
                           <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-slate-50 rounded-xl border border-hairline">
                             <div className="flex-1 p-2.5 sm:p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-sm sm:text-base text-slate-700 font-medium">{left}</div>
