@@ -4,6 +4,7 @@ import {
   ClipboardList, FileUp, Upload, CheckCircle2, AlertTriangle,
 } from 'lucide-react'
 import { classroomApi, lessonApi } from '../../lib/api'
+import { extractJson } from '../../lib/extractJson'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // "Crear con IA" — flujo guiado dentro del Aula.
@@ -80,7 +81,7 @@ export default function CrearConIAModal({ classroomId, academicTermId, onClose, 
 
       if (type === 'quiz') {
         let parsed: any
-        try { parsed = JSON.parse(raw) } catch { throw new FriendlyError('El texto no es un JSON válido. Revisa que empiece con “{” y termine con “}”, y que hayas copiado todo.') }
+        try { parsed = extractJson(raw) } catch (e: any) { throw new FriendlyError(e?.message || 'No se pudo leer el JSON. Revisa que hayas copiado el resultado completo de la IA.') }
         const { data: act } = await classroomApi.createActivity(classroomId, { type: 'QUIZ', title: titulo, academicTermId })
         try {
           const { data: imp } = await classroomApi.importQuestions(act.id, parsed)
@@ -91,7 +92,7 @@ export default function CrearConIAModal({ classroomId, academicTermId, onClose, 
         }
       } else if (type === 'lesson') {
         let parsed: any
-        try { parsed = JSON.parse(raw) } catch { throw new FriendlyError('El texto no es un JSON válido. Revisa que hayas copiado el archivo completo.') }
+        try { parsed = extractJson(raw) } catch (e: any) { throw new FriendlyError(e?.message || 'No se pudo leer el JSON. Revisa que hayas copiado el resultado completo de la IA.') }
         const snap = parsed?.lesson || (Array.isArray(parsed?.slides) ? parsed : null)
         if (!snap || !Array.isArray(snap.slides) || snap.slides.length === 0) {
           throw new FriendlyError('La lección no tiene diapositivas. Verifica que la IA haya generado el contenido completo.')
@@ -320,6 +321,10 @@ Reglas:
 - Incluye "explanation" en cada pregunta cuando ayude a aprender.
 - Usa solo los tipos que necesites (no es obligatorio incluir todos).
 
+IMPORTANTE — cómo entregarlo:
+- Si tu herramienta puede generar archivos, entrégame además un archivo .json DESCARGABLE con este contenido (nómbralo quiz.json).
+- Muéstrame también el JSON como texto plano para poder copiarlo, SIN cercas de código y sin comentarios.
+
 Contenido solicitado:
 ${paramsBlock(p, true, 'Número de preguntas')}`
   }
@@ -349,6 +354,10 @@ Reglas:
 - En MULTIPLE_CHOICE, "correctAnswer" debe ser el texto exacto de una de las opciones.
 - Termina con una diapositiva BADGE_REVEAL.
 - "body" admite HTML simple; no incluyas imágenes ni scripts.
+
+IMPORTANTE — cómo entregarlo:
+- Si tu herramienta puede generar archivos, entrégame además un archivo .json DESCARGABLE con este contenido (nómbralo leccion.json).
+- Muéstrame también el JSON como texto plano para poder copiarlo, SIN cercas de código y sin comentarios.
 
 Contenido solicitado:
 ${paramsBlock(p, true, 'Número de actividades')}`
