@@ -370,6 +370,7 @@ Usa ÚNICAMENTE estos tipos de pregunta: ${labels}.
 
 Reglas:
 - En MULTIPLE_CHOICE, "correct" debe ser exactamente igual a una de las opciones.
+- En MULTIPLE_CHOICE y MULTIPLE_SELECT, las opciones incorrectas deben ser plausibles y con una longitud y nivel de detalle SIMILAR a la correcta, para que la respuesta correcta no se delate por ser mucho más larga o específica. Aplica esto cuando sea razonable; no lo fuerces si perjudica la claridad de la pregunta.
 - En ORDERING, "items" deben estar ya en el orden correcto.
 - En FILL_BLANK marca cada hueco con exactamente tres guiones bajos (___) dentro del "text" y pon una respuesta por hueco en "answers", en el mismo orden. El número de "___" debe ser igual al número de respuestas.
 - En NUMERIC, "correct" es un número y "tolerance" es el margen aceptado (0 = exacto).

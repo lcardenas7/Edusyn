@@ -2348,7 +2348,9 @@ export class LiveSessionService implements OnModuleDestroy {
         }
       }
 
-      case 'MATCHING': {
+      case 'MATCHING':
+      case 'CATEGORIZE': {
+        // CATEGORIZE tiene la misma forma que MATCHING: { elemento: categoría }.
         try {
           const correctPairs = JSON.parse(correct) as Record<string, string>;
           const givenPairs = JSON.parse(given) as Record<string, string>;
@@ -2359,6 +2361,14 @@ export class LiveSessionService implements OnModuleDestroy {
         } catch {
           return false;
         }
+      }
+
+      case 'NUMERIC': {
+        // Correcto si |respuesta - esperada| <= tolerancia (options.tolerance).
+        const expected = parseFloat(String(question.correctAnswer).replace(',', '.'));
+        const g = parseFloat(String(answer).replace(',', '.'));
+        const tol = Number((question.options as any)?.tolerance) || 0;
+        return Number.isFinite(expected) && Number.isFinite(g) && Math.abs(g - expected) <= tol;
       }
 
       default:

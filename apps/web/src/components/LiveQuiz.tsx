@@ -3662,14 +3662,15 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       )
     }
 
-    // SHORT_ANSWER
-    if (type === 'SHORT_ANSWER') {
+    // SHORT_ANSWER / NUMERIC (misma UI; NUMERIC usa teclado numérico)
+    if (type === 'SHORT_ANSWER' || type === 'NUMERIC') {
       return (
         <div className="flex gap-2">
           <input
             value={selectedAnswer}
             onChange={e => setSelectedAnswer(e.target.value)}
-            placeholder="Escribe tu respuesta..."
+            {...(type === 'NUMERIC' ? { type: 'number', inputMode: 'decimal' as const, step: 'any' } : {})}
+            placeholder={type === 'NUMERIC' ? 'Escribe un número...' : 'Escribe tu respuesta...'}
             className="flex-1 bg-white/95 border-2 border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-lg placeholder:text-slate-300 focus:outline-none focus:border-[#4ECDC4] shadow-md"
           />
           <button onClick={() => submitAnswer(selectedAnswer)} disabled={!selectedAnswer.trim()} className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-md disabled:opacity-40">
@@ -3728,8 +3729,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       )
     }
 
-    // MATCHING
-    if (type === 'MATCHING') {
+    // MATCHING / CATEGORIZE (misma UI: left = ítems, right = categorías/opciones)
+    if (type === 'MATCHING' || type === 'CATEGORIZE') {
       const leftItems = options?.left || []
       const rightItems = options?.right || []
       return (
@@ -3751,7 +3752,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             </div>
           ))}
           <button onClick={submitMatchAnswer} disabled={Object.keys(matchAnswers).length < leftItems.length} className="w-full py-3 bg-green-500/30 text-green-400 rounded-xl font-bold hover:bg-green-500/40 disabled:opacity-30">
-            Confirmar emparejamiento
+            {type === 'CATEGORIZE' ? 'Confirmar clasificación' : 'Confirmar emparejamiento'}
           </button>
         </div>
       )

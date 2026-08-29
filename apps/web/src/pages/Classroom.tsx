@@ -3092,6 +3092,7 @@ Devuélveme ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin bloque 
 
 Reglas:
 - En MULTIPLE_CHOICE, "correct" debe ser exactamente igual a una de las opciones.
+- En MULTIPLE_CHOICE y MULTIPLE_SELECT, las opciones incorrectas deben ser plausibles y con una longitud y nivel de detalle SIMILAR a la correcta, para que la correcta no se delate por ser mucho más larga o específica. Aplícalo cuando sea razonable; no lo fuerces si perjudica la claridad.
 - En ORDERING, "items" ya deben estar en el orden CORRECTO.
 - En FILL_BLANK marca cada hueco con exactamente tres guiones bajos (___) dentro del "text" y pon una respuesta por hueco en "answers", en el mismo orden. El número de "___" debe ser igual al número de respuestas.
 - En NUMERIC, "correct" es un número y "tolerance" es el margen aceptado (0 = exacto).

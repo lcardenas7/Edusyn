@@ -32,6 +32,11 @@
 
 ## Notas por despliegue
 
+### 2026-08-29 — Live Quiz soporta Numérica/Categorizar + prompt: distractores proporcionales
+- **Live Quiz:** NUMERIC y CATEGORIZE ya no salen como "tipo no soportado". `LiveQuiz.tsx` los renderiza (NUMERIC reusa el input de respuesta corta con teclado numérico; CATEGORIZE reusa la UI de MATCHING) y `live-session.service.ts` `checkAnswer` los califica (NUMERIC con tolerancia; CATEGORIZE = misma forma que MATCHING).
+- **Prompts:** nueva regla para MULTIPLE_CHOICE/MULTIPLE_SELECT — las opciones incorrectas deben ser plausibles y de longitud/detalle similar a la correcta (que no se delate por ser mucho más larga), aplicándolo cuando sea razonable sin forzarlo.
+- **Archivos:** `live-session.service.ts`, `LiveQuiz.tsx`, `Classroom.tsx` (AI_QUIZ_PROMPT), `CrearConIAModal.tsx`. Sin migración.
+
 ### 2026-08-29 — Tipos de pregunta nuevos (Numérica, Categorizar) + mejoras Crear con IA
 - **Migración:** `20260829120000_quiz_numeric_categorize` — agrega `NUMERIC` y `CATEGORIZE` al enum `QuestionType` (aditivo, `ADD VALUE IF NOT EXISTS`).
 - **NUMERIC (Respuesta numérica):** número + tolerancia (`options.tolerance`); se acepta si |respuesta−esperada| ≤ tolerancia. Formulario, alumno (input numérico), calificación, resultados, importador.
