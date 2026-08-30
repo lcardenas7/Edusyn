@@ -12,9 +12,11 @@ import { GenerateReportCardDto, GenerateBulkReportCardsDto } from './dto/generat
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@RequireTenantContext()
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,

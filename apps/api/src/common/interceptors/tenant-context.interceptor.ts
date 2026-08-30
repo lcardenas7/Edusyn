@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
@@ -10,6 +11,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tenantContext } from '../../prisma/tenant-context';
 import { SKIP_TENANT_CHECK_KEY } from '../../modules/auth/decorators/skip-tenant-check.decorator';
+import { REQUIRE_TENANT_CONTEXT_KEY } from '../../modules/auth/decorators/require-tenant-context.decorator';
 
 /**
  * Interceptor global que ejecuta CADA request autenticado dentro de una
@@ -51,12 +53,23 @@ export class TenantContextInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    if (!user?.institutionId) {
+    const requireTenantContext = this.reflector.getAllAndOverride<boolean>(REQUIRE_TENANT_CONTEXT_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    // TenantGuard validates this value. For SuperAdmin it exists only when an
+    // institutional route explicitly accepted the requested destination.
+    const superAdminTarget = user?.isSuperAdmin === true ? request?.query?.institutionId : undefined;
+    if (requireTenantContext && user?.isSuperAdmin === true && !superAdminTarget) {
+      throw new ForbiddenException('SuperAdmin debe indicar institutionId para esta operación.');
+    }
+    const institutionId = superAdminTarget || request?.resolvedInstitutionId || user?.institutionId;
+    if (!institutionId) {
       // No tenant context needed (login, register, public routes, superadmin)
       return next.handle();
     }
 
-    const institutionId = user.institutionId;
     // Access the raw PrismaClient to open the outer transaction
     const rawPrisma: PrismaClient = (this.prisma as any).$raw;
 

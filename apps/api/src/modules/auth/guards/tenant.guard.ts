@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SKIP_TENANT_CHECK_KEY } from '../decorators/skip-tenant-check.decorator';
+import { REQUIRE_TENANT_CONTEXT_KEY } from '../decorators/require-tenant-context.decorator';
 
 /**
  * TenantGuard — Opción D (Híbrido)
@@ -28,6 +29,11 @@ export class TenantGuard implements CanActivate {
     ]);
     if (skipCheck) return true;
 
+    const requireTenantContext = this.reflector.getAllAndOverride<boolean>(REQUIRE_TENANT_CONTEXT_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
@@ -40,8 +46,12 @@ export class TenantGuard implements CanActivate {
     // SuperAdmin: puede operar sin tenant (solo para endpoints de gestión global)
     // o con tenant (operando en una institución específica)
     if (isSuperAdmin) {
-      // Si SuperAdmin especifica institutionId en query, usar ese
+      // Rutas institucionales (p. ej. Reportes) no permiten a SuperAdmin
+      // operar sin tenant: debe declarar explícitamente el destino.
       const queryInstitutionId = request.query?.institutionId;
+      if (requireTenantContext && !queryInstitutionId) {
+        throw new ForbiddenException('SuperAdmin debe indicar institutionId para esta operación.');
+      }
       request.resolvedInstitutionId = queryInstitutionId || jwtInstitutionId || null;
       return true;
     }
