@@ -5,6 +5,7 @@ import { CompetencyEvidenceService } from '../learning-route/competency-evidence
 import { ActivityGatingService } from './gating/activity-gating.service';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
+import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
 
 const COLOMBIA_TIMEZONE_OFFSET = '-05:00';
 const HAS_TIMEZONE_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
@@ -1962,23 +1963,16 @@ export class ClassroomService {
         isCorrect = JSON.stringify(selected) === JSON.stringify(correct);
         pointsEarned = isCorrect ? Number(q.points) : 0;
       } else if (q.type === 'SHORT_ANSWER') {
-        isCorrect = ans.answer?.trim().toLowerCase() === q.correctAnswer?.trim().toLowerCase();
+        // Mismo juez que las lecciones: tolera tildes, mayúsculas y puntuación,
+        // y admite varias respuestas válidas separadas por "|".
+        isCorrect = textMatches(q.correctAnswer, ans.answer);
         pointsEarned = isCorrect ? Number(q.points) : 0;
       } else if (q.type === 'FILL_BLANK') {
-        // FILL_BLANK: correctAnswer is JSON array of blanks in order
-        // answer is JSON array of student responses
-        try {
-          const correctBlanks = JSON.parse(q.correctAnswer || '[]') as string[];
-          const studentBlanks = JSON.parse(ans.answer || '[]') as string[];
-          const allCorrect = correctBlanks.every((c, i) => 
-            c.trim().toLowerCase() === (studentBlanks[i] || '').trim().toLowerCase()
-          );
-          isCorrect = allCorrect && correctBlanks.length === studentBlanks.length;
-          pointsEarned = isCorrect ? Number(q.points) : 0;
-        } catch {
-          isCorrect = false;
-          pointsEarned = 0;
-        }
+        // "Completar espacios": huecos en orden. Tolerante a tildes/puntuación y
+        // resistente a correctAnswer en texto plano (antes JSON.parse reventaba
+        // y marcaba TODA respuesta como incorrecta).
+        isCorrect = fillBlankMatches(q.correctAnswer, ans.answer);
+        pointsEarned = isCorrect ? Number(q.points) : 0;
       } else if (q.type === 'ORDERING') {
         // ORDERING: options contains items in correct order
         // answer is JSON array of items in student's order
@@ -2545,23 +2539,8 @@ export class ClassroomService {
               },
             });
 
-            // Copy questions for quiz/exam
-            for (const question of activity.questions) {
-              await this.prisma.activityQuestion.create({
-                data: {
-                  activityId: newActivity.id,
-                  type: question.type,
-                  text: question.text,
-                  imageUrl: question.imageUrl,
-                  options: question.options as any,
-                  correctAnswer: question.correctAnswer,
-                  points: question.points,
-                  explanation: question.explanation,
-                  subjectArea: question.subjectArea,
-                  sortOrder: question.sortOrder,
-                },
-              });
-            }
+            // Contenido completo: contextos, preguntas y lección interactiva.
+            await this.cloneActivityContent(activity.id, newActivity.id);
           }
         }
 
@@ -2624,6 +2603,106 @@ export class ClassroomService {
   // ═══════════════════════════════════════════════════════════════════════════
   // DUPLICATE MATERIAL/ACTIVITY
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Clona TODO el contenido de una actividad al duplicado: contextos de lectura,
+   * preguntas y —lo que faltaba— la lección interactiva con sus diapositivas.
+   *
+   * Antes solo se copiaban las preguntas: una actividad tipo LECCIÓN se duplicaba
+   * como cascarón vacío y al abrirla reventaba con "Lección no encontrada para
+   * esta actividad" (Lesson es 1:1 con la actividad, así que el duplicado no tenía
+   * ninguna). Un único helper para las tres rutas de copia (actividad, sección y
+   * aula completa) evita que vuelva a divergir.
+   */
+  private async cloneActivityContent(sourceActivityId: string, targetActivityId: string) {
+    // 1) Contextos (pasajes de lectura / imagen compartida por varias preguntas).
+    //    Se mapea el id viejo → nuevo para reenlazar las preguntas.
+    const contexts = await this.prisma.questionContext.findMany({
+      where: { activityId: sourceActivityId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    const contextIdMap = new Map<string, string>();
+    for (const ctx of contexts) {
+      const created = await this.prisma.questionContext.create({
+        data: {
+          activityId: targetActivityId,
+          title: ctx.title,
+          text: ctx.text,
+          imageUrl: ctx.imageUrl,
+          viewPolicy: ctx.viewPolicy,
+          sortOrder: ctx.sortOrder,
+        },
+      });
+      contextIdMap.set(ctx.id, created.id);
+    }
+
+    // 2) Preguntas (quiz/examen), con su contexto reenlazado.
+    const questions = await this.prisma.activityQuestion.findMany({
+      where: { activityId: sourceActivityId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    for (const q of questions) {
+      await this.prisma.activityQuestion.create({
+        data: {
+          activityId: targetActivityId,
+          contextId: q.contextId ? contextIdMap.get(q.contextId) ?? null : null,
+          type: q.type,
+          text: q.text,
+          imageUrl: q.imageUrl,
+          options: q.options as any,
+          correctAnswer: q.correctAnswer,
+          points: q.points,
+          explanation: q.explanation,
+          wrongExplanations: q.wrongExplanations as any,
+          subjectArea: q.subjectArea,
+          competency: q.competency,
+          sortOrder: q.sortOrder,
+          timeLimitSeconds: q.timeLimitSeconds,
+        },
+      });
+    }
+
+    // 3) Lección interactiva + diapositivas (sin progreso ni versiones: el
+    //    duplicado arranca limpio para el nuevo curso).
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { activityId: sourceActivityId },
+      include: { slides: { orderBy: { sortOrder: 'asc' } } },
+    });
+    if (lesson) {
+      await this.prisma.lesson.create({
+        data: {
+          activityId: targetActivityId,
+          title: lesson.title,
+          description: lesson.description,
+          coverImage: lesson.coverImage,
+          badgeEmoji: lesson.badgeEmoji,
+          badgeTitle: lesson.badgeTitle,
+          badgeColor: lesson.badgeColor,
+          estimatedMinutes: lesson.estimatedMinutes,
+          playMode: lesson.playMode,
+          slides: {
+            create: lesson.slides.map(sl => ({
+              type: sl.type,
+              sortOrder: sl.sortOrder,
+              title: sl.title,
+              body: sl.body,
+              imageUrl: sl.imageUrl,
+              videoUrl: sl.videoUrl,
+              audioUrl: sl.audioUrl,
+              layout: sl.layout,
+              // `undefined` omite el campo y queda NULL, igual que el original.
+              activityData: (sl.activityData as any) ?? undefined,
+              blocks: (sl.blocks as any) ?? undefined,
+              badgeEmoji: sl.badgeEmoji,
+              badgeTitle: sl.badgeTitle,
+            })),
+          },
+        },
+      });
+    }
+
+    return { questionsCopied: questions.length, contextsCopied: contexts.length, lessonCopied: !!lesson };
+  }
 
   /**
    * Duplica un material a otra sección (puede ser de otra aula)
@@ -2714,23 +2793,8 @@ export class ClassroomService {
       },
     });
 
-    // Copy questions if any
-    for (const question of activity.questions) {
-      await this.prisma.activityQuestion.create({
-        data: {
-          activityId: newActivity.id,
-          type: question.type,
-          text: question.text,
-          imageUrl: question.imageUrl,
-          options: question.options as any,
-          correctAnswer: question.correctAnswer,
-          points: question.points,
-          explanation: question.explanation,
-          subjectArea: question.subjectArea,
-          sortOrder: question.sortOrder,
-        },
-      });
-    }
+    // Contenido: contextos, preguntas y la lección interactiva con sus diapositivas.
+    await this.cloneActivityContent(activity.id, newActivity.id);
 
     return newActivity;
   }
@@ -2840,23 +2904,8 @@ export class ClassroomService {
         },
       });
 
-      // Copy questions for quiz/exam
-      for (const question of activity.questions) {
-        await this.prisma.activityQuestion.create({
-          data: {
-            activityId: newActivity.id,
-            type: question.type,
-            text: question.text,
-            imageUrl: question.imageUrl,
-            options: question.options as any,
-            correctAnswer: question.correctAnswer,
-            points: question.points,
-            explanation: question.explanation,
-            subjectArea: question.subjectArea,
-            sortOrder: question.sortOrder,
-          },
-        });
-      }
+      // Contenido completo: contextos, preguntas y lección interactiva.
+      await this.cloneActivityContent(activity.id, newActivity.id);
     }
 
     return {

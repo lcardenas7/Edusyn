@@ -4,6 +4,7 @@ import { ApdAiService } from '../apd/ai/apd-ai.service';
 import { LearningIdentityService, GrantXpResult } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
+import { canonicalText, norm, textMatches } from '../../common/utils/answer-matching.util';
 
 @Injectable()
 export class LessonService {
@@ -844,34 +845,11 @@ export class LessonService {
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Normalización espejo del frontend (grading.ts): trim + minúsculas + colapsa espacios.
-  private norm(s: any): string {
-    return String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
-  }
-
-  // Normaliza una respuesta ESCRITA para compararla con tolerancia: minúsculas,
-  // sin acentos, sin espacios extra y sin puntuación en los extremos. DEBE
-  // coincidir con canonicalText() de web/grading.ts.
-  private canonicalText(s: any): string {
-    return String(s ?? '')
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .replace(/^[\s.,;:!?¿¡"'“”‘’()…]+|[\s.,;:!?¿¡"'“”‘’()…]+$/g, '')
-      .trim();
-  }
-
-  // Juez de respuestas escritas. Admite alternativas separadas por "|".
-  // DEBE coincidir con textMatches() de web/grading.ts.
-  private textMatches(correct: any, answer: any): boolean {
-    const a = this.canonicalText(answer);
-    if (!a) return false;
-    return String(correct ?? '')
-      .split('|')
-      .map((c) => this.canonicalText(c))
-      .filter(Boolean)
-      .some((c) => c === a);
-  }
+  // El juez de respuestas escritas vive en common/utils/answer-matching.util.ts
+  // (espejo de web/grading.ts) y lo comparten lecciones, quiz en casa y Live Quiz.
+  private norm = norm;
+  private canonicalText = canonicalText;
+  private textMatches = textMatches;
 
   // Pares de MATCHING en `options` como "izquierda::derecha" (camino A).
   private parsePairs(options?: any[]): { left: string; right: string }[] {
