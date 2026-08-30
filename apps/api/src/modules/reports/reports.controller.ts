@@ -26,9 +26,23 @@ export class ReportsController {
     private readonly prisma: PrismaService,
   ) {}
 
+  /**
+   * Tenant effective for this request. For SuperAdmin, the interceptor has
+   * already required an explicit destination before a handler may execute.
+   */
+  private getEffectiveInstitutionId(req: any): string {
+    const institutionId = req.user?.isSuperAdmin === true
+      ? req.query?.institutionId
+      : req.user?.institutionId;
+    if (!institutionId) {
+      throw new ForbiddenException('No se pudo determinar la institución para esta operación.');
+    }
+    return institutionId;
+  }
+
   private async guardBulletinAccess(req: any, academicTermId: string) {
     const userId = req.user.sub || req.user.id;
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     if (!institutionId) return;
     const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
     const isFullAccess = userCaps.effectiveRoles.some(r =>
@@ -70,7 +84,7 @@ export class ReportsController {
   @Get('report-card-templates/selections')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getTemplateSelections(@Request() req) {
-    return this.reportsService.getTemplateSelections(req.user.institutionId);
+    return this.reportsService.getTemplateSelections(this.getEffectiveInstitutionId(req));
   }
 
   @Put('report-card-templates/selections')
@@ -79,13 +93,13 @@ export class ReportsController {
     @Request() req,
     @Body() body: { gradeId?: string | null; academicStructure?: string | null; templateKey: string },
   ) {
-    return this.reportsService.upsertTemplateSelection(req.user.institutionId, body);
+    return this.reportsService.upsertTemplateSelection(this.getEffectiveInstitutionId(req), body);
   }
 
   @Delete('report-card-templates/selections/:id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async deleteTemplateSelection(@Request() req, @Param('id') id: string) {
-    return this.reportsService.deleteTemplateSelection(req.user.institutionId, id);
+    return this.reportsService.deleteTemplateSelection(this.getEffectiveInstitutionId(req), id);
   }
 
   @Get('report-card-templates/resolve')
@@ -95,7 +109,7 @@ export class ReportsController {
     @Query('gradeId') gradeId?: string,
     @Query('academicStructure') academicStructure?: string,
   ) {
-    const templateKey = await this.reportsService.resolveTemplateKey(req.user.institutionId, gradeId, academicStructure);
+    const templateKey = await this.reportsService.resolveTemplateKey(this.getEffectiveInstitutionId(req), gradeId, academicStructure);
     return { templateKey };
   }
 
@@ -149,7 +163,7 @@ export class ReportsController {
   ) {
     // El enrollmentId llega del cliente: la institución la resuelve el servidor y acota
     // la consulta aguas abajo (docs/security/RLS-VALIDACION-CENSO.md).
-    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
     return this.reportsService.calculateMinimumGradeRequired(
       studentEnrollmentId,
       academicYearId,
@@ -170,7 +184,7 @@ export class ReportsController {
   ) {
     // Validar capability: DOCENTE solo puede ver grupos donde dicta o es tutor
     const userId = req.user.sub || req.user.id;
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     if (institutionId) {
       const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
       const isFullAccess = userCaps.effectiveRoles.some(r =>
@@ -188,7 +202,7 @@ export class ReportsController {
     }
     // Tenant isolation, independiente del control de capability de arriba: son
     // controles distintos y ninguno sustituye al otro.
-    const resolvedInstitutionId = await requireInstitutionId(this.prisma as any, req);
+    const resolvedInstitutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
     return this.reportsService.calculateMinimumGradeForGroup(
       groupId,
       academicYearId,
@@ -211,7 +225,7 @@ export class ReportsController {
     @Query('stage') stage?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getSubjectAverages(institutionId, academicYearId, groupId, termId, stage, reportMode);
   }
 
@@ -225,7 +239,7 @@ export class ReportsController {
     @Query('stage') stage?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getAreaAverages(institutionId, academicYearId, groupId, termId, stage, reportMode);
   }
 
@@ -238,7 +252,7 @@ export class ReportsController {
     @Query('termId') termId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getAreaConsolidated(institutionId, academicYearId, groupId, termId, reportMode);
   }
 
@@ -251,7 +265,7 @@ export class ReportsController {
     @Query('termId') termId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getStudentRanking(institutionId, academicYearId, groupId, termId, reportMode);
   }
 
@@ -265,7 +279,7 @@ export class ReportsController {
     @Query('gradeId') gradeId?: string,
     @Query('stage') stage?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getInstitutionalRanking(institutionId, academicYearId, termId, { groupId, gradeId, stage });
   }
 
@@ -279,7 +293,7 @@ export class ReportsController {
     @Query('termId') termId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getGradeDistribution(institutionId, academicYearId, groupId, subjectId, termId, reportMode);
   }
 
@@ -294,7 +308,7 @@ export class ReportsController {
     @Query('stage') stage?: string,
     @Query('subjectIds') subjectIds?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const subjectIdList = subjectIds ? subjectIds.split(',').filter(Boolean) : undefined;
     return this.reportsService.getSubjectLevelDistribution(institutionId, academicYearId, groupId, gradeId, termId, stage, subjectIdList);
   }
@@ -312,7 +326,7 @@ export class ReportsController {
     @Query('areaId') areaId?: string,
     @Query('subjectId') subjectId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getFailedSubjects(institutionId, academicYearId, groupId, termId, {
       reportMode,
       scope,
@@ -333,7 +347,7 @@ export class ReportsController {
     @Query('maxScore') maxScore?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getRecoveryList(
       institutionId, academicYearId, groupId, termId,
       minScore ? parseFloat(minScore) : undefined,
@@ -350,7 +364,7 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getPromotionProjection(institutionId, academicYearId, groupId, reportMode);
   }
 
@@ -363,7 +377,7 @@ export class ReportsController {
     @Query('studentEnrollmentId') studentEnrollmentId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getPeriodComparison(institutionId, academicYearId, groupId, studentEnrollmentId, reportMode);
   }
 
@@ -384,7 +398,7 @@ export class ReportsController {
     @Query('groupId') groupId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getSubjectAnalysis(institutionId, academicYearId, subjectId, groupId, reportMode);
   }
 
@@ -396,7 +410,7 @@ export class ReportsController {
     @Query('teacherId') teacherId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getTeacherPerformance(institutionId, academicYearId, teacherId, reportMode);
   }
 
@@ -407,14 +421,14 @@ export class ReportsController {
   @Get('report-card-config')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getReportCardConfig(@Request() req) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getReportCardConfig(institutionId);
   }
 
   @Put('report-card-config')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateReportCardConfig(@Request() req, @Body() data: any) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.updateReportCardConfig(institutionId, data);
   }
 
@@ -429,7 +443,7 @@ export class ReportsController {
     @Query('academicTermId') academicTermId: string,
     @Query('groupId') groupId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getRecoveryImpact(institutionId, academicTermId, groupId);
   }
 
@@ -491,7 +505,7 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getCompletenessStatus(institutionId, academicYearId, termId);
   }
 
@@ -505,7 +519,7 @@ export class ReportsController {
   ) {
     // Validar capability: DOCENTE solo puede ver su grupo o grupo tutor
     const userId = req.user.sub || req.user.id;
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     if (institutionId) {
       const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
       const isFullAccess = userCaps.effectiveRoles.some(r =>
@@ -542,7 +556,7 @@ export class ReportsController {
     @Query('termId') termId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportConsolidatedGradeSheet(
       institutionId, academicYearId, groupId, termId, reportMode,
     );
@@ -559,7 +573,7 @@ export class ReportsController {
     @Query('subjectId') subjectId?: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportGradeDistribution(
       institutionId, academicYearId, groupId, subjectId, termId,
     );
@@ -574,7 +588,7 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('teacherId') teacherId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportTeacherPerformance(
       institutionId, academicYearId, teacherId,
     );
@@ -590,7 +604,7 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportStudentRanking(
       institutionId, academicYearId, groupId, termId,
     );
@@ -606,7 +620,7 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportFailedSubjects(
       institutionId, academicYearId, groupId, termId,
     );
@@ -622,7 +636,7 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportRecoveryList(
       institutionId, academicYearId, groupId, termId,
     );
@@ -637,7 +651,7 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const workbook = await this.reportsExportService.exportPromotionProjection(
       institutionId, academicYearId, groupId,
     );
@@ -657,7 +671,7 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const buffer = await this.academicPdfService.generateRecoveryCertificate(
       institutionId, academicYearId, groupId, termId,
     );
@@ -672,7 +686,7 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const buffer = await this.academicPdfService.generateNonPromotedReport(
       institutionId, academicYearId, groupId,
     );
@@ -688,7 +702,7 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const buffer = await this.academicPdfService.generateStatisticalSummary(
       institutionId, academicYearId, groupId, termId,
     );
@@ -717,7 +731,7 @@ export class ReportsController {
     @Query('termId') termId?: string,
     @Query('reportMode') reportMode?: ReportMode,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getInstitutionalStatistics(institutionId, academicYearId, termId, reportMode);
   }
 
@@ -727,7 +741,7 @@ export class ReportsController {
     @Request() req,
     @Query('academicYearIds') academicYearIds: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     const ids = academicYearIds ? academicYearIds.split(',').filter(Boolean) : [];
     return this.reportsService.getAnnualComparison(institutionId, ids);
   }
@@ -739,7 +753,7 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getMinGradeConsolidated(institutionId, groupId, academicYearId);
   }
 
