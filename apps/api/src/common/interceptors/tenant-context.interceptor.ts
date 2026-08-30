@@ -58,13 +58,15 @@ export class TenantContextInterceptor implements NestInterceptor {
       context.getClass(),
     ]);
 
-    // TenantGuard validates this value. For SuperAdmin it exists only when an
-    // institutional route explicitly accepted the requested destination.
+    // Only SuperAdmin may request an explicit destination. A normal user's
+    // tenant always comes from the authenticated session, never from input.
     const superAdminTarget = user?.isSuperAdmin === true ? request?.query?.institutionId : undefined;
     if (requireTenantContext && user?.isSuperAdmin === true && !superAdminTarget) {
       throw new ForbiddenException('SuperAdmin debe indicar institutionId para esta operación.');
     }
-    const institutionId = superAdminTarget || request?.resolvedInstitutionId || user?.institutionId;
+    const institutionId = user?.isSuperAdmin === true
+      ? superAdminTarget || request?.resolvedInstitutionId || user?.institutionId
+      : user?.institutionId;
     if (!institutionId) {
       // No tenant context needed (login, register, public routes, superadmin)
       return next.handle();
