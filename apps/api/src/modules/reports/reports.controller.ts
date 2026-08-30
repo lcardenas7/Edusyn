@@ -13,9 +13,10 @@ import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateReportTenantGuard } from './guards/validate-report-tenant.guard';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ValidateReportTenantGuard)
 @RequireTenantContext()
 export class ReportsController {
   constructor(

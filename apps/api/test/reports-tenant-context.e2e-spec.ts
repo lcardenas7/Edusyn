@@ -11,6 +11,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { JwtAuthGuard } from '../src/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../src/modules/auth/guards/roles.guard';
 import { TenantContextInterceptor } from '../src/common/interceptors/tenant-context.interceptor';
+import { ValidateReportTenantGuard } from '../src/modules/reports/guards/validate-report-tenant.guard';
 
 describe('Reports tenant context (HTTP local, isolated)', () => {
   let app: INestApplication;
@@ -18,18 +19,23 @@ describe('Reports tenant context (HTTP local, isolated)', () => {
   const raw = {
     $transaction: jest.fn(async (callback: (tx: typeof transaction) => Promise<void>) => callback(transaction)),
   };
+  const institution = { findUnique: jest.fn() };
   const reportsService = {
     getSubjectAverages: jest.fn(async (institutionId: string) => ({ institutionId })),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    institution.findUnique.mockImplementation(async ({ where }: any) => (
+      where.id === 'tenant-b' ? { id: 'tenant-b' } : null
+    ));
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [ReportsController],
       providers: [
         Reflector,
         TenantContextInterceptor,
-        { provide: PrismaService, useValue: { $raw: raw } },
+        ValidateReportTenantGuard,
+        { provide: PrismaService, useValue: { $raw: raw, institution } },
         { provide: ReportsService, useValue: reportsService },
         { provide: ReportsExportService, useValue: {} },
         { provide: AcademicPdfService, useValue: {} },
@@ -81,6 +87,16 @@ describe('Reports tenant context (HTTP local, isolated)', () => {
     expect(reportsService.getSubjectAverages).toHaveBeenCalledWith(
       'tenant-b', 'year-1', undefined, undefined, undefined, undefined,
     );
+  });
+
+  it('returns 404 before a transaction when the SuperAdmin destination does not exist', async () => {
+    await request(app.getHttpServer())
+      .get('/reports/academic/subject-averages?academicYearId=year-1&institutionId=unknown')
+      .set('x-test-user', 'superadmin')
+      .expect(404);
+
+    expect(raw.$transaction).not.toHaveBeenCalled();
+    expect(reportsService.getSubjectAverages).not.toHaveBeenCalled();
   });
 
   it('ignores a normal user query tenant throughout the real HTTP route', async () => {
