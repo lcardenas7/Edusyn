@@ -66,6 +66,12 @@ export class ReportsController {
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
   ) {
+    const institutionId = this.getEffectiveInstitutionId(req);
+    await this.reportsService.assertReportCardScope(
+      institutionId,
+      studentEnrollmentId,
+      academicTermId,
+    );
     await this.guardBulletinAccess(req, academicTermId);
     return this.reportsService.getReportCardData(studentEnrollmentId, academicTermId);
   }
@@ -77,6 +83,12 @@ export class ReportsController {
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
   ) {
+    const institutionId = this.getEffectiveInstitutionId(req);
+    await this.reportsService.assertReportCardScope(
+      institutionId,
+      studentEnrollmentId,
+      academicTermId,
+    );
     await this.guardBulletinAccess(req, academicTermId);
     return this.reportsService.getReportCardYear(studentEnrollmentId, academicTermId);
   }
@@ -122,6 +134,12 @@ export class ReportsController {
     @Query('academicTermId') academicTermId: string,
     @Res() res: Response,
   ) {
+    const institutionId = this.getEffectiveInstitutionId(req);
+    await this.reportsService.assertReportCardScope(
+      institutionId,
+      studentEnrollmentId,
+      academicTermId,
+    );
     await this.guardBulletinAccess(req, academicTermId);
     const pdfBuffer = await this.reportsService.generateReportCardPdf(
       studentEnrollmentId,
@@ -455,16 +473,20 @@ export class ReportsController {
   @Get('terms/:termId/validate-grades')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async validateTermGrades(
+    @Request() req,
     @Param('termId') termId: string,
   ) {
+    await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
     return this.reportsService.validateTermGrades(termId);
   }
 
   @Post('terms/:termId/close')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   async closeTerm(
+    @Request() req,
     @Param('termId') termId: string,
   ) {
+    await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
     return this.reportsService.closeTerm(termId);
   }
 
@@ -474,6 +496,7 @@ export class ReportsController {
     @Param('termId') termId: string,
     @Request() req,
   ) {
+    await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
     const userId = req.user.sub || req.user.id;
     return this.reportsService.finalizeTerm(termId, userId);
   }
@@ -485,6 +508,7 @@ export class ReportsController {
     @Body() body: { reason: string },
     @Request() req,
   ) {
+    await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
     const userId = req.user.sub || req.user.id;
     return this.reportsService.reopenFinalizedTerm(termId, body.reason, userId);
   }
@@ -495,6 +519,7 @@ export class ReportsController {
     @Param('termId') termId: string,
     @Request() req,
   ) {
+    await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
     const userId = req.user.sub || req.user.id;
     return this.reportsService.reSnapshotTerm(termId, userId);
   }
@@ -507,6 +532,7 @@ export class ReportsController {
     @Query('termId') termId?: string,
   ) {
     const institutionId = this.getEffectiveInstitutionId(req);
+    await this.reportsService.assertCompletenessScope(institutionId, academicYearId, termId);
     return this.reportsService.getCompletenessStatus(institutionId, academicYearId, termId);
   }
 

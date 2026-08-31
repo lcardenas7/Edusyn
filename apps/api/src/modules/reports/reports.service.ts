@@ -44,6 +44,68 @@ export class ReportsService {
   ) {}
 
   /**
+   * Verifies that both identifiers belong to the effective institution before
+   * report-card data is read. The academic year must also match, so valid
+   * identifiers from the same institution cannot be combined arbitrarily.
+   */
+  async assertReportCardScope(
+    institutionId: string,
+    studentEnrollmentId: string,
+    academicTermId: string,
+  ): Promise<void> {
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: studentEnrollmentId, institutionId },
+      select: { id: true, academicYearId: true },
+    });
+    if (!enrollment) {
+      throw new NotFoundException('Matrícula no encontrada.');
+    }
+
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: academicTermId, academicYear: { institutionId } },
+      select: { id: true, academicYearId: true },
+    });
+    if (!term || term.academicYearId !== enrollment.academicYearId) {
+      throw new NotFoundException('Período académico no encontrado.');
+    }
+  }
+
+  /** Validates a term resource against the effective institution. */
+  async assertTermScope(institutionId: string, termId: string): Promise<void> {
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: termId, academicYear: { institutionId } },
+      select: { id: true },
+    });
+    if (!term) {
+      throw new NotFoundException('Período académico no encontrado.');
+    }
+  }
+
+  /** Validates the year and optional term used by completeness reporting. */
+  async assertCompletenessScope(
+    institutionId: string,
+    academicYearId: string,
+    termId?: string,
+  ): Promise<void> {
+    const academicYear = await this.prisma.academicYear.findFirst({
+      where: { id: academicYearId, institutionId },
+      select: { id: true },
+    });
+    if (!academicYear) {
+      throw new NotFoundException('Año académico no encontrado.');
+    }
+    if (!termId) return;
+
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: termId, academicYearId, academicYear: { institutionId } },
+      select: { id: true },
+    });
+    if (!term) {
+      throw new NotFoundException('Período académico no encontrado.');
+    }
+  }
+
+  /**
    * Obtiene las asignaturas que aplican a una matrícula específica.
    * Usa el snapshot (EnrollmentSubject) si existe, o calcula desde TeacherAssignment como fallback.
    * Esto protege contra cambios en plantillas que afectarían históricos.
