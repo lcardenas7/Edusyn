@@ -7,6 +7,8 @@ import { CreateSubjectDto } from './dto/create-subject.dto';
 import { SubjectsService } from './subjects.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('subjects')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,6 +25,8 @@ export class SubjectsController {
   }
 
   @Get()
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async list(
     @Request() req: any,

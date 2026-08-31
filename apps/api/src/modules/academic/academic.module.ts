@@ -42,6 +42,7 @@ import { GradeChangeService } from './grade-change.service';
 import { TemplatesController } from './templates.controller';
 import { TemplatesService } from './templates.service';
 import { AcademicStudentsController } from './academic-students.controller';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Module({
   imports: [EvaluationModule, AttendanceModule],
@@ -87,6 +88,7 @@ import { AcademicStudentsController } from './academic-students.controller';
     EnrollmentReportsService,
     GradeChangeService,
     TemplatesService,
+    ValidateTenantContextGuard,
   ],
   exports: [GradingPeriodConfigService, RecoveryPeriodConfigService, AcademicYearLifecycleService, EnrollmentService, GuardiansService, StudentDocumentsService, EnrollmentReportsService, GradeChangeService, StudentsService],
 })

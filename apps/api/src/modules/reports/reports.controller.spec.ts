@@ -17,9 +17,13 @@ describe('ReportsController tenant resolution', () => {
     expect(reflector.get<boolean>(REQUIRE_TENANT_CONTEXT_KEY, ReportsController)).toBe(true);
   });
 
-  it('passes the explicit SuperAdmin destination to report services', async () => {
+  it('passes only the guard-validated SuperAdmin destination to report services', async () => {
     const { controller, reportsService } = makeController();
-    const request = { user: { isSuperAdmin: true }, query: { institutionId: 'tenant-a' } };
+    const request = {
+      user: { isSuperAdmin: true },
+      query: { institutionId: 'untrusted-value' },
+      resolvedInstitutionId: 'tenant-a',
+    };
 
     await controller.getSubjectAverages(request, 'year-1');
 

@@ -13,10 +13,10 @@ import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
-import { ValidateReportTenantGuard } from './guards/validate-report-tenant.guard';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RolesGuard, ValidateReportTenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ValidateTenantContextGuard)
 @RequireTenantContext()
 export class ReportsController {
   constructor(
@@ -33,7 +33,7 @@ export class ReportsController {
    */
   private getEffectiveInstitutionId(req: any): string {
     const institutionId = req.user?.isSuperAdmin === true
-      ? req.query?.institutionId
+      ? req.resolvedInstitutionId
       : req.user?.institutionId;
     if (!institutionId) {
       throw new ForbiddenException('No se pudo determinar la institución para esta operación.');

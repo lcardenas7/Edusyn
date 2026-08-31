@@ -37,9 +37,13 @@ describe('TenantContextInterceptor', () => {
     expect(raw.$transaction).not.toHaveBeenCalled();
   });
 
-  it('sets the requested SuperAdmin tenant inside the transaction', async () => {
+  it('sets the guard-validated SuperAdmin tenant inside the transaction', async () => {
     const { interceptor, raw, tx } = makeInterceptor(true);
-    const request = { user: { isSuperAdmin: true }, query: { institutionId: 'tenant-a' } };
+    const request = {
+      user: { isSuperAdmin: true },
+      query: { institutionId: 'untrusted-value' },
+      resolvedInstitutionId: 'tenant-a',
+    };
 
     await expect(lastValueFrom(interceptor.intercept(makeContext(request), { handle: () => of({ ok: true }) }))).resolves.toEqual({ ok: true });
     expect(raw.$transaction).toHaveBeenCalledTimes(1);

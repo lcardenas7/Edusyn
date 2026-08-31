@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, UseGuards, Request, BadRequestException } from '@nestjs/common'
+import { Controller, Get, Put, Post, Body, UseGuards, Request, BadRequestException, Query } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
@@ -6,6 +6,9 @@ import type { ProfileDto, AreaConfigDto, GradingConfigDto, AcademicLevelConfig, 
 import { InstitutionConfigService } from './institution-config.service'
 import { InstitutionContextService } from '../institution-context/institution-context.service'
 import { PrismaService } from '../../prisma/prisma.service'
+import { resolveInstitutionId } from '../../common/utils/institution-resolver'
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator'
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard'
 
 // Escribir la config de evaluación (perfil, áreas, calificación, niveles, períodos)
 // recalcula boletines/promoción de TODA la institución → solo Admin/Rector.
@@ -22,7 +25,11 @@ export class InstitutionConfigController {
   ) {}
 
   // Helper para obtener el institutionId del usuario
-  private async getInstitutionId(userId: string): Promise<string> {
+  private async getInstitutionId(req: any, requestedInstitutionId?: string): Promise<string> {
+    const resolved = await resolveInstitutionId(this.prisma as any, req, requestedInstitutionId)
+    if (resolved) return resolved
+
+    const userId = req.user.id
     // Buscar en InstitutionUser
     const institutionUser = await this.prisma.institutionUser.findFirst({
       where: { userId, isActive: true },
@@ -56,9 +63,11 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get()
-  async getFullConfig(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getFullConfig(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getFullConfig(@Request() req, @Query('institutionId') institutionId?: string) {
+    const targetId = await this.getInstitutionId(req, institutionId)
+    return this.configService.getFullConfig(targetId)
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -66,15 +75,16 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('profile')
-  async getProfile(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getProfile(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getProfile(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.configService.getProfile(await this.getInstitutionId(req, institutionId))
   }
 
   @Put('profile')
   @Roles(...CONFIG_WRITE_ROLES)
   async updateProfile(@Request() req, @Body() dto: ProfileDto) {
-    const institutionId = await this.getInstitutionId(req.user.id)
+    const institutionId = await this.getInstitutionId(req)
     return this.configService.updateProfile(institutionId, dto)
   }
 
@@ -83,15 +93,16 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('areas')
-  async getAreaConfig(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getAreaConfig(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getAreaConfig(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.configService.getAreaConfig(await this.getInstitutionId(req, institutionId))
   }
 
   @Put('areas')
   @Roles(...CONFIG_WRITE_ROLES)
   async updateAreaConfig(@Request() req, @Body() config: AreaConfigDto) {
-    const institutionId = await this.getInstitutionId(req.user.id)
+    const institutionId = await this.getInstitutionId(req)
     return this.configService.updateAreaConfig(institutionId, config)
   }
 
@@ -100,15 +111,16 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('grading')
-  async getGradingConfig(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getGradingConfig(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getGradingConfig(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.configService.getGradingConfig(await this.getInstitutionId(req, institutionId))
   }
 
   @Put('grading')
   @Roles(...CONFIG_WRITE_ROLES)
   async updateGradingConfig(@Request() req, @Body() config: GradingConfigDto) {
-    const institutionId = await this.getInstitutionId(req.user.id)
+    const institutionId = await this.getInstitutionId(req)
     return this.configService.updateGradingConfig(institutionId, config)
   }
 
@@ -117,15 +129,16 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('academic-levels')
-  async getAcademicLevels(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getAcademicLevels(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getAcademicLevels(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.configService.getAcademicLevels(await this.getInstitutionId(req, institutionId))
   }
 
   @Put('academic-levels')
   @Roles(...CONFIG_WRITE_ROLES)
   async updateAcademicLevels(@Request() req, @Body() levels: AcademicLevelConfig[]) {
-    const institutionId = await this.getInstitutionId(req.user.id)
+    const institutionId = await this.getInstitutionId(req)
     return this.configService.updateAcademicLevels(institutionId, levels)
   }
 
@@ -134,15 +147,16 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('periods')
-  async getPeriods(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getPeriods(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getPeriods(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.configService.getPeriods(await this.getInstitutionId(req, institutionId))
   }
 
   @Put('periods')
   @Roles(...CONFIG_WRITE_ROLES)
   async updatePeriods(@Request() req, @Body() periods: PeriodConfig[]) {
-    const institutionId = await this.getInstitutionId(req.user.id)
+    const institutionId = await this.getInstitutionId(req)
     return this.configService.updatePeriods(institutionId, periods)
   }
 
@@ -155,15 +169,16 @@ export class InstitutionConfigController {
   @Post('apply-base')
   @Roles(...CONFIG_WRITE_ROLES)
   async applyBaseConfig(@Request() req, @Body() body: { overwrite?: boolean }) {
-    const institutionId = await this.getInstitutionId(req.user.id)
+    const institutionId = await this.getInstitutionId(req)
     return this.configService.applyBaseConfig(institutionId, { overwrite: body?.overwrite })
   }
 
   // Gate del onboarding: ¿la config mínima está lista? { ready, missing[] }.
   @Get('completeness')
-  async getCompleteness(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.configService.getConfigCompleteness(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getCompleteness(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.configService.getConfigCompleteness(await this.getInstitutionId(req, institutionId))
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -171,8 +186,9 @@ export class InstitutionConfigController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('rules-context')
-  async getRulesContext(@Request() req) {
-    const institutionId = await this.getInstitutionId(req.user.id)
-    return this.institutionContext.getContext(institutionId)
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
+  async getRulesContext(@Request() req, @Query('institutionId') institutionId?: string) {
+    return this.institutionContext.getContext(await this.getInstitutionId(req, institutionId))
   }
 }

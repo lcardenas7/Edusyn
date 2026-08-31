@@ -60,12 +60,12 @@ export class TenantContextInterceptor implements NestInterceptor {
 
     // Only SuperAdmin may request an explicit destination. A normal user's
     // tenant always comes from the authenticated session, never from input.
-    const superAdminTarget = user?.isSuperAdmin === true ? request?.query?.institutionId : undefined;
+    const superAdminTarget = user?.isSuperAdmin === true ? request?.resolvedInstitutionId : undefined;
     if (requireTenantContext && user?.isSuperAdmin === true && !superAdminTarget) {
       throw new ForbiddenException('SuperAdmin debe indicar institutionId para esta operación.');
     }
     const institutionId = user?.isSuperAdmin === true
-      ? superAdminTarget || request?.resolvedInstitutionId || user?.institutionId
+      ? superAdminTarget || user?.institutionId
       : user?.institutionId;
     if (!institutionId) {
       // No tenant context needed (login, register, public routes, superadmin)

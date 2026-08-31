@@ -23,6 +23,7 @@ import { FinalComponentsController } from './final-components.controller';
 import { FinalComponentsService } from './final-components.service';
 import { FinalComponentGradesController } from './final-component-grades.controller';
 import { FinalComponentGradesService } from './final-component-grades.service';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Module({
   controllers: [
@@ -51,6 +52,7 @@ import { FinalComponentGradesService } from './final-component-grades.service';
     GradeAuditService,
     FinalComponentsService,
     FinalComponentGradesService,
+    ValidateTenantContextGuard,
   ],
   exports: [StudentGradesService, PeriodFinalGradesService, PartialGradesService, GradeAuditService, FinalComponentsService, FinalComponentGradesService],
 })

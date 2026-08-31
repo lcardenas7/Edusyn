@@ -69,8 +69,10 @@ const DEFAULT_RULES_CONTEXT: InstitutionRulesContext = {
   qualitativeLevels: [],
 }
 
-export function useReportsData() {
+export function useReportsData(options: { institutionId?: string; enabled?: boolean } = {}) {
   const { institution } = useAuth()
+  const institutionId = options.institutionId ?? institution?.id
+  const enabled = options.enabled ?? true
   
   // Datos base compartidos
   const [academicYears, setAcademicYears] = useState<any[]>([])
@@ -105,16 +107,17 @@ export function useReportsData() {
   // Cargar configuración institucional y años académicos al iniciar
   useEffect(() => {
     const loadInitial = async () => {
+      if (!enabled || !institutionId) return
       try {
         // Cargar config institucional + años en paralelo
         // Pasar institutionId explícitamente para asegurar resolución correcta
-        const instId = institution?.id
+        const instId = institutionId
         const [yearsRes, yearsLifecycleRes, gradingRes, levelsRes, rulesRes] = await Promise.allSettled([
           academicYearsApi.getAll(instId),
-          instId ? academicYearLifecycleApi.getByInstitution(instId) : Promise.resolve({ data: [] }),
-          institutionConfigApi.getGradingConfig(),
-          institutionConfigApi.getAcademicLevels(),
-          institutionConfigApi.getRulesContext(),
+          Promise.resolve({ data: [] }),
+          institutionConfigApi.getGradingConfig(instId),
+          institutionConfigApi.getAcademicLevels(instId),
+          institutionConfigApi.getRulesContext(instId),
         ])
 
         // Reglas institucionales
@@ -175,19 +178,19 @@ export function useReportsData() {
       }
     }
     loadInitial()
-  }, [institution?.id])
+  }, [enabled, institutionId])
 
   // Cargar datos cuando cambia el año
   useEffect(() => {
     const loadData = async () => {
-      if (!filterYear) return
+      if (!enabled || !institutionId || !filterYear) return
       setLoading(true)
       try {
         const [termsRes, groupsRes, subjectsRes, assignmentsRes] = await Promise.all([
           academicTermsApi.getAll(filterYear),
-          groupsApi.getAll(),
-          subjectsApi.getAll(),
-          teacherAssignmentsApi.getAll({ academicYearId: filterYear })
+          groupsApi.getAll({ institutionId }),
+          subjectsApi.getAll(undefined, institutionId),
+          teacherAssignmentsApi.getAll({ academicYearId: filterYear, institutionId })
         ])
         setTerms(termsRes.data || [])
         setGroups(sortGroups(groupsRes.data || [])) // orden canónico "por grupo"
@@ -214,7 +217,7 @@ export function useReportsData() {
       }
     }
     loadData()
-  }, [filterYear])
+  }, [enabled, filterYear, institutionId])
 
   // Cargar estudiantes cuando cambia el grupo
   useEffect(() => {

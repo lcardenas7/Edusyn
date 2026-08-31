@@ -7,6 +7,8 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupsService } from './groups.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('groups')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,6 +34,8 @@ export class GroupsController {
   }
 
   @Get()
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA', 'RECTOR')
   async list(
     @Request() req: any,

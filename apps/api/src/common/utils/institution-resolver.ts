@@ -29,8 +29,11 @@ export async function resolveInstitutionId(
   //    NO se infiere del array `roles`: esos roles vienen de InstitutionUserRole y un
   //    administrador de tenant que pudiera asignar un rol llamado 'SUPERADMIN' dentro de
   //    su institución obtendría acceso cross-tenant.
-  if (user.isSuperAdmin === true && queryInstitutionId) {
-    return queryInstitutionId;
+  if (user.isSuperAdmin === true) {
+    // Routes that require tenant context validate the raw query in a
+    // post-JWT guard and store the only usable value here.
+    if (req.resolvedInstitutionId) return req.resolvedInstitutionId;
+    if (queryInstitutionId) return queryInstitutionId;
   }
 
   // 2. Usuarios normales → SIEMPRE usar JWT (ignorar query param por seguridad)

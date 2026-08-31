@@ -16,7 +16,7 @@ import {
 } from 'recharts'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
-import { teacherAssignmentsApi, periodFinalGradesApi, reportsApi } from '../../lib/api'
+import { institutionsApi, setReportTenantContext, teacherAssignmentsApi, periodFinalGradesApi, reportsApi } from '../../lib/api'
 import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
 
 const CHART_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
@@ -102,7 +102,26 @@ const STAGE_OPTIONS = [
 ]
 
 export default function AcademicReports() {
-  const { hasFeature, institution } = useAuth()
+  const { hasFeature, institution: sessionInstitution, isSuperAdmin } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [institutions, setInstitutions] = useState<Array<{ id: string; name: string }>>([])
+  const selectedInstitutionId = isSuperAdmin ? searchParams.get('institutionId') || undefined : sessionInstitution?.id
+  const institution = isSuperAdmin
+    ? institutions.find((item) => item.id === selectedInstitutionId) || null
+    : sessionInstitution
+
+  React.useEffect(() => {
+    if (!isSuperAdmin) return
+    institutionsApi.getAll()
+      .then((response) => setInstitutions(response.data || []))
+      .catch(() => toast.error('No se pudieron cargar las instituciones.'))
+  }, [isSuperAdmin])
+
+  React.useEffect(() => {
+    setReportTenantContext(isSuperAdmin ? selectedInstitutionId : undefined)
+    return () => setReportTenantContext(undefined)
+  }, [isSuperAdmin, selectedInstitutionId])
+
   const {
     academicYears, terms, groups, subjects, teachers, students,
     gradingScale,
@@ -112,7 +131,10 @@ export default function AcademicReports() {
     filterSubject, setFilterSubject,
     filterTeacher, setFilterTeacher,
     filterStudentId, setFilterStudentId,
-  } = useReportsData()
+  } = useReportsData({
+    institutionId: selectedInstitutionId,
+    enabled: !isSuperAdmin || Boolean(selectedInstitutionId),
+  })
 
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
@@ -225,12 +247,41 @@ export default function AcademicReports() {
   }
 
   // Deep-link desde el hub de reportes: ?report=<id> preselecciona el reporte (una vez).
-  const [searchParams] = useSearchParams()
   React.useEffect(() => {
     const rid = searchParams.get('report')
     if (rid) handleSelectReport(rid)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const renderInstitutionSelector = () => {
+    if (!isSuperAdmin) return null
+    return (
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <label htmlFor="report-institution" className="block text-sm font-medium text-blue-900">
+          Institución para este reporte
+        </label>
+        <p className="mt-1 text-xs text-blue-700">
+          Elige una institución antes de consultar. El destino se valida en el servidor y no cambia tu sesión.
+        </p>
+        <select
+          id="report-institution"
+          value={selectedInstitutionId || ''}
+          onChange={(event) => {
+            const next = new URLSearchParams(searchParams)
+            if (event.target.value) next.set('institutionId', event.target.value)
+            else next.delete('institutionId')
+            setSearchParams(next)
+            setSelectedReport(null)
+            setShowReport(false)
+          }}
+          className="mt-3 w-full max-w-xl rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-slate-900"
+        >
+          <option value="">Selecciona una institución</option>
+          {institutions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+      </div>
+    )
+  }
 
   const loadReportData = async (reportId: string) => {
     if (!filterYear) return
@@ -3021,6 +3072,14 @@ export default function AcademicReports() {
           </div>
         </div>
 
+        {renderInstitutionSelector()}
+
+        {isSuperAdmin && !selectedInstitutionId ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+            Selecciona una institución para cargar los reportes académicos.
+          </div>
+        ) : (
+
         <div className="space-y-6">
           {reportBlocks.map(block => {
             const bs = BLOCK_STYLES[block.color]
@@ -3054,6 +3113,7 @@ export default function AcademicReports() {
             )
           })}
         </div>
+        )}
       </div>
     )
   }
@@ -3085,6 +3145,15 @@ export default function AcademicReports() {
           </button>
         </div>
       </div>
+
+      {renderInstitutionSelector()}
+
+      {isSuperAdmin && !selectedInstitutionId ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+          Selecciona una institución antes de ejecutar un reporte.
+        </div>
+      ) : (
+        <>
 
       {renderFilters()}
 
@@ -3133,6 +3202,8 @@ export default function AcademicReports() {
       <div className="mt-4 bg-white rounded-xl border border-slate-200 p-4">
         {renderReportTable()}
       </div>
+        </>
+      )}
     </div>
   )
 }

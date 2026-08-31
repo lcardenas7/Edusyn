@@ -7,6 +7,8 @@ import { CreateTeacherAssignmentDto } from './dto/create-teacher-assignment.dto'
 import { TeacherAssignmentsService } from './teacher-assignments.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('teacher-assignments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -80,6 +82,8 @@ export class TeacherAssignmentsController {
   }
 
   @Get()
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async list(
     @Request() req: any,

@@ -18,10 +18,31 @@ const api = axios.create({
   },
 })
 
+// Enabled only while a SuperAdmin is inside Academic Reports. It is limited
+// to the screen's read endpoints and never affects writes or other pages.
+let reportTenantInstitutionId: string | undefined
+const REPORT_TENANT_READ_PATHS = [
+  '/reports',
+  '/academic-terms',
+  '/groups',
+  '/subjects',
+  '/teacher-assignments',
+  '/institution-config',
+]
+
+export const setReportTenantContext = (institutionId?: string) => {
+  reportTenantInstitutionId = institutionId
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  const isRead = !config.method || config.method.toLowerCase() === 'get'
+  const isReportTenantRead = REPORT_TENANT_READ_PATHS.some((path) => config.url?.startsWith(path))
+  if (reportTenantInstitutionId && isRead && isReportTenantRead) {
+    config.params = { ...config.params, institutionId: reportTenantInstitutionId }
   }
   return config
 })
@@ -57,10 +78,10 @@ export const institutionsApi = {
 
 // Institution Config (configuración completa institucional)
 export const institutionConfigApi = {
-  getFullConfig: () => api.get('/institution-config'),
-  getGradingConfig: () => api.get('/institution-config/grading'),
-  getAcademicLevels: () => api.get('/institution-config/academic-levels'),
-  getRulesContext: () => api.get('/institution-config/rules-context'),
+  getFullConfig: (institutionId?: string) => api.get('/institution-config', { params: { institutionId } }),
+  getGradingConfig: (institutionId?: string) => api.get('/institution-config/grading', { params: { institutionId } }),
+  getAcademicLevels: (institutionId?: string) => api.get('/institution-config/academic-levels', { params: { institutionId } }),
+  getRulesContext: (institutionId?: string) => api.get('/institution-config/rules-context', { params: { institutionId } }),
 }
 
 // Institution Profile (identidad institucional - para admin institucional)
@@ -125,7 +146,7 @@ export const areasApi = {
 
 // Subjects
 export const subjectsApi = {
-  getAll: (areaId?: string) => api.get('/subjects', { params: { areaId } }),
+  getAll: (areaId?: string, institutionId?: string) => api.get('/subjects', { params: { areaId, institutionId } }),
   create: (data: { areaId: string; name: string; weeklyHours?: number }) => api.post('/subjects', data),
 }
 
@@ -216,7 +237,7 @@ export const academicTermsApi = {
 
 // Teacher Assignments (Carga Academica)
 export const teacherAssignmentsApi = {
-  getAll: (params?: { academicYearId?: string; groupId?: string; teacherId?: string; activeOnly?: boolean }) => api.get('/teacher-assignments', { params }),
+  getAll: (params?: { academicYearId?: string; groupId?: string; teacherId?: string; institutionId?: string; activeOnly?: boolean }) => api.get('/teacher-assignments', { params }),
   create: (data: { academicYearId: string; groupId: string; subjectId: string; teacherId: string; weeklyHours?: number }) => api.post('/teacher-assignments', data),
   update: (id: string, data: { weeklyHours?: number }) => api.patch(`/teacher-assignments/${id}`, data),
   delete: (id: string) => api.delete(`/teacher-assignments/${id}`),

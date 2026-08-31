@@ -18,6 +18,8 @@ import { AcademicTermsService } from './academic-terms.service';
 import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('academic-terms')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,6 +30,8 @@ export class AcademicTermsController {
   ) {}
 
   @Get('years')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async listYears(@Request() req: any, @Query('institutionId') institutionId?: string) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
@@ -61,6 +65,8 @@ export class AcademicTermsController {
   }
 
   @Get()
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async list(@Query('academicYearId') academicYearId: string) {
     return this.academicTermsService.list(academicYearId);
