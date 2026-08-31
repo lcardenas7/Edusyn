@@ -24,6 +24,7 @@
 
 | Fecha | Entorno | Commit | Migración | Cambio |
 |-------|---------|--------|-----------|--------|
+| 2026-08-31 | `staging` | `3b63349` | No | Blindaje multi-tenant de Reportes: 12 commits (destino validado para SuperAdmin, aserciones de pertenencia por recurso, harness HTTP). Incluye tambien `71d2529` de classroom (preservar contenido de leccion al duplicar), que no es de seguridad. Verificado en vivo tras el despliegue: recursos de otra institucion responden 404 sin datos en los tres roles. |
 | 2026-08-29 | `staging` | `8b84d43` | No | Flujo guiado "Crear con IA" (Lección/Quiz/Tarea) en Actividades |
 | 2026-08-29 | `main` (prod) | `ed0032b` | No | Importador de preguntas de quiz desde JSON de IA |
 | 2026-08-29 | `staging` | `a0131a5` | No | Importador de preguntas de quiz desde JSON de IA |
