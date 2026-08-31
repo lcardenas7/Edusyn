@@ -77,6 +77,7 @@ interface NavItem {
 // ═══════════════════════════════════════════════════════════════════════════
 const superAdminNavigation: NavItem[] = [
   { name: 'Panel SuperAdmin', href: '/superadmin', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+  { name: 'Reportes Académicos', href: '/reports/academic', icon: BarChart3, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
   
   // Gestión de Instituciones
   { 
@@ -96,8 +97,7 @@ const superAdminNavigation: NavItem[] = [
     icon: ClipboardList, 
     roles: ['SUPER_ADMIN', 'SUPERADMIN'],
     children: [
-      { name: 'Logs del Sistema', href: '/superadmin/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
-      { name: 'Actividad Usuarios', href: '/superadmin/user-activity', icon: Users, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+      { name: 'Auditoría de notas', href: '/superadmin/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
     ]
   },
   

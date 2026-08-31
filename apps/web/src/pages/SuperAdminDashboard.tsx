@@ -2045,6 +2045,13 @@ function ObservabilityModal({
   const [audit, setAudit] = useState<any[]>([])
   const [auditLoading, setAuditLoading] = useState(false)
   const [actionFilter, setActionFilter] = useState<string>('')
+  const [auditTotal, setAuditTotal] = useState(0)
+  const [auditOffset, setAuditOffset] = useState(0)
+  const auditPageSize = 50
+
+  useEffect(() => {
+    setAuditOffset(0)
+  }, [institution?.id])
 
   useEffect(() => {
     if (tab === 'usage' && institution && !usage) {
@@ -2062,13 +2069,20 @@ function ObservabilityModal({
       superadminApi.getGradeAuditLog({
         institutionId: institution?.id,
         action: actionFilter || undefined,
-        limit: 100,
+        limit: auditPageSize,
+        offset: auditOffset,
       })
-        .then(r => setAudit(r.data?.items || []))
-        .catch(() => setAudit([]))
+        .then(r => {
+          setAudit(r.data?.items || [])
+          setAuditTotal(typeof r.data?.total === 'number' ? r.data.total : 0)
+        })
+        .catch(() => {
+          setAudit([])
+          setAuditTotal(0)
+        })
         .finally(() => setAuditLoading(false))
     }
-  }, [tab, institution, actionFilter])
+  }, [tab, institution, actionFilter, auditOffset])
 
   const actionLabel = (a: string) => a === 'CREATE' ? '🟢 Ingresó' : a === 'UPDATE' ? '✏️ Cambió' : '🗑️ Borró'
   const actionColor = (a: string) => a === 'CREATE' ? 'text-green-700 bg-green-50' : a === 'UPDATE' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
@@ -2142,14 +2156,19 @@ function ObservabilityModal({
           {tab === 'audit' && (
             <div className="space-y-3">
               <div className="flex gap-2">
-                {['', 'CREATE', 'UPDATE', 'DELETE'].map(a => (
-                  <button key={a || 'ALL'} onClick={() => setActionFilter(a)} className={`px-3 py-1.5 text-xs rounded-lg border ${actionFilter === a ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
+              {['', 'CREATE', 'UPDATE', 'DELETE'].map(a => (
+                  <button key={a || 'ALL'} onClick={() => { setActionFilter(a); setAuditOffset(0) }} className={`px-3 py-1.5 text-xs rounded-lg border ${actionFilter === a ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
                     {a === '' ? 'Todos' : a === 'CREATE' ? 'Ingresos' : a === 'UPDATE' ? 'Cambios' : 'Borrados'}
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-slate-500">
+                {auditTotal === 0
+                  ? '0 registros'
+                  : `Mostrando ${auditOffset + 1}–${Math.min(auditOffset + audit.length, auditTotal)} de ${auditTotal} registros`}
+              </p>
               {auditLoading ? <p className="text-sm text-slate-500 py-8 text-center">Cargando…</p> : audit.length === 0 ? (
-                <p className="text-sm text-slate-500 py-8 text-center">Sin registros todavía. La auditoría captura los cambios desde su activación.</p>
+                <p className="text-sm text-slate-500 py-8 text-center">Sin cambios de notas registrados. Esta auditoría captura eventos desde su activación.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -2188,6 +2207,24 @@ function ObservabilityModal({
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {auditTotal > auditPageSize && (
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    onClick={() => setAuditOffset(Math.max(0, auditOffset - auditPageSize))}
+                    disabled={auditOffset === 0 || auditLoading}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setAuditOffset(auditOffset + auditPageSize)}
+                    disabled={auditOffset + auditPageSize >= auditTotal || auditLoading}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40"
+                  >
+                    Siguiente
+                  </button>
                 </div>
               )}
             </div>
