@@ -38,7 +38,13 @@ describe('ValidateReportTenantGuard', () => {
   it('stores a verified SuperAdmin destination', async () => {
     const { guard, prisma } = makeGuard();
     prisma.institution.findUnique.mockResolvedValue({ id: 'tenant-a' });
-    const request = { user: { isSuperAdmin: true }, query: { institutionId: 'tenant-a' } };
+    // The guard writes the verified destination onto the request, so the shape
+    // must declare it: it does not exist before canActivate() runs.
+    const request: {
+      user: { isSuperAdmin: boolean };
+      query: { institutionId: string };
+      resolvedInstitutionId?: string;
+    } = { user: { isSuperAdmin: true }, query: { institutionId: 'tenant-a' } };
 
     await expect(guard.canActivate(makeContext(request))).resolves.toBe(true);
     expect(prisma.institution.findUnique).toHaveBeenCalledWith({
