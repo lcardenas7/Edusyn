@@ -343,7 +343,7 @@ const saveToStorage = <T,>(key: string, value: T): void => {
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined)
 
 export function AcademicProvider({ children }: { children: ReactNode }) {
-  const { institution: authInstitution } = useAuth()
+  const { institution: authInstitution, isLoading: authLoading, isSuperAdmin } = useAuth()
   const [academicYear, setAcademicYearState] = useState<number>(() => 
     loadFromStorage('edusyn_academicYear', new Date().getFullYear())
   )
@@ -370,6 +370,9 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
 
   // Cargar configuración académica desde API
   const loadAcademicConfigFromAPI = useCallback(async () => {
+    // A global SuperAdmin session has no implicit tenant. Academic Reports
+    // loads configuration only after its own explicit target is selected.
+    if (authLoading || isSuperAdmin) return
     const token = getAuthToken()
     if (!token) return
 
@@ -438,7 +441,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [authLoading, isSuperAdmin])
 
   // Guardar niveles académicos en API
   const saveAcademicLevelsToAPI = useCallback(async (): Promise<boolean> => {

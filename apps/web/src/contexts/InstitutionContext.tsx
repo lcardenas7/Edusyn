@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
 import { institutionProfileApi } from '../lib/api'
+import { useAuth } from './AuthContext'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPOS - Se mantienen aquí para compatibilidad con AcademicRulesEngine
@@ -180,6 +181,7 @@ const saveToStorage = <T,>(key: string, value: T): void => {
 }
 
 export function InstitutionProvider({ children }: { children: ReactNode }) {
+  const { isLoading: authLoading, isSuperAdmin } = useAuth()
   const [institution, setInstitutionState] = useState<InstitutionConfig>(() => 
     loadFromStorage(STORAGE_KEY, defaultInstitution)
   )
@@ -188,6 +190,9 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
   // Cargar perfil institucional desde la API
   const loadProfileFromAPI = useCallback(async () => {
+    // SuperAdmin manages global surfaces without an implicit institution.
+    // Reportes supplies its own explicit, validated target instead.
+    if (authLoading || isSuperAdmin) return
     const token = localStorage.getItem('token')
     if (!token) return
 
@@ -219,7 +224,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [authLoading, isSuperAdmin])
 
   // Guardar perfil institucional en la API
   const saveProfileToAPI = useCallback(async (): Promise<boolean> => {
