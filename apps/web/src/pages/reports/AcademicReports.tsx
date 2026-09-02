@@ -273,6 +273,18 @@ export default function AcademicReports() {
             setSearchParams(next)
             setSelectedReport(null)
             setShowReport(false)
+            // Todo filtro que guarde un identificador del destino anterior debe
+            // volver a su valor inicial: si no, el desplegable muestra la opción
+            // por defecto —porque el id ya no existe entre las opciones— mientras
+            // el estado sigue apuntando a la institución anterior.
+            setFilterGrade('all')
+            setFilterStudentId('all')
+            setFilterSubject('all')
+            setFilterTeacher('all')
+            setFilterGradeId('all')
+            setFilterSubjectIds([])
+            setFilterYear('')
+            setFilterPeriod('')
           }}
           className="mt-3 w-full max-w-xl rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-slate-900"
         >

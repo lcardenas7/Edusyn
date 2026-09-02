@@ -69,6 +69,16 @@ const DEFAULT_RULES_CONTEXT: InstitutionRulesContext = {
   qualitativeLevels: [],
 }
 
+// Valor por defecto de `gradingScale`, tanto al iniciar como al cambiar de
+// institución. Es una factoría y no una constante a propósito: hay consumidores
+// que ordenan `performanceLevels` con `.sort()`, que muta el array en su sitio,
+// y una única instancia compartida se corrompería entre reinicios y entre usos
+// del hook. Cada llamada devuelve un objeto y arrays nuevos.
+const createDefaultGradingScale = (): GradingScaleInfo => ({
+  minGrade: 1, maxGrade: 5, minPassingGrade: 3.0,
+  performanceLevels: [], academicLevels: [],
+})
+
 export function useReportsData(options: { institutionId?: string; enabled?: boolean } = {}) {
   const { institution } = useAuth()
   const institutionId = options.institutionId ?? institution?.id
@@ -83,10 +93,7 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
   const [students, setStudents] = useState<any[]>([])
   
   // Configuración de calificación institucional
-  const [gradingScale, setGradingScale] = useState<GradingScaleInfo>({
-    minGrade: 1, maxGrade: 5, minPassingGrade: 3.0,
-    performanceLevels: [], academicLevels: [],
-  })
+  const [gradingScale, setGradingScale] = useState<GradingScaleInfo>(createDefaultGradingScale)
   
   // Contexto de reglas institucionales (fuente única de verdad)
   const [rulesContext, setRulesContext] = useState<InstitutionRulesContext>(DEFAULT_RULES_CONTEXT)
@@ -106,6 +113,22 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
 
   // Cargar configuración institucional y años académicos al iniciar
   useEffect(() => {
+    // Al cambiar de destino, nada del anterior sigue a la vista: se vacía de
+    // forma síncrona, antes de pedir nada. Si la carga del destino nuevo falla,
+    // el estado se queda vacío en lugar de recuperar el catálogo previo.
+    setAcademicYears([])
+    setTerms([])
+    setGroups([])
+    setSubjects([])
+    setTeachers([])
+    setStudents([])
+    setGradingScale(createDefaultGradingScale())
+    setRulesContext(DEFAULT_RULES_CONTEXT)
+
+    // Descarta respuestas de un destino anterior: React ejecuta esta limpieza
+    // antes de volver a lanzar el efecto, de modo que la petición en vuelo de la
+    // institución anterior ya no puede escribir estado cuando resuelva.
+    let cancelled = false
     const loadInitial = async () => {
       if (!enabled || !institutionId) return
       try {
@@ -119,6 +142,7 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
           institutionConfigApi.getAcademicLevels(instId),
           institutionConfigApi.getRulesContext(instId),
         ])
+        if (cancelled) return
 
         // Reglas institucionales
         if (rulesRes.status === 'fulfilled' && rulesRes.value.data) {
@@ -178,10 +202,12 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
       }
     }
     loadInitial()
+    return () => { cancelled = true }
   }, [enabled, institutionId])
 
   // Cargar datos cuando cambia el año
   useEffect(() => {
+    let cancelled = false
     const loadData = async () => {
       if (!enabled || !institutionId || !filterYear) return
       setLoading(true)
@@ -192,6 +218,7 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
           subjectsApi.getAll(undefined, institutionId),
           teacherAssignmentsApi.getAll({ academicYearId: filterYear, institutionId })
         ])
+        if (cancelled) return
         setTerms(termsRes.data || [])
         setGroups(sortGroups(groupsRes.data || [])) // orden canónico "por grupo"
         setSubjects(subjectsRes.data || [])
@@ -213,21 +240,30 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
       } catch (err) {
         console.error('Error loading data:', err)
       } finally {
-        setLoading(false)
+        // Si este efecto quedó obsoleto, quien manda es la carga vigente: no le
+        // apagamos su indicador de carga.
+        if (!cancelled) setLoading(false)
       }
     }
     loadData()
+    return () => { cancelled = true }
   }, [enabled, filterYear, institutionId])
 
   // Cargar estudiantes cuando cambia el grupo
   useEffect(() => {
+    let cancelled = false
     const loadStudents = async () => {
       if (!filterGrade || filterGrade === 'all') {
         setStudents([])
         return
       }
       try {
-        const response = await studentsApi.getAll({ groupId: filterGrade })
+        // El destino de esta pantalla viaja explícito: una sesión de SuperAdmin
+        // no tiene institución en el JWT y esta ruta no la hereda del contexto
+        // temporal de Reportes. Para un usuario institucional el servidor sigue
+        // ignorando este valor y usando el de su sesión.
+        const response = await studentsApi.getAll({ groupId: filterGrade, institutionId })
+        if (cancelled) return
         const raw = response.data || []
         // Normalizar: si viene de StudentEnrollment, aplanar student data.
         // Se conservan los 4 componentes del nombre (primer/segundo nombre y
@@ -252,12 +288,17 @@ export function useReportsData(options: { institutionId?: string; enabled?: bool
         })
         setStudents(normalized)
       } catch (err) {
+        if (cancelled) return
         console.error('Error loading students:', err)
         setStudents([])
       }
     }
     loadStudents()
-  }, [filterGrade])
+    return () => { cancelled = true }
+    // `institutionId` entra aquí porque nada reinicia `filterGrade` al cambiar
+    // de institución: sin esta dependencia, la lista quedaría con los
+    // estudiantes del destino anterior.
+  }, [filterGrade, institutionId])
 
   return {
     // Datos
