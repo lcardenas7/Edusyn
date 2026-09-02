@@ -21,14 +21,14 @@ const api = axios.create({
 // Enabled only while a SuperAdmin is inside Academic Reports. It is limited
 // to the screen's read endpoints and never affects writes or other pages.
 let reportTenantInstitutionId: string | undefined
-const REPORT_TENANT_READ_PATHS = [
-  '/reports',
-  '/academic-terms',
-  '/groups',
-  '/subjects',
-  '/teacher-assignments',
-  '/institution-config',
-]
+
+// Anchored to a whole first segment: a merely similar prefix such as
+// /reports-legacy or /institution-config-extra must never inherit the target.
+const REPORT_TENANT_READ_SEGMENT =
+  /^\/(reports|academic-terms|groups|subjects|teacher-assignments|institution-config)(?=[/?]|$)/
+
+export const isReportTenantReadPath = (url?: string): boolean =>
+  typeof url === 'string' && REPORT_TENANT_READ_SEGMENT.test(url)
 
 export const setReportTenantContext = (institutionId?: string) => {
   reportTenantInstitutionId = institutionId
@@ -40,9 +40,13 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`
   }
   const isRead = !config.method || config.method.toLowerCase() === 'get'
-  const isReportTenantRead = REPORT_TENANT_READ_PATHS.some((path) => config.url?.startsWith(path))
-  if (reportTenantInstitutionId && isRead && isReportTenantRead) {
-    config.params = { ...config.params, institutionId: reportTenantInstitutionId }
+  if (reportTenantInstitutionId && isRead && isReportTenantReadPath(config.url)) {
+    // An institutionId supplied by the caller always wins: the temporary
+    // Reports target only fills the gap when the caller named none.
+    config.params = {
+      ...config.params,
+      institutionId: config.params?.institutionId ?? reportTenantInstitutionId,
+    }
   }
   return config
 })
