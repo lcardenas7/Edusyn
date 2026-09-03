@@ -60,7 +60,7 @@ export class ReportsController {
   }
 
   @Get('report-card/:studentEnrollmentId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'RECTOR')
   async getReportCardData(
     @Request() req,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
@@ -77,7 +77,7 @@ export class ReportsController {
   }
 
   @Get('report-card-year/:studentEnrollmentId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'RECTOR')
   async getReportCardYear(
     @Request() req,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
@@ -95,7 +95,7 @@ export class ReportsController {
 
   // ── Banco de Formatos de Boletín: selección/resolución de plantilla ──────────
   @Get('report-card-templates/selections')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getTemplateSelections(@Request() req) {
     return this.reportsService.getTemplateSelections(this.getEffectiveInstitutionId(req));
   }
@@ -116,7 +116,7 @@ export class ReportsController {
   }
 
   @Get('report-card-templates/resolve')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'RECTOR')
   async resolveTemplate(
     @Request() req,
     @Query('gradeId') gradeId?: string,
@@ -127,7 +127,7 @@ export class ReportsController {
   }
 
   @Get('report-card/:studentEnrollmentId/pdf')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'RECTOR')
   async downloadReportCardPdf(
     @Request() req,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
@@ -174,7 +174,7 @@ export class ReportsController {
    * Considera períodos con sus pesos, notas ya obtenidas, y nota mínima aprobatoria.
    */
   @Get('minimum-grade/:studentEnrollmentId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getMinimumGradeRequired(
     @Request() req,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
@@ -195,7 +195,7 @@ export class ReportsController {
    * Retorna un resumen con estudiantes en riesgo y asignaturas críticas.
    */
   @Get('minimum-grade/group/:groupId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getMinimumGradeForGroup(
     @Request() req,
     @Param('groupId') groupId: string,
@@ -235,7 +235,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('academic/subject-averages')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getSubjectAverages(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -249,7 +249,7 @@ export class ReportsController {
   }
 
   @Get('academic/area-averages')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getAreaAverages(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -263,7 +263,7 @@ export class ReportsController {
   }
 
   @Get('academic/area-consolidated')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getAreaConsolidated(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -276,7 +276,7 @@ export class ReportsController {
   }
 
   @Get('academic/student-ranking')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getStudentRanking(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -289,7 +289,7 @@ export class ReportsController {
   }
 
   @Get('academic/institutional-ranking')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getInstitutionalRanking(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -303,7 +303,7 @@ export class ReportsController {
   }
 
   @Get('academic/grade-distribution')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getGradeDistribution(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -317,7 +317,7 @@ export class ReportsController {
   }
 
   @Get('academic/subject-level-distribution')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getSubjectLevelDistribution(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -333,7 +333,7 @@ export class ReportsController {
   }
 
   @Get('academic/failed-subjects')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getFailedSubjects(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -356,7 +356,7 @@ export class ReportsController {
   }
 
   @Get('academic/recovery-list')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getRecoveryList(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -376,7 +376,7 @@ export class ReportsController {
   }
 
   @Get('academic/promotion-projection')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getPromotionProjection(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -388,7 +388,7 @@ export class ReportsController {
   }
 
   @Get('academic/period-comparison')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getPeriodComparison(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -401,7 +401,7 @@ export class ReportsController {
   }
 
   @Get('academic/student-history')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getStudentHistory(
     @Query('studentId') studentId: string,
   ) {
@@ -409,7 +409,7 @@ export class ReportsController {
   }
 
   @Get('academic/subject-analysis')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getSubjectAnalysis(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -422,7 +422,7 @@ export class ReportsController {
   }
 
   @Get('academic/teacher-performance')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getTeacherPerformance(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -438,7 +438,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('report-card-config')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getReportCardConfig(@Request() req) {
     const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.getReportCardConfig(institutionId);
@@ -456,7 +456,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('recovery-impact')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getRecoveryImpact(
     @Request() req,
     @Query('academicTermId') academicTermId: string,
@@ -471,7 +471,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('terms/:termId/validate-grades')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async validateTermGrades(
     @Request() req,
     @Param('termId') termId: string,
@@ -525,7 +525,7 @@ export class ReportsController {
   }
 
   @Get('academic/completeness-status')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getCompletenessStatus(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -537,7 +537,7 @@ export class ReportsController {
   }
 
   @Get('report-cards/group/:groupId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getGroupReportCardList(
     @Request() req,
     @Param('groupId') groupId: string,
@@ -574,7 +574,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('export/consolidated')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async exportConsolidated(
     @Request() req,
     @Res() res: Response,
@@ -591,7 +591,7 @@ export class ReportsController {
   }
 
   @Get('export/grade-distribution')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async exportGradeDistribution(
     @Request() req,
     @Res() res: Response,
@@ -608,7 +608,7 @@ export class ReportsController {
   }
 
   @Get('export/teacher-performance')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async exportTeacherPerformance(
     @Request() req,
     @Res() res: Response,
@@ -623,7 +623,7 @@ export class ReportsController {
   }
 
   @Get('export/student-ranking')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async exportStudentRanking(
     @Request() req,
     @Res() res: Response,
@@ -639,7 +639,7 @@ export class ReportsController {
   }
 
   @Get('export/failed-subjects')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async exportFailedSubjects(
     @Request() req,
     @Res() res: Response,
@@ -655,7 +655,7 @@ export class ReportsController {
   }
 
   @Get('export/recovery-list')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async exportRecoveryList(
     @Request() req,
     @Res() res: Response,
@@ -671,7 +671,7 @@ export class ReportsController {
   }
 
   @Get('export/promotion-projection')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async exportPromotionProjection(
     @Request() req,
     @Res() res: Response,
@@ -690,7 +690,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('pdf/recovery-certificate')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async pdfRecoveryCertificate(
     @Request() req,
     @Res() res: Response,
@@ -706,7 +706,7 @@ export class ReportsController {
   }
 
   @Get('pdf/non-promoted')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async pdfNonPromoted(
     @Request() req,
     @Res() res: Response,
@@ -721,7 +721,7 @@ export class ReportsController {
   }
 
   @Get('pdf/statistical-summary')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async pdfStatisticalSummary(
     @Request() req,
     @Res() res: Response,
@@ -737,7 +737,7 @@ export class ReportsController {
   }
 
   @Get('pdf/student-history/:studentId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async pdfStudentHistory(
     @Param('studentId') studentId: string,
     @Res() res: Response,
@@ -751,7 +751,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('institutional-statistics')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getInstitutionalStatistics(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -763,7 +763,7 @@ export class ReportsController {
   }
 
   @Get('annual-comparison')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getAnnualComparison(
     @Request() req,
     @Query('academicYearIds') academicYearIds: string,
@@ -774,7 +774,7 @@ export class ReportsController {
   }
 
   @Get('min-grade-consolidated')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR')
   async getMinGradeConsolidated(
     @Request() req,
     @Query('academicYearId') academicYearId: string,

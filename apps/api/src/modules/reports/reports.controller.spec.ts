@@ -1,5 +1,8 @@
 import { Reflector } from '@nestjs/core';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, NotFoundException, RequestMethod } from '@nestjs/common';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 import { ReportsController } from './reports.controller';
 import { REQUIRE_TENANT_CONTEXT_KEY } from '../auth/decorators/require-tenant-context.decorator';
 
@@ -121,5 +124,128 @@ describe('ReportsController tenant resolution', () => {
 
     expect(reportsService.assertCompletenessScope).toHaveBeenCalledWith('tenant-a', 'year-b', 'term-b');
     expect(reportsService.getCompletenessStatus).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Contrato de acceso del rector en Reportes.
+ *
+ * El rector es la maxima autoridad de SU institucion: consulta todo lo que
+ * Reportes expone y no escribe nada. Estas pruebas leen la metadata real de los
+ * decoradores y ejercitan el guard autentico, de modo que fijan el contrato
+ * tambien para las rutas que se anadan en el futuro.
+ *
+ * El aislamiento por institucion NO se prueba aqui: no depende de los roles
+ * sino del contexto de tenant y de getEffectiveInstitutionId, que este cambio
+ * no toca. Su evidencia funcional son las matrices A/B ya ejecutadas.
+ */
+describe('Reportes · contrato de acceso del rector', () => {
+  const LECTURA = 'GET';
+  const ESCRITURA = 'escritura';
+
+  interface Ruta { metodo: string; verbo: string; roles: string[] }
+
+  const inventario = (): Ruta[] => {
+    const proto = ReportsController.prototype as unknown as Record<string, unknown>;
+    return Object.getOwnPropertyNames(proto)
+      .filter((n) => n !== 'constructor' && typeof proto[n] === 'function')
+      .map((metodo) => {
+        const handler = proto[metodo] as (...a: unknown[]) => unknown;
+        const verbo = Reflect.getMetadata(METHOD_METADATA, handler);
+        if (verbo === undefined) return null;
+        return {
+          metodo,
+          verbo: verbo === RequestMethod.GET ? LECTURA : ESCRITURA,
+          roles: (Reflect.getMetadata(ROLES_KEY, handler) as string[]) ?? [],
+        };
+      })
+      .filter((r): r is Ruta => r !== null);
+  };
+
+  /** Ejercita el guard real con la sesion indicada sobre un metodo del controlador. */
+  const evaluarGuard = (metodo: string, roles: string[]): boolean => {
+    const guard = new RolesGuard(new Reflector());
+    const handler = (ReportsController.prototype as unknown as Record<string, unknown>)[metodo];
+    const context = {
+      getHandler: () => handler,
+      getClass: () => ReportsController,
+      switchToHttp: () => ({ getRequest: () => ({ user: { roles, isSuperAdmin: false } }) }),
+    } as unknown as ExecutionContext;
+    return guard.canActivate(context);
+  };
+
+  const ESCRITURAS_PROHIBIDAS = [
+    'upsertTemplateSelection',
+    'deleteTemplateSelection',
+    'generateBulkReportCards',
+    'updateReportCardConfig',
+    'closeTerm',
+    'finalizeTerm',
+    'reopenFinalizedTerm',
+    'reSnapshotTerm',
+  ];
+
+  const rutas = inventario();
+  const lecturas = rutas.filter((r) => r.verbo === LECTURA);
+  const escrituras = rutas.filter((r) => r.verbo === ESCRITURA);
+
+  it('el inventario coincide con el contrato acordado: 40 lecturas y 8 escrituras', () => {
+    expect(lecturas).toHaveLength(40);
+    expect(escrituras).toHaveLength(8);
+  });
+
+  it('las 40 rutas de lectura incluyen RECTOR', () => {
+    expect(lecturas.filter((r) => !r.roles.includes('RECTOR')).map((r) => r.metodo)).toEqual([]);
+  });
+
+  it.each([
+    ['agregado institucional', 'getSubjectAverages'],
+    ['ranking', 'getInstitutionalRanking'],
+    ['boletin individual', 'getReportCardData'],
+    ['indice de grupo', 'getGroupReportCardList'],
+    ['resolucion de plantilla', 'resolveTemplate'],
+    ['exportacion', 'exportConsolidated'],
+    ['validacion de periodo, solo lectura', 'validateTermGrades'],
+  ])('el guard admite al rector en %s', (_familia, metodo) => {
+    expect(evaluarGuard(metodo as string, ['RECTOR'])).toBe(true);
+  });
+
+  it('ninguna ruta de escritura declara RECTOR', () => {
+    expect(escrituras.filter((r) => r.roles.includes('RECTOR')).map((r) => r.metodo)).toEqual([]);
+  });
+
+  it('el inventario de escrituras es exactamente el acordado', () => {
+    expect(escrituras.map((r) => r.metodo).sort()).toEqual([...ESCRITURAS_PROHIBIDAS].sort());
+  });
+
+  it.each(ESCRITURAS_PROHIBIDAS)('el guard rechaza al rector en %s', (metodo) => {
+    expect(() => evaluarGuard(metodo, ['RECTOR'])).toThrow(ForbiddenException);
+  });
+
+  it('el rechazo es tipado, no un error generico que saldria como 500', () => {
+    let capturado: unknown;
+    try { evaluarGuard('closeTerm', ['RECTOR']); } catch (e) { capturado = e; }
+    expect(capturado).toBeInstanceOf(ForbiddenException);
+    expect((capturado as ForbiddenException).getStatus()).toBe(403);
+  });
+
+  it('toda ruta conserva SUPERADMIN y ADMIN_INSTITUTIONAL', () => {
+    expect(rutas
+      .filter((r) => !r.roles.includes('SUPERADMIN') || !r.roles.includes('ADMIN_INSTITUTIONAL'))
+      .map((r) => r.metodo)).toEqual([]);
+  });
+
+  it.each([
+    ['docente', 'DOCENTE', 'getReportCardData'],
+    // El coordinador NO cierra periodos: eso es de ADMIN_INSTITUTIONAL y
+    // SUPERADMIN. Se comprueba sobre una lectura que si tenia antes.
+    ['coordinador', 'COORDINADOR', 'getSubjectAverages'],
+    ['estudiante', 'ESTUDIANTE', 'getReportCardData'],
+  ])('el %s conserva su acceso donde ya lo tenia', (_quien, rol, metodo) => {
+    expect(evaluarGuard(metodo, [rol])).toBe(true);
+  });
+
+  it('un rol ajeno al contrato sigue rechazado en lectura', () => {
+    expect(() => evaluarGuard('getSubjectAverages', ['ACUDIENTE'])).toThrow(ForbiddenException);
   });
 });
