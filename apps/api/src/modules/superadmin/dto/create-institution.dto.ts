@@ -74,11 +74,10 @@ export class CreateInstitutionDto {
   adminPhone?: string;
 
   // ── Rector (figura académica) — separado del administrador de plataforma ──
-  // Si rectorSameAsAdmin = true (u omitido), el administrador también recibe el rol RECTOR
-  // (misma persona, mismas credenciales). Si es false, se crean los datos del rector aparte.
-  @IsOptional()
+  // Decisión obligatoria: true asigna ambos roles a la misma persona; false crea
+  // los datos del rector aparte. No existe un valor implícito.
   @IsBoolean()
-  rectorSameAsAdmin?: boolean;
+  rectorSameAsAdmin: boolean;
 
   @IsOptional()
   @IsString()

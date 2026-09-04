@@ -1068,8 +1068,8 @@ function CreateInstitutionModal({
     adminUsername: '',
     adminPassword: '',
     sendEmailNotification: false,
-    // Rector (figura académica) — separado del administrador de plataforma
-    rectorSameAsAdmin: true,
+    // Decisión explícita: no conceder dos roles por un valor predeterminado.
+    rectorSameAsAdmin: null as boolean | null,
     rectorFirstName: '',
     rectorLastName: '',
     rectorEmail: '',
@@ -1095,6 +1095,10 @@ function CreateInstitutionModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (formData.rectorSameAsAdmin === null) {
+      toast.error('Indica si el rector y el administrador institucional son la misma persona')
+      return
+    }
     setLoading(true)
 
     try {
@@ -1110,7 +1114,7 @@ function CreateInstitutionModal({
         adminPassword: formData.adminPassword,
         modules: formData.modules,
         rectorSameAsAdmin: formData.rectorSameAsAdmin,
-        ...(formData.rectorSameAsAdmin ? {} : {
+        ...(formData.rectorSameAsAdmin === true ? {} : {
           rectorFirstName: formData.rectorFirstName,
           rectorLastName: formData.rectorLastName,
           rectorEmail: formData.rectorEmail,
@@ -1336,20 +1340,39 @@ function CreateInstitutionModal({
             <h3 className="text-sm font-medium text-slate-700 mb-1">Rector(a)</h3>
             <p className="text-xs text-slate-400 mb-3">Figura académica (aprobaciones, firmas de boletines). Puede ser la misma persona que el administrador o alguien distinto.</p>
 
-            <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer mb-3">
-              <input
-                type="checkbox"
-                checked={formData.rectorSameAsAdmin}
-                onChange={(e) => setFormData({ ...formData, rectorSameAsAdmin: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded"
-              />
-              <div>
-                <div className="text-sm font-medium text-slate-900">El rector es el mismo administrador</div>
-                <div className="text-xs text-slate-500">Usa la misma persona y credenciales. Desmárcalo si el rector es otra persona.</div>
-              </div>
-            </label>
+            <fieldset className="space-y-2 mb-3">
+              <legend className="text-sm font-medium text-slate-700 mb-2">
+                ¿Quién ejercerá cada cargo? *
+              </legend>
+              <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer">
+                <input
+                  type="radio"
+                  name="rectorSameAsAdmin"
+                  checked={formData.rectorSameAsAdmin === true}
+                  onChange={() => setFormData({ ...formData, rectorSameAsAdmin: true })}
+                  className="w-4 h-4 mt-0.5 text-blue-600"
+                />
+                <div>
+                  <div className="text-sm font-medium text-slate-900">La misma persona ejercerá ambos cargos</div>
+                  <div className="text-xs text-slate-500">La cuenta recibirá los roles de Rector y Administrador Institucional, con la unión de sus permisos.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer">
+                <input
+                  type="radio"
+                  name="rectorSameAsAdmin"
+                  checked={formData.rectorSameAsAdmin === false}
+                  onChange={() => setFormData({ ...formData, rectorSameAsAdmin: false })}
+                  className="w-4 h-4 mt-0.5 text-blue-600"
+                />
+                <div>
+                  <div className="text-sm font-medium text-slate-900">El Rector y el Administrador son personas distintas</div>
+                  <div className="text-xs text-slate-500">Se registrará una identidad separada para la autoridad académica de la institución.</div>
+                </div>
+              </label>
+            </fieldset>
 
-            {!formData.rectorSameAsAdmin && (
+            {formData.rectorSameAsAdmin === false && (
               <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
                 <div>
                   <label className="block text-sm text-slate-600 mb-1">Nombre *</label>
@@ -1359,7 +1382,7 @@ function CreateInstitutionModal({
                     onChange={(e) => setFormData({ ...formData, rectorFirstName: e.target.value })}
                     placeholder="Carlos"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required={!formData.rectorSameAsAdmin}
+                    required={formData.rectorSameAsAdmin === false}
                   />
                 </div>
                 <div>
@@ -1370,7 +1393,7 @@ function CreateInstitutionModal({
                     onChange={(e) => setFormData({ ...formData, rectorLastName: e.target.value })}
                     placeholder="Pérez"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required={!formData.rectorSameAsAdmin}
+                    required={formData.rectorSameAsAdmin === false}
                   />
                 </div>
                 <div className="col-span-2">
@@ -1381,7 +1404,7 @@ function CreateInstitutionModal({
                     onChange={(e) => setFormData({ ...formData, rectorEmail: e.target.value })}
                     placeholder="rector@colegio.edu.co"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required={!formData.rectorSameAsAdmin}
+                    required={formData.rectorSameAsAdmin === false}
                   />
                 </div>
 
@@ -1468,7 +1491,7 @@ function CreateInstitutionModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || formData.rectorSameAsAdmin === null}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Creando...' : 'Crear Institución'}

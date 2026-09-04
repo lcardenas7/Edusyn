@@ -131,9 +131,9 @@ describe('ReportsController tenant resolution', () => {
  * Contrato de acceso del rector en Reportes.
  *
  * El rector es la maxima autoridad de SU institucion: consulta todo lo que
- * Reportes expone y no escribe nada. Estas pruebas leen la metadata real de los
- * decoradores y ejercitan el guard autentico, de modo que fijan el contrato
- * tambien para las rutas que se anadan en el futuro.
+ * Reportes expone y gobierna la configuracion de sus boletines, pero no ejecuta
+ * generacion masiva ni operaciones sobre el ciclo del periodo. Estas pruebas
+ * leen la metadata real de los decoradores y ejercitan el guard autentico.
  *
  * El aislamiento por institucion NO se prueba aqui: no depende de los roles
  * sino del contexto de tenant y de getEffectiveInstitutionId, que este cambio
@@ -174,11 +174,14 @@ describe('Reportes · contrato de acceso del rector', () => {
     return guard.canActivate(context);
   };
 
-  const ESCRITURAS_PROHIBIDAS = [
+  const ESCRITURAS_DE_GOBIERNO_RECTOR = [
     'upsertTemplateSelection',
     'deleteTemplateSelection',
-    'generateBulkReportCards',
     'updateReportCardConfig',
+  ];
+
+  const ESCRITURAS_PROHIBIDAS = [
+    'generateBulkReportCards',
     'closeTerm',
     'finalizeTerm',
     'reopenFinalizedTerm',
@@ -210,12 +213,18 @@ describe('Reportes · contrato de acceso del rector', () => {
     expect(evaluarGuard(metodo as string, ['RECTOR'])).toBe(true);
   });
 
-  it('ninguna ruta de escritura declara RECTOR', () => {
-    expect(escrituras.filter((r) => r.roles.includes('RECTOR')).map((r) => r.metodo)).toEqual([]);
+  it('el rector solo gobierna la configuracion de boletines entre las escrituras', () => {
+    expect(escrituras.filter((r) => r.roles.includes('RECTOR')).map((r) => r.metodo).sort())
+      .toEqual([...ESCRITURAS_DE_GOBIERNO_RECTOR].sort());
   });
 
   it('el inventario de escrituras es exactamente el acordado', () => {
-    expect(escrituras.map((r) => r.metodo).sort()).toEqual([...ESCRITURAS_PROHIBIDAS].sort());
+    expect(escrituras.map((r) => r.metodo).sort())
+      .toEqual([...ESCRITURAS_DE_GOBIERNO_RECTOR, ...ESCRITURAS_PROHIBIDAS].sort());
+  });
+
+  it.each(ESCRITURAS_DE_GOBIERNO_RECTOR)('el guard admite al rector para gobernar %s', (metodo) => {
+    expect(evaluarGuard(metodo, ['RECTOR'])).toBe(true);
   });
 
   it.each(ESCRITURAS_PROHIBIDAS)('el guard rechaza al rector en %s', (metodo) => {

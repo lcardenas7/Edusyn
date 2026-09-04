@@ -101,7 +101,7 @@ export class ReportsController {
   }
 
   @Put('report-card-templates/selections')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async upsertTemplateSelection(
     @Request() req,
     @Body() body: { gradeId?: string | null; academicStructure?: string | null; templateKey: string },
@@ -110,7 +110,7 @@ export class ReportsController {
   }
 
   @Delete('report-card-templates/selections/:id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async deleteTemplateSelection(@Request() req, @Param('id') id: string) {
     return this.reportsService.deleteTemplateSelection(this.getEffectiveInstitutionId(req), id);
   }
@@ -445,7 +445,7 @@ export class ReportsController {
   }
 
   @Put('report-card-config')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async updateReportCardConfig(@Request() req, @Body() data: any) {
     const institutionId = this.getEffectiveInstitutionId(req);
     return this.reportsService.updateReportCardConfig(institutionId, data);

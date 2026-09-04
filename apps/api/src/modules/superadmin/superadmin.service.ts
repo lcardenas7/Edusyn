@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInstitutionDto, UpdateInstitutionDto, UpdateInstitutionModulesDto } from './dto/create-institution.dto';
 import * as bcrypt from 'bcryptjs';
@@ -102,6 +102,15 @@ export class SuperadminService {
   async createInstitution(superAdminId: string, dto: CreateInstitutionDto) {
     await this.verifySuperAdmin(superAdminId);
 
+    // La coincidencia de cargos concede la unión de dos conjuntos de permisos.
+    // Debe ser una decisión explícita, incluso para llamadores que no pasen por
+    // ValidationPipe (scripts, pruebas o integraciones internas).
+    if (dto.rectorSameAsAdmin !== true && dto.rectorSameAsAdmin !== false) {
+      throw new BadRequestException(
+        'Debes indicar si el rector y el administrador institucional son la misma persona.',
+      );
+    }
+
     // Verificar que el slug no exista
     const existingSlug = await this.prisma.institution.findUnique({
       where: { slug: dto.slug },
@@ -121,7 +130,7 @@ export class SuperadminService {
     }
 
     // ── Rector: validar solo si es una persona distinta del administrador ──
-    const rectorSeparate = dto.rectorSameAsAdmin === false;
+    const rectorSeparate = !dto.rectorSameAsAdmin;
     if (rectorSeparate) {
       if (!dto.rectorFirstName || !dto.rectorLastName || !dto.rectorEmail) {
         throw new ConflictException('Datos del rector incompletos (nombre, apellido y email son requeridos).');

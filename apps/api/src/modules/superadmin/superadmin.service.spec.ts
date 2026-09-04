@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { SuperadminService } from './superadmin.service';
 
 /**
@@ -54,6 +54,13 @@ describe('SuperadminService.createInstitution — validaciones (Módulo 1)', () 
   it('rechaza a un usuario que NO es SuperAdmin (403)', async () => {
     const svc = makeService({ isSuperAdmin: false });
     await expect(svc.createInstitution('user-1', baseDto())).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('exige decidir expresamente si rector y administrador son la misma persona (400)', async () => {
+    const svc = makeService();
+    await expect(
+      svc.createInstitution('sa', baseDto({ rectorSameAsAdmin: undefined })),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rechaza slug duplicado (409)', async () => {

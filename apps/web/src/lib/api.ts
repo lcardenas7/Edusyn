@@ -1248,7 +1248,7 @@ export const superadminApi = {
     adminUsername?: string;
     adminPassword?: string;
     modules?: string[];
-    rectorSameAsAdmin?: boolean;
+    rectorSameAsAdmin: boolean;
     rectorFirstName?: string;
     rectorLastName?: string;
     rectorEmail?: string;
