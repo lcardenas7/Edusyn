@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PermissionAuditAction } from '@prisma/client';
+import { expandEffectiveRoles, hasInstitutionalAdminAuthority } from '../auth/role-hierarchy';
 
 export interface PermissionCheck {
   hasPermission: boolean;
@@ -69,7 +70,7 @@ export class PermissionsService {
       (iu: any) => (iu.institutionUserRoles || []).map((r: any) => r.role.name),
     );
     const allRoleNames = new Set<string>([...globalRoleNames, ...tenantRoleNames]);
-    if (allRoleNames.has('ADMIN_INSTITUTIONAL')) {
+    if (hasInstitutionalAdminAuthority([...allRoleNames])) {
       return { hasPermission: true, source: 'ROLE' };
     }
 
@@ -96,7 +97,7 @@ export class PermissionsService {
     // (El acceso total de ADMIN_INSTITUTIONAL ya se resolvió en el paso 2.1.)
 
     // 5. Verificar permisos base del rol (herencia de todos los roles)
-    const userRoles = user.roles.map(r => r.role.name);
+    const userRoles = expandEffectiveRoles(user.roles.map(r => r.role.name));
     
     for (const roleName of userRoles) {
       const rolePermission = await this.prisma.roleBasePermission.findFirst({

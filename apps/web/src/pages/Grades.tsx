@@ -111,11 +111,6 @@ export default function Grades() {
   
   const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN') || userRoles.includes('COORDINADOR')
   const isTeacher = userRoles.includes('DOCENTE')
-  // El rector supervisa, no captura. Su perfil no figura en los controladores
-  // de notas, de modo que esta pantalla no debe pedirles nada ni intentar
-  // dibujarse: sin esta salida, sus peticiones se rechazan y la vista queda
-  // vacía o rota.
-  const sinAccesoACaptura = userRoles.includes('RECTOR') && !isAdmin && !isTeacher
   
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -382,8 +377,6 @@ export default function Grades() {
   // Cargar asignaciones del docente
   useEffect(() => {
     const fetchAssignments = async () => {
-      // Ninguna peticion de notas sale para un perfil sin permiso sobre ellas.
-      if (sinAccesoACaptura) return
       setLoading(true)
       setError(null)
       try {
@@ -407,7 +400,7 @@ export default function Grades() {
       }
     }
     fetchAssignments()
-  }, [user?.id, isTeacher, sinAccesoACaptura])
+  }, [user?.id, isTeacher])
 
   // Cargar estado de períodos
   useEffect(() => {
@@ -1646,22 +1639,6 @@ export default function Grades() {
   // ============================================
   // RENDER
   // ============================================
-
-  // Salida temprana, despues de todos los hooks para no alterar su orden.
-  if (sinAccesoACaptura) {
-    return (
-      <div>
-        <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Calificaciones</h1>
-        </div>
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-900 max-w-2xl">
-          El registro de calificaciones está reservado al personal académico autorizado.
-          Tu perfil de rector tiene acceso de consulta a la información académica
-          institucional, pero no a la captura de notas.
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div>

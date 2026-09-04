@@ -22,7 +22,10 @@ export class InstitutionsController {
   // (superadmin.service.createInstitution). Este controlador solo consulta.
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  // El listado global pertenece a la plataforma. La institución actual se
+  // obtiene desde el JWT en los endpoints institucionales; ni Admin ni Rector
+  // deben poder enumerar otros tenants.
+  @Roles('SUPERADMIN')
   async list() {
     return this.institutionsService.list();
   }

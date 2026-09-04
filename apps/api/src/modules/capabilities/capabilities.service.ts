@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { hasInstitutionalAdminAuthority } from '../auth/role-hierarchy';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CATÁLOGO DE CAPABILITIES
@@ -233,7 +234,7 @@ export class CapabilitiesService {
     if (user.isSuperAdmin) return true;
 
     const roleNames = user.roles.map((r) => r.role.name);
-    if (roleNames.includes('ADMIN_INSTITUTIONAL')) return true;
+    if (hasInstitutionalAdminAuthority(roleNames)) return true;
 
     // 3. Determinar los roles efectivos del usuario
     const effectiveRoles: string[] = [];
@@ -319,10 +320,12 @@ export class CapabilitiesService {
     }
 
     const roleNames = user.roles.map((r) => r.role.name);
-    if (roleNames.includes('ADMIN_INSTITUTIONAL')) {
+    if (hasInstitutionalAdminAuthority(roleNames)) {
       return {
         capabilities: CAPABILITY_CATALOG.map((c) => c.key),
-        effectiveRoles: ['ADMIN_INSTITUTIONAL'],
+        effectiveRoles: roleNames.includes('RECTOR')
+          ? ['RECTOR', 'ADMIN_INSTITUTIONAL']
+          : ['ADMIN_INSTITUTIONAL'],
         isTutor: false,
         tutorGroupIds: [],
         teacherAssignmentGroupIds: [],

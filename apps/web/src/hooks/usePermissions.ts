@@ -89,7 +89,7 @@ export function usePermissions() {
     if (isSuperAdmin) return true
 
     // Admin Institucional tiene acceso total dentro de su institución
-    const isInstitutionAdmin = roleNames.includes('ADMIN_INSTITUTIONAL')
+    const isInstitutionAdmin = roleNames.includes('ADMIN_INSTITUTIONAL') || roleNames.includes('RECTOR')
     if (isInstitutionAdmin) return true
     
     // Verificar en permisos cargados

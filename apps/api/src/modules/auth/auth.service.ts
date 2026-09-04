@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../iam/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { expandEffectiveRoles } from './role-hierarchy';
 
 @Injectable()
 export class AuthService {
@@ -227,6 +228,8 @@ export class AuthService {
       });
       roles = globalRoles.map(r => r.role.name);
     }
+
+    roles = expandEffectiveRoles(roles);
 
     // TTL escalonado por nivel de privilegio
     const ttl = this.getTtlForRoles(roles, isSuperAdmin);

@@ -174,13 +174,13 @@ describe('Reportes · contrato de acceso del rector', () => {
     return guard.canActivate(context);
   };
 
-  const ESCRITURAS_DE_GOBIERNO_RECTOR = [
+  const ESCRITURAS_ADMIN_INSTITUCIONAL = [
     'upsertTemplateSelection',
     'deleteTemplateSelection',
     'updateReportCardConfig',
   ];
 
-  const ESCRITURAS_PROHIBIDAS = [
+  const ESCRITURAS_OPERATIVAS = [
     'generateBulkReportCards',
     'closeTerm',
     'finalizeTerm',
@@ -213,30 +213,17 @@ describe('Reportes · contrato de acceso del rector', () => {
     expect(evaluarGuard(metodo as string, ['RECTOR'])).toBe(true);
   });
 
-  it('el rector solo gobierna la configuracion de boletines entre las escrituras', () => {
-    expect(escrituras.filter((r) => r.roles.includes('RECTOR')).map((r) => r.metodo).sort())
-      .toEqual([...ESCRITURAS_DE_GOBIERNO_RECTOR].sort());
-  });
-
   it('el inventario de escrituras es exactamente el acordado', () => {
     expect(escrituras.map((r) => r.metodo).sort())
-      .toEqual([...ESCRITURAS_DE_GOBIERNO_RECTOR, ...ESCRITURAS_PROHIBIDAS].sort());
+      .toEqual([...ESCRITURAS_ADMIN_INSTITUCIONAL, ...ESCRITURAS_OPERATIVAS].sort());
   });
 
-  it.each(ESCRITURAS_DE_GOBIERNO_RECTOR)('el guard admite al rector para gobernar %s', (metodo) => {
+  it.each([...ESCRITURAS_ADMIN_INSTITUCIONAL, ...ESCRITURAS_OPERATIVAS])(
+    'el guard admite al rector como autoridad institucional en %s',
+    (metodo) => {
     expect(evaluarGuard(metodo, ['RECTOR'])).toBe(true);
-  });
-
-  it.each(ESCRITURAS_PROHIBIDAS)('el guard rechaza al rector en %s', (metodo) => {
-    expect(() => evaluarGuard(metodo, ['RECTOR'])).toThrow(ForbiddenException);
-  });
-
-  it('el rechazo es tipado, no un error generico que saldria como 500', () => {
-    let capturado: unknown;
-    try { evaluarGuard('closeTerm', ['RECTOR']); } catch (e) { capturado = e; }
-    expect(capturado).toBeInstanceOf(ForbiddenException);
-    expect((capturado as ForbiddenException).getStatus()).toBe(403);
-  });
+    },
+  );
 
   it('toda ruta conserva SUPERADMIN y ADMIN_INSTITUTIONAL', () => {
     expect(rutas

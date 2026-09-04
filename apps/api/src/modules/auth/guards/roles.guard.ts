@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@
 import { Reflector } from '@nestjs/core';
 
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { expandEffectiveRoles } from '../role-hierarchy';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -33,7 +34,8 @@ export class RolesGuard implements CanActivate {
       }).filter(Boolean);
     }
 
-    const hasRole = requiredRoles.some((r) => roles.includes(r));
+    const effectiveRoles = expandEffectiveRoles(roles);
+    const hasRole = requiredRoles.some((r) => effectiveRoles.includes(r));
     
     if (!hasRole) {
       throw new ForbiddenException(`Acceso denegado. Se requiere uno de estos roles: ${requiredRoles.join(', ')}`);

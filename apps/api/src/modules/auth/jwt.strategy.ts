@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { expandEffectiveRoles } from './role-hierarchy';
 
 export type JwtPayload = {
   sub: string;
@@ -27,7 +28,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return { 
       id: payload.sub, 
       email: payload.email, 
-      roles: payload.roles,
+      // También expande tokens emitidos antes de esta política. No cambia el
+      // tenant ni isSuperAdmin; solo materializa la jerarquía institucional.
+      roles: expandEffectiveRoles(payload.roles),
       institutionId: payload.institutionId || null,
       isSuperAdmin: payload.isSuperAdmin === true,
       institutionUserId: payload.institutionUserId || null,

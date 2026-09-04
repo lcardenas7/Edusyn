@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { authApi } from '../lib/api'
+import { withEffectiveInstitutionalRoles } from '../lib/roleHierarchy'
 
 interface InstitutionModule {
   module: string
@@ -20,7 +21,9 @@ interface User {
   email: string
   firstName: string
   lastName: string
-  roles: { role: { name: string } }[]
+  // El backend histórico entrega strings al iniciar sesión y objetos anidados
+  // desde /auth/me. Se conserva la compatibilidad mientras se unifica el DTO.
+  roles: any[]
   institution?: Institution
   isSuperAdmin?: boolean
   signatureImageUrl?: string
@@ -55,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       authApi.me()
         .then((res) => {
-          setUser(res.data)
+          setUser({ ...res.data, roles: withEffectiveInstitutionalRoles(res.data.roles) })
           if (res.data.institution) {
             setInstitution(res.data.institution)
           }
@@ -73,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password)
     localStorage.setItem('token', res.data.access_token)
-    const userData = res.data.user
+    const userData = {
+      ...res.data.user,
+      roles: withEffectiveInstitutionalRoles(res.data.user?.roles),
+    }
     setUser(userData)
     if (userData?.institution) {
       setInstitution(userData.institution)
