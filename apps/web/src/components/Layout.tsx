@@ -420,16 +420,23 @@ export default function Layout({ children }: { children: ReactNode }) {
       .filter((item: NavItem) => !item.children || item.children.length > 0)
   }, [userRoles, navigation, isSuperAdmin, hasModule, hasDimensionsGroups, delegatedPermissions])
 
-  // Auto-expandir menú si la ruta actual está en un submenú
-  useMemo(() => {
-    const currentPath = location.pathname
-    filteredNavigation.forEach(item => {
-      if (item.children?.some(child => child.href === currentPath)) {
-        if (!expandedMenus.includes(item.name)) {
-          setExpandedMenus(prev => [...prev, item.name])
-        }
-      }
-    })
+  // El cambio de ruta confirmado cierra el panel móvil. No se hace desde el
+  // onClick del Link para no competir con la actualización del enrutador.
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
+
+  // Auto-expandir el padre de la ruta activa después del render. Antes se
+  // hacía con useMemo y actualizaba estado durante la fase de render.
+  useEffect(() => {
+    const activeParent = filteredNavigation.find(item =>
+      item.children?.some(child => child.href === location.pathname),
+    )
+    if (!activeParent) return
+
+    setExpandedMenus(prev =>
+      prev.includes(activeParent.name) ? prev : [...prev, activeParent.name],
+    )
   }, [location.pathname, filteredNavigation])
 
   // Función para cambiar contraseña
@@ -596,7 +603,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                           <Link
                             key={child.name}
                             to={child.href!}
-                            onClick={handleNavClick}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                               isChildItemActive
                                 ? 'bg-blue-50 text-blue-700 font-medium'
@@ -635,7 +641,6 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Link
                 key={item.name}
                 to={item.href!}
-                onClick={handleNavClick}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700'
