@@ -22,7 +22,7 @@ describe('StudentGradesService.calculateTermGradeAtDate', () => {
         }),
       },
     };
-    return new StudentGradesService(prisma);
+    return new StudentGradesService(prisma, { record: jest.fn(), recordMany: jest.fn() } as any);
   }
 
   it('SIN plan + parciales → promedio simple (no "s/d")', async () => {

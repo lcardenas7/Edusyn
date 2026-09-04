@@ -13,12 +13,21 @@ export interface GradeAuditEventInput {
   source?: string; // default 'PARTIAL_GRADE'
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   partialGradeId?: string | null;
+  /** Id del registro afectado para los orígenes distintos de la nota parcial. */
+  recordId?: string | null;
+  /** Motivo declarado; solo lo exigen las operaciones de ciclo de período. */
+  reason?: string | null;
+  /** Correlación de lote: una escritura masiva comparte el mismo valor. */
+  batchId?: string | null;
   studentEnrollmentId?: string | null;
   teacherAssignmentId?: string | null;
   academicTermId?: string | null;
   componentType?: string | null;
   activityIndex?: number | null;
   activityName?: string | null;
+  subjectId?: string | null;
+  finalComponentId?: string | null;
+  evaluativeActivityId?: string | null;
   previousScore?: number | null;
   newScore?: number | null;
   previousValue?: any;
@@ -53,12 +62,18 @@ export class GradeAuditService {
           actorName: actor?.name ?? null,
           actorRole: actor?.role ?? null,
           partialGradeId: e.partialGradeId ?? null,
+          recordId: e.recordId ?? null,
+          reason: e.reason ?? null,
+          batchId: e.batchId ?? null,
           studentEnrollmentId: e.studentEnrollmentId ?? null,
           teacherAssignmentId: e.teacherAssignmentId ?? null,
           academicTermId: e.academicTermId ?? null,
           componentType: e.componentType ?? null,
           activityIndex: e.activityIndex ?? null,
           activityName: e.activityName ?? null,
+          subjectId: e.subjectId ?? null,
+          finalComponentId: e.finalComponentId ?? null,
+          evaluativeActivityId: e.evaluativeActivityId ?? null,
           previousScore: e.previousScore ?? null,
           newScore: e.newScore ?? null,
           previousValue: e.previousValue ?? undefined,

@@ -1,22 +1,35 @@
+import { randomUUID } from 'crypto';
+
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertStudentGradeDto } from './dto/upsert-student-grade.dto';
 import { filterApplicableComponents } from './final-component-scope.util';
+import { GradeAuditActor, GradeAuditService } from './grade-audit.service';
+
+/** Origen de auditoría de esta superficie: la nota de una actividad evaluativa. */
+const AUDIT_SOURCE = 'STUDENT_GRADE';
 
 @Injectable()
 export class StudentGradesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gradeAudit: GradeAuditService,
+  ) {}
 
-  async upsert(dto: UpsertStudentGradeDto) {
+  async upsert(dto: UpsertStudentGradeDto, actor?: GradeAuditActor, batchId?: string) {
     const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
-    return this.prisma.studentGrade.upsert({
-      where: {
-        studentEnrollmentId_evaluativeActivityId: {
-          studentEnrollmentId: dto.studentEnrollmentId,
-          evaluativeActivityId: dto.evaluativeActivityId,
-        },
-      },
+    const key = {
+      studentEnrollmentId: dto.studentEnrollmentId,
+      evaluativeActivityId: dto.evaluativeActivityId,
+    };
+    // Lectura previa: sin ella no hay valor anterior que registrar.
+    const prev = await this.prisma.studentGrade.findUnique({
+      where: { studentEnrollmentId_evaluativeActivityId: key },
+      select: { id: true, score: true },
+    });
+    const result = await this.prisma.studentGrade.upsert({
+      where: { studentEnrollmentId_evaluativeActivityId: key },
       update: {
         score: dto.score,
         observations: dto.observations,
@@ -29,17 +42,48 @@ export class StudentGradesService {
         observations: dto.observations,
       },
     });
+
+    const previousScore = prev ? Number(prev.score) : null;
+    // Guardar sin cambiar la nota no genera evento.
+    if (!prev || previousScore !== dto.score) {
+      await this.gradeAudit.record(
+        {
+          institutionId: enr!.institutionId,
+          source: AUDIT_SOURCE,
+          action: prev ? 'UPDATE' : 'CREATE',
+          recordId: result.id,
+          studentEnrollmentId: dto.studentEnrollmentId,
+          evaluativeActivityId: dto.evaluativeActivityId,
+          previousScore,
+          newScore: dto.score,
+          batchId: batchId ?? null,
+        },
+        actor,
+      );
+    }
+
+    return result;
   }
 
-  async bulkUpsert(evaluativeActivityId: string, grades: { studentEnrollmentId: string; score: number; observations?: string }[]) {
+  async bulkUpsert(
+    evaluativeActivityId: string,
+    grades: { studentEnrollmentId: string; score: number; observations?: string }[],
+    actor?: GradeAuditActor,
+  ) {
+    // Toda la carga masiva comparte correlación: ocurrió como una sola acción.
+    const batchId = randomUUID();
     const results = await Promise.all(
       grades.map((g) =>
-        this.upsert({
-          studentEnrollmentId: g.studentEnrollmentId,
-          evaluativeActivityId,
-          score: g.score,
-          observations: g.observations,
-        }),
+        this.upsert(
+          {
+            studentEnrollmentId: g.studentEnrollmentId,
+            evaluativeActivityId,
+            score: g.score,
+            observations: g.observations,
+          },
+          actor,
+          batchId,
+        ),
       ),
     );
     return results;

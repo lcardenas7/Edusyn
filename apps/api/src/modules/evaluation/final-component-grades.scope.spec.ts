@@ -34,9 +34,11 @@ describe('FinalComponentGradesService — la guarda de alcance en la captura', (
       },
       finalComponentScope: { findMany: jest.fn().mockResolvedValue(opts.reglas ?? []) },
       studentEnrollment: { findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1' }) },
-      finalComponentGrade: { upsert },
+      // La auditoria obliga a leer el registro previo antes de escribir; sin
+      // valor anterior no habria nada forense que registrar.
+      finalComponentGrade: { upsert, findUnique: jest.fn().mockResolvedValue(null), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
-    return { svc: new FinalComponentGradesService(prisma), prisma, upsert };
+    return { svc: new FinalComponentGradesService(prisma, { record: jest.fn(), recordMany: jest.fn() } as any), prisma, upsert };
   }
 
   const REGLA_EXCLUYE = [{ finalComponentId: 'fc1', gradeId: 'g8', subjectId: null, applies: false }];

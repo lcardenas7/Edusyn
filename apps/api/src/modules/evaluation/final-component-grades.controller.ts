@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { FinalComponentGradesService } from './final-component-grades.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { actorFromRequest } from './grade-audit-actor.util';
 
 @Controller('final-component-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,8 +35,8 @@ export class FinalComponentGradesController {
     teacherAssignmentId: string;
     finalComponentId: string;
     grade: number;
-  }) {
-    return this.service.upsert(body);
+  }, @Request() req: any) {
+    return this.service.upsert(body, actorFromRequest(req));
   }
 
   @Post('bulk-upsert')
@@ -45,13 +46,13 @@ export class FinalComponentGradesController {
     teacherAssignmentId: string;
     finalComponentId: string;
     grade: number;
-  }>) {
-    return this.service.bulkUpsert(body);
+  }>, @Request() req: any) {
+    return this.service.bulkUpsert(body, actorFromRequest(req));
   }
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(@Param('id') id: string, @Request() req: any) {
+    return this.service.remove(id, actorFromRequest(req));
   }
 }

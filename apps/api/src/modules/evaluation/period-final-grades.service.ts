@@ -1,9 +1,18 @@
+import { randomUUID } from 'crypto';
+
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GradeAuditActor, GradeAuditService } from './grade-audit.service';
+
+/** Origen de auditoría de esta superficie: la nota final del período. */
+const AUDIT_SOURCE = 'PERIOD_FINAL_GRADE';
 
 @Injectable()
 export class PeriodFinalGradesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gradeAudit: GradeAuditService,
+  ) {}
 
   /**
    * Valida que el período NO esté FINALIZED.
@@ -22,23 +31,32 @@ export class PeriodFinalGradesService {
     }
   }
 
-  async upsert(data: {
-    studentEnrollmentId: string;
-    academicTermId: string;
-    subjectId: string;
-    finalScore: number;
-    observations?: string;
-    enteredById: string;
-  }) {
+  async upsert(
+    data: {
+      studentEnrollmentId: string;
+      academicTermId: string;
+      subjectId: string;
+      finalScore: number;
+      observations?: string;
+      enteredById: string;
+    },
+    actor?: GradeAuditActor,
+    batchId?: string,
+  ) {
     await this.guardTermNotFinalized(data.academicTermId);
-    return this.prisma.periodFinalGrade.upsert({
-      where: {
-        studentEnrollmentId_academicTermId_subjectId: {
-          studentEnrollmentId: data.studentEnrollmentId,
-          academicTermId: data.academicTermId,
-          subjectId: data.subjectId,
-        },
-      },
+    const key = {
+      studentEnrollmentId: data.studentEnrollmentId,
+      academicTermId: data.academicTermId,
+      subjectId: data.subjectId,
+    };
+    // Lectura previa: `upsert` no distingue alta de modificación y descarta el
+    // valor anterior, que es justo lo que da valor forense al rastro.
+    const prev = await this.prisma.periodFinalGrade.findUnique({
+      where: { studentEnrollmentId_academicTermId_subjectId: key },
+      select: { id: true, finalScore: true, institutionId: true },
+    });
+    const result = await this.prisma.periodFinalGrade.upsert({
+      where: { studentEnrollmentId_academicTermId_subjectId: key },
       update: {
         finalScore: data.finalScore,
         observations: data.observations,
@@ -58,6 +76,28 @@ export class PeriodFinalGradesService {
         enteredBy: { select: { firstName: true, lastName: true } },
       },
     });
+
+    const previousScore = prev ? Number(prev.finalScore) : null;
+    // Guardar sin cambiar la nota no genera evento.
+    if (!prev || previousScore !== data.finalScore) {
+      await this.gradeAudit.record(
+        {
+          institutionId: result.institutionId,
+          source: AUDIT_SOURCE,
+          action: prev ? 'UPDATE' : 'CREATE',
+          recordId: result.id,
+          studentEnrollmentId: data.studentEnrollmentId,
+          academicTermId: data.academicTermId,
+          subjectId: data.subjectId,
+          previousScore,
+          newScore: data.finalScore,
+          batchId: batchId ?? null,
+        },
+        actor,
+      );
+    }
+
+    return result;
   }
 
   async findByGroup(groupId: string, academicTermId: string) {
@@ -102,15 +142,39 @@ export class PeriodFinalGradesService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, actor?: GradeAuditActor) {
     const grade = await this.prisma.periodFinalGrade.findUnique({
       where: { id },
-      select: { academicTermId: true },
+      select: {
+        academicTermId: true,
+        finalScore: true,
+        institutionId: true,
+        studentEnrollmentId: true,
+        subjectId: true,
+      },
     });
     if (grade) {
       await this.guardTermNotFinalized(grade.academicTermId);
     }
-    return this.prisma.periodFinalGrade.delete({ where: { id } });
+    const result = await this.prisma.periodFinalGrade.delete({ where: { id } });
+
+    if (grade) {
+      await this.gradeAudit.record(
+        {
+          institutionId: grade.institutionId,
+          source: AUDIT_SOURCE,
+          action: 'DELETE',
+          recordId: id,
+          studentEnrollmentId: grade.studentEnrollmentId,
+          academicTermId: grade.academicTermId,
+          subjectId: grade.subjectId,
+          previousScore: Number(grade.finalScore),
+          newScore: null,
+        },
+        actor,
+      );
+    }
+    return result;
   }
 
   async bulkUpsert(
@@ -122,13 +186,13 @@ export class PeriodFinalGradesService {
       observations?: string;
     }>,
     enteredById: string,
+    actor?: GradeAuditActor,
   ) {
+    // Toda la carga masiva comparte correlación: ocurrió como una sola acción.
+    const batchId = randomUUID();
     const results: any[] = [];
     for (const grade of grades) {
-      const result = await this.upsert({
-        ...grade,
-        enteredById,
-      });
+      const result = await this.upsert({ ...grade, enteredById }, actor, batchId);
       results.push(result);
     }
     return results;

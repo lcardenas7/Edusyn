@@ -3,6 +3,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PeriodFinalGradesService } from './period-final-grades.service';
+import { actorFromRequest } from './grade-audit-actor.util';
 
 @Controller('period-final-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,16 +13,16 @@ export class PeriodFinalGradesController {
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async upsert(@Body() data: any, @Req() req: any) {
-    return this.periodFinalGradesService.upsert({
-      ...data,
-      enteredById: req.user.id,
-    });
+    return this.periodFinalGradesService.upsert(
+      { ...data, enteredById: req.user.id },
+      actorFromRequest(req),
+    );
   }
 
   @Post('bulk')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async bulkUpsert(@Body() data: { grades: any[] }, @Req() req: any) {
-    return this.periodFinalGradesService.bulkUpsert(data.grades, req.user.id);
+    return this.periodFinalGradesService.bulkUpsert(data.grades, req.user.id, actorFromRequest(req));
   }
 
   @Get('by-group')
@@ -44,7 +45,7 @@ export class PeriodFinalGradesController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async delete(@Param('id') id: string) {
-    return this.periodFinalGradesService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    return this.periodFinalGradesService.delete(id, actorFromRequest(req));
   }
 }

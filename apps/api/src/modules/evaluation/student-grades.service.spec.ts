@@ -32,7 +32,7 @@ describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
     prisma.periodFinalGrade.findUnique.mockResolvedValue({ finalScore: 4.0 });
     prisma.finalComponent.findMany.mockResolvedValue([]);
 
-    const svc = new StudentGradesService(prisma as any);
+    const svc = new StudentGradesService(prisma as any, { record: jest.fn(), recordMany: jest.fn() } as any);
     const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
 
     expect(res.annualGrade).toBe(4.0);
@@ -55,7 +55,7 @@ describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
     prisma.partialGrade.findMany.mockResolvedValue([{ componentType: 'COG', score: 3.5 }]);
     prisma.finalComponent.findMany.mockResolvedValue([]);
 
-    const svc = new StudentGradesService(prisma as any);
+    const svc = new StudentGradesService(prisma as any, { record: jest.fn(), recordMany: jest.fn() } as any);
     const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
 
     expect(res.annualGrade).toBe(3.5);
@@ -74,7 +74,7 @@ describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
     prisma.partialGrade.findMany.mockResolvedValue([{ componentType: 'COG', score: 3.0 }]);
     prisma.finalComponent.findMany.mockResolvedValue([]);
 
-    const svc = new StudentGradesService(prisma as any);
+    const svc = new StudentGradesService(prisma as any, { record: jest.fn(), recordMany: jest.fn() } as any);
     const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
 
     expect(res.annualGrade).toBe(3.0);

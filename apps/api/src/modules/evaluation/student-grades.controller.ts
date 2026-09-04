@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { BulkUpsertGradesDto, UpsertStudentGradeDto } from './dto/upsert-student-grade.dto';
 import { StudentGradesService } from './student-grades.service';
+import { actorFromRequest } from './grade-audit-actor.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
@@ -26,14 +27,14 @@ export class StudentGradesController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async upsert(@Body() dto: UpsertStudentGradeDto) {
-    return this.studentGradesService.upsert(dto);
+  async upsert(@Body() dto: UpsertStudentGradeDto, @Request() req: any) {
+    return this.studentGradesService.upsert(dto, actorFromRequest(req));
   }
 
   @Post('bulk')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async bulkUpsert(@Body() dto: BulkUpsertGradesDto) {
-    return this.studentGradesService.bulkUpsert(dto.evaluativeActivityId, dto.grades);
+  async bulkUpsert(@Body() dto: BulkUpsertGradesDto, @Request() req: any) {
+    return this.studentGradesService.bulkUpsert(dto.evaluativeActivityId, dto.grades, actorFromRequest(req));
   }
 
   @Get('by-activity')

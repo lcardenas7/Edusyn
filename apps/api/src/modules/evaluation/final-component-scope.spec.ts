@@ -186,7 +186,7 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
         }),
       },
     };
-    const svc = new StudentGradesService(prisma);
+    const svc = new StudentGradesService(prisma, { record: jest.fn(), recordMany: jest.fn() } as any);
     jest.spyOn(svc as any, 'calculateTermGrade').mockResolvedValue({ grade: null, components: [] });
     return { svc, prisma, scopeFindMany };
   }

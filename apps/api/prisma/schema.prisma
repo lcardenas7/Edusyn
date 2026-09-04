@@ -1942,18 +1942,34 @@ model GradeAuditEvent {
 
   // Contexto del registro afectado
   partialGradeId      String? // id del registro (null tras DELETE)
+  // Identificador generico del registro afectado. `partialGradeId` solo sirve
+  // para el origen PARTIAL_GRADE; los demas origenes escriben aqui.
+  recordId            String?
   studentEnrollmentId String?
   teacherAssignmentId String?
   academicTermId      String?
   componentType       String?
   activityIndex       Int?
   activityName        String?
+  // Identificadores propios de cada origen. Se guardan aparte en vez de
+  // reutilizar `componentType`, que significa otra cosa en la nota parcial.
+  subjectId            String?
+  finalComponentId     String?
+  evaluativeActivityId String?
 
   // Valores (lo forense): nota anterior y nueva
   previousScore Decimal? @db.Decimal(5, 2)
   newScore      Decimal? @db.Decimal(5, 2)
   previousValue Json?
   newValue      Json?
+
+  // Motivo declarado por el actor. Obligatorio solo donde el gobierno del ciclo
+  // de periodo lo exija; el resto de operaciones lo dejan nulo.
+  reason String?
+
+  // Correlacion de lote: una escritura masiva emite un evento por estudiante y
+  // todos comparten este identificador, para leerse como una sola accion.
+  batchId String?
 
   performedAt DateTime @default(now())
 
@@ -1963,6 +1979,7 @@ model GradeAuditEvent {
   @@index([studentEnrollmentId])
   @@index([teacherAssignmentId, academicTermId])
   @@index([actorUserId])
+  @@index([batchId])
 }
 
 // Auditoría forense de asistencia (append-only). Mismo enfoque que GradeAuditEvent.

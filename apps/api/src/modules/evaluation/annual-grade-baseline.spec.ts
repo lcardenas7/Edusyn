@@ -68,7 +68,7 @@ describe('calculateAnnualGrade — línea base antes del alcance por grado', () 
       },
     };
 
-    const svc = new StudentGradesService(prisma);
+    const svc = new StudentGradesService(prisma, { record: jest.fn(), recordMany: jest.fn() } as any);
     // Sin PeriodFinalGrade el servicio recalcula desde PartialGrade; en estas
     // pruebas la nota canónica es la única fuente, así que anulamos el respaldo.
     jest.spyOn(svc as any, 'calculateTermGrade').mockResolvedValue({ grade: null, components: [] });
