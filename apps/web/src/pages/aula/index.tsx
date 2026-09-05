@@ -18,6 +18,7 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { alertDialog } from '../../components/ui/confirm'
 import { AulaShell } from './ui/AulaShell'
 import { AulaState, EmptyState } from './ui/EmptyState'
 import { LiveSessionBanner } from './ui/LiveSessionBanner'
@@ -150,6 +151,23 @@ export default function AulaVirtual() {
     [classroomId, navigate],
   )
 
+  /**
+   * Puente al aula actual para lo que todavía no se ha traído. Se avisa ANTES de saltar: un
+   * botón que te cambia de aula sin decírtelo se siente como un error de la aplicación.
+   */
+  const irAlAulaActualPara = useCallback(
+    async (que: 'crear' | 'valeria' | 'editar') => {
+      const textos: Record<typeof que, string> = {
+        crear: 'Crear actividades todavía se hace en el aula de siempre. Te llevamos allí; abre esta misma aula y usa "Nueva Actividad". Lo que crees aparecerá también aquí.',
+        valeria: 'Pedirle contenido a Valeria todavía se hace en el aula de siempre. Te llevamos allí.',
+        editar: 'Editar una actividad todavía se hace en el aula de siempre. Te llevamos allí.',
+      }
+      await alertDialog(textos[que], { title: 'Esto aún vive en el aula anterior' })
+      navigate('/classroom')
+    },
+    [navigate],
+  )
+
   const verActividades = useCallback(
     (estado?: string) => {
       if (!classroomId) return
@@ -229,7 +247,7 @@ export default function AulaVirtual() {
             aulaId={classroomId}
             rol={rol}
             onVolver={() => verActividades()}
-            onIrAlAulaActual={() => navigate('/classroom')}
+            onIrAlAulaActual={() => irAlAulaActualPara('editar')}
             onAbrirActividad={abrirActividad}
           />
         ) : vista === 'hoy' ? (
@@ -243,6 +261,12 @@ export default function AulaVirtual() {
             anuncios={aula?.anuncios ?? []}
             onAbrirActividad={abrirActividad}
             onVerActividades={verActividades}
+            // Crear todavía vive en el aula actual (el formulario por intención y el editor de
+            // preguntas no son componentes reutilizables). Se ofrece igual: sin estos botones
+            // el docente entra al aula nueva y no encuentra por dónde crear, que es peor que
+            // un puente honesto.
+            onCrear={rol === 'docente' ? () => irAlAulaActualPara('crear') : undefined}
+            onValeria={rol === 'docente' ? () => irAlAulaActualPara('valeria') : undefined}
           />
         ) : vista === 'unidades' ? (
           <Unidades
@@ -252,8 +276,8 @@ export default function AulaVirtual() {
             actividades={actividades}
             periodo={periodo}
             onAbrirActividad={abrirActividad}
-            onAbrirMaterial={() => navigate('/classroom')}
-            onCrear={() => navigate('/classroom')}
+            onAbrirMaterial={() => irAlAulaActualPara('editar')}
+            onCrear={() => irAlAulaActualPara('crear')}
           />
         ) : vista === 'actividades' ? (
           <Actividades
@@ -263,6 +287,7 @@ export default function AulaVirtual() {
             onPeriodo={cambiarPeriodo}
             filtroEstadoInicial={filtroEstado}
             onAbrirActividad={abrirActividad}
+            onCrear={rol === 'docente' ? () => irAlAulaActualPara('crear') : undefined}
           />
         ) : vista === 'notas' ? (
           <Notas
