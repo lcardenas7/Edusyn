@@ -14,6 +14,7 @@ import { classroomApi } from '../../../lib/api'
 import { parseApiError } from '../../../lib/toast'
 import type { ActivityLike } from '../model/activityState'
 import type { AnnouncementLike } from '../model/today'
+import { ordenarPeriodos } from '../model/periodos'
 import type { PeriodoOpcion } from '../ui/AulaShell'
 import { leerUltimaVisita, marcarVisitada } from '../model/lastVisit'
 import { etiquetaDeGrupo } from '../model/grados'
@@ -38,7 +39,7 @@ export interface AulaCargada {
     title: string
     isVisible: boolean
     academicTermId?: string | null
-    materials: { id: string; type: string; title: string; isVisible: boolean; fileUrl?: string; content?: string }[]
+    materials: { id: string; type: string; title: string; isVisible: boolean; sortOrder?: number; fileUrl?: string; content?: string }[]
   }[]
 }
 
@@ -51,9 +52,15 @@ function normalizarAula(data: any): AulaCargada {
   const periodosCrudos: any[] = data?.academicPeriods ?? []
   const actual = data?.currentPeriod ?? null
 
-  const periodos: PeriodoOpcion[] = periodosCrudos
-    .map((p) => ({ id: p.id, name: p.name, activo: actual?.id === p.id }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+  // Ojo con el orden: por nombre salían "Cuarto, Primer, Segundo, Tercer".
+  const periodos: PeriodoOpcion[] = ordenarPeriodos(
+    periodosCrudos.map((p) => ({
+      id: p.id,
+      name: p.name,
+      activo: actual?.id === p.id,
+      orden: p.order ?? p.number ?? p.sequence ?? null,
+    })),
+  )
 
   return {
     id: data.id,

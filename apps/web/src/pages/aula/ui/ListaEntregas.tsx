@@ -19,6 +19,7 @@ import type { EntregaLike } from '../data/useActividad'
 import { agoCopy } from '../model/countdown'
 import { submissionStateMeta, TONE_CLASSES } from '../model/labels'
 import { EmptyState } from './EmptyState'
+import { textoLegible } from '../model/texto'
 
 const nombreDe = (e: EntregaLike): string => {
   const s = e.studentEnrollment?.student
@@ -217,7 +218,7 @@ function FilaEntrega({
           {entrega.content && (
             <div className="mb-3 rounded-lg bg-surface-2 p-3">
               <p className="text-xs font-semibold text-ink-secondary">Lo que entregó</p>
-              <p className="mt-1 text-body-sm whitespace-pre-wrap text-ink-primary">{entrega.content}</p>
+              <p className="mt-1 text-body-sm whitespace-pre-wrap break-words text-ink-primary">{textoLegible(entrega.content)}</p>
             </div>
           )}
           {entrega.fileUrl && (

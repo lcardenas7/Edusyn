@@ -32,6 +32,7 @@ import { Timeline } from '../ui/Timeline'
 import { EntregaTarea } from '../ui/EntregaTarea'
 import { ListaEntregas } from '../ui/ListaEntregas'
 import { CopiarActividad } from '../ui/CopiarActividad'
+import { textoLegible } from '../model/texto'
 
 const LessonPlayer = lazy(() => import('../../../components/LessonPlayer'))
 
@@ -113,17 +114,21 @@ export function ActividadDetalle({
             <h1 className="mt-0.5 break-words text-h1 leading-tight font-bold text-ink-primary">{a.title}</h1>
             {a.section?.title && <p className="mt-1 text-body-sm text-ink-muted">{a.section.title}</p>}
           </div>
-          {esDocente ? (
-            <TeacherStateChip
-              state={vistaDocente.state}
-              suffix={vistaDocente.state === 'por-calificar' ? `· ${vistaDocente.porCalificar}` : undefined}
-            />
-          ) : (
-            <StudentStateChip
-              state={vista.state}
-              suffix={vista.state === 'calificada' && vista.score != null ? `· ${vista.score.toFixed(1)}` : undefined}
-            />
-          )}
+          {/* En móvil el chip baja a su propia línea: compartiendo fila le dejaba al título
+              unos 165 px y "Tarea 1 Guía 1." salía partido en dos renglones sin necesidad. */}
+          <div className="order-last w-full sm:order-none sm:w-auto">
+            {esDocente ? (
+              <TeacherStateChip
+                state={vistaDocente.state}
+                suffix={vistaDocente.state === 'por-calificar' ? `· ${vistaDocente.porCalificar}` : undefined}
+              />
+            ) : (
+              <StudentStateChip
+                state={vista.state}
+                suffix={vista.state === 'calificada' && vista.score != null ? `· ${vista.score.toFixed(1)}` : undefined}
+              />
+            )}
+          </div>
         </header>
 
         {/* Cuándo pasa cada cosa */}
@@ -181,7 +186,9 @@ export function ActividadDetalle({
             <h2 className="text-body-sm font-semibold text-ink-secondary">Instrucciones</h2>
             {/* El texto viene del editor enriquecido del docente. Se limpia a texto plano
                 antes que confiar en insertar HTML de terceros en la página. */}
-            <p className="mt-1 text-body-base leading-relaxed whitespace-pre-wrap text-ink-primary">
+            {/* `break-words` porque esto lo escribe el docente: un enlace largo sin espacios
+                estiraba la página entera a 2000 px en un celular. */}
+            <p className="mt-1 text-body-base leading-relaxed whitespace-pre-wrap break-words text-ink-primary">
               {aTextoPlano(a.description)}
             </p>
           </section>
@@ -447,8 +454,11 @@ function AccionesDocente({
 
 /** HTML del editor → texto plano. */
 function aTextoPlano(html: string): string {
-  if (typeof document === 'undefined') return html.replace(/<[^>]*>/g, ' ')
+  if (typeof document === 'undefined') return textoLegible(html.replace(/<[^>]*>/g, ' '))
   const div = document.createElement('div')
   div.innerHTML = html
-  return (div.textContent ?? '').trim()
+  // `textoLegible` va aquí porque es AQUÍ donde aparecen los espacios duros: el navegador
+  // convierte cada `&nbsp;` del editor del docente en un U+00A0, y con esos el párrafo entero
+  // se vuelve una sola palabra que no cabe en un celular.
+  return textoLegible((div.textContent ?? '').trim())
 }

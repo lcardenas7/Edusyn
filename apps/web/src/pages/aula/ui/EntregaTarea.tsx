@@ -17,6 +17,7 @@ import type { ActivityLike, StudentView } from '../model/activityState'
 import type { EntregaLike } from '../data/useActividad'
 import { agoCopy, dueCopy } from '../model/countdown'
 import { submissionStateMeta, TONE_CLASSES } from '../model/labels'
+import { textoLegible } from '../model/texto'
 
 export function EntregaTarea({
   actividad,
@@ -125,7 +126,7 @@ export function EntregaTarea({
       {entrega?.feedback && (
         <div className="mt-3 rounded-lg border border-hairline bg-surface-2 px-4 py-3">
           <p className="text-body-sm font-semibold text-ink-primary">Comentario de tu profe</p>
-          <p className="mt-1 text-body-sm whitespace-pre-wrap text-ink-secondary">{entrega.feedback}</p>
+          <p className="mt-1 text-body-sm whitespace-pre-wrap break-words text-ink-secondary">{textoLegible(entrega.feedback)}</p>
         </div>
       )}
 
