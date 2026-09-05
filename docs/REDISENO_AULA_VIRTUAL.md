@@ -262,9 +262,9 @@ están hoy en producción.
 | # | Defecto | Evidencia |
 |---|---|---|
 | P0-1 | Copia de actividad opaca que produce copias "sin período", irreparables desde la UI | `Classroom.tsx:2704-2716`, `6451-6532`, `quickCreateSection` 2230-2240 |
-| P0-2 | "Cancelar programación" **publica** la actividad inmediatamente | `Classroom.tsx:5251` → `2533-2536` |
+| P0-2 | "Cancelar programación" **publica** la actividad inmediatamente | `Classroom.tsx:5251` → `2533-2536` · **corregido en el aula nueva** (T8); falta en la actual |
 | P0-3 | Reiniciar lección borra intento, nota y XP de un clic sobre la fila del estudiante | `Classroom.tsx:5577-5581` |
-| P0-4 | "Devolver" se ejecuta aunque se cancele el `prompt()` nativo (`fb \|\| undefined`) | `Classroom.tsx:2955-2961` |
+| P0-4 | "Devolver" se ejecuta aunque se cancele el `prompt()` nativo (`fb \|\| undefined`) | `Classroom.tsx:2955-2961` · **corregido en el aula nueva** (T8); falta en la actual |
 | P0-5 | ~13 handlers con `catch {}` vacío: la UI miente | `1286,1290,1339,1343,2542,2557,2569,2960,3210` |
 | P0-6 | El rol ACUDIENTE cae en una vista que no lo contempla | `Layout.tsx:283` |
 
@@ -284,7 +284,7 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T5 | Vista **Hoy** (docente y estudiante) + muro de anuncios | ✅ | `e99911bc` · falta cablear a la API (T11) |
 | T6 | Vista **Actividades**: búsqueda, filtros, agrupación | ✅ | `e25fe180` · la URL llega en T11 |
 | T7 | Vista **Unidades**: materiales + actividades | ⬜ | |
-| T8 | **Detalle de actividad** con línea de tiempos e intentos | ⬜ | |
+| T8 | **Detalle de actividad**, entrega y calificación | ✅ | `36a0a09c` · corrige P0-2 y P0-4 |
 | T9 | **Wizard de copia** en 4 pasos (corrige P0-1) | ⬜ | |
 | T10 | Defectos P0-2 … P0-5 en el código actual | ⬜ | |
 | T11 | Interruptor + montaje de rutas + enlaces profundos | ✅ | `e3065128` · rutas `/aula/*` |
