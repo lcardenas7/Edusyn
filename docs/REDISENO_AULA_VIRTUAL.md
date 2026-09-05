@@ -380,3 +380,47 @@ punto a 0 %, el examen en borrador se le mostraba al estudiante como "Pendiente"
 actividad ya calificada seguía gritando "Venció hace 8 días".
 
 Despliegue: `staging` primero, y registrar la fila en `docs/REGISTRO_DESPLIEGUES.md`.
+
+---
+
+## 9. Qué falta (estado a 2026-09-05)
+
+Los catorce tickets planificados están cerrados. Lo que sigue **no** está hecho, ordenado por
+lo que más bloquea a un usuario real.
+
+### 9.1 Bloquea a alguien hoy
+
+| # | Qué | Por qué importa |
+|---|---|---|
+| F1 | **Crear y editar actividades** siguen en el aula actual | El formulario por intención (§6.1 del informe de flujos) y el editor de preguntas están dentro de `Classroom.tsx` y no son componentes reutilizables. En el aula nueva los botones existen y avisan antes de saltar, pero el docente termina cambiando de aula para trabajar. |
+| F2 | **Motores de quiz, examen, simulacro y autoevaluación** | Igual: viven dentro de `ActivitiesTab`. El estudiante puede *ver* la actividad en el aula nueva pero la resuelve en la anterior. Lecciones y juegos sí funcionan (reusan `LessonPlayer`). |
+| F3 | **Publicar y editar anuncios** | El muro dentro de "Hoy" es de solo lectura. El docente publica desde el aula actual. |
+| F4 | **Entrega por audio** | El aula actual permite grabar audio en una tarea con `metadata.audioResponse`; el panel nuevo acepta texto y archivo, pero no grabación. |
+
+### 9.2 Destinos aún no traídos
+
+**Rutas**, **Expedición ABP** y **Foro** muestran un puente al aula actual. Los tres tienen
+componente propio (`LearningRoutesTab`, `AbpTab`, `ForumTab`), así que traerlos es sobre todo
+montarlos en el shell nuevo y revisarles el lenguaje visual — no reescribirlos.
+
+### 9.3 Defectos conocidos que siguen abiertos
+
+| # | Qué | Notas |
+|---|---|---|
+| P0-6 | El rol **ACUDIENTE** cae en la vista de estudiante | El aula nueva hereda el mismo criterio (`rol` = docente si DOCENTE/COORDINADOR, si no estudiante). Hace falta decidir **qué debe ver un acudiente** antes de programarlo: es una decisión de producto, no un bug. |
+| P0-5 | Quedan **28 `catch {}`** en `Classroom.tsx` | Son cargas de solo lectura y guardas de `localStorage`/`JSON.parse`. Mienten menos (muestran vacío en vez de error) y tocarlas en bloque es más arriesgado que valioso. Se van con la retirada del aula actual. |
+
+### 9.4 Verificación que no puedo hacer yo
+
+- **Probar con datos reales.** Todo lo revisado hasta ahora usa datos de muestra o el adaptador
+  simulado de la demo. Las rutas `/aula/*` están protegidas y necesitan una sesión.
+- **Despliegue a staging.** Nada de este trabajo se ha desplegado (garantía G7).
+- **Prueba con un docente y un estudiante de verdad**, que es lo único que dice si la nueva
+  arquitectura de información se entiende sin explicarla.
+
+### 9.5 Deuda asumida a propósito
+
+- **Solo se prueba `model/`.** No hay pruebas de componentes: el proyecto no tiene
+  `@testing-library` y añadirlo es una decisión aparte. La lógica que decide *qué se ve* sí
+  está cubierta (120 pruebas).
+- **El aula actual sigue siendo la predeterminada.** El cambio de default es tuyo, no mío.
