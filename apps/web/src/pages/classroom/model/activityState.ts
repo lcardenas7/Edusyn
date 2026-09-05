@@ -82,6 +82,12 @@ export interface StudentView {
   state: StudentState
   /** Para ordenar: 0 = lo que más exige actuar. */
   urgency: number
+  /**
+   * Cómo desempatar dentro de la misma urgencia. Casi siempre `asc` (lo que vence antes va
+   * antes); en lo ya vencido es `desc`, porque lo que acaba de vencer todavía se puede
+   * recuperar hablando con el profe y lo de hace un mes ya no.
+   */
+  tieBreak?: 'asc' | 'desc'
   /** Nota obtenida, si ya la tiene. */
   score: number | null
   /** Tiene un borrador sin enviar aunque el estado principal sea otro (p. ej. "vencida"). */
@@ -92,9 +98,13 @@ export interface StudentView {
 }
 
 /**
- * Precedencia deliberada: primero lo que el estudiante NO puede cambiar (bloqueada, aún no
- * abre), luego lo que le exige actuar (devuelta, vencida), luego lo cerrado.
- * Una entrega devuelta gana sobre una calificada: significa "vuelve a mirarlo".
+ * Precedencia deliberada. El criterio de orden es **qué puede ganar todavía**, no qué está
+ * peor: a un estudiante no le sirve que lo primero que vea sea un taller que venció hace una
+ * semana, porque no puede viajar en el tiempo, y además desmoraliza. Así que primero lo que
+ * el profe está esperando, luego lo que todavía alcanza a entregar, y al final el control de
+ * daños.
+ *
+ * Una entrega devuelta gana sobre todo lo demás: el docente ya la revisó y espera respuesta.
  */
 export function deriveStudentState(a: ActivityLike, now: Date = new Date()): StudentView {
   const sub = a.submissions?.[0]
@@ -109,7 +119,7 @@ export function deriveStudentState(a: ActivityLike, now: Date = new Date()): Stu
   const base = { score, hasDraft, attempt, entregadaEn: sub?.submittedAt ?? null }
 
   if (a.locked) return { state: 'bloqueada', urgency: 90, ...base }
-  if (status === 'RETURNED') return { state: 'devuelta', urgency: 1, ...base }
+  if (status === 'RETURNED') return { state: 'devuelta', urgency: 0, ...base }
   if (status && GRADED_STATES.has(status)) return { state: 'calificada', urgency: 80, ...base }
   if (status && SUBMITTED_STATES.has(status)) return { state: 'entregada', urgency: 70, ...base }
 
@@ -118,12 +128,14 @@ export function deriveStudentState(a: ActivityLike, now: Date = new Date()): Stu
 
   const due = time(a.dueDate)
   if (due !== null) {
-    if (now.getTime() > due) return { state: 'vencida', urgency: 0, ...base }
-    if (sameBogotaDay(a.dueDate, now)) return { state: 'vence-hoy', urgency: 2, ...base }
-    if (due - now.getTime() < DUE_SOON_MS) return { state: 'vence-pronto', urgency: 3, ...base }
+    // Lo vencido va DESPUÉS de lo que todavía se alcanza a entregar, y entre lo vencido va
+    // primero lo más reciente: eso sí se puede recuperar.
+    if (now.getTime() > due) return { state: 'vencida', urgency: 4, tieBreak: 'desc', ...base }
+    if (sameBogotaDay(a.dueDate, now)) return { state: 'vence-hoy', urgency: 1, ...base }
+    if (due - now.getTime() < DUE_SOON_MS) return { state: 'vence-pronto', urgency: 2, ...base }
   }
 
-  if (hasDraft) return { state: 'en-borrador', urgency: 4, ...base }
+  if (hasDraft) return { state: 'en-borrador', urgency: 3, ...base }
   return { state: 'pendiente', urgency: 10, ...base }
 }
 
@@ -216,18 +228,24 @@ export function matchesSearch(a: ActivityLike, query: string): boolean {
 
 /**
  * Orden estable: primero lo que exige acción (urgencia), y dentro de la misma urgencia lo que
- * vence antes. Sin fecha va al final del grupo. El desempate por título evita que la lista
- * baile entre renders.
+ * vence antes — salvo en lo ya vencido, donde manda lo más reciente (`tieBreak: 'desc'`),
+ * porque una entrega que acaba de vencer todavía se puede recuperar y una de hace un mes no.
+ *
+ * Sin fecha va al final del grupo. El desempate final por título evita que la lista baile
+ * entre renders.
  */
 export function compareByUrgency(
-  ua: { urgency: number },
+  ua: { urgency: number; tieBreak?: 'asc' | 'desc' },
   a: ActivityLike,
-  ub: { urgency: number },
+  ub: { urgency: number; tieBreak?: 'asc' | 'desc' },
   b: ActivityLike,
 ): number {
   if (ua.urgency !== ub.urgency) return ua.urgency - ub.urgency
   const da = a.dueDate ?? '9999-12-31'
   const db = b.dueDate ?? '9999-12-31'
-  if (da !== db) return da < db ? -1 : 1
+  if (da !== db) {
+    const desc = ua.tieBreak === 'desc' && ub.tieBreak === 'desc'
+    return desc ? (da > db ? -1 : 1) : da < db ? -1 : 1
+  }
   return a.title.localeCompare(b.title, 'es')
 }
