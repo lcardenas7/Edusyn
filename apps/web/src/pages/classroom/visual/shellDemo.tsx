@@ -13,8 +13,10 @@ import { AulaShell } from '../ui/AulaShell'
 import type { Vista } from '../ui/destinations'
 import { ActivityCard } from '../ui/ActivityCard'
 import { EmptyState } from '../ui/EmptyState'
+import { Hoy } from '../views/Hoy'
 import { decorate } from '../model/list'
 import { isVisibleTo, type ActivityLike } from '../model/activityState'
+import type { AnnouncementLike } from '../model/today'
 
 const AHORA = new Date('2026-05-20T15:00:00.000Z')
 
@@ -68,6 +70,95 @@ const MUESTRA: ActivityLike[] = [
     _count: { submissions: 30 },
     ...({ studentCount: 32 } as object),
   },
+  {
+    id: '4',
+    type: 'EXAM',
+    title: 'Examen del período',
+    isPublished: false,
+    scheduledPublishAt: '2026-05-29T13:00:00.000Z',
+    section: UNIDAD,
+    maxScore: 5,
+    _count: { submissions: 0 },
+  },
+  {
+    id: '5',
+    type: 'TASK',
+    title: 'Taller de áreas y perímetros',
+    isPublished: false,
+    section: UNIDAD,
+    _count: { submissions: 0 },
+  },
+  {
+    id: '6',
+    type: 'ICFES_SIMULATOR',
+    title: 'Simulacro ICFES · razonamiento cuantitativo',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-06-18T22:00:00.000Z',
+    _count: { submissions: 0 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '7',
+    type: 'TASK',
+    title: 'Ensayo sobre modelos matemáticos',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-05-12T22:00:00.000Z',
+    maxScore: 5,
+    submissions: [{ status: 'GRADED', score: 4.3, submittedAt: '2026-05-11T20:00:00.000Z' }],
+    _count: { submissions: 31 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '8',
+    type: 'QUIZ',
+    title: 'Quiz de factorización',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-05-08T22:00:00.000Z',
+    maxScore: 5,
+    submissions: [{ status: 'GRADED', score: 3.6, submittedAt: '2026-05-07T20:00:00.000Z' }],
+    _count: { submissions: 29 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '9',
+    type: 'TASK',
+    title: 'Taller desierto de la semana pasada',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-05-13T22:00:00.000Z',
+    _count: { submissions: 0 },
+    ...({ studentCount: 32 } as object),
+  },
+]
+
+const ANUNCIOS: AnnouncementLike[] = [
+  {
+    id: 'an1',
+    title: 'Recuerden traer calculadora el jueves',
+    content: '<p>Para el taller de <strong>ecuaciones</strong> vamos a necesitar calculadora científica.</p>',
+    isPinned: true,
+    createdAt: '2026-05-14T13:00:00.000Z',
+    author: { firstName: 'Luis', lastName: 'Cárdenas' },
+  },
+  {
+    id: 'an2',
+    title: 'Cambio de fecha del examen',
+    content: '<p>El examen del período se corre para el viernes 29 de mayo.</p>',
+    isPinned: false,
+    createdAt: '2026-05-19T15:30:00.000Z',
+    author: { firstName: 'Luis', lastName: 'Cárdenas' },
+  },
+  {
+    id: 'an3',
+    title: 'Resultados del simulacro anterior',
+    content: '<p>Ya pueden ver sus resultados en la pestaña de notas.</p>',
+    isPinned: false,
+    createdAt: '2026-05-05T10:00:00.000Z',
+    author: { firstName: 'Luis', lastName: 'Cárdenas' },
+  },
 ]
 
 function Demo() {
@@ -112,43 +203,42 @@ function Demo() {
         onPeriodo={setPeriodo}
         badges={role === 'docente' ? { actividades: 6 } : { actividades: 2 }}
       >
-        <div className="mx-auto max-w-3xl">
-          <h1 className="text-h1 font-bold text-ink-primary">
-            {vista === 'hoy' ? (role === 'docente' ? 'Hola, profe 👋' : 'Hola, Ana 👋') : null}
-          </h1>
-
-          {vista === 'actividades' || vista === 'hoy' ? (
-            <div className="mt-4 space-y-2">
-              {visibles.map((a) => (
-                <ActivityCard
-                  key={a.id}
-                  item={decorate(a, role, AHORA)}
-                  role={role}
-                  onOpen={() => {}}
-                  now={AHORA}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-4">
-              <EmptyState
-                scene="sin-actividades"
-                title={`Aquí va "${vista}"`}
-                detail="Esta vista todavía no está construida; el armazón ya la sostiene."
+        {vista === 'hoy' ? (
+          <Hoy
+            role={role}
+            nombre={role === 'docente' ? 'profe Luis' : 'Ana'}
+            aulaTitulo={`${aula.asignatura} ${aula.grupo}`}
+            periodoNombre="Período 2"
+            estudiantes={32}
+            actividades={MUESTRA}
+            anuncios={ANUNCIOS}
+            onAbrirActividad={(id) => alert(`Abrir actividad ${id}`)}
+            onVerActividades={(f) => alert(`Ir a Actividades${f ? ` filtrando por ${f}` : ''}`)}
+            onCrear={(t) => alert(`Crear ${t}`)}
+            onValeria={() => alert('Abrir Valeria')}
+            now={AHORA}
+          />
+        ) : vista === 'actividades' ? (
+          <div className="mx-auto max-w-3xl space-y-2">
+            {visibles.map((a) => (
+              <ActivityCard
+                key={a.id}
+                item={decorate(a, role, AHORA)}
+                role={role}
+                onOpen={() => {}}
+                now={AHORA}
               />
-            </div>
-          )}
-
-          {/* Relleno para poder comprobar que el encabezado se queda pegado al hacer scroll */}
-          <div className="mt-6 space-y-3">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="rounded-card border border-hairline bg-surface-1 p-6 text-ink-muted">
-                Contenido de relleno {i + 1} — comprueba que el encabezado de contexto se queda
-                fijo arriba y no se esconde debajo del header.
-              </div>
             ))}
           </div>
-        </div>
+        ) : (
+          <div className="mx-auto max-w-3xl">
+            <EmptyState
+              scene="sin-actividades"
+              title={`Aquí va "${vista}"`}
+              detail="Esta vista todavía no está construida; el armazón ya la sostiene."
+            />
+          </div>
+        )}
       </AulaShell>
     </>
   )

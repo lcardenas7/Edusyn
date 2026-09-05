@@ -217,4 +217,41 @@ describe('orden', () => {
     const sinFecha = act({ id: 'c', title: 'C' })
     expect(compareByUrgency({ urgency: 0 }, sinFecha, { urgency: 0 }, b)).toBeGreaterThan(0)
   })
+
+  it('entre lo ya vencido manda lo más reciente, no lo más viejo', () => {
+    // Decisión deliberada: lo que acaba de vencer todavía se recupera hablando con el profe;
+    // lo de hace un mes ya no. Si alguien "arregla" esto al orden normal, esta prueba cae.
+    const reciente = act({ id: 'r', title: 'R', dueDate: '2026-05-19T00:00:00.000Z' })
+    const vieja = act({ id: 'v', title: 'V', dueDate: '2026-04-01T00:00:00.000Z' })
+    const desc = { urgency: 4, tieBreak: 'desc' as const }
+    expect(compareByUrgency(desc, reciente, desc, vieja)).toBeLessThan(0)
+  })
+})
+
+describe('qué se le propone primero al estudiante', () => {
+  /**
+   * El criterio es **qué puede ganar todavía**, no qué está peor. Un taller vencido hace una
+   * semana no puede ir por encima de algo que vence hoy: el estudiante no puede viajar en el
+   * tiempo, y ponérselo delante solo desmoraliza.
+   */
+  const urgenciaDe = (a: ActivityLike) => deriveStudentState(a, AHORA).urgency
+
+  it('lo devuelto por el profe va primero de todo', () => {
+    expect(urgenciaDe(act({ submissions: [{ status: 'RETURNED' }] }))).toBe(0)
+  })
+
+  it('lo que todavía alcanza a entregar va antes que lo ya vencido', () => {
+    const venceHoy = urgenciaDe(act({ dueDate: '2026-05-20T23:00:00.000Z' }))
+    const vencePronto = urgenciaDe(act({ dueDate: '2026-05-21T23:00:00.000Z' }))
+    const vencida = urgenciaDe(act({ dueDate: '2026-05-13T23:00:00.000Z' }))
+    expect(venceHoy).toBeLessThan(vencePronto)
+    expect(vencePronto).toBeLessThan(vencida)
+  })
+
+  it('lo que no depende del estudiante se va al fondo', () => {
+    const pendiente = urgenciaDe(act({ dueDate: '2026-06-30T23:00:00.000Z' }))
+    expect(pendiente).toBeLessThan(urgenciaDe(act({ submissions: [{ status: 'SUBMITTED' }] })))
+    expect(urgenciaDe(act({ openDate: '2026-06-01T13:00:00.000Z' }))).toBeGreaterThan(pendiente)
+    expect(urgenciaDe(act({ locked: true }))).toBeGreaterThan(pendiente)
+  })
 })
