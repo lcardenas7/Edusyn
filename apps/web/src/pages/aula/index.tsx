@@ -21,12 +21,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { AulaShell } from './ui/AulaShell'
 import { AulaState, EmptyState } from './ui/EmptyState'
 import { LiveSessionBanner } from './ui/LiveSessionBanner'
-import { DESTINOS, type Vista } from './ui/destinations'
+import { DESTINOS, vistaLabel, type Vista } from './ui/destinations'
 import { SelectorAula } from './views/SelectorAula'
 import { Hoy } from './views/Hoy'
 import { Actividades } from './views/Actividades'
 import { ActividadDetalle } from './views/ActividadDetalle'
 import { Unidades } from './views/Unidades'
+import { Notas } from './views/Notas'
+import { Estudiantes } from './views/Estudiantes'
 import { useAula, useAulas, type Rol } from './data/useAula'
 import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
@@ -262,12 +264,22 @@ export default function AulaVirtual() {
             filtroEstadoInicial={filtroEstado}
             onAbrirActividad={abrirActividad}
           />
+        ) : vista === 'notas' ? (
+          <Notas
+            classroomId={classroomId}
+            role={rol}
+            actividades={actividades}
+            onAbrirActividad={abrirActividad}
+            onIrAlGradebook={rol === 'docente' ? () => navigate('/grades') : undefined}
+          />
+        ) : vista === 'estudiantes' && rol === 'docente' ? (
+          <Estudiantes classroomId={classroomId} />
         ) : (
           <div className="mx-auto max-w-3xl">
             <EmptyState
               scene="sin-unidades"
-              title={`"${vista}" todavía no está en el aula nueva`}
-              detail="Se irán trayendo una por una. Mientras tanto puedes usarla en el aula actual."
+              title={`"${vistaLabel(vista)}" todavía no está en el aula nueva`}
+              detail="Se irán trayendo una por una. Mientras tanto puedes usarla en el aula actual, con los mismos datos."
               secondary={{ label: 'Abrir el aula actual', onClick: () => navigate('/classroom') }}
             />
           </div>
