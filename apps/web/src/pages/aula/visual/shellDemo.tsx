@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../../../index.css'
+import api from '../../../lib/api'
 import { AulaShell } from '../ui/AulaShell'
 import type { Vista } from '../ui/destinations'
 import { ActivityCard } from '../ui/ActivityCard'
@@ -23,6 +24,47 @@ import type { ActivityLike } from '../model/activityState'
 import type { AnnouncementLike } from '../model/today'
 
 const AHORA = new Date('2026-05-20T15:00:00.000Z')
+
+/**
+ * Respuestas simuladas para la demo. Se sustituye el adaptador de axios (la misma técnica que
+ * usa `lib/api.interceptor.test.ts`), así que **nada sale de esta pestaña**. Vive solo en este
+ * archivo, que no entra al build de producción.
+ *
+ * Sirve para poder revisar el asistente de copia, que sin datos no enseña lo importante: el
+ * período de cada unidad destino y el aviso cuando una unidad no tiene ninguno.
+ */
+api.defaults.adapter = async (config) => {
+  const url = config.url ?? ''
+  const responder = (data: unknown) =>
+    ({ data, status: 200, statusText: 'OK', headers: {}, config }) as never
+
+  if (config.method === 'get' && /^\/classrooms$/.test(url)) {
+    return responder([
+      { id: 'a1', title: 'Matemáticas 8-A', teacherAssignment: { subject: { name: 'Matemáticas' }, group: { name: '8-A' } } },
+      { id: 'a2', title: 'Matemáticas 8-B', teacherAssignment: { subject: { name: 'Matemáticas' }, group: { name: '8-B' } } },
+    ])
+  }
+  if (config.method === 'get' && /^\/classrooms\/[^/]+$/.test(url)) {
+    return responder({
+      id: url.split('/')[2],
+      sections: [
+        { id: 'u3', title: 'Unidad 3: Álgebra básica', academicTermId: 'p2' },
+        { id: 'u4', title: 'Unidad 4: Geometría y medida', academicTermId: 'p2' },
+        // La que dispara el aviso del defecto P0-1.
+        { id: 'uSin', title: 'Unidad suelta (sin período)', academicTermId: null },
+      ],
+      academicPeriods: [
+        { id: 'p1', name: 'Período 1' },
+        { id: 'p2', name: 'Período 2' },
+        { id: 'p3', name: 'Período 3' },
+      ],
+    })
+  }
+  if (config.method === 'put' && /update|sections/.test(url)) return responder({ ok: true })
+  if (config.method === 'post' && /duplicate-to/.test(url)) return responder({ id: 'copia-1' })
+
+  return responder(null)
+}
 
 const AULAS = [
   { id: 'a1', titulo: 'Matemáticas 8-A', asignatura: 'Matemáticas', grupo: '8-A' },
@@ -338,6 +380,8 @@ function Demo() {
             onVolver={() => setVista('actividades')}
             onCambio={() => alert('Recargar')}
             onIrAlAulaActual={() => alert('Ir al aula actual')}
+            aulaId={aula.id}
+            onAbrirActividad={(id) => alert(`Abrir la copia ${id}`)}
             now={AHORA}
           />
         ) : vista === 'actividades' ? (
