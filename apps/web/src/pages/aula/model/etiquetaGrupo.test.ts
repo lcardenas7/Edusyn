@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { etiquetaDeGrupo } from './SelectorAula'
+import { etiquetaDeGrupo } from '../model/grados'
 
 /**
  * Salió al probar el aula con datos con la forma real del backend: la tarjeta decía

@@ -45,7 +45,7 @@ export function NextStep({ item, onOpen, now = new Date() }: NextStepProps) {
 
   return (
     <section aria-labelledby="siguiente-paso" className="relative overflow-hidden rounded-modal border border-accent/25 bg-accent/[0.06]">
-      <div className="p-5 sm:p-6">
+      <div className="p-4 sm:p-6">
         <p id="siguiente-paso" className="text-xs font-semibold tracking-wide text-accent uppercase">
           Tu siguiente paso
         </p>
@@ -53,7 +53,7 @@ export function NextStep({ item, onOpen, now = new Date() }: NextStepProps) {
         <div className="mt-3 flex items-start gap-4">
           <ActivityGlyph type={a.type} size={56} />
           <div className="min-w-0 flex-1">
-            <h2 className="text-h2 leading-tight font-bold text-ink-primary">{a.title}</h2>
+            <h2 className="break-words text-h2 leading-tight font-bold text-ink-primary">{a.title}</h2>
             <p className="mt-1 text-body-sm text-ink-secondary">
               {activityTypeLabel(a.type, a.metadata)}
               {a.section?.title ? ` · ${a.section.title}` : ''}

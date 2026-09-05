@@ -409,7 +409,6 @@ function Demo() {
             role={role}
             actividades={MUESTRA}
             onAbrirActividad={(id) => alert(`Abrir actividad ${id}`)}
-            onIrAlGradebook={() => alert('Ir a Calificaciones')}
             now={AHORA}
           />
         ) : vista === 'estudiantes' ? (

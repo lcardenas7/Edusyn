@@ -16,6 +16,7 @@ import type { ActivityLike } from '../model/activityState'
 import type { AnnouncementLike } from '../model/today'
 import type { PeriodoOpcion } from '../ui/AulaShell'
 import { leerUltimaVisita, marcarVisitada } from '../model/lastVisit'
+import { etiquetaDeGrupo } from '../model/grados'
 
 export type Rol = 'docente' | 'estudiante'
 
@@ -25,6 +26,8 @@ export interface AulaCargada {
   titulo: string
   asignatura: string | null
   grupo: string | null
+  /** El color que el docente eligió. Es lo que distingue dos aulas de la misma asignatura. */
+  color: string | null
   estudiantes: number | null
   periodos: PeriodoOpcion[]
   periodoActual: PeriodoOpcion | null
@@ -56,7 +59,11 @@ function normalizarAula(data: any): AulaCargada {
     id: data.id,
     titulo: data.title ?? 'Aula',
     asignatura: asignacion?.subject?.name ?? null,
-    grupo: asignacion?.group?.name ?? null,
+    // El grupo puede llamarse "C" y su grado "Octavo": quedarse solo con el nombre del grupo
+    // deja encabezados como "INFORMATICA C", que no dicen de qué curso se trata. Salió
+    // probando con datos reales.
+    grupo: etiquetaDeGrupo(asignacion?.group?.grade?.name, asignacion?.group?.name) || null,
+    color: data?.color ?? null,
     // Ojo: el aula actual cae en `_count.sections` cuando `studentCount` viene en 0 y acaba
     // enseñando el número de SECCIONES con la etiqueta "estudiantes" (hallazgo E9 del informe
     // C). Aquí, si no hay dato, no se inventa: se muestra nada.
