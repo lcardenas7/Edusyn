@@ -14,8 +14,8 @@ import type { Vista } from '../ui/destinations'
 import { ActivityCard } from '../ui/ActivityCard'
 import { EmptyState } from '../ui/EmptyState'
 import { Hoy } from '../views/Hoy'
-import { decorate } from '../model/list'
-import { isVisibleTo, type ActivityLike } from '../model/activityState'
+import { Actividades } from '../views/Actividades'
+import type { ActivityLike } from '../model/activityState'
 import type { AnnouncementLike } from '../model/today'
 
 const AHORA = new Date('2026-05-20T15:00:00.000Z')
@@ -168,8 +168,6 @@ function Demo() {
   const [aulaIdx, setAulaIdx] = useState(0)
   const aula = AULAS[aulaIdx]
 
-  const visibles = MUESTRA.filter((a) => isVisibleTo(role, a))
-
   return (
     <>
       {/* Barra de pruebas: no forma parte del aula */}
@@ -219,17 +217,15 @@ function Demo() {
             now={AHORA}
           />
         ) : vista === 'actividades' ? (
-          <div className="mx-auto max-w-3xl space-y-2">
-            {visibles.map((a) => (
-              <ActivityCard
-                key={a.id}
-                item={decorate(a, role, AHORA)}
-                role={role}
-                onOpen={() => {}}
-                now={AHORA}
-              />
-            ))}
-          </div>
+          <Actividades
+            role={role}
+            actividades={MUESTRA}
+            periodo={periodo}
+            onPeriodo={setPeriodo}
+            onAbrirActividad={(id) => alert(`Abrir actividad ${id}`)}
+            onCrear={() => alert('Crear actividad')}
+            now={AHORA}
+          />
         ) : (
           <div className="mx-auto max-w-3xl">
             <EmptyState

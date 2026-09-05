@@ -14,7 +14,7 @@
 import type { DecoratedActivity, Role } from './list'
 import { decorate } from './list'
 import type { ActivityLike } from './activityState'
-import { compareByUrgency, isVisibleTo, sameBogotaDay } from './activityState'
+import { compareByUrgency, isVisibleTo, tieneEntregasPorCalificar, venceHoy, vencioSinEntregas } from './activityState'
 
 // ─── Estudiante ──────────────────────────────────────────────────────────────
 
@@ -124,15 +124,10 @@ export function buildTeacherToday(activities: ActivityLike[], now: Date = new Da
    * se evalúa antes que `vence-hoy` y la absorbía. La auditoría ya advertía (C5) que estos
    * estados se solapan por diseño; los conteos no suman al total, y está bien.
    */
-  const porCalificarActs = items.filter((d) => (d.teacher?.porCalificar ?? 0) > 0)
+  const porCalificarActs = items.filter((d) => tieneEntregasPorCalificar(d.activity))
   const entregas = porCalificarActs.reduce((s, d) => s + (d.teacher?.porCalificar ?? 0), 0)
-  const vencenHoy = items.filter((d) => d.activity.isPublished && sameBogotaDay(d.activity.dueDate, now))
-  const sinEntregas = items.filter((d) => {
-    const a = d.activity
-    if (!a.isPublished || !a.dueDate) return false
-    const venció = new Date(a.dueDate).getTime() < now.getTime()
-    return venció && !sameBogotaDay(a.dueDate, now) && (a._count?.submissions ?? 0) === 0
-  })
+  const vencenHoy = items.filter((d) => venceHoy(d.activity, now))
+  const sinEntregas = items.filter((d) => vencioSinEntregas(d.activity, now))
   const borradores = items.filter((d) => d.teacher?.state === 'borrador')
   const programadas = items.filter((d) => d.teacher?.state === 'programada')
   const publicadas = items.filter((d) => d.teacher && d.teacher.state !== 'borrador' && d.teacher.state !== 'programada').length

@@ -121,6 +121,21 @@ describe('los conteos de los chips salen del mismo universo que la lista', () =>
     }
   })
 
+  it('con una búsqueda activa, el chip cuenta lo que verás al pulsarlo, no el total', () => {
+    // Se detectó mirando la pantalla: con "taller" escrito, los chips seguían diciendo 7
+    // mientras la lista mostraba 2. Un número que miente es peor que no ponerlo.
+    const base = { activities: AULA, role: 'docente' as const, groupBy: 'unidad' as const, now: AHORA }
+    const conBusqueda = filters({ search: 'taller' })
+    const r = buildActivityList({ ...base, filters: conBusqueda })
+
+    for (const chip of stateChipsFor('docente', AHORA)) {
+      const alPulsar = buildActivityList({ ...base, filters: { ...conBusqueda, state: chip.id } })
+      expect(alPulsar.visible, `chip ${chip.id} con búsqueda`).toBe(r.chipCounts[chip.id])
+    }
+    // "Taller de ecuaciones" y su copia huérfana; el resto del aula queda fuera.
+    expect(r.chipCounts['todas']).toBe(2)
+  })
+
   it('los conteos respetan el período elegido', () => {
     const r = buildActivityList({
       activities: AULA,
