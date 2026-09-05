@@ -26,6 +26,7 @@ import { SelectorAula } from './views/SelectorAula'
 import { Hoy } from './views/Hoy'
 import { Actividades } from './views/Actividades'
 import { ActividadDetalle } from './views/ActividadDetalle'
+import { Unidades } from './views/Unidades'
 import { useAula, useAulas, type Rol } from './data/useAula'
 import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
@@ -232,6 +233,17 @@ export default function AulaVirtual() {
             anuncios={aula?.anuncios ?? []}
             onAbrirActividad={abrirActividad}
             onVerActividades={verActividades}
+          />
+        ) : vista === 'unidades' ? (
+          <Unidades
+            aulaId={classroomId}
+            role={rol}
+            secciones={aula?.secciones ?? []}
+            actividades={actividades}
+            periodo={periodo}
+            onAbrirActividad={abrirActividad}
+            onAbrirMaterial={() => navigate('/classroom')}
+            onCrear={() => navigate('/classroom')}
           />
         ) : vista === 'actividades' ? (
           <Actividades
