@@ -34,6 +34,7 @@ import { CrearActividad } from './ui/CrearActividad'
 import { useAula, useAulas, type Rol } from './data/useAula'
 import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
+import { useProgresoAulas } from './data/useProgresoAulas'
 import { buildTeacherToday, buildStudentToday } from './model/today'
 import { PERIOD_ALL } from './model/list'
 
@@ -136,6 +137,11 @@ export default function AulaVirtual() {
 
   // ─── Sin aula: la lista ────────────────────────────────────────────────
   const listado = useAulas(rol)
+  // El avance de cada aula llega en segundo plano: la lista se pinta enseguida.
+  const avances = useProgresoAulas(
+    classroomId ? [] : listado.aulas.map((a) => a.id),
+    rol,
+  )
 
   // ─── Con aula: sus datos ───────────────────────────────────────────────
   const { aula, actividades, cargando, error, recargar } = useAula(classroomId ?? null, rol)
@@ -228,6 +234,7 @@ export default function AulaVirtual() {
         onReintentar={listado.recargar}
         onEntrar={(id) => navigate(`/aula/${id}/hoy`)}
         onVolverAlActual={() => navigate('/classroom')}
+        avances={avances}
       />
     )
   }
@@ -304,6 +311,7 @@ export default function AulaVirtual() {
             anuncios={aula?.anuncios ?? []}
             onAbrirActividad={abrirActividad}
             onVerActividades={verActividades}
+            totalEstudiantes={aula?.estudiantes ?? null}
             // Crear todavía vive en el aula actual (el formulario por intención y el editor de
             // preguntas no son componentes reutilizables). Se ofrece igual: sin estos botones
             // el docente entra al aula nueva y no encuentra por dónde crear, que es peor que
@@ -319,6 +327,7 @@ export default function AulaVirtual() {
             actividades={actividades}
             periodo={periodo}
             onAbrirActividad={abrirActividad}
+            totalEstudiantes={aula?.estudiantes ?? null}
             onAbrirMaterial={() => irAlAulaActualPara('editar')}
             onCrear={() => setCreando(true)}
           />
@@ -330,6 +339,7 @@ export default function AulaVirtual() {
             onPeriodo={cambiarPeriodo}
             filtroEstadoInicial={filtroEstado}
             onAbrirActividad={abrirActividad}
+            totalEstudiantes={aula?.estudiantes ?? null}
             onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
           />
         ) : vista === 'notas' ? (

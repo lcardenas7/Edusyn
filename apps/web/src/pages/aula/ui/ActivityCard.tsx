@@ -35,10 +35,12 @@ export interface ActivityCardProps {
   onOpen: (activityId: string) => void
   /** Muestra el nombre de la unidad. Se apaga cuando la lista ya está agrupada por unidad. */
   showUnit?: boolean
+  /** Estudiantes del grupo. Sin este dato no se dibuja la barra de entregas. */
+  totalEstudiantes?: number | null
   now?: Date
 }
 
-export function ActivityCard({ item, role, onOpen, showUnit = true, now = new Date() }: ActivityCardProps) {
+export function ActivityCard({ item, role, onOpen, showUnit = true, totalEstudiantes, now = new Date() }: ActivityCardProps) {
   const a = item.activity
   const s = item.student
   const t = item.teacher
@@ -73,7 +75,8 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, now = new Da
   })()
 
   const entregadas = t?.entregas ?? 0
-  const totalEstudiantes = (a as unknown as { studentCount?: number }).studentCount
+  // El aula sabe cuántos estudiantes tiene; la actividad no siempre lo trae.
+  const total = totalEstudiantes ?? (a as unknown as { studentCount?: number }).studentCount ?? null
 
   return (
     <button
@@ -153,20 +156,25 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, now = new Da
           {/* Docente: cuántos entregaron, en barra + número */}
           {role === 'docente' && t && t.state !== 'borrador' && t.state !== 'programada' && (
             <div className="mt-2.5 flex items-center gap-2.5">
-              <div
-                className="h-1.5 w-28 overflow-hidden rounded-full bg-surface-3"
-                role="img"
-                aria-label={`${entregadas} entregas${totalEstudiantes ? ` de ${totalEstudiantes}` : ''}`}
-              >
+              {/* Sin saber cuántos estudiantes son, NO se dibuja barra: la versión anterior la
+                  pintaba llena en cuanto hubiera una entrega, así que 11 de 37 se veía como
+                  "entregaron todos". Una barra que miente es peor que ninguna barra. */}
+              {total != null && (
                 <div
-                  className="h-full rounded-full bg-accent"
-                  style={{
-                    width: totalEstudiantes ? `${Math.min(100, (entregadas / totalEstudiantes) * 100)}%` : entregadas > 0 ? '100%' : '0%',
-                  }}
-                />
-              </div>
+                  className="h-1.5 w-28 overflow-hidden rounded-full bg-surface-3"
+                  role="img"
+                  aria-label={`${entregadas} de ${total} entregaron`}
+                >
+                  <div
+                    className="h-full rounded-full bg-accent"
+                    style={{ width: `${Math.min(100, (entregadas / Math.max(total, 1)) * 100)}%` }}
+                  />
+                </div>
+              )}
               <span className="text-body-sm text-ink-muted">
-                {totalEstudiantes ? `${entregadas} de ${totalEstudiantes} entregaron` : `${entregadas} entregas`}
+                {total != null
+                  ? `${entregadas} de ${total} entregaron`
+                  : `${entregadas} ${entregadas === 1 ? 'entrega' : 'entregas'}`}
               </span>
             </div>
           )}

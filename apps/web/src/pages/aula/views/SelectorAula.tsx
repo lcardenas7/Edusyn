@@ -25,10 +25,13 @@
  */
 
 import { useMemo } from 'react'
+import { ArrowRight } from 'lucide-react'
 import type { AulaListada } from '../data/useAula'
 import { compararGrados, etiquetaDeGrupo } from '../model/grados'
 import { AulaState, EmptyState } from '../ui/EmptyState'
-import { SubjectMark, SubjectPattern, subjectIdentity } from '../visual/SubjectMark'
+import { subjectIdentity } from '../visual/SubjectMark'
+import { SubjectCover } from '../visual/SubjectCover'
+import type { AvanceDeAula } from '../data/useProgresoAulas'
 
 export interface SelectorAulaProps {
   nombre: string
@@ -41,6 +44,8 @@ export interface SelectorAulaProps {
   onCrear?: () => void
   /** Vía de vuelta al aula actual. El interruptor tiene que funcionar en los dos sentidos. */
   onVolverAlActual?: () => void
+  /** Avance del estudiante por aula. Llega en segundo plano; puede faltar. */
+  avances?: Record<string, AvanceDeAula>
 }
 
 const SIN_GRADO = 'Otras'
@@ -55,6 +60,7 @@ export function SelectorAula({
   onEntrar,
   onCrear,
   onVolverAlActual,
+  avances = {},
 }: SelectorAulaProps) {
   // ¿Todas las aulas son de la misma asignatura? Decide qué va en el titular de la tarjeta.
   const unaSolaAsignatura = useMemo(
@@ -159,6 +165,7 @@ export function SelectorAula({
                     aula={a}
                     role={role}
                     mandaElGrupo={unaSolaAsignatura}
+                    avance={avances[a.id]}
                     onEntrar={onEntrar}
                   />
                 ))}
@@ -175,18 +182,19 @@ function TarjetaAula({
   aula,
   role,
   mandaElGrupo,
+  avance,
   onEntrar,
 }: {
   aula: AulaListada
   role: 'docente' | 'estudiante'
   mandaElGrupo: boolean
+  avance?: AvanceDeAula
   onEntrar: (id: string) => void
 }) {
   const identidad = subjectIdentity(aula.asignatura)
   // El color que el docente eligió gana: cuando todas las aulas son de la misma asignatura, es
   // lo único que las distingue de un vistazo.
   const color = aula.color?.trim() || identidad.hue.ink
-  const hue = { ink: color, wash: `${color}1A`, deep: color }
 
   const grupoTexto = etiquetaDeGrupo(aula.grado, aula.grupo)
   const asignatura = aula.asignatura ?? aula.titulo
@@ -194,39 +202,67 @@ function TarjetaAula({
   const titular = mandaElGrupo ? grupoTexto || asignatura : asignatura
   const secundario = mandaElGrupo ? asignatura : grupoTexto
 
+  const empezado = avance != null && avance.hechas > 0
+
   return (
     <button
       type="button"
       onClick={() => onEntrar(aula.id)}
-      className={`group relative overflow-hidden rounded-modal border border-hairline bg-surface-1 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none ${
+      className={`group flex w-full flex-col overflow-hidden rounded-modal border border-hairline bg-surface-1 text-left transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none ${
         aula.activa ? '' : 'opacity-70'
       }`}
       style={{ ['--skill-accent' as string]: hexARgb(color) }}
     >
-      {/* Franja del color del aula: es la señal que el docente ya usa para distinguirlas. */}
-      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: color }} />
-      <SubjectPattern subject={aula.asignatura} hue={hue} opacity={0.05} />
-
-      <div className="relative pt-1.5">
-        <div className="flex items-start justify-between gap-2">
-          <SubjectMark subject={aula.asignatura} size={44} hue={hue} />
-          {!aula.activa && (
-            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-muted">
-              Archivada
-            </span>
-          )}
-        </div>
-
-        <h3 className="mt-3.5 text-h3 leading-tight font-bold text-ink-primary">{titular}</h3>
-        {secundario && <p className="mt-0.5 truncate text-body-sm text-ink-secondary">{secundario}</p>}
-
-        {/* Si no hay dato de estudiantes, no se inventa uno (defecto E9). */}
-        {role === 'docente' && aula.estudiantes != null && (
-          <p className="mt-3 text-body-sm text-ink-muted">
-            {aula.estudiantes} {aula.estudiantes === 1 ? 'estudiante' : 'estudiantes'}
-          </p>
+      {/* La portada: es lo que hace que la lista se vea como un aula y no como una tabla. */}
+      <span className="relative block">
+        <SubjectCover subject={aula.asignatura} color={color} />
+        {!aula.activa && (
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-surface-1/90 px-2.5 py-1 text-xs font-medium text-ink-muted backdrop-blur">
+            Archivada
+          </span>
         )}
-      </div>
+      </span>
+
+      <span className="flex min-w-0 flex-1 flex-col p-4">
+        <span className="block text-h3 leading-tight font-bold break-words text-ink-primary">{titular}</span>
+        {secundario && <span className="mt-0.5 block truncate text-body-sm text-ink-secondary">{secundario}</span>}
+
+        {/* Avance real, no decorativo: sale de las actividades del aula. Si todavía no ha
+            llegado, no se dibuja una barra vacía que parezca un cero. */}
+        {role === 'estudiante' && avance && (
+          <span className="mt-3 block">
+            <span className="flex items-center justify-between text-body-sm">
+              <span className="text-ink-secondary">
+                {avance.hechas} de {avance.total}
+              </span>
+              <span className="font-semibold text-ink-primary tabular-nums">{avance.pct}%</span>
+            </span>
+            <span
+              className="mt-1 block h-2 overflow-hidden rounded-full bg-surface-3"
+              role="img"
+              aria-label={`Avance: ${avance.pct} por ciento`}
+            >
+              <span
+                className="block h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                style={{ width: `${avance.pct}%`, backgroundColor: color }}
+              />
+            </span>
+          </span>
+        )}
+
+        {role === 'docente' && aula.estudiantes != null && (
+          <span className="mt-3 block text-body-sm text-ink-muted">
+            {aula.estudiantes} {aula.estudiantes === 1 ? 'estudiante' : 'estudiantes'}
+          </span>
+        )}
+
+        {/* Acción explícita. La tarjeta entera sigue siendo pulsable, pero un botón visible
+            dice qué pasa al tocarla — y para el estudiante distingue empezar de continuar. */}
+        <span className="mt-4 inline-flex min-h-btn items-center justify-center gap-1.5 rounded-lg px-4 text-body-sm font-semibold text-white transition-opacity group-hover:opacity-90" style={{ backgroundColor: color }}>
+          {role === 'estudiante' ? (empezado ? 'Continuar' : 'Empezar') : 'Entrar'}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </span>
     </button>
   )
 }

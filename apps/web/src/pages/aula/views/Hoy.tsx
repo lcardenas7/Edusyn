@@ -35,6 +35,8 @@ export interface HoyProps {
   onVerActividades: (filtroEstado?: string) => void
   onCrear?: (tipo: 'TASK' | 'QUIZ' | 'LESSON' | 'MATERIAL') => void
   onValeria?: () => void
+  /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
+  totalEstudiantes?: number | null
   now?: Date
 }
 
