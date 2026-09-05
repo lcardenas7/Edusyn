@@ -24,6 +24,8 @@ export interface ActivityLike {
   maxScore?: number
   dueDate?: string | null
   openDate?: string | null
+  /** ¿El docente acepta entregas después de la fecha límite? */
+  allowLateSubmit?: boolean
   isPublished: boolean
   publishedAt?: string | null
   scheduledPublishAt?: string | null

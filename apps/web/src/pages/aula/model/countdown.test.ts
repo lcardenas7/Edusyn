@@ -81,6 +81,16 @@ describe('línea de tiempos', () => {
     expect(hitos.map((h) => h.key)).toEqual(['publicada', 'vence'])
   })
 
+  it('va en orden cronológico, no por el ciclo de vida', () => {
+    // Quien entrega antes de la fecha límite vería "Vence 20 de mayo" y a su derecha
+    // "Entregada 19 de mayo", que es justo lo que una línea de tiempo no puede hacer.
+    const hitos = milestonesOf(
+      { dueDate: '2026-05-20T22:00:00.000Z', submittedAt: '2026-05-19T20:00:00.000Z' },
+      AHORA,
+    )
+    expect(hitos.map((h) => h.key)).toEqual(['entregada', 'vence'])
+  })
+
   it('marca como cumplido solo lo que ya pasó', () => {
     const hitos = milestonesOf(
       {
@@ -91,11 +101,12 @@ describe('línea de tiempos', () => {
       },
       AHORA,
     )
+    // Cronológico: la entrega (18 de mayo) va antes que el vencimiento (25 de mayo).
     expect(hitos.map((h) => [h.key, h.done])).toEqual([
       ['publicada', true],
       ['abre', true],
-      ['vence', false],
       ['entregada', true],
+      ['vence', false],
     ])
   })
 
