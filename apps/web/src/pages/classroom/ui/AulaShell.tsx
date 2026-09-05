@@ -47,6 +47,12 @@ export interface AulaShellProps {
   onPeriodo: (p: string) => void
   /** Conteos opcionales por destino, p. ej. { actividades: 6 }. */
   badges?: Partial<Record<Vista, number>>
+  /**
+   * Aviso que debe verse en TODAS las vistas, no solo en la que esté abierta. Hoy lo usa la
+   * sesión de quiz en vivo: el aviso actual vive dentro de la pestaña Actividades, así que un
+   * estudiante parado en Inicio no se entera de que la clase ya empezó a responder.
+   */
+  aviso?: ReactNode
   children: ReactNode
 }
 
@@ -60,6 +66,7 @@ export function AulaShell({
   periodo,
   onPeriodo,
   badges = {},
+  aviso,
   children,
 }: AulaShellProps) {
   const { expandido, alternar } = useRail()
@@ -219,7 +226,10 @@ export function AulaShell({
           </header>
 
           {/* `pb-24` deja aire para la barra inferior de móvil */}
-          <main className="px-4 pt-5 pb-24 lg:pb-10">{children}</main>
+          <main className="px-4 pt-5 pb-24 lg:pb-10">
+            {aviso && <div className="mx-auto mb-5 max-w-3xl">{aviso}</div>}
+            {children}
+          </main>
         </div>
       </div>
 
