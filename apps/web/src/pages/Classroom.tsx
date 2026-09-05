@@ -5,6 +5,7 @@ import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantB
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi, academicTermsApi } from '../lib/api'
 import { compareStudents } from '../utils/sortStudents'
 import { bogotaInputToIso, isoToBogotaInput, formatBogota } from '../lib/datetime'
+import { toast } from '../lib/toast'
 import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
 import LearningBadges from '../components/LearningBadges'
@@ -1010,12 +1011,12 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const handleTogglePin = async (id: string, pinned: boolean) => {
-    try { await classroomApi.updateAnnouncement(id, { isPinned: !pinned }); onReload() } catch {}
+    try { await classroomApi.updateAnnouncement(id, { isPinned: !pinned }); onReload() } catch (e) { toast.error(e) }
   }
 
   const handleDelete = async (id: string) => {
     if (!(await confirmDialog('¿Eliminar este anuncio?', { danger: true }))) return
-    try { await classroomApi.deleteAnnouncement(id); onReload() } catch {}
+    try { await classroomApi.deleteAnnouncement(id); onReload() } catch (e) { toast.error(e) }
   }
 
   const openAttachment = async (url: string) => {
@@ -1296,11 +1297,24 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const handleToggleVis = async (sectionId: string, vis: boolean) => {
-    try { await classroomApi.updateSection(sectionId, { isVisible: !vis }); onReload() } catch {}
+    try { await classroomApi.updateSection(sectionId, { isVisible: !vis }); onReload() } catch (e) { toast.error(e) }
   }
 
-  const handleDeleteMaterial = async (id: string) => {
-    try { await classroomApi.deleteMaterial(id); onReload() } catch {}
+  const handleDeleteMaterial = async (id: string, title?: string) => {
+    // Borraba el recurso de un clic, sin preguntar y sin avisar si fallaba.
+    const ok = await confirmDialog(
+      title
+        ? `Se eliminará «${title}» de esta unidad. Esta acción no se puede deshacer.`
+        : 'Se eliminará este recurso de la unidad. Esta acción no se puede deshacer.',
+      { title: 'Eliminar recurso', danger: true },
+    )
+    if (!ok) return
+    try {
+      await classroomApi.deleteMaterial(id)
+      onReload()
+    } catch (e) {
+      toast.error(e)
+    }
   }
 
   const openDuplicateMaterialModal = (materialId: string, materialTitle: string) => {
@@ -1349,11 +1363,11 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const handleToggleMaterialVis = async (id: string, vis: boolean) => {
-    try { await classroomApi.updateMaterial(id, { isVisible: !vis }); onReload() } catch {}
+    try { await classroomApi.updateMaterial(id, { isVisible: !vis }); onReload() } catch (e) { toast.error(e) }
   }
 
   const handleUpdateMaterialTitle = async (id: string, title: string) => {
-    try { await classroomApi.updateMaterial(id, { title }); onReload() } catch {}
+    try { await classroomApi.updateMaterial(id, { title }); onReload() } catch (e) { toast.error(e) }
   }
 
   const openMaterialModal = (sectionId: string, type: string) => {
@@ -1800,7 +1814,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate, onDownload, onUpdateTitle, resolveFileUrl }: {
   material: Material; isTeacher: boolean;
   onToggleVis: (id: string, vis: boolean) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, title?: string) => void;
   onDuplicate: (id: string, title: string) => void;
   onDownload: (m: Material) => void;
   onUpdateTitle: (id: string, title: string) => void;
@@ -1903,7 +1917,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
               <button onClick={() => onToggleVis(material.id, material.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100">
                 {material.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
               </button>
-              <button onClick={() => onDelete(material.id)} className="p-1.5 rounded-lg hover:bg-red-50">
+              <button onClick={() => onDelete(material.id, material.title)} className="p-1.5 rounded-lg hover:bg-red-50">
                 <Trash2 className="w-4 h-4 text-red-400" />
               </button>
             </div>
@@ -2552,7 +2566,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       }
       setActivities(prev => prev.map(a => a.id === id ? { ...a, isPublished: !published, isVisible: true, scheduledPublishAt: null } : a))
       loadActivities()
-    } catch {}
+    } catch (e) {
+      // P0-5: esto se tragaba el error, así que la lista se pintaba como publicada aunque el
+      // servidor la hubiera rechazado. Se recarga para deshacer el cambio optimista.
+      toast.error(e)
+      loadActivities()
+    }
   }
 
   const handleSchedulePublish = async (id: string, dateTime: string) => {
@@ -2567,7 +2586,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setScheduleDate('')
       setShowScheduleModal(null)
       loadActivities()
-    } catch {}
+    } catch (e) {
+      toast.error(e)
+      loadActivities()
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -2579,7 +2601,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         await classroomApi.deleteActivity(id, true)
       }
       loadActivities(); setSelectedActivity(null)
-    } catch {}
+    } catch (e) {
+      // Borrar y que no pase nada visible es la peor combinación: el docente no sabe si se
+      // borró o no, y vuelve a intentarlo.
+      toast.error(e)
+    }
   }
 
   const startEditActivity = (act: Activity) => {
@@ -2767,6 +2793,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const handleResetLesson = async (studentEnrollmentId: string, studentName: string) => {
     if (!resetLessonModal) return
+    // Defecto P0-3 de la auditoría: esto se ejecutaba con un solo clic sobre la fila del
+    // estudiante, dentro de una lista donde el gesto natural es "seleccionar". Reiniciar
+    // BORRA su intento, su nota y el XP ganado, y no se puede deshacer.
+    const ok = await confirmDialog(
+      `Se borrará el intento de ${studentName} en esta lección, junto con su nota y el XP que ganó. Tendrá que hacerla desde el principio. Esto no se puede deshacer.`,
+      { title: 'Reiniciar la lección', confirmLabel: 'Sí, reiniciar', danger: true },
+    )
+    if (!ok) return
     setResettingStudentId(studentEnrollmentId)
     try {
       await classroomApi.resetLessonForStudent(resetLessonModal.activityId, studentEnrollmentId)
@@ -6628,7 +6662,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   }
 
   const handlePin = async (postId: string) => {
-    try { await classroomApi.togglePinForumPost(postId); loadPosts(); if (selectedPost) openThread(selectedPost) } catch {}
+    try { await classroomApi.togglePinForumPost(postId); loadPosts(); if (selectedPost) openThread(selectedPost) } catch (e) { toast.error(e) }
   }
 
   const handleDeletePost = async (postId: string) => {
