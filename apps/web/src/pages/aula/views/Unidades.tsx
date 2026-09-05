@@ -1,16 +1,20 @@
 /**
  * "Unidades" — el curso ordenado por temas.
  *
- * Es la columna vertebral pedagógica: cada unidad trae su material de estudio **y** su
- * trabajo, que hoy viven separados en dos pestañas distintas ("Contenidos" y "Actividades") y
- * obligan al estudiante a reconstruir mentalmente qué pertenece a qué.
+ * Una unidad no es "un grupo de actividades": es un tema, con su material de estudio **y** su
+ * trabajo. En el aula actual eso vive partido en dos pestañas —Contenidos tiene los materiales,
+ * Actividades tiene las tareas— y el estudiante tiene que reconstruir mentalmente qué va con
+ * qué. El prototipo del rediseño repetía el error al revés: agrupaba solo actividades e
+ * ignoraba los materiales (defecto X6 del plan).
  *
- * Las unidades se abren y cierran, y lo que el estudiante deja abierto se recuerda: en un
- * curso de ocho unidades, tener que volver a abrir la suya en cada visita es fricción pura.
+ * La forma la pidió el fundador tras ver la lista de aulas: *"las cards del selector me
+ * encantó, así más o menos quiero incluso dentro de cada curso el contenido"*. Así que una
+ * unidad se presenta como se presenta un curso —portada, avance, acción— y **se entra en
+ * ella**, en vez de desplegarse en un acordeón. Con ocho unidades, un acordeón obliga a
+ * recordar cuál estabas mirando; una portada se reconoce.
  */
 
-import { useEffect, useState } from 'react'
-import { ChevronDown, EyeOff, FileText, Image as ImageIcon, Link2, Type, Video } from 'lucide-react'
+import { ArrowRight, BookOpen, EyeOff, FileText, Image as ImageIcon, Link2, Type, Video } from 'lucide-react'
 import type { ActivityLike } from '../model/activityState'
 import { buildUnits, type MaterialLike, type SeccionLike, type Unidad } from '../model/units'
 import { materialTypeLabel } from '../model/labels'
@@ -18,106 +22,64 @@ import type { Role } from '../model/list'
 import { ActivityCard } from '../ui/ActivityCard'
 import { EmptyState } from '../ui/EmptyState'
 import { ProgressRing } from '../visual/Progress'
-
-const CLAVE_ABIERTAS = (aulaId: string) => `edusyn:aula:${aulaId}:unidades`
+import { SubjectCover } from '../visual/SubjectCover'
 
 export interface UnidadesProps {
   aulaId: string
   role: Role
+  asignatura?: string | null
+  color?: string | null
   secciones: SeccionLike[]
   actividades: ActivityLike[]
   periodo: string
+  /** Unidad abierta. Sin ella se muestra la parrilla. */
+  unidadAbierta?: string | null
+  onAbrirUnidad: (unidadId: string | null) => void
   onAbrirActividad: (id: string) => void
   onAbrirMaterial?: (material: MaterialLike) => void
   onCrear?: () => void
-  /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
   totalEstudiantes?: number | null
   now?: Date
 }
 
-export function Unidades({
-  aulaId,
-  role,
-  secciones,
-  actividades,
-  periodo,
-  onAbrirActividad,
-  onAbrirMaterial,
-  onCrear,
-  totalEstudiantes,
-  now = new Date(),
-}: UnidadesProps) {
+export function Unidades(props: UnidadesProps) {
+  const { secciones, actividades, role, periodo, now = new Date(), unidadAbierta } = props
   const unidades = buildUnits({ secciones, actividades, role, periodo, now })
-  const [abiertas, setAbiertas] = useState<string[]>([])
-  const [listo, setListo] = useState(false)
 
-  // Se recuerda qué unidades dejó abiertas. Si nunca eligió, se abre la primera: una pantalla
-  // de acordeones todos cerrados no dice nada.
-  useEffect(() => {
-    let guardadas: string[] | null = null
-    try {
-      const raw = localStorage.getItem(CLAVE_ABIERTAS(aulaId))
-      if (raw) guardadas = JSON.parse(raw)
-    } catch {
-      guardadas = null
-    }
-    setAbiertas(Array.isArray(guardadas) ? guardadas : unidades.slice(0, 1).map((u) => u.id))
-    setListo(true)
-    // Solo al cambiar de aula: no queremos pisar lo que el usuario abre mientras navega.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aulaId])
+  if (unidades.length === 0) return <SinUnidades {...props} />
 
-  const alternar = (id: string) => {
-    const next = abiertas.includes(id) ? abiertas.filter((x) => x !== id) : [...abiertas, id]
-    setAbiertas(next)
-    try {
-      localStorage.setItem(CLAVE_ABIERTAS(aulaId), JSON.stringify(next))
-    } catch {
-      /* sin almacenamiento: la preferencia dura lo que la sesión */
-    }
-  }
+  const abierta = unidadAbierta ? unidades.find((u) => u.id === unidadAbierta) : null
+  return abierta ? (
+    <DetalleUnidad {...props} unidad={abierta} />
+  ) : (
+    <Parrilla {...props} unidades={unidades} />
+  )
+}
 
-  if (unidades.length === 0) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <h1 className="text-h1 font-bold text-ink-primary">Unidades</h1>
-        <div className="mt-4">
-          {role === 'docente' ? (
-            <EmptyState
-              scene="sin-unidades"
-              title="Todavía no has organizado el curso en unidades"
-              detail="Una unidad agrupa el material de estudio y las actividades de un mismo tema. Es lo que le da orden al aula."
-              action={onCrear ? { label: 'Crear la primera unidad', onClick: onCrear } : undefined}
-            />
-          ) : (
-            <EmptyState
-              scene="sin-unidades"
-              title="Aún no hay unidades en este período"
-              detail="Cuando tu profe organice el curso por temas, los verás aquí. Prueba también con otro período."
-            />
-          )}
-        </div>
-      </div>
-    )
-  }
+// ─── La parrilla de unidades ─────────────────────────────────────────────────
 
+function Parrilla({
+  unidades,
+  role,
+  asignatura,
+  color,
+  onAbrirUnidad,
+}: UnidadesProps & { unidades: Unidad[] }) {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <h1 className="text-h1 font-bold text-ink-primary">Unidades</h1>
       <p className="mt-0.5 text-body-sm text-ink-muted">El material y el trabajo de cada tema, juntos.</p>
 
-      <div className="mt-4 space-y-3">
-        {unidades.map((u) => (
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {unidades.map((u, i) => (
           <TarjetaUnidad
             key={u.id}
             unidad={u}
+            numero={i + 1}
             role={role}
-            abierta={listo && abiertas.includes(u.id)}
-            onAlternar={() => alternar(u.id)}
-            onAbrirActividad={onAbrirActividad}
-            onAbrirMaterial={onAbrirMaterial}
-            totalEstudiantes={totalEstudiantes}
-            now={now}
+            asignatura={asignatura}
+            color={color}
+            onAbrir={() => onAbrirUnidad(u.id)}
           />
         ))}
       </div>
@@ -127,26 +89,21 @@ export function Unidades({
 
 function TarjetaUnidad({
   unidad: u,
+  numero,
   role,
-  abierta,
-  onAlternar,
-  onAbrirActividad,
-  onAbrirMaterial,
-  totalEstudiantes,
-  now,
+  asignatura,
+  color,
+  onAbrir,
 }: {
   unidad: Unidad
+  numero: number
   role: Role
-  abierta: boolean
-  onAlternar: () => void
-  onAbrirActividad: (id: string) => void
-  onAbrirMaterial?: (m: MaterialLike) => void
-  totalEstudiantes?: number | null
-  now: Date
+  asignatura?: string | null
+  color?: string | null
+  onAbrir: () => void
 }) {
   const resumen = [
-    u.total.materiales > 0 &&
-      `${u.total.materiales} ${u.total.materiales === 1 ? 'recurso' : 'recursos'}`,
+    u.total.materiales > 0 && `${u.total.materiales} ${u.total.materiales === 1 ? 'recurso' : 'recursos'}`,
     u.total.actividades > 0 &&
       `${u.total.actividades} ${u.total.actividades === 1 ? 'actividad' : 'actividades'}`,
   ]
@@ -154,85 +111,157 @@ function TarjetaUnidad({
     .join(' · ')
 
   return (
-    <section className="overflow-hidden rounded-modal border border-hairline bg-surface-1">
-      <h2>
-        <button
-          type="button"
-          onClick={onAlternar}
-          aria-expanded={abierta}
-          className="flex w-full items-center gap-3 p-4 text-left focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+    <button
+      type="button"
+      onClick={onAbrir}
+      className="group flex w-full flex-col overflow-hidden rounded-modal border border-hairline bg-surface-1 text-left transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+    >
+      <span className="relative block">
+        <SubjectCover subject={asignatura} color={color} alto={88} />
+        <span
+          className="absolute top-2.5 left-3 rounded-full bg-surface-1/90 px-2.5 py-1 text-xs font-bold text-ink-secondary backdrop-blur"
+          aria-hidden="true"
         >
-          <ChevronDown
-            className={`h-5 w-5 shrink-0 text-ink-muted transition-transform motion-reduce:transition-none ${
-              abierta ? '' : '-rotate-90'
-            }`}
-            aria-hidden="true"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="break-words text-body-base font-semibold text-ink-primary">{u.titulo}</span>
-              {u.oculta && (
-                <span
-                  className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-ink-muted"
-                  title="Los estudiantes no la ven"
-                >
-                  <EyeOff className="h-3 w-3" aria-hidden="true" /> Oculta
-                </span>
-              )}
-            </span>
-            <span className="mt-0.5 block text-body-sm text-ink-muted">
-              {resumen || 'Todavía sin contenido'}
-            </span>
+          Unidad {numero}
+        </span>
+        {u.oculta && (
+          <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-surface-1/90 px-2.5 py-1 text-xs font-medium text-ink-muted backdrop-blur">
+            <EyeOff className="h-3 w-3" aria-hidden="true" /> Oculta
           </span>
-          {u.avance != null && <ProgressRing value={u.avance} size={44} thickness={4} />}
-        </button>
-      </h2>
+        )}
+        {u.avance != null && (
+          <span className="absolute -bottom-5 right-3 rounded-full bg-surface-1 p-1 shadow-sm">
+            <ProgressRing value={u.avance} size={44} thickness={4} />
+          </span>
+        )}
+      </span>
 
-      {abierta && (
-        <div className="space-y-4 border-t border-hairline p-4">
-          {u.materiales.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-body-sm font-semibold text-ink-secondary">Para estudiar</h3>
-              <ul className="space-y-1">
-                {u.materiales.map((m) => (
-                  <li key={m.id}>
-                    <FilaMaterial material={m} role={role} onAbrir={onAbrirMaterial} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      <span className="flex min-w-0 flex-1 flex-col p-4 pt-4">
+        <span className="block pr-12 text-body-base leading-snug font-bold break-words text-ink-primary">
+          {u.titulo}
+        </span>
+        <span className="mt-1 block text-body-sm text-ink-muted">{resumen || 'Todavía sin contenido'}</span>
 
-          {u.actividades.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-body-sm font-semibold text-ink-secondary">Para hacer</h3>
-              <div className="space-y-2">
-                {u.actividades.map((d) => (
-                  <ActivityCard
-                    key={d.activity.id}
-                    item={d}
-                    role={role}
-                    onOpen={onAbrirActividad}
-                    // La unidad ya está en la cabecera: repetirla en cada tarjeta es ruido.
-                    showUnit={false}
-                    totalEstudiantes={totalEstudiantes}
-                    now={now}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+        <span className="mt-4 inline-flex min-h-btn items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-body-sm font-semibold text-white transition-opacity group-hover:opacity-90">
+          {role === 'estudiante' && u.avance != null && u.avance > 0 ? 'Continuar' : 'Abrir'}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </span>
+    </button>
+  )
+}
 
-          {u.materiales.length === 0 && u.actividades.length === 0 && (
-            <p className="text-body-sm text-ink-muted">
-              {role === 'docente'
-                ? 'Esta unidad todavía está vacía. Añádele material o una actividad.'
-                : 'Tu profe todavía no ha puesto nada en esta unidad.'}
-            </p>
+// ─── Dentro de una unidad ────────────────────────────────────────────────────
+
+function DetalleUnidad({
+  unidad: u,
+  role,
+  asignatura,
+  color,
+  totalEstudiantes,
+  onAbrirUnidad,
+  onAbrirActividad,
+  onAbrirMaterial,
+  now = new Date(),
+}: UnidadesProps & { unidad: Unidad }) {
+  return (
+    <div className="mx-auto max-w-3xl">
+      <button
+        type="button"
+        onClick={() => onAbrirUnidad(null)}
+        className="mb-3 inline-flex min-h-btn items-center gap-1 rounded-lg px-2 text-body-sm font-medium text-ink-muted hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+      >
+        ‹ Unidades
+      </button>
+
+      <div className="overflow-hidden rounded-modal border border-hairline bg-surface-1">
+        <div className="relative">
+          <SubjectCover subject={asignatura} color={color} alto={96} />
+          {u.avance != null && (
+            <span className="absolute -bottom-6 right-4 rounded-full bg-surface-1 p-1 shadow-sm">
+              <ProgressRing value={u.avance} size={52} />
+            </span>
           )}
         </div>
+        <div className="p-5 pr-20">
+          <h1 className="text-h2 leading-tight font-bold break-words text-ink-primary">{u.titulo}</h1>
+          <p className="mt-1 text-body-sm text-ink-muted">
+            {u.total.materiales} {u.total.materiales === 1 ? 'recurso' : 'recursos'} ·{' '}
+            {u.total.actividades} {u.total.actividades === 1 ? 'actividad' : 'actividades'}
+            {u.oculta ? ' · oculta para los estudiantes' : ''}
+          </p>
+        </div>
+      </div>
+
+      {u.materiales.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 flex items-center gap-2 text-body-base font-semibold text-ink-primary">
+            <BookOpen className="h-4 w-4 text-ink-muted" aria-hidden="true" /> Para estudiar
+          </h2>
+          <ul className="space-y-1.5">
+            {u.materiales.map((m) => (
+              <li key={m.id}>
+                <FilaMaterial material={m} role={role} onAbrir={onAbrirMaterial} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-    </section>
+
+      {u.actividades.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-body-base font-semibold text-ink-primary">Para hacer</h2>
+          <div className="space-y-2">
+            {u.actividades.map((d) => (
+              <ActivityCard
+                key={d.activity.id}
+                item={d}
+                role={role}
+                onOpen={onAbrirActividad}
+                // La unidad ya está en la cabecera: repetirla en cada tarjeta es ruido.
+                showUnit={false}
+                totalEstudiantes={totalEstudiantes}
+                now={now}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {u.materiales.length === 0 && u.actividades.length === 0 && (
+        <p className="mt-6 rounded-card border border-dashed border-hairline bg-surface-1 p-6 text-center text-body-sm text-ink-muted">
+          {role === 'docente'
+            ? 'Esta unidad todavía está vacía. Añádele material o una actividad.'
+            : 'Tu profe todavía no ha puesto nada en esta unidad.'}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ─── Piezas ──────────────────────────────────────────────────────────────────
+
+function SinUnidades({ role, onCrear }: UnidadesProps) {
+  return (
+    <div className="mx-auto max-w-3xl">
+      <h1 className="text-h1 font-bold text-ink-primary">Unidades</h1>
+      <div className="mt-4">
+        {role === 'docente' ? (
+          <EmptyState
+            scene="sin-unidades"
+            title="Todavía no has organizado el curso en unidades"
+            detail="Una unidad agrupa el material de estudio y las actividades de un mismo tema. Es lo que le da orden al aula."
+            action={onCrear ? { label: 'Crear la primera unidad', onClick: onCrear } : undefined}
+          />
+        ) : (
+          <EmptyState
+            scene="sin-unidades"
+            title="Aún no hay unidades en este período"
+            detail="Cuando tu profe organice el curso por temas, los verás aquí. Prueba también con otro período."
+          />
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -269,7 +298,7 @@ function FilaMaterial({
   )
 
   const clase =
-    'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none min-h-row'
+    'flex min-h-row w-full items-center gap-3 rounded-card border border-hairline bg-surface-1 px-3 py-2.5 text-left transition-colors hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none'
 
   // Un enlace o archivo se abre como enlace de verdad: así funcionan "abrir en pestaña nueva"
   // y el clic con el botón central, que en un botón de JavaScript no funcionan.
