@@ -281,7 +281,7 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T2 | `visual/`: SubjectMark, ActivityGlyph, Progress, Scene | ✅ | `44f5b655` · galería en `/galeria-aula.html` |
 | T3 | `ui/`: StateChip, ActivityCard, EmptyState, Skeletons | ✅ | `83ec939f` |
 | T4 | `AulaShell`: riel colapsable, header de contexto, barra inferior móvil | ✅ | Demo en `/shell-aula.html` |
-| T5 | Vista **Hoy** (docente y estudiante) cableada + muro de anuncios | ⬜ | |
+| T5 | Vista **Hoy** (docente y estudiante) + muro de anuncios | ✅ | `e99911bc` · falta cablear a la API (T11) |
 | T6 | Vista **Actividades**: búsqueda, filtros, agrupación, URL | ⬜ | |
 | T7 | Vista **Unidades**: materiales + actividades | ⬜ | |
 | T8 | **Detalle de actividad** con línea de tiempos e intentos | ⬜ | |
@@ -308,6 +308,25 @@ cd apps/web && npx tsc --noEmit  # obligatorio antes de main (CLAUDE.md)
 
 Ninguna de las dos entra al build de producción — Vite solo empaqueta `index.html`; verificado
 en `dist/` tras `npm run build`.
+
+### Decisiones de criterio que NO hay que "arreglar"
+
+Dos comportamientos parecen bugs y son deliberados. Están fijados con pruebas; si alguien los
+cambia, las pruebas caen y este es el porqué:
+
+1. **Al estudiante, lo vencido va DESPUÉS de lo que todavía alcanza a entregar.**
+   El orden heredado ponía lo vencido primero. Pero un taller que murió hace una semana por
+   encima de un quiz que vence hoy es mal consejo: no puede viajar en el tiempo, y solo
+   desmoraliza. El criterio es *qué puede ganar todavía*. Entre lo vencido manda lo más
+   reciente, que es lo único recuperable hablando con el profe.
+   (`activityState.ts` · `deriveStudentState`, `tieBreak: 'desc'`)
+
+2. **Los cuatro paneles del docente se solapan a propósito.**
+   Una actividad que vence hoy Y tiene entregas por calificar sale en los dos sitios, así que
+   los conteos no suman al total. Derivarlos del estado excluyente de la tarjeta producía una
+   mentira: el panel decía "Nada se cierra hoy" mientras el estudiante veía "Vence hoy a las
+   5:00 p.m." de esa misma actividad. La auditoría ya advertía este solapamiento (C5).
+   (`today.ts` · `buildTeacherToday`)
 
 > **Tropiezo conocido: reinicia el servidor de desarrollo al crear archivos nuevos.**
 > El escáner de Tailwind resuelve su lista de archivos al arrancar. Si creas un componente
