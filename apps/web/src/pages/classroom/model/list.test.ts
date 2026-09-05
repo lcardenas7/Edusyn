@@ -234,6 +234,34 @@ describe('limpiar filtros', () => {
   })
 })
 
+describe('lo que cada rol tiene derecho a ver', () => {
+  it('el estudiante nunca ve borradores ni programadas, aunque lleguen en el payload', () => {
+    // El backend ya las filtra, pero la UI no debe depender de eso: si una sin publicar se
+    // colara, el estudiante vería un examen futuro anunciado como "Pendiente".
+    const r = buildActivityList({
+      activities: AULA,
+      role: 'estudiante',
+      filters: filters(),
+      groupBy: 'unidad',
+      now: AHORA,
+    })
+    const ids = r.groups.flatMap((g) => g.items).map((d) => d.activity.id)
+    expect(ids).not.toContain('borrador')
+    expect(ids).not.toContain('huerfana')
+  })
+
+  it('el docente sí ve todo, incluidos sus borradores', () => {
+    const r = buildActivityList({
+      activities: AULA,
+      role: 'docente',
+      filters: filters(),
+      groupBy: 'unidad',
+      now: AHORA,
+    })
+    expect(r.groups.flatMap((g) => g.items).map((d) => d.activity.id)).toContain('borrador')
+  })
+})
+
 describe('vista del estudiante', () => {
   const DEL_ALUMNO: ActivityLike[] = [
     act({ id: 'devuelta', title: 'Ensayo', section: UNIDAD_3, submissions: [{ status: 'RETURNED' }] }),

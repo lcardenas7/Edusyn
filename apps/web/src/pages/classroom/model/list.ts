@@ -13,6 +13,7 @@ import {
   compareByUrgency,
   deriveStudentState,
   deriveTeacherState,
+  isVisibleTo,
   matchesSearch,
   periodIdOf,
 } from './activityState'
@@ -202,9 +203,11 @@ export function buildActivityList({ activities, role, filters, groupBy, now = ne
   const chips = stateChipsFor(role)
   const chip = chips.find((c) => c.id === filters.state) ?? chips[0]
 
-  // 1 · Universo: el período es el organizador primario, así que el resto de filtros y los
-  //     conteos de los chips se calculan DENTRO del período elegido.
+  // 1 · Universo: primero lo que el rol tiene derecho a ver, y luego el período, que es el
+  //     organizador primario — así el resto de filtros y los conteos de los chips se calculan
+  //     DENTRO del período elegido.
   const universe = activities
+    .filter((a) => isVisibleTo(role, a))
     .filter((a) => {
       if (filters.period === PERIOD_ALL) return true
       const p = periodIdOf(a)

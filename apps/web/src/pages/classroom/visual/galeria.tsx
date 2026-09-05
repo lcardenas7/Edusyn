@@ -15,6 +15,11 @@ import { ActivityGlyph } from './ActivityGlyph'
 import { ProgressRing, Stamp } from './Progress'
 import { Scene, type SceneName } from './Scene'
 import { ALL_FAMILIES, familyMeta } from '../model/labels'
+import { ActivityCard } from '../ui/ActivityCard'
+import { EmptyState, ActivityListSkeleton, ErrorState } from '../ui/EmptyState'
+import { StateLegend } from '../ui/StateChip'
+import { decorate } from '../model/list'
+import { isVisibleTo, type ActivityLike } from '../model/activityState'
 
 const ASIGNATURAS = [
   'Matemáticas',
@@ -38,6 +43,97 @@ const ESCENAS: SceneName[] = [
   'sin-unidades',
   'sin-anuncios',
   'sin-aulas',
+]
+
+/** Ahora simulado para la galería: 20 de mayo de 2026, 10:00 en Bogotá. */
+const AHORA = new Date('2026-05-20T15:00:00.000Z')
+
+const UNIDAD = { id: 'u3', title: 'Unidad 3: Álgebra básica', academicTermId: 'p2' }
+
+const MUESTRA: ActivityLike[] = [
+  {
+    id: '1',
+    type: 'TASK',
+    title: 'Taller de ecuaciones lineales',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-05-20T22:00:00.000Z',
+    maxScore: 5,
+    gradingPending: 6,
+    _count: { submissions: 18 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '2',
+    type: 'QUIZ',
+    title: 'Quiz de proporciones',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-05-17T22:00:00.000Z',
+    metadata: { maxAttempts: 3 },
+    submissions: [{ status: 'DRAFT', attemptNumber: 2 }],
+    _count: { submissions: 24 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '3',
+    type: 'LESSON',
+    title: 'Lección: del lenguaje natural al algebraico',
+    isPublished: true,
+    section: UNIDAD,
+    submissions: [{ status: 'RETURNED' }],
+    _count: { submissions: 30 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '4',
+    type: 'EXAM',
+    title: 'Examen del período',
+    isPublished: false,
+    scheduledPublishAt: '2026-05-29T13:00:00.000Z',
+    section: UNIDAD,
+    maxScore: 5,
+    _count: { submissions: 0 },
+  },
+  {
+    id: '5',
+    type: 'ICFES_SIMULATOR',
+    title: 'Simulacro ICFES · razonamiento cuantitativo',
+    isPublished: true,
+    section: UNIDAD,
+    openDate: '2026-05-26T13:00:00.000Z',
+    dueDate: '2026-05-30T22:00:00.000Z',
+    _count: { submissions: 0 },
+    ...({ studentCount: 32 } as object),
+  },
+  {
+    id: '6',
+    type: 'GAME',
+    title: 'Crucigrama de términos algebraicos',
+    isPublished: true,
+    section: UNIDAD,
+    metadata: { gameType: 'CROSSWORD' },
+    locked: true,
+    submissions: [],
+    ...({
+      requirements: [
+        { prerequisiteId: 'a', title: 'Lección: del lenguaje natural al algebraico', satisfied: true },
+        { prerequisiteId: 'b', title: 'Quiz de proporciones', satisfied: false },
+      ],
+    } as object),
+  },
+  {
+    id: '7',
+    type: 'TASK',
+    title: 'Ensayo sobre modelos matemáticos',
+    isPublished: true,
+    section: UNIDAD,
+    dueDate: '2026-05-12T22:00:00.000Z',
+    maxScore: 5,
+    submissions: [{ status: 'GRADED', score: 4.3, submittedAt: '2026-05-11T20:00:00.000Z' }],
+    _count: { submissions: 31 },
+    ...({ studentCount: 32 } as object),
+  },
 ]
 
 function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
@@ -166,6 +262,54 @@ function Galeria() {
           </div>
         </Bloque>
 
+        <Bloque
+          titulo="Tarjeta de actividad · lo que ve el ESTUDIANTE"
+          nota="El estado se dice con texto, la fecha se dice en cristiano y se muestran los datos que hoy existen pero nunca se pintan: intentos, apertura, borrador sin enviar, qué falta para desbloquear."
+        >
+          <div className="space-y-2">
+            {MUESTRA.filter((a) => isVisibleTo('estudiante', a)).map((a) => (
+              <ActivityCard
+                key={a.id}
+                item={decorate(a, 'estudiante', AHORA)}
+                role="estudiante"
+                onOpen={() => {}}
+                now={AHORA}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-ink-muted">
+            El "Examen del período" no aparece aquí a propósito: está en borrador programado. El
+            modelo lo filtra aunque el backend lo mandara por error.
+          </p>
+        </Bloque>
+
+        <Bloque
+          titulo="Tarjeta de actividad · lo que ve el DOCENTE"
+          nota="Mismo componente, otra lectura: cuántos entregaron, cuántas esperan nota, qué está en borrador y qué se publica solo."
+        >
+          <div className="space-y-2">
+            {MUESTRA.map((a) => (
+              <ActivityCard key={a.id} item={decorate(a, 'docente', AHORA)} role="docente" onOpen={() => {}} now={AHORA} />
+            ))}
+          </div>
+        </Bloque>
+
+        <Bloque
+          titulo="Leyenda de estados"
+          nota="La auditoría señaló que el código de colores del aula no se explica en ninguna parte. Esto va en un desplegable junto a los filtros."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-card border border-hairline bg-surface-1 p-4">
+              <p className="mb-3 text-body-sm font-semibold text-ink-primary">Estudiante</p>
+              <StateLegend role="estudiante" />
+            </div>
+            <div className="rounded-card border border-hairline bg-surface-1 p-4">
+              <p className="mb-3 text-body-sm font-semibold text-ink-primary">Docente</p>
+              <StateLegend role="docente" />
+            </div>
+          </div>
+        </Bloque>
+
         <Bloque titulo="Avance y cierre" nota="El anillo se lee de reojo; el sello da el cierre que una barra al 100% no da.">
           <div className="flex flex-wrap items-center gap-6 rounded-card border border-hairline bg-surface-1 p-5">
             {[0, 25, 60, 100].map((v) => (
@@ -180,9 +324,36 @@ function Galeria() {
         </Bloque>
 
         <Bloque
-          titulo="Estados vacíos"
-          nota="Un vacío es una conversación: o falta algo por hacer, o el estudiante hizo todo y merece saberlo."
+          titulo="Estados vacíos, carga y error"
+          nota="Un vacío es una conversación: o falta algo por hacer, o el estudiante hizo todo y merece saberlo. Y siempre con salida: la auditoría encontró vacíos cuyo botón no resolvía nada."
         >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <EmptyState
+              scene="todo-al-dia"
+              title="No tienes nada pendiente"
+              detail="Entregaste todo lo de este período. Cuando tu profe publique algo nuevo, aparecerá aquí."
+              secondary={{ label: 'Ver lo que ya entregué', onClick: () => {} }}
+            />
+            <EmptyState
+              scene="sin-resultados"
+              title="Nada coincide con esa búsqueda"
+              detail="Prueba con otras palabras, o quita los filtros para ver todo el aula."
+              action={{ label: 'Quitar filtros', onClick: () => {} }}
+            />
+            <EmptyState
+              scene="sin-actividades"
+              title="Todavía no has creado actividades"
+              detail="Crea la primera para que tus estudiantes tengan qué entregar."
+              action={{ label: 'Crear actividad', onClick: () => {} }}
+              secondary={{ label: 'Pedirle una a Valeria', onClick: () => {} }}
+            />
+            <ErrorState message="Se cayó la conexión mientras cargábamos tus actividades." onRetry={() => {}} />
+          </div>
+
+          <p className="mt-5 mb-2 text-body-sm font-semibold text-ink-primary">Carga</p>
+          <ActivityListSkeleton rows={3} />
+
+          <p className="mt-5 mb-2 text-body-sm font-semibold text-ink-primary">Las seis escenas</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ESCENAS.map((n) => (
               <div
