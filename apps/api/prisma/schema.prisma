@@ -474,6 +474,12 @@ model Institution {
   // Control de contraseñas
   allowStudentPasswordChange Boolean @default(true) // Si es false, los estudiantes no pueden cambiar su contraseña
 
+  // F-1 · Habilita que los DOCENTES fijen la nota final de período de sus
+  // propias asignaturas. Desactivada por defecto a propósito: el permiso
+  // histórico era abierto y no debe heredarse como autorización implícita.
+  // Coordinación, rectoría y administración no dependen de esta bandera.
+  allowTeacherFinalGradeOverride Boolean @default(false)
+
   // Control de entorno
   isDemo Boolean @default(false) // Institución de demostración (permite seed demo, limpieza total)
 

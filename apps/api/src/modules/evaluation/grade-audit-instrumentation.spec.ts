@@ -23,6 +23,23 @@ import { FinalComponentGradesService } from './final-component-grades.service';
 describe('D-1 · auditoría de escrituras de notas', () => {
   const auditoriaFalsa = () => ({ record: jest.fn(), recordMany: jest.fn() });
 
+  /** Sesión supervisora: la política no le exige titularidad ni causal. */
+  const COORDINACION = { userId: 'u-1', roles: ['COORDINADOR'], institutionId: 'inst-1' };
+
+  /** Prisma mínimo para las notas finales, con todo dentro de la misma institución. */
+  const prismaNotasFinales = (extra: Record<string, unknown> = {}) => ({
+    academicTerm: {
+      findUnique: jest.fn().mockResolvedValue({ status: 'OPEN', academicYear: { institutionId: 'inst-1' } }),
+    },
+    subject: { findUnique: jest.fn().mockResolvedValue({ area: { institutionId: 'inst-1' } }) },
+    institution: { findUnique: jest.fn().mockResolvedValue({ allowTeacherFinalGradeOverride: false }) },
+    teacherAssignment: { findFirst: jest.fn().mockResolvedValue(null) },
+    studentEnrollment: {
+      findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1', groupId: 'grp-1' }),
+    },
+    ...extra,
+  });
+
   // ═══════════════════════════════════════════════════════════════════════
   // 1. Guardar sin cambios no genera ruido
   // ═══════════════════════════════════════════════════════════════════════
@@ -147,14 +164,12 @@ describe('D-1 · auditoría de escrituras de notas', () => {
 
     it('notas finales de período', async () => {
       const audit = auditoriaFalsa();
-      const prisma: any = {
-        academicTerm: { findUnique: jest.fn().mockResolvedValue({ status: 'OPEN' }) },
-        studentEnrollment: { findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1' }) },
+      const prisma: any = prismaNotasFinales({
         periodFinalGrade: {
           findUnique: jest.fn().mockResolvedValue(null),
           upsert: jest.fn().mockResolvedValue({ id: 'pfg-x', institutionId: 'inst-1' }),
         },
-      };
+      });
       const svc = new PeriodFinalGradesService(prisma, audit as any);
 
       await svc.bulkUpsert(
@@ -163,6 +178,7 @@ describe('D-1 · auditoría de escrituras de notas', () => {
           { studentEnrollmentId: 'enr-2', academicTermId: 't1', subjectId: 's1', finalScore: 2 },
         ],
         'user-1',
+        COORDINACION,
       );
 
       expect(audit.record).toHaveBeenCalledTimes(2);
@@ -179,19 +195,18 @@ describe('D-1 · auditoría de escrituras de notas', () => {
   describe('el evento conserva el valor anterior y el actor', () => {
     it('una modificación registra la nota previa, la nueva y quién la cambió', async () => {
       const audit = auditoriaFalsa();
-      const prisma: any = {
-        academicTerm: { findUnique: jest.fn().mockResolvedValue({ status: 'OPEN' }) },
-        studentEnrollment: { findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1' }) },
+      const prisma: any = prismaNotasFinales({
         periodFinalGrade: {
           findUnique: jest.fn().mockResolvedValue({ id: 'pfg-1', finalScore: 2.5, institutionId: 'inst-1' }),
           upsert: jest.fn().mockResolvedValue({ id: 'pfg-1', institutionId: 'inst-1' }),
         },
-      };
+      });
       const svc = new PeriodFinalGradesService(prisma, audit as any);
       const actor = { userId: 'u-1', name: 'quien-actua', role: 'RECTOR' };
 
       await svc.upsert(
         { studentEnrollmentId: 'enr-1', academicTermId: 't1', subjectId: 's1', finalScore: 4.8, enteredById: 'u-1' },
+        { userId: 'u-1', roles: ['RECTOR'], institutionId: 'inst-1' },
         actor,
       );
 

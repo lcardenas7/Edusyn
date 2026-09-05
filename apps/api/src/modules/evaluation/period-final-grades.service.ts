@@ -1,8 +1,24 @@
 import { randomUUID } from 'crypto';
 
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeAuditActor, GradeAuditService } from './grade-audit.service';
+import {
+  CausalNotaFinal,
+  decidirEscrituraNotaFinal,
+  mensajeDeRechazo,
+} from './period-final-grade-policy';
+
+/**
+ * Quién escribe, según la SESIÓN. La institución nunca llega en el cuerpo de la
+ * petición: se deriva aquí y lo recibido solo se contrasta contra ella.
+ */
+export interface QuienEscribe {
+  userId: string;
+  roles: readonly string[];
+  esSuperAdmin?: boolean;
+  institutionId: string;
+}
 
 /** Origen de auditoría de esta superficie: la nota final del período. */
 const AUDIT_SOURCE = 'PERIOD_FINAL_GRADE';
@@ -31,6 +47,78 @@ export class PeriodFinalGradesService {
     }
   }
 
+  /**
+   * Reúne los hechos que la política necesita y aplica su decisión.
+   *
+   * Las cuatro consultas van en paralelo y piden SOLO la institución de cada
+   * recurso: basta para contrastarlos contra la sesión, y no arrastra datos
+   * personales a una comprobación de permisos.
+   */
+  private async autorizarEscritura(
+    data: { studentEnrollmentId: string; academicTermId: string; subjectId: string; reason?: unknown },
+    quien: QuienEscribe,
+  ): Promise<CausalNotaFinal | undefined> {
+    const [matricula, periodo, asignatura, institucion] = await Promise.all([
+      this.prisma.studentEnrollment.findUnique({
+        where: { id: data.studentEnrollmentId },
+        select: { institutionId: true, groupId: true },
+      }),
+      // El período y la asignatura no llevan la institución encima: se alcanza
+      // por su año académico y por su área respectivamente.
+      this.prisma.academicTerm.findUnique({
+        where: { id: data.academicTermId },
+        select: { status: true, academicYear: { select: { institutionId: true } } },
+      }),
+      this.prisma.subject.findUnique({
+        where: { id: data.subjectId },
+        select: { area: { select: { institutionId: true } } },
+      }),
+      this.prisma.institution.findUnique({
+        where: { id: quien.institutionId },
+        select: { allowTeacherFinalGradeOverride: true },
+      }),
+    ]);
+
+    // La titularidad solo se consulta si hace falta: un supervisor no la
+    // necesita, y una consulta de más en cada guardado masivo se nota.
+    let esTitular = false;
+    if (matricula?.groupId) {
+      const asignacion = await this.prisma.teacherAssignment.findFirst({
+        where: {
+          teacherId: quien.userId,
+          groupId: matricula.groupId,
+          subjectId: data.subjectId,
+          institutionId: quien.institutionId,
+          OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
+        },
+        select: { id: true },
+      });
+      esTitular = Boolean(asignacion);
+    }
+
+    const decision = decidirEscrituraNotaFinal({
+      roles: quien.roles,
+      esSuperAdmin: quien.esSuperAdmin,
+      institucionSesion: quien.institutionId,
+      institucionMatricula: matricula?.institutionId ?? null,
+      institucionPeriodo: periodo?.academicYear?.institutionId ?? null,
+      institucionAsignatura: asignatura?.area?.institutionId ?? null,
+      periodoFinalizado: periodo?.status === 'FINALIZED',
+      habilitacionInstitucional: institucion?.allowTeacherFinalGradeOverride ?? false,
+      esTitular,
+      causal: data.reason,
+    });
+
+    if (decision.permitido) return decision.causalRegistrada;
+
+    const mensaje = mensajeDeRechazo(decision.motivo!);
+    // Un recurso de otra institución se trata como inexistente: prohibirlo
+    // confirmaría que existe.
+    if (decision.motivo === 'FUERA_DE_INSTITUCION') throw new NotFoundException(mensaje);
+    if (decision.motivo === 'CAUSAL_INVALIDA') throw new BadRequestException(mensaje);
+    throw new ForbiddenException(mensaje);
+  }
+
   async upsert(
     data: {
       studentEnrollmentId: string;
@@ -39,11 +127,16 @@ export class PeriodFinalGradesService {
       finalScore: number;
       observations?: string;
       enteredById: string;
+      reason?: unknown;
     },
+    quien: QuienEscribe,
     actor?: GradeAuditActor,
     batchId?: string,
   ) {
-    await this.guardTermNotFinalized(data.academicTermId);
+    const causal = await this.autorizarEscritura(data, quien);
+    // `reason` es un dato de la decisión, no una columna de la nota: viaja a la
+    // auditoría y no debe llegar a Prisma.
+    const { reason: _causalRecibida, ...datosNota } = data;
     const key = {
       studentEnrollmentId: data.studentEnrollmentId,
       academicTermId: data.academicTermId,
@@ -63,7 +156,7 @@ export class PeriodFinalGradesService {
         enteredById: data.enteredById,
         isManualOverride: true, // C-1: escritura manual = fijada; el recálculo no la pisa
       },
-      create: { ...data, isManualOverride: true, institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } }))!.institutionId },
+      create: { ...datosNota, isManualOverride: true, institutionId: quien.institutionId },
       include: {
         studentEnrollment: {
           include: {
@@ -91,6 +184,7 @@ export class PeriodFinalGradesService {
           subjectId: data.subjectId,
           previousScore,
           newScore: data.finalScore,
+          reason: causal ?? null,
           batchId: batchId ?? null,
         },
         actor,
@@ -142,7 +236,7 @@ export class PeriodFinalGradesService {
     });
   }
 
-  async delete(id: string, actor?: GradeAuditActor) {
+  async delete(id: string, quien: QuienEscribe, reason?: unknown, actor?: GradeAuditActor) {
     const grade = await this.prisma.periodFinalGrade.findUnique({
       where: { id },
       select: {
@@ -153,9 +247,21 @@ export class PeriodFinalGradesService {
         subjectId: true,
       },
     });
-    if (grade) {
-      await this.guardTermNotFinalized(grade.academicTermId);
+    // Un registro de otra institución se trata como inexistente.
+    if (!grade || grade.institutionId !== quien.institutionId) {
+      throw new NotFoundException('Registro no encontrado.');
     }
+    // Borrar una nota final es una escritura como cualquier otra y pasa por la
+    // misma puerta.
+    const causalBorrado = await this.autorizarEscritura(
+      {
+        studentEnrollmentId: grade.studentEnrollmentId,
+        academicTermId: grade.academicTermId,
+        subjectId: grade.subjectId,
+        reason,
+      },
+      quien,
+    );
     const result = await this.prisma.periodFinalGrade.delete({ where: { id } });
 
     if (grade) {
@@ -170,6 +276,7 @@ export class PeriodFinalGradesService {
           subjectId: grade.subjectId,
           previousScore: Number(grade.finalScore),
           newScore: null,
+          reason: causalBorrado ?? null,
         },
         actor,
       );
@@ -186,13 +293,14 @@ export class PeriodFinalGradesService {
       observations?: string;
     }>,
     enteredById: string,
+    quien: QuienEscribe,
     actor?: GradeAuditActor,
   ) {
     // Toda la carga masiva comparte correlación: ocurrió como una sola acción.
     const batchId = randomUUID();
     const results: any[] = [];
     for (const grade of grades) {
-      const result = await this.upsert({ ...grade, enteredById }, actor, batchId);
+      const result = await this.upsert({ ...grade, enteredById }, quien, actor, batchId);
       results.push(result);
     }
     return results;
