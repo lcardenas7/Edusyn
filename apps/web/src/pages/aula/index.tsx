@@ -46,6 +46,7 @@ function DetalleCargado({
   activityId,
   aulaId,
   rol,
+  totalEstudiantes,
   onVolver,
   onIrAlAulaActual,
   onAbrirActividad,
@@ -53,6 +54,7 @@ function DetalleCargado({
   activityId: string
   aulaId: string
   rol: Rol
+  totalEstudiantes?: number | null
   onVolver: () => void
   onIrAlAulaActual: () => void
   onAbrirActividad: (id: string) => void
@@ -86,6 +88,7 @@ function DetalleCargado({
           onCambio={recargar}
           onIrAlAulaActual={onIrAlAulaActual}
           aulaId={aulaId}
+          totalEstudiantes={totalEstudiantes}
           onAbrirActividad={onAbrirActividad}
         />
       )}
@@ -122,25 +125,36 @@ export default function AulaVirtual() {
   // esto el aula se creía en "Hoy" mientras mostraba una actividad: las migas de pan y el
   // destino resaltado mentían sobre dónde estás. Salió al recorrer el aula en el navegador.
   const vista: Vista = activityId ? 'actividades' : esVista(vistaParam) ? vistaParam : 'hoy'
-  // El período vive en la URL para que un enlace lleve a lo mismo que veía quien lo mandó.
-  const periodo = params.get('periodo') ?? PERIOD_ALL
+  /*
+   * El período vive en la URL para que un enlace lleve a lo mismo que veía quien lo mandó.
+   *
+   * Sin parámetro se arranca en el período EN CURSO, no en "Todos": probando con un aula real
+   * de 26 actividades repartidas en cuatro períodos, "Todos" mezclaba trabajo que venció hace
+   * noventa días con el de esta semana. El aula actual también arranca en un período.
+   * Elegir "Todos" sí se escribe en la URL, así que la elección del usuario manda.
+   */
+  const periodo = params.get('periodo') ?? aula?.periodoActual?.id ?? PERIOD_ALL
   const filtroEstado = params.get('estado')
 
   const irA = useCallback(
     (v: Vista) => {
       if (!classroomId) return
       // Cambiar de destino limpia el filtro de estado: venía de otro contexto.
-      const q = periodo !== PERIOD_ALL ? `?periodo=${encodeURIComponent(periodo)}` : ''
+      // Se arrastra el período tal cual estaba, incluido "todos": cambiar de destino no debe
+      // deshacer la elección del usuario.
+      const elegido = params.get('periodo')
+      const q = elegido ? `?periodo=${encodeURIComponent(elegido)}` : ''
       navigate(`/aula/${classroomId}/${v}${q}`)
     },
-    [classroomId, navigate, periodo],
+    [classroomId, navigate, params],
   )
 
   const cambiarPeriodo = useCallback(
     (p: string) => {
+      // Se escribe siempre, incluido "todos": si se borrara el parámetro, la vista volvería
+      // sola al período en curso y parecería que el selector no funciona.
       const next = new URLSearchParams(params)
-      if (p === PERIOD_ALL) next.delete('periodo')
-      else next.set('periodo', p)
+      next.set('periodo', p)
       setParams(next, { replace: true })
     },
     [params, setParams],
@@ -216,6 +230,7 @@ export default function AulaVirtual() {
         titulo: aula?.titulo ?? 'Aula',
         asignatura: aula?.asignatura,
         grupo: aula?.grupo,
+        color: aula?.color ?? null,
       }}
       role={rol}
       vista={vista}
@@ -249,6 +264,7 @@ export default function AulaVirtual() {
             activityId={activityId}
             aulaId={classroomId}
             rol={rol}
+            totalEstudiantes={aula?.estudiantes ?? null}
             onVolver={() => verActividades()}
             onIrAlAulaActual={() => irAlAulaActualPara('editar')}
             onAbrirActividad={abrirActividad}
@@ -298,7 +314,6 @@ export default function AulaVirtual() {
             role={rol}
             actividades={actividades}
             onAbrirActividad={abrirActividad}
-            onIrAlGradebook={rol === 'docente' ? () => navigate('/grades') : undefined}
           />
         ) : vista === 'estudiantes' && rol === 'docente' ? (
           <Estudiantes classroomId={classroomId} />

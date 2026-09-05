@@ -16,7 +16,7 @@
  * esconde la navegación justo a quien más la necesita.
  */
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronLeft, Ellipsis, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
 import { destinosDe, vistaLabel, type Vista } from './destinations'
@@ -36,6 +36,8 @@ export interface AulaShellProps {
     asignatura?: string | null
     /** "8-A" */
     grupo?: string | null
+    /** El color que el docente eligió para esta aula. Manda sobre el de la asignatura. */
+    color?: string | null
   }
   role: 'docente' | 'estudiante'
   vista: Vista
@@ -71,10 +73,22 @@ export function AulaShell({
 }: AulaShellProps) {
   const { expandido, alternar } = useRail()
   const [masAbierto, setMasAbierto] = useState(false)
+
+  /*
+   * La barra inferior de móvil ocupa la esquina donde vive el botón flotante de Valeria, que
+   * se monta justo sobre el destino "Más". Este atributo permite levantarlo desde `index.css`
+   * sin tocar `ValeriaAssistant.tsx`, y desaparece al salir del aula.
+   */
+  useEffect(() => {
+    document.body.setAttribute('data-aula-nav-inferior', '')
+    return () => document.body.removeAttribute('data-aula-nav-inferior')
+  }, [])
   const destinos = destinosDe(role)
   const principales = destinos.filter((d) => d.principal)
   const secundarios = destinos.filter((d) => !d.principal)
   const identidad = subjectIdentity(aula.asignatura)
+  const colorAula = aula.color?.trim() || identidad.hue.ink
+  const hueDelAula = { ink: colorAula, wash: `${colorAula}1A`, deep: colorAula }
 
   const irA = (v: Vista) => {
     onNavegar(v)
@@ -86,8 +100,8 @@ export function AulaShell({
     // decorar nada más. Se hace redefiniendo el token en este contenedor, no con CSS global,
     // para que no se filtre al resto de la aplicación.
     <div
-      className="min-h-screen bg-canvas"
-      style={{ ['--skill-accent' as string]: hexARgb(identidad.hue.ink) }}
+      className="min-h-screen bg-accent/[0.045]"
+      style={{ ['--skill-accent' as string]: hexARgb(aula.color?.trim() || identidad.hue.ink) }}
     >
       <div className="mx-auto flex max-w-workspace">
         {/* ─── Riel (escritorio) ─────────────────────────────────────────── */}
@@ -170,45 +184,51 @@ export function AulaShell({
             `top-14 lg:top-0` es el arreglo del hallazgo F1: en móvil, `Layout` tiene un header
             fijo de 56 px, así que un `top-0` metería esta barra debajo de él.
           */}
-          <header className="sticky top-14 z-20 border-b border-hairline bg-canvas/95 backdrop-blur lg:top-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-4 py-2.5">
+          <header className="sticky top-14 z-20 border-b border-accent/15 bg-accent/[0.07] backdrop-blur lg:top-0">
+            {/* Una sola fila, también en móvil. Envolviendo, el selector de período se llevaba
+                una línea entera del encabezado fijo y le comía altura útil a la pantalla. */}
+            <div className="flex flex-nowrap items-center gap-x-1.5 px-3 py-2 sm:gap-x-2 sm:px-4">
               <button
                 type="button"
                 onClick={onSalir}
-                className="inline-flex min-h-btn items-center gap-1 rounded-lg px-2 text-body-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+                aria-label="Volver a mis aulas"
+                className="inline-flex min-h-btn shrink-0 items-center gap-1 rounded-lg px-1.5 text-body-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:px-2"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Mis aulas</span>
-                <span className="sm:hidden">Aulas</span>
               </button>
 
               {/* Migas de pan: dónde estoy, sin adivinar */}
-              <nav aria-label="Ubicación" className="flex min-w-0 items-center gap-1.5">
-                <span className="lg:hidden">
-                  <SubjectMark subject={aula.asignatura} size={26} />
+              <nav aria-label="Ubicación" className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="shrink-0 lg:hidden">
+                  <SubjectMark subject={aula.asignatura} size={24} hue={hueDelAula} />
                 </span>
                 <p className="min-w-0 truncate text-body-sm">
                   <span className="font-medium text-ink-primary">
                     {aula.asignatura || aula.titulo}
                     {aula.grupo ? ` ${aula.grupo}` : ''}
                   </span>
-                  <span className="mx-1.5 text-ink-muted" aria-hidden="true">
+                  {/* En móvil la vista actual ya la dice la barra inferior, resaltada. Repetirla
+                      aquí solo servía para dejar el nombre del aula en "Matem…". */}
+                  <span className="mx-1.5 hidden text-ink-muted sm:inline" aria-hidden="true">
                     ›
                   </span>
-                  <span className="text-ink-secondary">{vistaLabel(vista)}</span>
+                  <span className="hidden text-ink-secondary sm:inline">{vistaLabel(vista)}</span>
                 </p>
               </nav>
 
               {periodos.length > 0 && (
-                <div className="ml-auto">
+                <>
                   <label className="sr-only" htmlFor="aula-periodo">
                     Período académico
                   </label>
+                  {/* Acotado en móvil: sin tope, el ancho lo fijaba la opción más larga
+                      ("Todos los períodos") y empujaba el resto de la fila fuera. */}
                   <select
                     id="aula-periodo"
                     value={periodo}
                     onChange={(e) => onPeriodo(e.target.value)}
-                    className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-2.5 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+                    className="min-h-btn max-w-[8.5rem] shrink-0 rounded-lg border border-hairline bg-surface-1 px-2 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:max-w-none sm:px-2.5"
                   >
                     {/* "Todos" existe a propósito: sin él, parte del aula queda invisible (C2). */}
                     <option value="todos">Todos los períodos</option>
@@ -220,14 +240,14 @@ export function AulaShell({
                     ))}
                     <option value="sin-periodo">Sin período</option>
                   </select>
-                </div>
+                </>
               )}
             </div>
           </header>
 
           {/* `pb-24` deja aire para la barra inferior de móvil */}
-          <main className="px-4 pt-5 pb-24 lg:pb-10">
-            {aviso && <div className="mx-auto mb-5 max-w-3xl">{aviso}</div>}
+          <main className="px-3 pt-4 pb-24 sm:px-4 sm:pt-5 lg:pb-10">
+            {aviso && <div className="mx-auto mb-4 max-w-3xl">{aviso}</div>}
             {children}
           </main>
         </div>
@@ -236,7 +256,7 @@ export function AulaShell({
       {/* ─── Barra inferior (móvil) ────────────────────────────────────────── */}
       <nav
         aria-label="Secciones del aula"
-        className="fixed right-0 bottom-0 left-0 z-30 border-t border-hairline bg-surface-1 pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed right-0 bottom-0 left-0 z-30 border-t border-accent/15 bg-surface-1/95 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         <div className="flex">
           {principales.map((d) => {

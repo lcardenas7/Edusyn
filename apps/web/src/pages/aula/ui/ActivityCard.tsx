@@ -82,19 +82,20 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, now = new Da
       disabled={bloqueada}
       aria-disabled={bloqueada}
       style={acento ? { borderLeftColor: acento, borderLeftWidth: 3 } : undefined}
-      className={`group w-full rounded-card border border-hairline bg-surface-1 p-4 text-left transition-colors ${
+      className={`group w-full rounded-card border border-hairline bg-surface-1 p-3 text-left transition-colors sm:p-4 ${
         bloqueada
           ? 'cursor-not-allowed opacity-70'
           : 'hover:border-accent/40 hover:bg-surface-1 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none'
       }`}
     >
-      <div className="flex items-start gap-3">
-        <ActivityGlyph type={a.type} size={44} />
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <ActivityGlyph type={a.type} size={38} className="sm:hidden" />
+        <ActivityGlyph type={a.type} size={44} className="hidden sm:inline-flex" />
 
         <div className="min-w-0 flex-1">
           {/* Título + estado */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="text-body-base font-semibold text-ink-primary">{a.title}</h3>
+            <h3 className="min-w-0 break-words text-body-base font-semibold text-ink-primary">{a.title}</h3>
             {role === 'estudiante' && s && (
               <StudentStateChip
                 state={s.state}
@@ -112,7 +113,7 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, now = new Da
           </div>
 
           {/* Tipo · unidad */}
-          <p className="mt-0.5 text-body-sm text-ink-muted">
+          <p className="mt-0.5 break-words text-body-sm text-ink-muted">
             {activityTypeLabel(a.type, a.metadata)}
             {showUnit && a.section?.title ? ` · ${a.section.title}` : ''}
           </p>

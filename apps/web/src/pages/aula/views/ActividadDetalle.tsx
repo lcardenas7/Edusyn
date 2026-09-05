@@ -49,6 +49,8 @@ export interface ActividadDetalleProps {
   onIrAlAulaActual: () => void
   /** Aula en la que estamos: la necesita el asistente de copia. */
   aulaId?: string
+  /** Estudiantes del grupo, para poder decir cuántos faltan por entregar. */
+  totalEstudiantes?: number | null
   /** Abre otra actividad (se usa al terminar de copiar). */
   onAbrirActividad?: (id: string) => void
   now?: Date
@@ -63,6 +65,7 @@ export function ActividadDetalle({
   onCambio,
   onIrAlAulaActual,
   aulaId,
+  totalEstudiantes,
   onAbrirActividad,
   now = new Date(),
 }: ActividadDetalleProps) {
@@ -96,7 +99,7 @@ export function ActividadDetalle({
         <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Actividades
       </button>
 
-      <article className="rounded-modal border border-hairline bg-surface-1 p-5 sm:p-6">
+      <article className="rounded-modal border border-hairline bg-surface-1 p-4 sm:p-6">
         {/* Encabezado */}
         <header className="flex flex-wrap items-start gap-4">
           <ActivityGlyph type={a.type} size={56} />
@@ -104,7 +107,7 @@ export function ActividadDetalle({
             <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: meta.ink }}>
               {activityTypeLabel(a.type, a.metadata)}
             </p>
-            <h1 className="mt-0.5 text-h1 leading-tight font-bold text-ink-primary">{a.title}</h1>
+            <h1 className="mt-0.5 break-words text-h1 leading-tight font-bold text-ink-primary">{a.title}</h1>
             {a.section?.title && <p className="mt-1 text-body-sm text-ink-muted">{a.section.title}</p>}
           </div>
           {esDocente ? (
@@ -222,7 +225,15 @@ export function ActividadDetalle({
         {!esDocente && a.type === 'TASK' && (
           <EntregaTarea actividad={a} entrega={miEntrega} vista={vista} onCambio={onCambio} now={now} />
         )}
-        {esDocente && <ListaEntregas actividad={a} entregas={entregas} onCambio={onCambio} now={now} />}
+        {esDocente && (
+          <ListaEntregas
+            actividad={a}
+            entregas={entregas}
+            totalEstudiantes={totalEstudiantes}
+            onCambio={onCambio}
+            now={now}
+          />
+        )}
       </div>
 
       {reproduciendo && (

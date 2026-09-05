@@ -164,7 +164,7 @@ function TarjetaUnidad({
           />
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="text-body-base font-semibold text-ink-primary">{u.titulo}</span>
+              <span className="break-words text-body-base font-semibold text-ink-primary">{u.titulo}</span>
               {u.oculta && (
                 <span
                   className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-ink-muted"

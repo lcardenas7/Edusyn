@@ -1,22 +1,16 @@
 /**
  * "Notas" — cómo va cada quien.
  *
- * **Decisión de arquitectura deliberada:** para el docente esto NO es una planilla donde poner
- * notas. Las notas del boletín viven en el módulo académico institucional, que tiene su propia
- * gobernanza (ventanas de calificación, auditoría de cambios, cierre de período). Abrir aquí
- * una segunda superficie de captura crearía dos verdades sobre el mismo dato, que es la peor
- * cosa que le puede pasar a un sistema de notas.
- *
- * Así que el docente ve aquí el estado de SU trabajo de calificación —qué falta por revisar,
- * cuánto lleva calificado— y se le manda al gradebook para lo demás. La nota de una entrega
- * concreta sí se pone donde corresponde: en el detalle de esa actividad.
+ * Para el DOCENTE esto no es una planilla: es el estado de su trabajo de revisión en esta
+ * aula —cuántas entregas le faltan por calificar, actividad por actividad—. La nota de una
+ * entrega concreta se pone donde corresponde, en el detalle de esa actividad. Y no se manda a
+ * nadie al módulo de boletines desde aquí: son otra cosa y otro flujo.
  *
  * Para el estudiante, en cambio, esto sí es la respuesta completa a "¿cómo voy?", y sale de
  * datos reales, no del texto fijo que muestra hoy la tarjeta del Home (P1-6).
  */
 
 import { useEffect, useState } from 'react'
-import { ExternalLink } from 'lucide-react'
 import { classroomApi } from '../../../lib/api'
 import { parseApiError } from '../../../lib/toast'
 import type { ActivityLike } from '../model/activityState'
@@ -36,7 +30,6 @@ export interface NotasProps {
   role: Role
   actividades: ActivityLike[]
   onAbrirActividad: (id: string) => void
-  onIrAlGradebook?: () => void
   now?: Date
 }
 
@@ -182,7 +175,7 @@ function NotasEstudiante({ classroomId, actividades, onAbrirActividad, now = new
 
 // ─── Docente ─────────────────────────────────────────────────────────────────
 
-function NotasDocente({ actividades, onAbrirActividad, onIrAlGradebook, now = new Date() }: NotasProps) {
+function NotasDocente({ actividades, onAbrirActividad, now = new Date() }: NotasProps) {
   const t = buildTeacherToday(actividades, now)
   const conEntregas = actividades
     .map((a) => decorate(a, 'docente', now))
@@ -194,23 +187,9 @@ function NotasDocente({ actividades, onAbrirActividad, onIrAlGradebook, now = ne
       <h1 className="text-h1 font-bold text-ink-primary">Calificación</h1>
       <p className="mt-0.5 text-body-sm text-ink-muted">Cómo va tu trabajo de revisión en esta aula.</p>
 
-      {/* Se dice en voz alta dónde viven las notas del boletín, para que nadie busque aquí. */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface-2 p-4">
-        <p className="min-w-0 text-body-sm text-ink-secondary">
-          Las notas del <strong className="text-ink-primary">boletín</strong> se registran en el módulo
-          académico, con sus ventanas de calificación y su auditoría. Aquí solo verás el estado de las
-          entregas de esta aula.
-        </p>
-        {onIrAlGradebook && (
-          <button
-            type="button"
-            onClick={onIrAlGradebook}
-            className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
-          >
-            Ir a Calificaciones <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </button>
-        )}
-      </div>
+      <p className="mt-3 text-body-sm text-ink-muted">
+        Solo lo de esta aula. Las notas del boletín las calcula el colegio con sus propias reglas.
+      </p>
 
       {t.porCalificar.entregas > 0 && (
         <p className="mt-4 text-body-base font-semibold text-ink-primary">

@@ -97,6 +97,25 @@
 .taller-sticky { transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s; }
 .taller-sticky:hover { transform: rotate(0deg) translateY(-4px) !important; box-shadow: var(--t-shadow-md, 0 12px 30px -10px rgba(40, 34, 22, 0.28)); }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Aula rediseñada · el botón de Valeria y la barra inferior no caben en la
+   misma esquina.
+
+   En móvil, el aula nueva pone una barra de navegación fija de 56 px abajo, y
+   el botón flotante de Valeria vive en `bottom-4 right-4` con 48 px de alto:
+   se monta justo encima del destino "Más". Aquí se levanta el botón mientras
+   esa barra está en pantalla.
+
+   Se hace desde CSS, apuntando al `aria-label`, para no tocar
+   `ValeriaAssistant.tsx`. El atributo lo pone y lo quita `AulaShell` al
+   montarse, así que fuera del aula nueva nada cambia.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  body[data-aula-nav-inferior] [aria-label='Abrir Valeria'] {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+
 :root {
   --primary: #2563eb;
   --primary-foreground: #ffffff;

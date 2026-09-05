@@ -31,11 +31,14 @@ const ESPERANDO = new Set(['SUBMITTED', 'LATE'])
 export function ListaEntregas({
   actividad,
   entregas,
+  totalEstudiantes,
   onCambio,
   now = new Date(),
 }: {
   actividad: ActivityLike
   entregas: EntregaLike[]
+  /** Cuántos estudiantes hay en el grupo, para saber cuántos faltan. */
+  totalEstudiantes?: number | null
   onCambio: () => void
   now?: Date
 }) {
@@ -46,7 +49,11 @@ export function ListaEntregas({
       <EmptyState
         scene="sin-actividades"
         title="Todavía no hay entregas"
-        detail="Cuando tus estudiantes entreguen, las verás aquí para calificarlas."
+        detail={
+          totalEstudiantes
+            ? `Ninguno de tus ${totalEstudiantes} estudiantes ha entregado todavía.`
+            : 'Cuando tus estudiantes entreguen, las verás aquí para calificarlas.'
+        }
         compact
       />
     )
@@ -61,18 +68,30 @@ export function ListaEntregas({
   })
 
   const porCalificar = ordenadas.filter((e) => ESPERANDO.has(e.status)).length
+  // Lo que el docente pregunta primero y hasta ahora no se respondía: quién falta.
+  const faltan = totalEstudiantes != null ? Math.max(0, totalEstudiantes - entregas.length) : null
 
   return (
     <section aria-labelledby="entregas">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 id="entregas" className="text-body-base font-semibold text-ink-primary">
-          Entregas <span className="text-ink-muted">({entregas.length})</span>
-        </h2>
-        {porCalificar > 0 && (
-          <span className="rounded-full border border-warning-100 bg-warning-50 px-2.5 py-1 text-badge font-medium text-warning-700">
-            {porCalificar} {porCalificar === 1 ? 'espera nota' : 'esperan nota'}
+          Entregas{' '}
+          <span className="text-ink-muted">
+            {totalEstudiantes != null ? `(${entregas.length} de ${totalEstudiantes})` : `(${entregas.length})`}
           </span>
-        )}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {porCalificar > 0 && (
+            <span className="rounded-full border border-warning-100 bg-warning-50 px-2.5 py-1 text-badge font-medium text-warning-700">
+              {porCalificar} {porCalificar === 1 ? 'espera nota' : 'esperan nota'}
+            </span>
+          )}
+          {faltan != null && faltan > 0 && (
+            <span className="rounded-full border border-hairline bg-surface-2 px-2.5 py-1 text-badge font-medium text-ink-secondary">
+              {faltan} sin entregar
+            </span>
+          )}
+        </div>
       </div>
 
       <ul className="space-y-2">
