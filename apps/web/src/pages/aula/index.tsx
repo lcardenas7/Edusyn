@@ -15,7 +15,7 @@
  * garantía G3: cambiar entre una y otra no escribe nada en el servidor).
  */
 
-import { useCallback, useMemo } from 'react'
+import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { alertDialog } from '../../components/ui/confirm'
@@ -30,11 +30,14 @@ import { ActividadDetalle } from './views/ActividadDetalle'
 import { Unidades } from './views/Unidades'
 import { Notas } from './views/Notas'
 import { Estudiantes } from './views/Estudiantes'
+import { CrearActividad } from './ui/CrearActividad'
 import { useAula, useAulas, type Rol } from './data/useAula'
 import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
 import { buildTeacherToday, buildStudentToday } from './model/today'
 import { PERIOD_ALL } from './model/list'
+
+const LessonEditor = lazy(() => import('../../components/LessonEditor'))
 
 const VISTAS = new Set(DESTINOS.map((d) => d.id))
 
@@ -50,11 +53,13 @@ function DetalleCargado({
   onVolver,
   onIrAlAulaActual,
   onAbrirActividad,
+  onEditarLeccion,
 }: {
   activityId: string
   aulaId: string
   rol: Rol
   totalEstudiantes?: number | null
+  onEditarLeccion: (a: { id: string; title: string; gameType?: string }) => void
   onVolver: () => void
   onIrAlAulaActual: () => void
   onAbrirActividad: (id: string) => void
@@ -90,6 +95,13 @@ function DetalleCargado({
           aulaId={aulaId}
           totalEstudiantes={totalEstudiantes}
           onAbrirActividad={onAbrirActividad}
+          onEditarLeccion={() =>
+            onEditarLeccion({
+              id: actividad.id,
+              title: actividad.title,
+              gameType: actividad.metadata?.gameType,
+            })
+          }
         />
       )}
     </AulaState>
@@ -105,6 +117,10 @@ export default function AulaVirtual() {
   const navigate = useNavigate()
   const { classroomId, vista: vistaParam, activityId } = useParams()
   const [params, setParams] = useSearchParams()
+  const [creando, setCreando] = useState(false)
+  // El editor de lecciones y juegos SÍ es reutilizable, así que se abre aquí mismo en vez de
+  // mandar al aula anterior.
+  const [editandoLeccion, setEditandoLeccion] = useState<{ id: string; title: string; gameType?: string } | null>(null)
 
   const rol: Rol = useMemo(() => {
     const roles: any[] = user?.roles ?? []
@@ -236,7 +252,9 @@ export default function AulaVirtual() {
       vista={vista}
       onNavegar={irA}
       onSalir={() => navigate('/aula')}
-      onSalirDelModulo={() => navigate('/')}
+      // `/` es la página pública de marketing, no el inicio de la aplicación: salir por ahí
+      // parecía que te desconectaba. El inicio del docente es `/dashboard`.
+      onSalirDelModulo={() => navigate('/dashboard')}
       periodos={aula?.periodos ?? []}
       periodo={periodo}
       onPeriodo={cambiarPeriodo}
@@ -269,6 +287,7 @@ export default function AulaVirtual() {
             onVolver={() => verActividades()}
             onIrAlAulaActual={() => irAlAulaActualPara('editar')}
             onAbrirActividad={abrirActividad}
+            onEditarLeccion={setEditandoLeccion}
           />
         ) : vista === 'hoy' ? (
           <Hoy
@@ -285,7 +304,7 @@ export default function AulaVirtual() {
             // preguntas no son componentes reutilizables). Se ofrece igual: sin estos botones
             // el docente entra al aula nueva y no encuentra por dónde crear, que es peor que
             // un puente honesto.
-            onCrear={rol === 'docente' ? () => irAlAulaActualPara('crear') : undefined}
+            onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
             onValeria={rol === 'docente' ? () => irAlAulaActualPara('valeria') : undefined}
           />
         ) : vista === 'unidades' ? (
@@ -297,7 +316,7 @@ export default function AulaVirtual() {
             periodo={periodo}
             onAbrirActividad={abrirActividad}
             onAbrirMaterial={() => irAlAulaActualPara('editar')}
-            onCrear={() => irAlAulaActualPara('crear')}
+            onCrear={() => setCreando(true)}
           />
         ) : vista === 'actividades' ? (
           <Actividades
@@ -307,7 +326,7 @@ export default function AulaVirtual() {
             onPeriodo={cambiarPeriodo}
             filtroEstadoInicial={filtroEstado}
             onAbrirActividad={abrirActividad}
-            onCrear={rol === 'docente' ? () => irAlAulaActualPara('crear') : undefined}
+            onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
           />
         ) : vista === 'notas' ? (
           <Notas
@@ -329,6 +348,54 @@ export default function AulaVirtual() {
           </div>
         )}
       </AulaState>
+      {creando && (
+        <CrearActividad
+          aulaId={classroomId}
+          unidades={aula?.secciones ?? []}
+          periodos={aula?.periodos ?? []}
+          periodoActual={aula?.periodoActual?.id ?? null}
+          onCerrar={() => setCreando(false)}
+          onCreada={(nueva, siguiente) => {
+            setCreando(false)
+            recargar()
+            if (siguiente === 'editor-leccion') {
+              // Lecciones y juegos se editan aquí: LessonEditor es un componente propio.
+              const gameType = (nueva as { metadata?: { gameType?: string } }).metadata?.gameType
+              setEditandoLeccion({ id: nueva.id, title: nueva.title, gameType })
+            } else {
+              // El resto abre su detalle; las preguntas de quiz todavía se añaden en el aula
+              // anterior, y el detalle lo dice.
+              abrirActividad(nueva.id)
+            }
+          }}
+        />
+      )}
+
+      {editandoLeccion && (
+        <Suspense fallback={null}>
+          <div className="fixed inset-0 z-50 bg-canvas">
+            <LessonEditor
+              activityId={editandoLeccion.id}
+              activityTitle={editandoLeccion.title}
+              classroomTitle={aula?.titulo}
+              subjectName={aula?.asignatura ?? undefined}
+              initialGameType={editandoLeccion.gameType}
+              onClose={() => {
+                setEditandoLeccion(null)
+                recargar()
+              }}
+              // Cerrar el editor y abrir el detalle: desde ahí se previsualiza con el mismo
+              // reproductor que ve el estudiante.
+              onPreview={() => {
+                const id = editandoLeccion.id
+                setEditandoLeccion(null)
+                recargar()
+                abrirActividad(id)
+              }}
+            />
+          </div>
+        </Suspense>
+      )}
     </AulaShell>
   )
 }

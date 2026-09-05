@@ -348,6 +348,11 @@ api.defaults.adapter = async (config) => {
   if (metodo !== 'get') {
     log('mutación aceptada · cuerpo: ' + JSON.stringify(config.data ?? null))
     if (/duplicate-to/.test(url)) return ok({ id: 'act-copia' })
+    if (/\/activities$/.test(url)) {
+      const cuerpo = typeof config.data === 'string' ? JSON.parse(config.data) : (config.data ?? {})
+      return ok({ id: 'act-nueva', title: cuerpo.title, type: cuerpo.type, ...cuerpo })
+    }
+    if (/\/sections$/.test(url)) return ok({ id: 'u-nueva' })
     return ok({ ok: true })
   }
 
