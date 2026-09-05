@@ -169,6 +169,19 @@ export function deriveTeacherState(a: ActivityLike, now: Date = new Date()): Tea
   return { state: 'publicada', urgency: 50, ...base }
 }
 
+/**
+ * ¿Puede este rol ver la actividad?
+ *
+ * El backend ya filtra los borradores del payload del estudiante, pero la UI no debe
+ * depender de eso: si alguna vez llega una actividad sin publicar, el estudiante vería un
+ * examen futuro anunciado como "Pendiente". Una segunda cerradura no sobra cuando lo que
+ * está en juego es que un estudiante vea un examen antes de tiempo.
+ */
+export function isVisibleTo(role: 'docente' | 'estudiante', a: ActivityLike): boolean {
+  if (role === 'docente') return true
+  return a.isPublished === true
+}
+
 // ─── Período ─────────────────────────────────────────────────────────────────
 
 /**
