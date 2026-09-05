@@ -14,7 +14,7 @@
 import type { DecoratedActivity, Role } from './list'
 import { decorate } from './list'
 import type { ActivityLike } from './activityState'
-import { compareByUrgency, isVisibleTo, tieneEntregasPorCalificar, venceHoy, vencioSinEntregas } from './activityState'
+import { aNumero, compareByUrgency, isVisibleTo, tieneEntregasPorCalificar, venceHoy, vencioSinEntregas } from './activityState'
 
 // ─── Estudiante ──────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ export function buildStudentToday(
     .map((d) => ({
       activity: d.activity,
       score: d.student!.score as number,
-      maxScore: d.activity.maxScore ?? null,
+      maxScore: aNumero(d.activity.maxScore),
     }))
 
   return {

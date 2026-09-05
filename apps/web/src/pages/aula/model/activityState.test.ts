@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  aNumero,
   bogotaDayKey,
   compareByUrgency,
   deriveStudentState,
@@ -253,5 +254,32 @@ describe('qué se le propone primero al estudiante', () => {
     expect(pendiente).toBeLessThan(urgenciaDe(act({ submissions: [{ status: 'SUBMITTED' }] })))
     expect(urgenciaDe(act({ openDate: '2026-06-01T13:00:00.000Z' }))).toBeGreaterThan(pendiente)
     expect(urgenciaDe(act({ locked: true }))).toBeGreaterThan(pendiente)
+  })
+})
+
+describe('las notas llegan del backend como texto, no como número', () => {
+  /**
+   * Este defecto dejó la pantalla del estudiante EN BLANCO con datos reales: el backend guarda
+   * las notas como `Decimal` de Prisma y se serializan como texto, así que `score.toFixed(1)`
+   * lanzaba y tumbaba el render entero. Con datos de prueba nunca salió, porque allí eran
+   * números.
+   */
+  it('una nota que llega como texto se convierte en número', () => {
+    const d = deriveStudentState(act({ submissions: [{ status: 'GRADED', score: '4.2' }] }), AHORA)
+    expect(d.score).toBe(4.2)
+    expect(() => d.score!.toFixed(1)).not.toThrow()
+  })
+
+  it('lo que no es un número se queda en null, no en NaN', () => {
+    // Un NaN se acabaría pintando como "NaN" en la pantalla del estudiante.
+    expect(aNumero('no es número')).toBeNull()
+    expect(aNumero('')).toBeNull()
+    expect(aNumero(null)).toBeNull()
+    expect(aNumero(undefined)).toBeNull()
+  })
+
+  it('el cero es una nota válida y no se confunde con "sin nota"', () => {
+    expect(aNumero(0)).toBe(0)
+    expect(aNumero('0')).toBe(0)
   })
 })
