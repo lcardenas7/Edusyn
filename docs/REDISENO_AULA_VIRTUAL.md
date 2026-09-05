@@ -198,6 +198,62 @@ lucide y no los necesita. Las páginas del prototipo, de hecho, no usan ni un co
 
 ---
 
+## 5.bis Garantías de datos — INNEGOCIABLE
+
+> Instrucción del fundador (2026-09-05): *"nada en producción, todo a staging, y ten en cuenta
+> que sea adecuado el traspaso cuando se intente utilizar en producción, es decir que no borre
+> datos."*
+
+Reglas que **todo agente que retome esto debe respetar**:
+
+### G1 · Cero migraciones, cero esquema
+El rediseño es **solo frontend**. No se toca Prisma, no se crea ni se altera ninguna tabla, no
+hay `prisma migrate`. Si en algún momento parece que hace falta un campo nuevo en la base, **se
+para y se pregunta**: no se añade de paso.
+
+### G2 · Cero endpoints nuevos de borrado
+El módulo nuevo consume **los mismos endpoints** que el aula actual (`classroomApi`). No se
+crea ningún `delete*` nuevo. Los borrados que ya existen (actividad, material, sección) se
+llaman igual que hoy, y solo detrás de `confirmDialog`.
+
+### G3 · El interruptor es reversible y sin efectos
+Cambiar entre aula actual y aula nueva **no escribe nada en el servidor**. Es una preferencia
+de interfaz. Volver atrás deja todo exactamente como estaba: mismas actividades, mismas notas,
+mismas entregas.
+
+### G4 · El estado local del estudiante se hereda, no se pisa
+El aula actual guarda "última visita" por dispositivo en **dos** claves redundantes:
+
+```
+edusyn:seenActs:<classroomId>     → milisegundos (Classroom.tsx:231, 729, 736)
+classroom_visited_<classroomId>   → ISO string   (Classroom.tsx:2428-2431)
+```
+
+Sirven para marcar actividades como "nuevas". El módulo nuevo **lee las dos y sigue escribiendo
+las dos**, para que:
+- al estrenar el aula nueva, el estudiante no vea de golpe todo marcado como "nuevo";
+- si vuelve al aula actual, tampoco.
+
+Cuando se retire el aula actual, se puede dejar de escribir la clave vieja — **nunca antes**.
+
+### G5 · La copia crea, jamás sobrescribe
+El wizard de copia (T9) siempre **crea** una actividad nueva. Nunca modifica ni borra la
+original. La copia nace como borrador y **no arrastra entregas ni notas** salvo que el docente
+lo pida explícitamente.
+
+### G6 · Los arreglos P0 van a favor del dato
+Los defectos de §6 son, tres de ellos, riesgos de pérdida: "Cancelar programación" publica sin
+querer, reiniciar lección borra intento/nota/XP de un clic, y "Devolver" se ejecuta aunque el
+docente cancele. Arreglarlos **reduce** el riesgo de destruir evidencia académica. Ninguno de
+esos arreglos borra nada por su cuenta.
+
+### G7 · Ruta de despliegue
+`feat/aula-virtual-rediseno` → **`staging`** únicamente. A `main` no se sube nada de este
+trabajo sin decisión explícita del fundador. Antes de cualquier despliegue:
+`npx tsc --noEmit` en `apps/web` y `npm test`; después, fila en `docs/REGISTRO_DESPLIEGUES.md`.
+
+---
+
 ## 6. Defectos P0 heredados que hay que arreglar
 
 Se arreglan en el **código actual** (`Classroom.tsx`), no solo en el módulo nuevo: son bugs que
