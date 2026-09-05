@@ -18,6 +18,8 @@ import { Hoy } from '../views/Hoy'
 import { Actividades } from '../views/Actividades'
 import { ActividadDetalle } from '../views/ActividadDetalle'
 import { Unidades } from '../views/Unidades'
+import { Notas } from '../views/Notas'
+import { Estudiantes } from '../views/Estudiantes'
 import { LiveSessionBanner } from '../ui/LiveSessionBanner'
 import type { LiveSessionLike } from '../model/liveSession'
 import type { ActivityLike } from '../model/activityState'
@@ -62,6 +64,23 @@ api.defaults.adapter = async (config) => {
   }
   if (config.method === 'put' && /update|sections/.test(url)) return responder({ ok: true })
   if (config.method === 'post' && /duplicate-to/.test(url)) return responder({ id: 'copia-1' })
+  if (/my-grades/.test(url)) {
+    return responder({
+      submissions: [
+        { score: 4.3, activity: { maxScore: 5 } },
+        { score: 3.6, activity: { maxScore: 5 } },
+      ],
+      pending: [],
+    })
+  }
+  if (/\/students$/.test(url)) {
+    return responder([
+      { student: { id: '1', firstName: 'Ana', lastName: 'Martínez', secondLastName: 'Ruiz', email: 'ana@colegio.edu.co' } },
+      { student: { id: '2', firstName: 'Carlos', lastName: 'Gómez', email: 'carlos@colegio.edu.co' } },
+      { student: { id: '3', firstName: 'Beatriz', lastName: 'Álvarez', secondLastName: 'Peña' } },
+      { student: { id: '4', firstName: 'Daniel', lastName: 'Gómez', secondLastName: 'Ariza' } },
+    ])
+  }
 
   return responder(null)
 }
@@ -384,6 +403,17 @@ function Demo() {
             onAbrirActividad={(id) => alert(`Abrir la copia ${id}`)}
             now={AHORA}
           />
+        ) : vista === 'notas' ? (
+          <Notas
+            classroomId={aula.id}
+            role={role}
+            actividades={MUESTRA}
+            onAbrirActividad={(id) => alert(`Abrir actividad ${id}`)}
+            onIrAlGradebook={() => alert('Ir a Calificaciones')}
+            now={AHORA}
+          />
+        ) : vista === 'estudiantes' ? (
+          <Estudiantes classroomId={aula.id} />
         ) : vista === 'actividades' ? (
           <Actividades
             role={role}
