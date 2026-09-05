@@ -32,6 +32,7 @@ export function EntregaTarea({
   now?: Date
 }) {
   const [texto, setTexto] = useState(entrega?.content ?? '')
+  const [archivo, setArchivo] = useState<File | null>(null)
   const [enviando, setEnviando] = useState(false)
 
   const calificada = vista.state === 'calificada'
@@ -48,8 +49,10 @@ export function EntregaTarea({
   const meta = submissionStateMeta(entrega?.status)
 
   const enviar = async () => {
-    if (!texto.trim()) {
-      toast.warning('Escribe tu respuesta antes de enviar')
+    // Una entrega puede ser solo un archivo: hay tareas que se entregan en foto o en PDF y no
+    // tienen nada que escribir.
+    if (!texto.trim() && !archivo && !entrega?.fileUrl) {
+      toast.warning('Escribe tu respuesta o adjunta un archivo antes de enviar')
       return
     }
     if (yaEntregada) {
@@ -62,11 +65,23 @@ export function EntregaTarea({
 
     setEnviando(true)
     try {
-      if (entrega?.id) {
-        await classroomApi.updateSubmission(entrega.id, { content: texto })
-      } else {
-        await classroomApi.submitTask(actividad.id, { content: texto })
+      let fileUrl: string | undefined
+      if (archivo) {
+        const { data } = await classroomApi.uploadMaterial(archivo)
+        fileUrl = data?.data?.path || data?.data?.url
       }
+      const contenido = texto.trim() || undefined
+      if (entrega?.id) {
+        // Sin archivo nuevo se conserva el que ya había: reemplazar una entrega solo para
+        // corregir el texto no debe borrar el adjunto.
+        await classroomApi.updateSubmission(entrega.id, {
+          content: contenido,
+          fileUrl: fileUrl ?? entrega.fileUrl ?? undefined,
+        })
+      } else {
+        await classroomApi.submitTask(actividad.id, { content: contenido, fileUrl })
+      }
+      setArchivo(null)
       toast.success(yaEntregada ? 'Actualizamos tu entrega' : 'Entrega enviada')
       onCambio()
     } catch (e) {
@@ -141,6 +156,38 @@ export function EntregaTarea({
             placeholder="Escribe aquí tu respuesta…"
             className="w-full rounded-lg border border-hairline bg-surface-1 p-3 text-body-sm text-ink-primary placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
           />
+
+          {/* Adjuntar: muchas tareas se entregan en foto o en PDF, no escribiendo. */}
+          <div className="mt-3">
+            <label
+              htmlFor={`archivo-${actividad.id}`}
+              className="inline-flex min-h-btn cursor-pointer items-center gap-2 rounded-lg border border-hairline px-3.5 text-body-sm font-medium text-ink-secondary transition-colors hover:text-ink-primary"
+            >
+              <Paperclip className="h-4 w-4" aria-hidden="true" />
+              {archivo ? 'Cambiar el archivo' : 'Adjuntar un archivo'}
+            </label>
+            <input
+              id={`archivo-${actividad.id}`}
+              type="file"
+              className="sr-only"
+              onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+            />
+            {archivo && (
+              <span className="ml-2 text-body-sm text-ink-secondary">
+                {archivo.name}{' '}
+                <button
+                  type="button"
+                  onClick={() => setArchivo(null)}
+                  className="font-medium text-accent hover:underline"
+                >
+                  quitar
+                </button>
+              </span>
+            )}
+            {!archivo && entrega?.fileUrl && (
+              <span className="ml-2 text-body-sm text-ink-muted">Ya tienes un archivo adjunto</span>
+            )}
+          </div>
 
           {vencida && permiteTarde && (
             <p className="mt-2 text-body-sm text-warning-700">
