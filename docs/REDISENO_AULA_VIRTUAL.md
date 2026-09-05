@@ -484,11 +484,16 @@ no le marca al estudiante todo como NUEVO, y volver a la actual tampoco.
 - [ ] `npx tsc --noEmit` y `npm test` en `apps/web` — verde
 - [ ] `npm run build` — y comprobar que `dist/` solo tiene `index.html` (las tres páginas de
       demo, `galeria-aula.html`, `shell-aula.html` y `aula-local.html`, **no** deben estar)
-- [ ] **Revisar el arrastre del commit `e3065128`**: un `git add -A apps/web` incluyó cinco
-      archivos con cambios que NO son del rediseño (`ValeriaAssistant.tsx`,
+- [x] **Arrastre corregido.** Un `git add -A apps/web` demasiado amplio había metido en el
+      commit `e3065128` cinco archivos que NO son del rediseño (`ValeriaAssistant.tsx`,
       `InstitutionLogin.tsx`, `LandingPage.tsx`, `Students.tsx`,
-      `InstitutionalPortfolio.tsx`). Son benignos —normalización "EduSyn" → "Edusyn" y nuevos
-      contextos de página para Valeria— pero van a subir con la rama. Decidir si se quedan.
+      `InstitutionalPortfolio.tsx`). Pertenecen a la entrada **"2026-09-02 — Demo rectoría,
+      marca comercial y Valeria conversacional"** de `REGISTRO_DESPLIEGUES.md`, que dice
+      explícitamente *"aislar estos archivos en un commit propio"* y tiene verificaciones
+      pendientes antes de desplegar. Peor: `ValeriaAssistant.tsx` va emparejado con
+      `apd-ai.service.ts`, que sigue sin commitear — subir solo la mitad web dejaría a Valeria
+      con contextos nuevos sin el cambio de API que los acompaña.
+      **Resuelto reconstruyendo la rama** (ver 10.7).
 - [ ] Fila en `docs/REGISTRO_DESPLIEGUES.md` tras el push
 - [ ] **A `main` no sube nada** sin decisión explícita del fundador (garantía G7)
 
@@ -501,3 +506,17 @@ no le marca al estudiante todo como NUEVO, y volver a la actual tampoco.
    grupos, las mismas actividades y las mismas notas.
 3. **Volver** con "Volver al aula de siempre" y comprobar que todo sigue en su sitio.
 4. Recién entonces, probar entregar, calificar y copiar.
+
+### 10.7 Cuál es la rama buena
+
+| Rama | Qué es |
+|---|---|
+| **`feat/aula-rediseno`** | **La buena.** 25 commits, 53 archivos, **solo** el rediseño. Cero `apps/api`, cero migraciones, cero archivos de otras entradas de la bitácora. Es la que se despliega. |
+| `feat/aula-virtual-rediseno` | La primera, con el arrastre. Se conserva por si hace falta consultar algo; **no desplegar desde aquí**. |
+
+Reconstruida con `git cherry-pick` commit a commit desde el mismo punto de partida
+(`13016f7e`), restaurando los cinco archivos ajenos a su estado original dentro del commit que
+los había tocado. La historia queda igual de legible y el contenido, limpio.
+
+Verificación de la rama limpia: `tsc` sin errores, **125 pruebas**, `npm run build` con
+`dist/index.html` como único HTML (las tres páginas de demo no entran).
