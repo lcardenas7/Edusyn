@@ -20,7 +20,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { ChevronDown, Info, Search, X } from 'lucide-react'
+import { Check, ChevronDown, Info, Search, X } from 'lucide-react'
 import type { ActivityLike } from '../model/activityState'
 import {
   agrupacionPorDefecto,
@@ -118,6 +118,59 @@ export function Actividades({
           </button>
         )}
       </header>
+
+      {/* Orientación del estudiante: cuánto le falta y cuánto lleva, antes de cualquier
+          filtro. Es lo primero que quiere saber al abrir esta pantalla, y hasta ahora tenía
+          que deducirlo contando tarjetas. Cada dato es pulsable: lleva a su filtro. */}
+      {role === 'estudiante' && resultado.total > 0 && (
+        <div className="mt-4 flex flex-wrap items-stretch gap-2.5">
+          <button
+            type="button"
+            onClick={() => setEstado('me-toca')}
+            className={`flex-1 rounded-card border p-3 text-left transition-colors ${
+              estado === 'me-toca'
+                ? 'border-accent bg-accent/[0.07]'
+                : 'border-hairline bg-surface-1 hover:border-accent/40'
+            }`}
+          >
+            <span className="block text-h2 leading-none font-bold text-ink-primary tabular-nums">
+              {resultado.chipCounts['me-toca'] ?? 0}
+            </span>
+            <span className="mt-1 block text-body-sm text-ink-secondary">te toca</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setEstado('pendiente')}
+            className={`flex-1 rounded-card border p-3 text-left transition-colors ${
+              estado === 'pendiente'
+                ? 'border-accent bg-accent/[0.07]'
+                : 'border-hairline bg-surface-1 hover:border-accent/40'
+            }`}
+          >
+            <span className="block text-h2 leading-none font-bold text-ink-primary tabular-nums">
+              {resultado.chipCounts['pendiente'] ?? 0}
+            </span>
+            <span className="mt-1 block text-body-sm text-ink-secondary">por hacer</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setEstado('entregadas')}
+            className={`flex-1 rounded-card border p-3 text-left transition-colors ${
+              estado === 'entregadas'
+                ? 'border-accent bg-accent/[0.07]'
+                : 'border-hairline bg-surface-1 hover:border-accent/40'
+            }`}
+          >
+            <span className="flex items-baseline gap-1.5">
+              <Check className="h-4 w-4 shrink-0 text-success-600" aria-hidden="true" />
+              <span className="text-h2 leading-none font-bold text-ink-primary tabular-nums">
+                {resultado.chipCounts['entregadas'] ?? 0}
+              </span>
+            </span>
+            <span className="mt-1 block text-body-sm text-ink-secondary">ya hiciste</span>
+          </button>
+        </div>
+      )}
 
       {/* ─── Controles: UNA fila, no dos sistemas paralelos ─────────────── */}
       <div className="mt-4 space-y-2.5">
