@@ -49,6 +49,7 @@ import TeacherWorkspace from './pages/TeacherWorkspace'
 import WorkspaceV2Page from './pages/WorkspaceV2'
 import SpaceDetailPage from './pages/WorkspaceV2/SpaceDetail'
 import Classroom from './pages/Classroom'
+import AulaVirtual from './pages/aula'
 import Layout from './components/Layout'
 import PlayLayout from './components/play/PlayLayout'
 import { PlayAuthProvider, usePlayAuth } from './contexts/PlayAuthContext'
@@ -423,6 +424,13 @@ function App() {
                   <Route path="/my-workspace-v2/:boardId" element={<SpaceDetailPage />} />
                   <Route path="/classroom" element={<Classroom />} />
                   <Route path="/my-classes" element={<Classroom />} />
+                  {/* Aula Virtual rediseñada (docs/REDISENO_AULA_VIRTUAL.md). Convive con la
+                      actual: se entra por el enlace "Probar la nueva aula" y se vuelve cuando
+                      se quiera. Cambiar entre una y otra NO escribe nada en el servidor. */}
+                  <Route path="/aula" element={<AulaVirtual />} />
+                  <Route path="/aula/:classroomId" element={<AulaVirtual />} />
+                  <Route path="/aula/:classroomId/:vista" element={<AulaVirtual />} />
+                  <Route path="/aula/:classroomId/actividades/:activityId" element={<AulaVirtual />} />
                   <Route path="/capabilities-config" element={<CapabilitiesConfig />} />
                 </Routes>
               </Layout>
