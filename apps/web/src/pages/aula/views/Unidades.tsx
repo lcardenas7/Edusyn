@@ -30,6 +30,8 @@ export interface UnidadesProps {
   onAbrirActividad: (id: string) => void
   onAbrirMaterial?: (material: MaterialLike) => void
   onCrear?: () => void
+  /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
+  totalEstudiantes?: number | null
   now?: Date
 }
 
@@ -42,6 +44,7 @@ export function Unidades({
   onAbrirActividad,
   onAbrirMaterial,
   onCrear,
+  totalEstudiantes,
   now = new Date(),
 }: UnidadesProps) {
   const unidades = buildUnits({ secciones, actividades, role, periodo, now })
@@ -113,6 +116,7 @@ export function Unidades({
             onAlternar={() => alternar(u.id)}
             onAbrirActividad={onAbrirActividad}
             onAbrirMaterial={onAbrirMaterial}
+            totalEstudiantes={totalEstudiantes}
             now={now}
           />
         ))}
@@ -128,6 +132,7 @@ function TarjetaUnidad({
   onAlternar,
   onAbrirActividad,
   onAbrirMaterial,
+  totalEstudiantes,
   now,
 }: {
   unidad: Unidad
@@ -136,6 +141,7 @@ function TarjetaUnidad({
   onAlternar: () => void
   onAbrirActividad: (id: string) => void
   onAbrirMaterial?: (m: MaterialLike) => void
+  totalEstudiantes?: number | null
   now: Date
 }) {
   const resumen = [
@@ -209,6 +215,7 @@ function TarjetaUnidad({
                     onOpen={onAbrirActividad}
                     // La unidad ya está en la cabecera: repetirla en cada tarjeta es ruido.
                     showUnit={false}
+                    totalEstudiantes={totalEstudiantes}
                     now={now}
                   />
                 ))}

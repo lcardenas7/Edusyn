@@ -54,6 +54,8 @@ export interface ActividadesProps {
   filtroEstadoInicial?: string | null
   onAbrirActividad: (id: string) => void
   onCrear?: () => void
+  /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
+  totalEstudiantes?: number | null
   now?: Date
 }
 
@@ -65,6 +67,7 @@ export function Actividades({
   filtroEstadoInicial,
   onAbrirActividad,
   onCrear,
+  totalEstudiantes,
   now = new Date(),
 }: ActividadesProps) {
   const [busqueda, setBusqueda] = useState('')
@@ -275,6 +278,7 @@ export function Actividades({
                     // Repetir la unidad en cada tarjeta cuando la lista YA está agrupada por
                     // unidad es ruido.
                     showUnit={agrupacion !== 'unidad'}
+                    totalEstudiantes={totalEstudiantes}
                     now={now}
                   />
                 ))}
