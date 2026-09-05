@@ -290,6 +290,11 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T11 | Interruptor + montaje de rutas + enlaces profundos | ✅ | `e3065128` · rutas `/aula/*` |
 | T12 | **Notas** y **Estudiantes** en el shell nuevo | ✅ | `f71a8abe` · Rutas, Expedición y Foro siguen con puente al aula actual |
 | T13 | **Sesión de quiz en vivo** en todo el aula, con sondeo | ✅ | `2644282f` |
+| T14 | Tarjetas verticales, agrupación por estado y portada de tipo | ✅ | `c5f89c02` · el peso visual sigue al estado |
+| T15 | **Recorrido de la unidad**: recursos y actividades en un solo camino | ✅ | `31ea35c0` · usa el `sortOrder` que la interfaz ignoraba |
+| T16 | Notas `Decimal` que llegan como texto (pantalla en blanco) | ✅ | `a053174d` · ver §11 |
+| T17 | **Tema del estudiante**: elige el color con el que ve su aula | ✅ | `d69f15f2` · `ProveedorAcento` es el punto único |
+| T18 | Texto que se salía de su caja en móvil (4 causas) | ✅ | `217dcdf8` · ver §11 |
 
 ---
 
@@ -520,3 +525,68 @@ los había tocado. La historia queda igual de legible y el contenido, limpio.
 
 Verificación de la rama limpia: `tsc` sin errores, **125 pruebas**, `npm run build` con
 `dist/index.html` como único HTML (las tres páginas de demo no entran).
+
+---
+
+## 11. Trampas que ya nos costaron una pantalla rota
+
+Cada una salió **con datos del colegio**, no con datos de prueba. Si vas a tocar
+este módulo, léelas antes.
+
+### 11.1 Las notas llegan como TEXTO, no como número
+
+Los campos de nota son `Decimal` de Prisma y se serializan como **cadena** en el
+JSON. `score.toFixed(1)` lanza y, como está dentro del render, **tumba la página
+entera**: el estudiante ve una pantalla en blanco, no un error.
+
+Usa siempre `aNumero()` (`model/activityState.ts`) al leer una nota que venga de
+la API. Los tipos ya admiten `number | string`. Hay prueba de regresión en
+`model/activityState.test.ts`.
+
+### 11.2 El texto del docente trae espacios duros (U+00A0)
+
+Cuando el docente pega desde Word, cada espacio viaja como `&nbsp;` y el
+navegador lo convierte en U+00A0 al leer el HTML. **Un espacio duro no es sitio
+por donde cortar la línea**, así que un párrafo entero cuenta como una sola
+palabra: estiró la página a 2009 px en un celular de 375.
+
+Todo texto libre escrito por una persona se pinta pasando por `textoLegible()`
+(`model/texto.ts`), y además con `break-words` como red de seguridad para
+enlaces largos. No se arregla en la base: el dato del colegio no se toca.
+
+### 11.3 Un `<select>` nativo corta su etiqueta, no la recorta con "…"
+
+Si la opción no cabe, un select la parte contra el borde: "Primer Período · e".
+Parece una pantalla rota. Antes de meter un `<select>` con tope de ancho,
+comprueba que la opción más larga quepa; si no, usa un botón + `Hoja` (así se
+hizo con el período) o acorta las etiquetas.
+
+### 11.4 `truncate` necesita `min-w-0` en TODA la cadena de flex
+
+Le faltaba al enlace de las filas de recurso del recorrido: el enlace se quedó
+en el ancho de su título completo (364 px dentro de una caja de 275) y la fila
+se salió de la pantalla. `min-w-0` en el hijo no basta si un antepasado flexible
+no lo tiene.
+
+### 11.5 Lo que flota sobre una portada le quita ancho a TODAS las líneas
+
+El anillo de progreso colgaba del borde y el título reservaba un pasillo de
+40 px en cada renglón; en dos columnas de móvil eso partía "Pensamiento
+computacional" en "computacion / al". Si algo flota, o va dentro de la portada,
+o el pasillo se reserva solo en la primera línea.
+
+### 11.6 Cómo cazarlas antes que el fundador
+
+En el navegador, sobre el aula en móvil (375 px):
+
+```js
+// 1. ¿la página es más ancha que la pantalla?
+document.documentElement.scrollWidth > innerWidth
+// 2. ¿algún select corta su opción más larga?
+[...document.querySelectorAll('select')].filter(s => {
+  const cs = getComputedStyle(s), cv = document.createElement('canvas').getContext('2d')
+  cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+  const ancha = Math.max(...[...s.options].map(o => cv.measureText(o.text).width))
+  return ancha > s.getBoundingClientRect().width - 20 - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+})
+```
