@@ -98,7 +98,7 @@ export function Actividades({
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-h1 font-bold text-ink-primary">Actividades</h1>
@@ -292,7 +292,9 @@ export function Actividades({
                 </button>
 
                 {!plegado && (
-                  <div className="space-y-2">
+                  // Parrilla: de dos en dos en cuanto hay ancho. En una columna solo caben
+                  // cuatro actividades por pantalla y todo obliga a bajar.
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                     {g.items.map((d) => (
                       <ActivityCard
                         key={d.activity.id}

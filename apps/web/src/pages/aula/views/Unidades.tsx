@@ -70,7 +70,8 @@ function Parrilla({
       <h1 className="text-h1 font-bold text-ink-primary">Unidades</h1>
       <p className="mt-0.5 text-body-sm text-ink-muted">El material y el trabajo de cada tema, juntos.</p>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Dos por fila desde el móvil: una columna obligaba a bajar por todo el curso. */}
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {unidades.map((u, i) => (
           <TarjetaUnidad
             key={u.id}
@@ -117,7 +118,7 @@ function TarjetaUnidad({
       className="group flex w-full flex-col overflow-hidden rounded-modal border border-hairline bg-surface-1 text-left transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
     >
       <span className="relative block">
-        <SubjectCover subject={asignatura} color={color} alto={88} />
+        <SubjectCover subject={asignatura} color={color} alto={72} />
         <span
           className="absolute top-2.5 left-3 rounded-full bg-surface-1/90 px-2.5 py-1 text-xs font-bold text-ink-secondary backdrop-blur"
           aria-hidden="true"
@@ -136,8 +137,8 @@ function TarjetaUnidad({
         )}
       </span>
 
-      <span className="flex min-w-0 flex-1 flex-col p-4 pt-4">
-        <span className="block pr-12 text-body-base leading-snug font-bold break-words text-ink-primary">
+      <span className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
+        <span className="block pr-10 text-body-sm leading-snug font-bold break-words text-ink-primary sm:text-body-base">
           {u.titulo}
         </span>
         <span className="mt-1 block text-body-sm text-ink-muted">{resumen || 'Todavía sin contenido'}</span>
@@ -165,7 +166,7 @@ function DetalleUnidad({
   now = new Date(),
 }: UnidadesProps & { unidad: Unidad }) {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <button
         type="button"
         onClick={() => onAbrirUnidad(null)}
@@ -211,7 +212,7 @@ function DetalleUnidad({
       {u.actividades.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-2 text-body-base font-semibold text-ink-primary">Para hacer</h2>
-          <div className="space-y-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {u.actividades.map((d) => (
               <ActivityCard
                 key={d.activity.id}
