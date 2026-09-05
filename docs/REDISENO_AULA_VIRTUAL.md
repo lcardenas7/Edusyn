@@ -221,9 +221,9 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | # | Ticket | Estado | Notas |
 |---|---|---|---|
 | T0 | Plan maestro (este documento) | ✅ | |
-| T1 | `model/` + pruebas: glosario, estado, período, cuenta regresiva | ⬜ | |
-| T2 | `visual/`: SubjectMark, ActivityGlyph, ProgressRing, Stamp, Scene | ⬜ | |
-| T3 | `ui/`: StateChip, ActivityCard, EmptyState, Skeletons | ⬜ | |
+| T1 | `model/` + pruebas: glosario, estado, período, cuenta regresiva | ✅ | `b7a700c6` · 61 pruebas |
+| T2 | `visual/`: SubjectMark, ActivityGlyph, Progress, Scene | ✅ | `44f5b655` · galería en `/galeria-aula.html` |
+| T3 | `ui/`: StateChip, ActivityCard, EmptyState, Skeletons | ✅ | `83ec939f` |
 | T4 | `AulaShell`: riel colapsable, header de contexto, barra inferior móvil | ⬜ | |
 | T5 | Vista **Hoy** (docente y estudiante) cableada + muro de anuncios | ⬜ | |
 | T6 | Vista **Actividades**: búsqueda, filtros, agrupación, URL | ⬜ | |
@@ -242,5 +242,15 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 cd apps/web && npm test          # pruebas puras del model/
 cd apps/web && npx tsc --noEmit  # obligatorio antes de main (CLAUDE.md)
 ```
+
+**Galería visual** (solo desarrollo): `npm run dev` y abrir
+<http://localhost:5173/galeria-aula.html>. Muestra glifos, tarjetas en ambos roles, leyenda de
+estados, avance, sellos y estados vacíos, sin tener que navegar el aula entera. No entra al
+build de producción (Vite solo empaqueta `index.html`; verificado en `dist/`).
+
+Al cambiar cualquier cosa de `visual/` o `ui/`, **míralo ahí antes de dar por buena la pieza**.
+Tres defectos de esta tanda solo se vieron mirando, no leyendo el código: el anillo dejaba un
+punto a 0 %, el examen en borrador se le mostraba al estudiante como "Pendiente", y una
+actividad ya calificada seguía gritando "Venció hace 8 días".
 
 Despliegue: `staging` primero, y registrar la fila en `docs/REGISTRO_DESPLIEGUES.md`.
