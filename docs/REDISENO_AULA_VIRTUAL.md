@@ -89,7 +89,7 @@ Corrige P1-7: hoy el aula vive en `useState`, así que refrescar devuelve a la l
 
 ### D4 · Entrega — módulo nuevo con interruptor
 
-Se construye el aula real (no otro prototipo) en `apps/web/src/pages/classroom/`, wired contra los
+Se construye el aula real (no otro prototipo) en `apps/web/src/pages/aula/`, wired contra los
 endpoints existentes. Un interruptor la activa y deja la actual intacta como respaldo, para poder
 desplegar a staging sin romper a docentes a mitad de período. Cuando el fundador valide, la nueva
 pasa a ser el default y la vieja se retira.
@@ -158,7 +158,7 @@ por emoji. Siempre **texto + icono + color**. Objetivos táctiles ≥ 44 px (`mi
 ## 4. Arquitectura del módulo
 
 ```
-apps/web/src/pages/classroom/
+apps/web/src/pages/aula/
 ├── index.tsx            · AulaVirtual: rutas del módulo y carga del aula
 ├── AulaShell.tsx        · riel colapsable + header de contexto + barra inferior móvil
 ├── model/               · LÓGICA PURA, sin React — es lo que se prueba
@@ -287,8 +287,24 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T8 | **Detalle de actividad** con línea de tiempos e intentos | ⬜ | |
 | T9 | **Wizard de copia** en 4 pasos (corrige P0-1) | ⬜ | |
 | T10 | Defectos P0-2 … P0-5 en el código actual | ⬜ | |
-| T11 | Interruptor + montaje de rutas + enlaces profundos | ⬜ | |
+| T11 | Interruptor + montaje de rutas + enlaces profundos | ✅ | `e3065128` · rutas `/aula/*` |
 | T12 | Notas, Foro, Rutas, Estudiantes en el shell nuevo | ⬜ | |
+| T13 | **Sesión de quiz en vivo** en todo el aula, con sondeo | ✅ | `2644282f` |
+
+---
+
+## 7.bis Cómo entrar al aula nueva
+
+1. `cd apps/web && npm run dev`, entrar con tu usuario.
+2. Ir a **Aula Virtual** (o *Mis Clases*) → botón **"Probar la nueva aula"** arriba a la derecha.
+3. O directamente: `/aula`.
+
+Vuelta atrás: **"Volver al aula de siempre"** en la cabecera del selector, o `/classroom`.
+Entrar y volver **no escribe nada en el servidor** (garantía G3).
+
+**Ojo con el nombre del módulo:** vive en `apps/web/src/pages/aula/`, no en `pages/classroom/`.
+Convivía con `pages/Classroom.tsx` diferenciándose solo en mayúsculas y TypeScript lo rechaza
+en sistemas de archivos insensibles a mayúsculas (error TS1149).
 
 ---
 
@@ -330,7 +346,15 @@ cambia, las pruebas caen y este es el porqué:
    `activityState.ts` y los usan **tanto los paneles como los chips**; hay una prueba que
    cruza ambos. La auditoría ya advertía este solapamiento (C5).
 
-3. **Los conteos de los chips respetan la búsqueda y el tipo.**
+3. **La sesión de quiz en vivo se sondea, no se consulta una sola vez.**
+   El aula actual pregunta al montar el componente y ya. Pero el orden real de los hechos es:
+   la clase entra al aula, y *después* el profe lanza el quiz — así que ese estudiante no se
+   entera nunca. `useLiveSession` consulta cada 20 s (callado con la pestaña oculta). El
+   `catch {}` de ese hook es la **única** excepción permitida a la regla de "cero catch
+   vacíos": un fallo de red ahí no debe romper el aula, y el aviso reaparece al ciclo
+   siguiente. (`data/useLiveSession.ts`)
+
+4. **Los conteos de los chips respetan la búsqueda y el tipo.**
    El número de un chip es *cuántas verás al pulsarlo*, no cuántas hay en el aula. Con
    "taller" escrito, un chip que dijera 7 y mostrara 2 al pulsarlo sería peor que no poner
    número. (`list.ts` · `buildActivityList`, pasos 2–4)
