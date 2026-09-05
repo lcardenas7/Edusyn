@@ -23,6 +23,7 @@ import { useMemo, useState } from 'react'
 import { ChevronDown, Info, Search, X } from 'lucide-react'
 import type { ActivityLike } from '../model/activityState'
 import {
+  agrupacionPorDefecto,
   availableTypes,
   buildActivityList,
   EMPTY_FILTERS,
@@ -73,7 +74,9 @@ export function Actividades({
   const [busqueda, setBusqueda] = useState('')
   const [tipo, setTipo] = useState<ActivityFamily | 'todos'>('todos')
   const [estado, setEstado] = useState(filtroEstadoInicial ?? 'todas')
-  const [agrupacion, setAgrupacion] = useState<GroupBy>('unidad')
+  const [agrupacion, setAgrupacion] = useState<GroupBy>(() => agrupacionPorDefecto(role))
+  // Grupos que el usuario abrió o cerró a mano. Lo que no esté aquí usa su valor por defecto.
+  const [plegados, setPlegados] = useState<Record<string, boolean>>({})
   const [verLeyenda, setVerLeyenda] = useState(false)
 
   const filtros: ListFilters = { search: busqueda, type: tipo, period: periodo, state: estado }
@@ -257,34 +260,57 @@ export function Actividades({
         </div>
       ) : (
         <div className="mt-6 space-y-6">
-          {resultado.groups.map((g) => (
-            <section key={g.key} aria-labelledby={`grupo-${g.key}`}>
-              <div className="mb-2">
-                <h2 id={`grupo-${g.key}`} className="flex items-center gap-2 text-body-base font-semibold text-ink-primary">
-                  {g.label}
-                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink-secondary">
-                    {g.items.length}
-                  </span>
-                </h2>
-                {g.hint && <p className="mt-0.5 text-body-sm text-ink-muted">{g.hint}</p>}
-              </div>
-              <div className="space-y-2">
-                {g.items.map((d) => (
-                  <ActivityCard
-                    key={d.activity.id}
-                    item={d}
-                    role={role}
-                    onOpen={onAbrirActividad}
-                    // Repetir la unidad en cada tarjeta cuando la lista YA está agrupada por
-                    // unidad es ruido.
-                    showUnit={agrupacion !== 'unidad'}
-                    totalEstudiantes={totalEstudiantes}
-                    now={now}
+          {resultado.groups.map((g) => {
+            // Lo terminado nace plegado: con catorce actividades, el estudiante tenía que bajar
+            // por encima de todo lo que ya entregó para llegar a lo que le falta.
+            const plegado = plegados[g.key] ?? g.plegadoPorDefecto ?? false
+            return (
+              <section key={g.key} aria-labelledby={`grupo-${g.key}`}>
+                <button
+                  type="button"
+                  onClick={() => setPlegados((p) => ({ ...p, [g.key]: !plegado }))}
+                  aria-expanded={!plegado}
+                  className="mb-2 flex w-full items-center gap-2 rounded-lg py-1 text-left focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+                >
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-ink-muted transition-transform motion-reduce:transition-none ${
+                      plegado ? '-rotate-90' : ''
+                    }`}
+                    aria-hidden="true"
                   />
-                ))}
-              </div>
-            </section>
-          ))}
+                  <span className="min-w-0">
+                    <span id={`grupo-${g.key}`} className="flex items-center gap-2">
+                      <span className="text-body-base font-semibold text-ink-primary">{g.label}</span>
+                      <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink-secondary">
+                        {g.items.length}
+                      </span>
+                    </span>
+                    {g.hint && !plegado && (
+                      <span className="mt-0.5 block text-body-sm text-ink-muted">{g.hint}</span>
+                    )}
+                  </span>
+                </button>
+
+                {!plegado && (
+                  <div className="space-y-2">
+                    {g.items.map((d) => (
+                      <ActivityCard
+                        key={d.activity.id}
+                        item={d}
+                        role={role}
+                        onOpen={onAbrirActividad}
+                        // Repetir la unidad en cada tarjeta cuando la lista YA está agrupada por
+                        // unidad es ruido.
+                        showUnit={agrupacion !== 'unidad'}
+                        totalEstudiantes={totalEstudiantes}
+                        now={now}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )
+          })}
         </div>
       )}
     </div>

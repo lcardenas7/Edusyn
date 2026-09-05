@@ -119,10 +119,21 @@ export function useAula(classroomId: string | null, rol: Rol): EstadoAula {
     Promise.all([
       classroomApi.getById(classroomId),
       classroomApi.listActivities(classroomId, rol === 'estudiante' ? 'student' : undefined),
+      /*
+       * `getById` no devuelve cuántos estudiantes tiene el grupo, y sin ese número la tarjeta
+       * de actividad no puede decir "11 de 37 entregaron" ni cuántos faltan. Se pide la lista
+       * solo para el docente —el estudiante no la necesita ni debería verla— y su fallo no
+       * rompe nada: sin el dato, simplemente no se dibuja la barra.
+       */
+      rol === 'docente'
+        ? classroomApi.getStudents(classroomId).catch(() => ({ data: null }))
+        : Promise.resolve({ data: null }),
     ])
-      .then(([resAula, resActs]) => {
+      .then(([resAula, resActs, resAlumnos]) => {
         if (!vivo) return
-        setAula(normalizarAula(resAula.data))
+        const normalizada = normalizarAula(resAula.data)
+        const matriculados = Array.isArray(resAlumnos.data) ? resAlumnos.data.length : null
+        setAula({ ...normalizada, estudiantes: normalizada.estudiantes ?? matriculados })
         setActividades(Array.isArray(resActs.data) ? resActs.data : [])
         marcarVisitada(classroomId)
       })

@@ -15,18 +15,43 @@
 
 import { ChevronRight, Lock, Paperclip, PenLine } from 'lucide-react'
 import type { DecoratedActivity, Role } from '../model/list'
-import { activityTypeLabel } from '../model/labels'
+import { activityTypeLabel, activityTypeMeta } from '../model/labels'
 import { agoCopy, bogotaLongDate, bogotaTime, dueCopy, opensCopy } from '../model/countdown'
 import { ActivityGlyph } from '../visual/ActivityGlyph'
 import { StudentStateChip, TeacherStateChip } from './StateChip'
 
-/** Estados que justifican el acento lateral. El resto va sin él, para que el acento signifique algo. */
-const ACENTO: Record<string, string> = {
-  vencida: 'rgb(var(--feedback-error, 229 72 77))',
-  'vence-hoy': '#E0A020',
-  devuelta: '#D2691E',
-  'por-calificar': '#D2691E',
-  'vencida-sin-entregas': '#E0A020',
+/**
+ * Cuánto pesa visualmente una tarjeta según su estado.
+ *
+ * Antes todas pesaban igual: una que vence hoy y una ya calificada ocupaban el mismo espacio
+ * con la misma forma, y el único canal que variaba era un icono de 44 px. En una lista de
+ * catorce no había ritmo y todo se leía igual.
+ *
+ * Ahora lo que exige acción se ve entero y con el color de su tipo; lo terminado se encoge a
+ * una fila tranquila donde la nota es lo que manda.
+ */
+type Peso = 'reclama' | 'normal' | 'cerrado'
+
+const PESO_ESTUDIANTE: Record<string, Peso> = {
+  vencida: 'reclama',
+  'vence-hoy': 'reclama',
+  devuelta: 'reclama',
+  'vence-pronto': 'reclama',
+  'en-borrador': 'reclama',
+  pendiente: 'normal',
+  'no-abierta': 'normal',
+  bloqueada: 'normal',
+  entregada: 'cerrado',
+  calificada: 'cerrado',
+}
+
+const PESO_DOCENTE: Record<string, Peso> = {
+  'por-calificar': 'reclama',
+  'vence-hoy': 'reclama',
+  'vencida-sin-entregas': 'reclama',
+  borrador: 'normal',
+  programada: 'normal',
+  publicada: 'cerrado',
 }
 
 export interface ActivityCardProps {
@@ -46,8 +71,11 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, totalEstudia
   const t = item.teacher
   const bloqueada = s?.state === 'bloqueada'
 
-  const estado = role === 'estudiante' ? s?.state : t?.state
-  const acento = estado ? ACENTO[estado] : undefined
+  const estado = (role === 'estudiante' ? s?.state : t?.state) ?? ''
+  const peso: Peso = (role === 'estudiante' ? PESO_ESTUDIANTE[estado] : PESO_DOCENTE[estado]) ?? 'normal'
+  // El color del tipo pinta SIEMPRE el borde izquierdo: es lo que hace que una lista de quizzes
+  // y tareas se vea variada en vez de catorce ladrillos iguales.
+  const colorTipo = activityTypeMeta(a.type).ink
 
   // Requisitos que faltan para desbloquear (los calcula el backend; la UI solo los pinta).
   const requisitos: { prerequisiteId: string; title: string; satisfied: boolean }[] =
@@ -84,27 +112,36 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, totalEstudia
       onClick={() => !bloqueada && onOpen(a.id)}
       disabled={bloqueada}
       aria-disabled={bloqueada}
-      style={acento ? { borderLeftColor: acento, borderLeftWidth: 3 } : undefined}
-      className={`group w-full rounded-card border border-hairline bg-surface-1 p-3 text-left transition-colors sm:p-4 ${
+      style={{
+        borderLeftColor: colorTipo,
+        // Lo que reclama atención lleva un filo grueso; lo cerrado, apenas una línea.
+        borderLeftWidth: peso === 'reclama' ? 5 : peso === 'cerrado' ? 2 : 3,
+      }}
+      className={`group w-full rounded-card border border-hairline text-left transition-colors ${
+        peso === 'cerrado' ? 'bg-surface-2/60 p-2.5 sm:p-3' : 'bg-surface-1 p-3 sm:p-4'
+      } ${
         bloqueada
           ? 'cursor-not-allowed opacity-70'
-          : 'hover:border-accent/40 hover:bg-surface-1 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none'
+          : 'hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none'
       }`}
     >
       <div className="flex items-start gap-2.5 sm:gap-3">
-        <ActivityGlyph type={a.type} size={38} className="sm:hidden" />
-        <ActivityGlyph type={a.type} size={44} className="hidden sm:inline-flex" />
+        {/* Lo terminado también se encoge: ocupa menos sitio y pesa menos en la mirada. */}
+        <ActivityGlyph type={a.type} size={peso === 'cerrado' ? 30 : 38} className="sm:hidden" />
+        <ActivityGlyph type={a.type} size={peso === 'cerrado' ? 34 : 44} className="hidden sm:inline-flex" />
 
         <div className="min-w-0 flex-1">
           {/* Título + estado */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="min-w-0 break-words text-body-base font-semibold text-ink-primary">{a.title}</h3>
-            {role === 'estudiante' && s && (
-              <StudentStateChip
-                state={s.state}
-                suffix={s.state === 'calificada' && s.score != null ? `· ${s.score.toFixed(1)}` : undefined}
-                size="sm"
-              />
+            <h3
+              className={`min-w-0 break-words font-semibold ${
+                peso === 'cerrado' ? 'text-body-sm text-ink-secondary' : 'text-body-base text-ink-primary'
+              }`}
+            >
+              {a.title}
+            </h3>
+            {role === 'estudiante' && s && s.state !== 'calificada' && (
+              <StudentStateChip state={s.state} size="sm" />
             )}
             {role === 'docente' && t && (
               <TeacherStateChip
@@ -197,7 +234,18 @@ export function ActivityCard({ item, role, onOpen, showUnit = true, totalEstudia
           )}
         </div>
 
-        {bloqueada ? (
+        {/* En una actividad calificada, el dato que el estudiante busca es la nota. Sustituye
+            al chevron y se lleva el peso visual que antes tenía el título. */}
+        {role === 'estudiante' && s?.state === 'calificada' && s.score != null ? (
+          <span className="mt-0.5 shrink-0 text-right">
+            <span className="block text-h3 leading-none font-bold text-ink-primary tabular-nums">
+              {s.score.toFixed(1)}
+            </span>
+            {a.maxScore != null && (
+              <span className="block text-xs text-ink-muted">de {Number(a.maxScore)}</span>
+            )}
+          </span>
+        ) : bloqueada ? (
           <Lock className="mt-1 h-4 w-4 shrink-0 text-ink-muted" aria-hidden="true" />
         ) : (
           <ChevronRight
