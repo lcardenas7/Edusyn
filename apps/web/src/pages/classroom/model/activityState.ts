@@ -194,6 +194,37 @@ export function isVisibleTo(role: 'docente' | 'estudiante', a: ActivityLike): bo
   return a.isPublished === true
 }
 
+// ─── Preguntas independientes sobre una actividad ────────────────────────────
+//
+// El docente hace preguntas que SE SOLAPAN: una actividad puede a la vez vencer hoy y tener
+// entregas esperando nota. El estado de la tarjeta es excluyente (muestra una sola cosa), así
+// que derivar de él los paneles y los chips producía mentiras — el tablero llegó a decir
+// "Nada se cierra hoy" mientras el estudiante veía "Vence hoy a las 5:00 p. m." de esa misma
+// actividad. La auditoría ya advertía este solapamiento (hallazgo C5).
+//
+// Estos predicados son la única fuente para los paneles de "Hoy" y para los chips de filtro,
+// para que los dos sitios no puedan discrepar.
+
+/** ¿Se cierra hoy para los estudiantes? Un borrador no cuenta: ni lo ven. */
+export function venceHoy(a: ActivityLike, now: Date = new Date()): boolean {
+  return a.isPublished === true && sameBogotaDay(a.dueDate, now)
+}
+
+/** ¿Ya venció (en un día anterior) y no entregó nadie? */
+export function vencioSinEntregas(a: ActivityLike, now: Date = new Date()): boolean {
+  if (!a.isPublished || !a.dueDate) return false
+  const due = time(a.dueDate)
+  if (due === null || due >= now.getTime()) return false
+  // Lo que vence hoy todavía tiene horas por delante: no es "desierta" aún.
+  if (sameBogotaDay(a.dueDate, now)) return false
+  return (a._count?.submissions ?? 0) === 0
+}
+
+/** ¿Hay entregas esperando nota? */
+export function tieneEntregasPorCalificar(a: ActivityLike): boolean {
+  return (a.gradingPending ?? 0) > 0
+}
+
 // ─── Período ─────────────────────────────────────────────────────────────────
 
 /**

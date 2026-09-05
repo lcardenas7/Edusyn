@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { ActivityLike } from './activityState'
 import { buildStudentToday, buildTeacherToday, ordenarAnuncios } from './today'
+import { decorate, stateChipsFor } from './list'
 
 /**
  * El objetivo declarado del tablero es que cada rol entienda su situación en menos de cinco
@@ -185,6 +186,35 @@ describe('tablero del docente', () => {
       AHORA,
     )
     expect(limpio.todoAlDia).toBe(true)
+  })
+})
+
+describe('el tablero y la lista no pueden contradecirse', () => {
+  /**
+   * Los paneles de "Hoy" y los chips de filtro de "Actividades" responden las mismas
+   * preguntas. Si cada uno las calcula por su lado, el docente ve "Vencen hoy: 1" en el
+   * tablero y ningún chip "Vencen hoy" en la lista. Pasó, y por eso ambos salen ahora de los
+   * mismos predicados.
+   */
+  it('lo que el tablero cuenta es exactamente lo que el chip filtra', () => {
+    const actividades = [
+      act({ id: 'ambas', dueDate: '2026-05-20T22:00:00.000Z', gradingPending: 6, _count: { submissions: 18 } }),
+      act({ id: 'desierta', dueDate: '2026-05-12T22:00:00.000Z', _count: { submissions: 0 } }),
+      act({ id: 'borrador', isPublished: false }),
+    ]
+    const tablero = buildTeacherToday(actividades, AHORA)
+    const chips = stateChipsFor('docente', AHORA)
+    const cuenta = (id: string) => {
+      const chip = chips.find((c) => c.id === id)!
+      return actividades.filter((a) => chip.match(decorate(a, 'docente', AHORA))).length
+    }
+
+    expect(cuenta('vence-hoy')).toBe(tablero.vencenHoy.length)
+    expect(cuenta('sin-entregas')).toBe(tablero.sinEntregas.length)
+    expect(cuenta('por-calificar')).toBe(tablero.porCalificar.actividades.length)
+    expect(cuenta('borrador')).toBe(tablero.borradores.length)
+    // Y en concreto: la que vence hoy no desaparece por tener entregas por calificar.
+    expect(cuenta('vence-hoy')).toBe(1)
   })
 })
 

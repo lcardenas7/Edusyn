@@ -16,6 +16,9 @@ import {
   isVisibleTo,
   matchesSearch,
   periodIdOf,
+  tieneEntregasPorCalificar,
+  venceHoy,
+  vencioSinEntregas,
 } from './activityState'
 import { bogotaDayDelta, bogotaShortDate } from './countdown'
 
@@ -65,7 +68,7 @@ export interface ActivityGroup {
 export interface StateChip {
   id: string
   label: string
-  /** Estados que agrupa este chip. */
+  /** Qué actividades entran en este chip. */
   match: (d: DecoratedActivity) => boolean
 }
 
@@ -91,17 +94,24 @@ const studentChips: StateChip[] = [
   },
 ]
 
-const teacherChips: StateChip[] = [
-  { id: 'todas', label: 'Todas', match: () => true },
-  { id: 'por-calificar', label: 'Por calificar', match: (d) => (d.teacher?.porCalificar ?? 0) > 0 },
-  { id: 'vence-hoy', label: 'Vencen hoy', match: (d) => d.teacher?.state === 'vence-hoy' },
-  { id: 'sin-entregas', label: 'Sin entregas', match: (d) => d.teacher?.state === 'vencida-sin-entregas' },
-  { id: 'borrador', label: 'Borradores', match: (d) => d.teacher?.state === 'borrador' },
-  { id: 'programada', label: 'Programadas', match: (d) => d.teacher?.state === 'programada' },
-]
+/**
+ * Los chips del docente usan los MISMOS predicados independientes que los paneles de "Hoy",
+ * no el estado excluyente de la tarjeta. Si no, el chip "Vencen hoy" desaparece en cuanto esa
+ * actividad tiene entregas por calificar, y el tablero y la lista se contradicen.
+ */
+function teacherChipsFor(now: Date): StateChip[] {
+  return [
+    { id: 'todas', label: 'Todas', match: () => true },
+    { id: 'por-calificar', label: 'Por calificar', match: (d) => tieneEntregasPorCalificar(d.activity) },
+    { id: 'vence-hoy', label: 'Vencen hoy', match: (d) => venceHoy(d.activity, now) },
+    { id: 'sin-entregas', label: 'Sin entregas', match: (d) => vencioSinEntregas(d.activity, now) },
+    { id: 'borrador', label: 'Borradores', match: (d) => d.teacher?.state === 'borrador' },
+    { id: 'programada', label: 'Programadas', match: (d) => d.teacher?.state === 'programada' },
+  ]
+}
 
-export function stateChipsFor(role: Role): StateChip[] {
-  return role === 'estudiante' ? studentChips : teacherChips
+export function stateChipsFor(role: Role, now: Date = new Date()): StateChip[] {
+  return role === 'estudiante' ? studentChips : teacherChipsFor(now)
 }
 
 // ─── Agrupación ──────────────────────────────────────────────────────────────
@@ -200,7 +210,7 @@ export function decorate(a: ActivityLike, role: Role, now: Date): DecoratedActiv
 }
 
 export function buildActivityList({ activities, role, filters, groupBy, now = new Date() }: BuildInput): BuildResult {
-  const chips = stateChipsFor(role)
+  const chips = stateChipsFor(role, now)
   const chip = chips.find((c) => c.id === filters.state) ?? chips[0]
 
   // 1 · Universo: primero lo que el rol tiene derecho a ver, y luego el período, que es el
@@ -215,18 +225,23 @@ export function buildActivityList({ activities, role, filters, groupBy, now = ne
     })
     .map((a) => decorate(a, role, now))
 
-  // 2 · Conteos de chips sobre el universo (no sobre la lista ya filtrada por chip).
-  const chipCounts: Record<string, number> = {}
-  for (const c of chips) chipCounts[c.id] = universe.filter(c.match).length
-
-  // 3 · Filtros secundarios.
-  const visible = universe.filter((d) => {
+  // 2 · Filtros que ESTRECHAN (tipo y búsqueda). Se aplican antes de contar los chips.
+  const acotado = universe.filter((d) => {
     if (filters.type !== 'todos' && familyOfType(d.activity.type) !== filters.type) return false
-    if (!matchesSearch(d.activity, filters.search)) return false
-    return chip.match(d)
+    return matchesSearch(d.activity, filters.search)
   })
 
-  // 4 · Agrupar.
+  // 3 · Conteos de chips sobre lo ya acotado, no sobre todo el universo.
+  //     Así el número de un chip es EXACTAMENTE cuántas verás si lo pulsas: con "taller"
+  //     escrito en la búsqueda, un chip que dijera 7 y mostrara 2 al pulsarlo sería mentira.
+  //     (La auditoría ya señalaba que hoy los conteos y la lista no cuadran — hallazgo C5.)
+  const chipCounts: Record<string, number> = {}
+  for (const c of chips) chipCounts[c.id] = acotado.filter(c.match).length
+
+  // 4 · El chip elegido.
+  const visible = acotado.filter(chip.match)
+
+  // 5 · Agrupar.
   const buckets = new Map<string, ActivityGroup>()
   for (const d of visible) {
     const { key, label, hint } = groupKeyOf(d, groupBy, role, now)
@@ -234,7 +249,7 @@ export function buildActivityList({ activities, role, filters, groupBy, now = ne
     buckets.get(key)!.items.push(d)
   }
 
-  // 5 · Ordenar dentro y entre grupos.
+  // 6 · Ordenar dentro y entre grupos.
   const groups = [...buckets.values()]
     .map((g) => ({
       ...g,
