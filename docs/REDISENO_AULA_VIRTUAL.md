@@ -288,7 +288,7 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T9 | **Asistente de copia** (corrige P0-1) | ✅ | `4c56888c` |
 | T10 | Defectos P0-2 … P0-5 en el código actual | ⬜ | |
 | T11 | Interruptor + montaje de rutas + enlaces profundos | ✅ | `e3065128` · rutas `/aula/*` |
-| T12 | Notas, Foro, Rutas, Estudiantes en el shell nuevo | ⬜ | |
+| T12 | **Notas** y **Estudiantes** en el shell nuevo | ✅ | `f71a8abe` · Rutas, Expedición y Foro siguen con puente al aula actual |
 | T13 | **Sesión de quiz en vivo** en todo el aula, con sondeo | ✅ | `2644282f` |
 
 ---
@@ -358,6 +358,14 @@ cambia, las pruebas caen y este es el porqué:
    El número de un chip es *cuántas verás al pulsarlo*, no cuántas hay en el aula. Con
    "taller" escrito, un chip que dijera 7 y mostrara 2 al pulsarlo sería peor que no poner
    número. (`list.ts` · `buildActivityList`, pasos 2–4)
+
+4. **"Notas" del docente no es una planilla, y es a propósito.**
+   Las notas del boletín viven en el módulo académico, con sus ventanas de calificación, su
+   auditoría de cambios y su cierre de período. Abrir en el aula una segunda superficie de
+   captura crearía **dos verdades sobre el mismo dato**. Aquí el docente ve el estado de su
+   trabajo de revisión y un enlace a Calificaciones; la nota de una entrega concreta se pone
+   en el detalle de esa actividad. Por lo mismo, el promedio del estudiante sale de
+   `getMyGrades` y no se recalcula en el navegador. (`views/Notas.tsx`)
 
 > **Tropiezo conocido: reinicia el servidor de desarrollo al crear archivos nuevos.**
 > El escáner de Tailwind resuelve su lista de archivos al arrancar. Si creas un componente
