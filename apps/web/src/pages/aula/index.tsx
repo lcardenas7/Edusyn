@@ -323,9 +323,20 @@ export default function AulaVirtual() {
           <Unidades
             aulaId={classroomId}
             role={rol}
+            asignatura={aula?.asignatura}
+            color={aula?.color}
             secciones={aula?.secciones ?? []}
             actividades={actividades}
             periodo={periodo}
+            // La unidad abierta va en la URL: así se puede compartir y el botón "atrás"
+            // devuelve a la parrilla en vez de sacarte del aula.
+            unidadAbierta={params.get('unidad')}
+            onAbrirUnidad={(id) => {
+              const next = new URLSearchParams(params)
+              if (id) next.set('unidad', id)
+              else next.delete('unidad')
+              setParams(next)
+            }}
             onAbrirActividad={abrirActividad}
             totalEstudiantes={aula?.estudiantes ?? null}
             onAbrirMaterial={() => irAlAulaActualPara('editar')}

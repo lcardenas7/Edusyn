@@ -259,6 +259,7 @@ function Demo() {
   const [periodo, setPeriodo] = useState('todos')
   const [aulaIdx, setAulaIdx] = useState(0)
   const [sesion, setSesion] = useState<'ninguna' | 'en-vivo' | 'en-casa'>('ninguna')
+  const [unidadAbierta, setUnidadAbierta] = useState<string | null>(null)
   const aula = AULAS[aulaIdx]
 
   const sesionActiva: LiveSessionLike | null =
@@ -344,6 +345,9 @@ function Demo() {
             secciones={SECCIONES}
             actividades={MUESTRA}
             periodo={periodo}
+            asignatura={aula.asignatura}
+            unidadAbierta={unidadAbierta}
+            onAbrirUnidad={setUnidadAbierta}
             onAbrirActividad={(id) => alert(`Abrir actividad ${id}`)}
             onAbrirMaterial={(m) => alert(`Abrir material "${m.title}"`)}
             onCrear={() => alert('Crear unidad')}
