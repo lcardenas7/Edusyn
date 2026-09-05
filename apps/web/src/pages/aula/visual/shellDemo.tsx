@@ -16,6 +16,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Hoy } from '../views/Hoy'
 import { Actividades } from '../views/Actividades'
 import { ActividadDetalle } from '../views/ActividadDetalle'
+import { Unidades } from '../views/Unidades'
 import { LiveSessionBanner } from '../ui/LiveSessionBanner'
 import type { LiveSessionLike } from '../model/liveSession'
 import type { ActivityLike } from '../model/activityState'
@@ -37,6 +38,33 @@ const PERIODOS = [
 ]
 
 const UNIDAD = { id: 'u3', title: 'Unidad 3: Álgebra básica', academicTermId: 'p2' }
+
+const SECCIONES = [
+  {
+    id: 'u3',
+    title: 'Unidad 3: Álgebra básica',
+    academicTermId: 'p2',
+    materials: [
+      { id: 'm1', type: 'VIDEO_YOUTUBE', title: 'Qué es una ecuación (video de 8 min)' },
+      { id: 'm2', type: 'DOCUMENT', title: 'Guía de ejercicios resueltos.pdf', fileUrl: '#' },
+      { id: 'm3', type: 'TEXT', title: 'Resumen: pasar del lenguaje natural al algebraico' },
+      { id: 'm4', type: 'LINK', title: 'Simulador de balanzas (borrador)', isVisible: false },
+    ],
+  },
+  {
+    id: 'u4',
+    title: 'Unidad 4: Geometría y medida',
+    academicTermId: 'p2',
+    materials: [{ id: 'm5', type: 'IMAGE', title: 'Mapa de fórmulas de áreas' }],
+  },
+  {
+    id: 'u5',
+    title: 'Unidad 5: Estadística (en preparación)',
+    academicTermId: 'p2',
+    isVisible: false,
+    materials: [],
+  },
+]
 
 const MUESTRA: ActivityLike[] = [
   {
@@ -249,6 +277,18 @@ function Demo() {
             now={AHORA}
           />
         ) : vista === 'unidades' ? (
+          <Unidades
+            aulaId={aula.id}
+            role={role}
+            secciones={SECCIONES}
+            actividades={MUESTRA}
+            periodo={periodo}
+            onAbrirActividad={(id) => alert(`Abrir actividad ${id}`)}
+            onAbrirMaterial={(m) => alert(`Abrir material "${m.title}"`)}
+            onCrear={() => alert('Crear unidad')}
+            now={AHORA}
+          />
+        ) : vista === 'rutas' ? (
           // Se aprovecha este destino para revisar el detalle sin backend.
           <ActividadDetalle
             actividad={MUESTRA[0]}
