@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense, type ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi, academicTermsApi } from '../lib/api'
@@ -215,6 +215,7 @@ const extractYoutubeId = (url: string) => {
 export default function Classroom() {
   const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const isTeacher = user?.roles?.some((r: any) => ['DOCENTE', 'COORDINADOR'].includes(r.role?.name || r.roleName || ''))
   const isStudent = user?.roles?.some((r: any) => ['ESTUDIANTE'].includes(r.role?.name || r.roleName || ''))
 
@@ -354,15 +355,27 @@ export default function Classroom() {
               {isStudent ? 'Accede a tus clases y materiales' : 'Gestiona tus aulas virtuales por asignatura'}
             </p>
           </div>
-          {isTeacher && (
+          <div className="flex items-center gap-2">
+            {/* Aula rediseñada (docs/REDISENO_AULA_VIRTUAL.md). Convive con esta: entrar y
+                volver no escribe nada en el servidor, es solo una preferencia de interfaz. */}
             <button
-              onClick={() => { setShowCreate(true); loadAvailableAssignments() }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              onClick={() => navigate('/aula')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:border-blue-300 hover:text-blue-700 transition-colors"
+              title="Estamos rediseñando el aula. Puedes volver cuando quieras."
             >
-              <Plus className="w-4 h-4" />
-              Crear Aula
+              <Sparkles className="w-4 h-4" />
+              Probar la nueva aula
             </button>
-          )}
+            {isTeacher && (
+              <button
+                onClick={() => { setShowCreate(true); loadAvailableAssignments() }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Crear Aula
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Identidad de aprendizaje del estudiante (XP / nivel / racha + insignias) */}
