@@ -21,7 +21,7 @@
  * deja que la nota sea lo que se vea.
  */
 
-import { Lock, Paperclip, PenLine } from 'lucide-react'
+import { Check, Lock, Paperclip, PenLine } from 'lucide-react'
 import type { DecoratedActivity, Role } from '../model/list'
 import { activityTypeLabel, activityTypeMeta } from '../model/labels'
 import { agoCopy, bogotaLongDate, bogotaTime, dueCopy, opensCopy } from '../model/countdown'
@@ -106,6 +106,8 @@ export function ActivityCard({
   const total = totalEstudiantes ?? (a as unknown as { studentCount?: number }).studentCount ?? null
   const adjunto = (a as unknown as { attachmentUrl?: string }).attachmentUrl
   const notaVisible = role === 'estudiante' && s?.state === 'calificada' && s.score != null
+  // Para el estudiante, "hecha" es lo que ya entregó: no le exige nada más.
+  const hecha = role === 'estudiante' && (s?.state === 'entregada' || s?.state === 'calificada')
 
   return (
     <button
@@ -137,6 +139,17 @@ export function ActivityCard({
         <span className="absolute bottom-2 left-3" aria-hidden="true">
           <ActivityGlyph type={a.type} size={cerrado ? 28 : 36} />
         </span>
+
+        {/* Marca de hecha: un visto verde se reconoce sin leer nada. El chip sigue diciendo
+            SI está entregada o ya calificada, que no es lo mismo. */}
+        {hecha && (
+          <span
+            className="absolute top-2 left-3 flex h-6 w-6 items-center justify-center rounded-full bg-success-500 text-white shadow-sm"
+            aria-hidden="true"
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          </span>
+        )}
 
         <span className="absolute top-2 right-2.5">
           {role === 'estudiante' && s && !notaVisible && <StudentStateChip state={s.state} size="sm" />}
