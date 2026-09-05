@@ -21,7 +21,8 @@ export interface ActivityLike {
   type: string
   title: string
   description?: string
-  maxScore?: number
+  /** También `Decimal`: llega como texto. Usar `aNumero`. */
+  maxScore?: number | string
   dueDate?: string | null
   openDate?: string | null
   /** ¿El docente acepta entregas después de la fecha límite? */
@@ -31,6 +32,8 @@ export interface ActivityLike {
   scheduledPublishAt?: string | null
   createdAt?: string
   academicTermId?: string | null
+  /** Donde el docente la dejó dentro de la unidad. */
+  sortOrder?: number
   section?: { id: string; title: string; academicTermId?: string | null } | null
   /** Entregas SUBMITTED/LATE pendientes de nota (solo llega en el payload docente). */
   gradingPending?: number
@@ -38,7 +41,12 @@ export interface ActivityLike {
   /** En el payload del estudiante viene su propia entrega (una sola). */
   submissions?: {
     status: string
-    score?: number | null
+    /**
+     * Ojo: el backend guarda las notas como `Decimal` de Prisma y **se serializan como
+     * texto**. Nunca se use sin pasar por `aNumero`: `"4.2".toFixed(1)` revienta y deja la
+     * pantalla en blanco. Pasó con datos reales.
+     */
+    score?: number | string | null
     submittedAt?: string | null
     attemptNumber?: number
   }[]
@@ -67,6 +75,17 @@ export function sameBogotaDay(a: string | Date | null | undefined, b: string | D
 const HOUR = 60 * 60 * 1000
 /** Ventana de "vence pronto": dos días. */
 export const DUE_SOON_MS = 48 * HOUR
+
+/**
+ * Convierte a número lo que el backend manda como `Decimal` (texto). Devuelve `null` ante
+ * cualquier cosa que no sea un número de verdad, en vez de propagar un `NaN` que luego se
+ * pinta como "NaN" en la pantalla del estudiante.
+ */
+export function aNumero(valor: number | string | null | undefined): number | null {
+  if (valor === null || valor === undefined || valor === '') return null
+  const n = typeof valor === 'number' ? valor : Number(valor)
+  return Number.isFinite(n) ? n : null
+}
 
 function time(value: string | Date | null | undefined): number | null {
   if (!value) return null
@@ -111,7 +130,8 @@ export interface StudentView {
 export function deriveStudentState(a: ActivityLike, now: Date = new Date()): StudentView {
   const sub = a.submissions?.[0]
   const status = sub?.status
-  const score = sub?.score ?? null
+  // El backend manda `Decimal` como texto: sin esto, `score.toFixed()` rompe la vista.
+  const score = aNumero(sub?.score)
   const hasDraft = status === 'DRAFT'
   const maxAttempts = a.metadata?.maxAttempts
   const attempt =
