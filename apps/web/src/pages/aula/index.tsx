@@ -25,12 +25,63 @@ import { DESTINOS, type Vista } from './ui/destinations'
 import { SelectorAula } from './views/SelectorAula'
 import { Hoy } from './views/Hoy'
 import { Actividades } from './views/Actividades'
+import { ActividadDetalle } from './views/ActividadDetalle'
 import { useAula, useAulas, type Rol } from './data/useAula'
+import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
 import { buildTeacherToday, buildStudentToday } from './model/today'
 import { PERIOD_ALL } from './model/list'
 
 const VISTAS = new Set(DESTINOS.map((d) => d.id))
+
+/**
+ * El detalle carga sus propios datos (la actividad completa y sus entregas), que la lista no
+ * trae. Va aparte para que su estado de carga y de error no arrastre a todo el aula.
+ */
+function DetalleCargado({
+  activityId,
+  rol,
+  onVolver,
+  onIrAlAulaActual,
+}: {
+  activityId: string
+  rol: Rol
+  onVolver: () => void
+  onIrAlAulaActual: () => void
+}) {
+  const { actividad, miEntrega, entregas, cargando, error, recargar } = useActividad(activityId, rol)
+
+  return (
+    <AulaState
+      loading={cargando}
+      error={error}
+      onRetry={recargar}
+      isEmpty={!actividad}
+      empty={
+        <div className="mx-auto max-w-3xl">
+          <EmptyState
+            scene="sin-resultados"
+            title="No encontramos esta actividad"
+            detail="Puede que se haya eliminado o que ya no esté disponible para ti."
+            action={{ label: 'Volver a la lista', onClick: onVolver }}
+          />
+        </div>
+      }
+    >
+      {actividad && (
+        <ActividadDetalle
+          actividad={actividad}
+          rol={rol}
+          miEntrega={miEntrega}
+          entregas={entregas}
+          onVolver={onVolver}
+          onCambio={recargar}
+          onIrAlAulaActual={onIrAlAulaActual}
+        />
+      )}
+    </AulaState>
+  )
+}
 
 function esVista(v: string | undefined): v is Vista {
   return !!v && VISTAS.has(v as Vista)
@@ -164,15 +215,12 @@ export default function AulaVirtual() {
         empty={null}
       >
         {activityId ? (
-          <div className="mx-auto max-w-3xl">
-            <EmptyState
-              scene="sin-actividades"
-              title="El detalle de la actividad llega en el siguiente paso"
-              detail="El armazón, los tableros y la lista ya funcionan con tus datos reales. Abre esta actividad desde el aula actual mientras tanto."
-              action={{ label: 'Volver a la lista', onClick: () => verActividades() }}
-              secondary={{ label: 'Abrir el aula actual', onClick: () => navigate('/classroom') }}
-            />
-          </div>
+          <DetalleCargado
+            activityId={activityId}
+            rol={rol}
+            onVolver={() => verActividades()}
+            onIrAlAulaActual={() => navigate('/classroom')}
+          />
         ) : vista === 'hoy' ? (
           <Hoy
             role={rol}

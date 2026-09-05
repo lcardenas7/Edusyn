@@ -15,6 +15,7 @@ import { ActivityCard } from '../ui/ActivityCard'
 import { EmptyState } from '../ui/EmptyState'
 import { Hoy } from '../views/Hoy'
 import { Actividades } from '../views/Actividades'
+import { ActividadDetalle } from '../views/ActividadDetalle'
 import { LiveSessionBanner } from '../ui/LiveSessionBanner'
 import type { LiveSessionLike } from '../model/liveSession'
 import type { ActivityLike } from '../model/activityState'
@@ -245,6 +246,58 @@ function Demo() {
             onVerActividades={(f) => alert(`Ir a Actividades${f ? ` filtrando por ${f}` : ''}`)}
             onCrear={(t) => alert(`Crear ${t}`)}
             onValeria={() => alert('Abrir Valeria')}
+            now={AHORA}
+          />
+        ) : vista === 'unidades' ? (
+          // Se aprovecha este destino para revisar el detalle sin backend.
+          <ActividadDetalle
+            actividad={MUESTRA[0]}
+            rol={role}
+            miEntrega={
+              role === 'estudiante'
+                ? {
+                    id: 'e1',
+                    activityId: MUESTRA[0].id,
+                    status: 'SUBMITTED',
+                    content: 'Adjunto el desarrollo de los cinco ejercicios.',
+                    submittedAt: '2026-05-19T20:00:00.000Z',
+                  }
+                : null
+            }
+            entregas={
+              role === 'docente'
+                ? [
+                    {
+                      id: 'e1',
+                      activityId: MUESTRA[0].id,
+                      status: 'SUBMITTED',
+                      content: 'Adjunto el desarrollo de los cinco ejercicios.',
+                      submittedAt: '2026-05-19T20:00:00.000Z',
+                      studentEnrollment: { student: { id: '1', firstName: 'Ana', lastName: 'Martínez' } },
+                    },
+                    {
+                      id: 'e2',
+                      activityId: MUESTRA[0].id,
+                      status: 'GRADED',
+                      score: 4.2,
+                      feedback: 'Buen procedimiento; revisa el signo del ejercicio 3.',
+                      submittedAt: '2026-05-18T14:00:00.000Z',
+                      studentEnrollment: { student: { id: '2', firstName: 'Carlos', lastName: 'Ruiz' } },
+                    },
+                    {
+                      id: 'e3',
+                      activityId: MUESTRA[0].id,
+                      status: 'LATE',
+                      content: 'Perdón profe, se me pasó la fecha.',
+                      submittedAt: '2026-05-20T11:00:00.000Z',
+                      studentEnrollment: { student: { id: '3', firstName: 'Laura', lastName: 'Gómez' } },
+                    },
+                  ]
+                : []
+            }
+            onVolver={() => setVista('actividades')}
+            onCambio={() => alert('Recargar')}
+            onIrAlAulaActual={() => alert('Ir al aula actual')}
             now={AHORA}
           />
         ) : vista === 'actividades' ? (

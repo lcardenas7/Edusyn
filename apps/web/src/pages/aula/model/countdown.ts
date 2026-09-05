@@ -147,5 +147,9 @@ export function milestonesOf(
   if (dates.dueDate) rows.push({ key: 'vence', label: 'Vence', date: dates.dueDate, done: past(dates.dueDate) })
   if (dates.submittedAt) rows.push({ key: 'entregada', label: 'Entregada', date: dates.submittedAt, done: true })
   if (dates.gradedAt) rows.push({ key: 'calificada', label: 'Calificada', date: dates.gradedAt, done: true })
-  return rows
+
+  // En orden CRONOLÓGICO, no por el ciclo de vida. Quien entrega antes de la fecha límite
+  // vería si no "Vence 20 de mayo" y a su derecha "Entregada 19 de mayo", que es justo lo que
+  // una línea de tiempo no puede hacer.
+  return rows.sort((a, b) => a.date.localeCompare(b.date))
 }
