@@ -15,6 +15,8 @@ import { ActivityCard } from '../ui/ActivityCard'
 import { EmptyState } from '../ui/EmptyState'
 import { Hoy } from '../views/Hoy'
 import { Actividades } from '../views/Actividades'
+import { LiveSessionBanner } from '../ui/LiveSessionBanner'
+import type { LiveSessionLike } from '../model/liveSession'
 import type { ActivityLike } from '../model/activityState'
 import type { AnnouncementLike } from '../model/today'
 
@@ -166,7 +168,19 @@ function Demo() {
   const [vista, setVista] = useState<Vista>('hoy')
   const [periodo, setPeriodo] = useState('todos')
   const [aulaIdx, setAulaIdx] = useState(0)
+  const [sesion, setSesion] = useState<'ninguna' | 'en-vivo' | 'en-casa'>('ninguna')
   const aula = AULAS[aulaIdx]
+
+  const sesionActiva: LiveSessionLike | null =
+    sesion === 'ninguna'
+      ? null
+      : {
+          id: 'sesion-1',
+          activityId: '2',
+          status: 'ACTIVE',
+          deliveryMode: sesion === 'en-casa' ? 'ASYNC_HOME' : 'SYNC',
+          activity: { title: 'Quiz de proporciones' },
+        }
 
   return (
     <>
@@ -185,6 +199,14 @@ function Demo() {
         >
           Aula: {aula.asignatura}
         </button>
+        <button
+          onClick={() =>
+            setSesion((s) => (s === 'ninguna' ? 'en-vivo' : s === 'en-vivo' ? 'en-casa' : 'ninguna'))
+          }
+          className="rounded-lg border border-hairline bg-surface-1 px-3 py-1.5 font-medium text-ink-primary"
+        >
+          Sesión: {sesion}
+        </button>
         <span className="text-ink-muted">
           Achica la ventana por debajo de 1024 px para ver la barra inferior.
         </span>
@@ -200,6 +222,15 @@ function Demo() {
         periodo={periodo}
         onPeriodo={setPeriodo}
         badges={role === 'docente' ? { actividades: 6 } : { actividades: 2 }}
+        aviso={
+          sesionActiva ? (
+            <LiveSessionBanner
+              session={sesionActiva}
+              role={role}
+              onEntrar={() => alert('Abrir la sesión de quiz')}
+            />
+          ) : undefined
+        }
       >
         {vista === 'hoy' ? (
           <Hoy
