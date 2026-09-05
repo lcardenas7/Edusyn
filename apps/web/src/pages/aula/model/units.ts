@@ -19,6 +19,8 @@ export interface MaterialLike {
   id: string
   type: string
   title: string
+  /** Donde el docente lo dejó dentro de la unidad. Es su intención pedagógica. */
+  sortOrder?: number
   isVisible?: boolean
   fileUrl?: string | null
   content?: string | null
