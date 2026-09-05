@@ -31,6 +31,7 @@ import { StudentStateChip, TeacherStateChip } from '../ui/StateChip'
 import { Timeline } from '../ui/Timeline'
 import { EntregaTarea } from '../ui/EntregaTarea'
 import { ListaEntregas } from '../ui/ListaEntregas'
+import { CopiarActividad } from '../ui/CopiarActividad'
 
 const LessonPlayer = lazy(() => import('../../../components/LessonPlayer'))
 
@@ -46,6 +47,10 @@ export interface ActividadDetalleProps {
   onVolver: () => void
   onCambio: () => void
   onIrAlAulaActual: () => void
+  /** Aula en la que estamos: la necesita el asistente de copia. */
+  aulaId?: string
+  /** Abre otra actividad (se usa al terminar de copiar). */
+  onAbrirActividad?: (id: string) => void
   now?: Date
 }
 
@@ -57,9 +62,12 @@ export function ActividadDetalle({
   onVolver,
   onCambio,
   onIrAlAulaActual,
+  aulaId,
+  onAbrirActividad,
   now = new Date(),
 }: ActividadDetalleProps) {
   const [reproduciendo, setReproduciendo] = useState(false)
+  const [copiando, setCopiando] = useState(false)
   const esDocente = rol === 'docente'
   const vista = deriveStudentState(a, now)
   const vistaDocente = deriveTeacherState(a, now)
@@ -190,7 +198,13 @@ export function ActividadDetalle({
         {(esDocente || tieneAccionEstudiante(a, vista.state)) && (
           <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-5">
             {esDocente ? (
-              <AccionesDocente actividad={a} onCambio={onCambio} onVolver={onVolver} onEditar={onIrAlAulaActual} />
+              <AccionesDocente
+                actividad={a}
+                onCambio={onCambio}
+                onVolver={onVolver}
+                onEditar={onIrAlAulaActual}
+                onCopiar={aulaId ? () => setCopiando(true) : undefined}
+              />
             ) : (
               <AccionesEstudiante
                 actividad={a}
@@ -215,6 +229,19 @@ export function ActividadDetalle({
         <Suspense fallback={null}>
           <LessonPlayer activityId={a.id} isTeacher={esDocente} onClose={() => setReproduciendo(false)} />
         </Suspense>
+      )}
+
+      {copiando && aulaId && (
+        <CopiarActividad
+          actividad={a}
+          aulaActualId={aulaId}
+          onCerrar={() => setCopiando(false)}
+          onCopiada={(nueva) => {
+            setCopiando(false)
+            if (onAbrirActividad) onAbrirActividad(nueva)
+            else onCambio()
+          }}
+        />
       )}
     </div>
   )
@@ -280,11 +307,13 @@ function AccionesDocente({
   onCambio,
   onVolver,
   onEditar,
+  onCopiar,
 }: {
   actividad: ActivityLike
   onCambio: () => void
   onVolver: () => void
   onEditar: () => void
+  onCopiar?: () => void
 }) {
   const [ocupado, setOcupado] = useState(false)
 
@@ -367,7 +396,7 @@ function AccionesDocente({
       <button type="button" onClick={onEditar} disabled={ocupado} className={btn}>
         <Pencil className="h-4 w-4" aria-hidden="true" /> Editar
       </button>
-      <button type="button" onClick={onEditar} disabled={ocupado} className={btn}>
+      <button type="button" onClick={onCopiar ?? onEditar} disabled={ocupado} className={btn}>
         <Copy className="h-4 w-4" aria-hidden="true" /> Copiar
       </button>
       <button

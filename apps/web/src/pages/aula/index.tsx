@@ -41,14 +41,18 @@ const VISTAS = new Set(DESTINOS.map((d) => d.id))
  */
 function DetalleCargado({
   activityId,
+  aulaId,
   rol,
   onVolver,
   onIrAlAulaActual,
+  onAbrirActividad,
 }: {
   activityId: string
+  aulaId: string
   rol: Rol
   onVolver: () => void
   onIrAlAulaActual: () => void
+  onAbrirActividad: (id: string) => void
 }) {
   const { actividad, miEntrega, entregas, cargando, error, recargar } = useActividad(activityId, rol)
 
@@ -78,6 +82,8 @@ function DetalleCargado({
           onVolver={onVolver}
           onCambio={recargar}
           onIrAlAulaActual={onIrAlAulaActual}
+          aulaId={aulaId}
+          onAbrirActividad={onAbrirActividad}
         />
       )}
     </AulaState>
@@ -218,9 +224,11 @@ export default function AulaVirtual() {
         {activityId ? (
           <DetalleCargado
             activityId={activityId}
+            aulaId={classroomId}
             rol={rol}
             onVolver={() => verActividades()}
             onIrAlAulaActual={() => navigate('/classroom')}
+            onAbrirActividad={abrirActividad}
           />
         ) : vista === 'hoy' ? (
           <Hoy
