@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, Ellipsis, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
 import { destinosDe, vistaLabel, type Vista } from './destinations'
 import { useRail } from './useRail'
@@ -55,6 +55,11 @@ export interface AulaShellProps {
    * estudiante parado en Inicio no se entera de que la clase ya empezó a responder.
    */
   aviso?: ReactNode
+  /**
+   * Salir del módulo y volver al resto de la aplicación. Hace falta porque dentro del aula el
+   * menú global se esconde: sin esta puerta, el docente quedaría encerrado.
+   */
+  onSalirDelModulo?: () => void
   children: ReactNode
 }
 
@@ -69,6 +74,7 @@ export function AulaShell({
   onPeriodo,
   badges = {},
   aviso,
+  onSalirDelModulo,
   children,
 }: AulaShellProps) {
   const { expandido, alternar } = useRail()
@@ -81,7 +87,16 @@ export function AulaShell({
    */
   useEffect(() => {
     document.body.setAttribute('data-aula-nav-inferior', '')
-    return () => document.body.removeAttribute('data-aula-nav-inferior')
+    /*
+     * Modo inmersivo: mientras estás dentro de un aula, el menú global del docente se esconde
+     * en escritorio. Dos barras laterales seguidas gastaban ~480 px de cromo y ninguna de las
+     * dos mandaba. Las reglas viven en index.css; aquí solo se enciende y se apaga.
+     */
+    document.body.setAttribute('data-aula-inmersiva', '')
+    return () => {
+      document.body.removeAttribute('data-aula-nav-inferior')
+      document.body.removeAttribute('data-aula-inmersiva')
+    }
   }, [])
   const destinos = destinosDe(role)
   const principales = destinos.filter((d) => d.principal)
@@ -106,13 +121,13 @@ export function AulaShell({
       <div className="mx-auto flex max-w-workspace">
         {/* ─── Riel (escritorio) ─────────────────────────────────────────── */}
         <aside
-          className="sticky top-0 hidden h-screen shrink-0 border-r border-hairline bg-surface-1 transition-[width] duration-200 motion-reduce:transition-none lg:flex lg:flex-col"
+          className="sticky top-0 hidden h-screen shrink-0 border-r border-accent/15 bg-accent/[0.05] transition-[width] duration-200 motion-reduce:transition-none lg:flex lg:flex-col"
           style={{ width: expandido ? 232 : 68 }}
           aria-label="Secciones del aula"
         >
           {/* Identidad del aula */}
-          <div className={`flex items-center gap-2.5 border-b border-hairline px-3 py-3.5 ${expandido ? '' : 'justify-center'}`}>
-            <SubjectMark subject={aula.asignatura} size={36} />
+          <div className={`flex items-center gap-2.5 border-b border-accent/15 px-3 py-3.5 ${expandido ? '' : 'justify-center'}`}>
+            <SubjectMark subject={aula.asignatura} size={36} hue={hueDelAula} />
             {expandido && (
               <div className="min-w-0">
                 <p className="truncate text-body-sm font-semibold text-ink-primary">{aula.asignatura || aula.titulo}</p>
@@ -153,7 +168,20 @@ export function AulaShell({
             })}
           </nav>
 
-          <div className="border-t border-hairline p-2">
+          <div className="space-y-0.5 border-t border-accent/15 p-2">
+            {onSalirDelModulo && (
+              <button
+                type="button"
+                onClick={onSalirDelModulo}
+                title="Salir del aula y volver al menú de Edusyn"
+                className={`flex min-h-btn w-full items-center gap-3 rounded-lg px-3 text-body-sm font-medium text-ink-secondary transition-colors hover:bg-surface-2 hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none ${
+                  expandido ? '' : 'justify-center px-0'
+                }`}
+              >
+                <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                {expandido ? <span>Salir del aula</span> : <span className="sr-only">Salir del aula</span>}
+              </button>
+            )}
             <button
               type="button"
               onClick={alternar}
@@ -246,7 +274,9 @@ export function AulaShell({
           </header>
 
           {/* `pb-24` deja aire para la barra inferior de móvil */}
-          <main className="px-3 pt-4 pb-24 sm:px-4 sm:pt-5 lg:pb-10">
+          {/* `pb-32` deja aire de sobra: con `pb-24` la última tarjeta quedaba pegada a la
+              barra inferior y el botón de Valeria le caía encima. */}
+          <main className="px-3 pt-4 pb-32 sm:px-4 sm:pt-5 lg:pb-10">
             {aviso && <div className="mx-auto mb-4 max-w-3xl">{aviso}</div>}
             {children}
           </main>
@@ -343,6 +373,24 @@ export function AulaShell({
                   </button>
                 )
               })}
+
+              {onSalirDelModulo && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMasAbierto(false)
+                    onSalirDelModulo()
+                  }}
+                  className="mt-1 flex w-full items-center gap-3 rounded-lg border-t border-hairline px-3 py-3 text-left text-ink-secondary transition-colors hover:bg-surface-2"
+                  style={{ minHeight: 56 }}
+                >
+                  <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-body-sm font-medium">Salir del aula</span>
+                    <span className="block text-xs text-ink-muted">Volver al menú de Edusyn</span>
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
