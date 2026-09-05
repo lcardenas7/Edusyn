@@ -115,7 +115,7 @@ function TarjetaAula({
 }) {
   const identidad = subjectIdentity(aula.asignatura)
   const nombre = aula.asignatura ?? aula.titulo
-  const grupo = [aula.grado, aula.grupo].filter(Boolean).join(' ')
+  const grupo = etiquetaDeGrupo(aula.grado, aula.grupo)
 
   return (
     <button
@@ -166,6 +166,22 @@ function SelectorSkeleton() {
       <span className="sr-only">Cargando tus aulas…</span>
     </div>
   )
+}
+
+/**
+ * Grado y grupo, sin repetirse. En Edusyn el grupo suele llamarse "8-A" y su grado "8", así
+ * que juntarlos a lo bruto produce "8 8-A". Si el nombre del grupo ya empieza por el grado,
+ * basta con el grupo.
+ */
+export function etiquetaDeGrupo(grado: string | null | undefined, grupo: string | null | undefined): string {
+  const g = (grado ?? '').trim()
+  const gr = (grupo ?? '').trim()
+  if (!gr) return g
+  if (!g) return gr
+  // "8-A", "8A", "8 A" ya llevan el grado dentro. El `(?!\d)` evita que el grado "1" se dé
+  // por contenido en el grupo "11-2", que es de otro grado.
+  if (new RegExp(`^${g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`, 'i').test(gr)) return gr
+  return `${g} ${gr}`
 }
 
 /** "#2E6BE6" → "46 107 230", el formato de los tokens del DS. */

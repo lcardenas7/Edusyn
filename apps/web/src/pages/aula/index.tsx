@@ -118,7 +118,10 @@ export default function AulaVirtual() {
   const { aula, actividades, cargando, error, recargar } = useAula(classroomId ?? null, rol)
   const { session } = useLiveSession(classroomId ?? null)
 
-  const vista: Vista = esVista(vistaParam) ? vistaParam : 'hoy'
+  // La ruta del detalle (`/aula/:id/actividades/:activityId`) no lleva `:vista`, así que sin
+  // esto el aula se creía en "Hoy" mientras mostraba una actividad: las migas de pan y el
+  // destino resaltado mentían sobre dónde estás. Salió al recorrer el aula en el navegador.
+  const vista: Vista = activityId ? 'actividades' : esVista(vistaParam) ? vistaParam : 'hoy'
   // El período vive en la URL para que un enlace lleve a lo mismo que veía quien lo mandó.
   const periodo = params.get('periodo') ?? PERIOD_ALL
   const filtroEstado = params.get('estado')

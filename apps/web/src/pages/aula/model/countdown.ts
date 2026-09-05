@@ -71,6 +71,12 @@ export function dueCopy(dueDate: string | Date | null | undefined, now: Date = n
   if (delta === null) return 'Sin fecha de entrega'
   if (delta === 0) {
     const hora = bogotaTime(dueDate)
+    // Sigue siendo hoy, pero la hora ya pasó: a las 6 de la tarde, una tarea que cerraba a las
+    // 5 no "vence hoy", ya venció. Decir lo contrario contradice al chip de estado, que sí lo
+    // marca como vencida. Salió al probar el aula con una fecha límite de hoy.
+    const ms = dueDate ? new Date(dueDate).getTime() : NaN
+    const yaPaso = Number.isFinite(ms) && now.getTime() > ms
+    if (yaPaso) return hora ? `Venció hoy a las ${hora}` : 'Venció hoy'
     return hora ? `Vence hoy a las ${hora}` : 'Vence hoy'
   }
   if (delta === 1) return 'Vence mañana'
