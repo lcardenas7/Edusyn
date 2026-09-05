@@ -282,7 +282,7 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T3 | `ui/`: StateChip, ActivityCard, EmptyState, Skeletons | ✅ | `83ec939f` |
 | T4 | `AulaShell`: riel colapsable, header de contexto, barra inferior móvil | ✅ | Demo en `/shell-aula.html` |
 | T5 | Vista **Hoy** (docente y estudiante) + muro de anuncios | ✅ | `e99911bc` · falta cablear a la API (T11) |
-| T6 | Vista **Actividades**: búsqueda, filtros, agrupación, URL | ⬜ | |
+| T6 | Vista **Actividades**: búsqueda, filtros, agrupación | ✅ | `e25fe180` · la URL llega en T11 |
 | T7 | Vista **Unidades**: materiales + actividades | ⬜ | |
 | T8 | **Detalle de actividad** con línea de tiempos e intentos | ⬜ | |
 | T9 | **Wizard de copia** en 4 pasos (corrige P0-1) | ⬜ | |
@@ -321,12 +321,19 @@ cambia, las pruebas caen y este es el porqué:
    reciente, que es lo único recuperable hablando con el profe.
    (`activityState.ts` · `deriveStudentState`, `tieBreak: 'desc'`)
 
-2. **Los cuatro paneles del docente se solapan a propósito.**
+2. **Los paneles y los chips del docente se solapan a propósito.**
    Una actividad que vence hoy Y tiene entregas por calificar sale en los dos sitios, así que
-   los conteos no suman al total. Derivarlos del estado excluyente de la tarjeta producía una
-   mentira: el panel decía "Nada se cierra hoy" mientras el estudiante veía "Vence hoy a las
-   5:00 p.m." de esa misma actividad. La auditoría ya advertía este solapamiento (C5).
-   (`today.ts` · `buildTeacherToday`)
+   los conteos no suman al total. Derivarlos del estado excluyente de la tarjeta producía dos
+   mentiras: el panel decía "Nada se cierra hoy" mientras el estudiante veía "Vence hoy a las
+   5:00 p.m." de esa misma actividad, y el chip "Vencen hoy" desaparecía de la lista.
+   Los predicados (`venceHoy`, `vencioSinEntregas`, `tieneEntregasPorCalificar`) viven en
+   `activityState.ts` y los usan **tanto los paneles como los chips**; hay una prueba que
+   cruza ambos. La auditoría ya advertía este solapamiento (C5).
+
+3. **Los conteos de los chips respetan la búsqueda y el tipo.**
+   El número de un chip es *cuántas verás al pulsarlo*, no cuántas hay en el aula. Con
+   "taller" escrito, un chip que dijera 7 y mostrara 2 al pulsarlo sería peor que no poner
+   número. (`list.ts` · `buildActivityList`, pasos 2–4)
 
 > **Tropiezo conocido: reinicia el servidor de desarrollo al crear archivos nuevos.**
 > El escáner de Tailwind resuelve su lista de archivos al arrancar. Si creas un componente
