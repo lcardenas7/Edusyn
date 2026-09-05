@@ -236,6 +236,7 @@ export default function AulaVirtual() {
       vista={vista}
       onNavegar={irA}
       onSalir={() => navigate('/aula')}
+      onSalirDelModulo={() => navigate('/')}
       periodos={aula?.periodos ?? []}
       periodo={periodo}
       onPeriodo={cambiarPeriodo}

@@ -533,8 +533,11 @@ export default function Layout({ children }: { children: ReactNode }) {
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={`
+      {/* Sidebar.
+          `data-app-sidebar` permite que un módulo inmersivo lo esconda desde CSS —hoy lo usa
+          el aula rediseñada, que trae su propio menú y no quiere dos barras laterales
+          seguidas—. Ver la regla en index.css. */}
+      <aside data-app-sidebar className={`
         fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 shadow-sm
         transform transition-transform duration-300 ease-in-out flex flex-col
         lg:translate-x-0
@@ -799,7 +802,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className="lg:pl-64 pt-14 lg:pt-0">
+      <main data-app-main className="lg:pl-64 pt-14 lg:pt-0">
         <div className="p-4 lg:p-8">
           {children}
         </div>

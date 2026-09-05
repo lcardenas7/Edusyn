@@ -116,6 +116,26 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Modo inmersivo del aula.
+
+   Dentro de un aula, el menú global del docente y el menú del aula quedaban uno
+   pegado al otro: dos barras laterales seguidas, ~480 px de cromo en un
+   portátil, y ninguna de las dos manda. Mientras estás dentro, el menú del aula
+   es el único, y para salir hay un destino explícito ("Salir del aula").
+
+   Solo en escritorio: en móvil el menú global es un cajón que no estorba, y es
+   la única forma de volver al resto de la aplicación.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  body[data-aula-inmersiva] [data-app-sidebar] {
+    display: none;
+  }
+  body[data-aula-inmersiva] [data-app-main] {
+    padding-left: 0;
+  }
+}
+
 :root {
   --primary: #2563eb;
   --primary-foreground: #ffffff;
