@@ -19,14 +19,16 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
+import { hexARgb, resolverAcento } from '../model/tema'
+import { DialogoTema, IconoTema } from './SelectorTema'
+import { BotonPeriodo, DialogoPeriodo } from './SelectorPeriodo'
+import { ProveedorAcento } from './AulaTema'
 import { destinosDe, vistaLabel, type Vista } from './destinations'
 import { useRail } from './useRail'
+import { useTemaEstudiante } from './useTemaEstudiante'
 
-export interface PeriodoOpcion {
-  id: string
-  name: string
-  activo?: boolean
-}
+export type { PeriodoOpcion } from './SelectorPeriodo'
+import type { PeriodoOpcion } from './SelectorPeriodo'
 
 export interface AulaShellProps {
   aula: {
@@ -79,6 +81,12 @@ export function AulaShell({
 }: AulaShellProps) {
   const { expandido, alternar } = useRail()
   const [masAbierto, setMasAbierto] = useState(false)
+  const [temaAbierto, setTemaAbierto] = useState(false)
+  const [periodoAbierto, setPeriodoAbierto] = useState(false)
+  // Solo el estudiante repinta su vista: el color del aula es la identidad que el docente eligió
+  // para su curso, y él sí debe verla como la dejó.
+  const esEstudiante = role === 'estudiante'
+  const { tema, elegir } = useTemaEstudiante(esEstudiante)
 
   /*
    * La barra inferior de móvil ocupa la esquina donde vive el botón flotante de Valeria, que
@@ -103,7 +111,9 @@ export function AulaShell({
   const secundarios = destinos.filter((d) => !d.principal)
   const identidad = subjectIdentity(aula.asignatura)
   const colorAula = aula.color?.trim() || identidad.hue.ink
-  const hueDelAula = { ink: colorAula, wash: `${colorAula}1A`, deep: colorAula }
+  // Lo que de verdad se pinta: el tema del estudiante si eligió uno, si no el del aula.
+  const acento = resolverAcento(tema, colorAula)
+  const hueDelAula = { ink: acento, wash: `${acento}1A`, deep: acento }
 
   const irA = (v: Vista) => {
     onNavegar(v)
@@ -116,7 +126,7 @@ export function AulaShell({
     // para que no se filtre al resto de la aplicación.
     <div
       className="min-h-screen bg-accent/[0.045]"
-      style={{ ['--skill-accent' as string]: hexARgb(aula.color?.trim() || identidad.hue.ink) }}
+      style={{ ['--skill-accent' as string]: hexARgb(acento) }}
     >
       <div className="mx-auto flex max-w-workspace">
         {/* ─── Riel (escritorio) ─────────────────────────────────────────── */}
@@ -169,6 +179,19 @@ export function AulaShell({
           </nav>
 
           <div className="space-y-0.5 border-t border-accent/15 p-2">
+            {esEstudiante && (
+              <button
+                type="button"
+                onClick={() => setTemaAbierto(true)}
+                title="Elige el color con el que ves el aula"
+                className={`flex min-h-btn w-full items-center gap-3 rounded-lg px-3 text-body-sm font-medium text-ink-secondary transition-colors hover:bg-surface-2 hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none ${
+                  expandido ? '' : 'justify-center px-0'
+                }`}
+              >
+                <IconoTema className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                {expandido ? <span>Elige tu color</span> : <span className="sr-only">Elige tu color</span>}
+              </button>
+            )}
             {onSalirDelModulo && (
               <button
                 type="button"
@@ -246,29 +269,7 @@ export function AulaShell({
               </nav>
 
               {periodos.length > 0 && (
-                <>
-                  <label className="sr-only" htmlFor="aula-periodo">
-                    Período académico
-                  </label>
-                  {/* Acotado en móvil: sin tope, el ancho lo fijaba la opción más larga
-                      ("Todos los períodos") y empujaba el resto de la fila fuera. */}
-                  <select
-                    id="aula-periodo"
-                    value={periodo}
-                    onChange={(e) => onPeriodo(e.target.value)}
-                    className="min-h-btn max-w-[8.5rem] shrink-0 rounded-lg border border-hairline bg-surface-1 px-2 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:max-w-none sm:px-2.5"
-                  >
-                    {/* "Todos" existe a propósito: sin él, parte del aula queda invisible (C2). */}
-                    <option value="todos">Todos los períodos</option>
-                    {periodos.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                        {p.activo ? ' · en curso' : ''}
-                      </option>
-                    ))}
-                    <option value="sin-periodo">Sin período</option>
-                  </select>
-                </>
+                <BotonPeriodo valor={periodo} periodos={periodos} onAbrir={() => setPeriodoAbierto(true)} />
               )}
             </div>
           </header>
@@ -278,7 +279,8 @@ export function AulaShell({
               barra inferior y el botón de Valeria le caía encima. */}
           <main className="px-3 pt-4 pb-32 sm:px-4 sm:pt-5 lg:pb-10">
             {aviso && <div className="mx-auto mb-4 max-w-3xl">{aviso}</div>}
-            {children}
+            {/* Todo lo de dentro pinta con el MISMO acento que el riel y el encabezado. */}
+            <ProveedorAcento acento={acento}>{children}</ProveedorAcento>
           </main>
         </div>
       </div>
@@ -374,6 +376,24 @@ export function AulaShell({
                 )
               })}
 
+              {esEstudiante && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMasAbierto(false)
+                    setTemaAbierto(true)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-ink-primary transition-colors hover:bg-surface-2"
+                  style={{ minHeight: 56 }}
+                >
+                  <IconoTema className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-body-sm font-medium">Elige tu color</span>
+                    <span className="block text-xs text-ink-muted">Cambia cómo ves tú el aula</span>
+                  </span>
+                </button>
+              )}
+
               {onSalirDelModulo && (
                 <button
                   type="button"
@@ -395,13 +415,24 @@ export function AulaShell({
           </div>
         </div>
       )}
+
+      {periodoAbierto && (
+        <DialogoPeriodo
+          valor={periodo}
+          periodos={periodos}
+          onElegir={onPeriodo}
+          onCerrar={() => setPeriodoAbierto(false)}
+        />
+      )}
+
+      {temaAbierto && (
+        <DialogoTema
+          elegido={tema}
+          colorAula={colorAula}
+          onElegir={elegir}
+          onCerrar={() => setTemaAbierto(false)}
+        />
+      )}
     </div>
   )
-}
-
-/** "#2E6BE6" → "46 107 230", que es el formato que esperan los tokens del DS. */
-function hexARgb(hex: string): string {
-  const v = hex.replace('#', '')
-  const n = parseInt(v.length === 3 ? v.split('').map((c) => c + c).join('') : v, 16)
-  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`
 }

@@ -38,10 +38,15 @@ import { ActivityCard } from '../ui/ActivityCard'
 import { EmptyState } from '../ui/EmptyState'
 import { StateLegend } from '../ui/StateChip'
 
+/**
+ * Etiquetas cortas a propósito: un `<select>` nativo **corta** su etiqueta contra el borde en
+ * vez de terminarla en "…", así que "Por fecha de entrega" se leía "Por fecha de ent" en un
+ * celular. Se dice lo mismo con menos.
+ */
 const AGRUPACIONES: { id: GroupBy; label: string }[] = [
   { id: 'unidad', label: 'Por unidad' },
   { id: 'estado', label: 'Por estado' },
-  { id: 'vencimiento', label: 'Por fecha de entrega' },
+  { id: 'vencimiento', label: 'Por fecha' },
 ]
 
 export interface ActividadesProps {
@@ -175,7 +180,7 @@ export function Actividades({
       {/* ─── Controles: UNA fila, no dos sistemas paralelos ─────────────── */}
       <div className="mt-4 space-y-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-0 flex-1 sm:max-w-xs">
+          <div className="relative w-full min-w-0 sm:max-w-xs sm:flex-1">
             <Search
               className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-muted"
               aria-hidden="true"
@@ -188,7 +193,7 @@ export function Actividades({
               type="search"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre o unidad…"
+              placeholder="Buscar actividad…"
               className="min-h-btn w-full rounded-lg border border-hairline bg-surface-1 pr-8 pl-9 text-body-sm text-ink-primary placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
             />
             {busqueda && (
@@ -203,6 +208,7 @@ export function Actividades({
             )}
           </div>
 
+          <div className="flex w-full min-w-0 gap-2 sm:w-auto">
           <label className="sr-only" htmlFor="filtro-tipo">
             Tipo de actividad
           </label>
@@ -210,7 +216,7 @@ export function Actividades({
             id="filtro-tipo"
             value={tipo}
             onChange={(e) => setTipo(e.target.value as ActivityFamily | 'todos')}
-            className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-2.5 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            className="min-h-btn min-w-0 flex-1 rounded-lg border border-hairline bg-surface-1 px-2.5 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:flex-none"
           >
             <option value="todos">Todos los tipos</option>
             {/* Se derivan de los datos: ni faltan tipos ni sobran opciones vacías (C3). */}
@@ -228,7 +234,7 @@ export function Actividades({
             id="agrupar"
             value={agrupacion}
             onChange={(e) => setAgrupacion(e.target.value as GroupBy)}
-            className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-2.5 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            className="min-h-btn min-w-0 flex-1 rounded-lg border border-hairline bg-surface-1 px-2.5 text-body-sm text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:flex-none"
           >
             {AGRUPACIONES.map((a) => (
               <option key={a.id} value={a.id}>
@@ -236,6 +242,7 @@ export function Actividades({
               </option>
             ))}
           </select>
+          </div>
         </div>
 
         {/* Chips neutros: el color solo en el activo. Envuelven, así que nada queda escondido
