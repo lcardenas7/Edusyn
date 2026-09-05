@@ -39,6 +39,20 @@ export interface ListFilters {
   state: string
 }
 
+/**
+ * Con qué agrupación arranca cada rol.
+ *
+ * El estudiante entra a Actividades a saber QUÉ LE FALTA, así que manda el estado: arriba lo
+ * que exige acción y abajo, plegado, lo que ya cerró. Agrupar por unidad —lo que se hacía—
+ * mezclaba lo entregado con lo pendiente y le obligaba a bajar por encima de todo.
+ *
+ * El docente usa esta pantalla como catálogo de lo que ha preparado, y ahí la unidad es el
+ * orden natural; lo que le falta por calificar ya se lo dice "Hoy".
+ */
+export function agrupacionPorDefecto(role: Role): GroupBy {
+  return role === 'estudiante' ? 'estado' : 'unidad'
+}
+
 export const EMPTY_FILTERS: ListFilters = {
   search: '',
   type: 'todos',
@@ -60,8 +74,17 @@ export interface ActivityGroup {
   label: string
   /** Frase que explica de qué va el grupo. Los grupos sin explicación desorientan. */
   hint?: string
+  /**
+   * El grupo nace plegado. Lo terminado no debe ocupar pantalla: con catorce actividades, un
+   * estudiante tenía que bajar por encima de todo lo que ya entregó para llegar a lo que le
+   * falta.
+   */
+  plegadoPorDefecto?: boolean
   items: DecoratedActivity[]
 }
+
+/** Grupos que ya no exigen nada: nacen plegados. */
+const GRUPOS_CERRADOS = new Set(['entregada', 'calificada', 'publicada'])
 
 // ─── Chips de estado ─────────────────────────────────────────────────────────
 
@@ -245,7 +268,9 @@ export function buildActivityList({ activities, role, filters, groupBy, now = ne
   const buckets = new Map<string, ActivityGroup>()
   for (const d of visible) {
     const { key, label, hint } = groupKeyOf(d, groupBy, role, now)
-    if (!buckets.has(key)) buckets.set(key, { key, label, hint, items: [] })
+    if (!buckets.has(key)) {
+      buckets.set(key, { key, label, hint, plegadoPorDefecto: GRUPOS_CERRADOS.has(key), items: [] })
+    }
     buckets.get(key)!.items.push(d)
   }
 
