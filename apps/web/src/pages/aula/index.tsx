@@ -38,6 +38,10 @@ import { buildTeacherToday, buildStudentToday } from './model/today'
 import { PERIOD_ALL } from './model/list'
 
 const LessonEditor = lazy(() => import('../../components/LessonEditor'))
+// Rutas y Expedición ya son componentes propios y reutilizables: se montan en el shell nuevo
+// sin tocarlos. El Foro todavía vive dentro de Classroom.tsx y por eso sigue con puente.
+const LearningRoutesTab = lazy(() => import('../../components/LearningRoutesTab'))
+const AbpTab = lazy(() => import('../../components/AbpTab'))
 
 const VISTAS = new Set(DESTINOS.map((d) => d.id))
 
@@ -335,6 +339,18 @@ export default function AulaVirtual() {
             actividades={actividades}
             onAbrirActividad={abrirActividad}
           />
+        ) : vista === 'rutas' ? (
+          <div className="mx-auto max-w-4xl">
+            <Suspense fallback={null}>
+              <LearningRoutesTab classroomId={classroomId} isTeacher={rol === 'docente'} />
+            </Suspense>
+          </div>
+        ) : vista === 'expedicion' ? (
+          <div className="mx-auto max-w-5xl">
+            <Suspense fallback={null}>
+              <AbpTab classroomId={classroomId} isTeacher={rol === 'docente'} />
+            </Suspense>
+          </div>
         ) : vista === 'estudiantes' && rol === 'docente' ? (
           <Estudiantes classroomId={classroomId} />
         ) : (
