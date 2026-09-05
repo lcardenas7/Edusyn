@@ -53,6 +53,8 @@ export interface ActividadDetalleProps {
   totalEstudiantes?: number | null
   /** Abre otra actividad (se usa al terminar de copiar). */
   onAbrirActividad?: (id: string) => void
+  /** Editar el contenido de una lección o un juego, sin salir del aula. */
+  onEditarLeccion?: () => void
   now?: Date
 }
 
@@ -67,6 +69,7 @@ export function ActividadDetalle({
   aulaId,
   totalEstudiantes,
   onAbrirActividad,
+  onEditarLeccion,
   now = new Date(),
 }: ActividadDetalleProps) {
   const [reproduciendo, setReproduciendo] = useState(false)
@@ -196,6 +199,25 @@ export function ActividadDetalle({
           </a>
         )}
 
+        {/* Al docente hay que decirle dónde sigue el trabajo. Un quiz recién creado no tiene
+            preguntas, y el editor de preguntas todavía vive en el aula anterior: sin este
+            aviso, la actividad se queda vacía sin que nadie sepa por qué. */}
+        {esDocente && MOTOR_EN_AULA_ACTUAL.has(a.type) && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface-2 p-4">
+            <p className="min-w-0 text-body-sm text-ink-secondary">
+              Las <strong className="text-ink-primary">preguntas</strong> de esta actividad se añaden
+              todavía en el aula anterior. Lo que agregues allí aparecerá también aquí.
+            </p>
+            <button
+              type="button"
+              onClick={onIrAlAulaActual}
+              className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            >
+              Añadir preguntas
+            </button>
+          </div>
+        )}
+
         {/* Acciones. Para una tarea, el estudiante no tiene botón aquí: su acción es el panel
             de entrega de abajo, así que no se dibuja un separador con nada debajo. */}
         {(esDocente || tieneAccionEstudiante(a, vista.state)) && (
@@ -205,7 +227,8 @@ export function ActividadDetalle({
                 actividad={a}
                 onCambio={onCambio}
                 onVolver={onVolver}
-                onEditar={onIrAlAulaActual}
+                // Lecciones y juegos se editan aquí; el resto todavía en el aula anterior.
+                onEditar={ABRE_REPRODUCTOR.has(a.type) && onEditarLeccion ? onEditarLeccion : onIrAlAulaActual}
                 onCopiar={aulaId ? () => setCopiando(true) : undefined}
               />
             ) : (
