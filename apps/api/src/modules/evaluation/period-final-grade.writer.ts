@@ -207,9 +207,20 @@ export class PeriodFinalGradeWriter {
    * registro. Son operaciones de una nota por estudiante y asignatura, no
    * cargas de miles.
    */
-  async fijarValor(clave: ClaveNotaFinal, finalScore: number, contexto: ContextoEscritura) {
+  async fijarValor(
+    clave: ClaveNotaFinal,
+    finalScore: number,
+    contexto: ContextoEscritura,
+    /**
+     * Institución de la SESIÓN. Cuando se indica, la fila encontrada debe
+     * pertenecer a ella: una nota de otra institución no se toca aunque su
+     * coordenada coincida.
+     */
+    institutionId?: string,
+  ) {
     const previa = await this.leerPrevia(clave);
     if (!previa) return 0;
+    if (institutionId && previa.institutionId !== institutionId) return 0;
 
     const anterior = Number(previa.finalScore);
     if (anterior === finalScore) return 0;

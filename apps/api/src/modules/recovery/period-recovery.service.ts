@@ -26,19 +26,20 @@ export class PeriodRecoveryService {
   /**
    * Propaga a la nota final el resultado de una recuperación.
    *
-   * Es una escritura con persona detrás y con causa conocida, de modo que lleva
-   * causal tipificada y actor. Antes se hacía con una actualización masiva que
-   * escribía sin leer, y por eso no dejaba rastro: para auditar hay que saber
-   * qué había antes.
+   * Una recuperación siempre la inicia una persona, de modo que su rastro debe
+   * decir quién fue: atribuirla al sistema incumpliría la condición de registro
+   * claro que sostiene todo este frente.
+   *
+   * La correlación es **el propio identificador de la recuperación**, no un
+   * número al azar: así el evento no solo agrupa, sino que apunta al expediente
+   * que explica el cambio.
    */
   private async propagarANotaFinal(
-    recovery: { studentEnrollmentId: string; academicTermId: string; subjectId: string },
+    recovery: { id: string; studentEnrollmentId: string; academicTermId: string; subjectId: string },
     finalScore: number,
-    actor?: GradeAuditActor,
+    actor: GradeAuditActor | undefined,
+    institutionId: string,
   ) {
-    // TODO(G-1): el actor humano de la recuperación no llega hasta aquí; hasta
-    // que el controlador lo propague, el evento se atribuye al sistema con
-    // causal de recuperación, que ya identifica el origen del cambio.
     return this.finalWriter.fijarValor(
       {
         studentEnrollmentId: recovery.studentEnrollmentId,
@@ -46,7 +47,13 @@ export class PeriodRecoveryService {
         subjectId: recovery.subjectId,
       },
       finalScore,
-      { origen: 'RECUPERACION', causal: 'RECUPERACION_NIVELACION', actor },
+      {
+        origen: 'RECUPERACION',
+        causal: 'RECUPERACION_NIVELACION',
+        batchId: recovery.id,
+        actor,
+      },
+      institutionId,
     );
   }
 
@@ -464,6 +471,7 @@ export class PeriodRecoveryService {
       evaluatedById: string;
     },
     institutionId: string,
+    actor?: GradeAuditActor,
   ) {
     const recovery = await this.prisma.periodRecovery.findUnique({
       where: { id },
@@ -527,7 +535,7 @@ export class PeriodRecoveryService {
     });
 
     if (nextStatus === 'APPROVED') {
-      await this.propagarANotaFinal(recovery, Number(finalScore));
+      await this.propagarANotaFinal(recovery, Number(finalScore), actor, institutionId);
     }
 
     return updatedRecovery;
@@ -544,6 +552,8 @@ export class PeriodRecoveryService {
       reviewedById: string;
       observations?: string;
     },
+    institutionId: string,
+    actor?: GradeAuditActor,
   ) {
     const recovery = await this.prisma.periodRecovery.findUnique({ where: { id } });
     if (!recovery) throw new BadRequestException('Recuperación no encontrada');
@@ -590,7 +600,7 @@ export class PeriodRecoveryService {
     // para que los boletines reflejen la nota recuperada
     // ═══════════════════════════════════════════════════════════════════════════
     if (finalStatus === 'APPROVED' && recovery.finalScore !== null) {
-      await this.propagarANotaFinal(recovery, Number(recovery.finalScore));
+      await this.propagarANotaFinal(recovery, Number(recovery.finalScore), actor, institutionId);
     }
 
     return updatedRecovery;

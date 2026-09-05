@@ -6,6 +6,7 @@ import { PeriodRecoveryService } from './period-recovery.service';
 import { RecoverySnapshotService } from './recovery-snapshot.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
+import { actorFromRequest } from '../evaluation/grade-audit-actor.util';
 
 @Controller('period-recovery')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -70,6 +71,9 @@ export class PeriodRecoveryController {
       id,
       { ...data, evaluatedById: req.user.id },
       instId,
+      // Quién registra el resultado: la nota final que se propague debe
+      // atribuirse a esta persona, no al sistema.
+      actorFromRequest(req),
     );
   }
 
@@ -79,11 +83,17 @@ export class PeriodRecoveryController {
     @Param('id') id: string,
     @Body() data: any,
     @Req() req: any,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.periodRecoveryService.reviewResult(id, {
-      ...data,
-      reviewedById: req.user.id,
-    });
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.periodRecoveryService.reviewResult(
+      id,
+      { ...data, reviewedById: req.user.id },
+      instId,
+      // Quién aprueba: la nota final que se propague debe atribuirse a esta
+      // persona, no al sistema.
+      actorFromRequest(req),
+    );
   }
 
   @Get('stats')
