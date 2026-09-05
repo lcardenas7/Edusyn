@@ -280,7 +280,7 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T1 | `model/` + pruebas: glosario, estado, período, cuenta regresiva | ✅ | `b7a700c6` · 61 pruebas |
 | T2 | `visual/`: SubjectMark, ActivityGlyph, Progress, Scene | ✅ | `44f5b655` · galería en `/galeria-aula.html` |
 | T3 | `ui/`: StateChip, ActivityCard, EmptyState, Skeletons | ✅ | `83ec939f` |
-| T4 | `AulaShell`: riel colapsable, header de contexto, barra inferior móvil | ⬜ | |
+| T4 | `AulaShell`: riel colapsable, header de contexto, barra inferior móvil | ✅ | Demo en `/shell-aula.html` |
 | T5 | Vista **Hoy** (docente y estudiante) cableada + muro de anuncios | ⬜ | |
 | T6 | Vista **Actividades**: búsqueda, filtros, agrupación, URL | ⬜ | |
 | T7 | Vista **Unidades**: materiales + actividades | ⬜ | |
@@ -299,10 +299,22 @@ cd apps/web && npm test          # pruebas puras del model/
 cd apps/web && npx tsc --noEmit  # obligatorio antes de main (CLAUDE.md)
 ```
 
-**Galería visual** (solo desarrollo): `npm run dev` y abrir
-<http://localhost:5173/galeria-aula.html>. Muestra glifos, tarjetas en ambos roles, leyenda de
-estados, avance, sellos y estados vacíos, sin tener que navegar el aula entera. No entra al
-build de producción (Vite solo empaqueta `index.html`; verificado en `dist/`).
+**Páginas de revisión** (solo desarrollo), con `npm run dev`:
+
+| Página | Qué muestra |
+|---|---|
+| <http://localhost:5173/galeria-aula.html> | Glifos, tarjetas en ambos roles, leyenda de estados, avance, sellos, estados vacíos |
+| <http://localhost:5173/shell-aula.html> | El armazón: riel colapsable, migas, período, barra inferior. Conmuta rol y asignatura |
+
+Ninguna de las dos entra al build de producción — Vite solo empaqueta `index.html`; verificado
+en `dist/` tras `npm run build`.
+
+> **Tropiezo conocido: reinicia el servidor de desarrollo al crear archivos nuevos.**
+> El escáner de Tailwind resuelve su lista de archivos al arrancar. Si creas un componente
+> nuevo con `npm run dev` ya corriendo, funcionarán solo las clases que **ya existían en otro
+> archivo del proyecto**, y las nuevas se caerán en silencio. Pasó aquí: `lg:flex` funcionaba y
+> `lg:flex-col` no, y el riel se dibujaba en fila con los botones fuera de su caja. Se
+> diagnostica en dos minutos con `getComputedStyle` y se arregla reiniciando el servidor.
 
 Al cambiar cualquier cosa de `visual/` o `ui/`, **míralo ahí antes de dar por buena la pieza**.
 Tres defectos de esta tanda solo se vieron mirando, no leyendo el código: el anillo dejaba un
