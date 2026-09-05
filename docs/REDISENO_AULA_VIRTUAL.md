@@ -263,9 +263,9 @@ están hoy en producción.
 |---|---|---|
 | P0-1 | Copia de actividad opaca que produce copias "sin período", irreparables desde la UI | `Classroom.tsx:2704-2716` · raíz en `classroom.service.ts:2773` (crea sin `academicTermId`) · **corregido en el aula nueva** (T9) |
 | P0-2 | "Cancelar programación" **publica** la actividad inmediatamente | `Classroom.tsx:5251` → `2533-2536` · **corregido en el aula nueva** (T8); falta en la actual |
-| P0-3 | Reiniciar lección borra intento, nota y XP de un clic sobre la fila del estudiante | `Classroom.tsx:5577-5581` |
+| P0-3 | Reiniciar lección borra intento, nota y XP de un clic sobre la fila del estudiante | `Classroom.tsx:5577-5581` · **corregido** (T10) |
 | P0-4 | "Devolver" se ejecuta aunque se cancele el `prompt()` nativo (`fb \|\| undefined`) | `Classroom.tsx:2955-2961` · **corregido en el aula nueva** (T8); falta en la actual |
-| P0-5 | ~13 handlers con `catch {}` vacío: la UI miente | `1286,1290,1339,1343,2542,2557,2569,2960,3210` |
+| P0-5 | ~13 handlers con `catch {}` vacío: la UI miente | **8 mutaciones corregidas** (T10); quedan 28 `catch {}` de solo lectura |
 | P0-6 | El rol ACUDIENTE cae en una vista que no lo contempla | `Layout.tsx:283` |
 
 ---
@@ -286,7 +286,7 @@ Estado: ⬜ pendiente · 🟡 en curso · ✅ hecho
 | T7 | Vista **Unidades**: materiales + actividades | ✅ | `bb628ade` |
 | T8 | **Detalle de actividad**, entrega y calificación | ✅ | `36a0a09c` · corrige P0-2 y P0-4 |
 | T9 | **Asistente de copia** (corrige P0-1) | ✅ | `4c56888c` |
-| T10 | Defectos P0-2 … P0-5 en el código actual | ⬜ | |
+| T10 | Defectos P0-3, P0-5 y H1 en el código actual | ✅ | `2b84b75f` · quedan 28 `catch {}` de solo lectura |
 | T11 | Interruptor + montaje de rutas + enlaces profundos | ✅ | `e3065128` · rutas `/aula/*` |
 | T12 | **Notas** y **Estudiantes** en el shell nuevo | ✅ | `f71a8abe` · Rutas, Expedición y Foro siguen con puente al aula actual |
 | T13 | **Sesión de quiz en vivo** en todo el aula, con sondeo | ✅ | `2644282f` |
