@@ -32,6 +32,13 @@ describe('cómo se dice una fecha límite', () => {
     expect(dueCopy('2026-05-20T22:59:00.000Z', AHORA)).toMatch(/^Vence hoy a las /)
   })
 
+  it('si la hora de hoy ya pasó, lo dice en pasado', () => {
+    // A las 6 de la tarde, una tarea que cerraba a las 5 no "vence hoy": ya venció. Decirlo en
+    // presente contradecía al chip de estado, que sí la marcaba como vencida.
+    // AHORA = 20 de mayo, 10:00 en Bogotá; la fecha límite fueron las 8:00 del mismo día.
+    expect(dueCopy('2026-05-20T13:00:00.000Z', AHORA)).toMatch(/^Venció hoy a las /)
+  })
+
   it('mañana y los días siguientes se dicen en cristiano', () => {
     expect(dueCopy('2026-05-21T15:00:00.000Z', AHORA)).toBe('Vence mañana')
     expect(dueCopy('2026-05-23T15:00:00.000Z', AHORA)).toBe('Te quedan 3 días')

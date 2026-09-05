@@ -424,3 +424,80 @@ montarlos en el shell nuevo y revisarles el lenguaje visual — no reescribirlos
   `@testing-library` y añadirlo es una decisión aparte. La lógica que decide *qué se ve* sí
   está cubierta (120 pruebas).
 - **El aula actual sigue siendo la predeterminada.** El cambio de default es tuyo, no mío.
+
+---
+
+## 10. Empalme con staging — qué puede y qué no puede pasarle a los datos
+
+> Escrito porque staging **ya tiene grupos y actividades de ejemplo** y la pregunta del fundador
+> fue directa: *"espero que este cambio no borre cosas"*. Esto es la respuesta verificada, no una
+> promesa.
+
+### 10.1 Lo que este cambio NO puede hacer
+
+**No hay nada que migrar.** Verificado con `git diff --name-only <base>..HEAD`: el trabajo del
+rediseño toca **solo `apps/web/` y `docs/`**. Cero archivos en `apps/api/`, cero en `prisma/`,
+cero migraciones. El despliegue es un frontend nuevo contra el **mismo** backend.
+
+**No hay endpoints nuevos.** El aula nueva consume exactamente los mismos que la actual.
+
+**Nada corre solo.** No hay ninguna escritura automática al abrir el aula, al cambiar de vista
+ni al filtrar. Todo lo que escribe nace de un clic explícito.
+
+**Volver atrás no cuesta nada.** El aula actual sigue en `/classroom` y sigue siendo la
+predeterminada. Revertir es revertir el frontend; no hay dato que deshacer.
+
+### 10.2 Inventario completo de lo que SÍ escribe
+
+Toda llamada de escritura del módulo `pages/aula/`, sin excepción:
+
+| Llamada | La dispara | Efecto |
+|---|---|---|
+| `submitTask` / `updateSubmission` | El estudiante pulsa Enviar | Crea o actualiza **su propia** entrega |
+| `uploadMaterial` | El estudiante adjunta un archivo | Sube el archivo |
+| `gradeSubmission` | El docente pulsa Guardar nota | Escribe nota y comentario |
+| `returnSubmission` | El docente pulsa Devolver | Marca la entrega como devuelta (comentario obligatorio) |
+| `publishActivity` / `unpublishActivity` | El docente | Cambia visibilidad. `unpublish` **confirma** y avisa que las entregas no se borran |
+| `duplicateActivity` | El asistente de copia | **Crea** una copia nueva. No toca el original |
+| `deleteActivity` | El docente | Único borrado del módulo. Detrás de `confirmDialog` con aviso de irreversible |
+| `updateSection` | Solo el arreglo de período del asistente de copia | **Ver 10.3** |
+
+### 10.3 La única escritura con efecto no obvio
+
+`updateSection({ academicTermId })` cambia el período de una **unidad**. Importa porque una
+actividad hereda el período de su unidad cuando no tiene uno propio
+(`periodIdOf = a.academicTermId ?? a.section?.academicTermId`): cambiar el de la unidad **mueve
+de período** a las actividades que no lo tengan propio.
+
+En un aula con datos reales eso puede reorganizar trabajo ya calificado, así que el asistente
+lo confirma diciendo el efecto completo antes de hacerlo. **No borra nada**, pero es la única
+acción del módulo que modifica algo preexistente distinto de lo que el usuario está mirando.
+
+### 10.4 Continuidad del estado del estudiante
+
+Ya resuelta en el código (garantía G4, `model/lastVisit.ts`, 11 pruebas): el aula nueva lee y
+escribe **las dos** claves de "última visita" que usa la actual, así que estrenar el aula nueva
+no le marca al estudiante todo como NUEVO, y volver a la actual tampoco.
+
+### 10.5 Antes de subir a staging
+
+- [ ] `npx tsc --noEmit` y `npm test` en `apps/web` — verde
+- [ ] `npm run build` — y comprobar que `dist/` solo tiene `index.html` (las tres páginas de
+      demo, `galeria-aula.html`, `shell-aula.html` y `aula-local.html`, **no** deben estar)
+- [ ] **Revisar el arrastre del commit `e3065128`**: un `git add -A apps/web` incluyó cinco
+      archivos con cambios que NO son del rediseño (`ValeriaAssistant.tsx`,
+      `InstitutionLogin.tsx`, `LandingPage.tsx`, `Students.tsx`,
+      `InstitutionalPortfolio.tsx`). Son benignos —normalización "EduSyn" → "Edusyn" y nuevos
+      contextos de página para Valeria— pero van a subir con la rama. Decidir si se quedan.
+- [ ] Fila en `docs/REGISTRO_DESPLIEGUES.md` tras el push
+- [ ] **A `main` no sube nada** sin decisión explícita del fundador (garantía G7)
+
+### 10.6 Qué probar en staging, en este orden
+
+1. **Que el aula actual sigue igual.** Entrar por `/classroom`, abrir un aula con datos, ver
+   actividades y entregas. Nada debe haber cambiado salvo: reiniciar lección y borrar recurso
+   ahora piden confirmación, y los errores ahora se ven.
+2. **Entrar al aula nueva** por "Probar la nueva aula" y comprobar que se ven los mismos
+   grupos, las mismas actividades y las mismas notas.
+3. **Volver** con "Volver al aula de siempre" y comprobar que todo sigue en su sitio.
+4. Recién entonces, probar entregar, calificar y copiar.

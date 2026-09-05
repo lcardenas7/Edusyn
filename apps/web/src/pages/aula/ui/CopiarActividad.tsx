@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, CircleAlert, X } from 'lucide-react'
 import { classroomApi } from '../../../lib/api'
 import { toast } from '../../../lib/toast'
+import { confirmDialog } from '../../../components/ui/confirm'
 import type { ActivityLike } from '../model/activityState'
 import { activityTypeLabel } from '../model/labels'
 import { ActivityGlyph } from '../visual/ActivityGlyph'
@@ -119,6 +120,18 @@ export function CopiarActividad({ actividad, aulaActualId, onCerrar, onCopiada }
 
   const asignarPeriodo = async () => {
     if (!unidad || !periodoParaUnidad) return
+    /*
+     * Esta es la ÚNICA acción del asistente que modifica algo que ya existía, así que se
+     * confirma diciendo el efecto completo: las actividades que ya están en esa unidad y no
+     * tienen período propio lo heredan de ella, así que cambiarlo las mueve de período. En un
+     * aula con datos reales eso puede reorganizar trabajo ya calificado.
+     */
+    const nombrePeriodo = periodos.find((p) => p.id === periodoParaUnidad)?.name ?? 'ese período'
+    const ok = await confirmDialog(
+      `La unidad «${unidad.title}» pasará a ${nombrePeriodo}. Las actividades que ya están en ella y no tengan un período propio se moverán también. No se borra nada.`,
+      { title: 'Cambiar el período de la unidad', confirmLabel: 'Sí, cambiarlo' },
+    )
+    if (!ok) return
     setAsignando(true)
     try {
       await classroomApi.updateSection(unidad.id, { academicTermId: periodoParaUnidad })
