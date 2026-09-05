@@ -6,6 +6,8 @@ import { UsersController } from './users.controller';
 import { BulkUploadService } from './bulk-upload.service';
 import { BulkUploadController } from './bulk-upload.controller';
 import { GradesBulkImportService } from './grades-bulk-import.service';
+// La importacion masiva escribe notas finales: debe hacerlo por la puerta unica.
+import { EvaluationModule } from '../evaluation/evaluation.module';
 import { GradesBulkImportController } from './grades-bulk-import.controller';
 import { StudentImportService } from './student-import.service';
 import { OnboardingStudentsController } from './onboarding-students.controller';
@@ -24,6 +26,7 @@ import { AcademicModule } from '../academic/academic.module';
     PrismaModule,
     InstitutionConfigModule, // reusa getConfigCompleteness para el gate SIEE (AR3)
     AcademicModule, // reusa validateYearForActivation para la honestidad de la activación (AR3)
+    EvaluationModule, // aporta PeriodFinalGradeWriter: nadie escribe la nota final por su cuenta
     MulterModule.register({
       limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max para consolidados grandes
     }),

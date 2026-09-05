@@ -466,6 +466,11 @@ export class SuperadminService {
       // 1. Eliminar registros relacionados con estudiantes
       await tx.attendanceRecord.deleteMany({ where: { studentEnrollment: { student: { institutionId } } } });
       await tx.partialGrade.deleteMany({ where: { studentEnrollment: { student: { institutionId } } } });
+      // G-1 · Única escritura de `periodFinalGrade` fuera del adaptador central de
+      // auditoría, y deliberada: aquí se borra la institución entera, incluido su
+      // propio registro forense. Auditar fila por fila lo que se está purgando no
+      // dejaría nada que leer. La excepción está declarada en las pruebas del
+      // adaptador; cualquier otra escritura directa las hace fallar.
       await tx.periodFinalGrade.deleteMany({ where: { studentEnrollment: { student: { institutionId } } } });
       await tx.studentEnrollment.deleteMany({ where: { student: { institutionId } } });
       await tx.student.deleteMany({ where: { institutionId } });

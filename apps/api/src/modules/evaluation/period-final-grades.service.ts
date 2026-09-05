@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeAuditActor, GradeAuditService } from './grade-audit.service';
+import { PeriodFinalGradeWriter } from './period-final-grade.writer';
 import {
   CausalNotaFinal,
   decidirEscrituraNotaFinal,
@@ -28,6 +29,7 @@ export class PeriodFinalGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gradeAudit: GradeAuditService,
+    private readonly writer: PeriodFinalGradeWriter,
   ) {}
 
   /**
@@ -148,15 +150,15 @@ export class PeriodFinalGradesService {
       where: { studentEnrollmentId_academicTermId_subjectId: key },
       select: { id: true, finalScore: true, institutionId: true },
     });
-    const result = await this.prisma.periodFinalGrade.upsert({
-      where: { studentEnrollmentId_academicTermId_subjectId: key },
-      update: {
-        finalScore: data.finalScore,
-        observations: data.observations,
-        enteredById: data.enteredById,
-        isManualOverride: true, // C-1: escritura manual = fijada; el recálculo no la pisa
-      },
-      create: { ...datosNota, isManualOverride: true, institutionId: quien.institutionId },
+    const result = await this.writer.upsert({
+      clave: key,
+      institutionId: quien.institutionId,
+      finalScore: data.finalScore,
+      observations: data.observations,
+      enteredById: data.enteredById,
+      // Escritura manual = fijada; el recálculo no la pisa.
+      isManualOverride: true,
+      contexto: { origen: 'MANUAL', causal, batchId, actor },
       include: {
         studentEnrollment: {
           include: {
@@ -169,27 +171,6 @@ export class PeriodFinalGradesService {
         enteredBy: { select: { firstName: true, lastName: true } },
       },
     });
-
-    const previousScore = prev ? Number(prev.finalScore) : null;
-    // Guardar sin cambiar la nota no genera evento.
-    if (!prev || previousScore !== data.finalScore) {
-      await this.gradeAudit.record(
-        {
-          institutionId: result.institutionId,
-          source: AUDIT_SOURCE,
-          action: prev ? 'UPDATE' : 'CREATE',
-          recordId: result.id,
-          studentEnrollmentId: data.studentEnrollmentId,
-          academicTermId: data.academicTermId,
-          subjectId: data.subjectId,
-          previousScore,
-          newScore: data.finalScore,
-          reason: causal ?? null,
-          batchId: batchId ?? null,
-        },
-        actor,
-      );
-    }
 
     return result;
   }
@@ -262,25 +243,12 @@ export class PeriodFinalGradesService {
       },
       quien,
     );
-    const result = await this.prisma.periodFinalGrade.delete({ where: { id } });
+    const result = await this.writer.eliminarPorId(id, {
+      origen: 'MANUAL',
+      causal: causalBorrado,
+      actor,
+    });
 
-    if (grade) {
-      await this.gradeAudit.record(
-        {
-          institutionId: grade.institutionId,
-          source: AUDIT_SOURCE,
-          action: 'DELETE',
-          recordId: id,
-          studentEnrollmentId: grade.studentEnrollmentId,
-          academicTermId: grade.academicTermId,
-          subjectId: grade.subjectId,
-          previousScore: Number(grade.finalScore),
-          newScore: null,
-          reason: causalBorrado ?? null,
-        },
-        actor,
-      );
-    }
     return result;
   }
 

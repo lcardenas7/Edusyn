@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { PeriodFinalGradesService } from './period-final-grades.service';
+import { PeriodFinalGradeWriter } from './period-final-grade.writer';
 import {
   CAUSALES_NOTA_FINAL,
   decidirEscrituraNotaFinal,
@@ -184,6 +185,13 @@ describe('F-1 · política de la nota final de período', () => {
       ...over,
     });
 
+    /**
+     * Servicio con el adaptador REAL: así las pruebas recorren la puerta única
+     * de escritura en vez de un doble que podría divergir de ella.
+     */
+    const servicio = (prisma: any, audit: any = { record: jest.fn() }) =>
+      new PeriodFinalGradesService(prisma, audit, new PeriodFinalGradeWriter(prisma, audit));
+
     const DOCENTE = { userId: 'u-doc', roles: ['DOCENTE'], institutionId: 'inst-1' };
     const NOTA = {
       studentEnrollmentId: 'enr-1',
@@ -199,7 +207,7 @@ describe('F-1 · política de la nota final de período', () => {
           findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-2', groupId: 'grp-9' }),
         },
       });
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await expect(svc.upsert({ ...NOTA, reason: 'HOMOLOGACION' }, DOCENTE)).rejects.toBeInstanceOf(
         NotFoundException,
@@ -209,7 +217,7 @@ describe('F-1 · política de la nota final de período', () => {
 
     it('sin titularidad responde prohibido y no escribe', async () => {
       const prisma: any = prismaCon({ teacherAssignment: { findFirst: jest.fn().mockResolvedValue(null) } });
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await expect(svc.upsert({ ...NOTA, reason: 'HOMOLOGACION' }, DOCENTE)).rejects.toBeInstanceOf(
         ForbiddenException,
@@ -219,7 +227,7 @@ describe('F-1 · política de la nota final de período', () => {
 
     it('sin causal responde petición inválida y no escribe', async () => {
       const prisma: any = prismaCon();
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await expect(svc.upsert(NOTA, DOCENTE)).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.periodFinalGrade.upsert).not.toHaveBeenCalled();
@@ -229,7 +237,7 @@ describe('F-1 · política de la nota final de período', () => {
       const prisma: any = prismaCon({
         institution: { findUnique: jest.fn().mockResolvedValue({ allowTeacherFinalGradeOverride: false }) },
       });
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await expect(svc.upsert({ ...NOTA, reason: 'HOMOLOGACION' }, DOCENTE)).rejects.toBeInstanceOf(
         ForbiddenException,
@@ -239,7 +247,7 @@ describe('F-1 · política de la nota final de período', () => {
     it('cumpliendo todo, escribe y la causal viaja a la auditoría', async () => {
       const prisma: any = prismaCon();
       const audit = { record: jest.fn() };
-      const svc = new PeriodFinalGradesService(prisma, audit as any);
+      const svc = servicio(prisma, audit);
 
       await svc.upsert({ ...NOTA, reason: 'INGRESO_TARDIO' }, DOCENTE);
 
@@ -254,7 +262,7 @@ describe('F-1 · política de la nota final de período', () => {
 
     it('la institución del registro creado sale de la sesión, nunca de la petición', async () => {
       const prisma: any = prismaCon();
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await svc.upsert({ ...NOTA, reason: 'INGRESO_TARDIO' }, DOCENTE);
 
@@ -276,7 +284,7 @@ describe('F-1 · política de la nota final de período', () => {
           delete: jest.fn(),
         },
       });
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await expect(svc.delete('pfg-1', DOCENTE, 'HOMOLOGACION')).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.periodFinalGrade.delete).not.toHaveBeenCalled();
@@ -296,7 +304,7 @@ describe('F-1 · política de la nota final de período', () => {
           delete: jest.fn(),
         },
       });
-      const svc = new PeriodFinalGradesService(prisma, { record: jest.fn() } as any);
+      const svc = servicio(prisma);
 
       await expect(svc.delete('pfg-1', DOCENTE, 'HOMOLOGACION')).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.periodFinalGrade.delete).not.toHaveBeenCalled();

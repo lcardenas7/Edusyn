@@ -3,6 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RecoveryStatus, RecoveryImpactType, RecoveryActivityType } from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
 import { RecoveryEngineService } from './recovery-engine.service';
+import { PeriodFinalGradeWriter } from '../evaluation/period-final-grade.writer';
+import { GradeAuditActor } from '../evaluation/grade-audit.service';
 
 // Tipos para la configuración de áreas
 interface AreaConfig {
@@ -18,7 +20,35 @@ export class PeriodRecoveryService {
     private readonly prisma: PrismaService,
     private readonly configService: RecoveryConfigService,
     private readonly engine: RecoveryEngineService,
+    private readonly finalWriter: PeriodFinalGradeWriter,
   ) {}
+
+  /**
+   * Propaga a la nota final el resultado de una recuperación.
+   *
+   * Es una escritura con persona detrás y con causa conocida, de modo que lleva
+   * causal tipificada y actor. Antes se hacía con una actualización masiva que
+   * escribía sin leer, y por eso no dejaba rastro: para auditar hay que saber
+   * qué había antes.
+   */
+  private async propagarANotaFinal(
+    recovery: { studentEnrollmentId: string; academicTermId: string; subjectId: string },
+    finalScore: number,
+    actor?: GradeAuditActor,
+  ) {
+    // TODO(G-1): el actor humano de la recuperación no llega hasta aquí; hasta
+    // que el controlador lo propague, el evento se atribuye al sistema con
+    // causal de recuperación, que ya identifica el origen del cambio.
+    return this.finalWriter.fijarValor(
+      {
+        studentEnrollmentId: recovery.studentEnrollmentId,
+        academicTermId: recovery.academicTermId,
+        subjectId: recovery.subjectId,
+      },
+      finalScore,
+      { origen: 'RECUPERACION', causal: 'RECUPERACION_NIVELACION', actor },
+    );
+  }
 
   /**
    * Detecta estudiantes que necesitan recuperación según la configuración del área
@@ -497,17 +527,7 @@ export class PeriodRecoveryService {
     });
 
     if (nextStatus === 'APPROVED') {
-      await this.prisma.periodFinalGrade.updateMany({
-        where: {
-          studentEnrollmentId: recovery.studentEnrollmentId,
-          subjectId: recovery.subjectId,
-          academicTermId: recovery.academicTermId,
-        },
-        data: {
-          finalScore,
-          updatedAt: new Date(),
-        },
-      });
+      await this.propagarANotaFinal(recovery, Number(finalScore));
     }
 
     return updatedRecovery;
@@ -570,18 +590,7 @@ export class PeriodRecoveryService {
     // para que los boletines reflejen la nota recuperada
     // ═══════════════════════════════════════════════════════════════════════════
     if (finalStatus === 'APPROVED' && recovery.finalScore !== null) {
-      await this.prisma.periodFinalGrade.updateMany({
-        where: {
-          studentEnrollmentId: recovery.studentEnrollmentId,
-          subjectId: recovery.subjectId,
-          academicTermId: recovery.academicTermId,
-        },
-        data: {
-          finalScore: recovery.finalScore,
-          // Marcar que fue modificada por recuperación
-          updatedAt: new Date(),
-        },
-      });
+      await this.propagarANotaFinal(recovery, Number(recovery.finalScore));
     }
 
     return updatedRecovery;

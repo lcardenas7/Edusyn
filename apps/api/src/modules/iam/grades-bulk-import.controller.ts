@@ -20,6 +20,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GradesBulkImportService, GradesImportResult, PreviewResult } from './grades-bulk-import.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { actorFromRequest } from '../evaluation/grade-audit-actor.util';
 
 @Controller('admin/grades-import')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -148,6 +149,9 @@ export class GradesBulkImportController {
         deactivateMissingStudents: options.deactivateMissingStudents ?? false,
         overwriteExistingGrades: options.overwriteExistingGrades ?? true,
       },
+      // Quién ejecuta la importación: sus escrituras derivadas deben ser
+      // atribuibles, no anónimas.
+      actorFromRequest(req),
     );
   }
 

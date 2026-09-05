@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeAuditService, GradeAuditActor } from './grade-audit.service';
 import { EvaluationComponentsService } from './evaluation-components.service';
+import { PeriodFinalGradeWriter } from './period-final-grade.writer';
 
 @Injectable()
 export class PartialGradesService {
@@ -9,6 +10,7 @@ export class PartialGradesService {
     private readonly prisma: PrismaService,
     private readonly gradeAudit: GradeAuditService,
     private readonly components: EvaluationComponentsService,
+    private readonly finalWriter: PeriodFinalGradeWriter,
   ) {}
 
   /**
@@ -339,10 +341,20 @@ export class PartialGradesService {
   // RECOMPUTE: Recalcular PeriodFinalGrade desde PartialGrades
   // ═══════════════════════════════════════════════════════════════════════
 
+  /**
+   * Recalcula la nota final derivada de las parciales.
+   *
+   * No tiene actor humano ni causal: es una consecuencia aritmética. Pero sí
+   * deja **evento de sistema**, con su origen y correlacionado con la operación
+   * que lo desencadenó, para que el registro explique por qué una nota final
+   * cambió sin que nadie la tocara.
+   */
   async recomputePeriodFinalGrade(params: {
     studentEnrollmentId: string;
     teacherAssignmentId: string;
     academicTermId: string;
+    /** Correlación con la escritura de parciales que provocó el recálculo. */
+    batchId?: string | null;
   }) {
     const { studentEnrollmentId, teacherAssignmentId, academicTermId } = params;
 
@@ -374,13 +386,10 @@ export class PartialGradesService {
 
     // 3. Si no quedan notas parciales → eliminar PeriodFinalGrade
     if (partials.length === 0) {
-      await this.prisma.periodFinalGrade.deleteMany({
-        where: {
-          studentEnrollmentId,
-          academicTermId,
-          subjectId: assignment.subjectId,
-        },
-      });
+      await this.finalWriter.eliminar(
+        { studentEnrollmentId, academicTermId, subjectId: assignment.subjectId },
+        { origen: 'RECALCULO', batchId: params.batchId ?? null },
+      );
       return;
     }
 
@@ -500,24 +509,13 @@ export class PartialGradesService {
     // C-2: la nota final se guarda SIEMPRE que existan parciales, incluido 0 real
     // (un 0 legítimo ya no se interpreta como "borrar"). El caso "sin parciales"
     // ya se resolvió en el paso 3 (delete).
-    await this.prisma.periodFinalGrade.upsert({
-      where: {
-        studentEnrollmentId_academicTermId_subjectId: {
-          studentEnrollmentId,
-          academicTermId,
-          subjectId: assignment.subjectId,
-        },
-      },
-      update: { finalScore, isManualOverride: false },
-      create: {
-        institutionId: assignment.institutionId,
-        studentEnrollmentId,
-        academicTermId,
-        subjectId: assignment.subjectId,
-        finalScore,
-        enteredById: assignment.teacherId,
-        isManualOverride: false,
-      },
+    await this.finalWriter.upsert({
+      clave: { studentEnrollmentId, academicTermId, subjectId: assignment.subjectId },
+      institutionId: assignment.institutionId,
+      finalScore,
+      enteredById: assignment.teacherId,
+      isManualOverride: false,
+      contexto: { origen: 'RECALCULO', batchId: params.batchId ?? null },
     });
   }
 

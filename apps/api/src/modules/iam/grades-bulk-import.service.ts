@@ -1,5 +1,7 @@
 import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PeriodFinalGradeWriter } from '../evaluation/period-final-grade.writer';
+import { GradeAuditActor } from '../evaluation/grade-audit.service';
 import * as ExcelJS from 'exceljs';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -79,7 +81,19 @@ export interface PreviewResult {
 
 @Injectable()
 export class GradesBulkImportService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly finalWriter: PeriodFinalGradeWriter,
+  ) {}
+
+  /**
+   * Correlación y actor de la importación en curso.
+   *
+   * Una importación produce muchas escrituras derivadas: se comparte una sola
+   * correlación para que el registro las lea como la operación única que fueron,
+   * y se conserva quién la ejecutó para que sean atribuibles.
+   */
+  private importacionEnCurso: { batchId: string; actor?: GradeAuditActor } | null = null;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PREVIEW: Analizar Excel sin aplicar cambios
@@ -182,9 +196,12 @@ export class GradesBulkImportService {
       deactivateMissingStudents: boolean;
       overwriteExistingGrades: boolean;
     },
+    actor?: GradeAuditActor,
   ): Promise<GradesImportResult> {
     // Validar que el período no esté finalizado
     await this.guardTermNotFinalized(academicTermId);
+
+    this.importacionEnCurso = { batchId: this.finalWriter.nuevaCorrelacion(), actor };
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
@@ -1044,22 +1061,18 @@ export class GradesBulkImportService {
     const scores = partials.map(p => Number(p.score));
     const finalScore = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
 
-    await this.prisma.periodFinalGrade.upsert({
-      where: {
-        studentEnrollmentId_academicTermId_subjectId: {
-          studentEnrollmentId,
-          academicTermId,
-          subjectId: assignment.subjectId,
-        },
-      },
-      update: { finalScore },
-      create: {
-        institutionId: assignment.institutionId,
-        studentEnrollmentId,
-        academicTermId,
-        subjectId: assignment.subjectId,
-        finalScore,
-        enteredById: assignment.teacherId,
+    // La nota final que produce una importación es derivada, no puesta a mano:
+    // conserva `isManualOverride` en falso y deja evento con origen propio.
+    await this.finalWriter.upsert({
+      clave: { studentEnrollmentId, academicTermId, subjectId: assignment.subjectId },
+      institutionId: assignment.institutionId,
+      finalScore,
+      enteredById: assignment.teacherId,
+      isManualOverride: false,
+      contexto: {
+        origen: 'IMPORTACION',
+        batchId: this.importacionEnCurso?.batchId ?? null,
+        actor: this.importacionEnCurso?.actor,
       },
     });
   }

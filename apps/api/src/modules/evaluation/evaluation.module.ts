@@ -19,6 +19,7 @@ import { PeriodFinalGradesService } from './period-final-grades.service';
 import { PartialGradesController } from './partial-grades.controller';
 import { PartialGradesService } from './partial-grades.service';
 import { GradeAuditService } from './grade-audit.service';
+import { PeriodFinalGradeWriter } from './period-final-grade.writer';
 import { FinalComponentsController } from './final-components.controller';
 import { FinalComponentsService } from './final-components.service';
 import { FinalComponentGradesController } from './final-component-grades.controller';
@@ -50,10 +51,11 @@ import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-
     PeriodFinalGradesService,
     PartialGradesService,
     GradeAuditService,
+    PeriodFinalGradeWriter,
     FinalComponentsService,
     FinalComponentGradesService,
     ValidateTenantContextGuard,
   ],
-  exports: [StudentGradesService, PeriodFinalGradesService, PartialGradesService, GradeAuditService, FinalComponentsService, FinalComponentGradesService],
+  exports: [StudentGradesService, PeriodFinalGradesService, PartialGradesService, GradeAuditService, FinalComponentsService, FinalComponentGradesService, PeriodFinalGradeWriter],
 })
 export class EvaluationModule {}

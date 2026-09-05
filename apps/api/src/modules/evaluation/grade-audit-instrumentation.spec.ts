@@ -1,6 +1,7 @@
 import { GradeAuditService } from './grade-audit.service';
 import { StudentGradesService } from './student-grades.service';
 import { PeriodFinalGradesService } from './period-final-grades.service';
+import { PeriodFinalGradeWriter } from './period-final-grade.writer';
 import { FinalComponentGradesService } from './final-component-grades.service';
 
 /**
@@ -22,6 +23,10 @@ import { FinalComponentGradesService } from './final-component-grades.service';
  */
 describe('D-1 · auditoría de escrituras de notas', () => {
   const auditoriaFalsa = () => ({ record: jest.fn(), recordMany: jest.fn() });
+
+  /** Servicio con el adaptador real, la única puerta de escritura de la tabla. */
+  const servicioNotasFinales = (prisma: any, audit: any) =>
+    new PeriodFinalGradesService(prisma, audit, new PeriodFinalGradeWriter(prisma, audit));
 
   /** Sesión supervisora: la política no le exige titularidad ni causal. */
   const COORDINACION = { userId: 'u-1', roles: ['COORDINADOR'], institutionId: 'inst-1' };
@@ -170,7 +175,7 @@ describe('D-1 · auditoría de escrituras de notas', () => {
           upsert: jest.fn().mockResolvedValue({ id: 'pfg-x', institutionId: 'inst-1' }),
         },
       });
-      const svc = new PeriodFinalGradesService(prisma, audit as any);
+      const svc = servicioNotasFinales(prisma, audit);
 
       await svc.bulkUpsert(
         [
@@ -201,7 +206,7 @@ describe('D-1 · auditoría de escrituras de notas', () => {
           upsert: jest.fn().mockResolvedValue({ id: 'pfg-1', institutionId: 'inst-1' }),
         },
       });
-      const svc = new PeriodFinalGradesService(prisma, audit as any);
+      const svc = servicioNotasFinales(prisma, audit);
       const actor = { userId: 'u-1', name: 'quien-actua', role: 'RECTOR' };
 
       await svc.upsert(
