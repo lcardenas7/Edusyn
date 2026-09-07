@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   applyIntent,
@@ -18,6 +18,8 @@ import {
   incidentFromGenerated,
   type IncidentProfile,
 } from '../../features/edulab/fuga/definition'
+import { discardLocalAttempt, loadLocalAttempt, persistLocalAttempt } from '../../features/edulab/recovery/indexed-db'
+import { createLocalAttemptRecord, recoverLocalAttempt, type RecoveredAttempt } from '../../features/edulab/recovery/recovery'
 import './fuga-laboratorio.css'
 
 interface WorldView {
@@ -40,6 +42,7 @@ interface Session {
 type SessionAction =
   | { type: 'intent'; primitive: Intent['primitive']; targetId: string; payload?: JsonValue }
   | { type: 'restart'; mode: AttemptMode; seed: string }
+  | { type: 'restore'; attempt: RecoveredAttempt }
 
 function startSession(mode: AttemptMode, seed: string): Session {
   return {
@@ -56,6 +59,7 @@ function startSession(mode: AttemptMode, seed: string): Session {
 
 function sessionReducer(session: Session, action: SessionAction): Session {
   if (action.type === 'restart') return startSession(action.mode, action.seed)
+  if (action.type === 'restore') return action.attempt
   const nextIntent = fugaIntent(session.state.version, action.primitive, action.targetId, action.payload)
   const result = applyIntent(fugaLaboratorioDefinition, session.state, nextIntent)
   return {
@@ -83,7 +87,17 @@ function ObjectiveMark({ achieved, demonstrated }: { achieved: boolean; demonstr
   )
 }
 
-function Intro({ onStart, onExit }: { onStart: (mode: AttemptMode, seed: string) => void; onExit: () => void }) {
+interface IntroProps {
+  onStart: (mode: AttemptMode, seed: string) => void
+  onExit: () => void
+  onResume: () => void
+  onDiscard: () => void
+  pendingAttempt: RecoveredAttempt | null
+  recoveryProblem: boolean
+  checkingRecovery: boolean
+}
+
+function Intro({ onStart, onExit, onResume, onDiscard, pendingAttempt, recoveryProblem, checkingRecovery }: IntroProps) {
   const [mode, setMode] = useState<AttemptMode>('EXPLORE')
   const [seed, setSeed] = useState('fuga-variante-a')
   return (
@@ -96,6 +110,15 @@ function Intro({ onStart, onExit }: { onStart: (mode: AttemptMode, seed: string)
         <div className="edulab-safety-note">
           <strong>Entrenamiento virtual.</strong> Ante un derrame real, aléjate, reporta y sigue el protocolo del docente. Nunca investigues una sustancia desconocida por tu cuenta ni uses el olor como prueba.
         </div>
+        {checkingRecovery && <p className="edulab-recovery-note" role="status">Buscando un intento guardado en este dispositivo…</p>}
+        {pendingAttempt && <section className="edulab-resume-card" aria-label="Intento local disponible">
+          <div><strong>Hay un intento guardado</strong><p>{pendingAttempt.state.mode === 'EXPLORE' ? 'Explorar' : 'Práctica guiada'} · {pendingAttempt.state.logicalTick} ticks · {pendingAttempt.acceptedIntents.length} decisiones</p></div>
+          <div className="edulab-resume-actions"><button className="edulab-primary" onClick={onResume}>Continuar intento</button><button className="edulab-exit" onClick={onDiscard}>Descartar</button></div>
+        </section>}
+        {recoveryProblem && <section className="edulab-resume-card is-invalid" role="alert">
+          <div><strong>El intento local no pudo verificarse</strong><p>La definición, el motor o el replay ya no coinciden. Puedes descartarlo de forma segura.</p></div>
+          <button className="edulab-exit" onClick={onDiscard}>Descartar intento incompatible</button>
+        </section>}
         <div className="edulab-intro-options">
           <fieldset>
             <legend>Modo</legend>
@@ -118,6 +141,13 @@ export default function FugaLaboratorio() {
   const navigate = useNavigate()
   const [started, setStarted] = useState(false)
   const [session, dispatch] = useReducer(sessionReducer, undefined, () => startSession('EXPLORE', 'fuga-variante-a'))
+  const [pendingAttempt, setPendingAttempt] = useState<RecoveredAttempt | null>(null)
+  const [recoveryProblem, setRecoveryProblem] = useState(false)
+  const [checkingRecovery, setCheckingRecovery] = useState(true)
+  const [persistenceStatus, setPersistenceStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const persistenceChain = useRef<Promise<void>>(Promise.resolve())
+  const persistenceRevision = useRef(0)
+  const mounted = useRef(true)
   const [profileChoice, setProfileChoice] = useState<IncidentProfile['profile']>('acidic')
   const [circuitChoice, setCircuitChoice] = useState<(typeof CIRCUITS)[number]>('circuit-a')
   const world = session.state.world as unknown as WorldView
@@ -125,6 +155,34 @@ export default function FugaLaboratorio() {
   const latestDiagnosis = session.diagnoses.at(-1)
   const completed = session.state.status === 'COMPLETED'
   const ending = fugaLaboratorioDefinition.endings.find((item) => item.id === session.state.endingId)
+
+  useEffect(() => () => { mounted.current = false }, [])
+
+  useEffect(() => {
+    let active = true
+    void loadLocalAttempt(fugaLaboratorioDefinition.definitionId)
+      .then((stored) => {
+        if (!active || stored === undefined) return
+        const recovered = recoverLocalAttempt(fugaLaboratorioDefinition, stored)
+        if (recovered.ok) setPendingAttempt(recovered.attempt)
+        else setRecoveryProblem(true)
+      })
+      .catch(() => { if (active) setRecoveryProblem(true) })
+      .finally(() => { if (active) setCheckingRecovery(false) })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!started) return
+    const revision = ++persistenceRevision.current
+    setPersistenceStatus('saving')
+    const record = createLocalAttemptRecord(session.state, session.acceptedIntents)
+    persistenceChain.current = persistenceChain.current
+      .catch(() => undefined)
+      .then(() => persistLocalAttempt(record, session.events))
+      .then(() => { if (mounted.current && persistenceRevision.current === revision) setPersistenceStatus('saved') })
+      .catch(() => { if (mounted.current && persistenceRevision.current === revision) setPersistenceStatus('error') })
+  }, [session, started])
 
   const progress = useMemo(() => {
     const objectives = Object.values(session.state.objectives)
@@ -144,11 +202,50 @@ export default function FugaLaboratorio() {
     dispatch({ type: 'intent', primitive, targetId, ...(payload === undefined ? {} : { payload }) })
   }
 
-  if (!started) {
-    return <Intro onExit={() => navigate('/dashboard')} onStart={(mode, seed) => {
+  const discardPendingAttempt = () => {
+    const attemptId = pendingAttempt?.state.attemptId ?? session.state.attemptId
+    void discardLocalAttempt(fugaLaboratorioDefinition.definitionId, attemptId).finally(() => {
+      setPendingAttempt(null)
+      setRecoveryProblem(false)
+    })
+  }
+
+  const beginFreshAttempt = (mode: AttemptMode, seed: string) => {
+    const attemptId = pendingAttempt?.state.attemptId ?? session.state.attemptId
+    void discardLocalAttempt(fugaLaboratorioDefinition.definitionId, attemptId).finally(() => {
+      setPendingAttempt(null)
+      setRecoveryProblem(false)
       dispatch({ type: 'restart', mode, seed })
       setStarted(true)
-    }} />
+    })
+  }
+
+  const restartAttempt = (mode: AttemptMode, seed: string) => {
+    const revision = ++persistenceRevision.current
+    setPersistenceStatus('saving')
+    persistenceChain.current = persistenceChain.current
+      .catch(() => undefined)
+      .then(() => discardLocalAttempt(fugaLaboratorioDefinition.definitionId, session.state.attemptId))
+    void persistenceChain.current
+      .then(() => dispatch({ type: 'restart', mode, seed }))
+      .catch(() => { if (mounted.current && persistenceRevision.current === revision) setPersistenceStatus('error') })
+  }
+
+  if (!started) {
+    return <Intro
+      checkingRecovery={checkingRecovery}
+      onDiscard={discardPendingAttempt}
+      onExit={() => navigate('/dashboard')}
+      onResume={() => {
+        if (!pendingAttempt) return
+        dispatch({ type: 'restore', attempt: pendingAttempt })
+        setPendingAttempt(null)
+        setStarted(true)
+      }}
+      onStart={beginFreshAttempt}
+      pendingAttempt={pendingAttempt}
+      recoveryProblem={recoveryProblem}
+    />
   }
 
   const evidenceReading = (key: string) => {
@@ -172,6 +269,7 @@ export default function FugaLaboratorio() {
           <span><b>{session.state.mode === 'EXPLORE' ? 'Explorar' : 'Práctica guiada'}</b> modo</span>
           <span><b>{session.state.logicalTick}</b> ticks</span>
           <span><b>{progress}/4</b> demostrados</span>
+          <span><b>{persistenceStatus === 'saved' ? 'Guardado local' : persistenceStatus === 'saving' ? 'Guardando' : persistenceStatus === 'error' ? 'Sin guardado' : 'Solo local'}</b> persistencia</span>
           <span className={`risk-${world.zone.exposure > 0 || world.spill.reaction ? 'high' : world.leak.active ? 'medium' : 'low'}`}><b>{world.zone.exposure > 0 || world.spill.reaction ? 'Alto' : world.leak.active ? 'Activo' : 'Estable'}</b> riesgo</span>
         </div>
       </header>
@@ -269,7 +367,7 @@ export default function FugaLaboratorio() {
         <p>{session.state.endingId === 'safe_escalation' ? 'Priorizaste la seguridad y entregaste el incidente a personal responsable.' : 'El estado es seguro. Revisa qué alcanzaste y qué pudiste demostrar con evidencia.'}</p>
         <div className="edulab-ending-grid">{fugaLaboratorioDefinition.objectives.map((objective) => { const objectiveState = session.state.objectives[objective.id]!; return <div key={objective.id}><strong>{objective.statement}</strong><ObjectiveMark achieved={objectiveState.achieved} demonstrated={objectiveState.demonstrated} /></div> })}</div>
         <p className="edulab-replay-proof">Replay local: <strong>{replayVerified ? 'verificado' : 'no coincide'}</strong> · {session.acceptedIntents.length} decisiones aceptadas · seed <code>{session.state.seed}</code> · definición <code>{session.state.definition.definitionHash.slice(-8)}</code></p>
-        <div className="edulab-ending-actions"><button className="edulab-primary" onClick={() => dispatch({ type: 'restart', mode: session.state.mode, seed: session.state.seed })}>Repetir misma variante</button><button className="edulab-secondary" onClick={() => dispatch({ type: 'restart', mode: session.state.mode, seed: session.state.seed === 'fuga-variante-a' ? 'incidente-2' : 'fuga-variante-a' })}>Probar otra variante</button><button className="edulab-exit" onClick={() => navigate('/dashboard')}>Volver a Edusyn</button></div>
+        <div className="edulab-ending-actions"><button className="edulab-primary" onClick={() => restartAttempt(session.state.mode, session.state.seed)}>Repetir misma variante</button><button className="edulab-secondary" onClick={() => restartAttempt(session.state.mode, session.state.seed === 'fuga-variante-a' ? 'incidente-2' : 'fuga-variante-a')}>Probar otra variante</button><button className="edulab-exit" onClick={() => navigate('/dashboard')}>Volver a Edusyn</button></div>
       </section></div>}
     </main>
   )
