@@ -15,6 +15,17 @@ Convención de marcado, la misma del programa multi-tenant:
 **Qué queda pendiente:** (y esperando qué autorización)
 ```
 
+> ## Nota append-only de vigencia · 2026-09-07 · EDULAB-4A-D
+>
+> Los párrafos conservados más abajo que dicen **«R1 sigue CONGELADO / no se ha integrado»** y
+> **«Código de EduLab: cero líneas / EduLab está sin código»** son registros históricos y **ya no
+> están vigentes**. R1 quedó integrado y validado en staging antes de abrir la implementación, y
+> EduLab ya tiene runtime, validador, fixtures, slice jugable y recuperación local. Se conservan
+> literalmente para respetar el registro append-only; esta nota gobierna su lectura actual.
+>
+> `ecfb7832` es el **HEAD documental** que incorporó la bitácora al branch. `993656de` es el
+> **último candidato funcional de código**: el commit posterior solo añadió documentación.
+
 > ## Actualización de estado · 2026-09-07
 >
 > **EduLab ya tiene foundation reutilizable, un primer slice jugable y recuperación local
@@ -194,6 +205,72 @@ No son de EduLab, pero se aplican igual:
 ---
 
 # Entradas
+
+## 2026-09-07 · EDULAB-3A — QA visual y recuperación local · Codex
+
+**Qué medí.** Render real del slice en escritorio y continuidad del intento tras recargar, usando
+un harness Vite temporal e ignorado por Git. La prueba fue exclusivamente local y no llamó API,
+base de datos, staging ni producción.
+
+**Qué encontré.**
+
+- La entrada y la escena DOM/SVG renderizan con jerarquía legible de misión, laboratorio,
+  controles y bitácora de evidencia. **[V]**
+- `activar alerta → aislar acceso → habilitar control remoto` produjo ticks, eventos semánticos y
+  el primer objetivo `achieved + demonstrates`; la consecuencia quedó visible en la escena. **[V]**
+- Las mediciones de pH y trazador elevaron el intento a cinco decisiones y conservaron sus valores
+  y eventos. **[V]**
+- Tras recargar apareció «Hay un intento guardado»; «Continuar intento» restituyó los cinco ticks,
+  las dos evidencias, el objetivo demostrado y la secuencia de eventos. **[V]**
+- No se ejecutó el descarte desde la UI en esta revisión; su comportamiento continúa cubierto por
+  las pruebas automatizadas de recuperación local. **[P]**
+
+**Qué cambié.** Nada en el producto. El servidor y el navegador locales de QA fueron cerrados; sus
+archivos temporales permanecieron bajo `node_modules/.cache/`, fuera de Git.
+
+**Qué queda pendiente.** Prueba visual en tablet/móvil y revisión humana de fidelidad científica
+antes de considerar publicable el contenido educativo.
+
+---
+
+## 2026-09-07 · EDULAB-4A-D — contrato privado de persistencia · Codex
+
+**Qué medí.** Compatibilidad del diseño de persistencia con la base
+`origin/staging@17045fb3`, el contexto transaccional de tenant, el contrato RLS reproducible y la
+inmutabilidad/replay ya demostrados por el runtime.
+
+**Qué encontré.**
+
+- El catálogo de experiencias y asset packs debe ser global, versionado e inmutable por contenido;
+  el rol de aplicación solo necesita lectura. **[V]**
+- Attempts y Events deben llevar `institutionId` obligatorio. Attempt pertenece al usuario
+  autenticado; Event pertenece al mismo tenant y owner a través de su Attempt. **[P]**
+- El contexto RLS existente cubre institución, pero el ownership fuerte requiere añadir en el
+  futuro una identidad de usuario autenticada dentro de la misma transacción. Ausencia de
+  cualquiera de los dos contextos debe negar el acceso. **[P]**
+- `contentHash` debe ser SHA-256 sobre contenido canónico. No es intercambiable con el
+  `definitionHash` FNV estable que hoy usa el runtime para identidad y replay. Ambos deben
+  persistirse. **[P]**
+- Event será append-only para el rol de aplicación; no habrá actualización, borrado ni truncate.
+  Attempt avanza con control optimista de versión y eventos idempotentes/ordenados. **[P]**
+- La retención de attempts y eventos sigue siendo una decisión abierta. Hasta resolverla, el
+  diseño seguro es minimizar desde el origen y no habilitar purga automática. **[P]**
+
+**Qué NO pude comprobar.** Ninguna tabla, policy o migración existe todavía; las pruebas A/B,
+denegación sin contexto, replay persistido y concurrencia son criterios del siguiente gate local,
+no resultados ejecutados. **[I]**
+
+**Qué cambié.** Se añadió esta reconciliación pública-safe y se preparó un documento privado
+ignorado por Git con el contrato de datos, permisos, RLS, SQL propuesto, prueba A/B y secuencia de
+migración. La bitácora no reproduce SQL ni el mapa de seguridad. No se modificó código, Prisma,
+migraciones, API, Aula, Assessment, notas, Pixi, staging o producción.
+
+**Qué queda pendiente.** Revisión humana del contrato privado y decisión de retención. Solo después
+podrá autorizarse EDULAB-4B: implementación aditiva en una rama/gate separado y validación exclusiva
+contra base local efímera. Este bloque queda sin stage y sin commit; un commit documental público-safe
+requiere autorización separada.
+
+---
 
 ## 2026-09-07 · EDULAB-3 — recuperación local verificable · Codex
 
