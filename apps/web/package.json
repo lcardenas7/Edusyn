@@ -29,6 +29,7 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
+    "@edusyn/edulab-runtime": "*",
     "@edusyn/types": "*",
     "@edusyn/ui": "*",
     "@tanstack/react-query": "^5.90.18",
