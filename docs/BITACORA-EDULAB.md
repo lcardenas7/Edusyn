@@ -206,6 +206,35 @@ No son de EduLab, pero se aplican igual:
 
 # Entradas
 
+## 2026-09-07 · EDULAB-4B — preflight de persistencia · Codex
+
+**Qué medí.** Compatibilidad del contrato privado con las 96 migraciones versionadas, el schema y
+el contexto transaccional de la base oficial `origin/staging@17045fb3`. La revisión fue solo de
+archivos locales: no ejecutó Prisma, SQL ni conexiones de base de datos.
+
+**Qué encontré.**
+
+- La base no contiene todavía entidades EduLab y ninguna migración histórica necesita cambiarse.
+  **[V]**
+- El contexto actual fija institución pero no identidad de usuario. El ownership de Attempts y
+  Events requiere incorporar esa identidad autenticada dentro de la misma transacción antes de
+  habilitar persistencia. **[V]**
+- El contrato RLS consolidado sirve como referencia de preflight y `ENABLE + FORCE`, pero sus
+  grants generales y policy única no sirven literalmente para el Event append-only de EduLab.
+  La futura migración debe revocar defaults y conceder permisos mínimos por operación. **[V]**
+- La retención no bloquea pruebas locales con datos sintéticos; sí impide definir purgas, cascadas
+  o despliegue productivo hasta que producto/legal cierre la política. **[P]**
+
+**Qué cambié.** Se amplió exclusivamente el documento privado ignorado por Git con los hallazgos,
+el orden seguro de concurrencia y el gate exacto de implementación. No se modificó código, schema,
+migraciones, API, datos, Aula, RLS desplegado, staging ni producción.
+
+**Qué queda pendiente.** EDULAB-4B-IMPLEMENTACIÓN necesita autorización expresa para levantar dos
+prohibiciones únicamente en entorno local efímero: modificar `apps/api/prisma/` y ejecutar Prisma.
+Hasta entonces, el preflight queda **PASS CON GATE** y este bloque se detiene en documentación.
+
+---
+
 ## 2026-09-07 · EDULAB-3A — QA visual y recuperación local · Codex
 
 **Qué medí.** Render real del slice en escritorio y continuidad del intento tras recargar, usando
