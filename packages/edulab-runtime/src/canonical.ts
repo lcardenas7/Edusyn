@@ -1,5 +1,9 @@
 import type { JsonObject, JsonValue } from './contracts.js';
 
+export function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 export function cloneJson<T extends JsonValue>(value: T): T {
   if (Array.isArray(value)) {
     return value.map((item) => cloneJson(item)) as T;

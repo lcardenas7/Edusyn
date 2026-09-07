@@ -108,4 +108,15 @@ describe('definition validator', () => {
     const result = validateDefinition(definition);
     expect(result.semantic.map((item) => item.code)).toContain('mutation.path.forbidden');
   });
+
+  it('rejects a reference to an undeclared generated variable inside an effect', () => {
+    const definition = validDefinition();
+    definition.rules[0]!.effects.unshift({
+      type: 'set',
+      path: 'world.ready',
+      value: { source: 'generated', path: 'missingVariable' },
+    });
+    const result = validateDefinition(definition);
+    expect(result.semantic.map((item) => item.code)).toContain('generation.reference.missing');
+  });
 });

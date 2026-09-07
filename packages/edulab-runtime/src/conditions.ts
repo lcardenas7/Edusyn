@@ -5,7 +5,7 @@ import type {
   JsonValue,
   ValueExpression,
 } from './contracts.js';
-import { jsonEquals } from './canonical.js';
+import { compareText, jsonEquals } from './canonical.js';
 
 export interface EvaluationContext {
   state: JsonObject;
@@ -39,7 +39,7 @@ export function resolveValue(
 
 function compareOrdered(left: JsonValue | undefined, right: JsonValue | undefined): number | null {
   if (typeof left === 'number' && typeof right === 'number') return left - right;
-  if (typeof left === 'string' && typeof right === 'string') return left.localeCompare(right, 'en');
+  if (typeof left === 'string' && typeof right === 'string') return compareText(left, right);
   return null;
 }
 

@@ -43,7 +43,9 @@ function isNonEmptyString(value: unknown): value is string {
 function isJsonValue(value: unknown, depth = 0): value is JsonValue {
   if (depth > 32) return false;
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
-  if (typeof value === 'number') return Number.isFinite(value);
+  // The definition language uses safe integers as fixed-point units. This keeps
+  // arithmetic identical across browser and server runtimes.
+  if (typeof value === 'number') return Number.isSafeInteger(value);
   if (Array.isArray(value)) return value.every((item) => isJsonValue(item, depth + 1));
   if (!isRecord(value)) return false;
   return Object.values(value).every((item) => isJsonValue(item, depth + 1));
@@ -297,18 +299,60 @@ function collectExpressions(condition: Condition, result: ValueExpression[]): vo
   }
 }
 
-function validateExpressionPaths(condition: Condition, path: string, issues: ValidationIssue[]): void {
+function validateExpression(
+  expression: ValueExpression,
+  path: string,
+  issues: ValidationIssue[],
+  generationKeys: Set<string>,
+): void {
+  if ('literal' in expression) return;
+  if (expression.source === 'state') {
+    if (!/^(world|objectives|logicalTick|status|endingId|checkpointId)(\.|$)/.test(expression.path)) {
+      issues.push(issue('semantic', 'path.unsupported', path, `Unsupported state path: ${expression.path}.`));
+    }
+    return;
+  }
+  if (expression.source === 'intent') {
+    if (!/^(primitive|targetId|payload)(\.|$)/.test(expression.path)) {
+      issues.push(issue('semantic', 'path.unsupported', path, `Unsupported intent path: ${expression.path}.`));
+    }
+    return;
+  }
+  const key = expression.path.split('.')[0]!;
+  if (!generationKeys.has(key)) {
+    issues.push(issue('semantic', 'generation.reference.missing', path, `Unknown generated variable: ${key}.`));
+  }
+}
+
+function validateExpressionPaths(
+  condition: Condition,
+  path: string,
+  issues: ValidationIssue[],
+  generationKeys: Set<string>,
+): void {
   const expressions: ValueExpression[] = [];
   collectExpressions(condition, expressions);
-  expressions.forEach((expression, index) => {
-    if ('literal' in expression) return;
-    const allowed = expression.source === 'state'
-      ? /^(world|objectives|logicalTick|status|endingId|checkpointId)(\.|$)/
-      : expression.source === 'intent'
-        ? /^(primitive|targetId|payload|actorId)(\.|$)/
-        : /^.+/;
-    if (!allowed.test(expression.path)) issues.push(issue('semantic', 'path.unsupported', `${path}#value${index}`, `Unsupported ${expression.source} path: ${expression.path}.`));
-  });
+  expressions.forEach((expression, index) => validateExpression(expression, `${path}#value${index}`, issues, generationKeys));
+}
+
+function effectExpressions(effect: EffectDefinition): ValueExpression[] {
+  switch (effect.type) {
+    case 'set':
+    case 'addToSet':
+    case 'removeFromSet':
+      return [effect.value];
+    case 'increment':
+      return [effect.amount];
+    case 'emit':
+      return [
+        ...(effect.subjectId ? [effect.subjectId] : []),
+        ...Object.values(effect.payload ?? {}),
+      ];
+    case 'diagnose':
+      return effect.at ? [effect.at] : [];
+    default:
+      return [];
+  }
 }
 
 function hasRuleCycle(rules: RuleDefinition[]): boolean {
@@ -336,6 +380,7 @@ export function validateSemantics(definition: ExperienceDefinition): ValidationI
   const endingIds = new Set(definition.endings.map((ending) => ending.id));
   const ruleIds = new Set(definition.rules.map((rule) => rule.id));
   const capabilities = new Set(definition.requiredCapabilities);
+  const generationKeys = new Set(definition.generation?.variables.map((variable) => variable.key) ?? []);
 
   if (definition.engineVersion !== EDULAB_ENGINE_VERSION) issues.push(issue('semantic', 'engine.version.unsupported', '$.engineVersion', `Runtime supports ${EDULAB_ENGINE_VERSION}.`));
   if (definition.objectives.length === 0) issues.push(issue('semantic', 'objectives.empty', '$.objectives', 'At least one objective is required.'));
@@ -344,9 +389,9 @@ export function validateSemantics(definition: ExperienceDefinition): ValidationI
 
   definition.objectives.forEach((objective, index) => {
     if (!objective.achieved) issues.push(issue('semantic', 'objective.achieved.missing', `$.objectives[${index}].achieved`, 'Objective needs an achieved condition.'));
-    else validateExpressionPaths(objective.achieved, `$.objectives[${index}].achieved`, issues);
+    else validateExpressionPaths(objective.achieved, `$.objectives[${index}].achieved`, issues, generationKeys);
     if (!objective.demonstrates) issues.push(issue('semantic', 'objective.demonstrates.missing', `$.objectives[${index}].demonstrates`, 'Objective needs a demonstrates condition.'));
-    else validateExpressionPaths(objective.demonstrates, `$.objectives[${index}].demonstrates`, issues);
+    else validateExpressionPaths(objective.demonstrates, `$.objectives[${index}].demonstrates`, issues, generationKeys);
   });
 
   definition.rules.forEach((rule, index) => {
@@ -360,9 +405,12 @@ export function validateSemantics(definition: ExperienceDefinition): ValidationI
     rule.after?.forEach((dependency) => {
       if (!ruleIds.has(dependency)) issues.push(issue('semantic', 'rule.reference.missing', `${path}.after`, `Unknown rule dependency: ${dependency}.`));
     });
-    if (rule.when) validateExpressionPaths(rule.when, `${path}.when`, issues);
+    if (rule.when) validateExpressionPaths(rule.when, `${path}.when`, issues, generationKeys);
     rule.effects.forEach((effect: EffectDefinition, effectIndex) => {
       const effectPath = `${path}.effects[${effectIndex}]`;
+      effectExpressions(effect).forEach((expression, expressionIndex) => {
+        validateExpression(expression, `${effectPath}#value${expressionIndex}`, issues, generationKeys);
+      });
       if ('path' in effect && !effect.path.startsWith('world.')) issues.push(issue('semantic', 'mutation.path.forbidden', `${effectPath}.path`, 'Definitions may mutate only world.* paths.'));
       if ((effect.type === 'achieve' || effect.type === 'demonstrate') && !objectiveIds.has(effect.objectiveId)) issues.push(issue('semantic', 'objective.reference.missing', `${effectPath}.objectiveId`, `Unknown objective: ${effect.objectiveId}.`));
       if (effect.type === 'finish' && !endingIds.has(effect.endingId)) issues.push(issue('semantic', 'ending.reference.missing', `${effectPath}.endingId`, `Unknown ending: ${effect.endingId}.`));

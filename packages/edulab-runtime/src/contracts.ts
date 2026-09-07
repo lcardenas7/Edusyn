@@ -222,6 +222,7 @@ export interface AttemptState {
   logicalTick: number;
   version: number;
   decisionSequence: number;
+  eventSequence: number;
   checkpointId: string | null;
   status: AttemptStatus;
   endingId: string | null;
@@ -234,7 +235,6 @@ export interface Intent {
   primitive: Primitive;
   targetId?: string;
   payload?: JsonValue;
-  actorId?: string;
 }
 
 export interface StateChange {
@@ -280,6 +280,13 @@ export interface EngineStepResult {
   state: AttemptState;
   stateHash: string;
   frame: Frame;
+  diagnoses: Diagnosis[];
+  events: DomainEvent[];
+}
+
+export interface ReplayResult {
+  state: AttemptState;
+  stateHash: string;
   diagnoses: Diagnosis[];
   events: DomainEvent[];
 }
