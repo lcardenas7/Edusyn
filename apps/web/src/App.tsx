@@ -1,120 +1,127 @@
+import { lazy, Suspense } from 'react'
+
+// Entrada publica: eager a proposito, para que la primera pantalla no espere
+// una descarga adicional.
+import Login from './pages/Login'
+import InstitutionLogin from './pages/InstitutionLogin'
+import LandingPage from './pages/LandingPage'
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { InstitutionProvider } from './contexts/InstitutionContext'
 import { AcademicProvider } from './contexts/AcademicContext'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Setup from './pages/Setup'
-import Students from './pages/Students'
-import Grades from './pages/Grades'
-import Attendance from './pages/Attendance'
-import Alerts from './pages/Alerts'
-import Statistics from './pages/Statistics'
-import Teachers from './pages/Teachers'
-import AcademicLoad from './pages/AcademicLoad'
-import Reports from './pages/Reports'
-import Observer from './pages/Observer'
-import ReportCards from './pages/ReportCards'
-import Communications from './pages/Communications'
-import ContentManager from './pages/ContentManager'
-import PeriodFinalGrades from './pages/PeriodFinalGrades'
-import Recoveries from './pages/Recoveries'
-import StaffLeave from './pages/StaffLeave'
-import ObserverStats from './pages/ObserverStats'
-import Performances from './pages/Performances'
-import Achievements from './pages/Achievements'
-import InstitutionLogin from './pages/InstitutionLogin'
-import SuperAdminDashboard from './pages/SuperAdminDashboard'
-import PermissionsAdmin from './pages/PermissionsAdmin'
-import StaffManagement from './pages/StaffManagement'
-import AcademicYearWizard from './pages/AcademicYearWizard'
-import Enrollments from './pages/Enrollments'
-import AcademicYearClosure from './pages/AcademicYearClosure'
-import VotingPortal from './pages/VotingPortal'
-import Elections from './pages/Elections'
-import ElectionResults from './pages/ElectionResults'
-import ConfiguracionInicial from './pages/ConfiguracionInicial'
-import LandingPage from './pages/LandingPage'
-import InstitutionalDocuments from './pages/InstitutionalDocuments'
-import ManagementTasks from './pages/ManagementTasks'
-import AcademicCatalog from './pages/AcademicCatalog'
-import AcademicTemplates from './pages/AcademicTemplates'
-import PlanEstudiosWizard from './pages/PlanEstudiosWizard'
-import ForceChangePassword from './pages/ForceChangePassword'
-import PedagogicalSupport from './pages/PedagogicalSupport'
-import DifferentialSupport from './pages/DifferentialSupport'
-import GradesBulkImport from './pages/GradesBulkImport'
-import TeacherWorkspace from './pages/TeacherWorkspace'
-import WorkspaceV2Page from './pages/WorkspaceV2'
-import SpaceDetailPage from './pages/WorkspaceV2/SpaceDetail'
-import Classroom from './pages/Classroom'
-import AulaVirtual from './pages/aula'
 import Layout from './components/Layout'
 import PlayLayout from './components/play/PlayLayout'
 import { PlayAuthProvider, usePlayAuth } from './contexts/PlayAuthContext'
-import {
-  RegisterPlay,
-  LoginPlay,
-  PlayDashboard,
-  PlayQuizzes,
-  PlayQuizEditor,
-  PlayLessons,
-  PlayLessonEditor,
-  PlaySessions,
-  JoinPage,
-  PlayProjector,
-  PlayLanding,
-  PlayMe,
-} from './pages/play'
 
 // Nuevas páginas por dominio (Refactor UX)
-import Scale from './pages/academic/config/Scale'
-import Periods from './pages/academic/config/Periods'
-import Levels from './pages/academic/config/Levels'
-import GradingWindows from './pages/academic/config/windows/GradingWindows'
-import RecoveryWindows from './pages/academic/config/windows/RecoveryWindows'
-import Structure from './pages/institution/Structure'
-import Profile from './pages/institution/Profile'
-import InstitutionHub from './pages/InstitutionHub'
-import AcademicHub from './pages/AcademicHub'
 
 // Reportes modulares (Refactor UX)
-import ReportsHub from './pages/ReportsHub'
-import AdminReports from './pages/reports/AdminReports'
-import AcademicReports from './pages/reports/AcademicReports'
-import CommissionReports from './pages/reports/CommissionReports'
-import AttendanceReports from './pages/reports/AttendanceReports'
-import AlertsReports from './pages/reports/AlertsReports'
-import BulletinsReports from './pages/reports/BulletinsReports'
-import EvaluationReports from './pages/reports/EvaluationReports'
-import PreventiveCutReports from './pages/reports/PreventiveCutReports'
-import SystemConfig from './pages/admin/SystemConfig'
-import InstitutionalPortfolio from './pages/InstitutionalPortfolio'
 
 // Módulo Financiero
-import Timetabling from './pages/Timetabling'
-import CapabilitiesConfig from './pages/CapabilitiesConfig'
 import { DialogHost } from './components/ui/confirm'
-import {
-  FinanceHub,
-  FinanceDashboard,
-  ThirdParties,
-  ThirdPartyDetail,
-  Concepts,
-  Obligations,
-  ObligationDetail,
-  Payments,
-  Expenses,
-  Categories,
-  Invoices,
-  FinanceReports,
-  FinanceSettings,
-  NewInvoice,
-  NewObligation,
-  NewThirdParty,
-  NewConcept,
-} from './pages/finance'
+
+// ── Rutas diferidas ────────────────────────────────────────────────────────
+// Cada pagina se descarga cuando alguien entra en ella, no al abrir Edusyn.
+// La entrada publica (portada y acceso) sigue siendo eager: hacerla diferida
+// añadiria una vuelta de red antes de la primera pantalla.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Setup = lazy(() => import('./pages/Setup'))
+const Students = lazy(() => import('./pages/Students'))
+const Grades = lazy(() => import('./pages/Grades'))
+const Attendance = lazy(() => import('./pages/Attendance'))
+const Alerts = lazy(() => import('./pages/Alerts'))
+const Statistics = lazy(() => import('./pages/Statistics'))
+const Teachers = lazy(() => import('./pages/Teachers'))
+const AcademicLoad = lazy(() => import('./pages/AcademicLoad'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Observer = lazy(() => import('./pages/Observer'))
+const ReportCards = lazy(() => import('./pages/ReportCards'))
+const Communications = lazy(() => import('./pages/Communications'))
+const ContentManager = lazy(() => import('./pages/ContentManager'))
+const PeriodFinalGrades = lazy(() => import('./pages/PeriodFinalGrades'))
+const Recoveries = lazy(() => import('./pages/Recoveries'))
+const StaffLeave = lazy(() => import('./pages/StaffLeave'))
+const ObserverStats = lazy(() => import('./pages/ObserverStats'))
+const Performances = lazy(() => import('./pages/Performances'))
+const Achievements = lazy(() => import('./pages/Achievements'))
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'))
+const PermissionsAdmin = lazy(() => import('./pages/PermissionsAdmin'))
+const StaffManagement = lazy(() => import('./pages/StaffManagement'))
+const AcademicYearWizard = lazy(() => import('./pages/AcademicYearWizard'))
+const Enrollments = lazy(() => import('./pages/Enrollments'))
+const AcademicYearClosure = lazy(() => import('./pages/AcademicYearClosure'))
+const VotingPortal = lazy(() => import('./pages/VotingPortal'))
+const Elections = lazy(() => import('./pages/Elections'))
+const ElectionResults = lazy(() => import('./pages/ElectionResults'))
+const ConfiguracionInicial = lazy(() => import('./pages/ConfiguracionInicial'))
+const InstitutionalDocuments = lazy(() => import('./pages/InstitutionalDocuments'))
+const ManagementTasks = lazy(() => import('./pages/ManagementTasks'))
+const AcademicCatalog = lazy(() => import('./pages/AcademicCatalog'))
+const AcademicTemplates = lazy(() => import('./pages/AcademicTemplates'))
+const PlanEstudiosWizard = lazy(() => import('./pages/PlanEstudiosWizard'))
+const ForceChangePassword = lazy(() => import('./pages/ForceChangePassword'))
+const PedagogicalSupport = lazy(() => import('./pages/PedagogicalSupport'))
+const DifferentialSupport = lazy(() => import('./pages/DifferentialSupport'))
+const GradesBulkImport = lazy(() => import('./pages/GradesBulkImport'))
+const TeacherWorkspace = lazy(() => import('./pages/TeacherWorkspace'))
+const WorkspaceV2Page = lazy(() => import('./pages/WorkspaceV2'))
+const SpaceDetailPage = lazy(() => import('./pages/WorkspaceV2/SpaceDetail'))
+const Classroom = lazy(() => import('./pages/Classroom'))
+const AulaVirtual = lazy(() => import('./pages/aula'))
+const Scale = lazy(() => import('./pages/academic/config/Scale'))
+const Periods = lazy(() => import('./pages/academic/config/Periods'))
+const Levels = lazy(() => import('./pages/academic/config/Levels'))
+const GradingWindows = lazy(() => import('./pages/academic/config/windows/GradingWindows'))
+const RecoveryWindows = lazy(() => import('./pages/academic/config/windows/RecoveryWindows'))
+const Structure = lazy(() => import('./pages/institution/Structure'))
+const Profile = lazy(() => import('./pages/institution/Profile'))
+const InstitutionHub = lazy(() => import('./pages/InstitutionHub'))
+const AcademicHub = lazy(() => import('./pages/AcademicHub'))
+const ReportsHub = lazy(() => import('./pages/ReportsHub'))
+const AdminReports = lazy(() => import('./pages/reports/AdminReports'))
+const AcademicReports = lazy(() => import('./pages/reports/AcademicReports'))
+const CommissionReports = lazy(() => import('./pages/reports/CommissionReports'))
+const AttendanceReports = lazy(() => import('./pages/reports/AttendanceReports'))
+const AlertsReports = lazy(() => import('./pages/reports/AlertsReports'))
+const BulletinsReports = lazy(() => import('./pages/reports/BulletinsReports'))
+const EvaluationReports = lazy(() => import('./pages/reports/EvaluationReports'))
+const PreventiveCutReports = lazy(() => import('./pages/reports/PreventiveCutReports'))
+const SystemConfig = lazy(() => import('./pages/admin/SystemConfig'))
+const InstitutionalPortfolio = lazy(() => import('./pages/InstitutionalPortfolio'))
+const Timetabling = lazy(() => import('./pages/Timetabling'))
+const CapabilitiesConfig = lazy(() => import('./pages/CapabilitiesConfig'))
+const RegisterPlay = lazy(() => import('./pages/play').then((m) => ({ default: m.RegisterPlay })))
+const LoginPlay = lazy(() => import('./pages/play').then((m) => ({ default: m.LoginPlay })))
+const PlayDashboard = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayDashboard })))
+const PlayQuizzes = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayQuizzes })))
+const PlayQuizEditor = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayQuizEditor })))
+const PlayLessons = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayLessons })))
+const PlayLessonEditor = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayLessonEditor })))
+const PlaySessions = lazy(() => import('./pages/play').then((m) => ({ default: m.PlaySessions })))
+const JoinPage = lazy(() => import('./pages/play').then((m) => ({ default: m.JoinPage })))
+const PlayProjector = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayProjector })))
+const PlayLanding = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayLanding })))
+const PlayMe = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayMe })))
+const FinanceHub = lazy(() => import('./pages/finance').then((m) => ({ default: m.FinanceHub })))
+const FinanceDashboard = lazy(() => import('./pages/finance').then((m) => ({ default: m.FinanceDashboard })))
+const ThirdParties = lazy(() => import('./pages/finance').then((m) => ({ default: m.ThirdParties })))
+const ThirdPartyDetail = lazy(() => import('./pages/finance').then((m) => ({ default: m.ThirdPartyDetail })))
+const Concepts = lazy(() => import('./pages/finance').then((m) => ({ default: m.Concepts })))
+const Obligations = lazy(() => import('./pages/finance').then((m) => ({ default: m.Obligations })))
+const ObligationDetail = lazy(() => import('./pages/finance').then((m) => ({ default: m.ObligationDetail })))
+const Payments = lazy(() => import('./pages/finance').then((m) => ({ default: m.Payments })))
+const Expenses = lazy(() => import('./pages/finance').then((m) => ({ default: m.Expenses })))
+const Categories = lazy(() => import('./pages/finance').then((m) => ({ default: m.Categories })))
+const Invoices = lazy(() => import('./pages/finance').then((m) => ({ default: m.Invoices })))
+const FinanceReports = lazy(() => import('./pages/finance').then((m) => ({ default: m.FinanceReports })))
+const FinanceSettings = lazy(() => import('./pages/finance').then((m) => ({ default: m.FinanceSettings })))
+const NewInvoice = lazy(() => import('./pages/finance').then((m) => ({ default: m.NewInvoice })))
+const NewObligation = lazy(() => import('./pages/finance').then((m) => ({ default: m.NewObligation })))
+const NewThirdParty = lazy(() => import('./pages/finance').then((m) => ({ default: m.NewThirdParty })))
+const NewConcept = lazy(() => import('./pages/finance').then((m) => ({ default: m.NewConcept })))
+
 
 function ProtectedRoute({ children, allowChangePassword = false }: { children: React.ReactNode; allowChangePassword?: boolean }) {
   const { isAuthenticated, isLoading, mustChangePassword, user, institution } = useAuth()
@@ -191,6 +198,7 @@ function PlayProtectedRoute({ children }: { children: React.ReactNode }) {
 function PlayRoutes() {
   return (
     <PlayAuthProvider>
+      <Suspense fallback={<div className="flex h-screen items-center justify-center text-slate-400">Cargando…</div>}>
       <Routes>
         <Route path="/" element={<PlayProtectedRoute><PlayLayout><PlayDashboard /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/quizzes" element={<PlayProtectedRoute><PlayLayout><PlayQuizzes /></PlayLayout></PlayProtectedRoute>} />
@@ -201,6 +209,7 @@ function PlayRoutes() {
         <Route path="/me" element={<PlayProtectedRoute><PlayLayout><PlayMe /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/projector/:sessionId" element={<PlayProtectedRoute><PlayProjector /></PlayProtectedRoute>} />
       </Routes>
+      </Suspense>
     </PlayAuthProvider>
   )
 }
@@ -220,6 +229,7 @@ function App() {
       <DialogHost />
       <InstitutionProvider>
       <AcademicProvider>
+      <Suspense fallback={<div className="flex h-screen items-center justify-center text-slate-400">Cargando…</div>}>
       <Routes>
         {/* Landing Page - Página principal pública */}
         <Route path="/" element={<LandingPage />} />
@@ -438,6 +448,7 @@ function App() {
           }
         />
       </Routes>
+      </Suspense>
       </AcademicProvider>
       </InstitutionProvider>
     </AuthProvider>
