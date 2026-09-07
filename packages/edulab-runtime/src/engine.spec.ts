@@ -139,6 +139,19 @@ describe('deterministic simulation engine', () => {
     expect(invalid.events).toEqual([]);
   });
 
+  it('rejects non-deterministic numeric input at the intent boundary', () => {
+    const initial = createAttempt(microLabFixture, {
+      attemptId: 'attempt-micro-lab', mode: 'EXPLORE', seed: 'invalid-number',
+    });
+    const invalid = applyIntent(microLabFixture, initial, {
+      intentId: 'fractional', attemptId: initial.attemptId, expectedVersion: 0,
+      primitive: 'inspect', targetId: 'source-sensor', payload: { reading: 1.5 },
+    });
+    expect(invalid.accepted).toBe(false);
+    expect(invalid.diagnoses[0]?.code).toBe('ENGINE.INTENT_INVALID');
+    expect(invalid.stateHash).toBe(stateHash(initial));
+  });
+
   it('changes replay evidence when an ordered intent changes', () => {
     const options = { attemptId: 'attempt-electric', mode: 'EXPLORE' as const, seed: 'electric-seed' };
     const safe = replay(electricCircuitFixture, options, [

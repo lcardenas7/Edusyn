@@ -30,7 +30,7 @@ export function canonicalize(value: JsonValue): JsonValue {
     return result;
   }
   if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new Error('Canonical JSON only accepts finite numbers.');
+    if (!Number.isSafeInteger(value)) throw new Error('Canonical EduLab JSON only accepts safe integers.');
     return Object.is(value, -0) ? 0 : value;
   }
   return value;

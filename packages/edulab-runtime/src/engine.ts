@@ -18,7 +18,7 @@ import type {
 } from './contracts.js';
 import { canonicalStringify, cloneJson, compareText, hashCanonical, jsonEquals } from './canonical.js';
 import { evaluateCondition, resolveValue, type EvaluationContext } from './conditions.js';
-import { EDULAB_ENGINE_VERSION } from './constants.js';
+import { EDULAB_ENGINE_VERSION, PRIMITIVES } from './constants.js';
 import { createDeterministicPrng } from './prng.js';
 import { assertValidDefinition } from './validator.js';
 
@@ -34,6 +34,29 @@ function asJson(value: unknown): JsonValue {
 
 function stateView(state: AttemptState): JsonObject {
   return state as unknown as JsonObject;
+}
+
+function isDeterministicJson(value: unknown, depth = 0): value is JsonValue {
+  if (depth > 32) return false;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isSafeInteger(value);
+  if (Array.isArray(value)) return value.every((item) => isDeterministicJson(item, depth + 1));
+  if (typeof value !== 'object') return false;
+  return Object.values(value).every((item) => isDeterministicJson(item, depth + 1));
+}
+
+function isIntent(value: unknown): value is Intent {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.intentId === 'string'
+    && candidate.intentId.trim().length > 0
+    && typeof candidate.attemptId === 'string'
+    && candidate.attemptId.trim().length > 0
+    && Number.isSafeInteger(candidate.expectedVersion)
+    && Number(candidate.expectedVersion) >= 0
+    && PRIMITIVES.includes(candidate.primitive as Intent['primitive'])
+    && (candidate.targetId === undefined || (typeof candidate.targetId === 'string' && candidate.targetId.trim().length > 0))
+    && (candidate.payload === undefined || isDeterministicJson(candidate.payload));
 }
 
 export function definitionHash(definition: ExperienceDefinition): string {
@@ -344,10 +367,12 @@ export function createAttempt(definitionInput: unknown, options: CreateAttemptOp
 export function applyIntent(
   definitionInput: unknown,
   currentState: AttemptState,
-  intent: Intent,
+  intentInput: unknown,
 ): EngineStepResult {
   assertValidDefinition(definitionInput);
   const definition = definitionInput;
+  if (!isIntent(intentInput)) return rejectedResult(currentState, 'ENGINE.INTENT_INVALID', 'Intent contract is invalid.');
+  const intent = intentInput;
   if (currentState.definition.definitionHash !== definitionHash(definition)) return rejectedResult(currentState, 'ENGINE.DEFINITION_MISMATCH', 'Attempt definition does not match runtime definition.');
   if (currentState.definition.engineVersion !== EDULAB_ENGINE_VERSION) return rejectedResult(currentState, 'ENGINE.VERSION_MISMATCH', 'Attempt engine version is not supported.');
   if (intent.attemptId !== currentState.attemptId) return rejectedResult(currentState, 'ENGINE.ATTEMPT_MISMATCH', 'Intent belongs to another attempt.');
