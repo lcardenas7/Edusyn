@@ -1,4 +1,16 @@
 /**
+ * OBSOLETO — pendiente de retirada. No ejecutar sin revisarlo antes.
+ *
+ * Fue un relleno puntual de marzo de 2026: propagaba a mano las notas de
+ * recuperacion aprobadas porque el codigo no lo hacia. Ese fallo se corrigio en
+ * el mismo commit, y hoy la propagacion ocurre por el adaptador unico de
+ * escritura de la nota final, con auditoria y contraste de institucion.
+ *
+ * Se conserva por trazabilidad, no porque haga falta. Su retirada esta
+ * propuesta y requiere su propia decision: nadie lo invoca desde package.json,
+ * la integracion continua, el codigo ni la documentacion.
+ */
+/**
  * Script para propagar notas de recuperación aprobadas a PeriodFinalGrade
  * 
  * Problema: Las recuperaciones aprobadas no actualizaban PeriodFinalGrade,
