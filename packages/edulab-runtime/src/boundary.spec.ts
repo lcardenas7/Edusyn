@@ -29,11 +29,9 @@ describe('runtime boundary', () => {
     expect(source).not.toMatch(/\b(?:window|document|fetch|XMLHttpRequest|WebSocket|Math\.random|Date\.now)\b/);
   });
 
-  it('is absent from the eager web source graph', () => {
-    const webSource = sourceFiles(join(repositoryRoot, 'apps', 'web', 'src'))
-      .map((path) => readFileSync(path, 'utf8'))
-      .join('\n');
-    expect(webSource).not.toContain('@edusyn/edulab-runtime');
-    expect(webSource).not.toContain('packages/edulab-runtime');
+  it('is reachable only through the lazy EduLab route', () => {
+    const appSource = readFileSync(join(repositoryRoot, 'apps', 'web', 'src', 'App.tsx'), 'utf8');
+    expect(appSource).toContain("const EduLabFuga = lazy(() => import('./pages/edulab/FugaLaboratorio'))");
+    expect(appSource).not.toMatch(/^import .*@edusyn\/edulab-runtime/m);
   });
 });

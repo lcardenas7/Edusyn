@@ -92,6 +92,7 @@ const SystemConfig = lazy(() => import('./pages/admin/SystemConfig'))
 const InstitutionalPortfolio = lazy(() => import('./pages/InstitutionalPortfolio'))
 const Timetabling = lazy(() => import('./pages/Timetabling'))
 const CapabilitiesConfig = lazy(() => import('./pages/CapabilitiesConfig'))
+const EduLabFuga = lazy(() => import('./pages/edulab/FugaLaboratorio'))
 const RegisterPlay = lazy(() => import('./pages/play').then((m) => ({ default: m.RegisterPlay })))
 const LoginPlay = lazy(() => import('./pages/play').then((m) => ({ default: m.LoginPlay })))
 const PlayDashboard = lazy(() => import('./pages/play').then((m) => ({ default: m.PlayDashboard })))
@@ -248,6 +249,9 @@ function App() {
         <Route path="/join" element={<JoinPage />} />
         <Route path="/join/:code" element={<JoinPage />} />
         <Route path="/play/*" element={<PlayRoutes />} />
+
+        {/* EduLab: experiencia inmersiva aislada del shell y cargada bajo demanda. */}
+        <Route path="/edulab/fuga" element={<ProtectedRoute><EduLabFuga /></ProtectedRoute>} />
         
         {/* Cambio obligatorio de contraseña */}
         <Route
