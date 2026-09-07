@@ -87,6 +87,9 @@ describe('Fuga en el laboratorio', () => {
     state = step(state, 'actuate', incident.containment).state
     expect(state.objectives['control-leak']).toEqual({ achieved: true, demonstrated: false })
     expect(state.objectives['identify-source']).toEqual({ achieved: false, demonstrated: false })
+    const prematureClose = step(state, 'inspect', 'status-panel')
+    expect(prematureClose.accepted).toBe(false)
+    expect(prematureClose.state.status).toBe('ACTIVE')
   })
 
   it('changes the world after a wrong circuit and permits recovery', () => {
@@ -108,7 +111,8 @@ describe('Fuga en el laboratorio', () => {
     expect(unsafe.events[0]?.type).toBe('unsafe_investigation.attempted')
     expect(unsafe.diagnoses[0]?.verdict).toBe('unsafe')
     const secured = safeSetup(unsafe.state)
-    expect(secured.objectives['secure-zone']).toEqual({ achieved: true, demonstrated: false })
+    expect(secured.objectives['secure-zone']).toEqual({ achieved: true, demonstrated: true })
+    expect(secured.world).toMatchObject({ intervention: { hadRecovery: true } })
   })
 
   it('supports the safe escalation ending without pretending scientific completion', () => {

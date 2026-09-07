@@ -99,7 +99,20 @@ export const fugaLaboratorioDefinition: ExperienceDefinition = {
           { op: 'eq', left: state('world.zone.remote'), right: literal(true) },
         ],
       },
-      demonstrates: { op: 'eq', left: state('world.zone.safeOrder'), right: literal(true) },
+      demonstrates: {
+        op: 'any',
+        conditions: [
+          { op: 'eq', left: state('world.zone.safeOrder'), right: literal(true) },
+          {
+            op: 'all',
+            conditions: [
+              { op: 'eq', left: state('world.intervention.hadRecovery'), right: literal(true) },
+              { op: 'eq', left: state('world.zone.isolated'), right: literal(true) },
+              { op: 'eq', left: state('world.zone.remote'), right: literal(true) },
+            ],
+          },
+        ],
+      },
     },
     {
       id: 'identify-source',
@@ -390,8 +403,10 @@ export const fugaLaboratorioDefinition: ExperienceDefinition = {
     {
       id: 'finish-contained', on: 'inspect', targets: ['status-panel'],
       when: { op: 'all', conditions: [
-        { op: 'eq', left: state('world.verification.stable'), right: literal(true) },
-        { op: 'eq', left: state('world.verification.explained'), right: literal(true) },
+        { op: 'eq', left: state('objectives.secure-zone.demonstrated'), right: literal(true) },
+        { op: 'eq', left: state('objectives.identify-source.demonstrated'), right: literal(true) },
+        { op: 'eq', left: state('objectives.control-leak.demonstrated'), right: literal(true) },
+        { op: 'eq', left: state('objectives.verify-and-explain.demonstrated'), right: literal(true) },
         { op: 'eq', left: state('world.intervention.hadRecovery'), right: literal(false) },
       ] },
       effects: [
@@ -402,8 +417,10 @@ export const fugaLaboratorioDefinition: ExperienceDefinition = {
     {
       id: 'finish-after-recovery', on: 'inspect', targets: ['status-panel'],
       when: { op: 'all', conditions: [
-        { op: 'eq', left: state('world.verification.stable'), right: literal(true) },
-        { op: 'eq', left: state('world.verification.explained'), right: literal(true) },
+        { op: 'eq', left: state('objectives.secure-zone.demonstrated'), right: literal(true) },
+        { op: 'eq', left: state('objectives.identify-source.demonstrated'), right: literal(true) },
+        { op: 'eq', left: state('objectives.control-leak.demonstrated'), right: literal(true) },
+        { op: 'eq', left: state('objectives.verify-and-explain.demonstrated'), right: literal(true) },
         { op: 'eq', left: state('world.intervention.hadRecovery'), right: literal(true) },
       ] },
       effects: [
