@@ -80,6 +80,12 @@ describe('Fuga en el laboratorio', () => {
     expect(canonicalReplayEvidence(first)).toBe(canonicalReplayEvidence(second))
   })
 
+  it('uses different incident profiles for the two visible variants', () => {
+    const first = incidentFromGenerated(start('fuga-variante-a').generated.incident)
+    const second = incidentFromGenerated(start('incidente-2').generated.incident)
+    expect(first).not.toEqual(second)
+  })
+
   it('keeps accidental control separate from demonstrated understanding', () => {
     let state = safeSetup(start('fuga-accidental'))
     const incident = incidentFromGenerated(state.generated.incident)

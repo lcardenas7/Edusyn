@@ -105,7 +105,7 @@ function Intro({ onStart, onExit }: { onStart: (mode: AttemptMode, seed: string)
           <fieldset>
             <legend>Variante determinista</legend>
             <label><input type="radio" checked={seed === 'fuga-variante-a'} onChange={() => setSeed('fuga-variante-a')} /> Incidente A</label>
-            <label><input type="radio" checked={seed === 'fuga-variante-b'} onChange={() => setSeed('fuga-variante-b')} /> Incidente B</label>
+            <label><input type="radio" checked={seed === 'incidente-2'} onChange={() => setSeed('incidente-2')} /> Incidente B</label>
           </fieldset>
         </div>
         <button className="edulab-primary" onClick={() => onStart(mode, seed)}>Entrar al laboratorio</button>
@@ -206,7 +206,7 @@ export default function FugaLaboratorio() {
                 <rect x={x - 54} y="72" width="108" height="124" rx="18" fill="url(#steel)" stroke="#9fd9de" strokeWidth="2"/>
                 <rect x={x - 36} y="94" width="72" height="58" rx="8" fill="#0b2a36"/>
                 <text x={x} y="129" textAnchor="middle" fill="#b9f4ef" fontSize="18" fontWeight="700">{String.fromCharCode(65 + index)}</text>
-                <path d={`M${x} 196V286H480V348`} fill="none" stroke={incident.circuit === `circuit-${String.fromCharCode(97 + index)}` ? '#52e2dc' : '#527482'} strokeWidth="12" strokeLinecap="round"/>
+                <path d={`M${x} 196V286H480V348`} fill="none" stroke={world.evidence.includes('circuit-trace') && incident.circuit === `circuit-${String.fromCharCode(97 + index)}` ? '#52e2dc' : '#527482'} strokeWidth="12" strokeLinecap="round"/>
                 <circle cx={x} cy="248" r="14" fill={world.leak.active ? '#f5b942' : '#43d19e'} stroke="#071922" strokeWidth="5"/>
               </g>)}
               <rect x="300" y="340" width="360" height="96" rx="22" fill="#244755" stroke={world.spill.reaction ? '#ff6b57' : '#6cb9bf'} strokeWidth="4"/>
@@ -269,7 +269,7 @@ export default function FugaLaboratorio() {
         <p>{session.state.endingId === 'safe_escalation' ? 'Priorizaste la seguridad y entregaste el incidente a personal responsable.' : 'El estado es seguro. Revisa qué alcanzaste y qué pudiste demostrar con evidencia.'}</p>
         <div className="edulab-ending-grid">{fugaLaboratorioDefinition.objectives.map((objective) => { const objectiveState = session.state.objectives[objective.id]!; return <div key={objective.id}><strong>{objective.statement}</strong><ObjectiveMark achieved={objectiveState.achieved} demonstrated={objectiveState.demonstrated} /></div> })}</div>
         <p className="edulab-replay-proof">Replay local: <strong>{replayVerified ? 'verificado' : 'no coincide'}</strong> · {session.acceptedIntents.length} decisiones aceptadas · seed <code>{session.state.seed}</code> · definición <code>{session.state.definition.definitionHash.slice(-8)}</code></p>
-        <div className="edulab-ending-actions"><button className="edulab-primary" onClick={() => dispatch({ type: 'restart', mode: session.state.mode, seed: session.state.seed })}>Repetir misma variante</button><button className="edulab-secondary" onClick={() => dispatch({ type: 'restart', mode: session.state.mode, seed: session.state.seed === 'fuga-variante-a' ? 'fuga-variante-b' : 'fuga-variante-a' })}>Probar otra variante</button><button className="edulab-exit" onClick={() => navigate('/dashboard')}>Volver a Edusyn</button></div>
+        <div className="edulab-ending-actions"><button className="edulab-primary" onClick={() => dispatch({ type: 'restart', mode: session.state.mode, seed: session.state.seed })}>Repetir misma variante</button><button className="edulab-secondary" onClick={() => dispatch({ type: 'restart', mode: session.state.mode, seed: session.state.seed === 'fuga-variante-a' ? 'incidente-2' : 'fuga-variante-a' })}>Probar otra variante</button><button className="edulab-exit" onClick={() => navigate('/dashboard')}>Volver a Edusyn</button></div>
       </section></div>}
     </main>
   )
