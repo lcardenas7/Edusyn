@@ -11,12 +11,17 @@
 
 import { PrismaClient } from '@prisma/client';
 
+// La conexion NUNCA se escribe aqui: llega por entorno. Una cadena embebida en
+// el repositorio es una credencial publicada, aunque el repositorio parezca privado.
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  throw new Error(
+    'Falta DATABASE_URL. Exportala antes de ejecutar este script; no la escribas en el fichero.',
+  );
+}
+
 const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: 'postgresql://postgres:HAvTNeXPTjDApwRxwPYyqGrLuDMTLNsM@centerbeam.proxy.rlwy.net:53943/railway'
-    }
-  }
+  datasources: { db: { url: DATABASE_URL } },
 });
 
 async function fixRecoveryGrades() {

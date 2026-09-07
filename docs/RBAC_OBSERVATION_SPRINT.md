@@ -35,7 +35,7 @@ Ejecutar cada 3-5 días contra producción:
 
 ```powershell
 # Desde la raíz del proyecto
-$env:DATABASE_URL="postgresql://postgres:HAvTNeXPTjDApwRxwPYyqGrLuDMTLNsM@centerbeam.proxy.rlwy.net:53943/railway"
+$env:DATABASE_URL="postgresql://<USUARIO>:<CLAVE>@<HOST>:<PUERTO>/<BASE>"
 ```
 
 ### Query de verificación (por rol):
@@ -146,7 +146,7 @@ SELECT r.name, COUNT(*) as cnt FROM "InstitutionUserRole" iur JOIN "Role" r ON r
 ## Re-ejecutar backfill (si se necesita)
 
 ```powershell
-$env:DATABASE_URL="postgresql://postgres:HAvTNeXPTjDApwRxwPYyqGrLuDMTLNsM@centerbeam.proxy.rlwy.net:53943/railway"
+$env:DATABASE_URL="postgresql://<USUARIO>:<CLAVE>@<HOST>:<PUERTO>/<BASE>"
 
 # Dry-run primero
 npx tsx scripts/backfill-institution-user-roles.ts
