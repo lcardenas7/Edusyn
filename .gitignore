@@ -41,3 +41,9 @@ outputs/
 
 # Graphify generated graph (local, do not commit)
 graphify-out/
+
+# Documentacion interna: NO se publica. Ver docs/CONVENCION_DOCUMENTACION.md
+# Rutas reservadas; `npm run check:publicable` falla si alguna queda rastreada.
+docs/security/
+docs/internal/
+docs/**/evidence/

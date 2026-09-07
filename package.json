@@ -10,7 +10,8 @@
     "build:api": "npm --workspace apps/api run build",
     "start:api": "npm --workspace apps/api run start:prod",
     "lint": "npm -ws run lint",
-    "check:bom": "node scripts/check-no-bom.mjs apps/api/prisma"
+    "check:bom": "node scripts/check-no-bom.mjs apps/api/prisma",
+    "check:publicable": "node scripts/check-publicable.mjs"
   },
   "dependencies": {
     "@nestjs/throttler": "^6.5.0",

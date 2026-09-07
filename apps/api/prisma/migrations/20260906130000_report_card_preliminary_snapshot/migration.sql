@@ -1,0 +1,23 @@
+-- Congelado PRELIMINAR de boletines — sin cerrar el período.
+--
+-- Responde a una decisión cerrada del rector (2026-08-27): coordinación y administración deben
+-- poder congelar una versión / señalar "listo" sin que eso equivalga al cierre oficial.
+--
+-- Rediseñada sobre el Edusyn vigente. NO reutiliza 20260827120000_report_card_traceability.
+--
+-- ESTRICTAMENTE ADITIVA Y FORWARD-ONLY:
+--   · Un único valor nuevo en un enum existente. Ninguna tabla cambia de forma.
+--   · Cero DELETE, cero DROP, cero TRUNCATE, cero modificación de datos académicos.
+--   · Inerte hasta que algo lo use: ninguna fila existente cambia de tipo.
+--
+-- CÓMO NO INTERFIERE CON LOS SNAPSHOTS OFICIALES:
+--   El índice único es (academicTermId, studentEnrollmentId, version). Los cierres oficiales
+--   numeran hacia arriba (1, 2, 3…) con MAX(version)+1; los preliminares numeran hacia abajo
+--   (−1, −2, −3…). Además, el cálculo de la versión oficial EXCLUYE explícitamente los
+--   PRELIMINARY (ver reports.service.ts), de modo que un preliminar creado antes del primer
+--   cierre no puede hacer que el cierre nazca con versión 0.
+--
+-- REVERSIBILIDAD: un valor añadido a un enum no se revierte en PostgreSQL, pero queda inerte
+--   mientras ninguna fila lo use. No hay nada más que deshacer.
+
+ALTER TYPE "ReportCardSnapshotType" ADD VALUE IF NOT EXISTS 'PRELIMINARY';

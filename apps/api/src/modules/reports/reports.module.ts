@@ -9,12 +9,13 @@ import { ReportsService } from './reports.service';
 import { AcademicDataSourceService } from './academic-data-source.service';
 import { ReportsExportService } from './reports-export.service';
 import { AcademicPdfService } from './academic-pdf.service';
+import { ReportCardGenerationAuditService } from './report-card-generation-audit.service';
 import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Module({
   imports: [PrismaModule, EvaluationModule, AttendanceModule, AcademicModule],
   controllers: [ReportsController],
-  providers: [ReportsService, AcademicDataSourceService, ReportsExportService, AcademicPdfService, ValidateTenantContextGuard],
-  exports: [ReportsService, AcademicDataSourceService, ReportsExportService, AcademicPdfService],
+  providers: [ReportsService, AcademicDataSourceService, ReportsExportService, AcademicPdfService, ReportCardGenerationAuditService, ValidateTenantContextGuard],
+  exports: [ReportsService, AcademicDataSourceService, ReportsExportService, AcademicPdfService, ReportCardGenerationAuditService],
 })
 export class ReportsModule {}

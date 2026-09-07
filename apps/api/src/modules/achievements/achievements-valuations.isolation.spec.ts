@@ -131,6 +131,10 @@ function buildDb() {
       upsert: jest.fn(async (args: any) => { writes.push({ op: 'upsert', args }); return { id: 'sev-1' }; }),
       deleteMany: jest.fn(async (args: any) => { writes.push({ op: 'deleteMany', args }); return { count: 1 }; }),
       count: jest.fn(async () => 0),
+      // Lecturas del estado previo para la auditoría del eje cualitativo (Pieza 2). Van DESPUÉS
+      // de assertOwnership; el aislamiento que prueba este archivo no depende de ellas.
+      findUnique: jest.fn(async () => null),
+      findMany: jest.fn(async () => []),
     },
     convivenciaEntry: {
       upsert: jest.fn(async (args: any) => { writes.push({ op: 'upsert', args }); return { id: 'cv-1' }; }),

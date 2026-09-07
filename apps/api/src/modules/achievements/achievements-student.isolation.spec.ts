@@ -89,6 +89,11 @@ function buildDb() {
         ) ?? null,
       ),
       findMany: jest.fn(async () => []),
+      // Lectura del estado previo para la auditoría del eje cualitativo (Pieza 2). Corre DESPUÉS
+      // de assertOwnership, así que no interviene en el aislamiento que prueba este archivo.
+      findUnique: jest.fn(async ({ where }: any) =>
+        studentAchievements.find((s) => s.id === where.id) ?? null,
+      ),
       create: jest.fn(async (args: any) => { writes.push({ op: 'create', args }); return { id: 'sa-new' }; }),
       update: jest.fn(async (args: any) => { writes.push({ op: 'update', args }); return { id: args.where.id }; }),
     },

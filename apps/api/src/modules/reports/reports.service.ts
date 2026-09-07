@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef, ConflictException } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
-import { EnrollmentStatus, Prisma } from '@prisma/client';
+import { EnrollmentStatus, Prisma, ReportCardSnapshotType } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
@@ -4156,6 +4156,91 @@ export class ReportsService {
    *
    * Si se reabre y vuelve a finalizar → genera nueva versión.
    */
+  /**
+   * Construye las filas de `TermReportCardSnapshot` de un grupo, con sus datos derivados.
+   *
+   * Este bloque vivía DUPLICADO literalmente en `finalizeTerm` y `reSnapshotTerm` — el propio
+   * código lo admitía con un «misma lógica que finalizeTerm». Se extrae para que los tres caminos
+   * que congelan un boletín (cierre, re-snapshot y congelado PRELIMINARY) produzcan exactamente el
+   * mismo documento. Un preliminar que mostrara otro promedio o otro puesto que el cierre no sería
+   * un preliminar: sería otro boletín.
+   *
+   * La extracción es literal: no cambia ninguna regla académica. Lo garantizan las pruebas de
+   * `snapshot-derived-stats.spec.ts`, escritas contra el código duplicado ANTES de tocarlo.
+   */
+  private buildSnapshotRows(
+    groupData: any,
+    rulesCtx: any,
+    opts: { termId: string; version: number; snapshotType: ReportCardSnapshotType; userId: string },
+  ) {
+    // ── Datos derivados por grupo (ranking, promedios, promoción) ──
+    const cardStats = groupData.cards.map((card: any) => {
+      const countableGrades = card.areaGrades
+        .filter((area: any) => area.calculationType !== 'INFORMATIVE')
+        .flatMap((area: any) => area.subjects)
+        .filter((s: any) => s.grade !== null);
+      const generalAverage = countableGrades.length > 0
+        ? Math.round((countableGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / countableGrades.length) * 10) / 10
+        : null;
+      const failedCount = countableGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
+      const approvedCount = countableGrades.length - failedCount;
+      const promotionStatus = countableGrades.length === 0
+        ? 'PENDIENTE'
+        : failedCount === 0 ? 'APRUEBA' : 'NO_APRUEBA';
+      return { enrollmentId: card.enrollmentId, generalAverage, failedCount, approvedCount, promotionStatus };
+    });
+
+    // Ranking: ordenar por promedio descendente
+    const ranked = [...cardStats]
+      .filter((s: any) => s.generalAverage !== null)
+      .sort((a: any, b: any) => (b.generalAverage ?? 0) - (a.generalAverage ?? 0));
+    const totalStudentsRanked = ranked.length;
+
+    const rankMap = new Map<string, number>();
+    for (let i = 0; i < ranked.length; i++) {
+      rankMap.set(ranked[i].enrollmentId, i + 1);
+    }
+
+    // Una fila por estudiante — ENRIQUECIDA con los datos derivados
+    return groupData.cards.map((card: any) => {
+      const stats = cardStats.find((s: any) => s.enrollmentId === card.enrollmentId)!;
+      return {
+        academicTermId: opts.termId,
+        studentEnrollmentId: card.enrollmentId,
+        version: opts.version,
+        snapshotType: opts.snapshotType,
+        generatedById: opts.userId,
+        data: {
+          institution: groupData.institution,
+          academicYear: groupData.academicYear,
+          term: groupData.term,
+          // C-4: contrato de PUBLICACIÓN congelado. Sin esto, un período FINALIZED
+          // pierde estos campos y el documento oficial cambia de aspecto respecto
+          // al que se aprobó (etiquetas, flags de contenido, layout).
+          reportContent: groupData.reportContent as unknown as Prisma.InputJsonValue,
+          academicStructure: groupData.academicStructure as unknown as Prisma.InputJsonValue,
+          displayConfig: groupData.displayConfig as unknown as Prisma.InputJsonValue,
+          student: card.student,
+          group: card.group,
+          areaGrades: card.areaGrades,
+          subjectGrades: card.subjectGrades,
+          structureSource: card.structureSource,
+          attendance: card.attendance,
+          achievements: card.achievements,
+          observations: card.observations,
+          generatedAt: groupData.generatedAt,
+          // ── Campos enriquecidos (Fase 0.2) ──
+          rank: rankMap.get(card.enrollmentId) ?? null,
+          totalStudentsRanked,
+          generalAverage: stats.generalAverage,
+          approvedSubjectsCount: stats.approvedCount,
+          failedSubjectsCount: stats.failedCount,
+          promotionStatus: stats.promotionStatus,
+        },
+      };
+    });
+  }
+
   async finalizeTerm(termId: string, userId: string) {
     // 1. Obtener término con su año académico
     const term = await this.prisma.academicTerm.findUnique({
@@ -4191,8 +4276,11 @@ export class ReportsService {
     }
 
     // 3. Calcular versión
+    // Los congelados PRELIMINARY quedan fuera de este cálculo a propósito: viven en una
+    // numeración negativa propia. Si contaran aquí, un preliminar creado antes del primer
+    // cierre haría que MAX(version) fuera -1 y el cierre oficial naciera con versión 0.
     const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
-      where: { academicTermId: termId },
+      where: { academicTermId: termId, snapshotType: { not: 'PRELIMINARY' } },
       _max: { version: true },
     });
     const version = (lastVersion._max.version ?? 0) + 1;
@@ -4207,71 +4295,8 @@ export class ReportsService {
       try {
         const groupData = await this.buildGroupReportCards(group.id, termId);
 
-        // ── Calcular datos derivados por grupo (ranking, promedios, promoción) ──
-        const cardStats = groupData.cards.map((card) => {
-          const countableGrades = card.areaGrades
-            .filter((area: any) => area.calculationType !== 'INFORMATIVE')
-            .flatMap((area: any) => area.subjects)
-            .filter((s: any) => s.grade !== null);
-          const generalAverage = countableGrades.length > 0
-            ? Math.round((countableGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / countableGrades.length) * 10) / 10
-            : null;
-          const failedCount = countableGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
-          const approvedCount = countableGrades.length - failedCount;
-          const promotionStatus = countableGrades.length === 0
-            ? 'PENDIENTE'
-            : failedCount === 0 ? 'APRUEBA' : 'NO_APRUEBA';
-          return { enrollmentId: card.enrollmentId, generalAverage, failedCount, approvedCount, promotionStatus };
-        });
-
-        // Ranking: ordenar por promedio descendente
-        const ranked = [...cardStats]
-          .filter(s => s.generalAverage !== null)
-          .sort((a, b) => (b.generalAverage ?? 0) - (a.generalAverage ?? 0));
-        const totalStudentsRanked = ranked.length;
-
-        const rankMap = new Map<string, number>();
-        for (let i = 0; i < ranked.length; i++) {
-          rankMap.set(ranked[i].enrollmentId, i + 1);
-        }
-
-        // Guardar snapshot por cada estudiante — ENRIQUECIDO con datos derivados
-        const snapshotData = groupData.cards.map((card) => {
-          const stats = cardStats.find(s => s.enrollmentId === card.enrollmentId)!;
-          return {
-            academicTermId: termId,
-            studentEnrollmentId: card.enrollmentId,
-            version,
-            snapshotType: 'INITIAL_CLOSE' as const,
-            generatedById: userId,
-            data: {
-              institution: groupData.institution,
-              academicYear: groupData.academicYear,
-              term: groupData.term,
-              // C-4: contrato de PUBLICACIÓN congelado. Sin esto, un período FINALIZED
-              // pierde estos campos y el documento oficial cambia de aspecto respecto
-              // al que se aprobó (etiquetas, flags de contenido, layout).
-              reportContent: groupData.reportContent as unknown as Prisma.InputJsonValue,
-              academicStructure: groupData.academicStructure as unknown as Prisma.InputJsonValue,
-              displayConfig: groupData.displayConfig as unknown as Prisma.InputJsonValue,
-              student: card.student,
-              group: card.group,
-              areaGrades: card.areaGrades,
-              subjectGrades: card.subjectGrades,
-              structureSource: card.structureSource,
-              attendance: card.attendance,
-              achievements: card.achievements,
-              observations: card.observations,
-              generatedAt: groupData.generatedAt,
-              // ── Campos enriquecidos (Fase 0.2) ──
-              rank: rankMap.get(card.enrollmentId) ?? null,
-              totalStudentsRanked,
-              generalAverage: stats.generalAverage,
-              approvedSubjectsCount: stats.approvedCount,
-              failedSubjectsCount: stats.failedCount,
-              promotionStatus: stats.promotionStatus,
-            },
-          };
+        const snapshotData = this.buildSnapshotRows(groupData, rulesCtx, {
+          termId, version, snapshotType: 'INITIAL_CLOSE', userId,
         });
 
         // Bulk insert snapshots
@@ -4367,6 +4392,108 @@ export class ReportsService {
    * Crea una nueva versión de snapshots usando buildGroupReportCards actualizado.
    * Útil cuando se corrigen bugs en la generación de snapshots.
    */
+  /**
+   * Siguiente versión para un congelado PRELIMINARY.
+   *
+   * Los preliminares numeran hacia abajo (−1, −2, −3…) y los oficiales hacia arriba (1, 2, 3…).
+   * Así conviven bajo el mismo índice único `(academicTermId, studentEnrollmentId, version)` sin
+   * disputarse un número, y **ningún preliminar puede desplazar la numeración oficial**, que es
+   * la condición que puso el rector: un congelado de trabajo no se confunde con el cierre.
+   *
+   * Se calcula por MIN sobre los preliminares del período, no por conteo: si alguna vez se borrara
+   * una fila, un conteo reutilizaría un número ya usado y chocaría con el índice único.
+   */
+  async preliminaryVersionFor(termId: string): Promise<number> {
+    const menor = await this.prisma.termReportCardSnapshot.aggregate({
+      where: { academicTermId: termId, snapshotType: 'PRELIMINARY' },
+      _min: { version: true },
+    });
+    const actual = menor._min.version ?? 0;
+    return (actual < 0 ? actual : 0) - 1;
+  }
+
+  /**
+   * Congela un boletín PRELIMINAR de todo el período, **sin cerrarlo**.
+   *
+   * Responde a la decisión del rector: coordinación y administración deben poder decir «esto es lo
+   * que hay a día de hoy» y dejarlo fijado, sin que eso equivalga al cierre oficial.
+   *
+   * Un preliminar tiene la MISMA estructura académica que un cierre — mismas estadísticas, mismo
+   * promedio, mismo puesto, mismo estado de promoción — porque comparte `buildSnapshotRows` con
+   * `finalizeTerm` y `reSnapshotTerm`. Un preliminar empobrecido no serviría para lo que se pide:
+   * comparar lo congelado con lo que se cerró después.
+   *
+   * Lo único que cambia respecto a un cierre:
+   *   · el TIPO (`PRELIMINARY`) y la NUMERACIÓN (negativa, ver `preliminaryVersionFor`);
+   *   · el MOMENTO: no exige `CLOSED`, se puede pedir con el período abierto;
+   *   · la FINALIDAD: **no cierra el período ni toca su estado**, y no escribe ninguna nota.
+   */
+  async createPreliminarySnapshot(termId: string, userId: string) {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: termId },
+      include: { academicYear: { select: { id: true, institutionId: true } } },
+    });
+
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    // A diferencia del cierre, aquí NO se exige un estado concreto: el sentido de un preliminar
+    // es justamente poder congelar mientras el período sigue vivo. Lo único que se rechaza es un
+    // período ya finalizado, donde el documento oficial existe y un «preliminar» no significa nada.
+    if (term.status === 'FINALIZED') {
+      throw new BadRequestException(
+        'El período ya está finalizado: existe un boletín oficial y un congelado preliminar no aplica.',
+      );
+    }
+
+    const groups = await this.prisma.group.findMany({
+      where: {
+        studentEnrollments: { some: { academicYearId: term.academicYearId, status: 'ACTIVE' } },
+      },
+      select: { id: true, name: true, grade: { select: { name: true } } },
+    });
+
+    if (groups.length === 0) {
+      throw new BadRequestException('No hay grupos con estudiantes activos para este período');
+    }
+
+    const version = await this.preliminaryVersionFor(termId);
+    const rulesCtx = await this.institutionContext.getContext(term.academicYear.institutionId);
+
+    let totalSnapshots = 0;
+    const groupResults: { groupId: string; groupName: string; students: number; error?: string }[] = [];
+
+    for (const group of groups) {
+      const groupName = group.grade ? `${group.grade.name} ${group.name}` : group.name;
+      try {
+        const groupData = await this.buildGroupReportCards(group.id, termId);
+        const snapshotData = this.buildSnapshotRows(groupData, rulesCtx, {
+          termId, version, snapshotType: 'PRELIMINARY', userId,
+        });
+
+        for (const snap of snapshotData) {
+          await this.prisma.termReportCardSnapshot.create({ data: snap });
+          totalSnapshots++;
+        }
+        groupResults.push({ groupId: group.id, groupName, students: snapshotData.length });
+      } catch (error) {
+        console.error(`[createPreliminarySnapshot] Error procesando grupo ${group.id}:`, error.message);
+        groupResults.push({ groupId: group.id, groupName, students: 0, error: error.message });
+      }
+    }
+
+    // Deliberadamente NO se toca `academicTerm`: un preliminar no cierra, no finaliza y no reabre.
+    return {
+      success: true,
+      termId,
+      version,
+      snapshotType: 'PRELIMINARY' as const,
+      totalSnapshots,
+      totalGroups: groups.length,
+      groupResults,
+      termStatus: term.status,
+    };
+  }
+
   async reSnapshotTerm(termId: string, userId: string) {
     const term = await this.prisma.academicTerm.findUnique({
       where: { id: termId },
@@ -4401,8 +4528,11 @@ export class ReportsService {
     }
 
     // Calcular nueva versión
+    // Los congelados PRELIMINARY quedan fuera de este cálculo a propósito: viven en una
+    // numeración negativa propia. Si contaran aquí, un preliminar creado antes del primer
+    // cierre haría que MAX(version) fuera -1 y el cierre oficial naciera con versión 0.
     const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
-      where: { academicTermId: termId },
+      where: { academicTermId: termId, snapshotType: { not: 'PRELIMINARY' } },
       _max: { version: true },
     });
     const version = (lastVersion._max.version ?? 0) + 1;
@@ -4425,69 +4555,8 @@ export class ReportsService {
         try {
           const groupData = await this.buildGroupReportCards(group.id, termId);
 
-          // Calcular datos derivados (misma lógica que finalizeTerm)
-          const cardStats = groupData.cards.map((card) => {
-            const allGrades = card.areaGrades
-              .filter((area: any) => area.calculationType !== 'INFORMATIVE')
-              .flatMap((area: any) => area.subjects)
-              .filter((s: any) => s.grade !== null);
-            const generalAverage = allGrades.length > 0
-              ? Math.round((allGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
-              : null;
-            const failedCount = allGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
-            const approvedCount = allGrades.length - failedCount;
-            const promotionStatus = allGrades.length === 0
-              ? 'PENDIENTE'
-              : failedCount === 0 ? 'APRUEBA' : 'NO_APRUEBA';
-            return { enrollmentId: card.enrollmentId, generalAverage, failedCount, approvedCount, promotionStatus };
-          });
-
-          // Ranking
-          const ranked = [...cardStats]
-            .filter(s => s.generalAverage !== null)
-            .sort((a, b) => (b.generalAverage ?? 0) - (a.generalAverage ?? 0));
-          const totalStudentsRanked = ranked.length;
-          const rankMap = new Map<string, number>();
-          for (let i = 0; i < ranked.length; i++) {
-            rankMap.set(ranked[i].enrollmentId, i + 1);
-          }
-
-          // Guardar snapshots
-          const snapshotData = groupData.cards.map((card) => {
-            const stats = cardStats.find(s => s.enrollmentId === card.enrollmentId)!;
-            return {
-              academicTermId: termId,
-              studentEnrollmentId: card.enrollmentId,
-              version,
-              snapshotType: 'INITIAL_CLOSE' as const,
-              generatedById: userId,
-              data: {
-                institution: groupData.institution,
-                academicYear: groupData.academicYear,
-                term: groupData.term,
-                // C-4: contrato de PUBLICACIÓN congelado. Sin esto, un período FINALIZED
-                // pierde estos campos y el documento oficial cambia de aspecto respecto
-                // al que se aprobó (etiquetas, flags de contenido, layout).
-                reportContent: groupData.reportContent as unknown as Prisma.InputJsonValue,
-                academicStructure: groupData.academicStructure as unknown as Prisma.InputJsonValue,
-                displayConfig: groupData.displayConfig as unknown as Prisma.InputJsonValue,
-                student: card.student,
-                group: card.group,
-                areaGrades: card.areaGrades,
-                subjectGrades: card.subjectGrades,
-                structureSource: card.structureSource,
-                attendance: card.attendance,
-                achievements: card.achievements,
-                observations: card.observations,
-                generatedAt: groupData.generatedAt,
-                rank: rankMap.get(card.enrollmentId) ?? null,
-                totalStudentsRanked,
-                generalAverage: stats.generalAverage,
-                approvedSubjectsCount: stats.approvedCount,
-                failedSubjectsCount: stats.failedCount,
-                promotionStatus: stats.promotionStatus,
-              },
-            };
+          const snapshotData = this.buildSnapshotRows(groupData, rulesCtx, {
+            termId, version, snapshotType: 'INITIAL_CLOSE', userId,
           });
 
           for (const snap of snapshotData) {

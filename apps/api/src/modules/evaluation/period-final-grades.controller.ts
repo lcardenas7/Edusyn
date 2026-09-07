@@ -6,6 +6,8 @@ import { PeriodFinalGradesService, QuienEscribe } from './period-final-grades.se
 import { actorFromRequest } from './grade-audit-actor.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('period-final-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,6 +42,8 @@ export class PeriodFinalGradesController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async upsert(@Body() data: any, @Req() req: any) {
     return this.periodFinalGradesService.upsert(
       { ...data, enteredById: req.user.id },
@@ -50,6 +54,8 @@ export class PeriodFinalGradesController {
 
   @Post('bulk')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async bulkUpsert(@Body() data: { grades: any[]; reason?: unknown }, @Req() req: any) {
     // Una causal declarada para el lote se aplica a cada fila que no traiga la suya.
     const grades = (data.grades ?? []).map((g: any) => ({ reason: data.reason, ...g }));
@@ -81,6 +87,8 @@ export class PeriodFinalGradesController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async delete(@Param('id') id: string, @Req() req: any, @Query('reason') reason?: string) {
     return this.periodFinalGradesService.delete(
       id,

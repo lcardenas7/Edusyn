@@ -7,6 +7,20 @@ import { RetirableEvidence, isEvidenceVigente, collectRetirementTermIds } from '
 /** Origen de auditoría E-5 para el catálogo de evidencias/imprescindibles (D-12). */
 export const EVIDENCE_AUDIT_SOURCE = 'ACHIEVEMENT_EVIDENCE';
 
+/**
+ * Orígenes de auditoría del EJE CUALITATIVO por estudiante (Pieza 2).
+ *
+ * El catálogo ya se auditaba con `ACHIEVEMENT_EVIDENCE`; lo que faltaba era lo que de verdad
+ * aparece en el boletín de un niño: su valoración, su juicio y su observación. Se separan por
+ * origen —y no por tabla— porque la pregunta forense siempre se hace en estos términos: «¿qué le
+ * cambiaron a este estudiante y quién fue?».
+ *
+ * Se usa el mecanismo vigente (`GradeAuditEvent`). No hay una segunda auditoría compitiendo.
+ */
+export const VALUATION_AUDIT_SOURCE = 'ACHIEVEMENT_VALUATION';   // valoración de un imprescindible
+export const JUDGEMENT_AUDIT_SOURCE = 'ACHIEVEMENT_JUDGEMENT';   // juicio valorativo del aprendizaje
+export const OBSERVATION_AUDIT_SOURCE = 'ACHIEVEMENT_OBSERVATION'; // observación escrita del docente
+
 @Injectable()
 export class AchievementService {
   private readonly logger = new Logger(AchievementService.name);
@@ -358,7 +372,9 @@ export class AchievementService {
     performanceLevel: PerformanceLevel;
     observation?: string | null;
     createdById?: string;
-  }, institutionId: string) {
+    /** Motivo declarado. Se registra si viene; no se inventa cuando falta. */
+    reason?: string | null;
+  }, institutionId: string, actor?: GradeAuditActor) {
     // A-1: los tres identificadores vienen del cliente. El aserto corre ANTES de la
     // guarda D-12/H-19 a propósito: si la evidencia fuese de otro tenant y estuviese
     // retirada, devolver el ConflictException revelaría que existe y en qué estado.
@@ -385,7 +401,20 @@ export class AchievementService {
       );
     }
 
-    return this.prisma.studentEvidenceValuation.upsert({
+    // Estado previo, ANTES de escribir: sin él, el evento diría qué quedó pero no qué había,
+    // y «¿qué cambió?» no tendría respuesta.
+    const previa = await this.prisma.studentEvidenceValuation.findUnique({
+      where: {
+        studentEnrollmentId_achievementEvidenceId_academicTermId: {
+          studentEnrollmentId: data.studentEnrollmentId,
+          achievementEvidenceId: data.achievementEvidenceId,
+          academicTermId: data.academicTermId,
+        },
+      },
+      select: { id: true, performanceLevel: true, observation: true },
+    });
+
+    const resultado = await this.prisma.studentEvidenceValuation.upsert({
       where: {
         studentEnrollmentId_achievementEvidenceId_academicTermId: {
           studentEnrollmentId: data.studentEnrollmentId,
@@ -408,6 +437,28 @@ export class AchievementService {
         createdById: data.createdById,
       },
     });
+
+    await this.auditQualitative([{
+      institutionId,
+      source: VALUATION_AUDIT_SOURCE,
+      // CREATE frente a UPDATE distingue la carga inicial de una corrección posterior.
+      action: previa ? 'UPDATE' : 'CREATE',
+      recordId: resultado.id,
+      studentEnrollmentId: data.studentEnrollmentId,
+      academicTermId: data.academicTermId,
+      activityName: evidence.text,
+      reason: data.reason ?? null,
+      previousValue: previa
+        ? { performanceLevel: previa.performanceLevel, observation: previa.observation }
+        : null,
+      newValue: {
+        achievementEvidenceId: data.achievementEvidenceId,
+        performanceLevel: data.performanceLevel,
+        observation: data.observation ?? null,
+      },
+    }], actor);
+
+    return resultado;
   }
 
   /** Elimina la valoración de un imprescindible (cuando el docente la quita). */
@@ -416,6 +467,8 @@ export class AchievementService {
     achievementEvidenceId: string,
     academicTermId: string,
     institutionId: string,
+    actor?: GradeAuditActor,
+    reason?: string | null,
   ) {
     // A-2: el índice único (studentEnrollmentId, achievementEvidenceId, academicTermId)
     // acota el borrado a UNA fila como máximo, pero sin este aserto bastaba un solo
@@ -425,9 +478,32 @@ export class AchievementService {
       achievementEvidenceId,
       academicTermId,
     });
+    // Lo que se va a borrar, leído antes de borrarlo. Es la única oportunidad de conservarlo.
+    const previas = await this.prisma.studentEvidenceValuation.findMany({
+      where: { studentEnrollmentId, achievementEvidenceId, academicTermId },
+      select: { id: true, performanceLevel: true, observation: true },
+    });
+
     await this.prisma.studentEvidenceValuation.deleteMany({
       where: { studentEnrollmentId, achievementEvidenceId, academicTermId },
     });
+
+    await this.auditQualitative(previas.map((previa) => ({
+      institutionId,
+      source: VALUATION_AUDIT_SOURCE,
+      action: 'DELETE' as const,
+      recordId: previa.id,
+      studentEnrollmentId,
+      academicTermId,
+      reason: reason ?? null,
+      previousValue: {
+        achievementEvidenceId,
+        performanceLevel: previa.performanceLevel,
+        observation: previa.observation,
+      },
+      newValue: null,
+    })), actor);
+
     return { success: true };
   }
 
@@ -987,6 +1063,37 @@ export class AchievementService {
     }
   }
 
+  /**
+   * Registra eventos del eje cualitativo. **Nunca impide la operación.**
+   *
+   * Misma regla que el resto de la auditoría de notas: si el registro falla, el cambio académico
+   * ya se aplicó y el docente debe recibir su respuesta normal. Un fallo de auditoría que dejara
+   * a un docente sin poder valorar sería peor que el hueco que esta pieza viene a tapar.
+   *
+   * Grano: **un evento por estudiante/registro afectado**, también en las operaciones masivas,
+   * donde además comparten `batchId`. Se eligió así porque la reconstrucción posterior siempre se
+   * pide por estudiante; un evento por lote no permitiría responder «¿qué le cambió a este niño?».
+   */
+  private async auditQualitative(
+    events: Parameters<GradeAuditService['recordMany']>[0],
+    actor?: GradeAuditActor,
+  ) {
+    if (!events.length) return;
+    try {
+      await this.gradeAudit?.recordMany(events, actor);
+    } catch (err: any) {
+      this.logger.error(
+        `No se pudieron auditar ${events.length} cambio(s) del eje cualitativo: ${err?.message || err}. ` +
+        'Los cambios SÍ se aplicaron.',
+      );
+    }
+  }
+
+  /** Identificador de lote, común a todos los eventos de una misma operación masiva. */
+  private newBatchId() {
+    return `qual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
   private async recordEvidenceAudit(params: {
     institutionId: string;
     academicTermId: string | null;
@@ -1433,13 +1540,40 @@ export class AchievementService {
     };
   }
 
-  async updateStudentObservation(id: string, observation: string, institutionId: string) {
+  async updateStudentObservation(
+    id: string,
+    observation: string,
+    institutionId: string,
+    actor?: GradeAuditActor,
+    reason?: string | null,
+  ) {
     // A-5: operaba por id sin ninguna referencia a institución.
     await this.assertOwnership(institutionId, { studentAchievementId: id });
-    return this.prisma.studentAchievement.update({
+
+    const previa = await this.prisma.studentAchievement.findUnique({
+      where: { id },
+      select: { observation: true, studentEnrollmentId: true, academicTermId: true },
+    });
+
+    const actualizada = await this.prisma.studentAchievement.update({
       where: { id },
       data: { observation },
     });
+
+    await this.auditQualitative([{
+      institutionId,
+      source: OBSERVATION_AUDIT_SOURCE,
+      // Una observación que ya tenía texto y se reescribe es una corrección, no una carga inicial.
+      action: previa?.observation ? 'UPDATE' : 'CREATE',
+      recordId: id,
+      studentEnrollmentId: previa?.studentEnrollmentId ?? null,
+      academicTermId: previa?.academicTermId ?? null,
+      reason: reason ?? null,
+      previousValue: { observation: previa?.observation ?? null },
+      newValue: { observation },
+    }], actor);
+
+    return actualizada;
   }
 
   async upsertStudentAchievement(data: {
@@ -1456,7 +1590,9 @@ export class AchievementService {
     attitudinalText?: string;
     observation?: string;
     approvedById?: string;
-  }, institutionId: string) {
+    /** Motivo declarado. Se registra si viene; no se inventa cuando falta. */
+    reason?: string | null;
+  }, institutionId: string, actor?: GradeAuditActor) {
     // A-4/A-5: los tres identificadores vienen del cliente y deben pertenecer TODOS
     // al tenant del actor. Va antes de resolver el período, que ya lee el aprendizaje.
     await this.assertOwnership(institutionId, {
@@ -1464,7 +1600,7 @@ export class AchievementService {
       achievementId: data.achievementId,
       ...(data.academicTermId ? { academicTermId: data.academicTermId } : {}),
     });
-    return this.upsertStudentAchievementCore(data, institutionId);
+    return this.upsertStudentAchievementCore(data, institutionId, { actor, reason: data.reason });
   }
 
   /**
@@ -1486,7 +1622,7 @@ export class AchievementService {
     attitudinalText?: string;
     observation?: string;
     approvedById?: string;
-  }, institutionId: string) {
+  }, institutionId: string, audit?: { actor?: GradeAuditActor; batchId?: string; reason?: string | null }) {
     // Resolver el período de la valoración: explícito, o el del aprendizaje (por-período).
     let academicTermId = data.academicTermId ?? null;
     if (!academicTermId) {
@@ -1536,13 +1672,23 @@ export class AchievementService {
       if (existing.institutionId !== institutionId) {
         throw new NotFoundException('Valoración no encontrada');
       }
-      return this.prisma.studentAchievement.update({
+      const actualizada = await this.prisma.studentAchievement.update({
         where: { id: existing.id },
         data: updateData,
       });
+      await this.auditJudgement({
+        institutionId, academicTermId, audit,
+        action: 'UPDATE',
+        recordId: existing.id,
+        studentEnrollmentId: data.studentEnrollmentId,
+        achievementId: data.achievementId,
+        previa: existing,
+        nueva: actualizada,
+      });
+      return actualizada;
     }
 
-    return this.prisma.studentAchievement.create({
+    const creada = await this.prisma.studentAchievement.create({
       data: {
         institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
@@ -1558,6 +1704,60 @@ export class AchievementService {
         attitudinalText: data.attitudinalText,
       },
     });
+    await this.auditJudgement({
+      institutionId, academicTermId, audit,
+      action: 'CREATE',
+      recordId: creada.id,
+      studentEnrollmentId: data.studentEnrollmentId,
+      achievementId: data.achievementId,
+      previa: null,
+      nueva: creada,
+    });
+    return creada;
+  }
+
+  /**
+   * Los campos del juicio valorativo que se conservan en la auditoría.
+   *
+   * Se guarda este subconjunto y no la fila entera a propósito: son los que acaban impresos en el
+   * boletín. Guardar el resto engordaría el registro sin responder mejor a «que le cambiaron».
+   */
+  private judgementSnapshot(fila: any) {
+    if (!fila) return null;
+    return {
+      performanceLevel: fila.performanceLevel ?? null,
+      approvedText: fila.approvedText ?? null,
+      isTextApproved: fila.isTextApproved ?? null,
+      approvedJudgment: fila.approvedJudgment ?? null,
+      isJudgmentApproved: fila.isJudgmentApproved ?? null,
+      attitudinalText: fila.attitudinalText ?? null,
+      observation: fila.observation ?? null,
+    };
+  }
+
+  private async auditJudgement(p: {
+    institutionId: string;
+    academicTermId: string | null;
+    audit?: { actor?: GradeAuditActor; batchId?: string; reason?: string | null };
+    action: 'CREATE' | 'UPDATE';
+    recordId: string;
+    studentEnrollmentId: string;
+    achievementId: string;
+    previa: any;
+    nueva: any;
+  }) {
+    await this.auditQualitative([{
+      institutionId: p.institutionId,
+      source: JUDGEMENT_AUDIT_SOURCE,
+      action: p.action,
+      recordId: p.recordId,
+      studentEnrollmentId: p.studentEnrollmentId,
+      academicTermId: p.academicTermId,
+      batchId: p.audit?.batchId ?? null,
+      reason: p.audit?.reason ?? null,
+      previousValue: this.judgementSnapshot(p.previa),
+      newValue: { achievementId: p.achievementId, ...this.judgementSnapshot(p.nueva) },
+    }], p.audit?.actor);
   }
 
   async approveStudentAchievement(
@@ -1566,12 +1766,18 @@ export class AchievementService {
     data: {
       approvedText: string;
       approvedJudgment?: string;
+      /** Motivo declarado. Se registra si viene; no se inventa cuando falta. */
+      reason?: string | null;
     },
     institutionId: string,
+    actor?: GradeAuditActor,
   ) {
     // A-5: aprobar una valoración ajena era posible con solo conocer su id.
     await this.assertOwnership(institutionId, { studentAchievementId: id });
-    return this.prisma.studentAchievement.update({
+
+    const previa = await this.prisma.studentAchievement.findUnique({ where: { id } });
+
+    const aprobada = await this.prisma.studentAchievement.update({
       where: { id },
       data: {
         approvedText: data.approvedText,
@@ -1582,6 +1788,22 @@ export class AchievementService {
         approvedById,
       },
     });
+
+    // Aprobar es siempre UPDATE: la fila ya existía. Aquí es donde un juicio pasa a ser
+    // el texto que se imprime, así que es justo el momento que interesa poder reconstruir.
+    await this.auditJudgement({
+      institutionId,
+      academicTermId: previa?.academicTermId ?? null,
+      audit: { actor, reason: data.reason },
+      action: 'UPDATE',
+      recordId: id,
+      studentEnrollmentId: previa?.studentEnrollmentId ?? '',
+      achievementId: previa?.achievementId ?? '',
+      previa,
+      nueva: aprobada,
+    });
+
+    return aprobada;
   }
 
   // ============================================
@@ -1596,6 +1818,7 @@ export class AchievementService {
       finalGrade: number;
     }>,
     academicTermId?: string,
+    actor?: GradeAuditActor,
   ) {
     // A-4: `institutionId` ya llega resuelto del actor (el controlador ignora el del
     // cuerpo). Se valida el aprendizaje y TODAS las matrículas del lote de una vez,
@@ -1611,6 +1834,9 @@ export class AchievementService {
       where: { institutionId },
       orderBy: { minScore: 'asc' },
     });
+
+    // Mismo criterio de grano que en el autorrelleno: un evento por estudiante, `batchId` común.
+    const batchId = this.newBatchId();
 
     const results = await Promise.all(
       studentGrades.map(async (sg) => {
@@ -1633,7 +1859,7 @@ export class AchievementService {
           performanceLevel: level,
           suggestedText: suggestion.suggestedText,
           suggestedJudgment: suggestion.suggestedJudgment,
-        }, institutionId);
+        }, institutionId, { actor, batchId });
       }),
     );
 
@@ -1664,6 +1890,7 @@ export class AchievementService {
     studentEnrollmentIds: string[],
     institutionId: string,
     academicTermId?: string,
+    actor?: GradeAuditActor,
   ) {
     // A-4: aprendizaje + lote completo de matrículas, en una sola validación previa.
     // Si una sola matrícula es ajena o inexistente, se rechaza el lote entero y no se
@@ -1712,6 +1939,9 @@ export class AchievementService {
       }
     }
 
+    // Mismo criterio de grano: un evento por estudiante, `batchId` común al lote.
+    const batchId = this.newBatchId();
+
     const results = await Promise.all(
       studentEnrollmentIds.map(async (enrollmentId) => {
         const grade = gradeMap.get(enrollmentId) || 0;
@@ -1722,7 +1952,7 @@ export class AchievementService {
           achievementId,
           academicTermId: valuationTermId,
           performanceLevel: level as any,
-        }, institutionId);
+        }, institutionId, { actor, batchId });
       }),
     );
 
@@ -1732,6 +1962,7 @@ export class AchievementService {
   async autoFillObservations(
     achievementId: string,
     institutionId: string,
+    actor?: GradeAuditActor,
   ) {
     // A-4: el aprendizaje debe pertenecer al actor. Sus valoraciones se resuelven
     // luego por `achievementId`, así que basta anclar el aprendizaje.
@@ -1757,18 +1988,41 @@ export class AchievementService {
       where: { achievementId },
     });
 
+    // Un lote = un `batchId` común. Los eventos siguen siendo uno por estudiante (así se puede
+    // preguntar «que le cambiaron a este niño»), y el lote se reconstruye agrupando por este id.
+    const batchId = this.newBatchId();
+    const eventos: Parameters<GradeAuditService['recordMany']>[0] = [];
+
     const results = await Promise.all(
       studentAchievements.map(async (sa) => {
         const template = templateMap.get(sa.performanceLevel);
         if (template) {
-          return this.prisma.studentAchievement.update({
+          const actualizada = await this.prisma.studentAchievement.update({
             where: { id: sa.id },
             data: { observation: template },
           });
+          eventos.push({
+            institutionId,
+            source: OBSERVATION_AUDIT_SOURCE,
+            // Sobrescribir una observación ya escrita es corrección; rellenar una vacía es carga.
+            action: sa.observation ? 'UPDATE' : 'CREATE',
+            recordId: sa.id,
+            studentEnrollmentId: sa.studentEnrollmentId,
+            academicTermId: sa.academicTermId,
+            batchId,
+            activityName: 'Autorrelleno de observaciones',
+            previousValue: { observation: sa.observation ?? null },
+            newValue: { observation: template, achievementId },
+          });
+          return actualizada;
         }
+        // Sin plantilla no se escribe nada, así que tampoco se audita: un evento aquí
+        // registraría un cambio que no ocurrió.
         return sa;
       }),
     );
+
+    await this.auditQualitative(eventos, actor);
 
     return results;
   }

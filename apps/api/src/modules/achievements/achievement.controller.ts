@@ -252,10 +252,12 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async upsertEvidenceValuation(
     @Request() req: any,
-    @Body() body: { studentEnrollmentId: string; achievementEvidenceId: string; academicTermId: string; performanceLevel: any; observation?: string | null },
+    @Body() body: { studentEnrollmentId: string; achievementEvidenceId: string; academicTermId: string; performanceLevel: any; observation?: string | null; reason?: string | null },
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req);
-    return this.achievementService.upsertEvidenceValuation({ ...body, createdById: req.user?.id }, instId);
+    return this.achievementService.upsertEvidenceValuation(
+      { ...body, createdById: req.user?.id }, instId, this.actorFrom(req),
+    );
   }
 
   @Delete('evidence-valuations')
@@ -265,6 +267,7 @@ export class AchievementController {
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('achievementEvidenceId') achievementEvidenceId: string,
     @Query('academicTermId') academicTermId: string,
+    @Query('reason') reason?: string,
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req);
     return this.achievementService.deleteEvidenceValuation(
@@ -272,6 +275,8 @@ export class AchievementController {
       achievementEvidenceId,
       academicTermId,
       instId,
+      this.actorFrom(req),
+      reason ?? null,
     );
   }
 
@@ -493,6 +498,7 @@ export class AchievementController {
       instId,
       body.studentGrades,
       body.academicTermId,
+      this.actorFrom(req),
     );
   }
 
@@ -514,6 +520,7 @@ export class AchievementController {
       body.studentEnrollmentIds,
       instId,
       body.academicTermId,
+      this.actorFrom(req),
     );
   }
 
@@ -531,6 +538,7 @@ export class AchievementController {
     return this.achievementService.autoFillObservations(
       body.achievementId,
       instId,
+      this.actorFrom(req),
     );
   }
 
@@ -538,11 +546,13 @@ export class AchievementController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async updateStudentObservation(
     @Param('id') id: string,
-    @Body() body: { observation: string },
+    @Body() body: { observation: string; reason?: string | null },
     @Request() req: any,
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req);
-    return this.achievementService.updateStudentObservation(id, body.observation, instId);
+    return this.achievementService.updateStudentObservation(
+      id, body.observation, instId, this.actorFrom(req), body.reason ?? null,
+    );
   }
 
   @Put('students/:id')
@@ -563,6 +573,7 @@ export class AchievementController {
       isJudgmentApproved?: boolean;
       attitudinalText?: string;
       observation?: string;
+      reason?: string | null;
     },
     @Request() req: any,
   ) {
@@ -570,7 +581,7 @@ export class AchievementController {
     return this.achievementService.upsertStudentAchievement({
       ...body,
       approvedById: req.user?.id,
-    }, instId);
+    }, instId, this.actorFrom(req));
   }
 
   @Post('students/:id/approve')
@@ -581,11 +592,14 @@ export class AchievementController {
     body: {
       approvedText: string;
       approvedJudgment?: string;
+      reason?: string | null;
     },
     @Request() req: any,
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req);
-    return this.achievementService.approveStudentAchievement(id, req.user.id, body, instId);
+    return this.achievementService.approveStudentAchievement(
+      id, req.user.id, body, instId, this.actorFrom(req),
+    );
   }
 
   // ============================================

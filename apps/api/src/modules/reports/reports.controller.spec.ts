@@ -22,7 +22,12 @@ describe('ReportsController tenant resolution', () => {
     };
     return {
       reportsService,
-      controller: new ReportsController(reportsService as any, {} as any, {} as any, capabilitiesService as any, {} as any),
+      controller: new ReportsController(
+        reportsService as any, {} as any, {} as any, capabilitiesService as any, {} as any,
+        // Auditoría de emisión (Pieza 1). Doble inerte: estas pruebas no emiten boletines,
+        // y auditar nunca debe condicionar lo que el controlador responde.
+        { recordSingle: jest.fn(), recordBulk: jest.fn() } as any,
+      ),
     };
   }
 
@@ -186,15 +191,19 @@ describe('Reportes · contrato de acceso del rector', () => {
     'finalizeTerm',
     'reopenFinalizedTerm',
     'reSnapshotTerm',
+    // Congelado PRELIMINARY (Pieza 3). Es la única escritura operativa que además admite a
+    // COORDINADOR: viene de la decisión del rector de que coordinación pueda señalar «listo»
+    // sin cerrar el período. El resto del contrato no cambia.
+    'createPreliminarySnapshot',
   ];
 
   const rutas = inventario();
   const lecturas = rutas.filter((r) => r.verbo === LECTURA);
   const escrituras = rutas.filter((r) => r.verbo === ESCRITURA);
 
-  it('el inventario coincide con el contrato acordado: 40 lecturas y 8 escrituras', () => {
+  it('el inventario coincide con el contrato acordado: 40 lecturas y 9 escrituras', () => {
     expect(lecturas).toHaveLength(40);
-    expect(escrituras).toHaveLength(8);
+    expect(escrituras).toHaveLength(9);
   });
 
   it('las 40 rutas de lectura incluyen RECTOR', () => {

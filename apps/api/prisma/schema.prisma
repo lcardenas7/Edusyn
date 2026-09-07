@@ -559,6 +559,7 @@ model Institution {
   rlsTeacherAssignments      TeacherAssignment[]      @relation("RlsInstitutionTA")
   rlsPartialGrades           PartialGrade[]           @relation("RlsInstitutionPG")
   rlsGradeAuditEvents        GradeAuditEvent[]        @relation("RlsInstitutionGAE")
+  rlsReportCardGenerationEvents ReportCardGenerationEvent[] @relation("RlsInstitutionRCGE")
   rlsAttendanceAuditEvents   AttendanceAuditEvent[]   @relation("RlsInstitutionAAE")
   rlsPeriodFinalGrades       PeriodFinalGrade[]       @relation("RlsInstitutionPFG")
   rlsFinalComponentGrades    FinalComponentGrade[]    @relation("RlsInstitutionFCG")
@@ -1199,6 +1200,10 @@ enum ReportCardSnapshotType {
   POST_RECOVERY // Después de aplicar recuperaciones
   FINAL_CLOSE // Cierre definitivo del período
   REOPENED // Reapertura por corrección
+  /// Congelado ANTICIPADO, sin cerrar el período. No es un cierre y no compite con los
+  /// anteriores: vive en una numeración propia (versiones negativas) para no desplazar
+  /// la secuencia oficial. Ver `preliminaryVersionFor` en reports.service.ts.
+  PRELIMINARY
 }
 
 model TermReopeningRecord {
@@ -1933,6 +1938,58 @@ enum GradeAuditAction {
   CREATE
   UPDATE
   DELETE
+}
+
+/// Qué originó la salida de un boletín. No es un cambio de nota: es la emisión
+/// de un documento, por eso no cabe en `GradeAuditAction` (CREATE/UPDATE/DELETE).
+enum ReportCardGenerationAction {
+  SINGLE_PDF // Un boletín individual — GET /reports/report-card/:id/pdf
+  BULK_PDF // Generación masiva por grupo — POST /reports/report-cards/bulk
+}
+
+/// Trazabilidad de la EMISIÓN de boletines — "cero cambios silenciosos".
+///
+/// Responde a una decisión cerrada del rector (2026-08-27): debe quedar registro de cuándo se
+/// exportaron los boletines, quién lo hizo y sobre quién. Hasta ahora `generateReportCardPdf` no
+/// dejaba ningún rastro.
+///
+/// No sustituye a `GradeAuditEvent`, que audita cambios de NOTA. Aquí se registra la salida de un
+/// documento, que es otro hecho del dominio.
+///
+/// Append-only por convención: nada lo actualiza ni lo borra.
+model ReportCardGenerationEvent {
+  id            String                     @id @default(cuid())
+  institutionId String
+  action        ReportCardGenerationAction
+
+  /// Quién lo emitió. Puede faltar si el actor no llegó al servicio.
+  actorUserId String?
+  actorName   String?
+  actorRole   String?
+
+  /// Sobre quién. En una emisión masiva el estudiante es null y se usa `groupId`.
+  studentEnrollmentId String?
+  academicTermId      String?
+  groupId             String?
+
+  /// Correlación de una emisión masiva: todos sus eventos comparten `batchId`.
+  batchId      String?
+  studentCount Int?
+
+  /// Una emisión fallida también deja rastro: saber que se intentó importa.
+  succeeded Boolean @default(true)
+  detail    Json?
+
+  performedAt DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionRCGE", fields: [institutionId], references: [id])
+
+  @@index([institutionId])
+  @@index([academicTermId])
+  @@index([studentEnrollmentId])
+  @@index([performedAt])
+  @@index([institutionId, action])
+  @@index([batchId])
 }
 
 model GradeAuditEvent {

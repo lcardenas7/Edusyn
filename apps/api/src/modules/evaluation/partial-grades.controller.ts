@@ -5,6 +5,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { PartialGradesService } from './partial-grades.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('partial-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,12 +27,16 @@ export class PartialGradesController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async upsert(@Body() data: any, @Request() req: any) {
     return this.partialGradesService.upsert(data, this.actorFrom(req));
   }
 
   @Post('bulk')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async bulkUpsert(@Body() data: { grades: any[] }, @Request() req: any) {
     return this.partialGradesService.bulkUpsert(data.grades, this.actorFrom(req));
   }
@@ -62,12 +68,16 @@ export class PartialGradesController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async delete(@Param('id') id: string, @Request() req: any) {
     return this.partialGradesService.delete(id, this.actorFrom(req));
   }
 
   @Post('recover-lost-grades')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async recoverLostGrades(@Request() req: any) {
     const instId = await requireInstitutionId(this.prisma as any, req);
     return this.partialGradesService.recoverLostGrades(instId);
@@ -75,6 +85,8 @@ export class PartialGradesController {
 
   @Delete('activity')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async deleteByActivity(
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,

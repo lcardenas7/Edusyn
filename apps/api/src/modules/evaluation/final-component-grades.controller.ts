@@ -4,6 +4,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { actorFromRequest } from './grade-audit-actor.util';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('final-component-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,6 +32,8 @@ export class FinalComponentGradesController {
 
   @Post('upsert')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async upsert(@Body() body: {
     studentEnrollmentId: string;
     teacherAssignmentId: string;
@@ -41,6 +45,8 @@ export class FinalComponentGradesController {
 
   @Post('bulk-upsert')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async bulkUpsert(@Body() body: Array<{
     studentEnrollmentId: string;
     teacherAssignmentId: string;
@@ -52,6 +58,8 @@ export class FinalComponentGradesController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async remove(@Param('id') id: string, @Request() req: any) {
     return this.service.remove(id, actorFromRequest(req));
   }

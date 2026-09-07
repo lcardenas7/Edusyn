@@ -16,6 +16,8 @@ import { StudentGradesService } from './student-grades.service';
 import { actorFromRequest } from './grade-audit-actor.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
+import { RequireTenantContext } from '../auth/decorators/require-tenant-context.decorator';
+import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-context.guard';
 
 @Controller('student-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,12 +29,16 @@ export class StudentGradesController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async upsert(@Body() dto: UpsertStudentGradeDto, @Request() req: any) {
     return this.studentGradesService.upsert(dto, actorFromRequest(req));
   }
 
   @Post('bulk')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseGuards(ValidateTenantContextGuard)
+  @RequireTenantContext()
   async bulkUpsert(@Body() dto: BulkUpsertGradesDto, @Request() req: any) {
     return this.studentGradesService.bulkUpsert(dto.evaluativeActivityId, dto.grades, actorFromRequest(req));
   }

@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ReportsService } from './reports.service';
+import { ReportCardGenerationAuditService } from './report-card-generation-audit.service';
 import { ReportsExportService } from './reports-export.service';
 import { AcademicPdfService } from './academic-pdf.service';
 import type { ReportMode } from './academic-data-source.service';
@@ -25,6 +26,7 @@ export class ReportsController {
     private readonly academicPdfService: AcademicPdfService,
     private readonly capabilitiesService: CapabilitiesService,
     private readonly prisma: PrismaService,
+    private readonly reportCardAudit: ReportCardGenerationAuditService,
   ) {}
 
   /**
@@ -57,6 +59,18 @@ export class ReportsController {
     }
     // If bulletins are released, any DOCENTE can view individual report cards
     // (group-level access is already checked in getGroupReportCardList)
+  }
+
+  /**
+   * Actor de la emisión. Mismo patrón que `achievement.controller.ts`: el rol puede venir como
+   * cadena o como objeto según de dónde salga el token, así que se normaliza.
+   */
+  private actorFrom(req: any): { userId?: string; name?: string; role?: string } {
+    const roles = req?.user?.roles;
+    const role = Array.isArray(roles)
+      ? roles.map((r: any) => (typeof r === 'string' ? r : r?.role?.name || r?.roleName || r?.name)).filter(Boolean).join(', ')
+      : undefined;
+    return { userId: req?.user?.id ?? req?.user?.sub, name: req?.user?.email, role: role || undefined };
   }
 
   @Get('report-card/:studentEnrollmentId')
@@ -141,10 +155,32 @@ export class ReportsController {
       academicTermId,
     );
     await this.guardBulletinAccess(req, academicTermId);
-    const pdfBuffer = await this.reportsService.generateReportCardPdf(
+
+    let pdfBuffer: Buffer;
+    try {
+      pdfBuffer = await this.reportsService.generateReportCardPdf(
+        studentEnrollmentId,
+        academicTermId,
+      );
+    } catch (error) {
+      // Un intento fallido también deja rastro: saber que se quiso emitir importa.
+      await this.reportCardAudit.recordSingle({
+        institutionId,
+        studentEnrollmentId,
+        academicTermId,
+        actor: this.actorFrom(req),
+        succeeded: false,
+        detail: { error: (error as Error)?.message ?? String(error) },
+      });
+      throw error;
+    }
+
+    await this.reportCardAudit.recordSingle({
+      institutionId,
       studentEnrollmentId,
       academicTermId,
-    );
+      actor: this.actorFrom(req),
+    });
 
     res.set({
       'Content-Type': 'application/pdf',
@@ -157,12 +193,40 @@ export class ReportsController {
 
   @Post('report-cards/bulk')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async generateBulkReportCards(@Body() dto: GenerateBulkReportCardsDto) {
-    return this.reportsService.generateBulkReportCards(
-      dto.groupId,
-      dto.academicTermId,
-      dto.academicYearId,
-    );
+  async generateBulkReportCards(@Request() req, @Body() dto: GenerateBulkReportCardsDto) {
+    const institutionId = this.getEffectiveInstitutionId(req);
+    try {
+      const resultado = await this.reportsService.generateBulkReportCards(
+        dto.groupId,
+        dto.academicTermId,
+        dto.academicYearId,
+      );
+
+      // Un solo evento por lote, con el recuento. Para responder "¿cuándo se exportaron los
+      // boletines de 8°A?" basta con eso, y evita escribir una fila por estudiante.
+      await this.reportCardAudit.recordBulk({
+        institutionId,
+        groupId: dto.groupId,
+        academicTermId: dto.academicTermId,
+        studentCount: Array.isArray((resultado as any)?.reportCards)
+          ? (resultado as any).reportCards.length
+          : ((resultado as any)?.total ?? 0),
+        actor: this.actorFrom(req),
+      });
+
+      return resultado;
+    } catch (error) {
+      await this.reportCardAudit.recordBulk({
+        institutionId,
+        groupId: dto.groupId,
+        academicTermId: dto.academicTermId,
+        studentCount: 0,
+        actor: this.actorFrom(req),
+        succeeded: false,
+        detail: { error: (error as Error)?.message ?? String(error) },
+      });
+      throw error;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -511,6 +575,23 @@ export class ReportsController {
     await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
     const userId = req.user.sub || req.user.id;
     return this.reportsService.reopenFinalizedTerm(termId, body.reason, userId);
+  }
+
+  /**
+   * Congelado PRELIMINAR — no cierra el período.
+   *
+   * Los tres roles vienen de la decisión del rector (D1): coordinación también debe poder señalar
+   * «listo», no solo administración. Es la única diferencia de permisos con el cierre oficial.
+   */
+  @Post('terms/:termId/preliminary-snapshot')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async createPreliminarySnapshot(
+    @Param('termId') termId: string,
+    @Request() req,
+  ) {
+    await this.reportsService.assertTermScope(this.getEffectiveInstitutionId(req), termId);
+    const userId = req.user.sub || req.user.id;
+    return this.reportsService.createPreliminarySnapshot(termId, userId);
   }
 
   @Post('terms/:termId/re-snapshot')

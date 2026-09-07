@@ -58,6 +58,8 @@ function makeService(opts: {
       upsert: valuationUpsert,
       deleteMany: valuationDelete,
       findMany: jest.fn().mockResolvedValue([]),
+      // Estado previo para la auditoría del eje cualitativo (Pieza 2).
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     studentEnrollment: {
       findUnique: jest.fn().mockResolvedValue({ institutionId: 'inst-1' }),
