@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
-import { institutionProfileApi } from '../lib/api'
+// Import por dominio: este contexto carga al arranque.
+import { institutionProfileApi } from '../lib/api/institution'
 import { useAuth } from './AuthContext'
 
 // ═══════════════════════════════════════════════════════════════════════════

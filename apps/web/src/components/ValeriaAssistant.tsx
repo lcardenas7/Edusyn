@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Copy, Loader2, Send, Sparkles, Trash2, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
-import { apdApi } from '../lib/api'
+// Import por dominio: el asistente cuelga de Layout, que es eager.
+import { apdApi } from '../lib/api/apd'
 import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, useValeriaAssistant } from '../contexts/ValeriaContext'
 

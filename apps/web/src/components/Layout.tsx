@@ -3,7 +3,10 @@ import ConnectionStatusBar from './ConnectionStatusBar'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ValeriaProvider } from '../contexts/ValeriaContext'
-import { authApi, communicationsApi } from '../lib/api'
+// Import directo por dominio: Layout carga al arranque y no debe arrastrar
+// la fachada completa de la API al paquete inicial.
+import { authApi } from '../lib/api/auth'
+import { communicationsApi } from '../lib/api/communications'
 import ValeriaAssistant from './ValeriaAssistant'
 import { 
   LayoutDashboard, 

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { authApi } from '../lib/api'
+// Import por dominio: esta pagina es la entrada publica y carga al arranque.
+import { authApi } from '../lib/api/auth'
 import { GraduationCap, User, Lock, AlertCircle, Eye, EyeOff, ShieldAlert } from 'lucide-react'
 
 export default function Login() {

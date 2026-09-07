@@ -1,78 +1,16 @@
-import axios from 'axios'
-
-// Detectar si estamos en producción por el hostname (staging excluido)
-const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
-const isStaging = hostname.includes('staging')
-const isProduction = !isStaging &&
-  (hostname.includes('railway.app') || hostname.includes('edusyn.co'))
-const API_BASE_URL = isProduction
-  ? 'https://api.edusyn.co/api'
-  : (import.meta.env.VITE_API_URL || '/api')
-
-console.log('[API] Base URL:', API_BASE_URL, '| Production:', isProduction)
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Enabled only while a SuperAdmin is inside Academic Reports. It is limited
-// to the screen's read endpoints and never affects writes or other pages.
-let reportTenantInstitutionId: string | undefined
-
-// Anchored to a whole first segment: a merely similar prefix such as
-// /reports-legacy or /institution-config-extra must never inherit the target.
-const REPORT_TENANT_READ_SEGMENT =
-  /^\/(reports|academic-terms|groups|subjects|teacher-assignments|institution-config)(?=[/?]|$)/
-
-export const isReportTenantReadPath = (url?: string): boolean =>
-  typeof url === 'string' && REPORT_TENANT_READ_SEGMENT.test(url)
-
-export const setReportTenantContext = (institutionId?: string) => {
-  reportTenantInstitutionId = institutionId
-}
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  const isRead = !config.method || config.method.toLowerCase() === 'get'
-  if (reportTenantInstitutionId && isRead && isReportTenantReadPath(config.url)) {
-    // An institutionId supplied by the caller always wins: the temporary
-    // Reports target only fills the gap when the caller named none.
-    config.params = {
-      ...config.params,
-      institutionId: config.params?.institutionId ?? reportTenantInstitutionId,
-    }
-  }
-  return config
-})
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
-    }
-    return Promise.reject(error)
-  }
-)
-
-export default api
-
-// Auth
-export const authApi = {
-  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
-  register: (data: { email: string; password: string; firstName: string; lastName: string }) => api.post('/auth/register', data),
-  me: () => api.get('/auth/me'),
-  changePassword: (currentPassword: string, newPassword: string) => api.post('/auth/change-password', { currentPassword, newPassword }),
-}
-
-// Institutions
+// Fachada de compatibilidad.
+//
+// Se conserva porque 144 ficheros la consumen, pero YA NO define el cliente ni
+// los dominios que usa el grafo eager: esos viven en modulos propios. Importar
+// desde aqui sigue funcionando; hacerlo desde codigo que carga al arranque
+// volveria a meter los 90 objetos restantes en el paquete inicial.
+import api from './client'
+export { default, api, isReportTenantReadPath, setReportTenantContext } from './client'
+export * from './auth'
+export * from './communications'
+export * from './storage'
+export * from './institution'
+export * from './apd'
 export const institutionsApi = {
   getAll: () => api.get('/institutions'),
   getById: (id: string) => api.get(`/institutions/${id}`),
@@ -89,13 +27,6 @@ export const institutionConfigApi = {
 }
 
 // Institution Profile (identidad institucional - para admin institucional)
-export const institutionProfileApi = {
-  get: () => api.get('/institution-config/profile'),
-  update: (data: { name?: string; nit?: string; daneCode?: string; city?: string; address?: string; phone?: string; email?: string; website?: string; logo?: string; primaryColor?: string }) =>
-    api.put('/institution-config/profile', data),
-}
-
-// Campuses (Sedes)
 export const campusesApi = {
   getAll: (institutionId?: string) => api.get('/campuses', { params: { institutionId } }),
   create: (data: { institutionId: string; name: string; address?: string }) => api.post('/campuses', data),
@@ -556,35 +487,6 @@ export const reportsApi = {
 }
 
 // Communications
-export const communicationsApi = {
-  getAll: (params?: { institutionId?: string; type?: string; status?: string }) => api.get('/communications', { params }),
-  create: (data: { institutionId: string; type: string; subject: string; content: string; recipients?: Array<{ type: string; recipientId?: string }> }) => api.post('/communications', data),
-  getById: (id: string) => api.get(`/communications/${id}`),
-  update: (id: string, data: { type?: string; subject?: string; content?: string; scheduledAt?: string }) => api.put(`/communications/${id}`, data),
-  send: (id: string) => api.post(`/communications/${id}/send`),
-  delete: (id: string) => api.delete(`/communications/${id}`),
-  getInbox: () => api.get('/communications/inbox'),
-  markAsRead: (id: string) => api.post(`/communications/${id}/read`),
-  reply: (id: string, content: string) => api.post(`/communications/${id}/reply`, { content }),
-  getReplies: (id: string) => api.get(`/communications/${id}/replies`),
-  getAvailableRecipients: (search?: string) => api.get('/communications/available-recipients', { params: { search } }),
-  getAllowedCategories: () => api.get('/communications/allowed-categories'),
-  uploadAttachment: (messageId: string, file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return api.post(`/communications/${messageId}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-  },
-  removeAttachment: (attachmentId: string) => api.delete(`/communications/attachments/${attachmentId}`),
-  getAttachmentDownloadUrl: (attachmentId: string) => api.get(`/communications/attachments/${attachmentId}/download`),
-  getStorageUsage: () => api.get('/communications/storage-usage'),
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIC STUDENTS API - Para uso exclusivo de páginas académicas
-// ═══════════════════════════════════════════════════════════════════════════
-// Las páginas académicas (Grades, Attendance, Observer, Achievements, etc.)
-// deben usar esta API en lugar de studentsApi para mantener la separación de dominios.
-
 export const academicStudentsApi = {
   /**
    * Obtiene estudiantes para un grupo en un año académico.
@@ -681,42 +583,6 @@ export const galleryApi = {
 }
 
 // Storage API - Subida de archivos a Supabase
-export const storageApi = {
-  resolveUrl: (path: string) => api.get('/storage/resolve-url', { params: { path } }),
-  uploadGalleryImage: (file: File, institutionId: string, category?: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('institutionId', institutionId);
-    if (category) formData.append('category', category);
-    return api.post('/storage/upload/gallery', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-  uploadAnnouncementImage: (file: File, institutionId: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('institutionId', institutionId);
-    return api.post('/storage/upload/announcement', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-  uploadSignature: (file: File, role: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('role', role);
-    return api.post('/storage/upload/signature', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-  uploadMySignature: (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/storage/upload/my-signature', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-}
-
 export const eventsApi = {
   getAll: (institutionId?: string, onlyActive = true, upcoming = false) => api.get('/events', { params: { institutionId, onlyActive, upcoming } }),
   getBirthdays: (institutionId?: string) => api.get('/events/birthdays', { params: { institutionId } }),
@@ -1898,188 +1764,6 @@ export const pedagogicalSupportApi = {
 // APD — ACOMPAÑAMIENTO PEDAGÓGICO DIFERENCIAL
 // ============================================
 
-export const apdApi = {
-  // Configuración institucional
-  getConfig: () => api.get('/apd/config'),
-  updateConfig: (data: { enableDifferentialSupport?: boolean; allowTeacherAccess?: boolean }) =>
-    api.put('/apd/config', data),
-
-  // Perfiles de acompañamiento
-  createProfile: (data: {
-    studentId: string;
-    supportCategory: string;
-    supportCategoryId?: string;
-    pedagogicalNotes?: string;
-    learningBarriers?: string;
-    strengths?: string;
-    supportNeeds?: string;
-    learningStyleObservations?: string;
-    parentConsentAccepted?: boolean;
-    consentDate?: string;
-    consentDocumentUrl?: string;
-  }) => api.post('/apd/profiles', data),
-  updateProfile: (id: string, data: {
-    supportCategory?: string;
-    supportCategoryId?: string;
-    pedagogicalNotes?: string;
-    learningBarriers?: string;
-    strengths?: string;
-    supportNeeds?: string;
-    learningStyleObservations?: string;
-    parentConsentAccepted?: boolean;
-    consentDate?: string;
-    consentDocumentUrl?: string;
-    active?: boolean;
-  }) => api.put(`/apd/profiles/${id}`, data),
-  getProfile: (id: string) => api.get(`/apd/profiles/${id}`),
-  getProfileByStudent: (studentId: string) => api.get(`/apd/profiles/by-student/${studentId}`),
-  getProfiles: (params?: { active?: string; search?: string }) =>
-    api.get('/apd/profiles', { params }),
-
-  // Planes de acompañamiento (APD extendido)
-  createPlan: (data: {
-    studentEnrollmentId: string;
-    academicTermId: string;
-    supportProfileId?: string;
-    achievementId?: string;
-    planType?: 'APD' | 'PIAR';
-    supportStrategy: string;
-    familyCommitment?: string;
-    followUpDate?: string;
-    observations?: string;
-    objectives?: any;
-    adaptationStrategies?: any;
-    evaluationAdjustments?: any;
-    planApprovedByFamily?: boolean;
-    familyApprovalDate?: string;
-    familySignatureUrl?: string;
-  }) => api.post('/apd/plans', data),
-  updatePlan: (id: string, data: {
-    planType?: 'APD' | 'PIAR';
-    supportStrategy?: string;
-    familyCommitment?: string;
-    followUpDate?: string;
-    observations?: string;
-    objectives?: any;
-    adaptationStrategies?: any;
-    evaluationAdjustments?: any;
-    planApprovedByFamily?: boolean;
-    familyApprovalDate?: string;
-    familySignatureUrl?: string;
-    status?: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
-  }) => api.put(`/apd/plans/${id}`, data),
-  getPlan: (id: string) => api.get(`/apd/plans/${id}`),
-
-  // Actividades
-  createActivity: (data: {
-    supportPlanId: string;
-    topic: string;
-    originalActivityDescription?: string;
-    teacherFinalActivity?: string;
-    adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
-    adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
-  }) => api.post('/apd/activities', data),
-  updateActivity: (id: string, data: {
-    topic?: string;
-    originalActivityDescription?: string;
-    teacherFinalActivity?: string;
-    adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
-    adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
-    completionStatus?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
-    teacherFeedback?: string;
-    studentPerformanceScore?: number;
-  }) => api.put(`/apd/activities/${id}`, data),
-
-  // Logs de progreso
-  createProgressLog: (data: {
-    supportPlanId: string;
-    progressIndicator: number;
-    qualitativeObservation?: string;
-  }) => api.post('/apd/progress-logs', data),
-
-  // Categorías de acompañamiento (configurables por institución)
-  getCategories: () => api.get('/apd/categories'),
-  createCategory: (data: { name: string; description?: string; sortOrder?: number }) =>
-    api.post('/apd/categories', data),
-  updateCategory: (id: string, data: { name?: string; description?: string; active?: boolean; sortOrder?: number }) =>
-    api.put(`/apd/categories/${id}`, data),
-
-  // Participantes del plan (equipo interdisciplinario)
-  addParticipant: (data: {
-    supportPlanId: string;
-    userId?: string;
-    role: 'TEACHER' | 'COUNSELOR' | 'COORDINATOR' | 'FAMILY_MEMBER' | 'EXTERNAL_SPECIALIST';
-    fullName?: string;
-    relationship?: string;
-    observations?: string;
-  }) => api.post('/apd/participants', data),
-  removeParticipant: (id: string) => api.delete(`/apd/participants/${id}`),
-  signParticipant: (id: string, data: { signatureUrl?: string }) =>
-    api.put(`/apd/participants/${id}/sign`, data),
-
-  // Asignaturas vinculadas al plan
-  addPlanSubject: (data: {
-    supportPlanId: string;
-    subjectId: string;
-    teacherId?: string;
-    specificNotes?: string;
-  }) => api.post('/apd/plan-subjects', data),
-  removePlanSubject: (id: string) => api.delete(`/apd/plan-subjects/${id}`),
-
-  // Documentos de soporte
-  addDocument: (data: {
-    supportPlanId: string;
-    type: 'EVIDENCE' | 'FAMILY_DOCUMENT' | 'ASSESSMENT' | 'REPORT';
-    fileName: string;
-    fileUrl: string;
-    description?: string;
-  }) => api.post('/apd/documents', data),
-  removeDocument: (id: string) => api.delete(`/apd/documents/${id}`),
-
-  // Reportes APD/PIAR
-  getReportByCategory: () => api.get('/apd/reports/category'),
-  getReportProgress: () => api.get('/apd/reports/progress'),
-  getReportByGrade: () => api.get('/apd/reports/grades'),
-  getReportAtRisk: () => api.get('/apd/reports/at-risk'),
-
-  // Índice de inclusión
-  getInclusionIndex: () => api.get('/apd/inclusion-index'),
-
-  // Estadísticas de diagnóstico (funnel: diagnóstico → perfil → plan)
-  getDiagnosisStats: () => api.get('/apd/diagnosis-stats'),
-
-  // Alertas automáticas
-  getAlerts: () => api.get('/apd/alerts'),
-
-  // Cruce rendimiento académico vs APD
-  getAcademicCrossover: (academicTermId?: string) =>
-    api.get('/apd/academic-crossover', { params: { academicTermId } }),
-
-  // Valeria AI
-  askValeria: (data: {
-    institutionId?: string;
-    question: string;
-    conversation?: {
-      role: 'user' | 'assistant';
-      content: string;
-    }[];
-    context?: {
-      institutionName?: string;
-      pageName?: string;
-      pageSummary?: string;
-      currentPath?: string;
-      gradeName?: string;
-      subjectName?: string;
-      topic?: string;
-      activityType?: 'QUIZ' | 'EXAM' | 'GUIDE' | 'ACHIEVEMENT' | 'GENERAL';
-      details?: string;
-    };
-    includeVisuals?: boolean;
-    visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
-  }) => api.post('/apd/ai/valeria', data),
-};
-
-// Teacher Workspace
 export const teacherWorkspaceApi = {
   // Dashboard "Centro del día"
   getToday: () => api.get('/teacher-workspace/today'),
@@ -2440,25 +2124,6 @@ export const classroomApi = {
  * Usa el endpoint GET /storage/public?path=... que sirve archivos directamente.
  * Solo funciona para prefijos permitidos: galeria/, firmas/.
  */
-export function toPublicFileUrl(storedValue: string | null | undefined): string {
-  if (!storedValue) return ''
-  // Si ya es una URL proxy, devolverla tal cual
-  if (storedValue.includes('/storage/public?path=')) return storedValue
-  // Extraer key de una URL firmada de R2
-  let key = storedValue
-  if (storedValue.startsWith('http')) {
-    try {
-      const url = new URL(storedValue)
-      const parts = url.pathname.split('/').filter(Boolean)
-      // Quitar bucket name del path: /edusyn-files/galeria/... → galeria/...
-      key = parts.length > 1 ? parts.slice(1).join('/') : parts.join('/')
-    } catch { return storedValue }
-  }
-  // Solo proxiar prefijos permitidos
-  if (!key.startsWith('galeria/') && !key.startsWith('firmas/')) return storedValue
-  return `${API_BASE_URL}/storage/public?path=${encodeURIComponent(key)}`
-}
-
 export const liveSessionApi = {
   create: (data: { classroomId: string; activityId: string; mode?: string; config?: any }) =>
     api.post('/live-session/create', data),
@@ -2983,3 +2648,4 @@ export const LIVE_QUIZ_TEAM_POOL: { name: string; color: string; emoji: string }
   { name: 'Equipo Cometa',    color: '#f97316', emoji: '☄️' },
   { name: 'Equipo Planeta',   color: '#14b8a6', emoji: '🪐' },
 ]
+

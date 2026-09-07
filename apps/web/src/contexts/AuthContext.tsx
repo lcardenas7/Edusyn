@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { authApi } from '../lib/api'
+// Import por dominio: este contexto carga al arranque.
+import { authApi } from '../lib/api/auth'
 import { withEffectiveInstitutionalRoles } from '../lib/roleHierarchy'
 
 interface InstitutionModule {

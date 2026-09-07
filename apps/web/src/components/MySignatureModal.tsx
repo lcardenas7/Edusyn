@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PenLine, X, Upload } from 'lucide-react'
-import { storageApi, toPublicFileUrl } from '../lib/api'
+// Import directo por dominio: este modal cuelga de Layout, que es eager.
+import { storageApi, toPublicFileUrl } from '../lib/api/storage'
 import { toast } from '../lib/toast'
 
 interface Props {

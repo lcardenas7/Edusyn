@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
-import api from '../lib/api'
+// Solo necesita el cliente HTTP, no los 90 objetos de la fachada.
+import api from '../lib/api/client'
 import { useAuth } from './AuthContext'
 
 // ═══════════════════════════════════════════════════════════════════════════
