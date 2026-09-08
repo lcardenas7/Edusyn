@@ -595,3 +595,39 @@ línea de RLS, ni la rama de consolidación.
 - **Decisión #5** — si el presupuesto de rendimiento se controla en CI desde el principio.
 - **Integración de R1** — sigue congelada y no depende de EduLab. Cuando toque, rama nueva desde el
   staging consolidado y verificación completa otra vez.
+
+---
+
+## 2026-09-07 · Gate de despliegue seguro a staging · Codex
+
+**Qué medí.** La aptitud del candidato EduLab para pasar a staging sin borrar ni reemplazar datos,
+manteniendo producción fuera del alcance y conservando la frontera de carga introducida por R1.
+
+**Qué encontré.**
+
+- La base sigue siendo `origin/staging = 17045fb3e47ee2f63a5067372cc7ce0b48331346` y el candidato
+  es un avance lineal desde esa base. **[V]**
+- Staging usa PostgreSQL 18, tenía 96 migraciones aplicadas, 0 fallidas y 0 tablas EduLab antes del
+  despliegue. La conexión de migración usa `edusyn_migrator` y fija el rol `edusyn_owner`; también
+  existe el rol de aplicación `edusyn_app`. **[V]**
+- La única migración nueva es forward-only y aditiva: crea las cuatro entidades EduLab, sus
+  restricciones y su aislamiento. No modifica migraciones históricas ni contiene operaciones de
+  borrado de tablas, columnas o registros. **[V]**
+- Se creó antes del despliegue un respaldo completo de staging con `pg_dump 18.6`, formato custom,
+  8.561.700 bytes y 2.092 entradas verificadas mediante `pg_restore --list`. SHA-256:
+  `1B94E139F21FA0BEE5FDFC354A89F589C036465D4C9F41559B1CCBF15F8BC789`. El artefacto permanece
+  fuera de Git. **[V]**
+- Producción quedó identificada por separado y se registraron sus despliegues vigentes para poder
+  comprobar que no cambien durante el proceso. **[V]**
+
+**Qué validé antes de desplegar.** Runtime **22/22 PASS**; web **198/198 PASS**; API **72 suites y
+1.147 pruebas PASS**; validación Prisma, build runtime, build web y build API en **PASS**. El entry
+web mide **148.989 bytes gzip**, con 164 chunks y 0 mayores de 1 MiB. EduLab conserva la ruta lazy y
+runtime/experiencia se emiten como chunks separados. `check:publicable`, BOM y `git diff --check`
+también pasan. **[V]**
+
+**Límites operativos.** El destino autorizado es exclusivamente staging. No se ejecutarán `db
+push`, `migrate reset`, seeds, truncados ni borrados; no se desplegará ni se cambiará la base de
+producción. La promoción queda condicionada a que web y API terminen en `SUCCESS`, health responda
+y el control posterior confirme 97 migraciones, 0 fallidas, cuatro tablas EduLab vacías y RLS
+`ENABLE + FORCE`. **[P]**
