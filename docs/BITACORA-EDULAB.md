@@ -206,6 +206,64 @@ No son de EduLab, pero se aplican igual:
 
 # Entradas
 
+## 2026-09-07 · EDULAB-4B — cierre recuperable · Codex
+
+**Qué cambió respecto de la entrada anterior.** La autorización separada para commits locales fue
+concedida. La referencia histórica «código sin stage por revisión automática» ya no describe el
+estado vigente; se conserva literalmente por la convención append-only. **[V]**
+
+**Commits locales.**
+
+- `b7b3e184` — contexto transaccional autenticado y pruebas.
+- `140baeab` — schema y migración aditiva tenant-safe.
+- `7cd12c5d` — repositorio transaccional, idempotencia, CAS y pruebas.
+
+`7cd12c5d` es el candidato funcional de EDULAB-4B antes de este cierre documental. No hubo push,
+merge, despliegue ni conexión a staging/producción.
+
+**Qué queda pendiente.** Revisión del diff candidato. La eventual aplicación en staging exige un
+gate independiente con backup, drift check, revisión SQL y autorización explícita. Retención y rol
+editorial deben resolverse antes de habilitar persistencia en producción.
+
+---
+
+## 2026-09-07 · EDULAB-4B-IMPLEMENTACIÓN — persistencia local aislada · Codex
+
+**Qué medí.** Viabilidad completa de la persistencia sobre la base exacta
+`origin/staging@17045fb3`, usando dos bases PostgreSQL efímeras locales independientes y datos
+exclusivamente sintéticos.
+
+**Qué encontré.**
+
+- Las 96 migraciones históricas más la nueva migración aditiva de EduLab se aplicaron desde cero
+  en ambas bases: **97 aplicadas, 0 fallidas**. Ninguna migración histórica fue editada. **[V]**
+- El contexto transaccional propaga institución y usuario autenticado mediante settings locales;
+  no toma identidad desde parámetros del cliente y falla cerrado cuando falta cualquiera. **[V]**
+- El catálogo global quedó de solo lectura para el rol de aplicación. Attempts y Events quedaron
+  aislados por institución + owner con RLS habilitado y forzado. **[V]**
+- La matriz A/B negó lectura e inserción cruzada entre instituciones y entre usuarios de una misma
+  institución. También negó UPDATE/DELETE/TRUNCATE de Events, DELETE de Attempts y escrituras de
+  catálogo. **[V]**
+- El repositorio usa creación idempotente sin abortar la transacción, compare-and-swap antes de
+  anexar el stream y rollback atómico ante conflicto. No se añadieron endpoints. **[V]**
+- Tres intents persistidos reprodujeron el mismo resultado determinista:
+  `stateHash = edulab-fnv1a32-27abccaa`. **[V]**
+- Prisma validate, check BOM, API build y `git diff --check` pasaron. La suite API terminó con
+  **72 suites / 1 145 tests PASS**; las pruebas focales finales terminaron con **12 PASS**. **[V]**
+- El diff schema/base no contiene diferencias EduLab. Permanece drift histórico ajeno a EduLab;
+  no se corrigió ni se convirtió en bloqueo. **[P]**
+
+**Qué cambié.** Se prepararon cuatro modelos Prisma nuevos, una migración forward-only con
+pre/postcondiciones, extensión del contexto transaccional y un repositorio interno con pruebas. No
+se añadieron endpoints, UI, seed versionado, Aula, notas, Assessment o Pixi. Staging y producción no
+se conectaron ni modificaron.
+
+**Qué queda pendiente.** El código está sin stage porque el revisor automático exigió una
+autorización separada y explícita para sus commits locales. Retención, rol editorial y despliegues
+siguen abiertos; no forman parte de este gate local.
+
+---
+
 ## 2026-09-07 · EDULAB-4B — preflight de persistencia · Codex
 
 **Qué medí.** Compatibilidad del contrato privado con las 96 migraciones versionadas, el schema y
