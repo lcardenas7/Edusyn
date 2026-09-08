@@ -400,6 +400,9 @@ model User {
   // Evaluación Actitudinal
   createdRubrics AttitudinalRubric[] @relation("AttitudinalRubricCreator")
 
+  // EduLab — intentos privados del usuario
+  edulabAttempts EduLabAttempt[] @relation("EduLabAttemptUser")
+
   // Permisos de personal
   leaveRequests         StaffLeaveRequest[] @relation("LeaveRequester")
   leaveRequestsReviewed StaffLeaveRequest[] @relation("LeaveReviewer")
@@ -603,6 +606,10 @@ model Institution {
 
   // Aula Virtual
   rlsClassrooms Classroom[] @relation("RlsInstitutionCR")
+
+  // EduLab — persistencia tenant-scoped
+  rlsEdulabAttempts EduLabAttempt[] @relation("RlsInstitutionEduLabAttempt")
+  rlsEdulabEvents   EduLabEvent[]   @relation("RlsInstitutionEduLabEvent")
 
   // Evaluación Actitudinal
   attitudinalRubrics AttitudinalRubric[] @relation("InstitutionAttitudinalRubrics")
@@ -7686,4 +7693,109 @@ model ReportCardTemplateSelection {
   @@unique([institutionId, gradeId])
   @@unique([institutionId, academicStructure])
   @@index([institutionId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EDULAB — catálogo global inmutable y ejecución privada por tenant/usuario
+// ═══════════════════════════════════════════════════════════════════════════
+
+model EduLabExperience {
+  id                    String   @id @default(cuid())
+  definitionId          String
+  version               Int
+  schemaVersion         String
+  engineVersion         String
+  contentHash           String
+  runtimeDefinitionHash String
+  title                 String
+  definition            Json
+  assetPackRefs         Json     @default("[]")
+  availability          String   @default("AVAILABLE")
+  publishedAt           DateTime @default(now())
+  retiredAt             DateTime?
+
+  attempts EduLabAttempt[] @relation("EduLabAttemptExperience")
+
+  @@unique([definitionId, version])
+  @@unique([contentHash])
+  @@unique([id, definitionId, version, contentHash, runtimeDefinitionHash, engineVersion], map: "EduLabExperience_replay_reference_key")
+}
+
+model EduLabAssetPack {
+  id            String   @id @default(cuid())
+  packId        String
+  version       Int
+  contentHash   String
+  manifest      Json
+  storagePrefix String
+  totalBytes    BigInt
+  availability  String   @default("AVAILABLE")
+  publishedAt   DateTime @default(now())
+  retiredAt     DateTime?
+
+  @@unique([packId, version])
+  @@unique([contentHash])
+}
+
+model EduLabAttempt {
+  id                    String   @id @default(cuid())
+  institutionId         String
+  userId                String
+  clientAttemptId       String
+  experienceId          String
+  definitionId          String
+  definitionVersion     Int
+  contentHash           String
+  runtimeDefinitionHash String
+  engineVersion         String
+  mode                  String
+  seed                  String
+  status                String   @default("ACTIVE")
+  endingId              String?
+  stateHash             String
+  logicalTick           Int      @default(0)
+  decisionSequence      Int      @default(0)
+  engineEventSequence   Int      @default(0)
+  streamSequence        BigInt   @default(0)
+  concurrencyVersion    Int      @default(0)
+  checkpointId          String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
+  completedAt           DateTime?
+
+  institution Institution      @relation("RlsInstitutionEduLabAttempt", fields: [institutionId], references: [id], onDelete: Restrict, map: "EduLabAttempt_institution_fkey")
+  user        User             @relation("EduLabAttemptUser", fields: [userId], references: [id], onDelete: Restrict, map: "EduLabAttempt_user_fkey")
+  experience  EduLabExperience @relation("EduLabAttemptExperience", fields: [experienceId, definitionId, definitionVersion, contentHash, runtimeDefinitionHash, engineVersion], references: [id, definitionId, version, contentHash, runtimeDefinitionHash, engineVersion], onDelete: Restrict, onUpdate: Restrict, map: "EduLabAttempt_experience_replay_fkey")
+  events      EduLabEvent[]    @relation("EduLabAttemptEvents")
+
+  @@unique([institutionId, userId, clientAttemptId])
+  @@unique([id, institutionId], map: "EduLabAttempt_id_institution_key")
+  @@index([institutionId, userId, status, updatedAt], map: "EduLabAttempt_owner_status_idx")
+  @@index([experienceId], map: "EduLabAttempt_experience_idx")
+}
+
+model EduLabEvent {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  attemptId           String
+  streamSequence      BigInt
+  kind                String
+  eventType           String
+  intentId            String?
+  decisionSequence    Int
+  engineEventSequence Int?
+  logicalTick         Int
+  idempotencyKey      String
+  causationId         String?
+  correlationId       String
+  payload             Json
+  payloadHash         String
+  createdAt           DateTime @default(now())
+
+  institution Institution   @relation("RlsInstitutionEduLabEvent", fields: [institutionId], references: [id], onDelete: Restrict, map: "EduLabEvent_institution_fkey")
+  attempt     EduLabAttempt @relation("EduLabAttemptEvents", fields: [attemptId, institutionId], references: [id, institutionId], onDelete: Restrict, map: "EduLabEvent_attempt_tenant_fkey")
+
+  @@unique([attemptId, streamSequence])
+  @@unique([attemptId, idempotencyKey])
+  @@index([institutionId, attemptId, streamSequence], map: "EduLabEvent_tenant_attempt_idx")
 }
