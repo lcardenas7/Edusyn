@@ -88,11 +88,20 @@ export class TenantContextInterceptor implements NestInterceptor {
               `SELECT set_config('app.current_institution', $1, true)`,
               institutionId,
             );
+            const userId = typeof user?.id === 'string' && user.id.length > 0
+              ? user.id
+              : undefined;
+            if (userId) {
+              await tx.$queryRawUnsafe(
+                `SELECT set_config('app.current_user', $1, true)`,
+                userId,
+              );
+            }
 
             // Run the entire request handler within the tenant context
             // AsyncLocalStorage propagates through all async operations
             return new Promise<void>((resolve, reject) => {
-              tenantContext.run({ tx, institutionId }, () => {
+              tenantContext.run({ tx, institutionId, userId }, () => {
                 next.handle().subscribe({
                   next: (val) => {
                     responseValue = val;

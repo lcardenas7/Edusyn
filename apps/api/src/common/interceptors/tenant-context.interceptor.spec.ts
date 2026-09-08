@@ -40,7 +40,7 @@ describe('TenantContextInterceptor', () => {
   it('sets the guard-validated SuperAdmin tenant inside the transaction', async () => {
     const { interceptor, raw, tx } = makeInterceptor(true);
     const request = {
-      user: { isSuperAdmin: true },
+      user: { id: 'superadmin-1', isSuperAdmin: true },
       query: { institutionId: 'untrusted-value' },
       resolvedInstitutionId: 'tenant-a',
     };
@@ -51,12 +51,16 @@ describe('TenantContextInterceptor', () => {
       "SELECT set_config('app.current_institution', $1, true)",
       'tenant-a',
     );
+    expect(tx.$queryRawUnsafe).toHaveBeenCalledWith(
+      "SELECT set_config('app.current_user', $1, true)",
+      'superadmin-1',
+    );
   });
 
   it('ignores a normal user query destination and uses the session tenant', async () => {
     const { interceptor, tx } = makeInterceptor(true);
     const request = {
-      user: { isSuperAdmin: false, institutionId: 'tenant-a' },
+      user: { id: 'user-a1', isSuperAdmin: false, institutionId: 'tenant-a' },
       query: { institutionId: 'tenant-b' },
       resolvedInstitutionId: 'tenant-b',
     };
@@ -65,6 +69,23 @@ describe('TenantContextInterceptor', () => {
     expect(tx.$queryRawUnsafe).toHaveBeenCalledWith(
       "SELECT set_config('app.current_institution', $1, true)",
       'tenant-a',
+    );
+    expect(tx.$queryRawUnsafe).toHaveBeenCalledWith(
+      "SELECT set_config('app.current_user', $1, true)",
+      'user-a1',
+    );
+  });
+
+  it('does not invent a user context when the authenticated principal has no id', async () => {
+    const { interceptor, tx } = makeInterceptor(false);
+    const request = { user: { isSuperAdmin: false, institutionId: 'tenant-a' } };
+
+    await lastValueFrom(interceptor.intercept(makeContext(request), { handle: () => of({ ok: true }) }));
+
+    expect(tx.$queryRawUnsafe).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRawUnsafe).not.toHaveBeenCalledWith(
+      "SELECT set_config('app.current_user', $1, true)",
+      expect.anything(),
     );
   });
 });

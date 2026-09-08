@@ -11,6 +11,8 @@ export interface TenantStore {
   tx: any;
   /** The resolved institutionId for this request */
   institutionId: string;
+  /** Authenticated user id. Undefined only for legacy/system tenant requests. */
+  userId?: string;
 }
 
 export const tenantContext = new AsyncLocalStorage<TenantStore>();
