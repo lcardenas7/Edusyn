@@ -45,6 +45,7 @@ export interface CrearActividadProps {
   periodos: PeriodoOpcion[]
   /** Período con el que se entra, para no obligar a elegirlo otra vez. */
   periodoActual?: string | null
+  tipoInicial?: string
   onCerrar: () => void
   /**
    * Se llama con la actividad creada y con dónde seguir: el editor de lecciones y juegos vive
@@ -60,12 +61,14 @@ export function CrearActividad({
   unidades,
   periodos,
   periodoActual,
+  tipoInicial,
   onCerrar,
   onCreada,
 }: CrearActividadProps) {
-  const [paso, setPaso] = useState<Paso>('intencion')
-  const [intencion, setIntencion] = useState<Intencion | null>(null)
-  const [tipo, setTipo] = useState<string>('')
+  const initial = tipoInicial && mecanicaDe(tipoInicial) ? tipoInicial : ''
+  const [paso, setPaso] = useState<Paso>(initial ? 'datos' : 'intencion')
+  const [intencion, setIntencion] = useState<Intencion | null>(INTENCIONES.find(i => mecanicasDe(i.id).some(m => m.type === initial))?.id ?? null)
+  const [tipo, setTipo] = useState<string>(initial)
 
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')

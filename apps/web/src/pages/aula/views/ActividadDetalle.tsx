@@ -37,7 +37,7 @@ import { textoLegible } from '../model/texto'
 const LessonPlayer = lazy(() => import('../../../components/LessonPlayer'))
 
 /** Tipos cuyo motor todavía vive dentro de Classroom.tsx. */
-const MOTOR_EN_AULA_ACTUAL = new Set(['QUIZ', 'EXAM', 'LIVE_QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR', 'SELF_ASSESSMENT'])
+const MOTOR_COMPARTIDO = new Set(['QUIZ', 'EXAM', 'LIVE_QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR', 'SELF_ASSESSMENT'])
 const ABRE_REPRODUCTOR = new Set(['LESSON', 'GAME'])
 
 export interface ActividadDetalleProps {
@@ -47,7 +47,7 @@ export interface ActividadDetalleProps {
   entregas: EntregaLike[]
   onVolver: () => void
   onCambio: () => void
-  onIrAlAulaActual: () => void
+  onAbrirHerramientas: () => void
   /** Aula en la que estamos: la necesita el asistente de copia. */
   aulaId?: string
   /** Estudiantes del grupo, para poder decir cuántos faltan por entregar. */
@@ -66,7 +66,7 @@ export function ActividadDetalle({
   entregas,
   onVolver,
   onCambio,
-  onIrAlAulaActual,
+  onAbrirHerramientas,
   aulaId,
   totalEstudiantes,
   onAbrirActividad,
@@ -209,15 +209,15 @@ export function ActividadDetalle({
         {/* Al docente hay que decirle dónde sigue el trabajo. Un quiz recién creado no tiene
             preguntas, y el editor de preguntas todavía vive en el aula anterior: sin este
             aviso, la actividad se queda vacía sin que nadie sepa por qué. */}
-        {esDocente && MOTOR_EN_AULA_ACTUAL.has(a.type) && (
+        {esDocente && MOTOR_COMPARTIDO.has(a.type) && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface-2 p-4">
             <p className="min-w-0 text-body-sm text-ink-secondary">
               Las <strong className="text-ink-primary">preguntas</strong> de esta actividad se añaden
-              todavía en el aula anterior. Lo que agregues allí aparecerá también aquí.
+              en el editor de actividades de esta misma aula.
             </p>
             <button
               type="button"
-              onClick={onIrAlAulaActual}
+              onClick={onAbrirHerramientas}
               className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
             >
               Añadir preguntas
@@ -235,7 +235,7 @@ export function ActividadDetalle({
                 onCambio={onCambio}
                 onVolver={onVolver}
                 // Lecciones y juegos se editan aquí; el resto todavía en el aula anterior.
-                onEditar={ABRE_REPRODUCTOR.has(a.type) && onEditarLeccion ? onEditarLeccion : onIrAlAulaActual}
+                onEditar={ABRE_REPRODUCTOR.has(a.type) && onEditarLeccion ? onEditarLeccion : onAbrirHerramientas}
                 onCopiar={aulaId ? () => setCopiando(true) : undefined}
               />
             ) : (
@@ -243,7 +243,7 @@ export function ActividadDetalle({
                 actividad={a}
                 estado={vista.state}
                 onAbrirReproductor={() => setReproduciendo(true)}
-                onIrAlAulaActual={onIrAlAulaActual}
+                onAbrirHerramientas={onAbrirHerramientas}
               />
             )}
           </div>
@@ -293,19 +293,19 @@ export function ActividadDetalle({
 /** ¿El estudiante tiene algún botón que pulsar en la cabecera de esta actividad? */
 function tieneAccionEstudiante(a: ActivityLike, estado: ReturnType<typeof deriveStudentState>['state']): boolean {
   if (estado === 'bloqueada' || estado === 'no-abierta') return false
-  return ABRE_REPRODUCTOR.has(a.type) || MOTOR_EN_AULA_ACTUAL.has(a.type)
+  return ABRE_REPRODUCTOR.has(a.type) || MOTOR_COMPARTIDO.has(a.type)
 }
 
 function AccionesEstudiante({
   actividad,
   estado,
   onAbrirReproductor,
-  onIrAlAulaActual,
+  onAbrirHerramientas,
 }: {
   actividad: ActivityLike
   estado: ReturnType<typeof deriveStudentState>['state']
   onAbrirReproductor: () => void
-  onIrAlAulaActual: () => void
+  onAbrirHerramientas: () => void
 }) {
   if (estado === 'bloqueada' || estado === 'no-abierta') return null
 
@@ -322,19 +322,18 @@ function AccionesEstudiante({
     )
   }
 
-  if (MOTOR_EN_AULA_ACTUAL.has(actividad.type)) {
+  if (MOTOR_COMPARTIDO.has(actividad.type)) {
     return (
       <div>
         <button
           type="button"
-          onClick={onIrAlAulaActual}
+          onClick={onAbrirHerramientas}
           className="inline-flex min-h-btn items-center gap-2 rounded-lg bg-accent px-5 text-body-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          Resolver en el aula actual
+          Abrir actividad
         </button>
         <p className="mt-2 text-body-sm text-ink-muted">
-          Este tipo de actividad todavía se resuelve en la versión anterior del aula. Tu progreso y tus
-          respuestas son los mismos.
+          Abre el reproductor de esta actividad para responder o continuar desde tu último avance.
         </p>
       </div>
     )

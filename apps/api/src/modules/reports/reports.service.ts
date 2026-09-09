@@ -281,7 +281,7 @@ export class ReportsService {
         });
         if (!enrollment) throw new NotFoundException('Student enrollment not found');
 
-        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId);
+        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId, enrollmentId);
         const card = groupData.cards.find(c => c.enrollmentId === enrollmentId);
         if (!card) throw new NotFoundException('Report card not found for this student in the group batch');
 
@@ -323,7 +323,7 @@ export class ReportsService {
         });
         if (!enrollment) throw new NotFoundException('Student enrollment not found');
 
-        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId);
+        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId, enrollmentId);
         const card = groupData.cards.find(c => c.enrollmentId === enrollmentId);
         if (!card) throw new NotFoundException('Report card not found for this student in the group batch');
 
@@ -598,29 +598,25 @@ export class ReportsService {
       doc.font('Helvetica-Bold').text('CALIFICACIONES POR ASIGNATURA');
       doc.moveDown(0.5);
 
-      const tableTop = doc.y;
       const col1 = 50;
       const col2 = 250;
       const col3 = 350;
       const col4 = 450;
 
-      doc.fontSize(9).font('Helvetica-Bold');
-      doc.text('Asignatura', col1, tableTop);
-      doc.text('Nota', col2, tableTop);
-      doc.text('Desempeño', col3, tableTop);
-      doc.text('Docente', col4, tableTop);
-
-      doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-
-      let y = tableTop + 20;
+      const tableHeader = (top: number) => {
+        doc.fontSize(9).font('Helvetica-Bold');
+        doc.text('Asignatura', col1, top, { width: 190 });
+        doc.text('Nota', col2, top, { width: 90 });
+        doc.text('Desempeño', col3, top, { width: 90 });
+        doc.text('Docente', col4, top, { width: 100 });
+        doc.moveTo(col1, top + 15).lineTo(550, top + 15).stroke();
+        doc.font('Helvetica').fontSize(8);
+        return top + 20;
+      };
+      let y = tableHeader(doc.y);
       doc.font('Helvetica').fontSize(8);
 
       for (const subject of data.subjectGrades) {
-        if (y > 700) {
-          doc.addPage();
-          y = 50;
-        }
-
         const recovered = subject.hasRecovery
           && subject.originalGrade !== null
           && subject.grade !== null
@@ -630,8 +626,15 @@ export class ReportsService {
         const recoveryLine = recovered
           ? `Recuperada: perdió con ${originalRecoveredGrade!.toFixed(1)}${subject.recoveryGrade !== null ? `, recuperación ${subject.recoveryGrade.toFixed(1)}` : ''}, definitiva ${finalRecoveredGrade!.toFixed(1)}`
           : '';
-        const rowHeight = recovered ? 30 : 20;
         const subjectLabel = recovered ? `${subject.subject}\n${recoveryLine}` : subject.subject;
+        const rowHeight = Math.max(20,
+          doc.heightOfString(subjectLabel, { width: 190 }) + 8,
+          doc.heightOfString(subject.teacher || '', { width: 100 }) + 8,
+        );
+        if (y + rowHeight > 710) {
+          doc.addPage();
+          y = tableHeader(50);
+        }
 
         doc.text(subjectLabel, col1, y, { width: 190 });
         doc.text(subject.grade?.toFixed(1) || 'N/A', col2, y);
@@ -640,15 +643,17 @@ export class ReportsService {
         y += rowHeight;
       }
 
-      doc.moveDown(2);
-
       // Attendance Summary
+      if (y + 100 > 710) { doc.addPage(); y = 30; }
+      doc.x = col1;
       doc.y = y + 20;
       doc.fontSize(10).font('Helvetica-Bold').text('ASISTENCIA');
       doc.font('Helvetica').fontSize(9);
       doc.text(`Total clases: ${data.attendance.total}`);
       doc.text(`Presente: ${data.attendance.present} | Ausente: ${data.attendance.absent} | Tardanzas: ${data.attendance.late} | Excusas: ${data.attendance.excused}`);
-      doc.text(`Porcentaje de asistencia: ${data.attendance.attendanceRate}%`);
+      doc.text(data.attendance.total > 0
+        ? `Porcentaje de asistencia: ${data.attendance.attendanceRate}%`
+        : 'Sin registros de asistencia en este período.');
       doc.moveDown();
 
       // Achievements
@@ -676,13 +681,22 @@ export class ReportsService {
         doc.font('Helvetica').fontSize(8);
 
         for (const obs of data.observations.slice(0, 5)) {
-          const dateStr = new Date(obs.date).toLocaleDateString('es-CO');
-          doc.text(`[${dateStr}] ${obs.type}: ${obs.description}`);
+          // La columna es @db.Date: conserva el día civil, sin convertirlo a la hora local.
+          const dateStr = new Date(obs.date).toLocaleDateString('es-CO', { timeZone: 'UTC' });
+          const types: Record<string, string> = {
+            POSITIVE: 'Reconocimiento', PEDAGOGICAL: 'Observación pedagógica',
+            BEHAVIORAL_MILD: 'Convivencia', ACTA_TYPE_I: 'Acta tipo I',
+            ACTA_TYPE_II: 'Acta tipo II', ACTA_TYPE_III: 'Acta tipo III',
+            PARENT_CITATION: 'Citación al acudiente', COMMITMENT: 'Compromiso',
+            COUNSELING_FOLLOWUP: 'Seguimiento de orientación', REFERRAL: 'Remisión',
+            COMMITTEE_DECISION: 'Decisión del comité', PEDAGOGICAL_FOLLOWUP: 'Seguimiento pedagógico',
+          };
+          doc.text(`[${dateStr}] ${types[obs.type] || obs.type}: ${obs.description}`);
         }
       }
 
       // Footer
-      doc.fontSize(8).text(`Generado el: ${new Date().toLocaleString('es-CO')}`, 50, 750);
+      doc.fontSize(8).text(`Generado el: ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`, 50, 750, { lineBreak: false });
 
       doc.end();
     });
@@ -2764,6 +2778,7 @@ export class ReportsService {
   async buildGroupReportCards(
     groupId: string,
     academicTermId: string,
+    requestedEnrollmentId?: string,
   ): Promise<{
     institution: { id: string; name: string; nit: string | null; address: string | null; phone: string | null; email: string | null };
     academicYear: { id: string; year: number; name: string | null };
@@ -2836,7 +2851,16 @@ export class ReportsService {
 
     // ─── QUERY 2: Matrículas del grupo con estudiante + grupo + año + director ──
     const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { groupId, status: 'ACTIVE' },
+      where: {
+        groupId,
+        // El grupo se reutiliza entre años: el período fija el universo histórico.
+        academicYear: { terms: { some: { id: academicTermId } } },
+        OR: [
+          { status: { in: ['ACTIVE', 'PROMOTED', 'REPEATED', 'GRADUATED'] } },
+          // Un retiro/traslado no debe impedir expedir el boletín individual previo.
+          ...(requestedEnrollmentId ? [{ id: requestedEnrollmentId }] : []),
+        ],
+      },
       include: {
         student: true,
         group: { include: { grade: true, director: { select: { id: true, firstName: true, lastName: true, signatureImageUrl: true } } } },
@@ -2846,7 +2870,7 @@ export class ReportsService {
     });
 
     if (enrollments.length === 0) {
-      throw new NotFoundException('No hay estudiantes activos en este grupo');
+      throw new NotFoundException('No hay matrículas para este grupo y año académico');
     }
 
     const firstEnrollment = enrollments[0];

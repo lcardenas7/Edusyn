@@ -70,8 +70,9 @@ export class RecoveryEngineService {
         finalScore = Math.min(recoveryScore, maxScore);
     }
 
-    // Redondear a 2 decimales
-    finalScore = Math.round(finalScore * 100) / 100;
+    // La recuperación puede mejorar la nota, nunca reducir la evidencia original.
+    // El tope limita el beneficio de recuperar; no recorta una nota ya obtenida.
+    finalScore = Math.max(originalScore, Math.round(finalScore * 100) / 100);
 
     const status: RecoveryStatus = finalScore >= minPassingScore ? 'APPROVED' : 'NOT_APPROVED';
 

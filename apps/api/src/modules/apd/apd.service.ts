@@ -174,6 +174,7 @@ export class ApdService {
         'No se puede activar el perfil sin consentimiento parental aceptado.',
       );
     }
+    const nextActive = consentAccepted ? (data.active ?? profile.active) : false;
 
     const updated = await this.prisma.educationalSupportProfile.update({
       where: { id: profileId },
@@ -188,7 +189,7 @@ export class ApdService {
         ...(data.parentConsentAccepted !== undefined && { parentConsentAccepted: data.parentConsentAccepted }),
         ...(data.consentDate !== undefined && { consentDate: data.consentDate ? new Date(data.consentDate) : null }),
         ...(data.consentDocumentUrl !== undefined && { consentDocumentUrl: data.consentDocumentUrl }),
-        ...(data.active !== undefined && { active: data.active }),
+        active: nextActive,
       },
       include: {
         student: {
@@ -197,9 +198,9 @@ export class ApdService {
       },
     });
 
-    const action = data.active === true
+    const action = nextActive && !profile.active
       ? 'PROFILE_ACTIVATED'
-      : data.active === false
+      : !nextActive && profile.active
         ? 'PROFILE_DEACTIVATED'
         : 'PROFILE_UPDATED';
 
@@ -209,7 +210,7 @@ export class ApdService {
       action,
       entityType: 'EducationalSupportProfile',
       entityId: profileId,
-      details: data,
+      details: { ...data, active: nextActive },
     });
 
     return updated;

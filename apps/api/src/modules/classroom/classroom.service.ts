@@ -2428,7 +2428,8 @@ export class ClassroomService {
     const source = await this.prisma.classroom.findUnique({
       where: { id: sourceClassroomId },
       include: {
-        teacherAssignment: { select: { teacherId: true } },
+        teacherAssignment: { select: { teacherId: true, academicYear: { select: { terms: { select: { id: true, order: true, type: true } } } } } },
+        activities: { where: { sectionId: null, isRouteScoped: false } },
         sections: {
           include: {
             materials: true,
@@ -2462,7 +2463,7 @@ export class ClassroomService {
         // Validate target assignment belongs to same teacher
         const targetAssignment = await this.prisma.teacherAssignment.findFirst({
           where: { id: targetAssignmentId, teacherId, endDate: null },
-          include: { group: { include: { grade: true } }, subject: true },
+          include: { group: { include: { grade: true } }, subject: true, academicYear: { select: { terms: { select: { id: true, order: true, type: true } } } } },
         });
 
         if (!targetAssignment) {
@@ -2488,6 +2489,24 @@ export class ClassroomService {
           });
         }
 
+        // Conserva la posición del período al copiar entre años; nunca enlaza al año origen.
+        const destinationTerm = (sourceTermId: string | null): string | null => {
+          const term = source.teacherAssignment.academicYear.terms.find(t => t.id === sourceTermId);
+          return term ? targetAssignment.academicYear.terms.find(t => t.order === term.order && t.type === term.type)?.id ?? null : null;
+        };
+        const copyActivity = async (activity: (typeof source.activities)[number], sectionId: string | null) => {
+          const created = await this.prisma.classroomActivity.create({ data: {
+            sectionId, classroomId: targetClassroom!.id, academicTermId: destinationTerm(activity.academicTermId),
+            type: activity.type, title: activity.title, description: activity.description,
+            maxScore: activity.maxScore, dueDate: null, openDate: null,
+            timeLimitMinutes: activity.timeLimitMinutes, allowLateSubmit: activity.allowLateSubmit,
+            maxAttempts: activity.maxAttempts, shuffleQuestions: activity.shuffleQuestions,
+            showResults: activity.showResults, isVisible: false, isPublished: false,
+            sortOrder: activity.sortOrder, metadata: activity.metadata as any,
+          } });
+          await this.cloneActivityContent(activity.id, created.id);
+        };
+
         // Copy sections with materials and activities
         for (const section of source.sections) {
           const newSection = await this.prisma.classroomSection.create({
@@ -2497,6 +2516,7 @@ export class ClassroomService {
               description: section.description,
               sortOrder: section.sortOrder,
               isVisible: section.isVisible,
+              academicTermId: destinationTerm(section.academicTermId),
             },
           });
 
@@ -2517,31 +2537,12 @@ export class ClassroomService {
 
           // Copy activities (without submissions)
           for (const activity of section.activities) {
-            const newActivity = await this.prisma.classroomActivity.create({
-              data: {
-                sectionId: newSection.id,
-                classroomId: targetClassroom.id,
-                type: activity.type,
-                title: activity.title,
-                description: activity.description,
-                maxScore: activity.maxScore,
-                dueDate: null, // Reset due date
-                openDate: null,
-                timeLimitMinutes: activity.timeLimitMinutes,
-                allowLateSubmit: activity.allowLateSubmit,
-                maxAttempts: activity.maxAttempts,
-                shuffleQuestions: activity.shuffleQuestions,
-                showResults: activity.showResults,
-                isVisible: false, // Start as not visible
-                isPublished: false, // Start as not published
-                sortOrder: activity.sortOrder,
-                metadata: activity.metadata as any,
-              },
-            });
-
-            // Contenido completo: contextos, preguntas y lección interactiva.
-            await this.cloneActivityContent(activity.id, newActivity.id);
+            await copyActivity(activity, newSection.id);
           }
+        }
+
+        for (const activity of source.activities) {
+          await copyActivity(activity, null);
         }
 
         // Copy forum topics (teacher-created) to target classroom

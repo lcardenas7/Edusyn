@@ -582,6 +582,7 @@ export class PeriodRecoveryService {
       where: { id },
       data: {
         status: finalStatus,
+        finalScore,
         reviewedById: data.reviewedById,
         observations: data.observations
           ? `${recovery.observations || ''}\n[Revisión]: ${data.observations}`

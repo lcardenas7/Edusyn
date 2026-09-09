@@ -163,14 +163,14 @@ const institutionalNavigation: NavItem[] = [
   
   // Matrículas y Admisiones
   { 
-    name: 'Matrículas', 
+    name: 'Matrículas y año escolar', 
     icon: UserPlus, 
     roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
     module: 'ENROLLMENTS',
     children: [
       { name: 'Gestión de Matrículas', href: '/enrollments', icon: UserPlus, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ENROLLMENTS' },
-      { name: 'Cierre Año Académico', href: '/academic-year-closure', icon: FileText, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
-      { name: 'Asistente Año Académico', href: '/academic-year-wizard', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
+      { name: 'Cierre y promoción del año', href: '/academic-year-closure', icon: FileText, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
+      { name: 'Preparar el siguiente año', href: '/academic-year-wizard', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
     ]
   },
 
@@ -185,7 +185,7 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Estudiantes', href: '/students', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'USERS' },
       { name: 'Otros Usuarios', href: '/staff', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
       // Carga Académica se movió a "Plan de Estudios" (es parte de armar el plan del grado).
-      { name: 'Permisos', href: '/admin/permissions', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
+      { name: 'Permisos de acceso', href: '/admin/permissions', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
     ]
   },
   
@@ -204,17 +204,17 @@ const institutionalNavigation: NavItem[] = [
       // por eso viven aquí además de en Configuración SIEE.
       { name: 'Ventanas de Calificación', href: '/academic/config/windows/grading', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Ventanas de Recuperación', href: '/academic/config/windows/recovery', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'RECOVERY' },
-      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
-      { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
     ]
   },
   
   // Seguimiento Estudiantil
   { 
-    name: 'Seguimiento', 
+    name: 'Seguimiento e inclusión', 
     icon: UserCheck, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'],
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'PSICOLOGA'],
     children: [
+      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
+      { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
       { name: 'Asistencia', href: '/attendance', icon: Calendar, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'], module: 'ATTENDANCE' },
       { name: 'Observador', href: '/observer', icon: ClipboardList, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'], module: 'OBSERVER' },
       { name: 'Informe Convivencial', href: '/observer-stats', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'] },
@@ -223,7 +223,7 @@ const institutionalNavigation: NavItem[] = [
   },
 
   // Permisos de Personal
-  { name: 'Permisos', href: '/staff-leave', icon: Shield, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE'] },
+  { name: 'Permisos del personal', href: '/staff-leave', icon: Shield, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE'] },
   
   // Elecciones Escolares
   { name: 'Elecciones', href: '/elections', icon: Vote, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },

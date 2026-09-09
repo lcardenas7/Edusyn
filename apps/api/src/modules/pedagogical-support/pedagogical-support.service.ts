@@ -168,10 +168,11 @@ export class PedagogicalSupportService {
   // OBTENER POR ESTUDIANTE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getByStudent(studentEnrollmentId: string, academicTermId?: string) {
+  async getByStudent(studentEnrollmentId: string, institutionId: string, academicTermId?: string) {
     return this.prisma.pedagogicalSupportPlan.findMany({
       where: {
         studentEnrollmentId,
+        institutionId,
         ...(academicTermId && { academicTermId }),
       },
       include: {
@@ -237,9 +238,9 @@ export class PedagogicalSupportService {
   // OBTENER POR ID
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getById(id: string) {
-    const plan = await this.prisma.pedagogicalSupportPlan.findUnique({
-      where: { id },
+  async getById(id: string, institutionId: string) {
+    const plan = await this.prisma.pedagogicalSupportPlan.findFirst({
+      where: { id, institutionId },
       include: {
         studentEnrollment: {
           include: {

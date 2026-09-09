@@ -45,8 +45,8 @@ export class PedagogicalSupportController {
   ) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.supportService.createSupportPlan({
-      institutionId,
       ...body,
+      institutionId,
     });
   }
 
@@ -95,10 +95,12 @@ export class PedagogicalSupportController {
   @Get('by-student/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getByStudent(
+    @Request() req: any,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
-    return this.supportService.getByStudent(studentEnrollmentId, academicTermId);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.supportService.getByStudent(studentEnrollmentId, institutionId, academicTermId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -123,7 +125,8 @@ export class PedagogicalSupportController {
 
   @Get(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getById(@Param('id') id: string) {
-    return this.supportService.getById(id);
+  async getById(@Request() req: any, @Param('id') id: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.supportService.getById(id, institutionId);
   }
 }
