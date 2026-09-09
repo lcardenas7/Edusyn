@@ -282,8 +282,8 @@ const institutionalNavigation: NavItem[] = [
   { name: 'Mi Espacio', href: '/my-workspace', icon: LayoutGrid, roles: ['DOCENTE', 'COORDINADOR'], module: 'TEACHER_WORKSPACE' },
 
   // Aula Virtual
-  { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },
-  { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
+  { name: 'Aula Virtual', href: '/aula', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },
+  { name: 'Mis Clases', href: '/aula', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
 
   // Edusyn Play: motor SEPARADO (estilo Kahoot/Quizizz, no dependiente de institución).
   // Se retira del menú docente a pedido; las rutas /play-landing y /play siguen vivas

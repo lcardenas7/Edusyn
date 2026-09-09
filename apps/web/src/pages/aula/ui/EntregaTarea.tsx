@@ -9,7 +9,8 @@
  */
 
 import { useState } from 'react'
-import { Paperclip, Send, TriangleAlert } from 'lucide-react'
+import { Mic, Paperclip, Send, TriangleAlert } from 'lucide-react'
+import { AudioRecorder } from '../../../components/media/SmartMedia'
 import { classroomApi } from '../../../lib/api'
 import { toast } from '../../../lib/toast'
 import { confirmDialog } from '../../../components/ui/confirm'
@@ -34,6 +35,8 @@ export function EntregaTarea({
 }) {
   const [texto, setTexto] = useState(entrega?.content ?? '')
   const [archivo, setArchivo] = useState<File | null>(null)
+  // El docente pudo marcar la tarea como "se responde con un audio".
+  const pideAudio = actividad.metadata?.audioResponse === true
   const [enviando, setEnviando] = useState(false)
 
   const calificada = vista.state === 'calificada'
@@ -53,7 +56,11 @@ export function EntregaTarea({
     // Una entrega puede ser solo un archivo: hay tareas que se entregan en foto o en PDF y no
     // tienen nada que escribir.
     if (!texto.trim() && !archivo && !entrega?.fileUrl) {
-      toast.warning('Escribe tu respuesta o adjunta un archivo antes de enviar')
+      toast.warning(
+        actividad.metadata?.audioResponse === true
+          ? 'Graba tu respuesta o adjunta un archivo antes de enviar'
+          : 'Escribe tu respuesta o adjunta un archivo antes de enviar',
+      )
       return
     }
     if (yaEntregada) {
@@ -157,6 +164,27 @@ export function EntregaTarea({
             placeholder="Escribe aquí tu respuesta…"
             className="w-full rounded-lg border border-hairline bg-surface-1 p-3 text-body-sm text-ink-primary placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
           />
+
+          {/* Grabar: solo cuando el docente marcó la tarea como respuesta en audio. La grabación
+              termina siendo un File normal, así que viaja por el mismo camino que un adjunto y no
+              necesita nada especial al enviar. */}
+          {pideAudio && (
+            <div className="mt-3 rounded-lg border border-hairline bg-surface-2 p-3">
+              <p className="flex items-center gap-1.5 text-body-sm font-semibold text-ink-primary">
+                <Mic className="h-4 w-4 text-accent" aria-hidden="true" />
+                Esta tarea se responde con un audio
+              </p>
+              <p className="mt-0.5 text-body-sm text-ink-muted">
+                Graba aquí tu respuesta. Si prefieres, también puedes adjuntar un archivo de audio.
+              </p>
+              <div className="mt-2.5">
+                <AudioRecorder
+                  disabled={enviando}
+                  onRecorded={(f) => setArchivo(f)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Adjuntar: muchas tareas se entregan en foto o en PDF, no escribiendo. */}
           <div className="mt-3">

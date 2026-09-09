@@ -436,11 +436,16 @@ function App() {
                   <Route path="/my-workspace-classic" element={<TeacherWorkspace />} />
                   <Route path="/my-workspace-v2" element={<WorkspaceV2Page />} />
                   <Route path="/my-workspace-v2/:boardId" element={<SpaceDetailPage />} />
-                  <Route path="/classroom" element={<Classroom />} />
-                  <Route path="/my-classes" element={<Classroom />} />
-                  {/* Aula Virtual rediseñada (docs/REDISENO_AULA_VIRTUAL.md). Convive con la
-                      actual: se entra por el enlace "Probar la nueva aula" y se vuelve cuando
-                      se quiera. Cambiar entre una y otra NO escribe nada en el servidor. */}
+                  {/* El Aula Virtual rediseñada (docs/REDISENO_AULA_VIRTUAL.md) es ya la
+                      predeterminada. Las direcciones antiguas apuntan a ella para que los
+                      enlaces guardados y los avisos ya enviados sigan funcionando.
+
+                      El aula anterior NO se retira: vive en /aula-clasica, sigue siendo el
+                      respaldo y además el aula nueva reutiliza cuatro de sus pestañas
+                      (ver HerramientasAula). Cambiar entre una y otra no escribe nada. */}
+                  <Route path="/classroom" element={<AulaVirtual />} />
+                  <Route path="/my-classes" element={<AulaVirtual />} />
+                  <Route path="/aula-clasica" element={<Classroom />} />
                   <Route path="/aula" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId/:vista" element={<AulaVirtual />} />

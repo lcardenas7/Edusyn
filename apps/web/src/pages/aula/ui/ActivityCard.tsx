@@ -21,7 +21,7 @@
  * deja que la nota sea lo que se vea.
  */
 
-import { Check, Lock, Paperclip, PenLine } from 'lucide-react'
+import { Check, Lock, Mic, Paperclip, PenLine } from 'lucide-react'
 import type { DecoratedActivity, Role } from '../model/list'
 import { activityTypeLabel, activityTypeMeta } from '../model/labels'
 import { agoCopy, bogotaLongDate, bogotaTime, dueCopy, opensCopy } from '../model/countdown'
@@ -206,6 +206,14 @@ export function ActivityCard({
         )}
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-ink-muted">
+          {/* Que se responde con audio hay que verlo en la lista: si no, el docente no distingue
+              sus tareas de audio y el estudiante se entera solo al abrirla. */}
+          {a.metadata?.audioResponse === true && (
+            <span className="inline-flex items-center gap-1">
+              <Mic className="h-3.5 w-3.5" aria-hidden="true" />
+              Se responde con audio
+            </span>
+          )}
           {s?.attempt && (
             <span>
               Intento {s.attempt.current} de {s.attempt.max}

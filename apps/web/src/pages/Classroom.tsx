@@ -357,15 +357,16 @@ export default function Classroom() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Aula rediseñada (docs/REDISENO_AULA_VIRTUAL.md). Convive con esta: entrar y
-                volver no escribe nada en el servidor, es solo una preferencia de interfaz. */}
+            {/* El aula rediseñada ya es la predeterminada; esta queda como respaldo en
+                /aula-clasica. Entrar y volver no escribe nada en el servidor: es solo una
+                preferencia de interfaz. */}
             <button
               onClick={() => navigate('/aula')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:border-blue-300 hover:text-blue-700 transition-colors"
-              title="Estamos rediseñando el aula. Puedes volver cuando quieras."
+              title="Esta es el aula anterior. Puedes volver a la nueva cuando quieras."
             >
               <Sparkles className="w-4 h-4" />
-              Probar la nueva aula
+              Volver al aula nueva
             </button>
             {isTeacher && (
               <button
