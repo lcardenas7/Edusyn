@@ -16,6 +16,7 @@ El encabezado toma sus valores de la configuración institucional, sin codificar
 - resolución oficial tomada de la configuración de boletines;
 - NIT y código DANE, cuando estén registrados;
 - color principal institucional.
+- ciudad, teléfono, correo institucional y sitio web, cuando estén diligenciados.
 
 Para La Esperanza del Sur, el encabezado solicitado es:
 
@@ -27,6 +28,8 @@ NIT 802.014.062-7
 ```
 
 La búsqueda pública en producción confirmó el nombre `Institución Educativa Distrital La Esperanza del Sur` y el slug `/esperanza-del-sur`. La pantalla pública mostró el icono genérico de Edusyn, por lo que el escudo institucional no puede darse por configurado hasta revisar el perfil con acceso válido o recibir el archivo oficial.
+
+La institución siempre se resuelve desde la sesión autenticada. El generador consulta por ese `institutionId` tanto el perfil y el escudo como la configuración de resolución y firmas, y filtra por el mismo identificador todos los casos del Observador. El tipo de acta, consecutivo, hechos, norma, medidas, testigos y descargos proceden del proceso registrado por la propia institución en `ActaRecord`; no existe una identidad ni un protocolo de La Esperanza del Sur codificado en el servicio.
 
 ## Regla para uno o varios estudiantes
 
