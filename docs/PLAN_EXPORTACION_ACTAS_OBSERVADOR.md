@@ -85,4 +85,8 @@ La versión puede pasar a producción cuando API y web compilen, las pruebas de 
 - TypeScript API aprobado después de generar el cliente Prisma correspondiente a staging.
 - Build Vite de producción aprobado; conserva la advertencia existente de algunos paquetes mayores a 500 kB.
 - Muestra conjunta renderizada en tamaño carta: dos páginas, contenido en la primera y firmas completas en la segunda, sin páginas vacías después de la corrección.
-- Despliegue pendiente de completar y registrar en `docs/REGISTRO_DESPLIEGUES.md`.
+- Muestra final renderizada de nuevo después del ajuste de firmas: dos páginas exactas, encabezado y contenido sin recortes, grilla de firmas alineada y pie `Página 1 de 2` / `Página 2 de 2`.
+- `staging`: commit funcional `bba72e62` publicado. La ruta `POST /api/observer/actas/export` responde `401` sin sesión, lo que confirma que el backend desplegado reconoce y protege el endpoint.
+- El buscador público de staging no contiene a La Esperanza del Sur. Para no copiar información real ni crear casos artificiales en producción, la prueba funcional autenticada se conserva con datos sintéticos y las pruebas automatizadas de aislamiento.
+- `producción`: commit funcional `af78f616` publicado desde un worktree limpio basado en `origin/main`. La ruta de `api.edusyn.co` responde `401` sin sesión y el paquete web público contiene los controles de exportación conjunta e individual.
+- Configuración institucional pendiente: cargar o confirmar el escudo oficial y verificar en el perfil la dirección, resolución, NIT y color antes de considerar definitivo el formato de La Esperanza del Sur.
