@@ -388,7 +388,15 @@ Despliegue: `staging` primero, y registrar la fila en `docs/REGISTRO_DESPLIEGUES
 
 ---
 
-## 9. Qué falta (estado a 2026-09-05)
+## 9. Qué falta (estado a 2026-09-05) — **SUPERADO**
+
+> **Este apartado quedó obsoleto el 2026-09-08.** Los ocho huecos están cerrados y el aula nueva es
+> ya la predeterminada. El estado vigente está en
+> [`ESTADO_AULA_VIRTUAL.md`](ESTADO_AULA_VIRTUAL.md).
+>
+> Se conserva lo de abajo porque explica de dónde venía cada hueco.
+
+### 9.0 (histórico) Qué faltaba a 2026-09-05
 
 Los catorce tickets planificados están cerrados. Lo que sigue **no** está hecho, ordenado por
 lo que más bloquea a un usuario real.
