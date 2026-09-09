@@ -12,6 +12,9 @@ const institution = {
   daneCode: '108001000000',
   address: 'Carrera 8C No. 93-92',
   city: 'Barranquilla',
+  phone: null,
+  email: null,
+  website: null,
   logo: null,
   primaryColor: '#1E3A8A',
 };
@@ -100,6 +103,55 @@ describe('ObserverActaPdfService', () => {
       observationIds: ['obs-1', 'foreign-id'],
       mode: ObserverActaExportMode.JOINT,
     })).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('resuelve identidad, configuración y casos desde la institución autenticada', async () => {
+    const otherInstitution = {
+      ...institution,
+      id: 'inst-other',
+      name: 'COLEGIO DISTRITAL DEL NORTE',
+      address: 'Calle 10 No. 20-30',
+      city: 'Soledad',
+      phone: '6050000000',
+      email: 'contacto@colegio.example',
+      website: 'colegio.example',
+      logo: 'institutions/inst-other/logo.png',
+      primaryColor: '#7C2D12',
+    };
+    const otherObservation = {
+      ...observations[0],
+      id: 'obs-other',
+      institutionId: otherInstitution.id,
+    };
+    prisma.institution.findUnique.mockResolvedValueOnce(otherInstitution);
+    prisma.reportCardConfig.findUnique.mockResolvedValueOnce({
+      headerResolution: 'RESOLUCIÓN 1234 DE 2024',
+      signatureConfig: [{ role: 'COORDINATOR', name: 'Coordinación Institucional', enabled: true }],
+    });
+    prisma.studentObservation.findMany.mockResolvedValueOnce([otherObservation]);
+    storage.resolveToDataUri.mockResolvedValueOnce(null);
+
+    const service = new ObserverActaPdfService(prisma, storage);
+    const pdf = await service.generate({
+      institutionId: otherInstitution.id,
+      actorId: 'coordinator-other',
+      actorRoles: ['COORDINADOR'],
+      observationIds: [otherObservation.id],
+      mode: ObserverActaExportMode.INDIVIDUAL,
+    });
+
+    expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
+    expect(prisma.institution.findUnique).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: { id: otherInstitution.id },
+      select: expect.objectContaining({ name: true, logo: true, address: true, city: true, phone: true, email: true, website: true }),
+    }));
+    expect(prisma.reportCardConfig.findUnique).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: { institutionId: otherInstitution.id },
+    }));
+    expect(prisma.studentObservation.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ institutionId: otherInstitution.id }),
+    }));
+    expect(storage.resolveToDataUri).toHaveBeenLastCalledWith(otherInstitution.logo);
   });
 
   it('impide al docente exportar actas ajenas a sus registros o dirección de grupo', async () => {

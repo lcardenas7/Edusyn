@@ -39,6 +39,9 @@ export class ObserverActaPdfService {
           daneCode: true,
           address: true,
           city: true,
+          phone: true,
+          email: true,
+          website: true,
           logo: true,
           primaryColor: true,
         },
@@ -235,11 +238,16 @@ export class ObserverActaPdfService {
     const textWidth = logo ? width - 68 : width;
     doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(13).text(String(institution.name || '').toUpperCase(), textX, startY, { width: textWidth, align: 'center' });
     doc.font('Helvetica').fontSize(8.5).fillColor('#334155');
-    if (institution.address) doc.text(`DIRECCIÓN ${String(institution.address).toUpperCase()}`, textX, doc.y + 2, { width: textWidth, align: 'center' });
+    const address = String(institution.address || '').trim();
+    const city = String(institution.city || '').trim();
+    const location = [address, city && !address.toLocaleLowerCase('es').includes(city.toLocaleLowerCase('es')) ? city : ''].filter(Boolean).join(' - ');
+    if (location) doc.text(`DIRECCIÓN ${location.toUpperCase()}`, textX, doc.y + 2, { width: textWidth, align: 'center' });
     const resolution = this.resolutionLine(config?.headerResolution);
     if (resolution) doc.text(resolution, textX, doc.y + 1, { width: textWidth, align: 'center' });
     const identifiers = [institution.nit ? `NIT ${institution.nit}` : '', institution.daneCode ? `DANE ${institution.daneCode}` : ''].filter(Boolean).join('   |   ');
     if (identifiers) doc.text(identifiers.toUpperCase(), textX, doc.y + 1, { width: textWidth, align: 'center' });
+    const contact = [institution.phone ? `TEL. ${institution.phone}` : '', institution.email || '', institution.website || ''].filter(Boolean).join('   |   ');
+    if (contact) doc.fontSize(7.2).text(contact, textX, doc.y + 1, { width: textWidth, align: 'center' });
     doc.y = Math.max(doc.y + 8, startY + 66);
     doc.moveTo(margin, doc.y).lineTo(margin + width, doc.y).strokeColor(brand).lineWidth(1.5).stroke();
     doc.moveDown(0.6);
