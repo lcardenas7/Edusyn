@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReportsService } from '../reports/reports.service';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
@@ -33,7 +33,26 @@ export class RecoverySnapshotService {
   /**
    * Obtiene el estado actual del proceso de recuperación de un período
    */
-  async getRecoveryStatus(academicTermId: string) {
+  /**
+   * Exige que el período sea del tenant del actor.
+   *
+   * Ninguno de los métodos de este servicio lo comprobaba: todos recibían un `academicTermId` del
+   * cliente y operaban. Cuatro de ellos ESCRIBEN —cerrar la ventana, generar snapshots, finalizar
+   * el proceso— sobre el período entero, así que con el identificador de otra institución se
+   * podían disparar sobre datos ajenos.
+   *
+   * `NotFoundException` y no `Forbidden`: un 403 confirmaría que el período existe.
+   */
+  private async assertTermScope(institutionId: string, academicTermId: string) {
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: academicTermId, academicYear: { institutionId } },
+      select: { id: true },
+    });
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+  }
+
+  async getRecoveryStatus(academicTermId: string, institutionId: string) {
+    await this.assertTermScope(institutionId, academicTermId);
     const config = await this.prisma.recoveryPeriodConfig.findUnique({
       where: { academicTermId },
       include: {
@@ -122,9 +141,11 @@ export class RecoverySnapshotService {
    */
   async closeRecoveryWindow(
     academicTermId: string,
-    userId?: string,
-    force: boolean = false
+    userId: string | undefined,
+    force: boolean,
+    institutionId: string,
   ) {
+    await this.assertTermScope(institutionId, academicTermId);
     const config = await this.prisma.recoveryPeriodConfig.findUnique({
       where: { academicTermId },
       include: { academicTerm: { select: { name: true } } }
@@ -185,8 +206,10 @@ export class RecoverySnapshotService {
    */
   async createPostRecoverySnapshots(
     academicTermId: string,
-    userId: string
+    userId: string,
+    actorInstitutionId: string,
   ) {
+    await this.assertTermScope(actorInstitutionId, academicTermId);
     const config = await this.prisma.recoveryPeriodConfig.findUnique({
       where: { academicTermId },
       include: { 
@@ -376,7 +399,8 @@ export class RecoverySnapshotService {
    * Finaliza el proceso de recuperación del período.
    * Marca el proceso como completamente terminado.
    */
-  async finalizeRecoveryProcess(academicTermId: string) {
+  async finalizeRecoveryProcess(academicTermId: string, institutionId: string) {
+    await this.assertTermScope(institutionId, academicTermId);
     const config = await this.prisma.recoveryPeriodConfig.findUnique({
       where: { academicTermId }
     });
@@ -408,7 +432,8 @@ export class RecoverySnapshotService {
   /**
    * Compara el snapshot inicial con el POST_RECOVERY para un estudiante
    */
-  async compareSnapshots(academicTermId: string, studentEnrollmentId: string) {
+  async compareSnapshots(academicTermId: string, studentEnrollmentId: string, institutionId: string) {
+    await this.assertTermScope(institutionId, academicTermId);
     const snapshots = await this.prisma.termReportCardSnapshot.findMany({
       where: { academicTermId, studentEnrollmentId },
       orderBy: { version: 'asc' }
@@ -446,8 +471,9 @@ export class RecoverySnapshotService {
   /**
    * Obtiene el flujo completo del proceso de recuperación para mostrar en UI
    */
-  async getRecoveryWorkflow(academicTermId: string) {
-    const status = await this.getRecoveryStatus(academicTermId);
+  async getRecoveryWorkflow(academicTermId: string, institutionId: string) {
+    await this.assertTermScope(institutionId, academicTermId);
+    const status = await this.getRecoveryStatus(academicTermId, institutionId);
 
     const steps = [
       {

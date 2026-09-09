@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecoveryStatus, RecoveryImpactType, RecoveryActivityType } from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
@@ -68,6 +68,54 @@ export class PeriodRecoveryService {
    * CHECKBOX "Pierde el área si cualquier asignatura está perdida":
    * - Si está marcado, aunque el promedio pase, SÍ debe recuperar
    */
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AISLAMIENTO INSTITUCIONAL
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // El defecto que estas guardas cierran: la institución se deducía del RECURSO que nombraba el
+  // cliente —la matrícula, el período, la recuperación—, nunca del actor. La fila resultante
+  // quedaba coherente (llevaba la institución correcta del estudiante), así que **una auditoría
+  // de datos no lo detectaba nunca**: había que leer el código para verlo.
+  //
+  // Se responde `NotFoundException` y no `Forbidden` a propósito, igual que en Aprendizajes: un
+  // 403 confirmaría que el recurso existe. Un recurso ajeno debe ser indistinguible de uno que
+  // no existe.
+
+  /** Exige que el período pertenezca al tenant del actor. `AcademicTerm` no tiene columna propia. */
+  private async assertTermScope(institutionId: string, academicTermId: string) {
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: academicTermId, academicYear: { institutionId } },
+      select: { id: true },
+    });
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+  }
+
+  /** Exige que la matrícula pertenezca al tenant del actor. */
+  private async assertEnrollmentScope(institutionId: string, studentEnrollmentId: string) {
+    const enr = await this.prisma.studentEnrollment.findFirst({
+      where: { id: studentEnrollmentId, institutionId },
+      select: { id: true },
+    });
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
+  }
+
+  /**
+   * Carga una recuperación exigiendo que sea del tenant del actor.
+   * `PeriodRecovery` sí tiene `institutionId`, así que basta acotar el `where`.
+   */
+  private async loadRecoveryInScope<T extends object>(
+    institutionId: string,
+    id: string,
+    include?: T,
+  ) {
+    const recovery = await this.prisma.periodRecovery.findFirst({
+      where: { id, institutionId },
+      ...(include ? { include } : {}),
+    } as never);
+    if (!recovery) throw new NotFoundException('Recuperación no encontrada');
+    return recovery as any;
+  }
+
   async detectStudentsNeedingRecovery(
     academicTermId: string,
     institutionId: string,
@@ -323,16 +371,22 @@ export class PeriodRecoveryService {
     scheduledDate?: Date;
     reinforcedDimension?: string;
     assignedById: string;
-  }) {
+  }, institutionId: string) {
+    // Los dos identificadores vienen del cliente y los dos deben ser del tenant del actor.
+    // Antes se leía la matrícula sin acotarla y se copiaba SU institución a la fila nueva: se
+    // podía crear una recuperación a un estudiante de otra institución y el registro quedaba
+    // perfectamente coherente.
+    await this.assertEnrollmentScope(institutionId, data.studentEnrollmentId);
+    await this.assertTermScope(institutionId, data.academicTermId);
+
     const enr = await this.prisma.studentEnrollment.findUnique({
       where: { id: data.studentEnrollmentId },
       select: { institutionId: true, academicYearId: true },
     });
-    if (!enr) throw new BadRequestException('Matrícula no encontrada');
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
 
-    // Validar que la recuperación esté permitida
     const term = await this.prisma.academicTerm.findUnique({ where: { id: data.academicTermId } });
-    if (!term) throw new BadRequestException('Período no encontrado');
+    if (!term) throw new NotFoundException('Período académico no encontrado');
 
     const validation = await this.engine.validateRecoveryCreation({
       institutionId: enr.institutionId,
@@ -387,10 +441,12 @@ export class PeriodRecoveryService {
     });
   }
 
-  async findByTerm(academicTermId: string, status?: RecoveryStatus) {
+  async findByTerm(academicTermId: string, status: RecoveryStatus | undefined, institutionId: string) {
+    await this.assertTermScope(institutionId, academicTermId);
     return this.prisma.periodRecovery.findMany({
       where: {
         academicTermId,
+        institutionId,
         ...(status && { status }),
       },
       include: {
@@ -411,9 +467,10 @@ export class PeriodRecoveryService {
     });
   }
 
-  async findByStudent(studentEnrollmentId: string) {
+  async findByStudent(studentEnrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentScope(institutionId, studentEnrollmentId);
     return this.prisma.periodRecovery.findMany({
-      where: { studentEnrollmentId },
+      where: { studentEnrollmentId, institutionId },
       include: {
         academicTerm: true,
         subject: true,
@@ -433,17 +490,13 @@ export class PeriodRecoveryService {
       evidences?: string;
       observations?: string;
     },
+    institutionId: string,
   ) {
-    const recovery = await this.prisma.periodRecovery.findUnique({
-      where: { id },
-      include: {
-        studentEnrollment: {
-          select: { institutionId: true, academicYearId: true },
-        },
-      },
+    // Escritura por id. Sin esta guarda bastaba conocer el identificador para modificar la
+    // actividad de refuerzo de una recuperación de otra institución.
+    const recovery = await this.loadRecoveryInScope(institutionId, id, {
+      studentEnrollment: { select: { institutionId: true, academicYearId: true } },
     });
-
-    if (!recovery) throw new BadRequestException('Recuperación no encontrada');
 
     const validation = await this.engine.validateRecoveryCreation({
       institutionId: recovery.studentEnrollment.institutionId,
@@ -473,14 +526,10 @@ export class PeriodRecoveryService {
     institutionId: string,
     actor?: GradeAuditActor,
   ) {
-    const recovery = await this.prisma.periodRecovery.findUnique({
-      where: { id },
-      include: {
-        academicTerm: true,
-      },
-    });
-
-    if (!recovery) throw new BadRequestException('Recuperación no encontrada');
+    // Recibía `institutionId` pero solo lo usaba para elegir las REGLAS: la recuperación se
+    // cargaba por id, sin acotar. Se podía registrar el resultado de otra institución
+    // aplicándole las reglas de la propia.
+    const recovery = await this.loadRecoveryInScope(institutionId, id, { academicTerm: true });
 
     const validation = await this.engine.validateRecoveryCreation({
       institutionId,
@@ -555,8 +604,10 @@ export class PeriodRecoveryService {
     institutionId: string,
     actor?: GradeAuditActor,
   ) {
-    const recovery = await this.prisma.periodRecovery.findUnique({ where: { id } });
-    if (!recovery) throw new BadRequestException('Recuperación no encontrada');
+    // Mismo caso que en registerResult: se cargaba por id y solo después se usaba la
+    // institución del propio registro. Aprobar o rechazar una recuperación ajena era posible
+    // con solo conocer su identificador.
+    const recovery = await this.loadRecoveryInScope(institutionId, id);
     if (recovery.status !== 'REVIEW_PENDING') {
       throw new BadRequestException('Solo se pueden revisar recuperaciones en estado REVIEW_PENDING');
     }
