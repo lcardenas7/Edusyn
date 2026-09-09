@@ -239,7 +239,7 @@ describe('ObserverController · resolución de institución', () => {
       service[m] = jest.fn().mockResolvedValue({});
     }
     const prisma = { institutionUser: { findFirst: jest.fn().mockResolvedValue(null) } };
-    return { controller: new ObserverController(service, prisma as any), service };
+    return { controller: new ObserverController(service, {} as any, prisma as any), service };
   }
 
   it.each([

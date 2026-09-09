@@ -330,6 +330,8 @@ export const observerApi = {
   // Actas
   createActa: (data: any) => api.post('/observer/actas', data),
   updateActa: (id: string, data: any) => api.put(`/observer/actas/${id}`, data),
+  exportActas: (observationIds: string[], mode: 'JOINT' | 'INDIVIDUAL') =>
+    api.post('/observer/actas/export', { observationIds, mode }, { responseType: 'blob' }),
   // Compromisos
   createCommitment: (data: any) => api.post('/observer/commitments', data),
   updateCommitment: (id: string, data: any) => api.put(`/observer/commitments/${id}`, data),
@@ -2648,4 +2650,3 @@ export const LIVE_QUIZ_TEAM_POOL: { name: string; color: string; emoji: string }
   { name: 'Equipo Cometa',    color: '#f97316', emoji: '☄️' },
   { name: 'Equipo Planeta',   color: '#14b8a6', emoji: '🪐' },
 ]
-

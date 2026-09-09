@@ -6,6 +6,7 @@ import {
   Handshake, Brain, Send, Users, BookOpen,
   Activity, Shield, Edit2,
   CheckCircle, XCircle, Trash2, BarChart3, Loader2,
+  Download, Printer,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { compareFullNames } from '../utils/sortStudents'
@@ -53,6 +54,7 @@ const canViewAll = (roles: string[]) => roles.some(r => ['ADMIN_INSTITUTIONAL', 
 // Helpers
 const fullName = (s: any) => s ? [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ') : ''
 const authorName = (a: any) => a ? `${a.firstName || ''} ${a.lastName || ''}`.trim() : ''
+const isFormalActa = (obs: any) => ['ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III'].includes(obs?.type)
 
 // Diagnóstico visual del estudiante basado en observaciones
 function getDiagnosticBadge(obs: any[]) {
@@ -105,6 +107,10 @@ export default function Observer() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [saving, setSaving] = useState(false)
   const [academicYearId, setAcademicYearId] = useState('')
+  const [selectedActaIds, setSelectedActaIds] = useState<string[]>([])
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportMode, setExportMode] = useState<'JOINT' | 'INDIVIDUAL'>('INDIVIDUAL')
+  const [exporting, setExporting] = useState(false)
 
   // Form para nueva observación
   const [formData, setFormData] = useState({
@@ -366,6 +372,31 @@ export default function Observer() {
     }
   }
 
+  const handleExportActas = async (ids = selectedActaIds, mode = exportMode) => {
+    if (!ids.length) return
+    setExporting(true)
+    try {
+      const response = await observerApi.exportActas(ids, ids.length === 1 ? 'INDIVIDUAL' : mode)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = ids.length === 1
+        ? 'acta-observador.pdf'
+        : mode === 'JOINT' ? 'acta-observador-conjunta.pdf' : 'actas-observador-individuales.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setShowExportModal(false)
+      setToast({ msg: 'Acta generada correctamente', type: 'success' })
+    } catch (err: any) {
+      setToast({ msg: err.response?.data?.message || 'No fue posible generar el acta', type: 'error' })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // ─── Nombre de estudiante desde observación ───────────────────────────
   const obsStudentName = (obs: any) => {
     if (obs.studentEnrollment?.student) return fullName(obs.studentEnrollment.student)
@@ -413,6 +444,18 @@ export default function Observer() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {selectedActaIds.length > 0 && (
+            <button
+              onClick={() => {
+                setExportMode(selectedActaIds.length > 1 ? 'JOINT' : 'INDIVIDUAL')
+                setShowExportModal(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Exportar actas ({selectedActaIds.length})
+            </button>
+          )}
           {selectedGroupId && (
             <button
               onClick={() => setShowCreateModal(true)}
@@ -435,6 +478,7 @@ export default function Observer() {
               onChange={(e) => {
                 setSelectedGroupId(e.target.value)
                 setSelectedEnrollmentId('')
+                setSelectedActaIds([])
               }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
             >
@@ -640,6 +684,19 @@ export default function Observer() {
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
+                      <th className="w-12 px-3 py-3 text-center text-xs font-medium text-slate-500">
+                        <input
+                          type="checkbox"
+                          aria-label="Seleccionar todas las actas visibles"
+                          checked={filteredObservations.some(isFormalActa) && filteredObservations.filter(isFormalActa).every((obs: any) => selectedActaIds.includes(obs.id))}
+                          onChange={(event) => {
+                            const visibleIds = filteredObservations.filter(isFormalActa).map((obs: any) => obs.id)
+                            setSelectedActaIds(event.target.checked
+                              ? [...new Set([...selectedActaIds, ...visibleIds])]
+                              : selectedActaIds.filter((id) => !visibleIds.includes(id)))
+                          }}
+                        />
+                      </th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Fecha</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Estudiante</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Tipo</th>
@@ -660,6 +717,18 @@ export default function Observer() {
                       const badge = getDiagnosticBadge(studentObs)
                       return (
                         <tr key={obs.id} className="hover:bg-slate-50">
+                          <td className="px-3 py-3 text-center">
+                            {isFormalActa(obs) && (
+                              <input
+                                type="checkbox"
+                                aria-label={`Seleccionar acta de ${obsStudentName(obs)}`}
+                                checked={selectedActaIds.includes(obs.id)}
+                                onChange={(event) => setSelectedActaIds(event.target.checked
+                                  ? [...new Set([...selectedActaIds, obs.id])]
+                                  : selectedActaIds.filter((id) => id !== obs.id))}
+                              />
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
                             {new Date(obs.date).toLocaleDateString('es-CO')}
                           </td>
@@ -744,6 +813,51 @@ export default function Observer() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ═══ Modal exportación de actas ═══ */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Exportar actas del observador</h2>
+                <p className="mt-1 text-sm text-slate-500">{selectedActaIds.length} acta{selectedActaIds.length === 1 ? '' : 's'} seleccionada{selectedActaIds.length === 1 ? '' : 's'}</p>
+              </div>
+              <button onClick={() => setShowExportModal(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 px-6 py-5">
+              <label className={`block rounded-xl border p-4 ${exportMode === 'JOINT' ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}>
+                <span className="flex items-start gap-3">
+                  <input type="radio" name="exportMode" value="JOINT" checked={exportMode === 'JOINT'} onChange={() => setExportMode('JOINT')} disabled={selectedActaIds.length === 1} className="mt-1" />
+                  <span>
+                    <span className="block font-medium text-slate-900">Una acta conjunta</span>
+                    <span className="mt-1 block text-sm text-slate-600">Úsela cuando todos los estudiantes participaron en el mismo hecho. Reúne implicados, versiones y firmas en un documento.</span>
+                  </span>
+                </span>
+              </label>
+              <label className={`block rounded-xl border p-4 ${exportMode === 'INDIVIDUAL' ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}>
+                <span className="flex items-start gap-3">
+                  <input type="radio" name="exportMode" value="INDIVIDUAL" checked={exportMode === 'INDIVIDUAL'} onChange={() => setExportMode('INDIVIDUAL')} className="mt-1" />
+                  <span>
+                    <span className="block font-medium text-slate-900">Una acta por estudiante</span>
+                    <span className="mt-1 block text-sm text-slate-600">Genera un único PDF multipágina, con una acta independiente para archivar en cada expediente.</span>
+                  </span>
+                </span>
+              </label>
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">La descarga incluye información sensible del observador. Consérvela únicamente en el archivo institucional autorizado.</p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <button onClick={() => setShowExportModal(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button onClick={() => handleExportActas()} disabled={exporting} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                Generar PDF
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1217,6 +1331,16 @@ export default function Observer() {
                 </>
               ) : (
                 <>
+                  {isFormalActa(selectedObs) && (
+                    <button
+                      onClick={() => handleExportActas([selectedObs.id], 'INDIVIDUAL')}
+                      disabled={exporting}
+                      className="flex items-center gap-2 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Descargar acta
+                    </button>
+                  )}
                   <button
                     onClick={() => handleStartEdit(selectedObs)}
                     className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"

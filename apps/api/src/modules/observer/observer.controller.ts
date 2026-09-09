@@ -1,4 +1,5 @@
-import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards, Request, Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -18,7 +19,9 @@ import {
   UpdateReferralDto,
   CreateMeasureDto,
   UpdateMeasureDto,
+  ExportObserverActasDto,
 } from './dto/create-observation.dto';
+import { ObserverActaPdfService } from './observer-acta-pdf.service';
 
 /**
  * Observador del estudiante: faltas, actas, compromisos, citaciones, remisiones y medidas.
@@ -36,6 +39,7 @@ import {
 export class ObserverController {
   constructor(
     private readonly observerService: ObserverService,
+    private readonly observerActaPdfService: ObserverActaPdfService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -175,6 +179,26 @@ export class ObserverController {
   // ═══════════════════════════════════════════════════════════════════════════
   // ACTAS
   // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('actas/export')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  async exportActas(@Request() req, @Body() dto: ExportObserverActasDto, @Res() res: Response) {
+    const institutionId = await this.inst(req);
+    const roles = (req.user.roles || [])
+      .map((role: any) => typeof role === 'string' ? role : role.role?.name || role.name)
+      .filter(Boolean);
+    const pdf = await this.observerActaPdfService.generate({
+      institutionId,
+      actorId: req.user.id,
+      actorRoles: roles,
+      observationIds: dto.observationIds,
+      mode: dto.mode,
+    });
+    const suffix = dto.mode === 'JOINT' ? 'conjunta' : 'individuales';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="acta-observador-${suffix}.pdf"`);
+    res.send(pdf);
+  }
 
   @Post('actas')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
