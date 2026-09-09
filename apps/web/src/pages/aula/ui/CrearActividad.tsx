@@ -17,7 +17,7 @@
  */
 
 import { useState } from 'react'
-import { ArrowLeft, Check, Plus, X } from 'lucide-react'
+import { ArrowLeft, Check, Mic, Plus, X } from 'lucide-react'
 import { classroomApi } from '../../../lib/api'
 import { toast } from '../../../lib/toast'
 import { bogotaInputToIso } from '../../../lib/datetime'
@@ -79,6 +79,7 @@ export function CrearActividad({
   const [vence, setVence] = useState('')
   const [notaMax, setNotaMax] = useState('5.0')
   const [aceptaTarde, setAceptaTarde] = useState(false)
+  const [respuestaEnAudio, setRespuestaEnAudio] = useState(false)
   const [intentos, setIntentos] = useState('1')
   const [minutos, setMinutos] = useState('')
   const [creando, setCreando] = useState(false)
@@ -116,6 +117,9 @@ export function CrearActividad({
         ...(campos?.calificable ? { maxScore: parseFloat(notaMax) || 5 } : {}),
         ...(campos?.calificable && vence ? { dueDate: bogotaInputToIso(vence) } : {}),
         ...(campos?.esTarea ? { allowLateSubmit: aceptaTarde } : {}),
+        // Viaja como `audioResponse`, igual que en el editor anterior: el backend lo guarda
+        // en `metadata` y es lo que el panel de entrega lee para ofrecer el micrófono.
+        ...(campos?.esTarea && respuestaEnAudio ? { audioResponse: true } : {}),
         ...(campos?.conPreguntas
           ? {
               maxAttempts: parseInt(intentos, 10) || 1,
@@ -389,6 +393,22 @@ export function CrearActividad({
                     className="accent-accent"
                   />
                   Aceptar entregas después de la fecha
+                </label>
+              )}
+
+              {campos.esTarea && (
+                <label className="flex cursor-pointer items-start gap-2.5 text-body-sm text-ink-secondary">
+                  <input
+                    type="checkbox"
+                    checked={respuestaEnAudio}
+                    onChange={(e) => setRespuestaEnAudio(e.target.checked)}
+                    className="mt-0.5 accent-accent"
+                  />
+                  <span className="inline-flex flex-wrap items-center gap-1.5">
+                    <Mic className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden="true" />
+                    Se responde con un audio
+                    <span className="text-ink-muted">— el estudiante graba desde la tarea</span>
+                  </span>
                 </label>
               )}
             </div>

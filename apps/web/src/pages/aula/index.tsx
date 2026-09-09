@@ -242,7 +242,9 @@ export default function AulaVirtual() {
         error={listado.error}
         onReintentar={listado.recargar}
         onEntrar={(id) => navigate(`/aula/${id}/hoy`)}
-        onVolverAlActual={() => navigate('/classroom')}
+        // /classroom ya apunta al aula nueva: sin esto, «volver a la anterior» daría
+        // media vuelta y regresaría aquí.
+        onVolverAlActual={() => navigate('/aula-clasica')}
         avances={avances}
         onCrear={rol === 'docente' ? () => setGestionAula('crear') : undefined}
       />

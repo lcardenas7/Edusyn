@@ -18,7 +18,7 @@ const quickPrompts = [
 ]
 
 function getPageContext(pathname: string) {
-  if (pathname.startsWith('/classroom')) {
+  if (pathname.startsWith('/aula') || pathname.startsWith('/classroom') || pathname.startsWith('/my-classes')) {
     return {
       pageName: 'Classroom',
       pageSummary: 'Gestiona actividades, preguntas, guías, quizzes, foros y seguimiento dentro del aula.',
