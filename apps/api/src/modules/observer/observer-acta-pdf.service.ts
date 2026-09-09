@@ -1,0 +1,327 @@
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import PDFDocument from 'pdfkit';
+
+import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseStorageService } from '../storage/supabase-storage.service';
+import { ObserverActaExportMode } from './dto/create-observation.dto';
+
+const FORMAL_ACTA_TYPES = ['ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III'] as const;
+const PRIVILEGED_ROLES = ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'];
+
+type ExportParams = {
+  institutionId: string;
+  actorId: string;
+  actorRoles: string[];
+  observationIds: string[];
+  mode: ObserverActaExportMode;
+};
+
+@Injectable()
+export class ObserverActaPdfService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
+
+  async generate(params: ExportParams): Promise<Buffer> {
+    const observationIds = [...new Set(params.observationIds)];
+    if (!observationIds.length || observationIds.length > 30) {
+      throw new BadRequestException('Seleccione entre 1 y 30 actas');
+    }
+
+    const [institution, reportConfig, observations] = await Promise.all([
+      this.prisma.institution.findUnique({
+        where: { id: params.institutionId },
+        select: {
+          id: true,
+          name: true,
+          nit: true,
+          daneCode: true,
+          address: true,
+          city: true,
+          logo: true,
+          primaryColor: true,
+        },
+      }),
+      this.prisma.reportCardConfig.findUnique({
+        where: { institutionId: params.institutionId },
+        select: { headerResolution: true, signatureConfig: true },
+      }),
+      this.prisma.studentObservation.findMany({
+        where: {
+          id: { in: observationIds },
+          institutionId: params.institutionId,
+          type: { in: [...FORMAL_ACTA_TYPES] },
+        },
+        include: {
+          actaRecord: true,
+          author: { select: { id: true, firstName: true, lastName: true } },
+          studentEnrollment: {
+            include: {
+              student: {
+                select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+              },
+              academicYear: { select: { year: true } },
+              group: {
+                include: {
+                  grade: { select: { name: true } },
+                  campus: { select: { name: true } },
+                  director: { select: { id: true, firstName: true, lastName: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    if (!institution) throw new NotFoundException('Institución no encontrada');
+    if (observations.length !== observationIds.length) {
+      throw new NotFoundException('Una o más actas no existen o no pertenecen a la institución');
+    }
+
+    const canExportAll = params.actorRoles.some((role) => PRIVILEGED_ROLES.includes(role));
+    if (!canExportAll) {
+      const unauthorized = observations.some(
+        (observation) => observation.authorId !== params.actorId && observation.studentEnrollment.group.directorId !== params.actorId,
+      );
+      if (unauthorized) throw new ForbiddenException('No puede exportar actas de estudiantes fuera de sus grupos o registros');
+    }
+
+    const order = new Map(observationIds.map((id, index) => [id, index]));
+    observations.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+
+    const logo = await this.resolveLogo(institution.logo);
+    return this.buildPdf({ institution, reportConfig, observations, logo, mode: params.mode });
+  }
+
+  private buildPdf(data: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ size: 'LETTER', margin: 42, bufferPages: true });
+        const chunks: Buffer[] = [];
+        doc.on('data', (chunk) => chunks.push(chunk as Buffer));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        const records = data.mode === ObserverActaExportMode.JOINT
+          ? [data.observations]
+          : data.observations.map((observation: any) => [observation]);
+
+        records.forEach((observations: any[], index: number) => {
+          if (index > 0) doc.addPage();
+          this.renderActa(doc, data.institution, data.reportConfig, observations, data.logo, data.mode);
+        });
+
+        const range = doc.bufferedPageRange();
+        for (let page = range.start; page < range.start + range.count; page += 1) {
+          doc.switchToPage(page);
+          const bottomMargin = doc.page.margins.bottom;
+          doc.page.margins.bottom = 0;
+          doc.font('Helvetica').fontSize(7).fillColor('#64748b').text(
+            `Documento confidencial - Observador del estudiante   |   Página ${page + 1} de ${range.count}`,
+            42,
+            doc.page.height - 28,
+            { width: doc.page.width - 84, align: 'center', lineBreak: false },
+          );
+          doc.page.margins.bottom = bottomMargin;
+        }
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private renderActa(doc: PDFKit.PDFDocument, institution: any, reportConfig: any, observations: any[], logo: Buffer | null, mode: ObserverActaExportMode) {
+    const margin = 42;
+    const width = doc.page.width - margin * 2;
+    const brand = this.brandColor(institution.primaryColor);
+    this.renderInstitutionHeader(doc, institution, reportConfig, logo, brand, margin, width);
+
+    const types = [...new Set(observations.map((item) => item.type))];
+    const title = types.length === 1 ? `ACTA DE CONVIVENCIA - ${this.typeLabel(types[0])}` : 'ACTA DE CONVIVENCIA ESCOLAR';
+    const titleY = doc.y;
+    doc.roundedRect(margin, titleY, width, 27, 4).fill(brand);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11).text(title, margin + 8, titleY + 8, { width: width - 16, align: 'center' });
+    doc.y = titleY + 36;
+
+    const actaNumbers = [...new Set(observations.map((item) => item.actaRecord?.actaNumber).filter(Boolean))];
+    const dates = [...new Set(observations.map((item) => this.dateOnly(item.date)))];
+    const years = [...new Set(observations.map((item) => item.studentEnrollment.academicYear?.year).filter(Boolean))];
+    const campuses = [...new Set(observations.map((item) => item.studentEnrollment.group?.campus?.name).filter(Boolean))];
+    this.renderMetaGrid(doc, margin, width, [
+      ['Número de acta', actaNumbers.length === 1 ? actaNumbers[0] : actaNumbers.length > 1 ? actaNumbers.join(', ') : 'Sin consecutivo'],
+      ['Fecha del hecho', dates.join(', ')],
+      ['Año lectivo', years.join(', ') || 'No registrado'],
+      ['Modalidad', mode === ObserverActaExportMode.JOINT && observations.length > 1 ? 'Acta conjunta' : 'Acta individual'],
+      ['Lugar o sede', campuses.join(', ') || 'Pendiente de registrar'],
+      ['Hora', 'Pendiente de registrar'],
+    ], brand);
+
+    this.renderSection(doc, '1. ESTUDIANTES IMPLICADOS', this.participantsText(observations), brand, margin, width);
+    this.renderSection(doc, '2. DESCRIPCIÓN OBJETIVA DE LA SITUACIÓN', this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.facts || item.description), brand, margin, width);
+    const statements = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.studentStatement);
+    this.renderSection(doc, '3. VERSIÓN O DESCARGOS DE LOS ESTUDIANTES', statements || 'Espacio para registrar la versión de los estudiantes implicados:\n\n\n', brand, margin, width);
+    const regulation = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.regulationApplied);
+    this.renderSection(doc, '4. NORMA O APARTADO DEL MANUAL DE CONVIVENCIA', regulation || 'Pendiente de registrar.', brand, margin, width);
+    const actions = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.sanctions || item.actionTaken);
+    this.renderSection(doc, '5. MEDIDAS, ACUERDOS Y COMPROMISOS', actions || 'Pendiente de registrar.\n\n', brand, margin, width);
+    const witnesses = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.witnesses);
+    this.renderSection(doc, '6. TESTIGOS U OTROS ASISTENTES', witnesses || 'No registrados.', brand, margin, width);
+
+    this.renderSignatures(doc, observations, reportConfig, brand, margin, width);
+  }
+
+  private renderInstitutionHeader(doc: PDFKit.PDFDocument, institution: any, config: any, logo: Buffer | null, brand: string, margin: number, width: number) {
+    const startY = doc.y;
+    if (logo) {
+      try { doc.image(logo, margin, startY, { fit: [58, 58], align: 'center', valign: 'center' }); } catch { /* continuar sin logo */ }
+    }
+    const textX = logo ? margin + 68 : margin;
+    const textWidth = logo ? width - 68 : width;
+    doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(13).text(String(institution.name || '').toUpperCase(), textX, startY, { width: textWidth, align: 'center' });
+    doc.font('Helvetica').fontSize(8.5).fillColor('#334155');
+    if (institution.address) doc.text(`DIRECCIÓN ${String(institution.address).toUpperCase()}`, textX, doc.y + 2, { width: textWidth, align: 'center' });
+    const resolution = this.resolutionLine(config?.headerResolution);
+    if (resolution) doc.text(resolution, textX, doc.y + 1, { width: textWidth, align: 'center' });
+    const identifiers = [institution.nit ? `NIT ${institution.nit}` : '', institution.daneCode ? `DANE ${institution.daneCode}` : ''].filter(Boolean).join('   |   ');
+    if (identifiers) doc.text(identifiers.toUpperCase(), textX, doc.y + 1, { width: textWidth, align: 'center' });
+    doc.y = Math.max(doc.y + 8, startY + 66);
+    doc.moveTo(margin, doc.y).lineTo(margin + width, doc.y).strokeColor(brand).lineWidth(1.5).stroke();
+    doc.moveDown(0.6);
+  }
+
+  private renderMetaGrid(doc: PDFKit.PDFDocument, x: number, width: number, entries: Array<[string, string]>, brand: string) {
+    const col = width / 2;
+    const rowHeight = 31;
+    const startY = doc.y;
+    entries.forEach(([label, value], index) => {
+      const row = Math.floor(index / 2);
+      const column = index % 2;
+      const cellX = x + column * col;
+      const y = startY + row * rowHeight;
+      doc.rect(cellX, y, col, rowHeight).strokeColor('#cbd5e1').lineWidth(0.6).stroke();
+      doc.font('Helvetica-Bold').fontSize(7).fillColor(brand).text(label.toUpperCase(), cellX + 6, y + 5, { width: col - 12 });
+      doc.font('Helvetica').fontSize(9).fillColor('#0f172a').text(String(value || 'No registrado'), cellX + 6, y + 15, { width: col - 12 });
+    });
+    doc.y = startY + rowHeight * Math.ceil(entries.length / 2) + 9;
+  }
+
+  private renderSection(doc: PDFKit.PDFDocument, title: string, text: string, brand: string, x: number, width: number) {
+    const safeText = String(text || 'No registrado.');
+    const textHeight = Math.max(18, doc.heightOfString(safeText, { width: width - 16, lineGap: 2 }));
+    this.ensureSpace(doc, textHeight + 35);
+    const y = doc.y;
+    doc.roundedRect(x, y, width, 20, 3).fill('#f1f5f9');
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text(title, x + 8, y + 6, { width: width - 16 });
+    doc.y = y + 25;
+    doc.font('Helvetica').fontSize(8.7).fillColor('#1e293b').text(safeText, x + 8, doc.y, { width: width - 16, lineGap: 2, align: 'justify' });
+    doc.moveDown(0.55);
+  }
+
+  private renderSignatures(doc: PDFKit.PDFDocument, observations: any[], config: any, brand: string, x: number, width: number) {
+    const configured = Array.isArray(config?.signatureConfig) ? config.signatureConfig : [];
+    const configuredName = (roles: string[]) => configured.find((item: any) => item?.enabled !== false && roles.includes(String(item?.role || '').toUpperCase()))?.name || '';
+    const people = new Map<string, { name: string; role: string }>();
+    const addUser = (user: any, role: string) => {
+      if (!user?.id) return;
+      const key = `user-${user.id}`;
+      const current = people.get(key);
+      const roles = current ? current.role.split(' / ') : [];
+      people.set(key, { name: this.userName(user), role: roles.includes(role) ? current!.role : [...roles, role].join(' / ') });
+    };
+    observations.forEach((item) => {
+      addUser(item.author, 'Docente que registra');
+      addUser(item.studentEnrollment.group?.director, 'Director(a) de grupo');
+    });
+    people.set('coordinator', { name: configuredName(['COORDINATOR', 'COORDINADOR']), role: 'Coordinador(a)' });
+    observations.forEach((item) => {
+      const student = this.studentName(item.studentEnrollment.student);
+      people.set(`student-${item.studentEnrollment.student.id}`, { name: student, role: 'Estudiante' });
+      people.set(`guardian-${item.studentEnrollment.student.id}`, { name: '', role: `Acudiente de ${student}` });
+    });
+
+    const list = [...people.values()];
+    this.ensureSpace(doc, 52 + Math.ceil(list.length / 2) * 67);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text('7. FIRMAS Y CONSTANCIA', x, doc.y, { width });
+    doc.moveDown(0.4);
+    doc.font('Helvetica').fontSize(7.5).fillColor('#475569').text('Las firmas dejan constancia de participación o conocimiento; no implican necesariamente aceptación de los hechos.', x, doc.y, { width });
+    doc.moveDown(0.8);
+
+    const columnWidth = (width - 22) / 2;
+    for (let row = 0; row < Math.ceil(list.length / 2); row += 1) {
+      const rowY = doc.y;
+      for (let column = 0; column < 2; column += 1) {
+        const person = list[row * 2 + column];
+        if (!person) continue;
+        const sigX = x + column * (columnWidth + 22);
+        const sigY = rowY + 31;
+        doc.moveTo(sigX, sigY).lineTo(sigX + columnWidth, sigY).strokeColor('#64748b').lineWidth(0.6).stroke();
+        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#0f172a').text(person.name || 'Nombre: ______________________________', sigX, sigY + 4, { width: columnWidth, align: 'center' });
+        doc.font('Helvetica').fontSize(7).fillColor('#475569').text(person.role, sigX, sigY + 16, { width: columnWidth, align: 'center' });
+        doc.y = rowY;
+      }
+      doc.y = rowY + 67;
+    }
+  }
+
+  private ensureSpace(doc: PDFKit.PDFDocument, required: number) {
+    if (doc.y + required > doc.page.height - 42) doc.addPage();
+  }
+
+  private participantsText(observations: any[]) {
+    return observations.map((item, index) => {
+      const enrollment = item.studentEnrollment;
+      const group = `${enrollment.group?.grade?.name || ''} ${enrollment.group?.name || ''}`.trim();
+      return `${index + 1}. ${this.studentName(enrollment.student)} - Grupo ${group || 'no registrado'}`;
+    }).join('\n');
+  }
+
+  private sharedOrEnumeratedText(observations: any[], pick: (item: any) => string | null | undefined) {
+    const values = observations.map((item) => String(pick(item) || '').trim());
+    const nonEmpty = values.filter(Boolean);
+    if (!nonEmpty.length) return '';
+    if (new Set(nonEmpty).size === 1 && nonEmpty.length === observations.length) return nonEmpty[0];
+    return observations.map((item, index) => `${this.studentName(item.studentEnrollment.student)}: ${values[index] || 'No registrado.'}`).join('\n\n');
+  }
+
+  private studentName(student: any) {
+    return [student?.lastName, student?.secondLastName, student?.firstName, student?.secondName].filter(Boolean).join(' ').toUpperCase();
+  }
+
+  private userName(user: any) {
+    return [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+  }
+
+  private typeLabel(type: string) {
+    return ({ ACTA_TYPE_I: 'TIPO I', ACTA_TYPE_II: 'TIPO II', ACTA_TYPE_III: 'TIPO III' } as Record<string, string>)[type] || 'ACTA';
+  }
+
+  private dateOnly(value: Date | string) {
+    const raw = value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    const [year, month, day] = raw.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : raw;
+  }
+
+  private resolutionLine(value?: string | null) {
+    const resolution = String(value || '').trim();
+    if (!resolution) return '';
+    return /resoluci[oó]n/i.test(resolution) ? resolution.toUpperCase() : `APROBACIÓN RESOLUCIÓN OFICIAL ${resolution.toUpperCase()}`;
+  }
+
+  private brandColor(value?: string | null) {
+    return value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#1E3A8A';
+  }
+
+  private async resolveLogo(storedValue?: string | null): Promise<Buffer | null> {
+    if (!storedValue) return null;
+    try {
+      const dataUri = await this.storage.resolveToDataUri(storedValue);
+      const match = dataUri?.match(/^data:[^;]+;base64,(.+)$/);
+      return match ? Buffer.from(match[1], 'base64') : null;
+    } catch {
+      return null;
+    }
+  }
+}

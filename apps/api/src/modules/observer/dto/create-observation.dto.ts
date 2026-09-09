@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsDateString, IsBoolean, IsNumber } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export enum ObservationTypeDto {
   POSITIVE = 'POSITIVE',
@@ -132,6 +132,22 @@ export class CreateActaDto {
   @IsOptional()
   @IsString()
   sanctions?: string;
+}
+
+export enum ObserverActaExportMode {
+  JOINT = 'JOINT',
+  INDIVIDUAL = 'INDIVIDUAL',
+}
+
+export class ExportObserverActasDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(30)
+  @IsString({ each: true })
+  observationIds: string[];
+
+  @IsEnum(ObserverActaExportMode)
+  mode: ObserverActaExportMode;
 }
 
 // DTO para Compromiso
