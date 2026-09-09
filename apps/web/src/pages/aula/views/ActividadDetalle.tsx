@@ -16,7 +16,7 @@
  */
 
 import { Suspense, lazy, useState } from 'react'
-import { ChevronLeft, Copy, Eye, EyeOff, CalendarClock, Paperclip, Pencil, Play, Trash2 } from 'lucide-react'
+import { BarChart3, ChevronLeft, Copy, Eye, EyeOff, CalendarClock, Paperclip, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
 import { classroomApi } from '../../../lib/api'
 import { toast } from '../../../lib/toast'
 import { confirmDialog } from '../../../components/ui/confirm'
@@ -224,6 +224,8 @@ export function ActividadDetalle({
             </button>
           </div>
         )}
+
+        {esDocente && <PanelPlanilla actividad={a} onAbrirHerramientas={onAbrirHerramientas} />}
 
         {/* Acciones. Para una tarea, el estudiante no tiene botón aquí: su acción es el panel
             de entrega de abajo, así que no se dibuja un separador con nada debajo. */}
@@ -460,4 +462,118 @@ function aTextoPlano(html: string): string {
   // convierte cada `&nbsp;` del editor del docente en un U+00A0, y con esos el párrafo entero
   // se vuelve una sola palabra que no cabe en un celular.
   return textoLegible((div.textContent ?? '').trim())
+}
+
+
+/**
+ * El puente con la planilla de notas.
+ *
+ * Calificar en el aula y calificar en la planilla eran dos trabajos separados: el docente ponía
+ * la nota a la entrega y luego la volvía a escribir en su planilla. El vínculo ya existía en el
+ * backend y en el editor anterior, pero el aula nueva no lo mostraba en ninguna parte, así que
+ * desde aquí no se veía siquiera si una actividad estaba vinculada.
+ *
+ * Antes de escribir nada se pide la previsualización y se dice **cuántas notas** se van a crear,
+ * cuántas a pisar y cuántas están en conflicto. Escribir en la planilla sin decir qué se va a
+ * tocar es exactamente lo que no debe pasar con notas.
+ */
+function PanelPlanilla({
+  actividad,
+  onAbrirHerramientas,
+}: {
+  actividad: ActivityLike
+  onAbrirHerramientas?: () => void
+}) {
+  const [sincronizando, setSincronizando] = useState(false)
+  const vinculada = actividad.syncToGradebook === true
+
+  const casilla = [actividad.gradebookComponent, actividad.gradebookIndex != null ? `casilla ${actividad.gradebookIndex}` : null]
+    .filter(Boolean)
+    .join(' · ')
+
+  const sincronizar = async () => {
+    setSincronizando(true)
+    try {
+      const { data } = await classroomApi.previewGradebookSync(
+        actividad.id,
+        actividad.academicTermId ?? undefined,
+      )
+      const r = data?.summary ?? data?.data?.summary
+      if (!r) {
+        toast.error('No se pudo consultar qué notas se escribirían. Inténtalo de nuevo.')
+        return
+      }
+      const escribibles = (r.toCreate ?? 0) + (r.toUpdate ?? 0)
+      if (escribibles === 0) {
+        toast.info(
+          r.alreadySynced ? 'La planilla ya está al día con esta actividad' : 'No hay notas para llevar todavía',
+          r.noSubmission ? `${r.noSubmission} estudiante(s) sin entrega.` : undefined,
+        )
+        return
+      }
+      const detalle = [
+        r.toCreate ? `${r.toCreate} nota(s) nuevas` : null,
+        r.toUpdate ? `${r.toUpdate} que se reemplazan` : null,
+        r.conflicts ? `${r.conflicts} en conflicto (no se tocan)` : null,
+        r.noSubmission ? `${r.noSubmission} sin entrega (no se tocan)` : null,
+      ].filter(Boolean).join(', ')
+
+      const ok = await confirmDialog(
+        `Se van a escribir ${escribibles} nota(s) en la planilla: ${detalle}.`,
+        { title: 'Llevar las notas a la planilla', confirmLabel: 'Sí, escribir' },
+      )
+      if (!ok) return
+
+      const { data: hecho } = await classroomApi.syncToGradebook(actividad.id, {
+        academicTermId: actividad.academicTermId ?? undefined,
+      })
+      const escritas = hecho?.synced ?? hecho?.data?.synced ?? escribibles
+      toast.success(`${escritas} nota(s) en la planilla`)
+    } catch (e) {
+      // Nada de `catch {}`: si no se escribió, el docente tiene que saberlo.
+      toast.error(e)
+    } finally {
+      setSincronizando(false)
+    }
+  }
+
+  return (
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface-2 p-4">
+      <p className="min-w-0 text-body-sm text-ink-secondary">
+        <BarChart3 className="mr-1.5 inline h-4 w-4 align-text-bottom text-ink-muted" aria-hidden="true" />
+        {vinculada ? (
+          <>
+            Las notas de esta actividad van a la <strong className="text-ink-primary">planilla</strong>
+            {casilla && <> — {casilla}</>}.
+          </>
+        ) : (
+          <>
+            Esta actividad <strong className="text-ink-primary">no está vinculada</strong> a la planilla:
+            sus notas se quedan en el aula.
+          </>
+        )}
+      </p>
+      {vinculada ? (
+        <button
+          type="button"
+          onClick={sincronizar}
+          disabled={sincronizando}
+          className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+        >
+          <RefreshCw className={`h-4 w-4 ${sincronizando ? 'animate-spin' : ''}`} aria-hidden="true" />
+          {sincronizando ? 'Revisando…' : 'Llevar notas a la planilla'}
+        </button>
+      ) : (
+        onAbrirHerramientas && (
+          <button
+            type="button"
+            onClick={onAbrirHerramientas}
+            className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+          >
+            Vincular a la planilla
+          </button>
+        )
+      )}
+    </div>
+  )
 }
