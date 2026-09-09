@@ -50,6 +50,14 @@ export interface ActivityLike {
     submittedAt?: string | null
     attemptNumber?: number
   }[]
+  /**
+   * Vínculo con la planilla de notas. El docente lo configura una vez y, a partir de ahí, las
+   * notas de esta actividad pueden escribirse en la casilla que eligió. Sin esto, calificar en
+   * el aula y calificar en la planilla son dos trabajos separados.
+   */
+  syncToGradebook?: boolean
+  gradebookComponent?: string | null
+  gradebookIndex?: number | null
   /** Candado por prerrequisitos. El backend es autoritativo; la UI solo pinta. */
   locked?: boolean
   metadata?: { gameType?: string; maxAttempts?: number; audioResponse?: boolean } | null
