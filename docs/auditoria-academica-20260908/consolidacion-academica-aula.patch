@@ -1,0 +1,1547 @@
+diff --git a/apps/api/src/modules/apd/apd.profile-contract.spec.ts b/apps/api/src/modules/apd/apd.profile-contract.spec.ts
+new file mode 100644
+index 00000000..3ba76e77
+--- /dev/null
++++ b/apps/api/src/modules/apd/apd.profile-contract.spec.ts
+@@ -0,0 +1,45 @@
++import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
++import { ApdService } from './apd.service';
++
++describe('Inclusion profile lifecycle and isolation', () => {
++  function setup(profile: any = null) {
++    const prisma = {
++      institution: { findUnique: jest.fn().mockResolvedValue({ enableDifferentialSupport: true }) },
++      student: { findFirst: jest.fn().mockResolvedValue({ id: 'student-a' }) },
++      educationalSupportProfile: {
++        findUnique: jest.fn().mockResolvedValue(profile),
++        create: jest.fn(({ data }) => Promise.resolve({ id: 'profile-a', ...data })),
++        update: jest.fn(({ data }) => Promise.resolve({ ...profile, ...data })),
++      },
++    };
++    const audit = { log: jest.fn().mockResolvedValue(undefined) };
++    return { service: new ApdService(prisma as any, audit as any, {} as any), prisma, audit };
++  }
++  it('creates an inactive profile without consent', async () => {
++    const { service } = setup();
++    const result = await service.createProfile({institutionId:'a', studentId:'student-a', supportCategory:'Synthetic'}, 'actor-a');
++    expect(result.active).toBe(false);
++  });
++  it('rejects a student outside the institution before creating the profile', async () => {
++    const { service, prisma } = setup();
++    prisma.student.findFirst.mockResolvedValue(null as any);
++    await expect(service.createProfile({institutionId:'a', studentId:'student-b', supportCategory:'Synthetic'}, 'actor-a')).rejects.toBeInstanceOf(NotFoundException);
++    expect(prisma.educationalSupportProfile.create).not.toHaveBeenCalled();
++  });
++  it('rejects updates to another institution without writing or auditing its data', async () => {
++    const { service, prisma, audit } = setup({id:'profile-b',institutionId:'b'});
++    await expect(service.updateProfile('profile-b','a',{pedagogicalNotes:'Synthetic'},'actor-a')).rejects.toBeInstanceOf(ForbiddenException);
++    expect(prisma.educationalSupportProfile.update).not.toHaveBeenCalled();
++    expect(audit.log).not.toHaveBeenCalled();
++  });
++  it('cannot explicitly activate a profile without consent', async () => {
++    const { service } = setup({id:'profile-a',institutionId:'a',active:false,parentConsentAccepted:false});
++    await expect(service.updateProfile('profile-a','a',{active:true},'actor-a')).rejects.toBeInstanceOf(BadRequestException);
++  });
++  it('revoking consent also deactivates the existing profile', async () => {
++    const { service } = setup({id:'profile-a',institutionId:'a',active:true,parentConsentAccepted:true});
++    const result = await service.updateProfile('profile-a','a',{parentConsentAccepted:false},'actor-a');
++    expect(result.active).toBe(false);
++    expect(result.parentConsentAccepted).toBe(false);
++  });
++});
+diff --git a/apps/api/src/modules/apd/apd.service.ts b/apps/api/src/modules/apd/apd.service.ts
+index 5cbc6630..49bc7e76 100644
+--- a/apps/api/src/modules/apd/apd.service.ts
++++ b/apps/api/src/modules/apd/apd.service.ts
+@@ -174,6 +174,7 @@ export class ApdService {
+         'No se puede activar el perfil sin consentimiento parental aceptado.',
+       );
+     }
++    const nextActive = consentAccepted ? (data.active ?? profile.active) : false;
+ 
+     const updated = await this.prisma.educationalSupportProfile.update({
+       where: { id: profileId },
+@@ -188,7 +189,7 @@ export class ApdService {
+         ...(data.parentConsentAccepted !== undefined && { parentConsentAccepted: data.parentConsentAccepted }),
+         ...(data.consentDate !== undefined && { consentDate: data.consentDate ? new Date(data.consentDate) : null }),
+         ...(data.consentDocumentUrl !== undefined && { consentDocumentUrl: data.consentDocumentUrl }),
+-        ...(data.active !== undefined && { active: data.active }),
++        active: nextActive,
+       },
+       include: {
+         student: {
+@@ -197,9 +198,9 @@ export class ApdService {
+       },
+     });
+ 
+-    const action = data.active === true
++    const action = nextActive && !profile.active
+       ? 'PROFILE_ACTIVATED'
+-      : data.active === false
++      : !nextActive && profile.active
+         ? 'PROFILE_DEACTIVATED'
+         : 'PROFILE_UPDATED';
+ 
+@@ -209,7 +210,7 @@ export class ApdService {
+       action,
+       entityType: 'EducationalSupportProfile',
+       entityId: profileId,
+-      details: data,
++      details: { ...data, active: nextActive },
+     });
+ 
+     return updated;
+diff --git a/apps/api/src/modules/classroom/classroom-copy-contract.spec.ts b/apps/api/src/modules/classroom/classroom-copy-contract.spec.ts
+new file mode 100644
+index 00000000..e314488b
+--- /dev/null
++++ b/apps/api/src/modules/classroom/classroom-copy-contract.spec.ts
+@@ -0,0 +1,35 @@
++import { ClassroomService } from './classroom.service';
++
++describe('Classroom copy completeness', () => {
++  function setup() {
++    const activity = {id:'without-unit',title:'Trabajo sin unidad',type:'TASK',academicTermId:'source-term',sectionId:null,maxScore:5,isPublished:true,metadata:{attachmentUrl:'/files/guide.pdf',attachmentName:'Guía'}};
++    const source = {id:'source',color:null,teacherAssignment:{teacherId:'teacher',academicYear:{terms:[{id:'source-term',type:'PERIOD',order:1}]}},
++      activities:[activity],sections:[{id:'unit',title:'Unidad',academicTermId:'source-term',materials:[],activities:[{...activity,id:'in-unit',sectionId:'unit'}]}],announcements:[]};
++    const prisma = {
++      classroom:{findUnique:jest.fn().mockResolvedValueOnce(source).mockResolvedValue({id:'target'})},
++      teacherAssignment:{findFirst:jest.fn().mockResolvedValue({id:'assignment',institutionId:'institution',academicYear:{terms:[{id:'target-term',type:'PERIOD',order:1}]}})},
++      classroomSection:{create:jest.fn().mockResolvedValue({id:'new-unit'})},
++      classroomActivity:{create:jest.fn().mockImplementation(async ({data})=>({id:'copy-'+data.title,...data}))},
++      forumPost:{findMany:jest.fn().mockResolvedValue([])},
++    };
++    const service = new ClassroomService(prisma as any,{} as any,{} as any,{} as any);
++    jest.spyOn(service as any,'cloneActivityContent').mockResolvedValue({});
++    return {service,prisma};
++  }
++  it('copies activities with and without units, as drafts and without student work',async()=>{
++    const {service,prisma}=setup();
++    expect((await service.copyClassroomTo('source',['assignment'],'teacher')).copied).toBe(1);
++    const writes=prisma.classroomActivity.create.mock.calls.map(c=>c[0].data);
++    expect(writes).toHaveLength(2);
++    expect(writes.map(w=>w.sectionId)).toEqual(expect.arrayContaining(['new-unit',null]));
++    for(const w of writes){expect(w.isPublished).toBe(false);expect(w.isVisible).toBe(false);expect(w).not.toHaveProperty('submissions');}
++  });
++  it('maps periods to the destination year and preserves the attached teaching material',async()=>{
++    const {service,prisma}=setup();
++    await service.copyClassroomTo('source',['assignment'],'teacher');
++    expect(prisma.classroomSection.create.mock.calls[0][0].data.academicTermId).toBe('target-term');
++    for(const [write] of prisma.classroomActivity.create.mock.calls){
++      expect(write.data).toMatchObject({academicTermId:'target-term',metadata:{attachmentUrl:'/files/guide.pdf',attachmentName:'Guía'}});
++    }
++  });
++});
+diff --git a/apps/api/src/modules/classroom/classroom.service.ts b/apps/api/src/modules/classroom/classroom.service.ts
+index 6a711ff6..34d988a8 100644
+--- a/apps/api/src/modules/classroom/classroom.service.ts
++++ b/apps/api/src/modules/classroom/classroom.service.ts
+@@ -2428,7 +2428,8 @@ export class ClassroomService {
+     const source = await this.prisma.classroom.findUnique({
+       where: { id: sourceClassroomId },
+       include: {
+-        teacherAssignment: { select: { teacherId: true } },
++        teacherAssignment: { select: { teacherId: true, academicYear: { select: { terms: { select: { id: true, order: true, type: true } } } } } },
++        activities: { where: { sectionId: null, isRouteScoped: false } },
+         sections: {
+           include: {
+             materials: true,
+@@ -2462,7 +2463,7 @@ export class ClassroomService {
+         // Validate target assignment belongs to same teacher
+         const targetAssignment = await this.prisma.teacherAssignment.findFirst({
+           where: { id: targetAssignmentId, teacherId, endDate: null },
+-          include: { group: { include: { grade: true } }, subject: true },
++          include: { group: { include: { grade: true } }, subject: true, academicYear: { select: { terms: { select: { id: true, order: true, type: true } } } } },
+         });
+ 
+         if (!targetAssignment) {
+@@ -2488,6 +2489,24 @@ export class ClassroomService {
+           });
+         }
+ 
++        // Conserva la posición del período al copiar entre años; nunca enlaza al año origen.
++        const destinationTerm = (sourceTermId: string | null): string | null => {
++          const term = source.teacherAssignment.academicYear.terms.find(t => t.id === sourceTermId);
++          return term ? targetAssignment.academicYear.terms.find(t => t.order === term.order && t.type === term.type)?.id ?? null : null;
++        };
++        const copyActivity = async (activity: (typeof source.activities)[number], sectionId: string | null) => {
++          const created = await this.prisma.classroomActivity.create({ data: {
++            sectionId, classroomId: targetClassroom!.id, academicTermId: destinationTerm(activity.academicTermId),
++            type: activity.type, title: activity.title, description: activity.description,
++            maxScore: activity.maxScore, dueDate: null, openDate: null,
++            timeLimitMinutes: activity.timeLimitMinutes, allowLateSubmit: activity.allowLateSubmit,
++            maxAttempts: activity.maxAttempts, shuffleQuestions: activity.shuffleQuestions,
++            showResults: activity.showResults, isVisible: false, isPublished: false,
++            sortOrder: activity.sortOrder, metadata: activity.metadata as any,
++          } });
++          await this.cloneActivityContent(activity.id, created.id);
++        };
++
+         // Copy sections with materials and activities
+         for (const section of source.sections) {
+           const newSection = await this.prisma.classroomSection.create({
+@@ -2497,6 +2516,7 @@ export class ClassroomService {
+               description: section.description,
+               sortOrder: section.sortOrder,
+               isVisible: section.isVisible,
++              academicTermId: destinationTerm(section.academicTermId),
+             },
+           });
+ 
+@@ -2517,33 +2537,14 @@ export class ClassroomService {
+ 
+           // Copy activities (without submissions)
+           for (const activity of section.activities) {
+-            const newActivity = await this.prisma.classroomActivity.create({
+-              data: {
+-                sectionId: newSection.id,
+-                classroomId: targetClassroom.id,
+-                type: activity.type,
+-                title: activity.title,
+-                description: activity.description,
+-                maxScore: activity.maxScore,
+-                dueDate: null, // Reset due date
+-                openDate: null,
+-                timeLimitMinutes: activity.timeLimitMinutes,
+-                allowLateSubmit: activity.allowLateSubmit,
+-                maxAttempts: activity.maxAttempts,
+-                shuffleQuestions: activity.shuffleQuestions,
+-                showResults: activity.showResults,
+-                isVisible: false, // Start as not visible
+-                isPublished: false, // Start as not published
+-                sortOrder: activity.sortOrder,
+-                metadata: activity.metadata as any,
+-              },
+-            });
+-
+-            // Contenido completo: contextos, preguntas y lección interactiva.
+-            await this.cloneActivityContent(activity.id, newActivity.id);
++            await copyActivity(activity, newSection.id);
+           }
+         }
+ 
++        for (const activity of source.activities) {
++          await copyActivity(activity, null);
++        }
++
+         // Copy forum topics (teacher-created) to target classroom
+         for (const topic of forumTopics) {
+           await this.prisma.forumPost.create({
+diff --git a/apps/api/src/modules/pedagogical-support/pedagogical-support.controller.ts b/apps/api/src/modules/pedagogical-support/pedagogical-support.controller.ts
+index ca64b357..8b928f4a 100644
+--- a/apps/api/src/modules/pedagogical-support/pedagogical-support.controller.ts
++++ b/apps/api/src/modules/pedagogical-support/pedagogical-support.controller.ts
+@@ -45,8 +45,8 @@ export class PedagogicalSupportController {
+   ) {
+     const institutionId = await requireInstitutionId(this.prisma as any, req);
+     return this.supportService.createSupportPlan({
+-      institutionId,
+       ...body,
++      institutionId,
+     });
+   }
+ 
+@@ -95,10 +95,12 @@ export class PedagogicalSupportController {
+   @Get('by-student/:studentEnrollmentId')
+   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+   async getByStudent(
++    @Request() req: any,
+     @Param('studentEnrollmentId') studentEnrollmentId: string,
+     @Query('academicTermId') academicTermId?: string,
+   ) {
+-    return this.supportService.getByStudent(studentEnrollmentId, academicTermId);
++    const institutionId = await requireInstitutionId(this.prisma as any, req);
++    return this.supportService.getByStudent(studentEnrollmentId, institutionId, academicTermId);
+   }
+ 
+   // ═══════════════════════════════════════════════════════════════════════════
+@@ -123,7 +125,8 @@ export class PedagogicalSupportController {
+ 
+   @Get(':id')
+   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+-  async getById(@Param('id') id: string) {
+-    return this.supportService.getById(id);
++  async getById(@Request() req: any, @Param('id') id: string) {
++    const institutionId = await requireInstitutionId(this.prisma as any, req);
++    return this.supportService.getById(id, institutionId);
+   }
+ }
+diff --git a/apps/api/src/modules/pedagogical-support/pedagogical-support.isolation.spec.ts b/apps/api/src/modules/pedagogical-support/pedagogical-support.isolation.spec.ts
+new file mode 100644
+index 00000000..93e621e3
+--- /dev/null
++++ b/apps/api/src/modules/pedagogical-support/pedagogical-support.isolation.spec.ts
+@@ -0,0 +1,50 @@
++import { NotFoundException } from '@nestjs/common';
++import { PedagogicalSupportController } from './pedagogical-support.controller';
++import { PedagogicalSupportService } from './pedagogical-support.service';
++
++describe('Pedagogical support tenant boundary', () => {
++  const request = { user: { id: 'teacher-a', institutionId: 'tenant-a' } };
++
++  it('does not let an unvalidated body replace the authenticated institution', async () => {
++    const service = { createSupportPlan: jest.fn().mockResolvedValue({}) };
++    const controller = new PedagogicalSupportController(service as any, {} as any);
++    await controller.create(request, {
++      institutionId: 'tenant-b', studentEnrollmentId: 'enrollment-b',
++      academicTermId: 'term-b', supportStrategy: 'Synthetic strategy',
++    } as any);
++    expect(service.createSupportPlan.mock.calls[0][0].institutionId).toBe('tenant-a');
++  });
++
++  it('supplies the authenticated tenant for student history', async () => {
++    const service = { getByStudent: jest.fn().mockResolvedValue([]) };
++    const controller = new PedagogicalSupportController(service as any, {} as any);
++    await (controller.getByStudent as any)(request, 'enrollment-b', 'term-b');
++    expect(service.getByStudent).toHaveBeenCalledWith('enrollment-b', 'tenant-a', 'term-b');
++  });
++
++  it('supplies the authenticated tenant for plan details', async () => {
++    const service = { getById: jest.fn().mockResolvedValue({}) };
++    const controller = new PedagogicalSupportController(service as any, {} as any);
++    await (controller.getById as any)(request, 'plan-b');
++    expect(service.getById).toHaveBeenCalledWith('plan-b', 'tenant-a');
++  });
++
++  it('does not return a plan from another institution', async () => {
++    const otherPlan = { id: 'plan-b', institutionId: 'tenant-b' };
++    const prisma = { pedagogicalSupportPlan: {
++      findUnique: jest.fn().mockResolvedValue(otherPlan),
++      findFirst: jest.fn(({ where }) => Promise.resolve(where.institutionId === 'tenant-b' ? otherPlan : null)),
++    } };
++    const service = new PedagogicalSupportService(prisma as any);
++    await expect((service.getById as any)('plan-b', 'tenant-a')).rejects.toBeInstanceOf(NotFoundException);
++  });
++
++  it('scopes history at the data query', async () => {
++    const prisma = { pedagogicalSupportPlan: { findMany: jest.fn().mockResolvedValue([]) } };
++    const service = new PedagogicalSupportService(prisma as any);
++    await (service.getByStudent as any)('enrollment-a', 'tenant-a', 'term-a');
++    expect(prisma.pedagogicalSupportPlan.findMany).toHaveBeenCalledWith(expect.objectContaining({
++      where: { studentEnrollmentId: 'enrollment-a', institutionId: 'tenant-a', academicTermId: 'term-a' },
++    }));
++  });
++});
+diff --git a/apps/api/src/modules/pedagogical-support/pedagogical-support.service.ts b/apps/api/src/modules/pedagogical-support/pedagogical-support.service.ts
+index 952a0751..43b8e523 100644
+--- a/apps/api/src/modules/pedagogical-support/pedagogical-support.service.ts
++++ b/apps/api/src/modules/pedagogical-support/pedagogical-support.service.ts
+@@ -168,10 +168,11 @@ export class PedagogicalSupportService {
+   // OBTENER POR ESTUDIANTE
+   // ═══════════════════════════════════════════════════════════════════════════
+ 
+-  async getByStudent(studentEnrollmentId: string, academicTermId?: string) {
++  async getByStudent(studentEnrollmentId: string, institutionId: string, academicTermId?: string) {
+     return this.prisma.pedagogicalSupportPlan.findMany({
+       where: {
+         studentEnrollmentId,
++        institutionId,
+         ...(academicTermId && { academicTermId }),
+       },
+       include: {
+@@ -237,9 +238,9 @@ export class PedagogicalSupportService {
+   // OBTENER POR ID
+   // ═══════════════════════════════════════════════════════════════════════════
+ 
+-  async getById(id: string) {
+-    const plan = await this.prisma.pedagogicalSupportPlan.findUnique({
+-      where: { id },
++  async getById(id: string, institutionId: string) {
++    const plan = await this.prisma.pedagogicalSupportPlan.findFirst({
++      where: { id, institutionId },
+       include: {
+         studentEnrollment: {
+           include: {
+diff --git a/apps/api/src/modules/recovery/period-recovery.service.ts b/apps/api/src/modules/recovery/period-recovery.service.ts
+index b04d2706..bb8eacb0 100644
+--- a/apps/api/src/modules/recovery/period-recovery.service.ts
++++ b/apps/api/src/modules/recovery/period-recovery.service.ts
+@@ -582,6 +582,7 @@ export class PeriodRecoveryService {
+       where: { id },
+       data: {
+         status: finalStatus,
++        finalScore,
+         reviewedById: data.reviewedById,
+         observations: data.observations
+           ? `${recovery.observations || ''}\n[Revisión]: ${data.observations}`
+diff --git a/apps/api/src/modules/recovery/recovery-engine.no-regression.spec.ts b/apps/api/src/modules/recovery/recovery-engine.no-regression.spec.ts
+new file mode 100644
+index 00000000..b7909f8b
+--- /dev/null
++++ b/apps/api/src/modules/recovery/recovery-engine.no-regression.spec.ts
+@@ -0,0 +1,23 @@
++import { RecoveryEngineService } from './recovery-engine.service';
++import { RecoveryImpactType } from '@prisma/client';
++
++describe('Recovery preserves the existing grade', () => {
++  const engine = new RecoveryEngineService({} as any, {} as any);
++  it.each(['ADJUST_TO_MINIMUM', 'AVERAGE_WITH_ORIGINAL', 'REPLACE_IF_HIGHER', 'QUALITATIVE_ONLY'] as RecoveryImpactType[])(
++    '%s cannot lower a grade when the recovery result is worse', (impactType) => {
++      expect(engine.calculateRecoveryImpact({ originalScore: 2.8, recoveryScore: 1,
++        maxScore: 3, minPassingScore: 3, impactType }).finalScore).toBe(2.8);
++    },
++  );
++  it('a recovery cap does not truncate a pre-existing higher grade', () => {
++    expect(engine.calculateRecoveryImpact({ originalScore: 4, recoveryScore: 5,
++      maxScore: 3, minPassingScore: 3, impactType: 'REPLACE_IF_HIGHER' })).toEqual({ finalScore: 4, status: 'APPROVED' });
++  });
++  it.each([
++    ['ADJUST_TO_MINIMUM', 3], ['AVERAGE_WITH_ORIGINAL', 3],
++    ['REPLACE_IF_HIGHER', 4], ['QUALITATIVE_ONLY', 2],
++  ] as [RecoveryImpactType, number][] )('preserves the intended benefit of %s', (impactType, expected) => {
++    expect(engine.calculateRecoveryImpact({ originalScore: 2, recoveryScore: 4,
++      maxScore: 5, minPassingScore: 3, impactType }).finalScore).toBe(expected);
++  });
++});
+diff --git a/apps/api/src/modules/recovery/recovery-engine.service.ts b/apps/api/src/modules/recovery/recovery-engine.service.ts
+index 4b43937f..34aa76df 100644
+--- a/apps/api/src/modules/recovery/recovery-engine.service.ts
++++ b/apps/api/src/modules/recovery/recovery-engine.service.ts
+@@ -70,8 +70,9 @@ export class RecoveryEngineService {
+         finalScore = Math.min(recoveryScore, maxScore);
+     }
+ 
+-    // Redondear a 2 decimales
+-    finalScore = Math.round(finalScore * 100) / 100;
++    // La recuperación puede mejorar la nota, nunca reducir la evidencia original.
++    // El tope limita el beneficio de recuperar; no recorta una nota ya obtenida.
++    finalScore = Math.max(originalScore, Math.round(finalScore * 100) / 100);
+ 
+     const status: RecoveryStatus = finalScore >= minPassingScore ? 'APPROVED' : 'NOT_APPROVED';
+ 
+diff --git a/apps/api/src/modules/recovery/recovery-review-score.spec.ts b/apps/api/src/modules/recovery/recovery-review-score.spec.ts
+new file mode 100644
+index 00000000..5567a0f4
+--- /dev/null
++++ b/apps/api/src/modules/recovery/recovery-review-score.spec.ts
+@@ -0,0 +1,18 @@
++import { PeriodRecoveryService } from './period-recovery.service';
++
++describe('Recovery review result consistency', () => {
++  it('persists the original score after rejection and does not change the official grade', async () => {
++    const prisma = {
++      periodRecovery: {
++        findUnique: jest.fn().mockResolvedValue({id:'recovery',institutionId:'institution',academicTermId:'term',status:'REVIEW_PENDING',originalScore:2,finalScore:3}),
++        update: jest.fn().mockImplementation(async ({data}) => data),
++      },
++      academicTerm: {findUnique:jest.fn().mockResolvedValue({academicYearId:'year'})},
++    };
++    const writer = {fijarValor:jest.fn()};
++    const service = new PeriodRecoveryService(prisma as any,{getOrCreateDefaultConfig:jest.fn().mockResolvedValue({minPassingScore:3})} as any,{} as any,writer as any);
++    const result = await service.reviewResult('recovery',{approved:false,reviewedById:'coordinator'},'institution');
++    expect(result).toMatchObject({status:'NOT_APPROVED',finalScore:2});
++    expect(writer.fijarValor).not.toHaveBeenCalled();
++  });
++});
+diff --git a/apps/api/src/modules/reports/report-history-enrollment.spec.ts b/apps/api/src/modules/reports/report-history-enrollment.spec.ts
+new file mode 100644
+index 00000000..d0d65c0f
+--- /dev/null
++++ b/apps/api/src/modules/reports/report-history-enrollment.spec.ts
+@@ -0,0 +1,23 @@
++import { ReportsService } from './reports.service';
++
++describe('Historical report enrollment universe', () => {
++  function setup() {
++    const prisma = { studentEnrollment: { findMany: jest.fn().mockResolvedValue([]) } };
++    const years = { getTermById: jest.fn().mockResolvedValue({ id: 'term-2026' }) };
++    const service = new ReportsService(prisma as any, {} as any, {} as any, {} as any, years as any, {} as any, {} as any, {} as any);
++    return { service, prisma };
++  }
++  it('limits reused groups to the year of the requested term and includes year-end statuses', async () => {
++    const { service, prisma } = setup();
++    await expect(service.buildGroupReportCards('group','term-2026')).rejects.toThrow();
++    expect(prisma.studentEnrollment.findMany).toHaveBeenCalledWith(expect.objectContaining({where:{
++      groupId:'group',academicYear:{terms:{some:{id:'term-2026'}}},
++      OR:[{status:{in:['ACTIVE','PROMOTED','REPEATED','GRADUATED']}}],
++    }}));
++  });
++  it('also includes a specifically requested withdrawn or transferred enrollment', async () => {
++    const { service, prisma } = setup();
++    await expect(service.buildGroupReportCards('group','term-2026','withdrawn-enrollment')).rejects.toThrow();
++    expect(prisma.studentEnrollment.findMany.mock.calls[0][0].where.OR).toContainEqual({id:'withdrawn-enrollment'});
++  });
++});
+diff --git a/apps/api/src/modules/reports/reports.service.ts b/apps/api/src/modules/reports/reports.service.ts
+index 9e92c27b..03a78f60 100644
+--- a/apps/api/src/modules/reports/reports.service.ts
++++ b/apps/api/src/modules/reports/reports.service.ts
+@@ -281,7 +281,7 @@ export class ReportsService {
+         });
+         if (!enrollment) throw new NotFoundException('Student enrollment not found');
+ 
+-        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId);
++        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId, enrollmentId);
+         const card = groupData.cards.find(c => c.enrollmentId === enrollmentId);
+         if (!card) throw new NotFoundException('Report card not found for this student in the group batch');
+ 
+@@ -323,7 +323,7 @@ export class ReportsService {
+         });
+         if (!enrollment) throw new NotFoundException('Student enrollment not found');
+ 
+-        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId);
++        const groupData = await this.buildGroupReportCards(enrollment.groupId, termId, enrollmentId);
+         const card = groupData.cards.find(c => c.enrollmentId === enrollmentId);
+         if (!card) throw new NotFoundException('Report card not found for this student in the group batch');
+ 
+@@ -598,29 +598,25 @@ export class ReportsService {
+       doc.font('Helvetica-Bold').text('CALIFICACIONES POR ASIGNATURA');
+       doc.moveDown(0.5);
+ 
+-      const tableTop = doc.y;
+       const col1 = 50;
+       const col2 = 250;
+       const col3 = 350;
+       const col4 = 450;
+ 
+-      doc.fontSize(9).font('Helvetica-Bold');
+-      doc.text('Asignatura', col1, tableTop);
+-      doc.text('Nota', col2, tableTop);
+-      doc.text('Desempeño', col3, tableTop);
+-      doc.text('Docente', col4, tableTop);
+-
+-      doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+-
+-      let y = tableTop + 20;
++      const tableHeader = (top: number) => {
++        doc.fontSize(9).font('Helvetica-Bold');
++        doc.text('Asignatura', col1, top, { width: 190 });
++        doc.text('Nota', col2, top, { width: 90 });
++        doc.text('Desempeño', col3, top, { width: 90 });
++        doc.text('Docente', col4, top, { width: 100 });
++        doc.moveTo(col1, top + 15).lineTo(550, top + 15).stroke();
++        doc.font('Helvetica').fontSize(8);
++        return top + 20;
++      };
++      let y = tableHeader(doc.y);
+       doc.font('Helvetica').fontSize(8);
+ 
+       for (const subject of data.subjectGrades) {
+-        if (y > 700) {
+-          doc.addPage();
+-          y = 50;
+-        }
+-
+         const recovered = subject.hasRecovery
+           && subject.originalGrade !== null
+           && subject.grade !== null
+@@ -630,8 +626,15 @@ export class ReportsService {
+         const recoveryLine = recovered
+           ? `Recuperada: perdió con ${originalRecoveredGrade!.toFixed(1)}${subject.recoveryGrade !== null ? `, recuperación ${subject.recoveryGrade.toFixed(1)}` : ''}, definitiva ${finalRecoveredGrade!.toFixed(1)}`
+           : '';
+-        const rowHeight = recovered ? 30 : 20;
+         const subjectLabel = recovered ? `${subject.subject}\n${recoveryLine}` : subject.subject;
++        const rowHeight = Math.max(20,
++          doc.heightOfString(subjectLabel, { width: 190 }) + 8,
++          doc.heightOfString(subject.teacher || '', { width: 100 }) + 8,
++        );
++        if (y + rowHeight > 710) {
++          doc.addPage();
++          y = tableHeader(50);
++        }
+ 
+         doc.text(subjectLabel, col1, y, { width: 190 });
+         doc.text(subject.grade?.toFixed(1) || 'N/A', col2, y);
+@@ -640,15 +643,17 @@ export class ReportsService {
+         y += rowHeight;
+       }
+ 
+-      doc.moveDown(2);
+-
+       // Attendance Summary
++      if (y + 100 > 710) { doc.addPage(); y = 30; }
++      doc.x = col1;
+       doc.y = y + 20;
+       doc.fontSize(10).font('Helvetica-Bold').text('ASISTENCIA');
+       doc.font('Helvetica').fontSize(9);
+       doc.text(`Total clases: ${data.attendance.total}`);
+       doc.text(`Presente: ${data.attendance.present} | Ausente: ${data.attendance.absent} | Tardanzas: ${data.attendance.late} | Excusas: ${data.attendance.excused}`);
+-      doc.text(`Porcentaje de asistencia: ${data.attendance.attendanceRate}%`);
++      doc.text(data.attendance.total > 0
++        ? `Porcentaje de asistencia: ${data.attendance.attendanceRate}%`
++        : 'Sin registros de asistencia en este período.');
+       doc.moveDown();
+ 
+       // Achievements
+@@ -676,13 +681,22 @@ export class ReportsService {
+         doc.font('Helvetica').fontSize(8);
+ 
+         for (const obs of data.observations.slice(0, 5)) {
+-          const dateStr = new Date(obs.date).toLocaleDateString('es-CO');
+-          doc.text(`[${dateStr}] ${obs.type}: ${obs.description}`);
++          // La columna es @db.Date: conserva el día civil, sin convertirlo a la hora local.
++          const dateStr = new Date(obs.date).toLocaleDateString('es-CO', { timeZone: 'UTC' });
++          const types: Record<string, string> = {
++            POSITIVE: 'Reconocimiento', PEDAGOGICAL: 'Observación pedagógica',
++            BEHAVIORAL_MILD: 'Convivencia', ACTA_TYPE_I: 'Acta tipo I',
++            ACTA_TYPE_II: 'Acta tipo II', ACTA_TYPE_III: 'Acta tipo III',
++            PARENT_CITATION: 'Citación al acudiente', COMMITMENT: 'Compromiso',
++            COUNSELING_FOLLOWUP: 'Seguimiento de orientación', REFERRAL: 'Remisión',
++            COMMITTEE_DECISION: 'Decisión del comité', PEDAGOGICAL_FOLLOWUP: 'Seguimiento pedagógico',
++          };
++          doc.text(`[${dateStr}] ${types[obs.type] || obs.type}: ${obs.description}`);
+         }
+       }
+ 
+       // Footer
+-      doc.fontSize(8).text(`Generado el: ${new Date().toLocaleString('es-CO')}`, 50, 750);
++      doc.fontSize(8).text(`Generado el: ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`, 50, 750, { lineBreak: false });
+ 
+       doc.end();
+     });
+@@ -2764,6 +2778,7 @@ export class ReportsService {
+   async buildGroupReportCards(
+     groupId: string,
+     academicTermId: string,
++    requestedEnrollmentId?: string,
+   ): Promise<{
+     institution: { id: string; name: string; nit: string | null; address: string | null; phone: string | null; email: string | null };
+     academicYear: { id: string; year: number; name: string | null };
+@@ -2836,7 +2851,16 @@ export class ReportsService {
+ 
+     // ─── QUERY 2: Matrículas del grupo con estudiante + grupo + año + director ──
+     const enrollments = await this.prisma.studentEnrollment.findMany({
+-      where: { groupId, status: 'ACTIVE' },
++      where: {
++        groupId,
++        // El grupo se reutiliza entre años: el período fija el universo histórico.
++        academicYear: { terms: { some: { id: academicTermId } } },
++        OR: [
++          { status: { in: ['ACTIVE', 'PROMOTED', 'REPEATED', 'GRADUATED'] } },
++          // Un retiro/traslado no debe impedir expedir el boletín individual previo.
++          ...(requestedEnrollmentId ? [{ id: requestedEnrollmentId }] : []),
++        ],
++      },
+       include: {
+         student: true,
+         group: { include: { grade: true, director: { select: { id: true, firstName: true, lastName: true, signatureImageUrl: true } } } },
+@@ -2846,7 +2870,7 @@ export class ReportsService {
+     });
+ 
+     if (enrollments.length === 0) {
+-      throw new NotFoundException('No hay estudiantes activos en este grupo');
++      throw new NotFoundException('No hay matrículas para este grupo y año académico');
+     }
+ 
+     const firstEnrollment = enrollments[0];
+diff --git a/apps/web/src/components/Layout.tsx b/apps/web/src/components/Layout.tsx
+index dc5d0d4d..a5330f67 100644
+--- a/apps/web/src/components/Layout.tsx
++++ b/apps/web/src/components/Layout.tsx
+@@ -163,14 +163,14 @@ const institutionalNavigation: NavItem[] = [
+   
+   // Matrículas y Admisiones
+   { 
+-    name: 'Matrículas', 
++    name: 'Matrículas y año escolar', 
+     icon: UserPlus, 
+     roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
+     module: 'ENROLLMENTS',
+     children: [
+       { name: 'Gestión de Matrículas', href: '/enrollments', icon: UserPlus, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ENROLLMENTS' },
+-      { name: 'Cierre Año Académico', href: '/academic-year-closure', icon: FileText, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
+-      { name: 'Asistente Año Académico', href: '/academic-year-wizard', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
++      { name: 'Cierre y promoción del año', href: '/academic-year-closure', icon: FileText, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
++      { name: 'Preparar el siguiente año', href: '/academic-year-wizard', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
+     ]
+   },
+ 
+@@ -185,7 +185,7 @@ const institutionalNavigation: NavItem[] = [
+       { name: 'Estudiantes', href: '/students', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'USERS' },
+       { name: 'Otros Usuarios', href: '/staff', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
+       // Carga Académica se movió a "Plan de Estudios" (es parte de armar el plan del grado).
+-      { name: 'Permisos', href: '/admin/permissions', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
++      { name: 'Permisos de acceso', href: '/admin/permissions', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
+     ]
+   },
+   
+@@ -204,17 +204,17 @@ const institutionalNavigation: NavItem[] = [
+       // por eso viven aquí además de en Configuración SIEE.
+       { name: 'Ventanas de Calificación', href: '/academic/config/windows/grading', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+       { name: 'Ventanas de Recuperación', href: '/academic/config/windows/recovery', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'RECOVERY' },
+-      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
+-      { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
+     ]
+   },
+   
+   // Seguimiento Estudiantil
+   { 
+-    name: 'Seguimiento', 
++    name: 'Seguimiento e inclusión', 
+     icon: UserCheck, 
+-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'],
++    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'PSICOLOGA'],
+     children: [
++      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
++      { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
+       { name: 'Asistencia', href: '/attendance', icon: Calendar, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'], module: 'ATTENDANCE' },
+       { name: 'Observador', href: '/observer', icon: ClipboardList, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'], module: 'OBSERVER' },
+       { name: 'Informe Convivencial', href: '/observer-stats', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'] },
+@@ -223,7 +223,7 @@ const institutionalNavigation: NavItem[] = [
+   },
+ 
+   // Permisos de Personal
+-  { name: 'Permisos', href: '/staff-leave', icon: Shield, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE'] },
++  { name: 'Permisos del personal', href: '/staff-leave', icon: Shield, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE'] },
+   
+   // Elecciones Escolares
+   { name: 'Elecciones', href: '/elections', icon: Vote, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+diff --git a/apps/web/src/components/ui/confirm.tsx b/apps/web/src/components/ui/confirm.tsx
+index ea077e97..dee42b92 100644
+--- a/apps/web/src/components/ui/confirm.tsx
++++ b/apps/web/src/components/ui/confirm.tsx
+@@ -12,7 +12,7 @@
+ import { useEffect, useState } from 'react'
+ import { AlertTriangle, Info } from 'lucide-react'
+ 
+-type DialogKind = 'confirm' | 'alert'
++type DialogKind = 'confirm' | 'alert' | 'prompt'
+ interface DialogState {
+   kind: DialogKind
+   title?: string
+@@ -20,6 +20,7 @@ interface DialogState {
+   confirmLabel: string
+   cancelLabel: string
+   danger: boolean
++  input?: { value: string }
+   resolve: (ok: boolean) => void
+ }
+ 
+@@ -28,7 +29,7 @@ let listener: ((s: DialogState | null) => void) | null = null
+ function open(state: Omit<DialogState, 'resolve'>): Promise<boolean> {
+   return new Promise(resolve => {
+     if (!listener) { // Sin host montado: degradar al nativo para no bloquear.
+-      resolve(state.kind === 'alert' ? true : window.confirm(state.message))
++      resolve(state.kind === 'alert' ? true : state.kind === 'prompt' ? false : window.confirm(state.message))
+       return
+     }
+     listener({ ...state, resolve })
+@@ -51,6 +52,14 @@ export function alertDialog(message: string, opts: { title?: string } = {}): Pro
+   return open({ kind: 'alert', message, title: opts.title, confirmLabel: 'Entendido', cancelLabel: '', danger: false })
+ }
+ 
++/** Cancelar devuelve null; confirmar una respuesta vacía devuelve ''. */
++export async function promptDialog(message: string, opts: { title?: string; confirmLabel?: string } = {}): Promise<string | null> {
++  const input = { value: '' }
++  const accepted = await open({ kind: 'prompt', message, title: opts.title, input,
++    confirmLabel: opts.confirmLabel ?? 'Guardar', cancelLabel: 'Cancelar', danger: false })
++  return accepted ? input.value : null
++}
++
+ export function DialogHost() {
+   const [state, setState] = useState<DialogState | null>(null)
+   useEffect(() => { listener = setState; return () => { listener = null } }, [])
+@@ -59,7 +68,7 @@ export function DialogHost() {
+     if (!state) return
+     const onKey = (e: KeyboardEvent) => {
+       if (e.key === 'Escape') close(false)
+-      if (e.key === 'Enter') close(true)
++      if (e.key === 'Enter' && state.kind !== 'prompt') close(true)
+     }
+     window.addEventListener('keydown', onKey)
+     return () => window.removeEventListener('keydown', onKey)
+@@ -70,7 +79,7 @@ export function DialogHost() {
+ 
+   return (
+     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-ink-primary/40 backdrop-blur-sm" onClick={() => close(false)}>
+-      <div className="bg-surface-1 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
++      <div role="dialog" aria-modal="true" aria-label={state.title || state.message} className="bg-surface-1 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+         <div className="p-5 flex gap-3">
+           <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${state.danger ? 'bg-red-50 text-red-600' : 'bg-violet-50 text-violet-600'}`}>
+             {state.danger ? <AlertTriangle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+@@ -78,15 +87,18 @@ export function DialogHost() {
+           <div className="flex-1 min-w-0 pt-0.5">
+             {state.title && <h3 className="font-bold text-ink-primary mb-1">{state.title}</h3>}
+             <p className="text-sm text-ink-secondary whitespace-pre-line">{state.message}</p>
++            {state.input && <textarea autoFocus aria-label={state.message} rows={3} value={state.input.value}
++              onChange={e => { state.input!.value = e.target.value; setState({ ...state }) }}
++              className="mt-3 w-full rounded-lg border border-hairline bg-surface-1 p-3 text-ink-primary focus:ring-2 focus:ring-accent" />}
+           </div>
+         </div>
+         <div className="px-5 py-3 bg-surface-2 flex justify-end gap-2">
+-          {state.kind === 'confirm' && (
++          {state.kind !== 'alert' && (
+             <button onClick={() => close(false)} className="px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-surface-3 rounded-lg">{state.cancelLabel}</button>
+           )}
+           <button
+             onClick={() => close(true)}
+-            autoFocus
++            autoFocus={state.kind !== 'prompt'}
+             className={`px-4 py-2 text-sm font-bold text-white rounded-lg ${state.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-violet-600 hover:bg-violet-700'}`}
+           >
+             {state.confirmLabel}
+diff --git a/apps/web/src/pages/Classroom.tsx b/apps/web/src/pages/Classroom.tsx
+index 84caefaa..1205d657 100644
+--- a/apps/web/src/pages/Classroom.tsx
++++ b/apps/web/src/pages/Classroom.tsx
+@@ -20,7 +20,7 @@ import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
+ import { FilterChip, FilterStrip } from '../components/ui/FilterChip'
+ import { ClassroomPicker } from '../components/ui/ClassroomPicker'
+ import { SectionPicker } from '../components/ui/SectionPicker'
+-import { confirmDialog, alertDialog } from '../components/ui/confirm'
++import { confirmDialog, alertDialog, promptDialog } from '../components/ui/confirm'
+ import {
+   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
+   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
+@@ -963,7 +963,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
+ // TAB: ANUNCIOS (separada del Inicio)
+ // ═══════════════════════════════════════════════════════════════════════════
+ 
+-function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
++export function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
+   classroom: any; isTeacher: boolean; onReload: () => void; setError: (e: string) => void
+ }) {
+   const [showForm, setShowForm] = useState(false)
+@@ -1212,7 +1212,7 @@ function ImagePreview({ url, name, onExpand }: { url: string; name?: string; onE
+ // TAB: CONTENIDO (Secciones + Materiales con formularios mejorados)
+ // ═══════════════════════════════════════════════════════════════════════════
+ 
+-function ContentTab({ classroom, isTeacher, onReload, setError }: {
++export function ContentTab({ classroom, isTeacher, onReload, setError }: {
+   classroom: any; isTeacher: boolean; onReload: () => void; setError: (e: string) => void
+ }) {
+   const sections: Section[] = classroom.sections || []
+@@ -2093,13 +2093,14 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
+   AUTO_GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Auto-calificado' },
+ }
+ 
+-function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: {
+-  classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void
++export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError, initialActivityId }: {
++  classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void; initialActivityId?: string
+ }) {
+   const [activities, setActivities] = useState<Activity[]>([])
+   const [loading, setLoading] = useState(true)
+   const [showCreate, setShowCreate] = useState(false)
+   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
++  const openedInitialActivity = useRef<string | null>(null)
+   const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL')
+   const [workFilter, setWorkFilter] = useState<string>('ALL') // filtro por estado de trabajo (pendiente/por calificar/etc.)
+   const [periodFilter, setPeriodFilter] = useState<string>('ALL') // organizador primario: por período académico
+@@ -2255,7 +2256,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }:
+   const sections: Section[] = [...baseSections, ...extraSections.filter(e => !baseSections.some(s => s.id === e.id))]
+ 
+   const quickCreateSection = async () => {
+-    const title = window.prompt('Nombre de la nueva sección (p. ej. "Unidad 1" o "Semana 3"):')?.trim()
++    const title = (await promptDialog('Nombre de la nueva sección (p. ej. "Unidad 1" o "Semana 3"):', { title: 'Nueva sección' }))?.trim()
+     if (!title) return
+     try {
+       const { data } = await classroomApi.createSection(classroom.id, { title })
+@@ -2271,7 +2272,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }:
+       setLoading(true)
+       const { data } = await classroomApi.listActivities(classroom.id, isStudent ? 'student' : undefined)
+       setActivities(data)
+-    } catch {} finally { setLoading(false) }
++    } catch { setError('No se pudieron cargar las actividades. Vuelve a intentarlo.') } finally { setLoading(false) }
+   }, [classroom.id, isStudent])
+ 
+   const svgToDataUrl = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+@@ -2937,6 +2938,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }:
+     }
+   }
+ 
++  useEffect(() => {
++    if (loading || !initialActivityId || openedInitialActivity.current === initialActivityId) return
++    const activity = activities.find(a => a.id === initialActivityId)
++    if (!activity) return
++    openedInitialActivity.current = initialActivityId
++    void openActivity(activity)
++  }, [loading, activities, initialActivityId])
++
+   const handleStudentSubmit = async () => {
+     if (!selectedActivity) return
+     try {
+@@ -3000,11 +3009,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }:
+   }
+ 
+   const handleReturn = async (sub: Submission) => {
+-    const fb = prompt('Retroalimentación para el estudiante (opcional):')
++    const fb = await promptDialog('Retroalimentación para el estudiante (opcional):', { title: 'Devolver entrega', confirmLabel: 'Devolver' })
++    if (fb === null) return
+     try {
+       await classroomApi.returnSubmission(sub.id, { feedback: fb || undefined })
+       if (selectedActivity) openActivity(selectedActivity)
+-    } catch {}
++    } catch { setError('No se pudo devolver la entrega. Vuelve a intentarlo.') }
+   }
+ 
+   const openFile = async (url: string) => {
+@@ -5295,7 +5305,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
+                 </div>
+                 <div className="flex justify-end gap-3">
+                   {activities.find(a => a.id === showScheduleModal)?.scheduledPublishAt && (
+-                    <button onClick={() => { handlePublish(showScheduleModal, false); setShowScheduleModal(null) }} className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl">
++                    <button onClick={() => { handlePublish(showScheduleModal, true); setShowScheduleModal(null) }} className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl">
+                       Cancelar programación
+                     </button>
+                   )}
+@@ -6593,7 +6603,7 @@ interface ForumPostData {
+   replies?: ForumPostData[];
+ }
+ 
+-function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
++export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
+   classroom: any; isTeacher: boolean; isStudent: boolean; user: any; setError: (e: string) => void
+ }) {
+   const [posts, setPosts] = useState<ForumPostData[]>([])
+diff --git a/apps/web/src/pages/aula/data/useAula.ts b/apps/web/src/pages/aula/data/useAula.ts
+index cb28cfff..3fb85711 100644
+--- a/apps/web/src/pages/aula/data/useAula.ts
++++ b/apps/web/src/pages/aula/data/useAula.ts
+@@ -10,7 +10,7 @@
+  */
+ 
+ import { useCallback, useEffect, useState } from 'react'
+-import { classroomApi } from '../../../lib/api'
++import { classroomApi, academicYearLifecycleApi } from '../../../lib/api'
+ import { parseApiError } from '../../../lib/toast'
+ import type { ActivityLike } from '../model/activityState'
+ import type { AnnouncementLike } from '../model/today'
+@@ -172,6 +172,8 @@ export interface AulaListada {
+   color?: string | null
+   estudiantes: number | null
+   activa: boolean
++  academicYear?: number | null
++  academicYearStatus?: string | null
+ }
+ 
+ export interface EstadoAulas {
+@@ -196,9 +198,18 @@ export function useAulas(rol: Rol): EstadoAulas {
+ 
+     classroomApi
+       .list(rol === 'estudiante' ? 'student' : undefined)
+-      .then(({ data }) => {
++      .then(async ({ data }) => {
++        const raw = Array.isArray(data) ? data : []
++        // El docente puede conservar aulas de varios años para el mismo grupo.
++        // El estudiante no consulta el endpoint administrativo de años.
++        const yearIds = rol === 'docente'
++          ? [...new Set<string>(raw.map((c: any) => c.teacherAssignment?.academicYearId).filter(Boolean))] : []
++        const years = new Map(await Promise.all(yearIds.map(async id => {
++          const response = await academicYearLifecycleApi.getById(id)
++          return [id, response.data] as const
++        })))
+         if (!vivo) return
+-        const lista = (Array.isArray(data) ? data : []).map((c: any) => ({
++        const lista = raw.map((c: any) => ({
+           id: c.id,
+           titulo: c.title,
+           asignatura: c.teacherAssignment?.subject?.name ?? null,
+@@ -208,6 +219,8 @@ export function useAulas(rol: Rol): EstadoAulas {
+           estudiantes: typeof c.studentCount === 'number' ? c.studentCount : null,
+           // `isActive` existe en el tipo y no se usaba en ninguna parte (hallazgo B6).
+           activa: c.isActive !== false,
++          academicYear: years.get(c.teacherAssignment?.academicYearId)?.year ?? null,
++          academicYearStatus: years.get(c.teacherAssignment?.academicYearId)?.status ?? null,
+         }))
+         setAulas(lista)
+       })
+diff --git a/apps/web/src/pages/aula/index.tsx b/apps/web/src/pages/aula/index.tsx
+index 7a98f149..e61b2899 100644
+--- a/apps/web/src/pages/aula/index.tsx
++++ b/apps/web/src/pages/aula/index.tsx
+@@ -18,7 +18,6 @@
+ import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+ import { useAuth } from '../../contexts/AuthContext'
+-import { alertDialog } from '../../components/ui/confirm'
+ import { AulaShell } from './ui/AulaShell'
+ import { AulaState, EmptyState } from './ui/EmptyState'
+ import { LiveSessionBanner } from './ui/LiveSessionBanner'
+@@ -31,16 +30,19 @@ import { Unidades } from './views/Unidades'
+ import { Notas } from './views/Notas'
+ import { Estudiantes } from './views/Estudiantes'
+ import { CrearActividad } from './ui/CrearActividad'
++import { GestionarAula, type GestionAula } from './ui/GestionarAula'
+ import { useAula, useAulas, type Rol } from './data/useAula'
+ import { useActividad } from './data/useActividad'
+ import { useLiveSession } from './data/useLiveSession'
+ import { useProgresoAulas } from './data/useProgresoAulas'
+ import { buildTeacherToday, buildStudentToday } from './model/today'
+ import { PERIOD_ALL } from './model/list'
++import type { Herramienta } from './views/HerramientasAula'
++const HerramientasAula = lazy(() => import('./views/HerramientasAula'))
+ 
+ const LessonEditor = lazy(() => import('../../components/LessonEditor'))
+ // Rutas y Expedición ya son componentes propios y reutilizables: se montan en el shell nuevo
+-// sin tocarlos. El Foro todavía vive dentro de Classroom.tsx y por eso sigue con puente.
++// sin duplicar sus datos. Foro y editores se cargan dentro de HerramientasAula.
+ const LearningRoutesTab = lazy(() => import('../../components/LearningRoutesTab'))
+ const AbpTab = lazy(() => import('../../components/AbpTab'))
+ 
+@@ -56,7 +58,7 @@ function DetalleCargado({
+   rol,
+   totalEstudiantes,
+   onVolver,
+-  onIrAlAulaActual,
++  onAbrirHerramientas,
+   onAbrirActividad,
+   onEditarLeccion,
+ }: {
+@@ -66,7 +68,7 @@ function DetalleCargado({
+   totalEstudiantes?: number | null
+   onEditarLeccion: (a: { id: string; title: string; gameType?: string }) => void
+   onVolver: () => void
+-  onIrAlAulaActual: () => void
++  onAbrirHerramientas: () => void
+   onAbrirActividad: (id: string) => void
+ }) {
+   const { actividad, miEntrega, entregas, cargando, error, recargar } = useActividad(activityId, rol)
+@@ -96,7 +98,7 @@ function DetalleCargado({
+           entregas={entregas}
+           onVolver={onVolver}
+           onCambio={recargar}
+-          onIrAlAulaActual={onIrAlAulaActual}
++          onAbrirHerramientas={onAbrirHerramientas}
+           aulaId={aulaId}
+           totalEstudiantes={totalEstudiantes}
+           onAbrirActividad={onAbrirActividad}
+@@ -123,6 +125,9 @@ export default function AulaVirtual() {
+   const { classroomId, vista: vistaParam, activityId } = useParams()
+   const [params, setParams] = useSearchParams()
+   const [creando, setCreando] = useState(false)
++  const [tipoCreacion, setTipoCreacion] = useState<string | undefined>()
++  const abrirCreacion = (tipo?: string) => { setTipoCreacion(tipo); setCreando(true) }
++  const [gestionAula, setGestionAula] = useState<GestionAula | null>(null)
+   // El editor de lecciones y juegos SÍ es reutilizable, así que se abre aquí mismo en vez de
+   // mandar al aula anterior.
+   const [editandoLeccion, setEditandoLeccion] = useState<{ id: string; title: string; gameType?: string } | null>(null)
+@@ -194,22 +199,26 @@ export default function AulaVirtual() {
+     [classroomId, navigate],
+   )
+ 
+-  /**
+-   * Puente al aula actual para lo que todavía no se ha traído. Se avisa ANTES de saltar: un
+-   * botón que te cambia de aula sin decírtelo se siente como un error de la aplicación.
+-   */
+-  const irAlAulaActualPara = useCallback(
+-    async (que: 'crear' | 'valeria' | 'editar') => {
+-      const textos: Record<typeof que, string> = {
+-        crear: 'Crear actividades todavía se hace en el aula de siempre. Te llevamos allí; abre esta misma aula y usa "Nueva Actividad". Lo que crees aparecerá también aquí.',
+-        valeria: 'Pedirle contenido a Valeria todavía se hace en el aula de siempre. Te llevamos allí.',
+-        editar: 'Editar una actividad todavía se hace en el aula de siempre. Te llevamos allí.',
+-      }
+-      await alertDialog(textos[que], { title: 'Esto aún vive en el aula anterior' })
+-      navigate('/classroom')
++  const abrirHerramienta = useCallback(
++    (herramienta: Herramienta, id?: string) => {
++      const q = new URLSearchParams(params)
++      q.set('herramienta', herramienta)
++      q.delete('actividad')
++      if (id) q.set('actividad', id)
++      setParams(q)
+     },
+-    [navigate],
++    [params, setParams],
+   )
++  const cerrarHerramienta = () => {
++    const q = new URLSearchParams(params)
++    q.delete('herramienta')
++    q.delete('actividad')
++    setParams(q)
++    recargar()
++  }
++  const herramientaParam = params.get('herramienta')
++  const herramienta = ['actividades', 'materiales', 'anuncios', 'foro'].includes(herramientaParam ?? '')
++    ? herramientaParam as Herramienta : null
+ 
+   const verActividades = useCallback(
+     (estado?: string) => {
+@@ -225,7 +234,7 @@ export default function AulaVirtual() {
+ 
+   if (!classroomId) {
+     return (
+-      <SelectorAula
++      <><SelectorAula
+         nombre={nombre}
+         role={rol}
+         aulas={listado.aulas}
+@@ -235,7 +244,13 @@ export default function AulaVirtual() {
+         onEntrar={(id) => navigate(`/aula/${id}/hoy`)}
+         onVolverAlActual={() => navigate('/classroom')}
+         avances={avances}
++        onCrear={rol === 'docente' ? () => setGestionAula('crear') : undefined}
+       />
++      {gestionAula && rol === 'docente' && <GestionarAula modo="crear" onCerrar={() => setGestionAula(null)} onGuardado={id => {
++        setGestionAula(null)
++        listado.recargar()
++        if (id) navigate(`/aula/${id}/hoy`)
++      }} />}</>
+     )
+   }
+ 
+@@ -275,13 +290,25 @@ export default function AulaVirtual() {
+           <LiveSessionBanner
+             session={session}
+             role={rol}
+-            // El reproductor del quiz vive en el aula actual; hasta que se traiga, el enlace
+-            // lleva allí en vez de dejar el aviso muerto.
+-            onEntrar={() => navigate('/classroom')}
++            // Abre la actividad exacta dentro del mismo shell.
++            onEntrar={() => abrirHerramienta('actividades', session.activityId)}
+           />
+         ) : undefined
+       }
+     >
++      {!herramienta && !activityId && (vista === 'hoy' || vista === 'unidades' || vista === 'actividades') && (
++        <div className="mx-auto mb-5 flex max-w-5xl flex-wrap gap-2" aria-label="Herramientas del aula">
++          {(vista === 'hoy' ? ['anuncios'] as const : vista === 'unidades' ? ['materiales'] as const : rol === 'docente' ? ['actividades'] as const : []).map(h => (
++            <button key={h} type="button" onClick={() => abrirHerramienta(h)} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm font-medium text-ink-primary hover:bg-surface-2">
++              {h === 'anuncios' ? 'Ver y gestionar anuncios' : h === 'materiales' ? 'Abrir materiales' : 'Herramientas de actividades'}
++            </button>
++          ))}
++          {rol === 'docente' && vista === 'hoy' && <>
++            <button type="button" onClick={() => setGestionAula('color')} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary">Color del aula</button>
++            <button type="button" onClick={() => setGestionAula('copiar')} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary">Copiar aula</button>
++          </>}
++        </div>
++      )}
+       <AulaState
+         loading={cargando}
+         error={error}
+@@ -289,14 +316,20 @@ export default function AulaVirtual() {
+         isEmpty={false}
+         empty={null}
+       >
+-        {activityId ? (
++        {herramienta || vista === 'foro' ? (
++          <Suspense fallback={<p role="status">Cargando herramientas del aula…</p>}>
++            <HerramientasAula key={`${classroomId}:${herramienta ?? 'foro'}:${params.get('actividad') ?? ''}`}
++              classroomId={classroomId} herramienta={herramienta ?? 'foro'} activityId={params.get('actividad') ?? undefined}
++              rol={rol} onCambio={recargar} onVolver={herramienta ? cerrarHerramienta : () => irA('hoy')} />
++          </Suspense>
++        ) : activityId ? (
+           <DetalleCargado
+             activityId={activityId}
+             aulaId={classroomId}
+             rol={rol}
+             totalEstudiantes={aula?.estudiantes ?? null}
+             onVolver={() => verActividades()}
+-            onIrAlAulaActual={() => irAlAulaActualPara('editar')}
++            onAbrirHerramientas={() => abrirHerramienta('actividades', activityId)}
+             onAbrirActividad={abrirActividad}
+             onEditarLeccion={setEditandoLeccion}
+           />
+@@ -312,12 +345,9 @@ export default function AulaVirtual() {
+             onAbrirActividad={abrirActividad}
+             onVerActividades={verActividades}
+             totalEstudiantes={aula?.estudiantes ?? null}
+-            // Crear todavía vive en el aula actual (el formulario por intención y el editor de
+-            // preguntas no son componentes reutilizables). Se ofrece igual: sin estos botones
+-            // el docente entra al aula nueva y no encuentra por dónde crear, que es peor que
+-            // un puente honesto.
+-            onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
+-            onValeria={rol === 'docente' ? () => irAlAulaActualPara('valeria') : undefined}
++            // Creación por intención y herramientas completas dentro de la misma aula.
++            onCrear={rol === 'docente' ? tipo => tipo === 'MATERIAL' ? abrirHerramienta('materiales') : abrirCreacion(tipo) : undefined}
++            onValeria={rol === 'docente' ? () => abrirHerramienta('actividades') : undefined}
+           />
+         ) : vista === 'unidades' ? (
+           <Unidades
+@@ -339,8 +369,8 @@ export default function AulaVirtual() {
+             }}
+             onAbrirActividad={abrirActividad}
+             totalEstudiantes={aula?.estudiantes ?? null}
+-            onAbrirMaterial={() => irAlAulaActualPara('editar')}
+-            onCrear={() => setCreando(true)}
++            onAbrirMaterial={() => abrirHerramienta('materiales')}
++            onCrear={() => abrirCreacion()}
+           />
+         ) : vista === 'actividades' ? (
+           <Actividades
+@@ -351,7 +381,7 @@ export default function AulaVirtual() {
+             filtroEstadoInicial={filtroEstado}
+             onAbrirActividad={abrirActividad}
+             totalEstudiantes={aula?.estudiantes ?? null}
+-            onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
++            onCrear={rol === 'docente' ? () => abrirCreacion() : undefined}
+           />
+         ) : vista === 'notas' ? (
+           <Notas
+@@ -378,16 +408,19 @@ export default function AulaVirtual() {
+           <div className="mx-auto max-w-3xl">
+             <EmptyState
+               scene="sin-unidades"
+-              title={`"${vistaLabel(vista)}" todavía no está en el aula nueva`}
+-              detail="Se irán trayendo una por una. Mientras tanto puedes usarla en el aula actual, con los mismos datos."
+-              secondary={{ label: 'Abrir el aula actual', onClick: () => navigate('/classroom') }}
++              title={`No tienes acceso a "${vistaLabel(vista)}"`}
++              detail="Selecciona una de las secciones disponibles para tu rol."
++              secondary={{ label: 'Volver a Hoy', onClick: () => irA('hoy') }}
+             />
+           </div>
+         )}
+       </AulaState>
++      {gestionAula && rol === 'docente' && <GestionarAula modo={gestionAula} classroomId={classroomId} colorInicial={aula?.color}
++        onCerrar={() => setGestionAula(null)} onGuardado={() => { setGestionAula(null); recargar(); listado.recargar() }} />}
+       {creando && (
+         <CrearActividad
+           aulaId={classroomId}
++          tipoInicial={tipoCreacion}
+           unidades={aula?.secciones ?? []}
+           periodos={aula?.periodos ?? []}
+           periodoActual={aula?.periodoActual?.id ?? null}
+@@ -399,9 +432,10 @@ export default function AulaVirtual() {
+               // Lecciones y juegos se editan aquí: LessonEditor es un componente propio.
+               const gameType = (nueva as { metadata?: { gameType?: string } }).metadata?.gameType
+               setEditandoLeccion({ id: nueva.id, title: nueva.title, gameType })
++            } else if (siguiente === 'preguntas') {
++              navigate(`/aula/${classroomId}/actividades/${nueva.id}?herramienta=actividades&actividad=${nueva.id}`)
+             } else {
+-              // El resto abre su detalle; las preguntas de quiz todavía se añaden en el aula
+-              // anterior, y el detalle lo dice.
++              // El detalle ofrece las herramientas del tipo de actividad creado.
+               abrirActividad(nueva.id)
+             }
+           }}
+diff --git a/apps/web/src/pages/aula/ui/CrearActividad.tsx b/apps/web/src/pages/aula/ui/CrearActividad.tsx
+index 390a23a9..0696b18d 100644
+--- a/apps/web/src/pages/aula/ui/CrearActividad.tsx
++++ b/apps/web/src/pages/aula/ui/CrearActividad.tsx
+@@ -45,6 +45,7 @@ export interface CrearActividadProps {
+   periodos: PeriodoOpcion[]
+   /** Período con el que se entra, para no obligar a elegirlo otra vez. */
+   periodoActual?: string | null
++  tipoInicial?: string
+   onCerrar: () => void
+   /**
+    * Se llama con la actividad creada y con dónde seguir: el editor de lecciones y juegos vive
+@@ -60,12 +61,14 @@ export function CrearActividad({
+   unidades,
+   periodos,
+   periodoActual,
++  tipoInicial,
+   onCerrar,
+   onCreada,
+ }: CrearActividadProps) {
+-  const [paso, setPaso] = useState<Paso>('intencion')
+-  const [intencion, setIntencion] = useState<Intencion | null>(null)
+-  const [tipo, setTipo] = useState<string>('')
++  const initial = tipoInicial && mecanicaDe(tipoInicial) ? tipoInicial : ''
++  const [paso, setPaso] = useState<Paso>(initial ? 'datos' : 'intencion')
++  const [intencion, setIntencion] = useState<Intencion | null>(INTENCIONES.find(i => mecanicasDe(i.id).some(m => m.type === initial))?.id ?? null)
++  const [tipo, setTipo] = useState<string>(initial)
+ 
+   const [titulo, setTitulo] = useState('')
+   const [descripcion, setDescripcion] = useState('')
+diff --git a/apps/web/src/pages/aula/ui/GestionarAula.tsx b/apps/web/src/pages/aula/ui/GestionarAula.tsx
+new file mode 100644
+index 00000000..d72e69c1
+--- /dev/null
++++ b/apps/web/src/pages/aula/ui/GestionarAula.tsx
+@@ -0,0 +1,92 @@
++import { useEffect, useState } from 'react'
++import { X } from 'lucide-react'
++import { classroomApi } from '../../../lib/api'
++import { toast } from '../../../lib/toast'
++
++export type GestionAula = 'crear' | 'copiar' | 'color'
++const titles = { crear: 'Crear aula', copiar: 'Copiar aula a otros grupos', color: 'Color del aula' }
++
++export function GestionarAula({ modo, classroomId, colorInicial, onCerrar, onGuardado }: {
++  modo: GestionAula; classroomId?: string; colorInicial?: string | null;
++  onCerrar: () => void; onGuardado: (id?: string) => void;
++}) {
++  const [assignments, setAssignments] = useState<any[]>([])
++  const [selected, setSelected] = useState<string[]>([])
++  const [color, setColor] = useState(colorInicial || '#3B82F6')
++  const [loading, setLoading] = useState(modo !== 'color')
++  const [saving, setSaving] = useState(false)
++  const [error, setError] = useState('')
++  const [revision, setRevision] = useState(0)
++  useEffect(() => {
++    if (modo === 'color') return
++    let active = true
++    setLoading(true)
++    setError('')
++    classroomApi.getAvailableAssignments().then(({data}) => { if (active) setAssignments(data) })
++      .catch(() => { if (active) setError('No se pudieron cargar tus asignaciones.') })
++      .finally(() => { if (active) setLoading(false) })
++    return () => { active = false }
++  }, [modo, revision])
++  useEffect(() => {
++    const key = (e: KeyboardEvent) => { if (e.key === 'Escape' && !saving) onCerrar() }
++    window.addEventListener('keydown', key)
++    return () => window.removeEventListener('keydown', key)
++  }, [onCerrar, saving])
++  const guardar = async () => {
++    if (saving || loading || (modo !== 'color' && !selected.length)) return
++    setSaving(true)
++    setError('')
++    try {
++      if (modo === 'crear') {
++        const {data} = await classroomApi.create({teacherAssignmentId:selected[0],color})
++        toast.success('Aula creada')
++        onGuardado(data.id)
++      } else if (modo === 'copiar' && classroomId) {
++        const {data} = await classroomApi.copyClassroomTo(classroomId,selected)
++        const failed = (data.results ?? []).filter((r: { error?: string }) => r.error)
++        if (failed.length || data.copied !== selected.length) {
++          setSelected([])
++          setError(`Se completaron ${data.copied} de ${selected.length} copias. ${failed.map((r: { error: string }) => r.error).join('. ')} Revisa los grupos de destino antes de volver a intentarlo.`)
++          return
++        }
++        toast.success(`Aula copiada a ${data.copied} grupo(s)`)
++        onGuardado()
++      } else if (classroomId) {
++        await classroomApi.update(classroomId,{color})
++        toast.success('Color actualizado')
++        onGuardado()
++      }
++    } catch (err: any) { setError(err.response?.data?.message || 'No se pudo guardar. Vuelve a intentarlo.') }
++    finally { setSaving(false) }
++  }
++  return (
++    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-ink-primary/40 p-4 backdrop-blur-sm">
++      <section role="dialog" aria-modal="true" aria-labelledby="gestion-aula-title" className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-modal border border-hairline bg-surface-1 p-6 shadow-xl">
++        <header className="mb-5 flex items-center justify-between gap-3">
++          <h2 id="gestion-aula-title" className="text-xl font-semibold text-ink-primary">{titles[modo]}</h2>
++          <button autoFocus type="button" aria-label="Cerrar" disabled={saving} onClick={onCerrar} className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-2"><X className="h-5 w-5" /></button>
++        </header>
++        {loading && <p role="status">Cargando asignaciones…</p>}
++        {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-800">{error}
++          {!assignments.length && modo !== 'color' && <button type="button" className="ml-2 min-h-btn underline" onClick={() => setRevision(r=>r+1)}>Reintentar</button>}
++        </p>}
++        {!loading && !error && modo !== 'color' && !assignments.length && <p className="text-ink-secondary">No hay asignaciones disponibles. Cada grupo necesita una carga docente asignada y una asignatura sin aula creada.</p>}
++        {!loading && modo !== 'color' && assignments.length > 0 && <fieldset disabled={saving} className="space-y-2">
++          <legend className="mb-2 font-medium text-ink-primary">{modo === 'crear' ? 'Asignatura y grupo' : 'Grupos de destino'}</legend>
++          {assignments.map(a => <label key={a.id} className="flex min-h-btn cursor-pointer items-center gap-3 rounded-lg border border-hairline p-3 text-body-sm text-ink-primary">
++            <input type={modo === 'crear' ? 'radio' : 'checkbox'} name="asignacion-aula" checked={selected.includes(a.id)} onChange={e => setSelected(modo === 'crear' ? [a.id] : e.target.checked ? [...selected,a.id] : selected.filter(id=>id!==a.id))} />
++            {a.subject?.name} · {a.group?.grade?.name} {a.group?.name}
++          </label>)}
++        </fieldset>}
++        {modo === 'copiar' && <p className="mt-4 text-body-sm text-ink-secondary">Copia unidades, materiales, actividades del aula y temas del foro. Las actividades quedan como borradores para revisar fechas y publicación. Las entregas, calificaciones y anuncios permanecen en el aula de origen.</p>}
++        {modo !== 'copiar' && <label className="mt-5 flex min-h-btn items-center gap-3 text-ink-primary">Color del aula
++          <input type="color" aria-label="Color del aula" value={color} disabled={saving} onChange={e=>setColor(e.target.value)} className="h-11 w-16 rounded-lg" />
++        </label>}
++        <footer className="mt-6 flex justify-end gap-3">
++          <button type="button" disabled={saving} onClick={onCerrar} className="min-h-btn rounded-lg border border-hairline px-4 text-ink-secondary">Cancelar</button>
++          <button type="button" disabled={saving || loading || (modo !== 'color' && !selected.length)} onClick={guardar} className="min-h-btn rounded-lg bg-accent px-4 font-medium text-white disabled:opacity-50">{saving ? 'Guardando…' : modo === 'copiar' ? 'Copiar a los grupos elegidos' : 'Guardar'}</button>
++        </footer>
++      </section>
++    </div>
++  )
++}
+diff --git a/apps/web/src/pages/aula/views/ActividadDetalle.tsx b/apps/web/src/pages/aula/views/ActividadDetalle.tsx
+index a0fae426..73f30c30 100644
+--- a/apps/web/src/pages/aula/views/ActividadDetalle.tsx
++++ b/apps/web/src/pages/aula/views/ActividadDetalle.tsx
+@@ -37,7 +37,7 @@ import { textoLegible } from '../model/texto'
+ const LessonPlayer = lazy(() => import('../../../components/LessonPlayer'))
+ 
+ /** Tipos cuyo motor todavía vive dentro de Classroom.tsx. */
+-const MOTOR_EN_AULA_ACTUAL = new Set(['QUIZ', 'EXAM', 'LIVE_QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR', 'SELF_ASSESSMENT'])
++const MOTOR_COMPARTIDO = new Set(['QUIZ', 'EXAM', 'LIVE_QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR', 'SELF_ASSESSMENT'])
+ const ABRE_REPRODUCTOR = new Set(['LESSON', 'GAME'])
+ 
+ export interface ActividadDetalleProps {
+@@ -47,7 +47,7 @@ export interface ActividadDetalleProps {
+   entregas: EntregaLike[]
+   onVolver: () => void
+   onCambio: () => void
+-  onIrAlAulaActual: () => void
++  onAbrirHerramientas: () => void
+   /** Aula en la que estamos: la necesita el asistente de copia. */
+   aulaId?: string
+   /** Estudiantes del grupo, para poder decir cuántos faltan por entregar. */
+@@ -66,7 +66,7 @@ export function ActividadDetalle({
+   entregas,
+   onVolver,
+   onCambio,
+-  onIrAlAulaActual,
++  onAbrirHerramientas,
+   aulaId,
+   totalEstudiantes,
+   onAbrirActividad,
+@@ -209,15 +209,15 @@ export function ActividadDetalle({
+         {/* Al docente hay que decirle dónde sigue el trabajo. Un quiz recién creado no tiene
+             preguntas, y el editor de preguntas todavía vive en el aula anterior: sin este
+             aviso, la actividad se queda vacía sin que nadie sepa por qué. */}
+-        {esDocente && MOTOR_EN_AULA_ACTUAL.has(a.type) && (
++        {esDocente && MOTOR_COMPARTIDO.has(a.type) && (
+           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface-2 p-4">
+             <p className="min-w-0 text-body-sm text-ink-secondary">
+               Las <strong className="text-ink-primary">preguntas</strong> de esta actividad se añaden
+-              todavía en el aula anterior. Lo que agregues allí aparecerá también aquí.
++              en el editor de actividades de esta misma aula.
+             </p>
+             <button
+               type="button"
+-              onClick={onIrAlAulaActual}
++              onClick={onAbrirHerramientas}
+               className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+             >
+               Añadir preguntas
+@@ -235,7 +235,7 @@ export function ActividadDetalle({
+                 onCambio={onCambio}
+                 onVolver={onVolver}
+                 // Lecciones y juegos se editan aquí; el resto todavía en el aula anterior.
+-                onEditar={ABRE_REPRODUCTOR.has(a.type) && onEditarLeccion ? onEditarLeccion : onIrAlAulaActual}
++                onEditar={ABRE_REPRODUCTOR.has(a.type) && onEditarLeccion ? onEditarLeccion : onAbrirHerramientas}
+                 onCopiar={aulaId ? () => setCopiando(true) : undefined}
+               />
+             ) : (
+@@ -243,7 +243,7 @@ export function ActividadDetalle({
+                 actividad={a}
+                 estado={vista.state}
+                 onAbrirReproductor={() => setReproduciendo(true)}
+-                onIrAlAulaActual={onIrAlAulaActual}
++                onAbrirHerramientas={onAbrirHerramientas}
+               />
+             )}
+           </div>
+@@ -293,19 +293,19 @@ export function ActividadDetalle({
+ /** ¿El estudiante tiene algún botón que pulsar en la cabecera de esta actividad? */
+ function tieneAccionEstudiante(a: ActivityLike, estado: ReturnType<typeof deriveStudentState>['state']): boolean {
+   if (estado === 'bloqueada' || estado === 'no-abierta') return false
+-  return ABRE_REPRODUCTOR.has(a.type) || MOTOR_EN_AULA_ACTUAL.has(a.type)
++  return ABRE_REPRODUCTOR.has(a.type) || MOTOR_COMPARTIDO.has(a.type)
+ }
+ 
+ function AccionesEstudiante({
+   actividad,
+   estado,
+   onAbrirReproductor,
+-  onIrAlAulaActual,
++  onAbrirHerramientas,
+ }: {
+   actividad: ActivityLike
+   estado: ReturnType<typeof deriveStudentState>['state']
+   onAbrirReproductor: () => void
+-  onIrAlAulaActual: () => void
++  onAbrirHerramientas: () => void
+ }) {
+   if (estado === 'bloqueada' || estado === 'no-abierta') return null
+ 
+@@ -322,19 +322,18 @@ function AccionesEstudiante({
+     )
+   }
+ 
+-  if (MOTOR_EN_AULA_ACTUAL.has(actividad.type)) {
++  if (MOTOR_COMPARTIDO.has(actividad.type)) {
+     return (
+       <div>
+         <button
+           type="button"
+-          onClick={onIrAlAulaActual}
++          onClick={onAbrirHerramientas}
+           className="inline-flex min-h-btn items-center gap-2 rounded-lg bg-accent px-5 text-body-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:outline-none"
+         >
+-          Resolver en el aula actual
++          Abrir actividad
+         </button>
+         <p className="mt-2 text-body-sm text-ink-muted">
+-          Este tipo de actividad todavía se resuelve en la versión anterior del aula. Tu progreso y tus
+-          respuestas son los mismos.
++          Abre el reproductor de esta actividad para responder o continuar desde tu último avance.
+         </p>
+       </div>
+     )
+diff --git a/apps/web/src/pages/aula/views/HerramientasAula.tsx b/apps/web/src/pages/aula/views/HerramientasAula.tsx
+new file mode 100644
+index 00000000..a22a821f
+--- /dev/null
++++ b/apps/web/src/pages/aula/views/HerramientasAula.tsx
+@@ -0,0 +1,58 @@
++import { useCallback, useEffect, useState } from 'react'
++import { ArrowLeft } from 'lucide-react'
++import { classroomApi } from '../../../lib/api'
++import { useAuth } from '../../../contexts/AuthContext'
++import { ActivitiesTab, AnnouncementsTab, ContentTab, ForumTab } from '../../Classroom'
++import { AulaState } from '../ui/EmptyState'
++import type { Rol } from '../data/useAula'
++
++export type Herramienta = 'actividades' | 'materiales' | 'anuncios' | 'foro'
++const titles: Record<Herramienta, string> = {
++  actividades: 'Editor y herramientas de actividades', materiales: 'Materiales del aula',
++  anuncios: 'Anuncios del aula', foro: 'Foro del aula',
++}
++
++/** Reutiliza los editores existentes con el aula exacta; no copia ni transforma datos. */
++export default function HerramientasAula({ classroomId, herramienta, activityId, rol, onVolver, onCambio }: {
++  classroomId: string; herramienta: Herramienta; activityId?: string; rol: Rol;
++  onVolver: () => void; onCambio: () => void;
++}) {
++  const { user } = useAuth()
++  const [classroom, setClassroom] = useState<any>(null)
++  const [loading, setLoading] = useState(true)
++  const [error, setError] = useState('')
++  const [revision, setRevision] = useState(0)
++  useEffect(() => {
++    let active = true
++    setLoading(true)
++    setError('')
++    classroomApi.getById(classroomId).then(({ data }) => {
++      if (active) setClassroom(data)
++    }).catch(() => {
++      if (active) setError('No se pudo cargar el aula. Vuelve a intentarlo.')
++    }).finally(() => { if (active) setLoading(false) })
++    return () => { active = false }
++  }, [classroomId, revision])
++  const onReload = useCallback(() => { setRevision(r => r + 1); onCambio() }, [onCambio])
++  const props = { classroom, isTeacher: rol === 'docente', isStudent: rol === 'estudiante', onReload, setError }
++  return (
++    <section className="mx-auto max-w-5xl space-y-5">
++      <header className="flex flex-wrap items-center gap-4 border-b border-hairline pb-5">
++        <button type="button" onClick={onVolver} className="inline-flex min-h-btn items-center gap-2 rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary hover:bg-surface-2">
++          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver
++        </button>
++        <div><h1 className="text-xl font-semibold text-ink-primary">{titles[herramienta]}</h1>
++          <p className="text-body-sm text-ink-secondary">{classroom?.title || 'Aula Virtual'}</p></div>
++      </header>
++      {error && classroom && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}<button type="button" className="ml-3 min-h-btn underline" onClick={() => setError('')}>Cerrar aviso</button></div>}
++      <AulaState loading={loading} error={!classroom ? error : null} onRetry={() => setRevision(r => r + 1)} isEmpty={!classroom} empty={null}>
++        {classroom && <div className="rounded-card border border-hairline bg-surface-1 p-4 sm:p-6 [&_button]:min-h-11">
++          {herramienta === 'actividades' ? <ActivitiesTab {...props} initialActivityId={activityId} />
++            : herramienta === 'materiales' ? <ContentTab {...props} />
++            : herramienta === 'anuncios' ? <AnnouncementsTab {...props} />
++            : <ForumTab {...props} user={user} />}
++        </div>}
++      </AulaState>
++    </section>
++  )
++}
+diff --git a/apps/web/src/pages/aula/views/SelectorAula.tsx b/apps/web/src/pages/aula/views/SelectorAula.tsx
+index 6a102be9..30716c76 100644
+--- a/apps/web/src/pages/aula/views/SelectorAula.tsx
++++ b/apps/web/src/pages/aula/views/SelectorAula.tsx
+@@ -106,6 +106,8 @@ export function SelectorAula({
+             {role === 'docente' ? 'Estas son tus aulas. ¿Por dónde empezamos?' : 'Estas son tus clases.'}
+           </p>
+         </div>
++        <div className="flex flex-wrap gap-2">
++        {role === 'docente' && onCrear && <button type="button" onClick={onCrear} className="min-h-btn rounded-lg bg-accent px-4 text-body-sm font-medium text-white">Crear aula</button>}
+         {onVolverAlActual && (
+           <button
+             type="button"
+@@ -115,6 +117,7 @@ export function SelectorAula({
+             Volver al aula de siempre
+           </button>
+         )}
++        </div>
+       </header>
+ 
+       <p className="mb-5 rounded-card border border-accent/25 bg-accent/[0.06] px-4 py-3 text-body-sm text-ink-secondary">
+@@ -226,6 +229,9 @@ function TarjetaAula({
+       <span className="flex min-w-0 flex-1 flex-col p-4">
+         <span className="block text-h3 leading-tight font-bold break-words text-ink-primary">{titular}</span>
+         {secundario && <span className="mt-0.5 block truncate text-body-sm text-ink-secondary">{secundario}</span>}
++        {aula.academicYear && <span className="mt-2 text-body-sm font-medium text-ink-secondary">
++          Año {aula.academicYear}{aula.academicYearStatus === 'CLOSED' ? ' · Cerrado' : aula.academicYearStatus === 'DRAFT' ? ' · En preparación' : ''}
++        </span>}
+ 
+         {/* Avance real, no decorativo: sale de las actividades del aula. Si todavía no ha
+             llegado, no se dibuja una barra vacía que parezca un cero. */}
+diff --git a/apps/web/src/pages/aula/visual/shellDemo.tsx b/apps/web/src/pages/aula/visual/shellDemo.tsx
+index d617ded8..9dc008cf 100644
+--- a/apps/web/src/pages/aula/visual/shellDemo.tsx
++++ b/apps/web/src/pages/aula/visual/shellDemo.tsx
+@@ -402,7 +402,7 @@ function Demo() {
+             }
+             onVolver={() => setVista('actividades')}
+             onCambio={() => alert('Recargar')}
+-            onIrAlAulaActual={() => alert('Ir al aula actual')}
++            onAbrirHerramientas={() => alert('Abrir herramientas de la actividad')}
+             aulaId={aula.id}
+             onAbrirActividad={(id) => alert(`Abrir la copia ${id}`)}
+             now={AHORA}

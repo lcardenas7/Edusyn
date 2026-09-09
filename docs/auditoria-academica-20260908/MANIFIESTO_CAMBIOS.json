@@ -1,0 +1,143 @@
+{
+  "baseCommit": "0eec42ba7b364efc3408a48db27de2d564f0de4d",
+  "deployed": false,
+  "files": [
+    {
+      "path": "apps/api/src/modules/apd/apd.profile-contract.spec.ts",
+      "new": true,
+      "sha256": "022e684ae91da51adb82d695474383708c58d2117c6893a1e047faa56d35508f"
+    },
+    {
+      "path": "apps/api/src/modules/apd/apd.service.ts",
+      "new": false,
+      "sha256": "96275d78c731d36e0549874e25158ca86a89420aa10bfc7727e2ac806726be28"
+    },
+    {
+      "path": "apps/api/src/modules/classroom/classroom-copy-contract.spec.ts",
+      "new": true,
+      "sha256": "6ea87ac27f698f9f8b4bb6903bfec744f7aeba7896cca4f7b966666f365bceeb"
+    },
+    {
+      "path": "apps/api/src/modules/classroom/classroom.service.ts",
+      "new": false,
+      "sha256": "85278be4769c1a3c92a289141667e2b3596026df50a927cd568134304909cf8f"
+    },
+    {
+      "path": "apps/api/src/modules/pedagogical-support/pedagogical-support.controller.ts",
+      "new": false,
+      "sha256": "bb9a8adc4ef69ad50730ad9ed7700c51a01f46b20ce6f565bb1160ab2d8b5498"
+    },
+    {
+      "path": "apps/api/src/modules/pedagogical-support/pedagogical-support.isolation.spec.ts",
+      "new": true,
+      "sha256": "c75706a50180fdb6bcc304999724f866fe362e2b4ceb8137fa2f61f812baa6af"
+    },
+    {
+      "path": "apps/api/src/modules/pedagogical-support/pedagogical-support.service.ts",
+      "new": false,
+      "sha256": "ec90b0ba7b4f6617c29cecb29edeccd51c54eb2cb138fea1b48c8d4c135140f0"
+    },
+    {
+      "path": "apps/api/src/modules/recovery/period-recovery.service.ts",
+      "new": false,
+      "sha256": "21eff736a984fd406d48da393b7be0771bab60939b497c45f71b466ff79d363a"
+    },
+    {
+      "path": "apps/api/src/modules/recovery/recovery-engine.no-regression.spec.ts",
+      "new": true,
+      "sha256": "08acb925b740fc247a3fcbffb5653c61b94202583f40d263cf14929c541ec5eb"
+    },
+    {
+      "path": "apps/api/src/modules/recovery/recovery-engine.service.ts",
+      "new": false,
+      "sha256": "f44e6ee8e7998d673222c0525bb5b369398993ae1294c72f40163eb831d687f0"
+    },
+    {
+      "path": "apps/api/src/modules/recovery/recovery-review-score.spec.ts",
+      "new": true,
+      "sha256": "79b5d5262dc97b8fe7f0211501094541818865fe99c6270589526731dbadb921"
+    },
+    {
+      "path": "apps/api/src/modules/reports/report-history-enrollment.spec.ts",
+      "new": true,
+      "sha256": "c1f2e3734da3944f7bc9cb8f1b7b9c36a5aa17c0648533ae8092e4e199669082"
+    },
+    {
+      "path": "apps/api/src/modules/reports/reports.service.ts",
+      "new": false,
+      "sha256": "46967a66964160dba2b2266b76948beab47cf36b4c63b5d592d0c6e113c02ae5"
+    },
+    {
+      "path": "apps/web/src/components/Layout.tsx",
+      "new": false,
+      "sha256": "6be5142cfafdd51168c1e8e36f34b6d1a68033027488030ee8b1eb1502db75fc"
+    },
+    {
+      "path": "apps/web/src/components/ui/confirm.tsx",
+      "new": false,
+      "sha256": "ea0c6721f84857ff701bc14e8bd445ed0c0edd2afc7c1aa6524f6dccb9d0684b"
+    },
+    {
+      "path": "apps/web/src/pages/Classroom.tsx",
+      "new": false,
+      "sha256": "35125f525c2b61c874585f1868c6ee9ceb124206b02272a17bfcf3a3a6dee56b"
+    },
+    {
+      "path": "apps/web/src/pages/aula/data/useAula.ts",
+      "new": false,
+      "sha256": "70b1fc1c8e07346b0eee71cb52d385ac81367f7e204d73efee7699e75435fe7d"
+    },
+    {
+      "path": "apps/web/src/pages/aula/index.tsx",
+      "new": false,
+      "sha256": "4aca9a480eec6748d6d515c8f3fe1f4a9c0a1c3de8ea9002302999c2682e57a7"
+    },
+    {
+      "path": "apps/web/src/pages/aula/ui/CrearActividad.tsx",
+      "new": false,
+      "sha256": "68669af50dede33ba76127e79791799701e6fa2478988712b6542a52042c2aa1"
+    },
+    {
+      "path": "apps/web/src/pages/aula/ui/GestionarAula.tsx",
+      "new": true,
+      "sha256": "2cbc871e3c470cf789af7d2665f0891104edfca1ec02b96a39885298747e5823"
+    },
+    {
+      "path": "apps/web/src/pages/aula/views/ActividadDetalle.tsx",
+      "new": false,
+      "sha256": "7993af08f9c18097d2d550c384c5de0c6fa09c8cb454a9cc57ba9cfd928b1f2e"
+    },
+    {
+      "path": "apps/web/src/pages/aula/views/HerramientasAula.tsx",
+      "new": true,
+      "sha256": "cae4929f0f03215865a12ed4dae5153f22e46526978acabddf0ccfed0c740c12"
+    },
+    {
+      "path": "apps/web/src/pages/aula/views/SelectorAula.tsx",
+      "new": false,
+      "sha256": "d1fb6b83715eed727f522869309963a18d48394c3df24c9344d48501967966d5"
+    },
+    {
+      "path": "apps/web/src/pages/aula/visual/shellDemo.tsx",
+      "new": false,
+      "sha256": "5a1d04129402a1a4ff9e6bcb42bead023369dd39626fd0c5efedd991775f9ecb"
+    }
+  ],
+  "patchSha256": "989154aa143458d2d3343efa913adade818839f1c76b334c843dec2fb973ecdb",
+  "excluded": "Laboratory data, credentials, dependencies, generated builds and private security notes",
+  "patchRegenerated": {
+    "por": "Claude, 2026-09-08",
+    "motivo": "El parche original no tenia cabeceras \"new file mode\" ni \"index\": git apply fallaba con 8 errores y no podia crear los 8 archivos nuevos (las 6 pruebas de regresion incluidas). Los 16 modificados si aplicaban.",
+    "verificacion": "git apply --check sobre 0eec42ba = 0. Aplicado en un checkout limpio de la base, los 24 ficheros resultan identicos a la copia donde se ejecutaron las pruebas."
+  },
+  "verificacion": {
+    "suitesApi": 78,
+    "pruebasApi": 1171,
+    "archivosWeb": 18,
+    "pruebasWeb": 198,
+    "tscApi": "limpio",
+    "tscWeb": "limpio",
+    "nota": "La corrida registrada por Astra (jest-final.json) era parcial: 61 suites / 1006 pruebas, sin 16 suites que si existen en la base, entre ellas classroom.service.spec.ts, que cubre el codigo de copia modificado. Ejecutada la suite completa sobre este contenido: pasa entera."
+  },
+  "relevoExcluido": "RELEVO_CLAUDE.md no se versiona: describe debilidades de aislamiento aun sin corregir y su propio texto pide no incorporarlo ni publicarlo. Permanece en outputs/."
+}
