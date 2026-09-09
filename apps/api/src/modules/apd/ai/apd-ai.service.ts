@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { matchValeriaTopic, buildTopicGrounding } from './valeria-knowledge';
 import {
   IApdAiService,
   ApdAiGenerateStrategyRequest,
@@ -454,30 +455,57 @@ export class ApdAiService implements IApdAiService {
   private buildEdusynKnowledgeContext(): string {
     return [
       'Edusyn es una plataforma educativa SaaS creada por Edusyn SAS.',
-      'Valeria es la asistente pedagógica de Edusyn para apoyar al docente.',
-      'Si el usuario pregunta por la pantalla actual, responde primero con base en el contexto de esa pantalla.',
-      'Si el contexto incluye pageName o pageSummary, úsalo como referencia principal para ubicar al usuario en la interfaz.',
-      'Cuando la pregunta sea sobre un flujo de Edusyn, responde con pasos concretos, menú probable, campos que debe llenar y resultado esperado.',
-      'No respondas como IA genérica si la intención del usuario es usar un módulo de la plataforma.',
-      'En Classroom, el flujo normal es: crear actividad en borrador -> agregar preguntas o guía -> revisar -> publicar o programar.',
-      'Los quizzes y exámenes pueden publicarse como borrador, Live Quiz o Quiz en Casa.',
-      'Si la petición es crear un quiz o un examen, incluye también una lista de preguntas dentro de activityDraft.questions y procura que sean editables y listas para crear en Classroom.',
-      'Las imágenes y apoyos visuales se colocan en el campo de imagen de la pregunta o del contexto; si el docente solicita SVG, debe ser simple, seguro y sin scripts.',
-      'En notas y calificaciones, normalmente se trabaja por grupo, asignatura y período; el docente ingresa valoraciones, logros o descriptores y el sistema calcula promedios según la configuración institucional.',
-      'En logros, explica cómo registrarlos o consultarlos por asignatura, período o reporte, y menciona que pueden aparecer en boletines o reportes académicos.',
-      'En asistencia, orienta sobre selección de grupo o docente, fecha, registro de presentes/ausentes/tardanzas/excusas y consultas de reportes.',
-      'En observaciones o seguimiento, orienta a registrar notas de comportamiento o seguimiento con fecha, categoría y estudiante, especialmente desde observador o workspace del docente.',
-      'En reportes y boletines, explica cómo generar salidas por período, grupo o estudiante, incluyendo notas, logros, asistencia y observaciones cuando aplique.',
-      'Valeria debe dar instrucciones, sugerencias y explicaciones sobre procesos de Edusyn, pero no debe inventar datos no proporcionados ni tocar calificaciones numéricas críticas.',
+      'Valeria es el asistente conversacional y pedagógico de Edusyn. Su tarea es orientar, explicar y proponer; no ejecuta acciones críticas ni modifica datos por cuenta propia.',
+      'PRINCIPIO DE RESPUESTA: si la consulta trata sobre Edusyn, responde con un flujo breve y verificable: 1) módulo o punto de entrada, 2) selecciones o campos necesarios, 3) acción de guardar/publicar, 4) resultado esperado. Si faltan datos para un paso, pregunta solo por el dato mínimo faltante.',
+      'Usa pageName, pageSummary y currentPath como la referencia principal para ubicar al usuario. No inventes botones, permisos, datos, menús ni resultados que no estén en este contexto.',
+      'Aclara que la visibilidad de algunas opciones depende del rol y de los módulos habilitados por la institución. Para notas, matrícula, promoción y otros datos sensibles, explica el flujo pero nunca recomiendes alterar información oficial sin revisión humana.',
+      '',
+      'MÓDULO ACADÉMICO: la institución configura año lectivo, períodos, escala de valoración, niveles/grados, áreas, asignaturas, plan de estudios y carga académica. Luego matricula estudiantes y asigna docentes. Un docente normalmente selecciona grupo, asignatura y período antes de registrar información.',
+      'NOTAS Y CALIFICACIONES: abre Notas, selecciona grupo, asignatura y período, registra la valoración en los componentes o actividades disponibles y guarda. El sistema calcula los resultados conforme a la configuración institucional. Classroom puede alimentar actividades, pero el docente debe revisar antes de que una calificación quede registrada.',
+      'ASISTENCIA: abre Asistencia, selecciona grupo y fecha, marca presente, ausente, tardanza o excusa según corresponda y guarda el registro. Después puede consultar reportes y alertas por estudiante o grupo.',
+      '',
+      'APRENDIZAJES Y EVIDENCIAS: abre Aprendizajes y Evidencias, selecciona grupo, asignatura y período. Primero crea o elige el Aprendizaje/Desempeño: expresa QUÉ se espera que el estudiante desarrolle. Dentro de ese aprendizaje usa “Agregar evidencia” para registrar una o varias evidencias: expresan CÓMO se comprueba el aprendizaje. Guarda cada cambio. Ejemplo: aprendizaje “Comprende y aplica la lógica de algoritmos”; evidencia “Diseña algoritmos con estructuras condicionales”.',
+      'En Aprendizajes y Evidencias, el docente puede reutilizar textos desde el Banco de Aprendizajes o duplicarlos hacia otros grupos de la misma asignatura. Las evidencias pertenecen al aprendizaje; no deben registrarse como si fueran una nota independiente.',
+      'La configuración institucional define si se usa solo Aprendizajes o Aprendizajes + Evidencias, qué información aparece en el boletín y, en los grados que lo soportan, si la valoración cualitativa ocurre por aprendizaje o por evidencia. Si no aparece “Agregar evidencia”, orienta a revisar que el modelo de registro Aprendizajes + Evidencias esté habilitado por coordinación o administración.',
+      '',
+      'CLASSROOM / EDUSYN LEARN: el docente entra a un aula, crea una actividad en borrador, define instrucciones, fechas y tipo, agrega preguntas o contenido, revisa y publica o programa. Los quizzes y exámenes pueden usarse como borrador, Live Quiz o Quiz en Casa. Solo crea activityDraft cuando el docente pide explícitamente crear una actividad, quiz, examen, guía o banco de preguntas.',
+      'RUTAS DE APRENDIZAJE: dentro de Classroom se puede crear una ruta por competencia, organizar pasos y vincular actividades o lecciones. La ruta muestra el proceso de aprendizaje; no reemplaza la revisión docente.',
+      'EDUSYN PROJECTS / EXPEDICIÓN ABP: desde el aula se crea una expedición con reto, equipos y misiones. Los equipos organizan tareas, añaden recursos y entregan evidencias como enlace o archivo; el docente revisa, retroalimenta y puede solicitar ajustes antes de aprobar.',
+      '',
+      'OBSERVADOR Y CONVIVENCIA: abre Observador del Estudiante, selecciona grupo y estudiante, crea una observación con tipo/categoría, descripción y seguimiento cuando aplique, y guarda. Se puede consultar el resumen individual, notificar a familia y revisar el informe convivencial. Para actas, compromisos, citaciones, remisiones o medidas pedagógicas, orienta a coordinación según los permisos disponibles.',
+      'INCLUSIÓN EDUCATIVA: si el módulo está habilitado, se crea un perfil de acompañamiento del estudiante y después un plan APD o PIAR. El plan permite registrar objetivos, estrategias, ajustes, actividades, participantes, documentos y progreso. La decisión pedagógica y los datos sensibles siguen siendo responsabilidad del equipo interdisciplinario.',
+      'COMUNICACIONES: permite preparar y enviar comunicados institucionales a los destinatarios definidos. Antes de enviar, se debe revisar audiencia, contenido y fecha; Valeria puede ayudar a redactar, no enviar en nombre del usuario.',
+      '',
+      'REPORTES E INSIGHT: los reportes y boletines se consultan por período, grupo o estudiante. Integran, según la configuración y disponibilidad, notas, aprendizajes/evidencias, asistencia y observaciones. La información mostrada debe interpretarse como apoyo a la decisión, no como reemplazo del criterio del rector, coordinador o docente.',
+      'FINANZAS: el flujo parte de terceros, categorías y conceptos de cobro; luego se crean obligaciones, se registran pagos o egresos y se consultan cartera, recibos, facturas y reportes. No afirmes que un pago fue aplicado ni des instrucciones para anularlo sin que el usuario confirme el caso concreto.',
+      'ESPACIO DOCENTE: permite organizar espacios de curso, calendario, seguimientos, bitácora, recaudo, roles y recursos. Úsalo para organizar el trabajo docente; el Observador institucional sigue siendo el lugar indicado para procesos formales de convivencia.',
+      '',
+      'Para consultas externas responde como un chat normal y claro. Si una respuesta requiere datos recientes, fuentes oficiales o información que no está disponible, dilo con honestidad en vez de inventar una respuesta.',
     ].join('\n');
   }
 
   /**
-   * Construye el prompt del sistema optimizado para generación de quizzes educativos.
+   * Solo una petición inequívoca debe abrir el flujo de creación de actividad.
+   * Preguntar "¿qué es...?" o "responde esta pregunta" no convierte el chat en quiz.
    */
-  private buildQuizSystemPrompt(request: ApdAiTeacherQuestionRequest): string {
+  private isExplicitActivityRequest(question: string): boolean {
+    const q = (question || '').toLowerCase();
+    const creationVerb = /\b(crea|crear|genera|generar|diseña|diseñar|prepara|preparar|arma|armar|elabora|elaborar|construye|construir)\b/;
+    const assessment = /\b(quiz|examen|cuestionario|evaluaci[oó]n|prueba)\b/;
+    const questionBank = /\b(preguntas?)\b/;
+    const requestedCount = /\b\d+\s+preguntas?\b/;
+
+    return (creationVerb.test(q) && (assessment.test(q) || questionBank.test(q)))
+      || (requestedCount.test(q) && /\b(sobre|acerca de|de)\b/.test(q));
+  }
+
+  /**
+   * Construye el prompt conversacional de Valeria. La generación de actividades
+   * se habilita únicamente cuando el docente la solicita de forma explícita.
+   */
+  private buildValeriaChatSystemPrompt(request: ApdAiTeacherQuestionRequest): string {
     const q = (request.question || '').toLowerCase();
-    const isQuizRequest = q.includes('quiz') || q.includes('examen') || q.includes('pregunta') || q.includes('cuestionario') || q.includes('evaluación');
+    const isQuizRequest = this.isExplicitActivityRequest(request.question || '');
     const requestedCount = this.extractQuestionCount(request.question || '');
     const extractedTopic = this.extractTopicFromQuestion(request.question || '');
     const wantsTrueFalse = q.includes('falso') || q.includes('verdadero') || q.includes('v/f');
@@ -526,7 +554,10 @@ export class ApdAiService implements IApdAiService {
     }
 
     basePrompt.push(
-      'Devuelve JSON válido con: answer, keyPoints, activityDraft (con questions), confidence.',
+      isQuizRequest
+        ? 'Devuelve JSON válido con: answer, keyPoints, activityDraft (con questions), confidence.'
+        : 'Devuelve JSON válido con: answer, keyPoints, nextSteps opcional y confidence. NO incluyas activityDraft ni preguntas de evaluación salvo que el usuario las pida explícitamente.',
+      'Para consultas externas responde como un asistente conversacional normal: explica con claridad, reconoce límites o incertidumbre y no fuerces la respuesta hacia Edusyn ni hacia un quiz.',
       `Contexto Edusyn:\n${this.buildEdusynKnowledgeContext()}`,
     );
 
@@ -543,6 +574,9 @@ export class ApdAiService implements IApdAiService {
 
   private buildActivityDraftSuggestion(request: ApdAiTeacherQuestionRequest): ApdAiTeacherQuestionResponse['activityDraft'] | undefined {
     const q = (request.question || '').toLowerCase();
+    if (!this.isExplicitActivityRequest(request.question || '')) {
+      return undefined;
+    }
     // PRIORIZAR tema extraído de la pregunta del usuario sobre el contexto de página
     const extractedTopic = this.extractTopicFromQuestion(request.question || '');
     const topicSource = extractedTopic
@@ -657,12 +691,7 @@ export class ApdAiService implements IApdAiService {
 
     const shouldGenerate = activityType === 'QUIZ'
       || activityType === 'EXAM'
-      || q.includes('quiz')
-      || q.includes('examen')
-      || q.includes('cuestionario')
-      || q.includes('pregunta')
-      || q.includes('evaluación')
-      || q.includes('prueba');
+      || this.isExplicitActivityRequest(request.question || '');
 
     if (!shouldGenerate) {
       return undefined;
@@ -1683,7 +1712,8 @@ export class ApdAiService implements IApdAiService {
     }
 
     try {
-      const systemInstruction = this.buildQuizSystemPrompt(request);
+      const wantsActivity = this.isExplicitActivityRequest(request.question || '');
+      const systemInstruction = this.buildValeriaChatSystemPrompt(request);
 
       const userPrompt = [
         `Pregunta del docente: ${request.question}`,
@@ -1705,11 +1735,11 @@ export class ApdAiService implements IApdAiService {
         userPrompt,
       );
 
-      const suggestedDraft = this.buildActivityDraftSuggestion(request);
-      const suggestedQuestions = suggestedDraft?.questions?.length
-        ? suggestedDraft.questions
-        : this.buildQuestionDraftSuggestion(request, suggestedDraft?.type as 'QUIZ' | 'EXAM' | 'TASK' | undefined);
-      const activityDraft = result.activityDraft?.title?.trim() || suggestedDraft
+      const suggestedDraft = wantsActivity ? this.buildActivityDraftSuggestion(request) : undefined;
+      const suggestedQuestions = wantsActivity && !suggestedDraft?.questions?.length
+        ? this.buildQuestionDraftSuggestion(request, suggestedDraft?.type as 'QUIZ' | 'EXAM' | 'TASK' | undefined)
+        : suggestedDraft?.questions;
+      const activityDraft = wantsActivity && (result.activityDraft?.title?.trim() || suggestedDraft)
         ? {
             title: result.activityDraft?.title?.trim() || suggestedDraft?.title || 'Actividad sugerida',
             description: result.activityDraft?.description?.trim() || suggestedDraft?.description || request.question,
@@ -2324,110 +2354,84 @@ export class ApdAiService implements IApdAiService {
     return drafts.slice(0, count);
   }
 
+  /**
+   * Respuesta cuando NO hay proveedor de IA configurado.
+   *
+   * Antes devolvía un texto genérico («estoy en modo básico») que no ayudaba a nadie: el docente
+   * preguntaba cómo registrar una evidencia y recibía un menú. Ahora consulta primero la base de
+   * conocimiento verificada de `valeria-knowledge.ts`, que describe los flujos reales de la
+   * plataforma. Sin LLM y sin coste, Valeria responde de verdad las preguntas de uso.
+   *
+   * Tres reglas, en este orden:
+   *   1. Si piden crear una actividad, NO se inventan preguntas: eso sí necesita IA.
+   *   2. Si la pregunta es sobre Edusyn, se responde con el flujo verificado.
+   *   3. Si no lo es, se dice con franqueza que no hay IA — antes que fingir una respuesta.
+   */
+  /** El borrador de actividad sin preguntas: título y configuración, nada inventado. */
+  private draftSinPreguntas(
+    request: ApdAiTeacherQuestionRequest,
+  ): ApdAiTeacherQuestionResponse['activityDraft'] | undefined {
+    const draft = this.buildActivityDraftSuggestion(request);
+    if (!draft) return undefined;
+    const { questions, ...sinPreguntas } = draft as Record<string, unknown>;
+    return sinPreguntas as ApdAiTeacherQuestionResponse['activityDraft'];
+  }
+
   private placeholderTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): ApdAiTeacherQuestionResponse {
-    const q = (request.question || '').toLowerCase().trim();
-    const activityDraft = this.buildActivityDraftSuggestion(request);
-    const questionDrafts = activityDraft?.questions?.length
-      ? activityDraft.questions
-      : this.buildQuestionDraftSuggestion(request, activityDraft?.type as 'QUIZ' | 'EXAM' | 'TASK' | undefined);
+    const pregunta = request.question || '';
+    const wantsActivity = this.isExplicitActivityRequest(pregunta);
 
-    // Respuestas contextuales básicas cuando Gemini no está habilitado
-    if (q.includes('edusyn') || q.includes('qué puedo hacer') || q.includes('funcionalidades')) {
+    // 1) Crear contenido sí exige IA. Se entrega el borrador, nunca preguntas inventadas.
+    if (wantsActivity) {
+      const extractedTopic = this.extractTopicFromQuestion(pregunta) || 'el tema solicitado';
       return {
-        answer: `Edusyn es una plataforma educativa integral creada por Luis Cárdenas. Puedes gestionar:\n\n• **Classroom**: Crear quizzes, exámenes, guías y actividades interactivas\n• **Notas**: Registrar calificaciones por período y componente\n• **Asistencia**: Control diario con reportes automáticos\n• **Boletines**: Generación de informes académicos\n• **Logros**: Definir indicadores por asignatura\n• **Comunicaciones**: Enviar mensajes a padres y estudiantes\n• **Finanzas**: Facturación, pagos y cartera\n\nNavega por el menú lateral para explorar cada módulo.`,
-        keyPoints: [],
-        confidence: 0.9,
-      };
-    }
-
-    if (q.includes('quiz') || q.includes('examen') || q.includes('cuestionario') || q.includes('pregunta')) {
-      const extractedTopic = this.extractTopicFromQuestion(request.question || '') || 'el tema solicitado';
-      return {
-        answer: `⚠️ **Modo sin conexión a IA**: No pude conectarme al servicio de inteligencia artificial para generar las preguntas específicas sobre **"${extractedTopic}"**.\n\nHe creado el borrador de la actividad (título y configuración), pero **las preguntas NO fueron generadas** porque necesito la IA para crear contenido específico del tema.\n\n**¿Qué puedes hacer?**\n1. **Reintentar** — Envía tu solicitud de nuevo en unos segundos\n2. **Crear manualmente** — Usa el borrador creado y agrega tus propias preguntas\n\n_El servicio de IA puede estar temporalmente ocupado. Normalmente se recupera en 1-2 minutos._`,
+        answer:
+          `⚠️ **Sin conexión a IA**: no pude generar las preguntas sobre **"${extractedTopic}"**.\n\n` +
+          'Dejé creado el borrador de la actividad (título y configuración), pero **las preguntas no ' +
+          'se generaron**: para eso necesito el servicio de inteligencia artificial.\n\n' +
+          '**Qué puedes hacer**\n' +
+          '1. **Reintentar** en unos segundos.\n' +
+          '2. **Escribirlas tú** sobre el borrador que quedó creado.',
         keyPoints: [
           `Tema detectado: ${extractedTopic}`,
-          'Las preguntas deben generarse con IA o manualmente',
-          'Reintenta en unos segundos si necesitas generación automática',
+          'El borrador se creó; las preguntas no',
+          'Reintenta si necesitas generación automática',
         ],
-        activityDraft: activityDraft
-          ? {
-              ...activityDraft,
-              questions: undefined, // NO generar preguntas genéricas falsas
-            }
-          : undefined,
-        confidence: 0.3,
+        // El borrador va SIN preguntas a propósito. `buildActivityDraftSuggestion` sabe
+        // rellenar con preguntas genéricas de plantilla («¿Cuál describe mejor qué es El
+        // tema?»), y sin IA eso es exactamente lo que no debe pasar: parecen preguntas
+        // reales, el docente podría publicarlas, y no dicen nada de su asignatura.
+        activityDraft: this.draftSinPreguntas(request),
+        confidence: 0.4,
       };
     }
 
-    if (q.includes('classroom') || q.includes('actividad')) {
+    // 2) Filtro previo: flujos verificados de la plataforma.
+    const encontrado = matchValeriaTopic(pregunta, {
+      currentPath: request.context?.currentPath,
+      pageName: request.context?.pageName,
+    });
+
+    if (encontrado) {
       return {
-        answer: `En **Classroom** puedes:\n\n1. **Crear actividades**: Tareas, quizzes, exámenes, guías y autoevaluaciones\n2. **Live Quiz**: Sesiones en tiempo real donde los estudiantes responden simultáneamente\n3. **Quiz en Casa**: Los estudiantes resuelven a su ritmo con fecha límite\n4. **Preguntas variadas**: Opción múltiple, verdadero/falso, completar, emparejar\n5. **Sincronizar notas**: Enviar calificaciones directamente a la planilla\n\nPara crear un quiz: Entra a un aula → Actividades → Nueva Actividad → Selecciona tipo Quiz/Examen → Agrega preguntas → Publica.`,
-        keyPoints: [],
-        activityDraft: activityDraft
-          ? {
-              ...activityDraft,
-              questions: undefined,
-            }
-          : undefined,
-        confidence: 0.9,
+        answer: encontrado.topic.answer,
+        keyPoints: encontrado.topic.keyPoints,
+        // Alta, pero no máxima: es un flujo verificado, no una respuesta razonada sobre el caso.
+        confidence: 0.85,
       };
     }
 
-    if (q.includes('logro') || q.includes('logros') || q.includes('achievement')) {
-      return {
-        answer: `En Edusyn, los **logros** se usan para describir el aprendizaje alcanzado por el estudiante y suelen mostrarse en reportes o boletines junto con la valoración del período.\n\nFlujo recomendado:\n1. Entra al módulo de **Notas / Evaluación / Reportes** según tu menú\n2. Selecciona grupo, asignatura y período\n3. Registra el logro o descriptor correspondiente\n4. Guarda para que aparezca en los informes del estudiante o del grupo\n\nSi me dices en qué pantalla estás, te indico el flujo exacto dentro de esa ruta.`,
-        keyPoints: [],
-        confidence: 0.9,
-      };
-    }
-
-    if (q.includes('nota') || q.includes('calificacion') || q.includes('planilla')) {
-      return {
-        answer: `Para gestionar **notas** en Edusyn:\n\n1. Ve a **Notas** en el menú lateral\n2. Selecciona grupo y asignatura\n3. Elige el período activo\n4. Ingresa las calificaciones por componente (Cognitivo, Procedimental, Actitudinal)\n5. El sistema calcula promedios automáticamente\n\nTambién puedes importar notas desde Excel o sincronizar desde Classroom.`,
-        keyPoints: [],
-        confidence: 0.9,
-      };
-    }
-
-    if (q.includes('asistencia')) {
-      return {
-        answer: `El módulo de **Asistencia** permite:\n\n• Registrar asistencia diaria por grupo\n• Marcar: Presente, Ausente, Tardanza, Excusa\n• Ver reportes de inasistencia por estudiante\n• Alertas automáticas cuando un estudiante supera el límite\n\nAccede desde el menú lateral → Asistencia → Selecciona grupo y fecha.`,
-        keyPoints: [],
-        confidence: 0.9,
-      };
-    }
-
-    if (q.includes('observacion') || q.includes('observador') || q.includes('seguimiento')) {
-      return {
-        answer: `Para registrar **observaciones** o hacer seguimiento en Edusyn puedes usar el observador del estudiante o el espacio de seguimiento del docente, según el módulo que tengas habilitado.\n\nFlujo típico:\n1. Busca al estudiante o grupo\n2. Abre el observador / seguimiento / notas del aula\n3. Escribe la observación con fecha y categoría\n4. Guarda para que quede en el historial\n\nSi estás usando Classroom, también puedes apoyarte en **observaciones por actividad** o en los tableros de seguimiento del docente.`,
-        keyPoints: [],
-        confidence: 0.9,
-      };
-    }
-
-    if (q.includes('boletin') || q.includes('informe') || q.includes('reporte')) {
-      return {
-        answer: `Los **boletines** y reportes académicos en Edusyn se generan a partir de la información registrada en notas, logros, asistencia y observaciones.\n\nNormalmente incluyen:\n• Notas por asignatura y período\n• Promedio general y puesto\n• Logros e indicadores\n• Observaciones del director de grupo\n• Asistencia del período\n\nVe a **Reportes / Boletines** → Selecciona grupo, período o estudiante → Genera PDF individual o masivo.`,
-        keyPoints: [],
-        confidence: 0.9,
-      };
-    }
-
-    if (q.includes('hola') || q.includes('buenos') || q.includes('saludos')) {
-      return {
-        answer: `¡Hola! Soy Valeria, tu asistente en Edusyn. Puedo ayudarte con:\n\n• Cómo usar Classroom y crear quizzes\n• Gestión de notas y asistencia\n• Generación de boletines\n• Flujos de la plataforma\n\n¿En qué te puedo ayudar hoy?`,
-        keyPoints: [],
-        confidence: 0.95,
-      };
-    }
-
-    // Respuesta genérica mejorada
+    // 3) Fuera de la plataforma. Decirlo, en vez de responder de memoria.
     return {
-      answer: `Gracias por tu consulta. Actualmente estoy en modo básico (sin conexión a IA avanzada).\n\nPuedo ayudarte con información sobre:\n• **Classroom**: Quizzes, exámenes, actividades y preguntas\n• **Notas**: Planillas, calificaciones, promedios y logros\n• **Asistencia**: Registro diario, reportes y alertas\n• **Observaciones**: Seguimiento del estudiante y del aula\n• **Boletines**: Generación de informes académicos\n\nIntenta preguntar algo más específico como "¿Cómo creo un quiz?", "¿Cómo asigno notas?" o "¿Cómo registro una observación?"`,
+      answer:
+        'Ahora mismo **no tengo conexión con el servicio de IA**, así que solo puedo responder sobre ' +
+        'el uso de Edusyn.\n\nPrueba con algo como «¿Cómo registro un aprendizaje y una evidencia?», ' +
+        '«¿Cómo tomo la asistencia?» o «¿Cómo genero el boletín del período?».',
       keyPoints: [],
-      confidence: 0.5,
+      confidence: 0.3,
     };
   }
+
 }
