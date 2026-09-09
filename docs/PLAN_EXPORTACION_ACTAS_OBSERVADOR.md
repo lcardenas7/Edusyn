@@ -41,12 +41,21 @@ La búsqueda pública en producción confirmó el nombre `Institución Educativa
 2. Tipo, número de acta, fecha, año lectivo y modalidad.
 3. Estudiantes implicados y grupo.
 4. Descripción objetiva de la situación.
-5. Versión o descargos de los estudiantes.
-6. Norma o apartado del Manual de Convivencia.
-7. Medidas, acuerdos y compromisos.
-8. Testigos u otros asistentes.
-9. Firmas de docente que registra, director de grupo, coordinación, estudiantes y acudientes.
-10. Pie de confidencialidad y numeración de páginas.
+5. Norma o apartado del Manual de Convivencia.
+6. Medidas, acuerdos y compromisos.
+7. Testigos u otros asistentes.
+8. Firmas institucionales de docente, director de grupo y coordinación.
+9. Anexo individual de versión o descargos para cada estudiante, con firmas de estudiante, acudiente y docente.
+10. Pie de confidencialidad y numeración de páginas en el acta y sus anexos.
+
+## Ajuste de formato posterior a la revisión visual
+
+- El acta principal presenta implicados, descripción, norma, medidas y testigos dentro de cuadros completos con encabezado y borde.
+- La descripción objetiva dispone de un área mayor para que el relato no quede comprimido.
+- La versión o descargos ya no ocupa una sección breve dentro del acta principal. Cada estudiante recibe un anexo individual identificado con el consecutivo, la fecha, el nombre y el grupo.
+- El anexo ofrece un área amplia para texto registrado en el sistema o diligenciamiento manuscrito y termina con firmas de estudiante, acudiente y docente receptor.
+- Las firmas del acta principal se reducen a docente que registra, director de grupo y coordinación, distribuidas en una sola fila cuando son tres personas.
+- Una acta conjunta con dos estudiantes produce tres hojas: una para el acta y una por cada anexo individual.
 
 Si existe un `ActaRecord`, sus hechos, descargos, normatividad, medidas, testigos y consecutivo tienen prioridad. Si la observación está tipificada como acta pero aún no tiene ese registro complementario, se usan la descripción y la acción tomada, y los campos faltantes quedan claramente marcados para completar.
 

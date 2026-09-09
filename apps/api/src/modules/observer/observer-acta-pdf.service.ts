@@ -111,6 +111,10 @@ export class ObserverActaPdfService {
         records.forEach((observations: any[], index: number) => {
           if (index > 0) doc.addPage();
           this.renderActa(doc, data.institution, data.reportConfig, observations, data.logo, data.mode);
+          observations.forEach((observation) => {
+            doc.addPage();
+            this.renderStudentStatementAnnex(doc, data.institution, data.reportConfig, observation, data.logo);
+          });
         });
 
         const range = doc.bufferedPageRange();
@@ -159,18 +163,67 @@ export class ObserverActaPdfService {
       ['Hora', 'Pendiente de registrar'],
     ], brand);
 
-    this.renderSection(doc, '1. ESTUDIANTES IMPLICADOS', this.participantsText(observations), brand, margin, width);
-    this.renderSection(doc, '2. DESCRIPCIÓN OBJETIVA DE LA SITUACIÓN', this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.facts || item.description), brand, margin, width);
-    const statements = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.studentStatement);
-    this.renderSection(doc, '3. VERSIÓN O DESCARGOS DE LOS ESTUDIANTES', statements || 'Espacio para registrar la versión de los estudiantes implicados:\n\n\n', brand, margin, width);
+    this.renderBoxSection(doc, '1. ESTUDIANTES IMPLICADOS', this.participantsText(observations), brand, margin, width, 38);
+    this.renderBoxSection(doc, '2. DESCRIPCIÓN OBJETIVA DE LA SITUACIÓN', this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.facts || item.description), brand, margin, width, 82);
     const regulation = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.regulationApplied);
-    this.renderSection(doc, '4. NORMA O APARTADO DEL MANUAL DE CONVIVENCIA', regulation || 'Pendiente de registrar.', brand, margin, width);
+    this.renderBoxSection(doc, '3. NORMA O APARTADO DEL MANUAL DE CONVIVENCIA', regulation || 'Pendiente de registrar.', brand, margin, width, 48);
     const actions = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.sanctions || item.actionTaken);
-    this.renderSection(doc, '5. MEDIDAS, ACUERDOS Y COMPROMISOS', actions || 'Pendiente de registrar.\n\n', brand, margin, width);
+    this.renderBoxSection(doc, '4. MEDIDAS, ACUERDOS Y COMPROMISOS', actions || 'Pendiente de registrar.', brand, margin, width, 58);
     const witnesses = this.sharedOrEnumeratedText(observations, (item) => item.actaRecord?.witnesses);
-    this.renderSection(doc, '6. TESTIGOS U OTROS ASISTENTES', witnesses || 'No registrados.', brand, margin, width);
+    this.renderBoxSection(doc, '5. TESTIGOS U OTROS ASISTENTES', witnesses || 'No registrados.', brand, margin, width, 36);
 
     this.renderSignatures(doc, observations, reportConfig, brand, margin, width);
+  }
+
+  private renderStudentStatementAnnex(doc: PDFKit.PDFDocument, institution: any, reportConfig: any, observation: any, logo: Buffer | null) {
+    const margin = 42;
+    const width = doc.page.width - margin * 2;
+    const brand = this.brandColor(institution.primaryColor);
+    this.renderInstitutionHeader(doc, institution, reportConfig, logo, brand, margin, width);
+
+    const titleY = doc.y;
+    doc.roundedRect(margin, titleY, width, 35, 4).fill(brand);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11).text('ANEXO INDIVIDUAL', margin + 8, titleY + 6, { width: width - 16, align: 'center' });
+    doc.font('Helvetica').fontSize(8).text('VERSIÓN O DESCARGOS DEL ESTUDIANTE', margin + 8, titleY + 20, { width: width - 16, align: 'center' });
+    doc.y = titleY + 44;
+
+    const enrollment = observation.studentEnrollment;
+    const group = `${enrollment.group?.grade?.name || ''} ${enrollment.group?.name || ''}`.trim();
+    this.renderMetaGrid(doc, margin, width, [
+      ['Acta asociada', observation.actaRecord?.actaNumber || 'Sin consecutivo'],
+      ['Fecha del hecho', this.dateOnly(observation.date)],
+      ['Estudiante', this.studentName(enrollment.student)],
+      ['Grupo', group || 'No registrado'],
+    ], brand);
+
+    doc.font('Helvetica').fontSize(7.5).fillColor('#475569').text(
+      'Este anexo recoge la versión libre del estudiante y forma parte integral del acta indicada. Puede diligenciarse en el sistema o completarse de forma manuscrita al imprimir.',
+      margin,
+      doc.y,
+      { width, align: 'justify', lineGap: 1.5 },
+    );
+    doc.moveDown(0.7);
+
+    const statement = String(observation.actaRecord?.studentStatement || '').trim();
+    this.renderBoxSection(
+      doc,
+      'VERSIÓN LIBRE Y VOLUNTARIA DEL ESTUDIANTE',
+      statement || 'Espacio para que el estudiante relate los hechos con sus propias palabras:',
+      brand,
+      margin,
+      width,
+      310,
+      !statement,
+    );
+
+    doc.font('Helvetica').fontSize(7.2).fillColor('#475569').text(
+      'La firma deja constancia de que esta versión fue leída o registrada según lo expresado por el estudiante.',
+      margin,
+      doc.y,
+      { width },
+    );
+    doc.moveDown(0.7);
+    this.renderAnnexSignatures(doc, observation, margin, width);
   }
 
   private renderInstitutionHeader(doc: PDFKit.PDFDocument, institution: any, config: any, logo: Buffer | null, brand: string, margin: number, width: number) {
@@ -205,19 +258,27 @@ export class ObserverActaPdfService {
       doc.font('Helvetica-Bold').fontSize(7).fillColor(brand).text(label.toUpperCase(), cellX + 6, y + 5, { width: col - 12 });
       doc.font('Helvetica').fontSize(9).fillColor('#0f172a').text(String(value || 'No registrado'), cellX + 6, y + 15, { width: col - 12 });
     });
-    doc.y = startY + rowHeight * Math.ceil(entries.length / 2) + 9;
+    doc.y = startY + rowHeight * Math.ceil(entries.length / 2) + 6;
   }
 
-  private renderSection(doc: PDFKit.PDFDocument, title: string, text: string, brand: string, x: number, width: number) {
+  private renderBoxSection(doc: PDFKit.PDFDocument, title: string, text: string, brand: string, x: number, width: number, minBodyHeight = 32, writingLines = false) {
     const safeText = String(text || 'No registrado.');
-    const textHeight = Math.max(18, doc.heightOfString(safeText, { width: width - 16, lineGap: 2 }));
-    this.ensureSpace(doc, textHeight + 35);
+    const textHeight = doc.heightOfString(safeText, { width: width - 20, lineGap: 2 });
+    const bodyHeight = Math.max(minBodyHeight, textHeight + 16);
+    const totalHeight = bodyHeight + 23;
+    this.ensureSpace(doc, totalHeight + 4);
     const y = doc.y;
-    doc.roundedRect(x, y, width, 20, 3).fill('#f1f5f9');
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text(title, x + 8, y + 6, { width: width - 16 });
-    doc.y = y + 25;
-    doc.font('Helvetica').fontSize(8.7).fillColor('#1e293b').text(safeText, x + 8, doc.y, { width: width - 16, lineGap: 2, align: 'justify' });
-    doc.moveDown(0.55);
+    doc.roundedRect(x, y, width, totalHeight, 4).fillAndStroke('#ffffff', '#cbd5e1');
+    doc.save().roundedRect(x, y, width, 22, 4).clip().rect(x, y + 11, width, 11).fill('#f1f5f9').restore();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text(title, x + 9, y + 7, { width: width - 18 });
+    doc.font('Helvetica').fontSize(8.5).fillColor('#1e293b').text(safeText, x + 10, y + 31, { width: width - 20, lineGap: 2, align: 'justify' });
+    if (writingLines) {
+      const firstLineY = y + 68;
+      for (let lineY = firstLineY; lineY < y + totalHeight - 13; lineY += 22) {
+        doc.moveTo(x + 10, lineY).lineTo(x + width - 10, lineY).strokeColor('#dbe3ee').lineWidth(0.45).stroke();
+      }
+    }
+    doc.y = y + totalHeight + 4;
   }
 
   private renderSignatures(doc: PDFKit.PDFDocument, observations: any[], config: any, brand: string, x: number, width: number) {
@@ -236,34 +297,49 @@ export class ObserverActaPdfService {
       addUser(item.studentEnrollment.group?.director, 'Director(a) de grupo');
     });
     people.set('coordinator', { name: configuredName(['COORDINATOR', 'COORDINADOR']), role: 'Coordinador(a)' });
-    observations.forEach((item) => {
-      const student = this.studentName(item.studentEnrollment.student);
-      people.set(`student-${item.studentEnrollment.student.id}`, { name: student, role: 'Estudiante' });
-      people.set(`guardian-${item.studentEnrollment.student.id}`, { name: '', role: `Acudiente de ${student}` });
-    });
-
     const list = [...people.values()];
-    this.ensureSpace(doc, 52 + Math.ceil(list.length / 2) * 67);
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text('7. FIRMAS Y CONSTANCIA', x, doc.y, { width });
+    this.ensureSpace(doc, 40 + Math.ceil(list.length / 3) * 46);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text('6. FIRMAS INSTITUCIONALES', x, doc.y, { width });
     doc.moveDown(0.4);
-    doc.font('Helvetica').fontSize(7.5).fillColor('#475569').text('Las firmas dejan constancia de participación o conocimiento; no implican necesariamente aceptación de los hechos.', x, doc.y, { width });
-    doc.moveDown(0.8);
+    doc.font('Helvetica').fontSize(7.2).fillColor('#475569').text('Los estudiantes y acudientes firman sus respectivos anexos de versión o descargos.', x, doc.y, { width });
+    doc.moveDown(0.5);
 
-    const columnWidth = (width - 22) / 2;
-    for (let row = 0; row < Math.ceil(list.length / 2); row += 1) {
+    const gap = 14;
+    const columnWidth = (width - gap * 2) / 3;
+    for (let row = 0; row < Math.ceil(list.length / 3); row += 1) {
       const rowY = doc.y;
-      for (let column = 0; column < 2; column += 1) {
-        const person = list[row * 2 + column];
+      for (let column = 0; column < 3; column += 1) {
+        const person = list[row * 3 + column];
         if (!person) continue;
-        const sigX = x + column * (columnWidth + 22);
-        const sigY = rowY + 31;
+        const sigX = x + column * (columnWidth + gap);
+        const sigY = rowY + 23;
         doc.moveTo(sigX, sigY).lineTo(sigX + columnWidth, sigY).strokeColor('#64748b').lineWidth(0.6).stroke();
-        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#0f172a').text(person.name || 'Nombre: ______________________________', sigX, sigY + 4, { width: columnWidth, align: 'center' });
-        doc.font('Helvetica').fontSize(7).fillColor('#475569').text(person.role, sigX, sigY + 16, { width: columnWidth, align: 'center' });
+        doc.font('Helvetica-Bold').fontSize(6.8).fillColor('#0f172a').text(person.name || 'Nombre: __________________', sigX, sigY + 4, { width: columnWidth, align: 'center' });
+        doc.font('Helvetica').fontSize(6.5).fillColor('#475569').text(person.role, sigX, sigY + 15, { width: columnWidth, align: 'center' });
         doc.y = rowY;
       }
-      doc.y = rowY + 67;
+      doc.y = rowY + 46;
     }
+  }
+
+  private renderAnnexSignatures(doc: PDFKit.PDFDocument, observation: any, x: number, width: number) {
+    const student = this.studentName(observation.studentEnrollment.student);
+    const people = [
+      { name: student, role: 'Estudiante' },
+      { name: '', role: 'Acudiente' },
+      { name: this.userName(observation.author), role: 'Docente que recibe o registra' },
+    ];
+    const gap = 14;
+    const columnWidth = (width - gap * 2) / 3;
+    const rowY = doc.y;
+    people.forEach((person, index) => {
+      const sigX = x + index * (columnWidth + gap);
+      const sigY = rowY + 25;
+      doc.moveTo(sigX, sigY).lineTo(sigX + columnWidth, sigY).strokeColor('#64748b').lineWidth(0.6).stroke();
+      doc.font('Helvetica-Bold').fontSize(6.8).fillColor('#0f172a').text(person.name || 'Nombre: __________________', sigX, sigY + 4, { width: columnWidth, align: 'center' });
+      doc.font('Helvetica').fontSize(6.5).fillColor('#475569').text(person.role, sigX, sigY + 15, { width: columnWidth, align: 'center' });
+    });
+    doc.y = rowY + 50;
   }
 
   private ensureSpace(doc: PDFKit.PDFDocument, required: number) {

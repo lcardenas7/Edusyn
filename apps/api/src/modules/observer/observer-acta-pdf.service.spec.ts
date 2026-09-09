@@ -78,6 +78,7 @@ describe('ObserverActaPdfService', () => {
 
     expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
     expect(pdf.length).toBeGreaterThan(3000);
+    expect(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)).toHaveLength(3);
     expect(prisma.studentObservation.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ institutionId: institution.id }),
     }));
