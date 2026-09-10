@@ -376,6 +376,8 @@ export const observerApi = {
   updateActa: (id: string, data: any) => api.put(`/observer/actas/${id}`, data),
   exportActas: (observationIds: string[], mode: 'JOINT' | 'INDIVIDUAL') =>
     api.post('/observer/actas/export', { observationIds, mode }, { responseType: 'blob' }),
+  exportPedagogicalFollowups: (observationIds: string[]) =>
+    api.post('/observer/pedagogical-followups/export', { observationIds }, { responseType: 'blob' }),
   // Compromisos
   createCommitment: (data: any) => api.post('/observer/commitments', data),
   updateCommitment: (id: string, data: any) => api.put(`/observer/commitments/${id}`, data),

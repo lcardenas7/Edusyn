@@ -150,6 +150,14 @@ export class ExportObserverActasDto {
   mode: ObserverActaExportMode;
 }
 
+export class ExportPedagogicalFollowupsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(30)
+  @IsString({ each: true })
+  observationIds: string[];
+}
+
 // DTO para Compromiso
 export class CreateCommitmentDto {
   @IsOptional()
