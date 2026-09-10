@@ -20,6 +20,7 @@ import {
   CreateMeasureDto,
   UpdateMeasureDto,
   ExportObserverActasDto,
+  ExportPedagogicalFollowupsDto,
 } from './dto/create-observation.dto';
 import { ObserverActaPdfService } from './observer-acta-pdf.service';
 
@@ -197,6 +198,24 @@ export class ObserverController {
     const suffix = dto.mode === 'JOINT' ? 'conjunta' : 'individuales';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="acta-observador-${suffix}.pdf"`);
+    res.send(pdf);
+  }
+
+  @Post('pedagogical-followups/export')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  async exportPedagogicalFollowups(@Request() req, @Body() dto: ExportPedagogicalFollowupsDto, @Res() res: Response) {
+    const institutionId = await this.inst(req);
+    const roles = (req.user.roles || [])
+      .map((role: any) => typeof role === 'string' ? role : role.role?.name || role.name)
+      .filter(Boolean);
+    const pdf = await this.observerActaPdfService.generatePedagogicalFollowups({
+      institutionId,
+      actorId: req.user.id,
+      actorRoles: roles,
+      observationIds: dto.observationIds,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="seguimientos-pedagogicos.pdf"');
     res.send(pdf);
   }
 

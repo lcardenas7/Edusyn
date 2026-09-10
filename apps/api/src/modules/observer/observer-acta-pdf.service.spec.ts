@@ -105,6 +105,43 @@ describe('ObserverActaPdfService', () => {
     })).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('genera seguimientos pedagógicos individuales y limita la consulta a su institución', async () => {
+    const pedagogicalFollowup = {
+      ...observations[0],
+      id: 'pedagogical-1',
+      type: 'PEDAGOGICAL_FOLLOWUP',
+      status: 'IN_PROGRESS',
+      description: 'Presenta dificultades sostenidas en comprensión lectora y requiere acompañamiento focalizado.',
+      actionTaken: 'Plan de lectura guiada, retroalimentación semanal y ajuste de actividades.',
+      requiresFollowUp: true,
+      followUpDate: new Date('2026-09-30T00:00:00.000Z'),
+      followUpNotes: 'Revisar avances con el docente de lenguaje.',
+      parentNotified: true,
+      parentNotifiedAt: new Date('2026-09-10T00:00:00.000Z'),
+      actaRecord: null,
+    };
+    prisma.studentObservation.findMany.mockResolvedValueOnce([pedagogicalFollowup]);
+    const service = new ObserverActaPdfService(prisma, storage);
+    const pdf = await service.generatePedagogicalFollowups({
+      institutionId: institution.id,
+      actorId: 'coordinator-1',
+      actorRoles: ['COORDINADOR'],
+      observationIds: [pedagogicalFollowup.id],
+    });
+
+    expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
+    expect(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)).toHaveLength(1);
+    expect(prisma.studentObservation.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ institutionId: institution.id, type: 'PEDAGOGICAL_FOLLOWUP' }),
+    }));
+
+    const outputPath = process.env.OBSERVER_PEDAGOGICAL_SAMPLE_PATH;
+    if (outputPath) {
+      mkdirSync(dirname(outputPath), { recursive: true });
+      writeFileSync(outputPath, pdf);
+    }
+  });
+
   it('resuelve identidad, configuración y casos desde la institución autenticada', async () => {
     const otherInstitution = {
       ...institution,

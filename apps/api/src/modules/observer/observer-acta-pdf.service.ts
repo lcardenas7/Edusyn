@@ -98,6 +98,63 @@ export class ObserverActaPdfService {
     return this.buildPdf({ institution, reportConfig, observations, logo, mode: params.mode });
   }
 
+  async generatePedagogicalFollowups(params: Omit<ExportParams, 'mode'>): Promise<Buffer> {
+    const observationIds = [...new Set(params.observationIds)];
+    if (!observationIds.length || observationIds.length > 30) {
+      throw new BadRequestException('Seleccione entre 1 y 30 seguimientos pedagógicos');
+    }
+
+    const [institution, reportConfig, observations] = await Promise.all([
+      this.prisma.institution.findUnique({
+        where: { id: params.institutionId },
+        select: {
+          id: true, name: true, nit: true, daneCode: true, address: true, city: true,
+          phone: true, email: true, website: true, logo: true, primaryColor: true,
+        },
+      }),
+      this.prisma.reportCardConfig.findUnique({
+        where: { institutionId: params.institutionId },
+        select: { headerResolution: true, signatureConfig: true },
+      }),
+      this.prisma.studentObservation.findMany({
+        where: {
+          id: { in: observationIds },
+          institutionId: params.institutionId,
+          type: 'PEDAGOGICAL_FOLLOWUP',
+        },
+        include: {
+          author: { select: { id: true, firstName: true, lastName: true } },
+          studentEnrollment: {
+            include: {
+              student: { select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true } },
+              academicYear: { select: { year: true } },
+              group: {
+                include: {
+                  grade: { select: { name: true } },
+                  campus: { select: { name: true } },
+                  director: { select: { id: true, firstName: true, lastName: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    if (!institution) throw new NotFoundException('Institución no encontrada');
+    if (observations.length !== observationIds.length) {
+      throw new NotFoundException('Uno o más seguimientos no existen o no pertenecen a la institución');
+    }
+    const canExportAll = params.actorRoles.some((role) => PRIVILEGED_ROLES.includes(role));
+    if (!canExportAll && observations.some((observation) => observation.authorId !== params.actorId && observation.studentEnrollment.group.directorId !== params.actorId)) {
+      throw new ForbiddenException('No puede exportar seguimientos de estudiantes fuera de sus grupos o registros');
+    }
+    const order = new Map(observationIds.map((id, index) => [id, index]));
+    observations.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    const logo = await this.resolveLogo(institution.logo);
+    return this.buildPedagogicalPdf({ institution, reportConfig, observations, logo });
+  }
+
   private buildPdf(data: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -138,6 +195,71 @@ export class ObserverActaPdfService {
         reject(error);
       }
     });
+  }
+
+  private buildPedagogicalPdf(data: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ size: 'LETTER', margin: 42, bufferPages: true });
+        const chunks: Buffer[] = [];
+        doc.on('data', (chunk) => chunks.push(chunk as Buffer));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+        data.observations.forEach((observation: any, index: number) => {
+          if (index > 0) doc.addPage();
+          this.renderPedagogicalFollowup(doc, data.institution, data.reportConfig, observation, data.logo);
+        });
+        const range = doc.bufferedPageRange();
+        for (let page = range.start; page < range.start + range.count; page += 1) {
+          doc.switchToPage(page);
+          const bottomMargin = doc.page.margins.bottom;
+          doc.page.margins.bottom = 0;
+          doc.font('Helvetica').fontSize(7).fillColor('#64748b').text(
+            `Documento confidencial - Seguimiento pedagógico   |   Página ${page + 1} de ${range.count}`,
+            42, doc.page.height - 28, { width: doc.page.width - 84, align: 'center', lineBreak: false },
+          );
+          doc.page.margins.bottom = bottomMargin;
+        }
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private renderPedagogicalFollowup(doc: PDFKit.PDFDocument, institution: any, reportConfig: any, observation: any, logo: Buffer | null) {
+    const margin = 42;
+    const width = doc.page.width - margin * 2;
+    const brand = this.brandColor(institution.primaryColor);
+    this.renderInstitutionHeader(doc, institution, reportConfig, logo, brand, margin, width);
+    const titleY = doc.y;
+    doc.roundedRect(margin, titleY, width, 29, 4).fill(brand);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11).text('INFORME DE SEGUIMIENTO PEDAGÓGICO', margin + 8, titleY + 9, { width: width - 16, align: 'center' });
+    doc.y = titleY + 37;
+
+    const enrollment = observation.studentEnrollment;
+    const group = `${enrollment.group?.grade?.name || ''} ${enrollment.group?.name || ''}`.trim();
+    this.renderMetaGrid(doc, margin, width, [
+      ['Fecha de registro', this.dateOnly(observation.date)],
+      ['Estado', this.statusLabel(observation.status)],
+      ['Estudiante', this.studentName(enrollment.student)],
+      ['Grupo', group || 'No registrado'],
+      ['Año lectivo', String(enrollment.academicYear?.year || 'No registrado')],
+      ['Sede', enrollment.group?.campus?.name || 'No registrada'],
+    ], brand);
+    this.renderBoxSection(doc, '1. SITUACIÓN O NECESIDAD PEDAGÓGICA IDENTIFICADA', observation.description, brand, margin, width, 72);
+    this.renderBoxSection(doc, '2. ACCIONES PEDAGÓGICAS Y APOYOS ACORDADOS', observation.actionTaken || 'Pendiente de registrar.', brand, margin, width, 58);
+    const followUp = [
+      observation.requiresFollowUp ? 'Requiere seguimiento: Sí.' : 'Requiere seguimiento: No.',
+      observation.followUpDate ? `Fecha acordada: ${this.dateOnly(observation.followUpDate)}.` : '',
+      observation.followUpNotes ? `Notas de seguimiento: ${observation.followUpNotes}` : '',
+    ].filter(Boolean).join('\n');
+    this.renderBoxSection(doc, '3. PLAN Y VALORACIÓN DEL SEGUIMIENTO', followUp || 'Pendiente de registrar.', brand, margin, width, 66);
+    const parentNotice = observation.parentNotified
+      ? `Acudiente notificado${observation.parentNotifiedAt ? ` el ${this.dateOnly(observation.parentNotifiedAt)}` : ''}.`
+      : 'Acudiente pendiente de notificación.';
+    this.renderBoxSection(doc, '4. COMUNICACIÓN CON EL ACUDIENTE', parentNotice, brand, margin, width, 34);
+    this.renderSignatures(doc, [observation], reportConfig, brand, margin, width, '5. FIRMAS Y CONSTANCIA', 'Las firmas dejan constancia del acompañamiento y los acuerdos pedagógicos registrados.');
   }
 
   private renderActa(doc: PDFKit.PDFDocument, institution: any, reportConfig: any, observations: any[], logo: Buffer | null, mode: ObserverActaExportMode) {
@@ -289,7 +411,7 @@ export class ObserverActaPdfService {
     doc.y = y + totalHeight + 4;
   }
 
-  private renderSignatures(doc: PDFKit.PDFDocument, observations: any[], config: any, brand: string, x: number, width: number) {
+  private renderSignatures(doc: PDFKit.PDFDocument, observations: any[], config: any, brand: string, x: number, width: number, title = '6. FIRMAS INSTITUCIONALES', note = 'Los estudiantes y acudientes firman sus respectivos anexos de versión o descargos.') {
     const configured = Array.isArray(config?.signatureConfig) ? config.signatureConfig : [];
     const configuredName = (roles: string[]) => configured.find((item: any) => item?.enabled !== false && roles.includes(String(item?.role || '').toUpperCase()))?.name || '';
     const people = new Map<string, { name: string; role: string }>();
@@ -307,9 +429,9 @@ export class ObserverActaPdfService {
     people.set('coordinator', { name: configuredName(['COORDINATOR', 'COORDINADOR']), role: 'Coordinador(a)' });
     const list = [...people.values()];
     this.ensureSpace(doc, 40 + Math.ceil(list.length / 3) * 46);
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text('6. FIRMAS INSTITUCIONALES', x, doc.y, { width });
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(brand).text(title, x, doc.y, { width });
     doc.moveDown(0.4);
-    doc.font('Helvetica').fontSize(7.2).fillColor('#475569').text('Los estudiantes y acudientes firman sus respectivos anexos de versión o descargos.', x, doc.y, { width });
+    doc.font('Helvetica').fontSize(7.2).fillColor('#475569').text(note, x, doc.y, { width });
     doc.moveDown(0.5);
 
     const gap = 14;
@@ -380,6 +502,10 @@ export class ObserverActaPdfService {
 
   private typeLabel(type: string) {
     return ({ ACTA_TYPE_I: 'TIPO I', ACTA_TYPE_II: 'TIPO II', ACTA_TYPE_III: 'TIPO III' } as Record<string, string>)[type] || 'ACTA';
+  }
+
+  private statusLabel(status?: string | null) {
+    return ({ OPEN: 'Abierto', IN_PROGRESS: 'En seguimiento', CLOSED: 'Cerrado' } as Record<string, string>)[String(status || '')] || 'No registrado';
   }
 
   private dateOnly(value: Date | string) {

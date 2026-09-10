@@ -55,6 +55,7 @@ const canViewAll = (roles: string[]) => roles.some(r => ['ADMIN_INSTITUTIONAL', 
 const fullName = (s: any) => s ? [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ') : ''
 const authorName = (a: any) => a ? `${a.firstName || ''} ${a.lastName || ''}`.trim() : ''
 const isFormalActa = (obs: any) => ['ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III'].includes(obs?.type)
+const isPedagogicalFollowup = (obs: any) => obs?.type === 'PEDAGOGICAL_FOLLOWUP'
 
 // Diagnóstico visual del estudiante basado en observaciones
 function getDiagnosticBadge(obs: any[]) {
@@ -108,6 +109,7 @@ export default function Observer() {
   const [saving, setSaving] = useState(false)
   const [academicYearId, setAcademicYearId] = useState('')
   const [selectedActaIds, setSelectedActaIds] = useState<string[]>([])
+  const [selectedPedagogicalFollowupIds, setSelectedPedagogicalFollowupIds] = useState<string[]>([])
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportMode, setExportMode] = useState<'JOINT' | 'INDIVIDUAL'>('INDIVIDUAL')
   const [exporting, setExporting] = useState(false)
@@ -397,6 +399,28 @@ export default function Observer() {
     }
   }
 
+  const handleExportPedagogicalFollowups = async (ids = selectedPedagogicalFollowupIds) => {
+    if (!ids.length) return
+    setExporting(true)
+    try {
+      const response = await observerApi.exportPedagogicalFollowups(ids)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = ids.length === 1 ? 'seguimiento-pedagogico.pdf' : 'seguimientos-pedagogicos.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setToast({ msg: 'Seguimiento pedagógico generado correctamente', type: 'success' })
+    } catch (err: any) {
+      setToast({ msg: err.response?.data?.message || 'No fue posible generar el seguimiento pedagógico', type: 'error' })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // ─── Nombre de estudiante desde observación ───────────────────────────
   const obsStudentName = (obs: any) => {
     if (obs.studentEnrollment?.student) return fullName(obs.studentEnrollment.student)
@@ -454,6 +478,16 @@ export default function Observer() {
             >
               <Download className="w-4 h-4" />
               Exportar actas ({selectedActaIds.length})
+            </button>
+          )}
+          {selectedPedagogicalFollowupIds.length > 0 && (
+            <button
+              onClick={() => handleExportPedagogicalFollowups()}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 border border-teal-200 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 disabled:opacity-50 text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Descargar seguimientos ({selectedPedagogicalFollowupIds.length})
             </button>
           )}
           {selectedGroupId && (
@@ -687,13 +721,13 @@ export default function Observer() {
                       <th className="w-12 px-3 py-3 text-center text-xs font-medium text-slate-500">
                         <input
                           type="checkbox"
-                          aria-label="Seleccionar todas las actas visibles"
-                          checked={filteredObservations.some(isFormalActa) && filteredObservations.filter(isFormalActa).every((obs: any) => selectedActaIds.includes(obs.id))}
+                          aria-label="Seleccionar todos los documentos descargables visibles"
+                          checked={filteredObservations.some((obs: any) => isFormalActa(obs) || isPedagogicalFollowup(obs)) && filteredObservations.filter((obs: any) => isFormalActa(obs) || isPedagogicalFollowup(obs)).every((obs: any) => isFormalActa(obs) ? selectedActaIds.includes(obs.id) : selectedPedagogicalFollowupIds.includes(obs.id))}
                           onChange={(event) => {
-                            const visibleIds = filteredObservations.filter(isFormalActa).map((obs: any) => obs.id)
-                            setSelectedActaIds(event.target.checked
-                              ? [...new Set([...selectedActaIds, ...visibleIds])]
-                              : selectedActaIds.filter((id) => !visibleIds.includes(id)))
+                            const actaIds = filteredObservations.filter(isFormalActa).map((obs: any) => obs.id)
+                            const followupIds = filteredObservations.filter(isPedagogicalFollowup).map((obs: any) => obs.id)
+                            setSelectedActaIds(event.target.checked ? [...new Set([...selectedActaIds, ...actaIds])] : selectedActaIds.filter((id) => !actaIds.includes(id)))
+                            setSelectedPedagogicalFollowupIds(event.target.checked ? [...new Set([...selectedPedagogicalFollowupIds, ...followupIds])] : selectedPedagogicalFollowupIds.filter((id) => !followupIds.includes(id)))
                           }}
                         />
                       </th>
@@ -718,14 +752,14 @@ export default function Observer() {
                       return (
                         <tr key={obs.id} className="hover:bg-slate-50">
                           <td className="px-3 py-3 text-center">
-                            {isFormalActa(obs) && (
+                            {(isFormalActa(obs) || isPedagogicalFollowup(obs)) && (
                               <input
                                 type="checkbox"
-                                aria-label={`Seleccionar acta de ${obsStudentName(obs)}`}
-                                checked={selectedActaIds.includes(obs.id)}
-                                onChange={(event) => setSelectedActaIds(event.target.checked
-                                  ? [...new Set([...selectedActaIds, obs.id])]
-                                  : selectedActaIds.filter((id) => id !== obs.id))}
+                                aria-label={`Seleccionar documento de ${obsStudentName(obs)}`}
+                                checked={isFormalActa(obs) ? selectedActaIds.includes(obs.id) : selectedPedagogicalFollowupIds.includes(obs.id)}
+                                onChange={(event) => isFormalActa(obs)
+                                  ? setSelectedActaIds(event.target.checked ? [...new Set([...selectedActaIds, obs.id])] : selectedActaIds.filter((id) => id !== obs.id))
+                                  : setSelectedPedagogicalFollowupIds(event.target.checked ? [...new Set([...selectedPedagogicalFollowupIds, obs.id])] : selectedPedagogicalFollowupIds.filter((id) => id !== obs.id))}
                               />
                             )}
                           </td>
@@ -1339,6 +1373,16 @@ export default function Observer() {
                     >
                       <Download className="w-4 h-4" />
                       Descargar acta
+                    </button>
+                  )}
+                  {isPedagogicalFollowup(selectedObs) && (
+                    <button
+                      onClick={() => handleExportPedagogicalFollowups([selectedObs.id])}
+                      disabled={exporting}
+                      className="flex items-center gap-2 px-4 py-2 border border-teal-200 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 disabled:opacity-50 text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Descargar seguimiento
                     </button>
                   )}
                   <button

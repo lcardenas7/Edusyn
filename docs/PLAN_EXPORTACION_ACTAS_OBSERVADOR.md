@@ -60,6 +60,13 @@ La institución siempre se resuelve desde la sesión autenticada. El generador c
 - Las firmas del acta principal se reducen a docente que registra, director de grupo y coordinación, distribuidas en una sola fila cuando son tres personas.
 - Una acta conjunta con dos estudiantes produce tres hojas: una para el acta y una por cada anexo individual.
 
+## Informes de seguimiento pedagógico
+
+- Las observaciones de tipo `PEDAGOGICAL_FOLLOWUP` se descargan como informes institucionales independientes, no como actas de convivencia.
+- Cada informe incluye la situación o necesidad identificada, acciones pedagógicas y apoyos, fecha y notas de seguimiento, estado, comunicación con acudiente y firmas institucionales.
+- Al seleccionar varios seguimientos, se genera un único PDF multipágina con una hoja por estudiante para archivo individual.
+- El endpoint aplica el mismo aislamiento institucional y de rol que las actas: perfil, configuración, casos y logo se resuelven desde la institución autenticada; los docentes solo descargan registros propios o de grupos que dirigen.
+
 Si existe un `ActaRecord`, sus hechos, descargos, normatividad, medidas, testigos y consecutivo tienen prioridad. Si la observación está tipificada como acta pero aún no tiene ese registro complementario, se usan la descripción y la acción tomada, y los campos faltantes quedan claramente marcados para completar.
 
 ## Seguridad
