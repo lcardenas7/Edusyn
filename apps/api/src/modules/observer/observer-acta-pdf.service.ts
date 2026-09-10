@@ -48,7 +48,10 @@ export class ObserverActaPdfService {
       }),
       this.prisma.reportCardConfig.findUnique({
         where: { institutionId: params.institutionId },
-        select: { headerResolution: true, signatureConfig: true },
+        // `logoUrl` conserva compatibilidad con escudos cargados antes de que el
+        // perfil institucional fuera la fuente canónica. Así ningún formato de
+        // Observador queda sin identidad mientras se consolida el perfil.
+        select: { headerResolution: true, signatureConfig: true, logoUrl: true },
       }),
       this.prisma.studentObservation.findMany({
         where: {
@@ -94,7 +97,7 @@ export class ObserverActaPdfService {
     const order = new Map(observationIds.map((id, index) => [id, index]));
     observations.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 
-    const logo = await this.resolveLogo(institution.logo);
+    const logo = await this.resolveLogo(this.institutionLogo(institution, reportConfig));
     return this.buildPdf({ institution, reportConfig, observations, logo, mode: params.mode });
   }
 
@@ -114,7 +117,7 @@ export class ObserverActaPdfService {
       }),
       this.prisma.reportCardConfig.findUnique({
         where: { institutionId: params.institutionId },
-        select: { headerResolution: true, signatureConfig: true },
+        select: { headerResolution: true, signatureConfig: true, logoUrl: true },
       }),
       this.prisma.studentObservation.findMany({
         where: {
@@ -151,7 +154,7 @@ export class ObserverActaPdfService {
     }
     const order = new Map(observationIds.map((id, index) => [id, index]));
     observations.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
-    const logo = await this.resolveLogo(institution.logo);
+    const logo = await this.resolveLogo(this.institutionLogo(institution, reportConfig));
     return this.buildPedagogicalPdf({ institution, reportConfig, observations, logo });
   }
 
@@ -522,6 +525,11 @@ export class ObserverActaPdfService {
 
   private brandColor(value?: string | null) {
     return value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#1E3A8A';
+  }
+
+  /** El perfil es la fuente oficial; el campo histórico de boletines es respaldo de lectura. */
+  private institutionLogo(institution: { logo?: string | null }, reportConfig?: { logoUrl?: string | null } | null) {
+    return institution.logo || reportConfig?.logoUrl || null;
   }
 
   private async resolveLogo(storedValue?: string | null): Promise<Buffer | null> {

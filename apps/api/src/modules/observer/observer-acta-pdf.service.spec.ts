@@ -21,6 +21,7 @@ const institution = {
 
 const reportConfig = {
   headerResolution: '06197/2015',
+  logoUrl: null,
   signatureConfig: [{ role: 'COORDINATOR', label: 'Coordinador(a)', name: 'Coordinación de Convivencia', enabled: true }],
 };
 
@@ -162,7 +163,7 @@ describe('ObserverActaPdfService', () => {
     };
     prisma.institution.findUnique.mockResolvedValueOnce(otherInstitution);
     prisma.reportCardConfig.findUnique.mockResolvedValueOnce({
-      headerResolution: 'RESOLUCIÓN 1234 DE 2024',
+      headerResolution: 'RESOLUCIÓN 1234 DE 2024', logoUrl: null,
       signatureConfig: [{ role: 'COORDINATOR', name: 'Coordinación Institucional', enabled: true }],
     });
     prisma.studentObservation.findMany.mockResolvedValueOnce([otherObservation]);
@@ -189,6 +190,24 @@ describe('ObserverActaPdfService', () => {
       where: expect.objectContaining({ institutionId: otherInstitution.id }),
     }));
     expect(storage.resolveToDataUri).toHaveBeenLastCalledWith(otherInstitution.logo);
+  });
+
+  it('usa el escudo histórico de boletines mientras el perfil institucional se consolida', async () => {
+    prisma.institution.findUnique.mockResolvedValueOnce({ ...institution, logo: null });
+    prisma.reportCardConfig.findUnique.mockResolvedValueOnce({ ...reportConfig, logoUrl: 'institutions/inst-esperanza/shield.png' });
+    prisma.studentObservation.findMany.mockResolvedValueOnce([observations[0]]);
+    storage.resolveToDataUri.mockResolvedValueOnce(null);
+
+    const service = new ObserverActaPdfService(prisma, storage);
+    await service.generate({
+      institutionId: institution.id,
+      actorId: 'coordinator-1',
+      actorRoles: ['COORDINADOR'],
+      observationIds: [observations[0].id],
+      mode: ObserverActaExportMode.INDIVIDUAL,
+    });
+
+    expect(storage.resolveToDataUri).toHaveBeenLastCalledWith('institutions/inst-esperanza/shield.png');
   });
 
   it('impide al docente exportar actas ajenas a sus registros o dirección de grupo', async () => {

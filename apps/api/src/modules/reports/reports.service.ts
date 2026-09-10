@@ -3724,7 +3724,7 @@ export class ReportsService {
     // Verificar que existe o crear
     await this.getReportCardConfig(institutionId);
 
-    return this.prisma.reportCardConfig.update({
+    const config = await this.prisma.reportCardConfig.update({
       where: { institutionId },
       data: {
         showLogo: data.showLogo,
@@ -3770,6 +3770,26 @@ export class ReportsService {
         preschoolLevelDisplay: data.preschoolLevelDisplay,
       },
     });
+
+    // Perfil institucional = fuente común de identidad para boletines,
+    // Observador y los demás formatos. Si el administrador carga o cambia el
+    // escudo/color desde Boletines, se consolida aquí sin borrar una identidad
+    // existente cuando el formulario trae un valor vacío.
+    const profileIdentity: { logo?: string; primaryColor?: string } = {};
+    if (typeof data.logoUrl === 'string' && data.logoUrl.trim()) {
+      profileIdentity.logo = data.logoUrl.trim();
+    }
+    if (typeof data.primaryColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(data.primaryColor.trim())) {
+      profileIdentity.primaryColor = data.primaryColor.trim();
+    }
+    if (Object.keys(profileIdentity).length) {
+      await this.prisma.institution.update({
+        where: { id: institutionId },
+        data: profileIdentity,
+      });
+    }
+
+    return config;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
