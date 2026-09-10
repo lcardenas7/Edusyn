@@ -443,8 +443,12 @@ function App() {
                       El aula anterior NO se retira: vive en /aula-clasica, sigue siendo el
                       respaldo y además el aula nueva reutiliza cuatro de sus pestañas
                       (ver HerramientasAula). Cambiar entre una y otra no escribe nada. */}
-                  <Route path="/classroom" element={<AulaVirtual />} />
-                  <Route path="/my-classes" element={<AulaVirtual />} />
+                  {/* Redirección, no render: si /classroom siguiera dibujando el aula nueva, la
+                      barra de direcciones diría una cosa y la pantalla otra, y un enlace copiado
+                      desde ahí perpetuaría la ruta vieja. Con `replace` no queda en el historial,
+                      así que el botón "atrás" no rebota entre la ruta vieja y la nueva. */}
+                  <Route path="/classroom" element={<Navigate to="/aula" replace />} />
+                  <Route path="/my-classes" element={<Navigate to="/aula" replace />} />
                   <Route path="/aula-clasica" element={<Classroom />} />
                   <Route path="/aula" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId" element={<AulaVirtual />} />

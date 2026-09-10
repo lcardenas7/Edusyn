@@ -20,6 +20,7 @@ import { agoCopy } from '../model/countdown'
 import { submissionStateMeta, TONE_CLASSES } from '../model/labels'
 import { EmptyState } from './EmptyState'
 import { textoLegible } from '../model/texto'
+import { SmartAudio } from '../../../components/media/SmartMedia'
 
 const nombreDe = (e: EntregaLike): string => {
   const s = e.studentEnrollment?.student
@@ -131,6 +132,7 @@ function FilaEntrega({
   onCambio: () => void
   now: Date
 }) {
+  const esDeAudio = actividad.metadata?.audioResponse === true
   const meta = submissionStateMeta(entrega.status)
   const max = actividad.maxScore != null ? Number(actividad.maxScore) : 5
 
@@ -222,14 +224,31 @@ function FilaEntrega({
             </div>
           )}
           {entrega.fileUrl && (
-            <a
-              href={entrega.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mb-3 inline-block text-body-sm font-medium text-accent hover:underline"
-            >
-              Abrir el archivo que subió
-            </a>
+            /* En una tarea de audio, mandar al docente a otra pestaña para escuchar treinta
+               grabaciones es inservible: se reproduce aquí mismo y se deja igualmente el enlace
+               para descargar. `SmartAudio` resuelve la URL firmada del almacenamiento. */
+            esDeAudio ? (
+              <div className="mb-3">
+                <SmartAudio src={entrega.fileUrl} className="w-full max-w-md" />
+                <a
+                  href={entrega.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block text-body-sm font-medium text-accent hover:underline"
+                >
+                  Descargar la grabación
+                </a>
+              </div>
+            ) : (
+              <a
+                href={entrega.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 inline-block text-body-sm font-medium text-accent hover:underline"
+              >
+                Abrir el archivo que subió
+              </a>
+            )
           )}
 
           <div className="flex flex-wrap items-end gap-3">

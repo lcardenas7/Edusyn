@@ -16,7 +16,7 @@ Fecha: 2026-09-08 · Continúa [`REDISENO_AULA_VIRTUAL.md`](REDISENO_AULA_VIRTUA
 | Dirección | Qué abre |
 |---|---|
 | `/aula` | **El aula nueva.** Es a donde entra el menú |
-| `/classroom`, `/my-classes` | También el aula nueva — los enlaces antiguos siguen sirviendo |
+| `/classroom`, `/my-classes` | **Redirigen** a `/aula` (`replace`) — los enlaces antiguos siguen sirviendo |
 | `/aula-clasica` | El aula anterior, como respaldo |
 
 Cambiar de una a otra **no escribe nada en el servidor**: es solo una preferencia de interfaz.
@@ -33,7 +33,7 @@ El interruptor funciona en los dos sentidos.
 | F5 | Foro | ✅ | `ForumTab` montado dentro |
 | F6 | **Entrega por audio** | ✅ | **Escrito nuevo** (§4) |
 | F7 | Subir material a una unidad | ✅ | `ContentTab` montado dentro |
-| F8 | Valeria para generar contenido | ✅ | Lleva al editor, donde vive el asistente |
+| F8 | Valeria para generar contenido | ✅ | Abre el asistente directamente (`?valeria=1`) |
 
 Y los dos destinos que solo mostraban un puente —**Rutas** y **Expedición ABP**— están montados
 en el shell, cada uno con carga diferida propia.
@@ -84,11 +84,53 @@ el envío**. Si la tarea pide audio, el aviso de entrega vacía dice *graba*, no
 Límite heredado del componente: **5 minutos** por grabación (el backend limita a 10 MB). Si el
 navegador no permite grabar, lo dice y ofrece adjuntar un archivo de audio.
 
+## 4.bis Verificación del 2026-09-09
+
+Segunda pasada sobre el estado real, no sobre el relevo. Tres correcciones y una comprobación.
+
+**Rutas antiguas: ahora redirigen de verdad.** `/classroom` y `/my-classes` *renderizaban* el aula
+nueva; la barra de direcciones decía una cosa y la pantalla otra, y cualquier enlace copiado desde
+ahí perpetuaba la ruta vieja. Ahora son `<Navigate to="/aula" replace />`. Con `replace` no quedan
+en el historial, así que «atrás» no rebota entre las dos.
+
+**El botón de Valeria lleva a Valeria.** Decía «Pedirle a Valeria» y dejaba al docente en el editor
+de actividades con el asistente cerrado — ahí *vive*, pero había que buscarlo. La intención viaja
+ahora en la URL (`?valeria=1`), así que sobrevive a un refresco y el enlace lleva al mismo sitio.
+
+**El docente puede oír el audio sin salir.** La entrega se veía como «Abrir el archivo que subió»,
+en otra pestaña: inservible para escuchar treinta grabaciones. En una tarea de audio se reproduce
+en línea con `SmartAudio`, y se conserva el enlace de descarga.
+
+**Cadena de audio, comprobada de extremo a extremo:**
+
+| Eslabón | Estado |
+|---|---|
+| El docente marca la tarea | `CrearActividad` envía `audioResponse` |
+| El backend lo guarda | `classroom.service` → `metadata.audioResponse` |
+| El estudiante graba | `AudioRecorder` (webm/mp4/ogg, 5 min) |
+| El archivo sube | `POST /storage/upload/classroom-material`, rol `ESTUDIANTE` admitido, acotado por institución, 10 MB |
+| El almacenamiento lo acepta | `CLASSROOM_ALLOWED_TYPES` incluye los 11 tipos de audio **y** el caso de móviles que mandan `application/octet-stream` con extensión de audio |
+| El docente lo escucha | Reproductor en la lista de entregas + descarga |
+| Los errores se ven | Sin `catch {}`: el fallo llega por `toast.error` |
+
+**Desplegado en staging, verificado en el paquete servido**: el trozo del aula
+(`index-D4JyRBhw.js`) contiene «Se responde con un audio» y «Llevar notas a la planilla»;
+`aula-clasica` está en el paquete de entrada.
+
+**Lo que NO pude verificar:** la navegación autenticada de punta a punta. Las rutas del aula están
+protegidas y entrar exige credenciales, que no debo usar. Queda pendiente de una prueba humana con
+sesión de docente y de estudiante.
+
+5 pruebas nuevas fijan el contrato de rutas (`aula/model/rutas.test.ts`), incluida una guarda
+explícita de que el Aula Clásica **no desaparece del código**.
+
+---
+
 ## 5. Lo que sigue abierto
 
 | # | Qué | De quién depende |
 |---|---|---|
-| P0-6 | **El rol ACUDIENTE** cae en la vista de estudiante | **Decisión de producto tuya:** qué debe ver un acudiente. Verificado: las dos aulas usan el **mismo** criterio (`DOCENTE`/`COORDINADOR` → docente; el resto → estudiante), así que el cambio de predeterminada no empeoró nada |
+| P0-6 | **El rol ACUDIENTE** cae en la vista de estudiante — propuesta concreta en [`PROPUESTA_ROL_ACUDIENTE.md`](PROPUESTA_ROL_ACUDIENTE.md), sin implementar | **Decisión de producto tuya:** qué debe ver un acudiente. Verificado: las dos aulas usan el **mismo** criterio (`DOCENTE`/`COORDINADOR` → docente; el resto → estudiante), así que el cambio de predeterminada no empeoró nada |
 | P0-5 | 26 `catch {}` en `Classroom.tsx` | Se van con la retirada del aula anterior (§3) |
 | — | **Retirar el aula anterior** | Trabajo grande: extraer las cuatro pestañas a componentes propios |
 | — | Lenguaje visual de las cuatro herramientas reutilizadas | Va con lo anterior |

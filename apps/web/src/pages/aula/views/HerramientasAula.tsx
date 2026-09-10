@@ -13,9 +13,11 @@ const titles: Record<Herramienta, string> = {
 }
 
 /** Reutiliza los editores existentes con el aula exacta; no copia ni transforma datos. */
-export default function HerramientasAula({ classroomId, herramienta, activityId, rol, onVolver, onCambio }: {
+export default function HerramientasAula({ classroomId, herramienta, activityId, rol, onVolver, onCambio, abrirValeria }: {
   classroomId: string; herramienta: Herramienta; activityId?: string; rol: Rol;
   onVolver: () => void; onCambio: () => void;
+  /** Llegó desde el botón «Pedirle a Valeria»: hay que abrirle el asistente, no solo la pantalla. */
+  abrirValeria?: boolean;
 }) {
   const { user } = useAuth()
   const [classroom, setClassroom] = useState<any>(null)
@@ -47,7 +49,7 @@ export default function HerramientasAula({ classroomId, herramienta, activityId,
       {error && classroom && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}<button type="button" className="ml-3 min-h-btn underline" onClick={() => setError('')}>Cerrar aviso</button></div>}
       <AulaState loading={loading} error={!classroom ? error : null} onRetry={() => setRevision(r => r + 1)} isEmpty={!classroom} empty={null}>
         {classroom && <div className="rounded-card border border-hairline bg-surface-1 p-4 sm:p-6 [&_button]:min-h-11">
-          {herramienta === 'actividades' ? <ActivitiesTab {...props} initialActivityId={activityId} />
+          {herramienta === 'actividades' ? <ActivitiesTab {...props} initialActivityId={activityId} openValeria={abrirValeria} />
             : herramienta === 'materiales' ? <ContentTab {...props} />
             : herramienta === 'anuncios' ? <AnnouncementsTab {...props} />
             : <ForumTab {...props} user={user} />}
