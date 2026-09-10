@@ -29,10 +29,36 @@ const COLLAB_FIELDS = new Set(['col', 'owner']);
 export class TallerService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private assertContext(ctx: Ctx) {
+    if (!ctx?.institutionId || !ctx?.userId) throw new NotFoundException('Contexto no encontrado');
+  }
+
+  private async loadInstrumentInScope(ctx: Ctx, id: string) {
+    this.assertContext(ctx);
+    const instrument = await this.prisma.tallerInstrument.findFirst({ where: { id, institutionId: ctx.institutionId } });
+    if (!instrument) throw new NotFoundException('Instrumento no encontrado');
+    return instrument;
+  }
+
+  private async loadObjectInScope(ctx: Ctx, id: string) {
+    this.assertContext(ctx);
+    const object = await this.prisma.tallerObject.findFirst({ where: { id, institutionId: ctx.institutionId, deletedAt: null } });
+    if (!object) throw new NotFoundException('Objeto no encontrado');
+    return object;
+  }
+
+  private async loadRelationInScope(ctx: Ctx, id: string) {
+    this.assertContext(ctx);
+    const relation = await this.prisma.tallerRelation.findFirst({ where: { id, institutionId: ctx.institutionId } });
+    if (!relation) throw new NotFoundException('Conexión no encontrada');
+    return relation;
+  }
+
   // ─── Permisos: miembro del equipo o docente dueño del proyecto ─────────────
 
   /** Resuelve el actor frente a un equipo del Aula: miembro (enrollmentId) o docente dueño. */
   private async resolveActor(teamId: string, ctx: Ctx): Promise<{ enrollmentId: string | null; name: string; role: 'student' | 'teacher' }> {
+    this.assertContext(ctx);
     const team = await this.prisma.abpTeam.findFirst({
       where: { id: teamId, institutionId: ctx.institutionId },
       include: {
@@ -90,7 +116,8 @@ export class TallerService {
     const where = { teamId: dto.teamId, institutionId: ctx.institutionId, motor, dynamic, stationId };
     let inst = await this.prisma.tallerInstrument.findFirst({ where });
     if (!inst) {
-      const team = await this.prisma.abpTeam.findFirst({ where: { id: dto.teamId }, select: { projectId: true, project: { select: { classroomId: true } } } });
+      const team = await this.prisma.abpTeam.findFirst({ where: { id: dto.teamId, institutionId: ctx.institutionId }, select: { projectId: true, project: { select: { classroomId: true } } } });
+      if (!team) throw new NotFoundException('Equipo no encontrado');
       inst = await this.prisma.tallerInstrument.create({
         data: {
           institutionId: ctx.institutionId,
@@ -105,7 +132,7 @@ export class TallerService {
       // carrera: si otro request creó a la vez, quédate con el más antiguo
       const canonical = await this.prisma.tallerInstrument.findFirst({ where, orderBy: { createdAt: 'asc' } });
       if (canonical && canonical.id !== inst.id) {
-        await this.prisma.tallerInstrument.delete({ where: { id: inst.id } }).catch(() => {});
+        await this.prisma.tallerInstrument.deleteMany({ where: { id: inst.id, institutionId: ctx.institutionId } }).catch(() => {});
         inst = canonical;
       } else {
         await this.emit(ctx, { type: 'instrument.Created', actorRole: actor.role, teamId: dto.teamId, expeditionId: inst.expeditionId, instrumentId: inst.id, payload: { motor, dynamic } });
@@ -116,12 +143,11 @@ export class TallerService {
 
   /** Estado completo de un instrumento: objetos vivos + relaciones + mis votos. */
   async getInstrumentState(ctx: Ctx, instrumentId: string) {
-    const inst = await this.prisma.tallerInstrument.findFirst({ where: { id: instrumentId, institutionId: ctx.institutionId } });
-    if (!inst) throw new NotFoundException('Instrumento no encontrado');
+    const inst = await this.loadInstrumentInScope(ctx, instrumentId);
     const actor = inst.teamId ? await this.resolveActor(inst.teamId, ctx) : { enrollmentId: null, name: 'Docente', role: 'teacher' as const };
 
     const objects = await this.prisma.tallerObject.findMany({
-      where: { instrumentId, deletedAt: null },
+      where: { institutionId: ctx.institutionId, instrumentId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
     });
     const ids = objects.map(o => o.id);
@@ -171,8 +197,7 @@ export class TallerService {
    * lo cuelga del padre con la arista 'deriva-de' (Árbol de Ideas / motor Graph).
    * Emite object.Created. */
   async createObject(ctx: Ctx, instrumentId: string, dto: { type?: string; text?: string; colorId?: number; x?: number; y?: number; parentId?: string; date?: string; fields?: Record<string, any> }) {
-    const inst = await this.prisma.tallerInstrument.findFirst({ where: { id: instrumentId, institutionId: ctx.institutionId } });
-    if (!inst) throw new NotFoundException('Instrumento no encontrado');
+    const inst = await this.loadInstrumentInScope(ctx, instrumentId);
     if (!inst.teamId) throw new BadRequestException('Instrumento sin equipo');
     const actor = await this.resolveActor(inst.teamId, ctx);
     const text = String(dto.text || '').trim();
@@ -184,7 +209,7 @@ export class TallerService {
       parent = await this.prisma.tallerObject.findFirst({
         where: { id: dto.parentId, instrumentId, institutionId: ctx.institutionId, deletedAt: null }, select: { id: true },
       });
-      if (!parent) throw new BadRequestException('La rama de la que cuelga ya no existe');
+      if (!parent) throw new NotFoundException('La rama de la que cuelga ya no existe');
     }
 
     const validTypes = ['PostIt', 'Idea', 'Note', 'Question', 'Link', 'Evidence', 'Decision', 'Task'];
@@ -218,8 +243,7 @@ export class TallerService {
    * (drag: la posición del último drop gana). Emite object.Updated (con throttle
    * implícito: el front solo llama al soltar/confirmar, no por pixel). */
   async updateObject(ctx: Ctx, objectId: string, dto: { text?: string; colorId?: number; x?: number; y?: number; version?: number; date?: string; fields?: Record<string, any> }) {
-    const obj = await this.prisma.tallerObject.findFirst({ where: { id: objectId, institutionId: ctx.institutionId, deletedAt: null } });
-    if (!obj) throw new NotFoundException('Objeto no encontrado');
+    const obj = await this.loadObjectInScope(ctx, objectId);
     if (!obj.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(obj.teamId, ctx);
     // Permisos, según la naturaleza del cambio:
@@ -262,10 +286,13 @@ export class TallerService {
 
     const expected = dto.version ?? -1;
     const res = await this.prisma.tallerObject.updateMany({
-      where: expected >= 0 ? { id: objectId, version: expected } : { id: objectId },
+      where: { id: objectId, institutionId: ctx.institutionId, deletedAt: null, ...(expected >= 0 ? { version: expected } : {}) },
       data: { data, version: { increment: 1 } },
     });
-    if (res.count === 0) throw new BadRequestException('CONFLICTO: el objeto cambió, recarga');
+    if (res.count === 0) {
+      await this.loadObjectInScope(ctx, objectId);
+      throw new BadRequestException('CONFLICTO: el objeto cambió, recarga');
+    }
     if (editaContenido) {
       await this.emit(ctx, {
         type: 'object.Updated', actorRole: actor.role,
@@ -273,19 +300,19 @@ export class TallerService {
         objectType: obj.type, objectId, payload: { text: data.text?.slice(0, 120) },
       });
     }
-    return this.prisma.tallerObject.findUnique({ where: { id: objectId } });
+    return this.loadObjectInScope(ctx, objectId);
   }
 
   /** Borrado SUAVE (nada desaparece). Autor o docente. Emite object.Deleted. */
   async deleteObject(ctx: Ctx, objectId: string) {
-    const obj = await this.prisma.tallerObject.findFirst({ where: { id: objectId, institutionId: ctx.institutionId, deletedAt: null } });
-    if (!obj) throw new NotFoundException('Objeto no encontrado');
+    const obj = await this.loadObjectInScope(ctx, objectId);
     if (!obj.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(obj.teamId, ctx);
     if (actor.role === 'student' && obj.authorId !== actor.enrollmentId) {
       throw new ForbiddenException('Solo el autor (o el docente) puede eliminarlo');
     }
-    await this.prisma.tallerObject.update({ where: { id: objectId }, data: { deletedAt: new Date() } });
+    const deleted = await this.prisma.tallerObject.updateMany({ where: { id: objectId, institutionId: ctx.institutionId, deletedAt: null }, data: { deletedAt: new Date() } });
+    if (!deleted.count) throw new NotFoundException('Objeto no encontrado');
     await this.emit(ctx, {
       type: 'object.Deleted', actorRole: actor.role,
       teamId: obj.teamId, expeditionId: obj.expeditionId, instrumentId: obj.instrumentId,
@@ -311,9 +338,8 @@ export class TallerService {
   async connectObjects(ctx: Ctx, dto: { fromId: string; toId: string; relType?: string; label?: string }) {
     if (!dto?.fromId || !dto?.toId) throw new BadRequestException('Faltan los extremos de la conexión');
     if (dto.fromId === dto.toId) throw new BadRequestException('Una pieza no se conecta consigo misma');
-    const from = await this.prisma.tallerObject.findFirst({ where: { id: dto.fromId, institutionId: ctx.institutionId, deletedAt: null } });
-    const to = await this.prisma.tallerObject.findFirst({ where: { id: dto.toId, institutionId: ctx.institutionId, deletedAt: null } });
-    if (!from || !to) throw new NotFoundException('Alguna de las piezas ya no existe');
+    const from = await this.loadObjectInScope(ctx, dto.fromId);
+    const to = await this.loadObjectInScope(ctx, dto.toId);
     if (!from.instrumentId || from.instrumentId !== to.instrumentId) throw new BadRequestException('Solo se conectan piezas del mismo instrumento');
     if (!from.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(from.teamId, ctx);
@@ -323,25 +349,25 @@ export class TallerService {
     const creada = await this.link(ctx, from.teamId, from.id, to.id, relType, label);
     if (!creada && label) {
       // ya existía esa conexión: actualizamos su etiqueta
-      await this.prisma.tallerRelation.updateMany({ where: { fromId: from.id, toId: to.id, relType }, data: { label } });
+      await this.prisma.tallerRelation.updateMany({ where: { institutionId: ctx.institutionId, fromId: from.id, toId: to.id, relType }, data: { label } });
     }
     await this.emit(ctx, {
       type: 'relation.Created', actorRole: actor.role,
       teamId: from.teamId, expeditionId: from.expeditionId, instrumentId: from.instrumentId,
       objectType: from.type, objectId: from.id, payload: { toId: to.id, relType, label },
     });
-    return this.prisma.tallerRelation.findFirst({ where: { fromId: from.id, toId: to.id, relType } });
+    return this.prisma.tallerRelation.findFirst({ where: { institutionId: ctx.institutionId, fromId: from.id, toId: to.id, relType } });
   }
 
   /** Quita una conexión libre. Cualquiera del equipo (tejer y destejer el grafo
    * es colectivo); no aplica a las aristas internas de votos/comentarios. */
   async disconnectObjects(ctx: Ctx, relationId: string) {
-    const rel = await this.prisma.tallerRelation.findFirst({ where: { id: relationId, institutionId: ctx.institutionId } });
-    if (!rel) throw new NotFoundException('Conexión no encontrada');
+    const rel = await this.loadRelationInScope(ctx, relationId);
     if (rel.relType === 'vota' || rel.relType === 'responde-a') throw new BadRequestException('Esa conexión la gestiona el sistema');
     if (!rel.teamId) throw new BadRequestException('Conexión sin equipo');
     const actor = await this.resolveActor(rel.teamId, ctx);
-    await this.prisma.tallerRelation.delete({ where: { id: relationId } });
+    const deleted = await this.prisma.tallerRelation.deleteMany({ where: { id: relationId, institutionId: ctx.institutionId } });
+    if (!deleted.count) throw new NotFoundException('Conexión no encontrada');
     await this.emit(ctx, {
       type: 'relation.Removed', actorRole: actor.role, teamId: rel.teamId,
       objectId: rel.fromId, payload: { toId: rel.toId, relType: rel.relType },
@@ -354,8 +380,7 @@ export class TallerService {
   /** Vota/des-vota un objeto. El voto ES un objeto (Vote) + relación 'vota' → target.
    * Idempotente por (autor, target): re-votar quita el voto (toggle). */
   async toggleVote(ctx: Ctx, targetId: string) {
-    const target = await this.prisma.tallerObject.findFirst({ where: { id: targetId, institutionId: ctx.institutionId, deletedAt: null } });
-    if (!target) throw new NotFoundException('Objeto no encontrado');
+    const target = await this.loadObjectInScope(ctx, targetId);
     if (!target.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(target.teamId, ctx);
     if (!actor.enrollmentId) throw new ForbiddenException('Solo los integrantes votan');
@@ -364,7 +389,7 @@ export class TallerService {
     // se mantiene la regla de no auto-votarse.
     if (target.authorId === actor.enrollmentId) {
       const inst = target.instrumentId
-        ? await this.prisma.tallerInstrument.findUnique({ where: { id: target.instrumentId }, select: { motor: true } })
+        ? await this.loadInstrumentInScope(ctx, target.instrumentId)
         : null;
       if (inst?.motor !== 'POLL') throw new BadRequestException('No puedes votar tu propio aporte');
     }
@@ -375,13 +400,15 @@ export class TallerService {
       select: { id: true },
     });
     const rel = myVotes.length ? await this.prisma.tallerRelation.findFirst({
-      where: { toId: targetId, relType: 'vota', fromId: { in: myVotes.map(v => v.id) } },
+      where: { institutionId: ctx.institutionId, toId: targetId, relType: 'vota', fromId: { in: myVotes.map(v => v.id) } },
     }) : null;
 
     if (rel) {
       // des-votar: borrado suave del Vote + quitar la arista
-      await this.prisma.tallerObject.update({ where: { id: rel.fromId }, data: { deletedAt: new Date() } });
-      await this.prisma.tallerRelation.delete({ where: { id: rel.id } });
+      const removed = await this.prisma.tallerObject.updateMany({ where: { id: rel.fromId, institutionId: ctx.institutionId, deletedAt: null }, data: { deletedAt: new Date() } });
+      if (!removed.count) throw new NotFoundException('Voto no encontrado');
+      const unlinked = await this.prisma.tallerRelation.deleteMany({ where: { id: rel.id, institutionId: ctx.institutionId } });
+      if (!unlinked.count) throw new NotFoundException('Conexión no encontrada');
       await this.emit(ctx, { type: 'vote.Removed', actorRole: actor.role, teamId: target.teamId, expeditionId: target.expeditionId, instrumentId: target.instrumentId, objectType: target.type, objectId: targetId });
       return { voted: false };
     }
@@ -403,8 +430,7 @@ export class TallerService {
   async addComment(ctx: Ctx, targetId: string, text: string) {
     const t = String(text || '').trim();
     if (!t) throw new BadRequestException('El comentario no puede estar vacío');
-    const target = await this.prisma.tallerObject.findFirst({ where: { id: targetId, institutionId: ctx.institutionId, deletedAt: null } });
-    if (!target) throw new NotFoundException('Objeto no encontrado');
+    const target = await this.loadObjectInScope(ctx, targetId);
     if (!target.teamId) throw new BadRequestException('Objeto sin equipo');
     const actor = await this.resolveActor(target.teamId, ctx);
 

@@ -2,11 +2,11 @@
 
 Fecha: 2026-09-10. Base: origin/staging 996263f806c85490c52000b0c001449dc7f2dd1d.
 
-Bloque 0 implementado con deuda explícita; bloques 1–4 pendientes. No constituye cierre global del aislamiento.
+Bloque 0 publicado con deuda explícita. Bloque 1: Taller auditado en servicios con pruebas A/B, 40 pruebas nuevas, entrega lista para staging. Resto de módulos y bloques 2–4 pendientes. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1110 declaraciones de ruta (incluye SSE y dos rutas de app), 236 con llamada directa, incondicional y esperada a requireInstitutionId, 816 pendientes de calibración y 58 excepciones no institucionales.
+1110 declaraciones de ruta (incluye SSE y dos rutas de app), 246 con llamada directa, incondicional y esperada a requireInstitutionId, 805 pendientes de calibración y 59 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -53,7 +53,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | staff-leave | 7 | 4 | 3 | 0 | Pendiente de auditoría A/B por módulo |
 | storage | 7 | 0 | 7 | 0 | Pendiente de auditoría A/B por módulo |
 | superadmin | 13 | 0 | 0 | 13 | No aplica tenant único; autorización global pendiente |
-| taller | 11 | 0 | 11 | 0 | Pendiente de auditoría A/B por módulo |
+| taller | 11 | 10 | 0 | 1 | Servicios auditados, 40 pruebas; HTTP pendiente. Ver AUDITORIA_AISLAMIENTO_TALLER.md |
 | teacher-schedule | 4 | 0 | 4 | 0 | Pendiente de auditoría A/B por módulo |
 | teacher-workspace | 61 | 0 | 61 | 0 | Pendiente de auditoría A/B por módulo |
 | timetabling | 46 | 0 | 46 | 0 | Pendiente de auditoría A/B por módulo |
@@ -62,17 +62,18 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 - Recuperaciones: docs/AUDITORIA_AISLAMIENTO_RECUPERACIONES.md documenta 33 rutas y 30 pruebas A/B de servicios. No se atribuye un cierre HTTP ni por asignación docente.
 - El encargo declara 3/39 auditados, pero no identifica inequívocamente las otras dos unidades del inventario. Aprendizajes y Reportes son antecedentes, no justifican marcar completos academic o reports sin reconciliar su alcance.
-- Taller sí contiene institutionId, resolveActor y filtros institucionales en esta base. También hay consultas posteriores sin institución. La premisa de cero menciones del encargo es incorrecta; requiere auditoría completa, no una reparación basada en esa cuenta.
+- Taller sí contiene institutionId, resolveActor y filtros institucionales en esta base. Las 13 operaciones posteriores sin filtro propio se acotaron en esta entrega; 40 pruebas añadidas. La premisa de cero menciones del encargo era incorrecta. Ver AUDITORIA_AISLAMIENTO_TALLER.md.
 - docs/security/BITACORA-RLS.md y el handoff RLS citado no existen en esta base. RLS permanece fuera del alcance; no se ha conectado a ninguna base.
 - Play no recibe una excepción global: panel personal y autenticación tienen excepciones por ruta; conversiones, sesiones y rutas públicas restantes quedan pendientes de clasificación individual.
 
 ## Riesgos y siguiente trabajo
 
-Prioridad: auditar Taller por completo, luego enrollment, templates, learning-route, attendance, preventive-cuts, observer y classroom. Continuar con los demás módulos; no modificar la frontera EduLab sin resolver el conflicto con el alcance de 39 módulos.
+Taller: auditoría de sus once rutas y servicio terminada; HTTP pendiente. Siguiente: enrollment, luego templates, learning-route, attendance, preventive-cuts, observer y classroom. Matrículas incluye traslados de notas/asistencia/tutorías en su servicio de 1.321 líneas, además de reportes (415 líneas). El usuario eligió auditoría integral del flujo: se incluyen traslados de notas, asistencia y tutorías antes de marcarlo cerrado. Matrículas en inventario, todavía sin correcciones. Continuar con los demás módulos; no modificar la frontera EduLab sin resolver el conflicto con el alcance de 39 módulos.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
 ## Verificación y entrega
 
-Verificado: 83 suites / 1.232 pruebas API (13 del contrato estructural), 19 archivos / 203 pruebas web, tipos API/web y build Nest correctos. El cliente Prisma se generó exclusivamente dentro del worktree para coincidir con el esquema; no se ejecutaron migraciones ni conexiones a bases. Ningún dato real modificado. Push pendiente; no promovido a producción. Ver docs/AUDITORIA_BLOQUE_0_BLINDAJE.md para límites del contrato.
+Verificado: 83 suites / 1.232 pruebas API (13 del contrato estructural), 19 archivos / 203 pruebas web, tipos API/web y build Nest correctos. El cliente Prisma se generó exclusivamente dentro del worktree para coincidir con el esquema; no se ejecutaron migraciones ni conexiones a bases. Ningún dato real modificado. Push a staging confirmado: afe9f388. Railway pendiente de verificar; no promovido a producción. Ver docs/AUDITORIA_BLOQUE_0_BLINDAJE.md para límites del contrato.
 
+Checkpoint Taller: 84 suites / 1.272 pruebas API, tipos API y build Nest correctos; 40 pruebas nuevas del módulo. La suite se repitió fuera del sandbox tras un fallo de lectura de una dependencia y pasó completa. Web conserva 203 pruebas y tipos aprobados, sin cambios. Push de Taller pendiente.

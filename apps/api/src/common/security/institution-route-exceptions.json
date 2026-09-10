@@ -4513,69 +4513,9 @@
   },
   {
     "key": "modules/taller/taller.controller.ts#TallerController.catalog @Get('catalog')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "7df5797a50a79b5343452e59de6efb592fa7211b007571362cf09a6ed44eac8f"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.comment @Post('objects/:id/comments')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "4c91f9cbee98062498e601e89976014cf2bd18053824872ff5bece95a0727a5f"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.connect @Post('relations')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "e7b7f1a5313d710d15cf207ba1b54396c813f5d958577b2d41398ca52ddfb362"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.createObject @Post('instruments/:id/objects')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "177b48b8199f0fd7c7e3bea3b81cbae99b1ab35723c35d2de2d15143b28ded0e"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.deleteObject @Delete('objects/:id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "118793ff7c00d713cca2fc7e2ee9842225657bd051277f0fcde4275f9b9a47b8"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.disconnect @Delete('relations/:id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c3b72a4e6b4ed70855db5157a9632fdcdf6a4978df31331bb3376191a2d01bc3"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.resolve @Post('instruments/resolve')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "09d01ef0ee1012b98fc52fcccc689ba8f1e64067f0f5c9160616274439c889e7"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.state @Get('instruments/:id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "7bc48053ee0f612d40fa63823cbd8a9b3d22be77567724755b3f70006f276014"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.timeline @Get('teams/:teamId/timeline')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "45ed633c6937144c2650194884a2809f612834d31ca360ce714c5a080930a595"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.updateObject @Patch('objects/:id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "d18bd3f13f92a76bba14edc9597d4f4b41464f64e27b3ca87e0e41a65cb204cb"
-  },
-  {
-    "key": "modules/taller/taller.controller.ts#TallerController.vote @Post('objects/:id/vote')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en taller: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "94461a32c7924839fd373a458441541d4d8272d3f90641f40c8d586c46dc7109"
+    "kind": "non-institutional",
+    "reason": "Catálogo declarativo estático de instrumentos e intenciones; no consulta Prisma ni datos de una institución. TallerController.catalog devuelve constantes del catálogo.",
+    "fingerprint": "e7d08141322f4e49462583efab56929d31724aff635d9e7ff13ff59fa0514aca"
   },
   {
     "key": "modules/teacher-schedule/teacher-schedule.controller.ts#TeacherScheduleController.create @Post()",
