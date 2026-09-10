@@ -48,6 +48,12 @@
 
 ## Notas por despliegue
 
+### Criterio permanente — formatos imprimibles del Observador
+
+- Todo tipo de registro que pueda requerir archivo físico institucional debe contar con un formato de exportación propio, descargable e imprimible.
+- El formato debe resolver la identidad de la institución autenticada (nombre, escudo, datos de identificación, contacto y color cuando estén configurados), presentar la información pertinente al proceso y prever las constancias o firmas necesarias.
+- Una vista en pantalla no sustituye el formato de archivo. Al crear o ampliar un tipo de Observador, se debe evaluar y documentar su salida imprimible antes de dar el flujo por terminado.
+
 ### 2026-08-29 — Importador de preguntas de quiz desde JSON de IA
 - **Qué:** botón "Importar IA" en el editor de Quiz/Examen. El docente pide a una IA un JSON "limpio"
   de preguntas, lo pega/sube y se crean en lote. Backend traduce al formato interno de `ActivityQuestion`.
