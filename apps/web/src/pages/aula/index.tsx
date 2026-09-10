@@ -200,11 +200,15 @@ export default function AulaVirtual() {
   )
 
   const abrirHerramienta = useCallback(
-    (herramienta: Herramienta, id?: string) => {
+    (herramienta: Herramienta, id?: string, conValeria = false) => {
       const q = new URLSearchParams(params)
       q.set('herramienta', herramienta)
       q.delete('actividad')
+      q.delete('valeria')
       if (id) q.set('actividad', id)
+      // La intención viaja en la URL, no en un estado suelto: así sobrevive a un refresco y el
+      // enlace lleva al docente al mismo sitio si lo comparte.
+      if (conValeria) q.set('valeria', '1')
       setParams(q)
     },
     [params, setParams],
@@ -213,6 +217,7 @@ export default function AulaVirtual() {
     const q = new URLSearchParams(params)
     q.delete('herramienta')
     q.delete('actividad')
+    q.delete('valeria')
     setParams(q)
     recargar()
   }
@@ -322,7 +327,8 @@ export default function AulaVirtual() {
           <Suspense fallback={<p role="status">Cargando herramientas del aula…</p>}>
             <HerramientasAula key={`${classroomId}:${herramienta ?? 'foro'}:${params.get('actividad') ?? ''}`}
               classroomId={classroomId} herramienta={herramienta ?? 'foro'} activityId={params.get('actividad') ?? undefined}
-              rol={rol} onCambio={recargar} onVolver={herramienta ? cerrarHerramienta : () => irA('hoy')} />
+              rol={rol} onCambio={recargar} onVolver={herramienta ? cerrarHerramienta : () => irA('hoy')}
+              abrirValeria={params.get('valeria') === '1'} />
           </Suspense>
         ) : activityId ? (
           <DetalleCargado
@@ -349,7 +355,7 @@ export default function AulaVirtual() {
             totalEstudiantes={aula?.estudiantes ?? null}
             // Creación por intención y herramientas completas dentro de la misma aula.
             onCrear={rol === 'docente' ? tipo => tipo === 'MATERIAL' ? abrirHerramienta('materiales') : abrirCreacion(tipo) : undefined}
-            onValeria={rol === 'docente' ? () => abrirHerramienta('actividades') : undefined}
+            onValeria={rol === 'docente' ? () => abrirHerramienta('actividades', undefined, true) : undefined}
           />
         ) : vista === 'unidades' ? (
           <Unidades

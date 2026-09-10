@@ -2094,8 +2094,11 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
   AUTO_GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Auto-calificado' },
 }
 
-export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError, initialActivityId }: {
+export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError, initialActivityId, openValeria }: {
   classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void; initialActivityId?: string
+  /** Abre el asistente de Valeria nada más entrar. Lo usa el aula nueva: su botón prometía a
+   *  Valeria y solo dejaba al docente en la pantalla donde vive, con el asistente cerrado. */
+  openValeria?: boolean
 }) {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -2938,6 +2941,14 @@ export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setEr
       } catch { setMySubmission(null) }
     }
   }
+
+  // Se abre UNA vez: con una ref y no con estado, para que volver del modal no lo reabra.
+  const abrioValeria = useRef(false)
+  useEffect(() => {
+    if (!openValeria || !isTeacher || abrioValeria.current) return
+    abrioValeria.current = true
+    setShowValeriaModal(true)
+  }, [openValeria, isTeacher])
 
   useEffect(() => {
     if (loading || !initialActivityId || openedInitialActivity.current === initialActivityId) return
