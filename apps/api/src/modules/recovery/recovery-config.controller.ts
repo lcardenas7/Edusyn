@@ -31,27 +31,40 @@ export class RecoveryConfigController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async upsertConfig(@Body() data: any) {
-    return this.configService.upsertConfig(data);
+  async upsertConfig(@Body() data: any, @Request() req: any) {
+    // El cuerpo ya no decide la institución: la pone el actor.
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
+    return this.configService.upsertConfig({ ...data, institutionId: instId });
   }
 
   // ─── Reglas granulares ───
 
   @Get(':configId/rules')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async listRules(@Param('configId') configId: string) {
-    return this.configService.listRules(configId);
+  async listRules(
+    @Param('configId') configId: string,
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.configService.listRules(configId, instId);
   }
 
   @Post('rules')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async upsertRule(@Body() data: any) {
-    return this.configService.upsertRule(data);
+  async upsertRule(@Body() data: any, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
+    return this.configService.upsertRule(data, instId);
   }
 
   @Delete('rules/:id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async deleteRule(@Param('id') id: string) {
-    return this.configService.deleteRule(id);
+  async deleteRule(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.configService.deleteRule(id, instId);
   }
 }

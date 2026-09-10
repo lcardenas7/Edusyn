@@ -27,29 +27,44 @@ export class FinalRecoveryController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async create(@Body() data: any) {
-    return this.finalRecoveryService.create(data);
+  async create(@Body() data: any, @Req() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
+    return this.finalRecoveryService.create(data, instId);
   }
 
   @Get('by-year')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async findByYear(
+    @Req() req: any,
     @Query('academicYearId') academicYearId: string,
     @Query('status') status?: string,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.finalRecoveryService.findByYear(academicYearId, status as any);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.finalRecoveryService.findByYear(academicYearId, status as any, instId);
   }
 
   @Get('by-student/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async findByStudent(@Param('studentEnrollmentId') studentEnrollmentId: string) {
-    return this.finalRecoveryService.findByStudent(studentEnrollmentId);
+  async findByStudent(
+    @Param('studentEnrollmentId') studentEnrollmentId: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.finalRecoveryService.findByStudent(studentEnrollmentId, instId);
   }
 
   @Patch(':id/plan')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async updatePlan(@Param('id') id: string, @Body() data: any) {
-    return this.finalRecoveryService.updatePlan(id, data);
+  async updatePlan(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.finalRecoveryService.updatePlan(id, data, instId);
   }
 
   @Patch(':id/result')

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AcademicActType } from '@prisma/client';
 
@@ -59,9 +59,19 @@ export class AcademicActsService {
     });
   }
 
-  async findByStudent(studentEnrollmentId: string) {
+  /** Exige que la matrícula sea del tenant del actor antes de listarle sus actas. */
+  private async assertEnrollmentScope(institutionId: string, studentEnrollmentId: string) {
+    const enr = await this.prisma.studentEnrollment.findFirst({
+      where: { id: studentEnrollmentId, institutionId },
+      select: { id: true },
+    });
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
+  }
+
+  async findByStudent(studentEnrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentScope(institutionId, studentEnrollmentId);
     return this.prisma.academicAct.findMany({
-      where: { studentEnrollmentId },
+      where: { studentEnrollmentId, institutionId },
       include: {
         academicYear: true,
         finalRecoveryPlan: {
@@ -74,7 +84,14 @@ export class AcademicActsService {
     });
   }
 
-  async approve(id: string, approvedById: string) {
+  async approve(id: string, approvedById: string, institutionId: string) {
+    // Aprobar un acta ajena era posible con solo conocer su id. Se comprueba antes de escribir.
+    const acta = await this.prisma.academicAct.findFirst({
+      where: { id, institutionId },
+      select: { id: true },
+    });
+    if (!acta) throw new NotFoundException('Acta no encontrada');
+
     return this.prisma.academicAct.update({
       where: { id },
       data: {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecoveryImpactType } from '@prisma/client';
 
@@ -114,6 +114,22 @@ export class RecoveryConfigService {
   // CRUD DE REGLAS GRANULARES (RecoveryRule)
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Exige que la configuración pertenezca al tenant del actor.
+   *
+   * Las reglas cuelgan de una configuración, y la configuración es de una institución. Sin esta
+   * guarda bastaba conocer el `recoveryConfigId` para listar, crear o borrar las reglas de
+   * recuperación de otro colegio — es decir, para cambiarle a otra institución la nota máxima
+   * que puede sacar un estudiante recuperando.
+   */
+  private async assertConfigScope(institutionId: string, recoveryConfigId: string) {
+    const config = await this.prisma.recoveryConfig.findFirst({
+      where: { id: recoveryConfigId, institutionId },
+      select: { id: true },
+    });
+    if (!config) throw new NotFoundException('Configuración de recuperación no encontrada');
+  }
+
   async upsertRule(data: {
     recoveryConfigId: string;
     institutionId: string;
@@ -125,8 +141,12 @@ export class RecoveryConfigService {
     isEnabled?: boolean;
     label?: string;
     description?: string;
-  }) {
+  }, actorInstitutionId?: string) {
     const { recoveryConfigId, institutionId, appliesTo, activityType, ...ruleData } = data;
+    // El cuerpo traía su propio `institutionId` y se escribía tal cual. Se exige que la
+    // configuración sea del actor, y la regla hereda ESA institución.
+    const dueno = actorInstitutionId ?? institutionId;
+    await this.assertConfigScope(dueno, recoveryConfigId);
 
     return this.prisma.recoveryRule.upsert({
       where: {
@@ -139,7 +159,7 @@ export class RecoveryConfigService {
       update: ruleData,
       create: {
         recoveryConfigId,
-        institutionId,
+        institutionId: dueno,
         appliesTo,
         activityType: activityType as any,
         ...ruleData,
@@ -147,13 +167,18 @@ export class RecoveryConfigService {
     });
   }
 
-  async deleteRule(id: string) {
-    return this.prisma.recoveryRule.delete({ where: { id } });
+  async deleteRule(id: string, institutionId: string) {
+    // Borrado por id. `deleteMany` acotado en lugar de `delete`: si la regla es de otra
+    // institución no borra nada, y se responde como si no existiera.
+    const borradas = await this.prisma.recoveryRule.deleteMany({ where: { id, institutionId } });
+    if (borradas.count === 0) throw new NotFoundException('Regla de recuperación no encontrada');
+    return { success: true };
   }
 
-  async listRules(recoveryConfigId: string) {
+  async listRules(recoveryConfigId: string, institutionId: string) {
+    await this.assertConfigScope(institutionId, recoveryConfigId);
     return this.prisma.recoveryRule.findMany({
-      where: { recoveryConfigId },
+      where: { recoveryConfigId, institutionId },
       orderBy: [{ appliesTo: 'asc' }, { activityType: 'asc' }],
     });
   }

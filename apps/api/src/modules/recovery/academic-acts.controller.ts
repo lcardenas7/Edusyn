@@ -17,8 +17,11 @@ export class AcademicActsController {
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() data: any, @Req() req: any) {
+    // El cuerpo no decide la institución.
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
     return this.academicActsService.create({
       ...data,
+      institutionId: instId,
       createdById: req.user.id,
     });
   }
@@ -37,21 +40,33 @@ export class AcademicActsController {
 
   @Get('by-student/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async findByStudent(@Param('studentEnrollmentId') studentEnrollmentId: string) {
-    return this.academicActsService.findByStudent(studentEnrollmentId);
+  async findByStudent(
+    @Param('studentEnrollmentId') studentEnrollmentId: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.academicActsService.findByStudent(studentEnrollmentId, instId);
   }
 
   @Patch(':id/approve')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async approve(@Param('id') id: string, @Req() req: any) {
-    return this.academicActsService.approve(id, req.user.id);
+  async approve(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.academicActsService.approve(id, req.user.id, instId);
   }
 
   @Post('promotion')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async generatePromotionAct(@Body() data: any, @Req() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
     return this.academicActsService.generatePromotionAct({
       ...data,
+      institutionId: instId,
       createdById: req.user.id,
     });
   }
@@ -59,8 +74,10 @@ export class AcademicActsController {
   @Post('academic-council')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async generateAcademicCouncilAct(@Body() data: any, @Req() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req, data?.institutionId);
     return this.academicActsService.generateAcademicCouncilAct({
       ...data,
+      institutionId: instId,
       createdById: req.user.id,
     });
   }

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecoveryStatus, RecoveryActivityType } from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
@@ -84,6 +84,15 @@ export class FinalRecoveryService {
     return studentsNeedingRecovery;
   }
 
+  /** Exige que la matrícula sea del tenant del actor. */
+  private async assertEnrollmentScope(institutionId: string, studentEnrollmentId: string) {
+    const enr = await this.prisma.studentEnrollment.findFirst({
+      where: { id: studentEnrollmentId, institutionId },
+      select: { id: true },
+    });
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
+  }
+
   async create(data: {
     studentEnrollmentId: string;
     academicYearId: string;
@@ -97,12 +106,16 @@ export class FinalRecoveryService {
     endDate?: Date;
     responsibleTeacherId: string;
     supervisorId?: string;
-  }) {
+  }, institutionId: string) {
+    // La matrícula viene del cliente. Antes se leía sin acotar y se copiaba SU institución al
+    // plan nuevo: el registro quedaba coherente y el cruce era invisible en los datos.
+    await this.assertEnrollmentScope(institutionId, data.studentEnrollmentId);
+
     const enr = await this.prisma.studentEnrollment.findUnique({
       where: { id: data.studentEnrollmentId },
       select: { institutionId: true },
     });
-    if (!enr) throw new BadRequestException('Matrícula no encontrada');
+    if (!enr) throw new NotFoundException('Matrícula no encontrada');
 
     // Validar que la recuperación final esté permitida
     const validation = await this.engine.validateRecoveryCreation({
@@ -167,10 +180,11 @@ export class FinalRecoveryService {
     });
   }
 
-  async findByYear(academicYearId: string, status?: RecoveryStatus) {
+  async findByYear(academicYearId: string, status: RecoveryStatus | undefined, institutionId: string) {
     return this.prisma.finalRecoveryPlan.findMany({
       where: {
         academicYearId,
+        institutionId,
         ...(status && { status }),
       },
       include: {
@@ -193,9 +207,10 @@ export class FinalRecoveryService {
     });
   }
 
-  async findByStudent(studentEnrollmentId: string) {
+  async findByStudent(studentEnrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentScope(institutionId, studentEnrollmentId);
     return this.prisma.finalRecoveryPlan.findMany({
-      where: { studentEnrollmentId },
+      where: { studentEnrollmentId, institutionId },
       include: {
         academicYear: true,
         area: true,
@@ -219,7 +234,16 @@ export class FinalRecoveryService {
       evidences?: string;
       observations?: string;
     },
+    institutionId: string,
   ) {
+    // Actualizaba por id SIN comprobar nada: ni siquiera cargaba el plan. Bastaba conocer el
+    // identificador para reescribir el plan de refuerzo de otra institución.
+    const plan = await this.prisma.finalRecoveryPlan.findFirst({
+      where: { id, institutionId },
+      select: { id: true },
+    });
+    if (!plan) throw new NotFoundException('Plan de recuperación no encontrado');
+
     return this.prisma.finalRecoveryPlan.update({
       where: { id },
       data: {
