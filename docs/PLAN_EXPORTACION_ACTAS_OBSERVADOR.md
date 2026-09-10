@@ -11,7 +11,7 @@ Implementar una exportación formal y segura de las observaciones clasificadas c
 El encabezado toma sus valores de la configuración institucional, sin codificar datos de un colegio en el programa:
 
 - nombre oficial;
-- escudo institucional, cuando exista en el perfil;
+- escudo institucional: la fuente canónica es el perfil de la institución. Mientras una institución tenga un escudo histórico guardado solo en la configuración de Boletines, los formatos del Observador lo leen como respaldo; al guardar desde Boletines se consolida también en el perfil para que todos los formatos usen la misma identidad.
 - dirección;
 - resolución oficial tomada de la configuración de boletines;
 - NIT y código DANE, cuando estén registrados;
@@ -108,4 +108,4 @@ La versión puede pasar a producción cuando API y web compilen, las pruebas de 
 - `staging`: commit funcional `bba72e62` publicado. La ruta `POST /api/observer/actas/export` responde `401` sin sesión, lo que confirma que el backend desplegado reconoce y protege el endpoint.
 - El buscador público de staging no contiene a La Esperanza del Sur. Para no copiar información real ni crear casos artificiales en producción, la prueba funcional autenticada se conserva con datos sintéticos y las pruebas automatizadas de aislamiento.
 - `producción`: commit funcional `af78f616` publicado desde un worktree limpio basado en `origin/main`. La ruta de `api.edusyn.co` responde `401` sin sesión y el paquete web público contiene los controles de exportación conjunta e individual.
-- Configuración institucional pendiente: cargar o confirmar el escudo oficial y verificar en el perfil la dirección, resolución, NIT y color antes de considerar definitivo el formato de La Esperanza del Sur.
+- Configuración institucional pendiente: cargar o confirmar el escudo oficial y verificar en el perfil la dirección, resolución, NIT y color antes de considerar definitivo el formato de La Esperanza del Sur. Desde la corrección de identidad, un escudo ya guardado en Boletines sirve como respaldo para Actas y Seguimientos, y el próximo guardado lo consolida en el perfil institucional.
