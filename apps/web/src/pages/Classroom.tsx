@@ -6,6 +6,7 @@ import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi, academicTe
 import { compareStudents } from '../utils/sortStudents'
 import { bogotaInputToIso, isoToBogotaInput, formatBogota } from '../lib/datetime'
 import { toast } from '../lib/toast'
+import { textoPlanoDeHtml } from '../lib/html'
 import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
 import LearningBadges from '../components/LearningBadges'
@@ -6921,7 +6922,9 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                     {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
                     <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{post.title || 'Sin título'}</h3>
                   </div>
-                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">{post.content}</p>
+                  {/* Vista previa en texto plano: `content` es el HTML del editor, y pintado como
+                      texto salían las etiquetas y los `&nbsp;` en la lista del foro. */}
+                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">{textoPlanoDeHtml(post.content)}</p>
                   <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
                     <span>{post.author.firstName} {post.author.lastName}</span>
                     <span>{formatDate(post.createdAt)}</span>
