@@ -3078,100 +3078,16 @@
     "fingerprint": "e83f98d32fe02d3fc9dfb14c0c1b451f6e332a0eb594b58ff13d32cc3f2c6edf"
   },
   {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.addStep @Post(':routeId/steps')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "de9f7f0bdef59c4cd45e21a96aec112fff3ff8afe50bee62a980223f985db53b"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.addStepWithNewActivity @Post(':routeId/steps/new-activity')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "00eb00567e65609575f8589502e1ba2da5aaf7564c9eee6ae2efa8922c28588b"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.byClassroom @Get('classroom/:classroomId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "456a9c85e7df59279d288139b4310cecf4a8d73e6d9b3e89ffbbd2c791a15c21"
-  },
-  {
     "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.competencies @Get('competencies')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "8ffd2a0484f93ca3731f9e5f092fe28576efe0c104b68e3ad2ec62cd396811f2"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.create @Post()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1675cec699b26338002b15e89dca49c9d027c203f6f455bf011eaf9093a5ef40"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.createStepActivity @Post('steps/:stepId/activity')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c7dd89501f3566c8b0765afb970bcbddb23209ec9362d0559489d278f5dc0a20"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.fromPlan @Post('from-plan')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "20c0875f1f9d76dbe9b0311f2fc37b2e0e9ce8b985081a823061b9864f39df72"
+    "kind": "non-institutional",
+    "reason": "Catálogo GLOBAL de can-do CEFR: el modelo Competency no tiene institutionId en el esquema, así que no hay dato de ninguna institución que acotar. Auditado en docs/AUDITORIA_AISLAMIENTO_LEARNING_ROUTE.md.",
+    "fingerprint": "112d670b7ac9ca616ddf8fd269ee866eb05095f6eefaac8952d3e775137b60cf"
   },
   {
     "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.generate @Post('generate')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "a9ea93935ba9dfe47177e1fd2e19442c404a26ac25baec242dc8a0ade41ef9b4"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.generateStepLesson @Post('steps/:stepId/generate-lesson')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1bd860de903e118942056235d00c9a764edbadb2849ec857fc92a781c73bcb63"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.getOne @Get(':routeId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "e2e7c54663cf02be56a3e7d46fdaa8228b22c93091c5b0bd5357e507a6e8d607"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.myProgress @Get(':routeId/progress')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "3c3fd2aa30cd2147ca080d06bba6fa7e70dbcca0d0ef56bc9a0d533225030e25"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.remove @Delete(':routeId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "628ec695d0d8d9bec605dce147cb85517aeeca79c2c7cd335d5a6e98a7158bbd"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.removeStep @Delete('steps/:stepId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c0cd2bb4445a60e8bc11079b36145341dde05c5641ecffc69cf9480c34d368fb"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.reorder @Put(':routeId/steps/reorder')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "efcc8beb537361717ad818c867f0b43ad14d0be826db0750026aeb425e2ef5ee"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.update @Put(':routeId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "8ccb2bd6b03eb1833386f68ff23a9323919709fddc15d9b738f1e3aaf0d7f1ed"
-  },
-  {
-    "key": "modules/learning-route/learning-route.controller.ts#LearningRouteController.updateStep @Put('steps/:stepId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en learning-route: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "b8c74bd1f5a0f694dc72c0d9a8a8a98cf04d571b9b8824293551a7a950330d64"
+    "kind": "non-institutional",
+    "reason": "Genera un borrador de ruta con Valeria y lo devuelve sin persistir: cero operaciones Prisma en el camino, ningún dato institucional leído ni escrito. Auditado en docs/AUDITORIA_AISLAMIENTO_LEARNING_ROUTE.md.",
+    "fingerprint": "30c3dac280b758b878b96aeac14ade8ef5aacb17d5a2c6ecb202c006952f3226"
   },
   {
     "key": "modules/live-session/live-session.controller.ts#LiveSessionController.addPartner @Post(':id/add-partner')",
