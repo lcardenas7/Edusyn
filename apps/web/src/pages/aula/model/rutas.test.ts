@@ -55,6 +55,11 @@ describe('Aula · contrato de rutas', () => {
 
   it('el Aula Clásica NO desaparece del código', () => {
     // Guarda explícita: retirarla es una decisión aparte y todavía no está tomada.
-    expect(app).toContain('lazy(() => import(\'./pages/Classroom\'))')
+    // Vale cualquiera de las dos formas de importarla: en staging las páginas se cargan en
+    // diferido (`lazy`) y en producción, mientras no se promueva esa mejora, de forma directa.
+    const importada =
+      app.includes('lazy(() => import(\'./pages/Classroom\'))') ||
+      /import Classroom from '\.\/pages\/Classroom'/.test(app)
+    expect(importada).toBe(true)
   })
 })
