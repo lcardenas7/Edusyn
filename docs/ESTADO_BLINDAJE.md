@@ -68,7 +68,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 ## Riesgos y siguiente trabajo
 
-Taller: once rutas y servicio revisados, HTTP pendiente. Matrículas: correcciones integrales y laboratorio HTTP con JWT real y Prisma simulado. Faltan contención/rollback con PostgreSQL sintético y las dependencias HTTP de plantillas, notas y asistencia. Inclusión: recorridos mejorados y comprobados con un colegio ficticio; servicio APD y planes pedagógicos aún sin auditoría integral A/B. Continuar con estos puntos y luego templates, learning-route, attendance, preventive-cuts, observer y classroom. No modificar la frontera EduLab.
+Prioridad indicada por el usuario el 2026-09-11: posponer Inclusión, con pendientes en REGISTRO_DESPLIEGUES.md y AUDITORIA_AISLAMIENTO_INCLUSION.md, y retomar academic/templates → learning-route → attendance → preventive-cuts → observer → classroom. Taller conserva HTTP pendiente. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de plantillas, notas y asistencia pendientes. No modificar la frontera EduLab.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
