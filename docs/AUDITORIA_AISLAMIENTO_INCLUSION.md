@@ -1,6 +1,6 @@
 # Inclusión Educativa (APD): auditoría parcial y flujo de trabajo
 
-Fecha: 2026-09-11. Base: `origin/staging` 8f63c9d9. No declara el módulo cerrado.
+Fecha: 2026-09-11. Revisión iniciada en `origin/staging` 8f63c9d9, integrada sobre ee1cbb3a. Correcciones: 9ae32d6b. No declara el módulo cerrado.
 
 ## Hallazgos corregidos
 
@@ -38,6 +38,7 @@ Antes: 32 rutas, 31 con resolución directa. Después: 35 rutas, 34 con resoluci
 - `apps/api/src/modules/apd/apd-workspace.http.spec.ts`: 18 pruebas con Nest, estrategia JWT y RolesGuard reales; almacenamiento Prisma simulado con filtros A/B. Incluye docentes y orientación, bandera desactivada, intentos de cambiar configuración y cruces en ambas direcciones.
 - `apps/api/src/modules/apd/apd-plans-isolation.spec.ts`: 39 pruebas de servicios. El doble aplica igualdad, claves compuestas y relaciones, y registra cada intento de escritura. Los cruces no escriben ni auditan; lectura cruzada no llega a consultas con relaciones. Incluye perfil de otro estudiante del mismo colegio, período de otro año, consentimiento, duplicados, contexto omitido, reabrir y vaciar campos.
 - `apps/web/tests/enrollment-inclusion.smoke.cjs`: recorridos sintéticos de Matrículas e Inclusión, incluidos docente habilitado/deshabilitado, orientación, selección de estudiante, agenda, edición y pantalla móvil. Las peticiones están interceptadas: complementa las pruebas HTTP, no las sustituye.
+- Verificación tras integrar staging: 88 suites / 1.440 pruebas API, 22 archivos / 214 pruebas web y recorrido de navegador aprobados. Build Nest y tipos API/web aprobados. Las tres pruebas antiguas de actualización de perfiles se adaptaron a consultas filtradas y rechazo 404; el ciclo de consentimiento sigue cubierto.
 
 ## Qué NO cubre
 

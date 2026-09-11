@@ -1,6 +1,6 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-11. Base de esta entrega: origin/staging 8f63c9d9.
+Fecha: 2026-09-11. Base de esta entrega: origin/staging ee1cbb3a; correcciones de Inclusión en 9ae32d6b.
 
 Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: mejoras de uso y acceso por rol; 39 pruebas de perfiles/planes y 18 HTTP del contexto de trabajo. Auditoría del resto del módulo pendiente. No constituye cierre global del aislamiento.
 
@@ -82,3 +82,5 @@ Checkpoint Taller: 84 suites / 1.272 pruebas API, tipos API y build Nest correct
 Checkpoint Matrículas/Inclusión (2026-09-11): 86 suites / 1.383 pruebas API aprobadas; 111 nuevas (63 servicios + 48 HTTP). Tipos API/web aprobados. Navegador local sintético: recorridos de Matrículas, edición de estudiante, agenda y edición de planes, selección de estudiante en perfiles y vista móvil aprobados. Pruebas HTTP no conectan PostgreSQL ni certifican RLS. Ver los dos documentos de esta entrega para alcance y pendientes.
 
 Verificación final de la entrega: build Nest aprobado; web 21 archivos / 208 pruebas, tipos aprobados y smoke de navegador reproducible aprobado. No se verificó Railway ni se promovió a producción.
+
+Checkpoint adicional de Inclusión: 88 suites / 1.440 pruebas API y 22 archivos / 214 pruebas web aprobados después de integrar staging ee1cbb3a. 57 pruebas nuevas de Inclusión (39 de servicio y 18 HTTP). Build Nest y tipos API/web aprobados; navegador sintético de Matrículas e Inclusión aprobado. Los 39 módulos conservan su estado explícito: este checkpoint no cierra APD ni el aislamiento global.
