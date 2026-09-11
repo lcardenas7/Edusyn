@@ -13,6 +13,7 @@ const writeMethods = ['create', 'update', 'updateMany', 'deleteMany'];
 function matches(row: any, where: any = {}): boolean {
   return Object.entries(where).every(([key, value]: [string, any]) => {
     if (value === undefined) return true;
+    if (key === 'AND') return (Array.isArray(value) ? value : [value]).every((part: any) => matches(row, part));
     if (key === 'OR') return value.some((part: any) => matches(row, part));
     if (value && typeof value === 'object') {
       if ('in' in value) return value.in.includes(row[key]);
@@ -91,4 +92,3 @@ export function noWrites(prisma: any) {
     for (const method of writeMethods) expect(delegate[method]).not.toHaveBeenCalled();
   }
 }
-

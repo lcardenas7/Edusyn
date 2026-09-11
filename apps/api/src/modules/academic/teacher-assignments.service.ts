@@ -175,7 +175,7 @@ export class TeacherAssignmentsService {
       }
     });
 
-    await this.templatesService.syncTemplateFromActiveAssignments(params.gradeId, params.academicYearId, {
+    await this.templatesService.syncTemplateFromActiveAssignments(params.gradeId, params.academicYearId, params.institutionId, {
       countInAverage: params.countInAverage,
     });
 

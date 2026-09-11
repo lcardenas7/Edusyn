@@ -34,6 +34,7 @@ export class TemplatesController {
   @Post('quick-setup')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async quickSetup(
+    @Request() req: any,
     @Body() body: {
       institutionId: string;
       academicYearId: string;
@@ -45,12 +46,14 @@ export class TemplatesController {
       }>;
     },
   ) {
-    return this.templatesService.quickSetup(body);
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    return this.templatesService.quickSetup({ ...body, institutionId: instId });
   }
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async createTemplate(
+    @Request() req: any,
     @Body() body: {
       institutionId: string;
       academicYearId: string;  // 🔥 REQUERIDO
@@ -62,22 +65,21 @@ export class TemplatesController {
       useAttitudinalAchievement?: boolean;
     },
   ) {
-    return this.templatesService.createTemplate(body);
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    return this.templatesService.createTemplate({ ...body, institutionId: instId });
   }
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async listTemplates(
+    @Request() req: any,
     @Query('institutionId') institutionId: string,
     @Query('academicYearId') academicYearId: string,  // 🔥 REQUERIDO
     @Query('level') level?: AcademicLevel,
     @Query('includeInactive') includeInactive?: string,
   ) {
-    return this.templatesService.listTemplates(
-      institutionId,
-      academicYearId,
-      level,
-      includeInactive === 'true',
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.templatesService.listTemplates(instId, academicYearId, level, includeInactive === 'true'
     );
   }
 
@@ -103,13 +105,16 @@ export class TemplatesController {
 
   @Get(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getTemplate(@Param('id') id: string) {
-    return this.templatesService.findTemplateById(id);
+  async getTemplate(
+    @Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.findTemplateById(id, instId);
   }
 
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateTemplate(
+    @Request() req: any,
     @Param('id') id: string,
     @Body() body: {
       name?: string;
@@ -121,13 +126,16 @@ export class TemplatesController {
       useAttitudinalAchievement?: boolean;
     },
   ) {
-    return this.templatesService.updateTemplate(id, body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.updateTemplate(id, body, instId);
   }
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async deleteTemplate(@Param('id') id: string) {
-    return this.templatesService.deleteTemplate(id);
+  async deleteTemplate(
+    @Request() req: any, @Param('id') id: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.deleteTemplate(id, instId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -137,6 +145,7 @@ export class TemplatesController {
   @Post(':templateId/areas')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async addAreaToTemplate(
+    @Request() req: any,
     @Param('templateId') templateId: string,
     @Body() body: {
       areaId: string;
@@ -148,12 +157,14 @@ export class TemplatesController {
       order?: number;
     },
   ) {
-    return this.templatesService.addAreaToTemplate({ templateId, ...body });
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.addAreaToTemplate({ ...body, templateId }, instId);
   }
 
   @Put('areas/:templateAreaId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateTemplateArea(
+    @Request() req: any,
     @Param('templateAreaId') templateAreaId: string,
     @Body() body: {
       weightPercentage?: number;
@@ -164,13 +175,16 @@ export class TemplatesController {
       order?: number;
     },
   ) {
-    return this.templatesService.updateTemplateArea(templateAreaId, body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.updateTemplateArea(templateAreaId, body, instId);
   }
 
   @Delete('areas/:templateAreaId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async removeAreaFromTemplate(@Param('templateAreaId') templateAreaId: string) {
-    return this.templatesService.removeAreaFromTemplate(templateAreaId);
+  async removeAreaFromTemplate(
+    @Request() req: any, @Param('templateAreaId') templateAreaId: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.removeAreaFromTemplate(templateAreaId, instId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -180,6 +194,7 @@ export class TemplatesController {
   @Post('areas/:templateAreaId/subjects')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async addSubjectToTemplateArea(
+    @Request() req: any,
     @Param('templateAreaId') templateAreaId: string,
     @Body() body: {
       subjectId: string;
@@ -191,12 +206,14 @@ export class TemplatesController {
       useAttitudinalAchievement?: boolean;
     },
   ) {
-    return this.templatesService.addSubjectToTemplateArea({ templateAreaId, ...body });
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.addSubjectToTemplateArea({ ...body, templateAreaId }, instId);
   }
 
   @Put('subjects/:templateSubjectId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateTemplateSubject(
+    @Request() req: any,
     @Param('templateSubjectId') templateSubjectId: string,
     @Body() body: {
       weeklyHours?: number;
@@ -207,16 +224,19 @@ export class TemplatesController {
       useAttitudinalAchievement?: boolean | null;
     },
   ) {
-    return this.templatesService.updateTemplateSubject(templateSubjectId, body);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.updateTemplateSubject(templateSubjectId, body, instId);
   }
 
   @Delete('subjects/:templateSubjectId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async removeSubjectFromTemplateArea(
+    @Request() req: any,
     @Param('templateSubjectId') templateSubjectId: string,
     @Query('force') force?: string,
   ) {
-    return this.templatesService.removeSubjectFromTemplateArea(templateSubjectId, force === 'true');
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.removeSubjectFromTemplateArea(templateSubjectId, instId, force === 'true');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -226,37 +246,45 @@ export class TemplatesController {
   @Post('grades/:gradeId/assign')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async assignTemplateToGrade(
+    @Request() req: any,
     @Param('gradeId') gradeId: string,
     @Body() body: { templateId: string; academicYearId: string; overrides?: any },
   ) {
-    return this.templatesService.assignTemplateToGrade(gradeId, body.templateId, body.academicYearId, body.overrides);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.assignTemplateToGrade(gradeId, body.templateId, body.academicYearId, instId, body.overrides);
   }
 
   @Post('grades/:gradeId/sync-from-assignments')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async syncTemplateFromActiveAssignments(
+    @Request() req: any,
     @Param('gradeId') gradeId: string,
     @Body() body: { academicYearId: string },
   ) {
-    return this.templatesService.syncTemplateFromActiveAssignments(gradeId, body.academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.syncTemplateFromActiveAssignments(gradeId, body.academicYearId, instId);
   }
 
   @Delete('grades/:gradeId/assign')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async removeTemplateFromGrade(
+    @Request() req: any,
     @Param('gradeId') gradeId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
-    return this.templatesService.removeTemplateFromGrade(gradeId, academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.removeTemplateFromGrade(gradeId, academicYearId, instId);
   }
 
   @Get('grades/:gradeId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getGradeTemplate(
+    @Request() req: any,
     @Param('gradeId') gradeId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
-    return this.templatesService.getGradeTemplate(gradeId, academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.getGradeTemplate(gradeId, academicYearId, instId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -266,6 +294,7 @@ export class TemplatesController {
   @Post('groups/:groupId/exceptions')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async addGroupException(
+    @Request() req: any,
     @Param('groupId') groupId: string,
     @Body() body: {
       subjectId: string;
@@ -276,26 +305,31 @@ export class TemplatesController {
       reason?: string;
     },
   ) {
-    return this.templatesService.addGroupException({ groupId, ...body });
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.addGroupException({ ...body, groupId }, instId);
   }
 
   @Delete('groups/:groupId/exceptions/:subjectId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async removeGroupException(
+    @Request() req: any,
     @Param('groupId') groupId: string,
     @Param('subjectId') subjectId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
-    return this.templatesService.removeGroupException(groupId, subjectId, academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.removeGroupException(groupId, subjectId, academicYearId, instId);
   }
 
   @Get('groups/:groupId/exceptions')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getGroupExceptions(
+    @Request() req: any,
     @Param('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
-    return this.templatesService.getGroupExceptions(groupId, academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.getGroupExceptions(groupId, academicYearId, instId);
   }
 
   @Get('groups/:groupId/effective-structure')

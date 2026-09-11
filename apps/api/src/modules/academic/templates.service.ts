@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AcademicLevel, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule, GroupExceptionType, GradeStage } from '@prisma/client';
+import { AcademicLevel, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule, GroupExceptionType, GradeStage, Prisma } from '@prisma/client';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICIO DE PLANTILLAS ACADÉMICAS
@@ -9,7 +9,60 @@ import { AcademicLevel, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule,
 
 @Injectable()
 export class TemplatesService {
+  private transactional = false;
   constructor(private readonly prisma: PrismaService) {}
+
+  private withTransaction<T>(action: (service: TemplatesService) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(async tx => {
+      const service = new TemplatesService(tx as PrismaService);
+      service.transactional = true;
+      return action(service);
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30000 });
+  }
+
+  private scopeWhere(model: string, institutionId: string): any {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    switch (model) {
+      case 'teacherAssignment': return { institutionId, academicYear: { institutionId }, group: { campus: { institutionId }, grade: { institutionId } }, subject: { area: { institutionId } } };
+      case 'templateArea': return { template: { institutionId }, area: { institutionId } };
+      case 'templateSubject': return { templateArea: { template: { institutionId }, area: { institutionId } }, subject: { area: { institutionId } } };
+      case 'gradeTemplate': return { grade: { institutionId }, template: { institutionId }, academicYear: { institutionId } };
+      case 'groupSubjectException': return { group: { campus: { institutionId }, grade: { institutionId } }, subject: { area: { institutionId } }, academicYear: { institutionId } };
+      case 'subject': return { area: { institutionId } };
+      case 'group': return { campus: { institutionId }, grade: { institutionId } };
+      default: return { institutionId };
+    }
+  }
+
+  private async loadInScope(model: 'academicTemplate' | 'templateArea' | 'templateSubject' | 'academicYear' | 'grade' | 'group' | 'area' | 'subject', id: string, institutionId: string) {
+    if (!id || typeof id !== 'string') throw new NotFoundException('Recurso no encontrado');
+    const row = await (this.prisma[model] as any).findFirst({ where: { id, AND: this.scopeWhere(model, institutionId) } });
+    if (!row) throw new NotFoundException('Recurso no encontrado');
+    return row;
+  }
+
+  private async assertGradeYear(gradeId: string, academicYearId: string, institutionId: string) {
+    await this.loadInScope('academicYear', academicYearId, institutionId);
+    return this.loadInScope('grade', gradeId, institutionId);
+  }
+
+  private async assertGroupYear(groupId: string, academicYearId: string, institutionId: string) {
+    await this.loadInScope('academicYear', academicYearId, institutionId);
+    return this.loadInScope('group', groupId, institutionId);
+  }
+
+  private pickFields(data: any, keys: string[]) {
+    return Object.fromEntries(keys.filter(key => data[key] !== undefined).map(key => [key, data[key]]));
+  }
+
+  private async deleteInScope(model: 'academicTemplate' | 'templateArea' | 'templateSubject' | 'gradeTemplate' | 'groupSubjectException', where: any, institutionId: string) {
+    const scoped = { ...where, AND: this.scopeWhere(model, institutionId) };
+    const row = await (this.prisma[model] as any).findFirst({ where: scoped });
+    if (!row) throw new NotFoundException('Recurso no encontrado');
+    const result = await (this.prisma[model] as any).deleteMany({ where: scoped });
+    if (!result.count) throw new NotFoundException('Recurso no encontrado');
+    return row;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PLANTILLAS ACADÉMICAS
@@ -25,17 +78,13 @@ export class TemplatesService {
     achievementsPerPeriod?: number;
     useAttitudinalAchievement?: boolean;
   }) {
+    await this.loadInScope('academicYear', data.academicYearId, data.institutionId);
     // Verificar nombre único por institución Y año
-    const existing = await this.prisma.academicTemplate.findUnique({
-      where: { 
-        institutionId_academicYearId_name: { 
-          institutionId: data.institutionId, 
-          academicYearId: data.academicYearId,
-          name: data.name 
-        } 
-      },
+    if (!this.transactional) return this.withTransaction(service => service.createTemplate(data));
+    const existing = await this.prisma.academicTemplate.findFirst({
+      where: { institutionId: data.institutionId, academicYearId: data.academicYearId, name: data.name, AND: this.scopeWhere('academicTemplate', data.institutionId) },
     });
-    
+
     if (existing) {
       throw new BadRequestException(`Ya existe una plantilla "${data.name}" en este año académico`);
     }
@@ -43,12 +92,7 @@ export class TemplatesService {
     // Si es default, quitar default de otras plantillas del mismo nivel EN ESTE AÑO
     if (data.isDefault) {
       await this.prisma.academicTemplate.updateMany({
-        where: { 
-          institutionId: data.institutionId, 
-          academicYearId: data.academicYearId,
-          level: data.level, 
-          isDefault: true 
-        },
+        where: { institutionId: data.institutionId, academicYearId: data.academicYearId, level: data.level, isDefault: true, AND: this.scopeWhere('academicTemplate', data.institutionId) },
         data: { isDefault: false },
       });
     }
@@ -66,10 +110,10 @@ export class TemplatesService {
       },
       include: {
         academicYear: true,
-        templateAreas: {
+        templateAreas: { where: this.scopeWhere('templateArea', data.institutionId),
           include: {
             area: true,
-            templateSubjects: { include: { subject: true } },
+            templateSubjects: { where: this.scopeWhere('templateSubject', data.institutionId),  include: { subject: true } },
           },
           orderBy: { order: 'asc' },
         },
@@ -78,21 +122,22 @@ export class TemplatesService {
     });
   }
 
-  async findTemplateById(id: string) {
-    const template = await this.prisma.academicTemplate.findUnique({
-      where: { id },
+  async findTemplateById(id: string, institutionId: string) {
+    await this.loadInScope('academicTemplate', id, institutionId);
+    const template = await this.prisma.academicTemplate.findFirst({
+      where: { id, AND: this.scopeWhere('academicTemplate', institutionId) },
       include: {
-        templateAreas: {
+        templateAreas: { where: this.scopeWhere('templateArea', institutionId),
           include: {
             area: true,
-            templateSubjects: {
+            templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),
               include: { subject: true },
               orderBy: { order: 'asc' },
             },
           },
           orderBy: { order: 'asc' },
         },
-        gradeTemplates: {
+        gradeTemplates: { where: this.scopeWhere('gradeTemplate', institutionId),
           include: { grade: true },
         },
         _count: { select: { gradeTemplates: true } },
@@ -110,30 +155,26 @@ export class TemplatesService {
     isActive?: boolean;
     achievementsPerPeriod?: number;
     useAttitudinalAchievement?: boolean;
-  }) {
-    const template = await this.findTemplateById(id);
+  }, institutionId: string) {
+    const template = await this.findTemplateById(id, institutionId);
 
     // Si se marca como default, quitar default de otras
+    if (!this.transactional) return this.withTransaction(service => service.updateTemplate(id, data, institutionId));
     if (data.isDefault) {
       await this.prisma.academicTemplate.updateMany({
-        where: {
-          institutionId: template.institutionId,
-          level: data.level || template.level,
-          isDefault: true,
-          id: { not: id },
-        },
+        where: { institutionId, academicYearId: template.academicYearId, level: data.level || template.level, isDefault: true, id: { not: id }, AND: this.scopeWhere('academicTemplate', institutionId) },
         data: { isDefault: false },
       });
     }
 
     return this.prisma.academicTemplate.update({
-      where: { id },
-      data,
+      where: { id, AND: this.scopeWhere('academicTemplate', institutionId) },
+      data: this.pickFields(data, ["name","description","level","isDefault","isActive","achievementsPerPeriod","useAttitudinalAchievement"]),
       include: {
-        templateAreas: {
+        templateAreas: { where: this.scopeWhere('templateArea', institutionId),
           include: {
             area: true,
-            templateSubjects: { include: { subject: true } },
+            templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
           },
           orderBy: { order: 'asc' },
         },
@@ -142,38 +183,35 @@ export class TemplatesService {
     });
   }
 
-  async deleteTemplate(id: string) {
-    const template = await this.findTemplateById(id);
-    
+  async deleteTemplate(id: string, institutionId: string) {
+    const template = await this.findTemplateById(id, institutionId);
+
     // Verificar si tiene grados asignados
+    if (!this.transactional) return this.withTransaction(service => service.deleteTemplate(id, institutionId));
     if (template.gradeTemplates.length > 0) {
       throw new BadRequestException(
         'No se puede eliminar la plantilla porque tiene grados asignados. Desasigne los grados primero.'
       );
     }
-    
-    return this.prisma.academicTemplate.delete({ where: { id } });
+
+    return this.deleteInScope('academicTemplate', { id }, institutionId);
   }
 
   async listTemplates(
-    institutionId: string, 
+    institutionId: string,
     academicYearId: string,  // 🔥 REQUERIDO: Filtrar por año
-    level?: AcademicLevel, 
+    level?: AcademicLevel,
     includeInactive = false
   ) {
+    await this.loadInScope('academicYear', academicYearId, institutionId);
     return this.prisma.academicTemplate.findMany({
-      where: {
-        institutionId,
-        academicYearId,
-        ...(level && { level }),
-        ...(includeInactive ? {} : { isActive: true }),
-      },
+      where: { institutionId, academicYearId, ...(level && { level }), ...(includeInactive ? {} : { isActive: true }), AND: this.scopeWhere('academicTemplate', institutionId) },
       include: {
         academicYear: true,
-        templateAreas: {
+        templateAreas: { where: this.scopeWhere('templateArea', institutionId),
           include: {
             area: true,
-            templateSubjects: { include: { subject: true } },
+            templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
           },
           orderBy: { order: 'asc' },
         },
@@ -196,12 +234,14 @@ export class TemplatesService {
     recoveryRule?: AreaRecoveryRule;
     isMandatory?: boolean;
     order?: number;
-  }) {
+  }, institutionId: string) {
+    await this.loadInScope('academicTemplate', data.templateId, institutionId);
+    await this.loadInScope('area', data.areaId, institutionId);
     // Verificar que no exista ya
-    const existing = await this.prisma.templateArea.findUnique({
-      where: { templateId_areaId: { templateId: data.templateId, areaId: data.areaId } },
+    const existing = await this.prisma.templateArea.findFirst({
+      where: { templateId: data.templateId, areaId: data.areaId, AND: this.scopeWhere('templateArea', institutionId) },
     });
-    
+
     if (existing) {
       throw new BadRequestException('Esta área ya está en la plantilla');
     }
@@ -219,7 +259,7 @@ export class TemplatesService {
       },
       include: {
         area: true,
-        templateSubjects: { include: { subject: true } },
+        templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
       },
     });
   }
@@ -231,19 +271,21 @@ export class TemplatesService {
     recoveryRule?: AreaRecoveryRule;
     isMandatory?: boolean;
     order?: number;
-  }) {
+  }, institutionId: string) {
+    await this.loadInScope('templateArea', templateAreaId, institutionId);
     return this.prisma.templateArea.update({
-      where: { id: templateAreaId },
-      data,
+      where: { id: templateAreaId, AND: this.scopeWhere('templateArea', institutionId) },
+      data: this.pickFields(data, ["weightPercentage","calculationType","approvalRule","recoveryRule","isMandatory","order"]),
       include: {
         area: true,
-        templateSubjects: { include: { subject: true } },
+        templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
       },
     });
   }
 
-  async removeAreaFromTemplate(templateAreaId: string) {
-    return this.prisma.templateArea.delete({ where: { id: templateAreaId } });
+  async removeAreaFromTemplate(templateAreaId: string, institutionId: string) {
+    await this.loadInScope('templateArea', templateAreaId, institutionId);
+    return this.deleteInScope('templateArea', { id: templateAreaId }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -259,12 +301,16 @@ export class TemplatesService {
     order?: number;
     achievementsPerPeriod?: number;
     useAttitudinalAchievement?: boolean;
-  }) {
+  }, institutionId: string) {
+    const parent = await this.loadInScope('templateArea', data.templateAreaId, institutionId);
+    const subject = await this.loadInScope('subject', data.subjectId, institutionId);
+    if (subject.areaId !== parent.areaId) throw new BadRequestException('La asignatura debe pertenecer al área de la plantilla');
     // Verificar que no exista ya
-    const existing = await this.prisma.templateSubject.findUnique({
-      where: { templateAreaId_subjectId: { templateAreaId: data.templateAreaId, subjectId: data.subjectId } },
+    if (!this.transactional) return this.withTransaction(service => service.addSubjectToTemplateArea(data, institutionId));
+    const existing = await this.prisma.templateSubject.findFirst({
+      where: { templateAreaId: data.templateAreaId, subjectId: data.subjectId, AND: this.scopeWhere('templateSubject', institutionId) },
     });
-    
+
     if (existing) {
       throw new BadRequestException('Esta asignatura ya está en el área de la plantilla');
     }
@@ -272,7 +318,7 @@ export class TemplatesService {
     // Si es dominante, quitar dominante de otras asignaturas del área
     if (data.isDominant) {
       await this.prisma.templateSubject.updateMany({
-        where: { templateAreaId: data.templateAreaId, isDominant: true },
+        where: { templateAreaId: data.templateAreaId, isDominant: true, AND: this.scopeWhere('templateSubject', institutionId) },
         data: { isDominant: false },
       });
     }
@@ -299,9 +345,11 @@ export class TemplatesService {
     order?: number;
     achievementsPerPeriod?: number | null;
     useAttitudinalAchievement?: boolean | null;
-  }) {
-    const templateSubject = await this.prisma.templateSubject.findUnique({
-      where: { id: templateSubjectId },
+  }, institutionId: string) {
+    await this.loadInScope('templateSubject', templateSubjectId, institutionId);
+    if (!this.transactional) return this.withTransaction(service => service.updateTemplateSubject(templateSubjectId, data, institutionId));
+    const templateSubject = await this.prisma.templateSubject.findFirst({
+      where: { id: templateSubjectId, AND: this.scopeWhere('templateSubject', institutionId) },
     });
 
     if (!templateSubject) {
@@ -311,22 +359,23 @@ export class TemplatesService {
     // Si es dominante, quitar dominante de otras
     if (data.isDominant) {
       await this.prisma.templateSubject.updateMany({
-        where: { templateAreaId: templateSubject.templateAreaId, isDominant: true, id: { not: templateSubjectId } },
+        where: { templateAreaId: templateSubject.templateAreaId, isDominant: true, id: { not: templateSubjectId }, AND: this.scopeWhere('templateSubject', institutionId) },
         data: { isDominant: false },
       });
     }
 
     return this.prisma.templateSubject.update({
-      where: { id: templateSubjectId },
-      data,
+      where: { id: templateSubjectId, AND: this.scopeWhere('templateSubject', institutionId) },
+      data: this.pickFields(data, ["weeklyHours","weightPercentage","isDominant","order","achievementsPerPeriod","useAttitudinalAchievement"]),
       include: { subject: true },
     });
   }
 
-  async removeSubjectFromTemplateArea(templateSubjectId: string, force = false) {
+  async removeSubjectFromTemplateArea(templateSubjectId: string, institutionId: string, force = false) {
+    await this.loadInScope('templateSubject', templateSubjectId, institutionId);
     // Obtener la asignatura con su contexto
-    const templateSubject = await this.prisma.templateSubject.findUnique({
-      where: { id: templateSubjectId },
+    const templateSubject = await this.prisma.templateSubject.findFirst({
+      where: { id: templateSubjectId, AND: this.scopeWhere('templateSubject', institutionId) },
       include: {
         subject: true,
         templateArea: {
@@ -341,21 +390,19 @@ export class TemplatesService {
       throw new NotFoundException('Configuración de asignatura no encontrada');
     }
 
-    const { institutionId, academicYearId } = templateSubject.templateArea.template;
+    const { academicYearId } = templateSubject.templateArea.template;
     const subjectId = templateSubject.subjectId;
 
     // Verificar datos asociados
     const [teacherAssignments, partialGrades, finalGrades] = await Promise.all([
       this.prisma.teacherAssignment.count({
-        where: { subjectId, academicYearId, institutionId },
+        where: { subjectId, academicYearId, institutionId, AND: this.scopeWhere('teacherAssignment', institutionId) },
       }),
       this.prisma.partialGrade.count({
-        where: {
-          teacherAssignment: { subjectId, academicYearId, institutionId },
-        },
+        where: { teacherAssignment: { subjectId, academicYearId, institutionId }, AND: this.scopeWhere('partialGrade', institutionId) },
       }),
       this.prisma.periodFinalGrade.count({
-        where: { subjectId, institutionId },
+        where: { subjectId, institutionId, AND: this.scopeWhere('periodFinalGrade', institutionId) },
       }),
     ]);
 
@@ -374,7 +421,7 @@ export class TemplatesService {
       });
     }
 
-    return this.prisma.templateSubject.delete({ where: { id: templateSubjectId } });
+    return this.deleteInScope('templateSubject', { id: templateSubjectId }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -382,20 +429,24 @@ export class TemplatesService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async assignTemplateToGrade(
-    gradeId: string, 
-    templateId: string, 
+    gradeId: string,
+    templateId: string,
     academicYearId: string,  // 🔥 REQUERIDO
+    institutionId: string,
     overrides?: any
   ) {
+    await this.assertGradeYear(gradeId, academicYearId, institutionId);
+    const template = await this.loadInScope('academicTemplate', templateId, institutionId);
+    if (template.academicYearId !== academicYearId) throw new BadRequestException('La plantilla debe corresponder al año de la asignación');
     // Verificar si ya tiene una plantilla asignada PARA ESTE AÑO
-    const existing = await this.prisma.gradeTemplate.findUnique({
-      where: { gradeId_academicYearId: { gradeId, academicYearId } },
+    const existing = await this.prisma.gradeTemplate.findFirst({
+      where: { gradeId, academicYearId, AND: this.scopeWhere('gradeTemplate', institutionId) },
     });
-    
+
     if (existing) {
       // Actualizar la asignación existente
       return this.prisma.gradeTemplate.update({
-        where: { id: existing.id },
+        where: { id: existing.id, AND: this.scopeWhere('gradeTemplate', institutionId) },
         data: { templateId, overrides },
         include: { grade: true, template: true, academicYear: true },
       });
@@ -429,8 +480,18 @@ export class TemplatesService {
       }>;
     }>;
   }) {
-    const grade = await this.prisma.grade.findUnique({
-      where: { id: dto.gradeId },
+    await this.assertGradeYear(dto.gradeId, dto.academicYearId, dto.institutionId);
+    for (const area of dto.areas || []) {
+      if (area.areaId) await this.loadInScope('area', area.areaId, dto.institutionId);
+      for (const input of area.subjects || []) {
+        if (input.subjectId) {
+          const subject = await this.loadInScope('subject', input.subjectId, dto.institutionId);
+          if (!area.areaId || subject.areaId !== area.areaId) throw new BadRequestException('La asignatura debe pertenecer al área seleccionada');
+        }
+      }
+    }
+    const grade = await this.prisma.grade.findFirst({
+      where: { id: dto.gradeId, AND: this.scopeWhere('grade', dto.institutionId) },
       select: { id: true, name: true, stage: true, institutionId: true },
     });
     if (!grade) throw new NotFoundException('Grado no encontrado');
@@ -453,16 +514,17 @@ export class TemplatesService {
     return this.prisma.$transaction(
       async (tx) => {
         // 1. Plantilla del grado: editar la existente o crear una nueva
-        const existingGT = await tx.gradeTemplate.findUnique({
-          where: { gradeId_academicYearId: { gradeId, academicYearId } },
+        const existingGT = await tx.gradeTemplate.findFirst({
+          where: { gradeId, academicYearId, AND: this.scopeWhere('gradeTemplate', dto.institutionId) },
           select: { templateId: true },
         });
 
         let templateId = existingGT?.templateId ?? null;
+        if (templateId && !await tx.academicTemplate.findFirst({ where: { id: templateId, institutionId, academicYearId }, select: { id: true } })) throw new NotFoundException('Plantilla no encontrada para este año');
         if (!templateId) {
           let name = `Plantilla ${grade.name}`;
-          const clash = await tx.academicTemplate.findUnique({
-            where: { institutionId_academicYearId_name: { institutionId, academicYearId, name } },
+          const clash = await tx.academicTemplate.findFirst({
+            where: { institutionId, academicYearId, name, AND: this.scopeWhere('academicTemplate', dto.institutionId) },
             select: { id: true },
           });
           if (clash) name = `${name} (${gradeId.slice(0, 4)})`;
@@ -479,8 +541,8 @@ export class TemplatesService {
           let areaId = a.areaId ?? null;
           const newAreaName = a.newAreaName?.trim();
           if (!areaId && newAreaName) {
-            const existingArea = await tx.area.findUnique({
-              where: { institutionId_name: { institutionId, name: newAreaName } },
+            const existingArea = await tx.area.findFirst({
+              where: { institutionId, name: newAreaName, AND: this.scopeWhere('area', dto.institutionId) },
               select: { id: true },
             });
             areaId =
@@ -495,8 +557,8 @@ export class TemplatesService {
           if (!areaId) continue;
 
           // Upsert del área en la plantilla
-          let ta = await tx.templateArea.findUnique({
-            where: { templateId_areaId: { templateId, areaId } },
+          let ta = await tx.templateArea.findFirst({
+            where: { templateId, areaId, AND: this.scopeWhere('templateArea', dto.institutionId) },
             select: { id: true },
           });
           if (!ta) {
@@ -523,8 +585,8 @@ export class TemplatesService {
             let subjectId = s.subjectId ?? null;
             const newSubjectName = s.newSubjectName?.trim();
             if (!subjectId && newSubjectName) {
-              const existingSubj = await tx.subject.findUnique({
-                where: { areaId_name: { areaId, name: newSubjectName } },
+              const existingSubj = await tx.subject.findFirst({
+                where: { areaId, name: newSubjectName, AND: this.scopeWhere('subject', dto.institutionId) },
                 select: { id: true },
               });
               subjectId =
@@ -544,12 +606,12 @@ export class TemplatesService {
             if (!subjectId) continue;
 
             const hours = Number.isFinite(s.weeklyHours) ? Math.max(0, Math.trunc(s.weeklyHours)) : 0;
-            const existingTS = await tx.templateSubject.findUnique({
-              where: { templateAreaId_subjectId: { templateAreaId: ta.id, subjectId } },
+            const existingTS = await tx.templateSubject.findFirst({
+              where: { templateAreaId: ta.id, subjectId, AND: this.scopeWhere('templateSubject', dto.institutionId) },
               select: { id: true },
             });
             if (existingTS) {
-              await tx.templateSubject.update({ where: { id: existingTS.id }, data: { weeklyHours: hours } });
+              await tx.templateSubject.update({ where: { id: existingTS.id, AND: this.scopeWhere('templateSubject', dto.institutionId) }, data: { weeklyHours: hours } });
             } else {
               await tx.templateSubject.create({
                 data: {
@@ -569,7 +631,7 @@ export class TemplatesService {
         if (existingGT) {
           if (existingGT.templateId !== templateId) {
             await tx.gradeTemplate.update({
-              where: { gradeId_academicYearId: { gradeId, academicYearId } },
+              where: { gradeId_academicYearId: { gradeId, academicYearId }, AND: this.scopeWhere('gradeTemplate', dto.institutionId) },
               data: { templateId },
             });
           }
@@ -579,17 +641,20 @@ export class TemplatesService {
 
         return { success: true, templateId, gradeId, areasProcessed: dto.areas.length };
       },
-      { timeout: 30000 },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30000 },
     );
   }
 
   async syncTemplateFromActiveAssignments(
     gradeId: string,
     academicYearId: string,
+    institutionId: string,
     options?: { countInAverage?: boolean },
   ) {
-    const grade = await this.prisma.grade.findUnique({
-      where: { id: gradeId },
+    await this.assertGradeYear(gradeId, academicYearId, institutionId);
+    if (!this.transactional) return this.withTransaction(service => service.syncTemplateFromActiveAssignments(gradeId, academicYearId, institutionId, options));
+    const grade = await this.prisma.grade.findFirst({
+      where: { id: gradeId, AND: this.scopeWhere('grade', institutionId) },
       select: {
         id: true,
         institutionId: true,
@@ -603,12 +668,7 @@ export class TemplatesService {
     }
 
     const assignments = await this.prisma.teacherAssignment.findMany({
-      where: {
-        institutionId: grade.institutionId,
-        academicYearId,
-        group: { gradeId },
-        endDate: null,
-      },
+      where: { institutionId, academicYearId, group: { gradeId }, endDate: null, AND: this.scopeWhere('teacherAssignment', institutionId) },
       include: {
         subject: {
           select: {
@@ -633,15 +693,15 @@ export class TemplatesService {
 
     const level = this.mapGradeStageToAcademicLevel(grade.stage);
 
-    const existingGradeTemplate = await this.prisma.gradeTemplate.findUnique({
-      where: { gradeId_academicYearId: { gradeId, academicYearId } },
+    const existingGradeTemplate = await this.prisma.gradeTemplate.findFirst({
+      where: { gradeId, academicYearId, AND: this.scopeWhere('gradeTemplate', institutionId) },
       include: {
         template: {
           include: {
-            templateAreas: {
+            templateAreas: { where: this.scopeWhere('templateArea', institutionId),
               include: {
                 area: true,
-                templateSubjects: { include: { subject: true } },
+                templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
               },
               orderBy: { order: 'asc' },
             },
@@ -651,21 +711,18 @@ export class TemplatesService {
     });
 
     let template = existingGradeTemplate?.template;
+    if (template && template.academicYearId !== academicYearId) {
+      throw new BadRequestException('La plantilla asignada no corresponde al año académico');
+    }
 
     if (!template) {
       const reusableTemplate = await this.prisma.academicTemplate.findFirst({
-        where: {
-          institutionId: grade.institutionId,
-          academicYearId,
-          level,
-          isActive: true,
-          gradeTemplates: { none: {} },
-        },
+        where: { institutionId, academicYearId, level, isActive: true, gradeTemplates: { none: {} }, AND: this.scopeWhere('academicTemplate', institutionId) },
         include: {
-          templateAreas: {
+          templateAreas: { where: this.scopeWhere('templateArea', institutionId),
             include: {
               area: true,
-              templateSubjects: { include: { subject: true } },
+              templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
             },
             orderBy: { order: 'asc' },
           },
@@ -683,7 +740,7 @@ export class TemplatesService {
 
     if (!template) {
       template = await this.createTemplate({
-        institutionId: grade.institutionId,
+        institutionId,
         academicYearId,
         name: `Plantilla ${grade.name}`,
         description: `Plantilla creada desde las asignaciones activas de ${grade.name}`,
@@ -694,8 +751,9 @@ export class TemplatesService {
       });
     }
 
+    if (!template) throw new NotFoundException('Plantilla no encontrada');
     if (!existingGradeTemplate || existingGradeTemplate.templateId !== template.id) {
-      await this.assignTemplateToGrade(gradeId, template.id, academicYearId, existingGradeTemplate?.overrides);
+      await this.assignTemplateToGrade(gradeId, template.id, academicYearId, institutionId, existingGradeTemplate?.overrides);
     }
 
     const templateAreas = template.templateAreas ?? [];
@@ -759,7 +817,7 @@ export class TemplatesService {
           },
           include: {
             area: true,
-            templateSubjects: { include: { subject: true } },
+            templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
           },
         });
         templateAreaMap.set(areaId, templateArea);
@@ -768,7 +826,7 @@ export class TemplatesService {
         (!specialArea && isConvivenciaArea && (templateArea.calculationType !== 'AVERAGE' || templateArea.isMandatory === false))
       ) {
         templateArea = await this.prisma.templateArea.update({
-          where: { id: templateArea.id },
+          where: { id: templateArea.id, AND: this.scopeWhere('templateArea', institutionId) },
           data: {
             weightPercentage: specialArea ? 0 : (templateArea.weightPercentage > 0 ? templateArea.weightPercentage : Math.round((100 / areaCount) * 10) / 10),
             calculationType: specialArea ? 'INFORMATIVE' : 'AVERAGE',
@@ -776,7 +834,7 @@ export class TemplatesService {
           },
           include: {
             area: true,
-            templateSubjects: { include: { subject: true } },
+            templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
           },
         });
         templateAreaMap.set(areaId, templateArea);
@@ -809,7 +867,7 @@ export class TemplatesService {
 
         if (specialSubject) {
           await this.prisma.templateSubject.update({
-            where: { id: existingSubject.id },
+            where: { id: existingSubject.id, AND: this.scopeWhere('templateSubject', institutionId) },
             data: {
               weeklyHours: 1,
               weightPercentage: 100,
@@ -822,34 +880,34 @@ export class TemplatesService {
 
         if (existingSubject.weeklyHours === 0 && subject.weeklyHours > 0) {
           await this.prisma.templateSubject.update({
-            where: { id: existingSubject.id },
+            where: { id: existingSubject.id, AND: this.scopeWhere('templateSubject', institutionId) },
             data: { weeklyHours: subject.weeklyHours },
           });
         }
       }
     }
 
-    return this.getGradeTemplate(gradeId, academicYearId);
+    return this.getGradeTemplate(gradeId, academicYearId, institutionId);
   }
 
-  async removeTemplateFromGrade(gradeId: string, academicYearId: string) {
-    return this.prisma.gradeTemplate.delete({ 
-      where: { gradeId_academicYearId: { gradeId, academicYearId } } 
-    });
+  async removeTemplateFromGrade(gradeId: string, academicYearId: string, institutionId: string) {
+    await this.assertGradeYear(gradeId, academicYearId, institutionId);
+    return this.deleteInScope('gradeTemplate', { gradeId, academicYearId }, institutionId);
   }
 
-  async getGradeTemplate(gradeId: string, academicYearId: string) {
-    return this.prisma.gradeTemplate.findUnique({
-      where: { gradeId_academicYearId: { gradeId, academicYearId } },
+  async getGradeTemplate(gradeId: string, academicYearId: string, institutionId: string) {
+    await this.assertGradeYear(gradeId, academicYearId, institutionId);
+    return this.prisma.gradeTemplate.findFirst({
+      where: { gradeId, academicYearId, AND: this.scopeWhere('gradeTemplate', institutionId) },
       include: {
         grade: true,
         academicYear: true,
         template: {
           include: {
-            templateAreas: {
+            templateAreas: { where: this.scopeWhere('templateArea', institutionId),
               include: {
                 area: true,
-                templateSubjects: { include: { subject: true } },
+                templateSubjects: { where: this.scopeWhere('templateSubject', institutionId),  include: { subject: true } },
               },
               orderBy: { order: 'asc' },
             },
@@ -860,15 +918,16 @@ export class TemplatesService {
   }
 
   async listGradesWithTemplates(institutionId: string, academicYearId: string) {
+    await this.loadInScope('academicYear', academicYearId, institutionId);
     // Grados de ESTA institución con su plantilla asignada PARA ESTE AÑO.
     // El filtro por institutionId es obligatorio: sin él la pantalla listaba los
     // grados de TODAS las instituciones de la base (fuga multi-tenant), y los
     // ajenos aparecían como "Sin asignar" — se veían como duplicados.
     const grades = await this.prisma.grade.findMany({
-      where: { institutionId },
+      where: { institutionId, AND: this.scopeWhere('grade', institutionId) },
       include: {
         gradeTemplates: {
-          where: { academicYearId },
+          where: { AND: [{ academicYearId }, this.scopeWhere('gradeTemplate', institutionId)] },
           include: { template: true, academicYear: true },
         },
       },
@@ -879,19 +938,14 @@ export class TemplatesService {
     const assignmentCounts = gradeIds.length > 0
       ? await this.prisma.teacherAssignment.groupBy({
           by: ['groupId'],
-          where: {
-            institutionId,
-            academicYearId,
-            endDate: null,
-            group: { gradeId: { in: gradeIds } },
-          },
+          where: { institutionId, academicYearId, endDate: null, group: { gradeId: { in: gradeIds } }, AND: this.scopeWhere('teacherAssignment', institutionId) },
           _count: { _all: true },
         })
       : [];
 
     const groupGrades = gradeIds.length > 0
       ? await this.prisma.group.findMany({
-          where: { gradeId: { in: gradeIds } },
+          where: { gradeId: { in: gradeIds }, AND: this.scopeWhere('group', institutionId) },
           select: { id: true, gradeId: true },
         })
       : [];
@@ -937,22 +991,18 @@ export class TemplatesService {
     weeklyHours?: number;
     weightPercentage?: number;
     reason?: string;
-  }) {
+  }, institutionId: string) {
+    await this.assertGroupYear(data.groupId, data.academicYearId, institutionId);
+    await this.loadInScope('subject', data.subjectId, institutionId);
     // Verificar si ya existe PARA ESTE AÑO
-    const existing = await this.prisma.groupSubjectException.findUnique({
-      where: { 
-        groupId_subjectId_academicYearId: { 
-          groupId: data.groupId, 
-          subjectId: data.subjectId,
-          academicYearId: data.academicYearId 
-        } 
-      },
+    const existing = await this.prisma.groupSubjectException.findFirst({
+      where: { groupId: data.groupId, subjectId: data.subjectId, academicYearId: data.academicYearId, AND: this.scopeWhere('groupSubjectException', institutionId) },
     });
-    
+
     if (existing) {
       // Actualizar
       return this.prisma.groupSubjectException.update({
-        where: { id: existing.id },
+        where: { id: existing.id, AND: this.scopeWhere('groupSubjectException', institutionId) },
         data: {
           type: data.type,
           weeklyHours: data.weeklyHours,
@@ -964,22 +1014,21 @@ export class TemplatesService {
     }
 
     return this.prisma.groupSubjectException.create({
-      data,
+      data: { groupId: data.groupId, subjectId: data.subjectId, academicYearId: data.academicYearId, type: data.type, weeklyHours: data.weeklyHours, weightPercentage: data.weightPercentage, reason: data.reason },
       include: { subject: { include: { area: true } }, academicYear: true },
     });
   }
 
-  async removeGroupException(groupId: string, subjectId: string, academicYearId: string) {
-    return this.prisma.groupSubjectException.delete({
-      where: { 
-        groupId_subjectId_academicYearId: { groupId, subjectId, academicYearId } 
-      },
-    });
+  async removeGroupException(groupId: string, subjectId: string, academicYearId: string, institutionId: string) {
+    await this.assertGroupYear(groupId, academicYearId, institutionId);
+    await this.loadInScope('subject', subjectId, institutionId);
+    return this.deleteInScope('groupSubjectException', { groupId, subjectId, academicYearId }, institutionId);
   }
 
-  async getGroupExceptions(groupId: string, academicYearId: string) {
+  async getGroupExceptions(groupId: string, academicYearId: string, institutionId: string) {
+    await this.assertGroupYear(groupId, academicYearId, institutionId);
     return this.prisma.groupSubjectException.findMany({
-      where: { groupId, academicYearId },
+      where: { groupId, academicYearId, AND: this.scopeWhere('groupSubjectException', institutionId) },
       include: { subject: { include: { area: true } }, academicYear: true },
     });
   }
@@ -990,16 +1039,14 @@ export class TemplatesService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async getEffectiveStructureForGroupInScope(groupId: string, academicYearId: string, institutionId: string) {
-    if (!institutionId) throw new NotFoundException('Institución no encontrada');
-    const year = await this.prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId }, select: { id: true } });
-    if (!year) throw new NotFoundException('Año lectivo no encontrado');
+    await this.assertGroupYear(groupId, academicYearId, institutionId);
     // Obtener el grupo con su grado
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, campus: { institutionId }, grade: { institutionId } },
+      where: { id: groupId, campus: { institutionId }, grade: { institutionId }, AND: this.scopeWhere('group', institutionId) },
       include: {
         grade: true,
         subjectExceptions: {
-          where: { academicYearId, subject: { area: { institutionId } } },
+          where: { AND: [{ academicYearId, subject: { area: { institutionId } } }, this.scopeWhere('groupSubjectException', institutionId)] },
           include: { subject: true },
         },
       },
@@ -1011,16 +1058,16 @@ export class TemplatesService {
 
     // Obtener la plantilla asignada al grado PARA ESTE AÑO
     const gradeTemplate = await this.prisma.gradeTemplate.findFirst({
-      where: { gradeId: group.gradeId, academicYearId, template: { institutionId }, grade: { institutionId }, academicYear: { institutionId } },
+      where: { gradeId: group.gradeId, academicYearId, template: { institutionId }, grade: { institutionId }, academicYear: { institutionId }, AND: this.scopeWhere('gradeTemplate', institutionId) },
       include: {
         template: {
           include: {
             templateAreas: {
-              where: { area: { institutionId } },
+              where: { AND: [{ area: { institutionId } }, this.scopeWhere('templateArea', institutionId)] },
               include: {
                 area: true,
                 templateSubjects: {
-                  where: { subject: { area: { institutionId } } },
+                  where: { AND: [{ subject: { area: { institutionId } } }, this.scopeWhere('templateSubject', institutionId)] },
                   include: { subject: true },
                   orderBy: { order: 'asc' },
                 },
@@ -1051,7 +1098,7 @@ export class TemplatesService {
           const modification = exceptions.find(
             e => e.subjectId === ts.subjectId && e.type === 'MODIFY'
           );
-          
+
           return {
             ...ts,
             weeklyHours: modification?.weeklyHours ?? ts.weeklyHours,

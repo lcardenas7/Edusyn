@@ -1,12 +1,12 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-11. Base de esta entrega: origin/staging ee1cbb3a; correcciones de Inclusión en 9ae32d6b.
+Fecha: 2026-09-11. Base de esta entrega: origin/staging 38614231; Plantillas añadida a la revisión de aplicación.
 
-Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: contexto, perfiles/planes, actividades y avances con 93 pruebas de servicios/auxiliares y 50 HTTP. Auditoría del resto del módulo pendiente. No constituye cierre global del aislamiento.
+Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Plantillas: 21 rutas institucionales corregidas y catálogo estático, con 100 pruebas nuevas de servicio y 67 HTTP. Inclusión queda pospuesta por el usuario: contexto, perfiles/planes, actividades y avances tienen 93 pruebas de servicios/auxiliares y 50 HTTP; el resto sigue pendiente. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1113 declaraciones de ruta (incluye SSE y dos rutas de app), 274 con llamada directa, incondicional y esperada a requireInstitutionId, 779 pendientes de calibración y 60 excepciones no institucionales.
+1113 declaraciones de ruta (incluye SSE y dos rutas de app), 293 con llamada directa, incondicional y esperada a requireInstitutionId, 759 pendientes de calibración y 61 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -19,7 +19,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | Módulo | Rutas | Resolución directa | Pendiente calibrar | No institucional | Estado de auditoría |
 |---|---:|---:|---:|---:|---|
 | abp | 66 | 0 | 66 | 0 | Pendiente de auditoría A/B por módulo |
-| academic | 159 | 75 | 83 | 1 | Parcial: Matrículas integral + dependencias; PostgreSQL sintético y resto de academic pendientes. Ver AUDITORIA_AISLAMIENTO_MATRICULAS.md |
+| academic | 159 | 94 | 63 | 2 | Parcial: Matrículas y Plantillas corregidas con pruebas de servicio y HTTP. PostgreSQL sintético y resto de academic pendientes. Ver AUDITORIA_AISLAMIENTO_MATRICULAS.md y AUDITORIA_AISLAMIENTO_PLANTILLAS.md |
 | achievements | 46 | 42 | 4 | 0 | Pendiente de auditoría A/B por módulo |
 | apd | 35 | 34 | 1 | 0 | Parcial: contexto, perfiles/planes, actividades y avances; 93 pruebas de servicio/auxiliares y 50 HTTP. Participantes, adjuntos, firmas, materias, agregaciones y PostgreSQL pendientes. Ver AUDITORIA_AISLAMIENTO_INCLUSION.md |
 | attendance | 17 | 1 | 16 | 0 | Parcial: resumen usado por Matrículas corregido; resto de rutas y HTTP del resumen pendientes |
@@ -38,7 +38,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | iam | 44 | 7 | 37 | 0 | Pendiente de auditoría A/B por módulo |
 | institution-config | 14 | 0 | 14 | 0 | Pendiente de auditoría A/B por módulo |
 | institution-context | 0 | 0 | 0 | 0 | Pendiente de auditoría A/B por módulo |
-| learning-route | 16 | 0 | 16 | 0 | Pendiente de auditoría A/B por módulo |
+| learning-route | 16 | 0 | 16 | 0 | Pendiente: encargo específico publicado para Claude en ENCARGO_CLAUDE_BLINDAJE_LEARNING_ROUTE.md; ejecución no confirmada |
 | live-session | 27 | 0 | 27 | 0 | Pendiente de auditoría A/B por módulo |
 | management-tasks | 19 | 4 | 15 | 0 | Pendiente de auditoría A/B por módulo |
 | men-reports | 5 | 0 | 5 | 0 | Pendiente de auditoría A/B por módulo |
@@ -86,3 +86,5 @@ Verificación final de la entrega: build Nest aprobado; web 21 archivos / 208 pr
 Checkpoint adicional de Inclusión: 88 suites / 1.440 pruebas API y 22 archivos / 214 pruebas web aprobados después de integrar staging ee1cbb3a. 57 pruebas nuevas de Inclusión (39 de servicio y 18 HTTP). Build Nest y tipos API/web aprobados; navegador sintético de Matrículas e Inclusión aprobado. Los 39 módulos conservan su estado explícito: este checkpoint no cierra APD ni el aislamiento global.
 
 Checkpoint de actividades y avances de Inclusión (base ff81a71b): 90 suites / 1.526 pruebas API y 22 archivos / 214 pruebas web aprobados. 86 pruebas nuevas (54 servicios/auxiliares, 32 HTTP), tipos API/web y build Nest aprobados. Retirar la guarda de creación hace fallar ambos casos A/B; restaurarla devuelve las 54 pruebas de servicio a verde. Inventario sin cambios: 1.113 rutas, 274 directas, 779 pendientes de calibración y 60 excepciones no institucionales. No se ha probado PostgreSQL sintético ni se declara APD cerrado.
+
+Checkpoint Plantillas (base 38614231): 21 rutas institucionales y 1 catálogo estático revisados; 100 pruebas nuevas de servicio y 67 HTTP. Suite API completa: 92 suites / 1.693 pruebas. Web: 22 archivos / 214 pruebas. Tipos API/web y build Nest aprobados. Se retiran 19 excepciones y se reclasifica el catálogo, sin cambiar otras rutas. La prueba de mutación detecta quitar la guarda de año. PostgreSQL sintético y el resto de academic siguen pendientes. Inclusión permanece pospuesta; Claude tiene instrucciones versionadas para learning-route.
