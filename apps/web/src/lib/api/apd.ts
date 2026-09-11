@@ -2,6 +2,9 @@
 import api from './client'
 
 export const apdApi = {
+  getWorkspace: () => api.get('/apd/workspace'),
+  getWorkspaceStudents: (groupId: string, academicYearId: string) => api.get('/apd/workspace/students', { params: { groupId, academicYearId } }),
+  getPlans: (groupId: string, academicTermId: string) => api.get('/apd/plans', { params: { groupId, academicTermId } }),
   // Configuración institucional
   getConfig: () => api.get('/apd/config'),
   updateConfig: (data: { enableDifferentialSupport?: boolean; allowTeacherAccess?: boolean }) =>

@@ -1,15 +1,23 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApdService } from './apd.service';
 
 describe('Inclusion profile lifecycle and isolation', () => {
   function setup(profile: any = null) {
+    const matches = (row: any, where: any) => row && Object.entries(where).every(([key, value]) => value === undefined || row[key] === value);
     const prisma = {
       institution: { findUnique: jest.fn().mockResolvedValue({ enableDifferentialSupport: true }) },
-      student: { findFirst: jest.fn().mockResolvedValue({ id: 'student-a' }) },
+      student: { findFirst: jest.fn(async ({ where }) => {
+        const student = { id: 'student-a', institutionId: 'a', isActive: true };
+        return matches(student, where) ? student : null;
+      }) },
       educationalSupportProfile: {
-        findUnique: jest.fn().mockResolvedValue(profile),
+        findUnique: jest.fn(async ({ where }) => matches(profile, where.institutionId_studentId || where) ? profile : null),
+        findFirst: jest.fn(async ({ where }) => matches(profile, where) ? profile : null),
         create: jest.fn(({ data }) => Promise.resolve({ id: 'profile-a', ...data })),
-        update: jest.fn(({ data }) => Promise.resolve({ ...profile, ...data })),
+        update: jest.fn(async ({ where, data }) => {
+          if (!matches(profile, where)) throw new Error('P2025');
+          return { ...profile, ...data };
+        }),
       },
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
@@ -22,13 +30,12 @@ describe('Inclusion profile lifecycle and isolation', () => {
   });
   it('rejects a student outside the institution before creating the profile', async () => {
     const { service, prisma } = setup();
-    prisma.student.findFirst.mockResolvedValue(null as any);
     await expect(service.createProfile({institutionId:'a', studentId:'student-b', supportCategory:'Synthetic'}, 'actor-a')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.educationalSupportProfile.create).not.toHaveBeenCalled();
   });
   it('rejects updates to another institution without writing or auditing its data', async () => {
     const { service, prisma, audit } = setup({id:'profile-b',institutionId:'b'});
-    await expect(service.updateProfile('profile-b','a',{pedagogicalNotes:'Synthetic'},'actor-a')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.updateProfile('profile-b','a',{pedagogicalNotes:'Synthetic'},'actor-a')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.educationalSupportProfile.update).not.toHaveBeenCalled();
     expect(audit.log).not.toHaveBeenCalled();
   });

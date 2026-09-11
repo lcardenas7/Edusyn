@@ -1,12 +1,12 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-11. Base de esta entrega: origin/staging 000d435b.
+Fecha: 2026-09-11. Base de esta entrega: origin/staging 8f63c9d9.
 
-Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: mejoras de uso verificadas; auditoría A/B de su servicio pendiente. No constituye cierre global del aislamiento.
+Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: mejoras de uso y acceso por rol; 39 pruebas de perfiles/planes y 18 HTTP del contexto de trabajo. Auditoría del resto del módulo pendiente. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1110 declaraciones de ruta (incluye SSE y dos rutas de app), 271 con llamada directa, incondicional y esperada a requireInstitutionId, 779 pendientes de calibración y 60 excepciones no institucionales.
+1113 declaraciones de ruta (incluye SSE y dos rutas de app), 274 con llamada directa, incondicional y esperada a requireInstitutionId, 779 pendientes de calibración y 60 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -21,7 +21,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | abp | 66 | 0 | 66 | 0 | Pendiente de auditoría A/B por módulo |
 | academic | 159 | 75 | 83 | 1 | Parcial: Matrículas integral + dependencias; PostgreSQL sintético y resto de academic pendientes. Ver AUDITORIA_AISLAMIENTO_MATRICULAS.md |
 | achievements | 46 | 42 | 4 | 0 | Pendiente de auditoría A/B por módulo |
-| apd | 32 | 31 | 1 | 0 | Mejoras de uso verificadas; 32 rutas/servicio aún pendientes de auditoría A/B. Ver REVISION_FLUJOS_MATRICULAS_INCLUSION.md |
+| apd | 35 | 34 | 1 | 0 | Parcial: contexto de trabajo con 18 pruebas HTTP y perfiles/planes con 39 de servicio. Resto pendiente. Ver AUDITORIA_AISLAMIENTO_INCLUSION.md |
 | attendance | 17 | 1 | 16 | 0 | Parcial: resumen usado por Matrículas corregido; resto de rutas y HTTP del resumen pendientes |
 | auth | 7 | 0 | 4 | 3 | Pendiente de auditoría A/B por módulo |
 | capabilities | 5 | 3 | 2 | 0 | Pendiente de auditoría A/B por módulo |

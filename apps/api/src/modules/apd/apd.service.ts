@@ -16,11 +16,100 @@ export class ApdService {
     private readonly progress: ApdProgressService,
   ) {}
 
+  private assertInstitution(institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada.');
+  }
+
+  private assertResourceId(id: string) {
+    if (typeof id !== 'string' || !id.trim()) throw new NotFoundException('Recurso no encontrado.');
+  }
+
+  private async assertCategory(categoryId: string | undefined, institutionId: string) {
+    if (categoryId && !await this.prisma.supportCategory.findFirst({ where: { id: categoryId, institutionId }, select: { id: true } })) {
+      throw new NotFoundException('Categoría no encontrada.');
+    }
+  }
+
+  private async loadProfileInScope(profileId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    this.assertResourceId(profileId);
+    const profile = await this.prisma.educationalSupportProfile.findFirst({
+      where: { id: profileId, institutionId },
+      select: { id: true, active: true, parentConsentAccepted: true },
+    });
+    if (!profile) throw new NotFoundException('Perfil de acompañamiento no encontrado.');
+    return profile;
+  }
+
+  private async loadPlanInScope(planId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    this.assertResourceId(planId);
+    const plan = await this.prisma.pedagogicalSupportPlan.findFirst({
+      where: { id: planId, institutionId },
+      select: { id: true, status: true },
+    });
+    if (!plan) throw new NotFoundException('Plan no encontrado.');
+    return plan;
+  }
+
+  private async assertWorkspaceGroup(groupId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    if (!groupId || !await this.prisma.group.findFirst({ where: { id: groupId, campus: { institutionId }, grade: { institutionId } }, select: { id: true } })) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
+  }
+
+  async getWorkspaceContext(institutionId: string) {
+    this.assertInstitution(institutionId);
+    await this.checkModuleEnabled(institutionId);
+    const [academicYears, groups] = await Promise.all([
+      this.prisma.academicYear.findMany({
+        where: { institutionId },
+        select: { id: true, year: true, name: true, status: true, terms: { select: { id: true, name: true, order: true, startDate: true, endDate: true }, orderBy: { order: 'asc' } } },
+        orderBy: { year: 'desc' },
+      }),
+      this.prisma.group.findMany({
+        where: { campus: { institutionId }, grade: { institutionId } },
+        select: { id: true, name: true, gradeId: true, grade: { select: { id: true, name: true } } },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+    return { academicYears, groups };
+  }
+
+  async getWorkspaceStudents(groupId: string, academicYearId: string, institutionId: string) {
+    await this.assertWorkspaceGroup(groupId, institutionId);
+    if (!academicYearId || !await this.prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId }, select: { id: true } })) throw new NotFoundException('Año lectivo no encontrado.');
+    await this.checkModuleEnabled(institutionId);
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { institutionId, groupId, academicYearId, status: 'ACTIVE', student: { institutionId } },
+      select: { id: true, studentId: true, student: { select: { firstName: true, secondName: true, lastName: true, secondLastName: true } } },
+      orderBy: { student: { lastName: 'asc' } },
+    });
+    return enrollments.map(e => ({ id: e.studentId, enrollmentId: e.id, name: [e.student.lastName, e.student.secondLastName, e.student.firstName, e.student.secondName].filter(Boolean).join(' ') }));
+  }
+
+  async getWorkspacePlans(groupId: string, academicTermId: string, institutionId: string) {
+    await this.assertWorkspaceGroup(groupId, institutionId);
+    if (!academicTermId || !await this.prisma.academicTerm.findFirst({ where: { id: academicTermId, academicYear: { institutionId } }, select: { id: true } })) throw new NotFoundException('Período no encontrado.');
+    await this.checkModuleEnabled(institutionId);
+    return this.prisma.pedagogicalSupportPlan.findMany({
+      where: { institutionId, academicTermId, studentEnrollment: { groupId, institutionId } },
+      include: {
+        studentEnrollment: { select: { student: { select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true, documentNumber: true } } } },
+        activities: { where: { supportPlan: { institutionId } } },
+        progressLogs: { where: { supportPlan: { institutionId } }, include: { createdBy: { select: { firstName: true, lastName: true } } }, orderBy: { createdAt: 'desc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CONFIGURACIÓN INSTITUCIONAL
   // ═══════════════════════════════════════════════════════════════════════════
 
   async checkModuleEnabled(institutionId: string): Promise<void> {
+    this.assertInstitution(institutionId);
     const institution = await this.prisma.institution.findUnique({
       where: { id: institutionId },
       select: { enableDifferentialSupport: true },
@@ -33,6 +122,7 @@ export class ApdService {
   }
 
   async getInstitutionConfig(institutionId: string) {
+    this.assertInstitution(institutionId);
     return this.prisma.institution.findUnique({
       where: { id: institutionId },
       select: {
@@ -77,6 +167,7 @@ export class ApdService {
     },
     userId: string,
   ) {
+    this.assertResourceId(data.studentId);
     await this.checkModuleEnabled(data.institutionId);
 
     // Verificar que el estudiante pertenece a la institución
@@ -86,6 +177,7 @@ export class ApdService {
     if (!student) {
       throw new NotFoundException('Estudiante no encontrado en esta institución.');
     }
+    await this.assertCategory(data.supportCategoryId, data.institutionId);
 
     // Verificar que no exista ya un perfil
     const existing = await this.prisma.educationalSupportProfile.findUnique({
@@ -157,15 +249,8 @@ export class ApdService {
     },
     userId: string,
   ) {
-    const profile = await this.prisma.educationalSupportProfile.findUnique({
-      where: { id: profileId },
-    });
-    if (!profile) {
-      throw new NotFoundException('Perfil de acompañamiento no encontrado.');
-    }
-    if (profile.institutionId !== institutionId) {
-      throw new ForbiddenException('El perfil no pertenece a esta institución.');
-    }
+    const profile = await this.loadProfileInScope(profileId, institutionId);
+    await this.assertCategory(data.supportCategoryId, institutionId);
 
     // No permitir activar sin consentimiento
     const consentAccepted = data.parentConsentAccepted ?? profile.parentConsentAccepted;
@@ -177,7 +262,7 @@ export class ApdService {
     const nextActive = consentAccepted ? (data.active ?? profile.active) : false;
 
     const updated = await this.prisma.educationalSupportProfile.update({
-      where: { id: profileId },
+      where: { id: profileId, institutionId },
       data: {
         ...(data.supportCategory !== undefined && { supportCategory: data.supportCategory }),
         ...(data.supportCategoryId !== undefined && { supportCategoryId: data.supportCategoryId || null }),
@@ -217,13 +302,15 @@ export class ApdService {
   }
 
   async getProfile(profileId: string, institutionId: string, userId: string) {
-    const profile = await this.prisma.educationalSupportProfile.findUnique({
-      where: { id: profileId },
+    await this.loadProfileInScope(profileId, institutionId);
+    const profile = await this.prisma.educationalSupportProfile.findFirst({
+      where: { id: profileId, institutionId },
       include: {
         student: {
           select: { id: true, firstName: true, lastName: true, secondLastName: true, secondName: true },
         },
         supportPlans: {
+          where: { institutionId },
           include: {
             academicTerm: { select: { id: true, name: true, order: true } },
             activities: true,
@@ -240,9 +327,6 @@ export class ApdService {
     if (!profile) {
       throw new NotFoundException('Perfil de acompañamiento no encontrado.');
     }
-    if (profile.institutionId !== institutionId) {
-      throw new ForbiddenException('El perfil no pertenece a esta institución.');
-    }
 
     // Auditar consulta
     await this.audit.log({
@@ -257,6 +341,8 @@ export class ApdService {
   }
 
   async getProfileByStudent(studentId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    this.assertResourceId(studentId);
     return this.prisma.educationalSupportProfile.findUnique({
       where: {
         institutionId_studentId: { institutionId, studentId },
@@ -273,6 +359,7 @@ export class ApdService {
     institutionId: string,
     options?: { active?: boolean; search?: string },
   ) {
+    this.assertInstitution(institutionId);
     return this.prisma.educationalSupportProfile.findMany({
       where: {
         institutionId,
@@ -320,26 +407,40 @@ export class ApdService {
     },
     userId: string,
   ) {
+    this.assertResourceId(data.studentEnrollmentId);
+    this.assertResourceId(data.academicTermId);
     await this.checkModuleEnabled(data.institutionId);
 
     // Validar matrícula
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: data.studentEnrollmentId },
-      include: { group: { include: { grade: true } } },
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: data.studentEnrollmentId, institutionId: data.institutionId },
+      select: { id: true, studentId: true, academicYearId: true, status: true },
     });
     if (!enrollment) {
       throw new NotFoundException('Matrícula no encontrada.');
     }
-    if (enrollment.institutionId !== data.institutionId) {
-      throw new ForbiddenException('La matrícula no pertenece a esta institución.');
+    if (enrollment.status !== 'ACTIVE') {
+      throw new BadRequestException('Solo se pueden crear planes para una matrícula activa.');
+    }
+
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: data.academicTermId, academicYear: { institutionId: data.institutionId } },
+      select: { id: true, academicYearId: true },
+    });
+    if (!term) throw new NotFoundException('Período no encontrado.');
+    if (term.academicYearId !== enrollment.academicYearId) throw new BadRequestException('El período debe corresponder al año de la matrícula.');
+    if (data.achievementId && !await this.prisma.achievement.findFirst({ where: { id: data.achievementId, institutionId: data.institutionId }, select: { id: true } })) {
+      throw new NotFoundException('Aprendizaje no encontrado.');
     }
 
     // Validar perfil si se proporciona
     if (data.supportProfileId) {
-      const profile = await this.prisma.educationalSupportProfile.findUnique({
-        where: { id: data.supportProfileId },
+      const profile = await this.prisma.educationalSupportProfile.findFirst({
+        where: { id: data.supportProfileId, institutionId: data.institutionId, studentId: enrollment.studentId },
+        select: { id: true, active: true, parentConsentAccepted: true },
       });
-      if (!profile || !profile.active) {
+      if (!profile) throw new NotFoundException('Perfil de acompañamiento no encontrado para este estudiante.');
+      if (!profile.active || !profile.parentConsentAccepted) {
         throw new BadRequestException(
           'El perfil de acompañamiento no existe o no está activo.',
         );
@@ -349,6 +450,7 @@ export class ApdService {
     // Prevenir duplicados activos
     const existingActive = await this.prisma.pedagogicalSupportPlan.findFirst({
       where: {
+        institutionId: data.institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         academicTermId: data.academicTermId,
         status: 'ACTIVE',
@@ -421,20 +523,12 @@ export class ApdService {
     },
     userId: string,
   ) {
-    const plan = await this.prisma.pedagogicalSupportPlan.findUnique({
-      where: { id: planId },
-    });
-    if (!plan) {
-      throw new NotFoundException('Plan no encontrado.');
-    }
-    if (plan.institutionId !== institutionId) {
-      throw new ForbiddenException('El plan no pertenece a esta institución.');
-    }
+    const plan = await this.loadPlanInScope(planId, institutionId);
 
     const isStatusChange = data.status && data.status !== plan.status;
 
     const updated = await this.prisma.pedagogicalSupportPlan.update({
-      where: { id: planId },
+      where: { id: planId, institutionId },
       data: {
         ...(data.planType !== undefined && { planType: data.planType }),
         ...(data.supportStrategy !== undefined && { supportStrategy: data.supportStrategy }),
@@ -449,6 +543,7 @@ export class ApdService {
         ...(data.familySignatureUrl !== undefined && { familySignatureUrl: data.familySignatureUrl }),
         ...(data.status !== undefined && { status: data.status }),
         ...(data.status === 'COMPLETED' && { completedAt: new Date(), completedById: userId }),
+        ...(data.status && data.status !== 'COMPLETED' && { completedAt: null, completedById: null }),
       },
       include: {
         studentEnrollment: {
@@ -479,8 +574,9 @@ export class ApdService {
   }
 
   async getPlan(planId: string, institutionId: string) {
-    const plan = await this.prisma.pedagogicalSupportPlan.findUnique({
-      where: { id: planId },
+    await this.loadPlanInScope(planId, institutionId);
+    const plan = await this.prisma.pedagogicalSupportPlan.findFirst({
+      where: { id: planId, institutionId },
       include: {
         studentEnrollment: {
           include: {
@@ -516,9 +612,6 @@ export class ApdService {
 
     if (!plan) {
       throw new NotFoundException('Plan no encontrado.');
-    }
-    if (plan.institutionId !== institutionId) {
-      throw new ForbiddenException('El plan no pertenece a esta institución.');
     }
 
     return plan;

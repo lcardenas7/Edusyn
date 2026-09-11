@@ -24,6 +24,9 @@ Fecha: 2026-09-11. Complementa el aislamiento por petición explícita del usuar
 - Cambiar de año limpia períodos/grupos anteriores. Las peticiones de planes/perfiles no sobreescriben una selección reciente. Cambiar de institución o usuario reinicia el estado de la pantalla.
 - Un fallo de carga muestra un error y opción de reintento, evitando presentar una consulta fallida como cero planes. Los errores de guardado son visibles sobre los formularios y permanecen hasta cerrarlos.
 - Editar un perfil inactivo no lo reactiva por tener consentimiento. Borrar observaciones, compromisos o fechas persiste el vaciado, en lugar de omitir el campo y conservar su valor anterior.
+- Acceso real de DOCENTE y PSICOLOGA al contexto de trabajo, sin depender de permisos de otras pantallas. El API permite leer las dos banderas de configuración y conserva la restricción institucional de acceso docente. Años, grupos, estudiantes y planes se consultan mediante endpoints propios de Inclusión.
+- Crear un perfil permite elegir explícitamente el año de matrícula. Los grupos ya no desaparecen por carecer de una asignación docente en la API general.
+- Crear un plan rechaza perfiles de otro estudiante, períodos de otro año y referencias ajenas. Reabrirlo limpia sus datos de cierre anteriores. Ver AUDITORIA_AISLAMIENTO_INCLUSION.md.
 
 ## Verificación
 
@@ -35,6 +38,6 @@ Comprobado: filtros, movimiento con cuerpo esperado, fallo de historial, búsque
 
 ## Qué NO cubre
 
-Esta entrega no declara APD auditado en seguridad. Sus 32 rutas y su servicio requieren revisión A/B independiente, al igual que la API compartida de planes pedagógicos. Tampoco sustituye una prueba integrada con la base de datos, el Layout completo, firmas/documentos, análisis institucional ni comprobación de despliegue. No se añadió asesoría clínica, generación de diagnósticos, migraciones ni cambios de permisos del servidor.
+Esta entrega no declara APD cerrado en seguridad. De sus 35 rutas, el contexto de trabajo tiene 18 pruebas HTTP y perfiles/planes tienen 39 pruebas de servicio; el inventario pendiente está en AUDITORIA_AISLAMIENTO_INCLUSION.md. La API compartida de planes pedagógicos requiere revisión independiente. Tampoco sustituye una prueba integrada con la base de datos, el Layout completo, firmas/documentos, análisis institucional ni comprobación de despliegue. No se añadió asesoría clínica, generación de diagnósticos ni migraciones. Los cambios de permisos del servidor se limitan a lectura de configuración y consultas propias de trabajo de Inclusión.
 
-Pendientes funcionales identificados: selección docente de grupos según asignación y acceso de orientación; resistencia a fallos parciales del resumen institucional; revisión integral de adjuntos, participantes, firmas y cierre de planes. Deben resolverse con evidencia antes de declarar terminado todo el módulo de Inclusión.
+Pendientes funcionales identificados: selección docente de grupos según asignación; resistencia a fallos parciales del resumen institucional; revisión integral de adjuntos, participantes, firmas y cierre de planes. Deben resolverse con evidencia antes de declarar terminado todo el módulo de Inclusión. La entrada docente/orientación de la primera entrega se había probado con peticiones interceptadas; las 18 pruebas HTTP adicionales verifican ahora sus permisos reales para el contexto de trabajo.

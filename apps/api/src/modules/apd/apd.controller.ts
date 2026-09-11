@@ -66,13 +66,37 @@ export class ApdController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('config')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
   async getConfig(
     @Request() req: any,
     @Query('institutionId') institutionId?: string,
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.apdService.getInstitutionConfig(instId);
+  }
+
+  @Get('workspace')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async getWorkspace(@Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    await this.validateTeacherAccess(req, institutionId);
+    return this.apdService.getWorkspaceContext(institutionId);
+  }
+
+  @Get('workspace/students')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async getWorkspaceStudents(@Request() req: any, @Query('groupId') groupId: string, @Query('academicYearId') academicYearId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    await this.validateTeacherAccess(req, institutionId);
+    return this.apdService.getWorkspaceStudents(groupId, academicYearId, institutionId);
+  }
+
+  @Get('plans')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async getPlans(@Request() req: any, @Query('groupId') groupId: string, @Query('academicTermId') academicTermId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    await this.validateTeacherAccess(req, institutionId);
+    return this.apdService.getWorkspacePlans(groupId, academicTermId, institutionId);
   }
 
   @Put('config')

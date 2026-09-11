@@ -7,7 +7,7 @@ import {
   Search, Star, TrendingUp, Settings, Eye, Edit3, ClipboardList, UserPlus,
   BookOpen, Paperclip, Trash2, PenTool, Tag, PieChart, Target,
 } from 'lucide-react'
-import { apdApi, academicStudentsApi, academicYearsApi, academicTermsApi, teacherAssignmentsApi, academicGradesApi, groupsApi } from '../lib/api'
+import { apdApi } from '../lib/api'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTES
@@ -82,6 +82,7 @@ function DifferentialSupportContent() {
   const [configError, setConfigError] = useState('')
   const [configAttempt, setConfigAttempt] = useState(0)
   const [plansError, setPlansError] = useState('')
+  const [workspaceGroups, setWorkspaceGroups] = useState<any[]>([])
   const [profilesError, setProfilesError] = useState('')
   const [planFilter, setPlanFilter] = useState<FollowUpFilter>('all')
   const [planSearch, setPlanSearch] = useState('')
@@ -178,6 +179,8 @@ function DifferentialSupportContent() {
   const isRector = user?.roles?.some((r: any) => ['RECTOR'].includes(typeof r === 'string' ? r : r.role?.name || r.name))
   const canConfigure = isAdmin || isRector
   const canViewDashboard = isAdmin || isRector || isCoordinator
+  const isPsychologist = user?.roles?.some((r: any) => (typeof r === 'string' ? r : r.role?.name || r.name) === 'PSICOLOGA')
+  const teacherOnly = user?.roles?.some((r: any) => (typeof r === 'string' ? r : r.role?.name || r.name) === 'DOCENTE') && !isAdmin && !isCoordinator && !isRector && !isPsychologist
 
   const showMsg = (type: 'success' | 'error', text: string) => {
     const next = { type, text }
@@ -196,7 +199,7 @@ function DifferentialSupportContent() {
       try {
         const res = await apdApi.getConfig()
         if (cancelled) return
-        setModuleEnabled(res.data?.enableDifferentialSupport || false)
+        setModuleEnabled(!!res.data?.enableDifferentialSupport && (!teacherOnly || res.data?.allowTeacherAccess !== false))
         setAllowTeacher(res.data?.allowTeacherAccess ?? true)
       } catch (err: any) { if (!cancelled) setConfigError(err.response?.status === 403 ? 'No tiene acceso al módulo de Inclusión con el rol actual.' : 'No se pudo cargar la configuración de Inclusión. Intente nuevamente.') }
       finally { if (!cancelled) setConfigLoading(false) }
@@ -249,25 +252,27 @@ function DifferentialSupportContent() {
 
   useEffect(() => {
     if (!showProfileModal || editingProfile) return
-    const loadGrades = async () => { try { const res = await academicGradesApi.getAll(institutionId); setModalGrades(res.data || []) } catch { setModalGrades([]) } }
-    loadGrades()
-  }, [showProfileModal, editingProfile, institutionId])
+    const grades = new Map<string, any>()
+    workspaceGroups.forEach(g => { if (g.grade) grades.set(g.grade.id, g.grade) })
+    setModalGrades(Array.from(grades.values()))
+  }, [showProfileModal, editingProfile, workspaceGroups])
 
   useEffect(() => {
-    if (!modalSelectedGradeId) { setModalGroups([]); setModalSelectedGroupId(''); return }
-    const load = async () => { try { const res = await groupsApi.getAll({ gradeId: modalSelectedGradeId, institutionId }); setModalGroups(res.data || []); setModalSelectedGroupId('') } catch { setModalGroups([]) } }
-    load()
-  }, [modalSelectedGradeId, institutionId])
+    setModalGroups(workspaceGroups.filter(g => g.gradeId === modalSelectedGradeId))
+    setModalSelectedGroupId(''); setModalStudents([])
+  }, [modalSelectedGradeId, workspaceGroups])
 
   useEffect(() => {
-    if (!modalSelectedGroupId || !selectedYearId) { setModalStudents([]); return }
-    const load = async () => {
-      setModalStudentsLoading(true)
-      try { const res = await academicStudentsApi.getByGroup({ groupId: modalSelectedGroupId, academicYearId: selectedYearId, institutionId }); setModalStudents(res.data || []) } catch { setModalStudents([]) }
-      finally { setModalStudentsLoading(false) }
-    }
-    load()
-  }, [modalSelectedGroupId, selectedYearId, institutionId])
+    setModalStudents([])
+    if (!modalSelectedGroupId || !selectedYearId) return
+    let cancelled = false
+    setModalStudentsLoading(true)
+    apdApi.getWorkspaceStudents(modalSelectedGroupId, selectedYearId).then(res => {
+      if (!cancelled) setModalStudents(res.data || [])
+    }).catch(() => { if (!cancelled) showMsg('error', 'No se pudieron cargar los estudiantes del grupo.') })
+      .finally(() => { if (!cancelled) setModalStudentsLoading(false) })
+    return () => { cancelled = true }
+  }, [modalSelectedGroupId, selectedYearId])
 
   const openCreateProfile = () => {
     setEditingProfile(null)
@@ -327,61 +332,41 @@ function DifferentialSupportContent() {
 
   useEffect(() => {
     if (!moduleEnabled) return
-    const load = async () => {
-      try {
-        const res = await academicYearsApi.getAll(); const years = res.data || []; setAcademicYears(years)
-        const current = years.find((y: any) => y.isCurrent) || years.find((y: any) => y.status === 'ACTIVE') || years.sort((a: any, b: any) => b.year - a.year)[0]
-        if (current) setSelectedYearId(current.id)
-      } catch { showMsg('error', 'No se pudieron cargar los años académicos.') }
-    }
-    load()
+    let cancelled = false
+    apdApi.getWorkspace().then(res => {
+      if (cancelled) return
+      const years = res.data.academicYears || []
+      setAcademicYears(years); setWorkspaceGroups(res.data.groups || [])
+      const current = years.find((y: any) => y.status === 'ACTIVE') || years[0]
+      setSelectedYearId(current?.id || '')
+    }).catch(() => { if (!cancelled) showMsg('error', 'No se pudieron cargar los años y grupos de Inclusión. Actualice la página para reintentar.') })
+    return () => { cancelled = true }
   }, [moduleEnabled])
 
   useEffect(() => {
-    setTerms([]); setSelectedTermId(''); setPlans([])
-    if (!selectedYearId) return
-    let cancelled = false
-    const load = async () => {
-      try {
-        const res = await academicTermsApi.getAll(selectedYearId)
-        if (cancelled) return
-        const next = res.data || []; const now = new Date()
-        const current = next.find((t: any) => t.startDate && t.endDate && new Date(t.startDate) <= now && new Date(t.endDate) >= now) || next[0]
-        setTerms(next); setSelectedTermId(current?.id || '')
-      } catch { if (!cancelled) showMsg('error', 'No se pudieron cargar los períodos.') }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [selectedYearId])
+    const year = academicYears.find((y: any) => y.id === selectedYearId)
+    const next = year?.terms || []; const now = new Date()
+    const current = next.find((t: any) => t.startDate && t.endDate && new Date(t.startDate) <= now && new Date(t.endDate) >= now) || next[0]
+    setTerms(next); setSelectedTermId(current?.id || ''); setPlans([])
+    const nextGroups = workspaceGroups.map(g => ({ ...g, gradeName: g.grade?.name }))
+    setGroups(nextGroups); setSelectedGroupId(selectedYearId ? nextGroups[0]?.id || '' : '')
+  }, [selectedYearId, academicYears, workspaceGroups])
 
   useEffect(() => {
-    setGroups([]); setSelectedGroupId(''); setPlans([])
-    if (!selectedYearId) return
+    setStudents([])
+    if (!selectedGroupId || !selectedYearId) return
     let cancelled = false
-    const load = async () => {
-      try {
-        const res = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
-        if (cancelled) return
-        const uniqueGroups = new Map<string, any>()
-        ;(res.data || []).forEach((a: any) => { if (a.group && !uniqueGroups.has(a.group.id)) uniqueGroups.set(a.group.id, { id: a.group.id, name: a.group.name, gradeName: a.group.grade?.name }) })
-        const next = Array.from(uniqueGroups.values()); setGroups(next); setSelectedGroupId(next[0]?.id || '')
-      } catch { if (!cancelled) showMsg('error', 'No se pudieron cargar los grupos.') }
-    }
-    load()
+    apdApi.getWorkspaceStudents(selectedGroupId, selectedYearId).then(res => {
+      if (!cancelled) setStudents(res.data || [])
+    }).catch(() => { if (!cancelled) showMsg('error', 'No se pudieron cargar los estudiantes del grupo.') })
     return () => { cancelled = true }
-  }, [selectedYearId])
-
-  useEffect(() => {
-    if (!selectedGroupId || !selectedYearId) { setStudents([]); return }
-    const load = async () => { try { const res = await academicStudentsApi.getByGroup({ groupId: selectedGroupId, academicYearId: selectedYearId, institutionId }); setStudents(res.data || []) } catch { setStudents([]) } }
-    load()
-  }, [selectedGroupId, selectedYearId, institutionId])
+  }, [selectedGroupId, selectedYearId])
 
   const loadPlans = async () => {
     const request = ++plansRequest.current
     if (!selectedGroupId || !selectedTermId) { setPlans([]); setPlansLoading(false); return }
     setPlansLoading(true); setPlansError('')
-    try { const { pedagogicalSupportApi } = await import('../lib/api'); const res = await pedagogicalSupportApi.getByGroup(selectedGroupId, selectedTermId); if (request === plansRequest.current) setPlans(res.data || []) }
+    try { const res = await apdApi.getPlans(selectedGroupId, selectedTermId); if (request === plansRequest.current) setPlans(res.data || []) }
     catch { if (request === plansRequest.current) setPlansError('No se pudieron cargar los planes. Intente nuevamente.') } finally { if (request === plansRequest.current) setPlansLoading(false) }
   }
 
@@ -612,8 +597,8 @@ function DifferentialSupportContent() {
     <div className="max-w-2xl mx-auto mt-12">
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
         <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-        <h2 className="text-lg font-semibold text-amber-800 mb-2">Módulo no habilitado</h2>
-        <p className="text-amber-600">El módulo de Acompañamiento Pedagógico Diferencial no está habilitado. Contacte al administrador.</p>
+        <h2 className="text-lg font-semibold text-amber-800 mb-2">{teacherOnly && !allowTeacher ? 'Acceso docente no habilitado' : 'Módulo no habilitado'}</h2>
+        <p className="text-amber-600">{teacherOnly && !allowTeacher ? 'El colegio ha desactivado el acceso docente a Inclusión. Solicite al administrador revisar esta configuración.' : 'El módulo de Acompañamiento Pedagógico Diferencial no está habilitado. Contacte al administrador.'}</p>
       </div>
     </div>
   )
@@ -1221,6 +1206,7 @@ function DifferentialSupportContent() {
             <div className="flex items-center justify-between p-5 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-900">{editingProfile ? 'Editar Perfil' : 'Nuevo Perfil de Acompañamiento'}</h2><button onClick={() => setShowProfileModal(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button></div>
             <div className="p-5 space-y-4">
               {!editingProfile && (<>
+                <div><label className="block text-xs font-medium text-slate-600 mb-1">Año de matrícula</label><select value={selectedYearId} onChange={e => { setSelectedYearId(e.target.value); setProfileForm(prev => ({ ...prev, studentId: '' })) }} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">{academicYears.map((y: any) => <option key={y.id} value={y.id}>{y.name || y.year}</option>)}</select></div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Grado</label><select value={modalSelectedGradeId} onChange={(e) => { setModalSelectedGradeId(e.target.value); setProfileForm({ ...profileForm, studentId: '' }) }} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"><option value="">Seleccionar grado...</option>{modalGrades.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label><select value={modalSelectedGroupId} onChange={(e) => { setModalSelectedGroupId(e.target.value); setProfileForm({ ...profileForm, studentId: '' }) }} disabled={!modalSelectedGradeId} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm disabled:bg-slate-100"><option value="">Seleccionar grupo...</option>{modalGroups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
