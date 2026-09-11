@@ -891,7 +891,7 @@ export class ReportsService {
             const result = await this.studentGradesService.calculateTermGrade(
               studentEnrollmentId,
               subject.teacherAssignmentId!,
-              term.id,
+              term.id, institutionId,
             );
             return {
               termId: term.id,

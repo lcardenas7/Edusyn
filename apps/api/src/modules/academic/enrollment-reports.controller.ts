@@ -1,5 +1,8 @@
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import {
   Controller,
+  Request,
   Get,
   Param,
   Query,
@@ -15,7 +18,7 @@ import { EnrollmentReportsService } from './enrollment-reports.service';
 @Controller('enrollment-reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EnrollmentReportsController {
-  constructor(private readonly reportsService: EnrollmentReportsService) {}
+  constructor(private readonly reportsService: EnrollmentReportsService, private readonly prisma: PrismaService) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LISTADO DE MATRICULADOS - PDF
@@ -23,16 +26,17 @@ export class EnrollmentReportsController {
 
   @Get('list/:academicYearId/pdf')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
-  async getEnrollmentListPdf(
+  async getEnrollmentListPdf(@Request() req: any,
     @Param('academicYearId') academicYearId: string,
     @Query('gradeId') gradeId: string,
     @Query('groupId') groupId: string,
     @Query('status') status: string,
     @Res() res: Response,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     const buffer = await this.reportsService.generateEnrollmentListPdf(
       academicYearId,
-      { gradeId, groupId, status }
+      { gradeId, groupId, status }, institutionId
     );
 
     res.set({
@@ -50,16 +54,17 @@ export class EnrollmentReportsController {
 
   @Get('list/:academicYearId/excel')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
-  async getEnrollmentListExcel(
+  async getEnrollmentListExcel(@Request() req: any,
     @Param('academicYearId') academicYearId: string,
     @Query('gradeId') gradeId: string,
     @Query('groupId') groupId: string,
     @Query('status') status: string,
     @Res() res: Response,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     const buffer = await this.reportsService.generateEnrollmentListExcel(
       academicYearId,
-      { gradeId, groupId, status }
+      { gradeId, groupId, status }, institutionId
     );
 
     res.set({
@@ -77,11 +82,12 @@ export class EnrollmentReportsController {
 
   @Get('stats/:academicYearId/pdf')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR')
-  async getStatsByGradePdf(
+  async getStatsByGradePdf(@Request() req: any,
     @Param('academicYearId') academicYearId: string,
     @Res() res: Response,
   ) {
-    const buffer = await this.reportsService.generateStatsByGradePdf(academicYearId);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    const buffer = await this.reportsService.generateStatsByGradePdf(academicYearId, institutionId);
 
     res.set({
       'Content-Type': 'application/pdf',

@@ -12,12 +12,15 @@ import { StudentGradesService } from './student-grades.service';
 describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
   function makePrismaMock() {
     return {
-      academicTerm: { findMany: jest.fn() },
-      teacherAssignment: { findUnique: jest.fn() },
-      periodFinalGrade: { findUnique: jest.fn() },
+      studentEnrollment: { findFirst: jest.fn(async ({ where }: any) => where.institutionId === 'inst-A' ? { id: where.id, academicYearId: 'y1' } : null) },
+      academicYear: { findFirst: jest.fn(async ({ where }: any) => where.institutionId === 'inst-A' ? { id: where.id } : null) },
+
+      academicTerm: { findMany: jest.fn(), findFirst: jest.fn(async ({where}: any) => where.academicYear.institutionId === 'inst-A' ? {id: where.id, academicYearId:'y1'} : null) },
+      teacherAssignment: { findFirst: jest.fn() },
+      periodFinalGrade: { findFirst: jest.fn() },
       finalComponent: { findMany: jest.fn() },
-      finalComponentGrade: { findUnique: jest.fn() },
-      evaluationPlan: { findUnique: jest.fn() },
+      finalComponentGrade: { findFirst: jest.fn() },
+      evaluationPlan: { findFirst: jest.fn() },
       partialGrade: { findMany: jest.fn() },
     };
   }
@@ -27,27 +30,27 @@ describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
   it('usa PeriodFinalGrade (canónico) y NO recalcula desde parciales cuando existe', async () => {
     const prisma = makePrismaMock();
     prisma.academicTerm.findMany.mockResolvedValue(singleTerm);
-    prisma.teacherAssignment.findUnique.mockResolvedValue({ subjectId: 'sub1' });
+    prisma.teacherAssignment.findFirst.mockResolvedValue({ academicYearId: 'y1', subjectId: 'sub1' });
     // Nota canónica = 4.0 (p.ej. recuperada). Si recalculara desde parciales daría otra cosa.
-    prisma.periodFinalGrade.findUnique.mockResolvedValue({ finalScore: 4.0 });
+    prisma.periodFinalGrade.findFirst.mockResolvedValue({ finalScore: 4.0 });
     prisma.finalComponent.findMany.mockResolvedValue([]);
 
     const svc = new StudentGradesService(prisma as any, { record: jest.fn(), recordMany: jest.fn() } as any);
-    const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
 
     expect(res.annualGrade).toBe(4.0);
-    expect(prisma.periodFinalGrade.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.periodFinalGrade.findFirst).toHaveBeenCalledTimes(1);
     // Prueba de que NO se recalculó desde parciales:
-    expect(prisma.evaluationPlan.findUnique).not.toHaveBeenCalled();
+    expect(prisma.evaluationPlan.findFirst).not.toHaveBeenCalled();
     expect(prisma.partialGrade.findMany).not.toHaveBeenCalled();
   });
 
   it('cae al recálculo desde PartialGrade cuando NO existe PeriodFinalGrade', async () => {
     const prisma = makePrismaMock();
     prisma.academicTerm.findMany.mockResolvedValue(singleTerm);
-    prisma.teacherAssignment.findUnique.mockResolvedValue({ subjectId: 'sub1' });
-    prisma.periodFinalGrade.findUnique.mockResolvedValue(null); // sin nota canónica aún
-    prisma.evaluationPlan.findUnique.mockResolvedValue({
+    prisma.teacherAssignment.findFirst.mockResolvedValue({ academicYearId: 'y1', subjectId: 'sub1' });
+    prisma.periodFinalGrade.findFirst.mockResolvedValue(null); // sin nota canónica aún
+    prisma.evaluationPlan.findFirst.mockResolvedValue({
       components: [
         { componentId: 'c1', percentage: 100, component: { id: 'c1', code: 'COG', name: 'Cognitivo' } },
       ],
@@ -56,17 +59,17 @@ describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
     prisma.finalComponent.findMany.mockResolvedValue([]);
 
     const svc = new StudentGradesService(prisma as any, { record: jest.fn(), recordMany: jest.fn() } as any);
-    const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
 
     expect(res.annualGrade).toBe(3.5);
-    expect(prisma.evaluationPlan.findUnique).toHaveBeenCalled(); // sí recalculó (fallback)
+    expect(prisma.evaluationPlan.findFirst).toHaveBeenCalled(); // sí recalculó (fallback)
   });
 
   it('si la asignación no tiene subjectId, recalcula (no rompe)', async () => {
     const prisma = makePrismaMock();
     prisma.academicTerm.findMany.mockResolvedValue(singleTerm);
-    prisma.teacherAssignment.findUnique.mockResolvedValue({ subjectId: null });
-    prisma.evaluationPlan.findUnique.mockResolvedValue({
+    prisma.teacherAssignment.findFirst.mockResolvedValue({ academicYearId: 'y1', subjectId: null });
+    prisma.evaluationPlan.findFirst.mockResolvedValue({
       components: [
         { componentId: 'c1', percentage: 100, component: { id: 'c1', code: 'COG', name: 'Cognitivo' } },
       ],
@@ -75,10 +78,10 @@ describe('StudentGradesService.calculateAnnualGrade (A-11 / INV-10)', () => {
     prisma.finalComponent.findMany.mockResolvedValue([]);
 
     const svc = new StudentGradesService(prisma as any, { record: jest.fn(), recordMany: jest.fn() } as any);
-    const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const res = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
 
     expect(res.annualGrade).toBe(3.0);
     // No se consultó PeriodFinalGrade porque no hay subjectId para la coordenada.
-    expect(prisma.periodFinalGrade.findUnique).not.toHaveBeenCalled();
+    expect(prisma.periodFinalGrade.findFirst).not.toHaveBeenCalled();
   });
 });

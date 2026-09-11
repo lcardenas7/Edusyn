@@ -105,24 +105,85 @@ export class EnrollmentService {
     private templatesService: TemplatesService,
   ) {}
 
+  private transactional = false;
+
+  /** Keep every write in a movement, including its audit and snapshot, on one client. */
+  forTransaction(tx: Prisma.TransactionClient): EnrollmentService {
+    const service = new EnrollmentService(tx as PrismaService, this.yearLifecycleService, new TemplatesService(tx as PrismaService));
+    service.transactional = true;
+    return service;
+  }
+
+  private runTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    if (this.transactional) return operation(this.prisma);
+    return this.prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30000 });
+  }
+
+  private assertInstitution(institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+  }
+
+  private async assertYearInScope(id: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    const year = await this.prisma.academicYear.findFirst({ where: { id, institutionId }, select: { id: true, status: true } });
+    if (!year) throw new NotFoundException('Año lectivo no encontrado');
+    return year;
+  }
+
+  private async assertStudentInScope(id: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    const student = await this.prisma.student.findFirst({ where: { id, institutionId }, select: { id: true } });
+    if (!student) throw new NotFoundException('Estudiante no encontrado');
+    return student;
+  }
+
+  private async assertGroupInScope(id: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    const group = await this.prisma.group.findFirst({ where: { id, campus: { institutionId }, grade: { institutionId } }, select: { id: true, gradeId: true } });
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+    return group;
+  }
+
+  private async assertEnrollmentInScope(id: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    const enrollment = await this.prisma.studentEnrollment.findFirst({ where: { id, institutionId }, select: { id: true, groupId: true, academicYearId: true } });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+    return enrollment;
+  }
+
+  private async assertFiltersInScope(filters: EnrollmentFilters, institutionId: string) {
+    this.assertInstitution(institutionId);
+    if (filters.academicYearId) await this.assertYearInScope(filters.academicYearId, institutionId);
+    if (filters.groupId) await this.assertGroupInScope(filters.groupId, institutionId);
+    if (filters.gradeId && !await this.prisma.grade.findFirst({ where: { id: filters.gradeId, institutionId }, select: { id: true } })) {
+      throw new NotFoundException('Grado no encontrado');
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // MATRICULAR ESTUDIANTE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async enrollStudent(dto: EnrollStudentDto) {
+  async enrollStudent(dto: EnrollStudentDto, institutionId: string) {
+    await this.assertStudentInScope(dto.studentId, institutionId);
+    await this.assertYearInScope(dto.academicYearId, institutionId);
+    await this.assertGroupInScope(dto.groupId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).enrollStudentInTransaction(dto, institutionId));
+  }
+
+  private async enrollStudentInTransaction(dto: EnrollStudentDto, institutionId: string) {
+    await this.assertStudentInScope(dto.studentId, institutionId);
+    await this.assertGroupInScope(dto.groupId, institutionId);
     // Validar que el año permita matrículas
-    const canEnroll = await this.yearLifecycleService.canEnrollStudents(dto.academicYearId);
+    const canEnroll = (await this.assertYearInScope(dto.academicYearId, institutionId)).status === 'ACTIVE';
     if (!canEnroll) {
       throw new ForbiddenException('El año lectivo no permite matrículas en su estado actual');
     }
 
     // Verificar que el estudiante no esté ya matriculado en este año
-    const existingEnrollment = await this.prisma.studentEnrollment.findUnique({
+    const existingEnrollment = await this.prisma.studentEnrollment.findFirst({
       where: {
-        studentId_academicYearId: {
-          studentId: dto.studentId,
-          academicYearId: dto.academicYearId,
-        },
+        institutionId, studentId: dto.studentId, academicYearId: dto.academicYearId,
       },
     });
 
@@ -131,14 +192,15 @@ export class EnrollmentService {
     }
 
     // Verificar que el grupo exista
-    const group = await this.prisma.group.findUnique({
-      where: { id: dto.groupId },
+    const group = await this.prisma.group.findFirst({
+      where: { id: dto.groupId, campus: { institutionId }, grade: { institutionId } },
       include: { 
         grade: true,
         _count: {
           select: {
             studentEnrollments: {
               where: {
+                institutionId,
                 academicYearId: dto.academicYearId,
                 status: 'ACTIVE',
               },
@@ -163,13 +225,13 @@ export class EnrollmentService {
     }
 
     // Obtener institutionId del estudiante
-    const student = await this.prisma.student.findUnique({ where: { id: dto.studentId }, select: { institutionId: true } });
+    const student = await this.prisma.student.findFirst({ where: { id: dto.studentId, institutionId }, select: { id: true } });
     if (!student) throw new NotFoundException('Estudiante no encontrado');
 
     // Crear la matrícula
     const enrollment = await this.prisma.studentEnrollment.create({
       data: {
-        institutionId: student.institutionId,
+        institutionId,
         studentId: dto.studentId,
         academicYearId: dto.academicYearId,
         groupId: dto.groupId,
@@ -205,10 +267,10 @@ export class EnrollmentService {
       reason: 'Matrícula inicial',
       observations: dto.observations,
       performedById: dto.enrolledById,
-    });
+    }, institutionId);
 
     // 🔥 SNAPSHOT: Copiar estructura académica al momento de matrícula
-    await this.createAcademicSnapshot(enrollment.id, dto.groupId, dto.academicYearId);
+    await this.createAcademicSnapshot(enrollment.id, dto.groupId, dto.academicYearId, institutionId);
 
     return enrollment;
   }
@@ -217,9 +279,17 @@ export class EnrollmentService {
   // CREAR ESTUDIANTE Y MATRICULAR (FLUJO UNIFICADO)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createStudentAndEnroll(dto: CreateStudentAndEnrollDto) {
+  async createStudentAndEnroll(dto: CreateStudentAndEnrollDto, institutionId: string) {
+    await this.assertYearInScope(dto.academicYearId, institutionId);
+    await this.assertGroupInScope(dto.groupId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).createStudentAndEnrollInTransaction(dto, institutionId));
+  }
+
+  private async createStudentAndEnrollInTransaction(dto: CreateStudentAndEnrollDto, institutionId: string) {
+    dto = { ...dto, institutionId };
+    await this.assertGroupInScope(dto.groupId, institutionId);
     // Validar que el año permita matrículas
-    const canEnroll = await this.yearLifecycleService.canEnrollStudents(dto.academicYearId);
+    const canEnroll = (await this.assertYearInScope(dto.academicYearId, institutionId)).status === 'ACTIVE';
     if (!canEnroll) {
       throw new ForbiddenException('El año lectivo no permite matrículas en su estado actual');
     }
@@ -236,12 +306,9 @@ export class EnrollmentService {
 
     if (existingStudent) {
       // Verificar si ya está matriculado en este año
-      const existingEnrollment = await this.prisma.studentEnrollment.findUnique({
+      const existingEnrollment = await this.prisma.studentEnrollment.findFirst({
         where: {
-          studentId_academicYearId: {
-            studentId: existingStudent.id,
-            academicYearId: dto.academicYearId,
-          },
+          institutionId, studentId: existingStudent.id, academicYearId: dto.academicYearId,
         },
       });
 
@@ -261,18 +328,19 @@ export class EnrollmentService {
         modality: dto.modality,
         observations: dto.observations,
         enrolledById: dto.enrolledById,
-      });
+      }, institutionId);
     }
 
     // Verificar cupo del grupo
-    const group = await this.prisma.group.findUnique({
-      where: { id: dto.groupId },
+    const group = await this.prisma.group.findFirst({
+      where: { id: dto.groupId, campus: { institutionId }, grade: { institutionId } },
       include: {
         grade: true,
         _count: {
           select: {
             studentEnrollments: {
               where: {
+                institutionId,
                 academicYearId: dto.academicYearId,
                 status: 'ACTIVE',
               },
@@ -296,7 +364,7 @@ export class EnrollmentService {
     }
 
     // Crear estudiante y matrícula en transacción
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.runTransaction(async (tx) => {
       // Crear estudiante
       const student = await tx.student.create({
         data: {
@@ -379,7 +447,7 @@ export class EnrollmentService {
     });
 
     // 🔥 SNAPSHOT: Copiar estructura académica al momento de matrícula
-    await this.createAcademicSnapshot(result.id, dto.groupId, dto.academicYearId);
+    await this.createAcademicSnapshot(result.id, dto.groupId, dto.academicYearId, institutionId);
 
     return result;
   }
@@ -389,6 +457,7 @@ export class EnrollmentService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async findStudentByDocument(institutionId: string, documentNumber: string) {
+    this.assertInstitution(institutionId);
     const student = await this.prisma.student.findUnique({
       where: {
         institutionId_documentNumber: {
@@ -398,6 +467,7 @@ export class EnrollmentService {
       },
       include: {
         enrollments: {
+          where: { institutionId },
           include: {
             group: {
               include: {
@@ -426,11 +496,16 @@ export class EnrollmentService {
   // RETIRAR ESTUDIANTE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async withdrawStudent(dto: WithdrawStudentDto) {
-    const enrollment = await this.getEnrollmentById(dto.enrollmentId);
+  async withdrawStudent(dto: WithdrawStudentDto, institutionId: string) {
+    await this.assertEnrollmentInScope(dto.enrollmentId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).withdrawStudentInTransaction(dto, institutionId));
+  }
+
+  private async withdrawStudentInTransaction(dto: WithdrawStudentDto, institutionId: string) {
+    const enrollment = await this.getEnrollmentById(dto.enrollmentId, institutionId);
 
     // Validar que el año permita modificaciones
-    const canModify = await this.yearLifecycleService.canModify(enrollment.academicYearId);
+    const canModify = (await this.assertYearInScope(enrollment.academicYearId, institutionId)).status !== 'CLOSED';
     if (!canModify) {
       throw new ForbiddenException('El año lectivo no permite modificaciones');
     }
@@ -442,7 +517,7 @@ export class EnrollmentService {
 
     // Actualizar la matrícula
     const updatedEnrollment = await this.prisma.studentEnrollment.update({
-      where: { id: dto.enrollmentId },
+      where: { id: dto.enrollmentId, institutionId },
       data: {
         status: 'WITHDRAWN',
         withdrawalDate: new Date(),
@@ -467,7 +542,7 @@ export class EnrollmentService {
       reason: dto.reason,
       observations: dto.observations,
       performedById: dto.performedById,
-    });
+    }, institutionId);
 
     return updatedEnrollment;
   }
@@ -476,11 +551,16 @@ export class EnrollmentService {
   // TRASLADAR ESTUDIANTE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async transferStudent(dto: TransferStudentDto) {
-    const enrollment = await this.getEnrollmentById(dto.enrollmentId);
+  async transferStudent(dto: TransferStudentDto, institutionId: string) {
+    await this.assertEnrollmentInScope(dto.enrollmentId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).transferStudentInTransaction(dto, institutionId));
+  }
+
+  private async transferStudentInTransaction(dto: TransferStudentDto, institutionId: string) {
+    const enrollment = await this.getEnrollmentById(dto.enrollmentId, institutionId);
 
     // Validar que el año permita modificaciones
-    const canModify = await this.yearLifecycleService.canModify(enrollment.academicYearId);
+    const canModify = (await this.assertYearInScope(enrollment.academicYearId, institutionId)).status !== 'CLOSED';
     if (!canModify) {
       throw new ForbiddenException('El año lectivo no permite modificaciones');
     }
@@ -492,7 +572,7 @@ export class EnrollmentService {
 
     // Actualizar la matrícula
     const updatedEnrollment = await this.prisma.studentEnrollment.update({
-      where: { id: dto.enrollmentId },
+      where: { id: dto.enrollmentId, institutionId },
       data: {
         status: 'TRANSFERRED',
         withdrawalDate: new Date(),
@@ -521,7 +601,7 @@ export class EnrollmentService {
       reason: dto.reason,
       observations: dto.observations,
       performedById: dto.performedById,
-    });
+    }, institutionId);
 
     return updatedEnrollment;
   }
@@ -530,11 +610,17 @@ export class EnrollmentService {
   // CAMBIAR GRUPO
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async changeGroup(dto: ChangeGroupDto) {
-    const enrollment = await this.getEnrollmentById(dto.enrollmentId);
+  async changeGroup(dto: ChangeGroupDto, institutionId: string) {
+    await this.assertEnrollmentInScope(dto.enrollmentId, institutionId);
+    await this.assertGroupInScope(dto.newGroupId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).changeGroupInTransaction(dto, institutionId));
+  }
+
+  private async changeGroupInTransaction(dto: ChangeGroupDto, institutionId: string) {
+    const enrollment = await this.getEnrollmentById(dto.enrollmentId, institutionId);
 
     // Validar que el año permita modificaciones
-    const canModify = await this.yearLifecycleService.canModify(enrollment.academicYearId);
+    const canModify = (await this.assertYearInScope(enrollment.academicYearId, institutionId)).status !== 'CLOSED';
     if (!canModify) {
       throw new ForbiddenException('El año lectivo no permite modificaciones');
     }
@@ -544,15 +630,18 @@ export class EnrollmentService {
       throw new BadRequestException(`No se puede cambiar el grupo de una matrícula en estado ${enrollment.status}`);
     }
 
+    if (enrollment.groupId === dto.newGroupId) throw new BadRequestException('Seleccione un grupo diferente al actual');
+
     // Verificar que el nuevo grupo exista y validar cupo
-    const newGroup = await this.prisma.group.findUnique({
-      where: { id: dto.newGroupId },
+    const newGroup = await this.prisma.group.findFirst({
+      where: { id: dto.newGroupId, campus: { institutionId }, grade: { institutionId } },
       include: { 
         grade: true,
         _count: {
           select: {
             studentEnrollments: {
               where: {
+                institutionId,
                 academicYearId: enrollment.academicYearId,
                 status: 'ACTIVE',
               },
@@ -579,6 +668,7 @@ export class EnrollmentService {
     const previousGroupId = enrollment.groupId;
     const previousGradeId = enrollment.group.gradeId;
     const isSameGrade = previousGradeId === newGroup.gradeId;
+    if (!isSameGrade) throw new BadRequestException('Los cambios de grado deben realizarse mediante el flujo de validación académica.');
 
     // ═══════════════════════════════════════════════════════════════════════════
     // MIGRACIÓN DE NOTAS (solo si es el mismo grado)
@@ -597,13 +687,13 @@ export class EnrollmentService {
         dto.enrollmentId,
         previousGroupId,
         dto.newGroupId,
-        enrollment.academicYearId,
+        enrollment.academicYearId, institutionId,
       );
     }
 
     // Actualizar la matrícula
     const updatedEnrollment = await this.prisma.studentEnrollment.update({
-      where: { id: dto.enrollmentId },
+      where: { id: dto.enrollmentId, institutionId },
       data: {
         groupId: dto.newGroupId,
       },
@@ -622,7 +712,7 @@ export class EnrollmentService {
     // REGENERAR SNAPSHOT DE ESTRUCTURA ACADÉMICA
     // El snapshot del nuevo grupo puede tener docentes diferentes
     // ═══════════════════════════════════════════════════════════════════════════
-    await this.regenerateAcademicSnapshot(dto.enrollmentId);
+    await this.regenerateAcademicSnapshot(dto.enrollmentId, institutionId);
 
     // Crear evento de auditoría con información de migración
     await this.createEnrollmentEvent({
@@ -643,7 +733,7 @@ export class EnrollmentService {
       reason: dto.reason,
       observations: dto.observations,
       performedById: dto.performedById,
-    });
+    }, institutionId);
 
     return {
       ...updatedEnrollment,
@@ -663,7 +753,7 @@ export class EnrollmentService {
     enrollmentId: string,
     previousGroupId: string,
     newGroupId: string,
-    academicYearId: string,
+    academicYearId: string, institutionId: string,
   ): Promise<{
     partialGradesMigrated: number;
     studentGradesMigrated: number;
@@ -672,14 +762,19 @@ export class EnrollmentService {
     subjectsMatched: string[];
     subjectsNotMatched: string[];
   }> {
+    const enrollment = await this.assertEnrollmentInScope(enrollmentId, institutionId);
+    await this.assertYearInScope(academicYearId, institutionId);
+    await this.assertGroupInScope(previousGroupId, institutionId);
+    await this.assertGroupInScope(newGroupId, institutionId);
+    if (enrollment.academicYearId !== academicYearId) throw new NotFoundException("Matrícula no encontrada");
     // 1. Obtener TeacherAssignments del grupo anterior y nuevo
     const [oldAssignments, newAssignments] = await Promise.all([
       this.prisma.teacherAssignment.findMany({
-        where: { groupId: previousGroupId, academicYearId },
+        where: { groupId: previousGroupId, academicYearId, institutionId },
         include: { subject: true },
       }),
       this.prisma.teacherAssignment.findMany({
-        where: { groupId: newGroupId, academicYearId },
+        where: { groupId: newGroupId, academicYearId, institutionId },
         include: { subject: true },
       }),
     ]);
@@ -710,7 +805,7 @@ export class EnrollmentService {
       // 3a. Migrar PartialGrades
       const partialResult = await this.prisma.partialGrade.updateMany({
         where: {
-          studentEnrollmentId: enrollmentId,
+          institutionId, studentEnrollmentId: enrollmentId,
           teacherAssignmentId: oldTa.id,
         },
         data: {
@@ -722,7 +817,7 @@ export class EnrollmentService {
       // 3b. Migrar StudentGrades (a través de EvaluativeActivity)
       // Primero obtener las actividades del assignment anterior
       const oldActivities = await this.prisma.evaluativeActivity.findMany({
-        where: { teacherAssignmentId: oldTa.id },
+        where: { teacherAssignmentId: oldTa.id, institutionId },
         select: { id: true },
       });
 
@@ -733,7 +828,7 @@ export class EnrollmentService {
         // Solo contamos cuántas hay para el reporte
         const studentGradesCount = await this.prisma.studentGrade.count({
           where: {
-            studentEnrollmentId: enrollmentId,
+            institutionId, studentEnrollmentId: enrollmentId,
             evaluativeActivityId: { in: oldActivities.map(a => a.id) },
           },
         });
@@ -743,7 +838,7 @@ export class EnrollmentService {
       // 3c. Migrar AttendanceRecords
       const attendanceResult = await this.prisma.attendanceRecord.updateMany({
         where: {
-          studentEnrollmentId: enrollmentId,
+          institutionId, studentEnrollmentId: enrollmentId,
           teacherAssignmentId: oldTa.id,
         },
         data: {
@@ -757,7 +852,7 @@ export class EnrollmentService {
     // Esta tabla tiene groupId directo, no teacherAssignmentId
     const tutoringResult = await this.prisma.tutoringAttendance.updateMany({
       where: {
-        studentEnrollmentId: enrollmentId,
+        institutionId, studentEnrollmentId: enrollmentId,
         groupId: previousGroupId,
       },
       data: {
@@ -780,11 +875,16 @@ export class EnrollmentService {
   // REACTIVAR ESTUDIANTE (Reingreso)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async reactivateStudent(dto: ReactivateStudentDto) {
-    const enrollment = await this.getEnrollmentById(dto.enrollmentId);
+  async reactivateStudent(dto: ReactivateStudentDto, institutionId: string) {
+    await this.assertEnrollmentInScope(dto.enrollmentId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).reactivateStudentInTransaction(dto, institutionId));
+  }
+
+  private async reactivateStudentInTransaction(dto: ReactivateStudentDto, institutionId: string) {
+    const enrollment = await this.getEnrollmentById(dto.enrollmentId, institutionId);
 
     // Validar que el año permita matrículas
-    const canEnroll = await this.yearLifecycleService.canEnrollStudents(enrollment.academicYearId);
+    const canEnroll = (await this.assertYearInScope(enrollment.academicYearId, institutionId)).status === 'ACTIVE';
     if (!canEnroll) {
       throw new ForbiddenException('El año lectivo no permite matrículas en su estado actual');
     }
@@ -794,9 +894,12 @@ export class EnrollmentService {
       throw new BadRequestException(`Solo se pueden reactivar matrículas en estado WITHDRAWN, actual: ${enrollment.status}`);
     }
 
+    const capacity = await this.getGroupCapacity(enrollment.groupId, enrollment.academicYearId, institutionId);
+    if (capacity.isFull) throw new BadRequestException('El grupo no tiene cupos disponibles para reactivar la matrícula.');
+
     // Actualizar la matrícula
     const updatedEnrollment = await this.prisma.studentEnrollment.update({
-      where: { id: dto.enrollmentId },
+      where: { id: dto.enrollmentId, institutionId },
       data: {
         status: 'ACTIVE',
         withdrawalDate: null,
@@ -823,7 +926,7 @@ export class EnrollmentService {
       reason: dto.reason,
       observations: dto.observations,
       performedById: dto.performedById,
-    });
+    }, institutionId);
 
     return updatedEnrollment;
   }
@@ -832,9 +935,10 @@ export class EnrollmentService {
   // OBTENER MATRÍCULA POR ID
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getEnrollmentById(enrollmentId: string) {
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: enrollmentId },
+  async getEnrollmentById(enrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentInScope(enrollmentId, institutionId);
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: enrollmentId, institutionId },
       include: {
         student: true,
         group: {
@@ -845,6 +949,7 @@ export class EnrollmentService {
         },
         academicYear: true,
         events: {
+          where: { institutionId },
           orderBy: { performedAt: 'desc' },
           take: 10,
           include: {
@@ -871,8 +976,9 @@ export class EnrollmentService {
   // LISTAR MATRÍCULAS CON FILTROS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getEnrollments(filters: EnrollmentFilters) {
-    const where: any = {};
+  async getEnrollments(filters: EnrollmentFilters, institutionId: string) {
+    await this.assertFiltersInScope(filters, institutionId);
+    const where: Prisma.StudentEnrollmentWhereInput = { institutionId };
 
     if (filters.academicYearId) {
       where.academicYearId = filters.academicYearId;
@@ -933,9 +1039,10 @@ export class EnrollmentService {
   // HISTORIAL DE MATRÍCULA
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getEnrollmentHistory(enrollmentId: string) {
+  async getEnrollmentHistory(enrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentInScope(enrollmentId, institutionId);
     return this.prisma.enrollmentEvent.findMany({
-      where: { enrollmentId },
+      where: { enrollmentId, institutionId },
       include: {
         performedBy: {
           select: {
@@ -954,9 +1061,10 @@ export class EnrollmentService {
   // HISTORIAL DE MATRÍCULAS DE UN ESTUDIANTE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getStudentEnrollmentHistory(studentId: string) {
+  async getStudentEnrollmentHistory(studentId: string, institutionId: string) {
+    await this.assertStudentInScope(studentId, institutionId);
     return this.prisma.studentEnrollment.findMany({
-      where: { studentId },
+      where: { studentId, institutionId },
       include: {
         group: {
           include: {
@@ -989,9 +1097,11 @@ export class EnrollmentService {
   // GESTIÓN DE CUPOS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getGroupCapacity(groupId: string, academicYearId: string) {
-    const group = await this.prisma.group.findUnique({
-      where: { id: groupId },
+  async getGroupCapacity(groupId: string, academicYearId: string, institutionId: string) {
+    await this.assertGroupInScope(groupId, institutionId);
+    await this.assertYearInScope(academicYearId, institutionId);
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, campus: { institutionId }, grade: { institutionId } },
       include: {
         grade: true,
         campus: true,
@@ -1000,6 +1110,7 @@ export class EnrollmentService {
           select: {
             studentEnrollments: {
               where: {
+                institutionId,
                 academicYearId,
                 status: 'ACTIVE',
               },
@@ -1029,6 +1140,7 @@ export class EnrollmentService {
   }
 
   async getCapacityByAcademicYear(academicYearId: string, institutionId: string) {
+    await this.assertYearInScope(academicYearId, institutionId);
     const groups = await this.prisma.group.findMany({
       where: {
         campus: { institutionId },
@@ -1041,6 +1153,7 @@ export class EnrollmentService {
           select: {
             studentEnrollments: {
               where: {
+                institutionId,
                 academicYearId,
                 status: 'ACTIVE',
               },
@@ -1071,9 +1184,10 @@ export class EnrollmentService {
     }));
   }
 
-  async updateGroupCapacity(groupId: string, maxCapacity: number | null) {
+  async updateGroupCapacity(groupId: string, maxCapacity: number | null, institutionId: string) {
+    await this.assertGroupInScope(groupId, institutionId);
     return this.prisma.group.update({
-      where: { id: groupId },
+      where: { id: groupId, campus: { institutionId }, grade: { institutionId } },
       data: { maxCapacity },
     });
   }
@@ -1082,19 +1196,20 @@ export class EnrollmentService {
   // ESTADÍSTICAS DE MATRÍCULAS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getEnrollmentStats(academicYearId: string) {
+  async getEnrollmentStats(academicYearId: string, institutionId: string) {
+    await this.assertYearInScope(academicYearId, institutionId);
     const [total, byStatus, byGrade] = await Promise.all([
       this.prisma.studentEnrollment.count({
-        where: { academicYearId },
+        where: { academicYearId, institutionId },
       }),
       this.prisma.studentEnrollment.groupBy({
         by: ['status'],
-        where: { academicYearId },
+        where: { academicYearId, institutionId },
         _count: true,
       }),
       this.prisma.studentEnrollment.groupBy({
         by: ['groupId'],
-        where: { academicYearId },
+        where: { academicYearId, institutionId },
         _count: true,
       }),
     ]);
@@ -1123,12 +1238,11 @@ export class EnrollmentService {
     observations?: string;
     academicActId?: string;
     performedById: string;
-  }) {
-    // Fetch institutionId from the enrollment
-    const enrollment = await this.prisma.studentEnrollment.findUnique({ where: { id: data.enrollmentId }, select: { institutionId: true } });
+  }, institutionId: string) {
+    await this.assertEnrollmentInScope(data.enrollmentId, institutionId);
     return this.prisma.enrollmentEvent.create({
       data: {
-        institutionId: enrollment!.institutionId,
+        institutionId,
         enrollmentId: data.enrollmentId,
         type: data.type,
         movementType: data.movementType,
@@ -1157,11 +1271,14 @@ export class EnrollmentService {
   private async createAcademicSnapshot(
     enrollmentId: string,
     groupId: string,
-    academicYearId: string,
+    academicYearId: string, institutionId: string,
   ): Promise<void> {
+    await this.assertEnrollmentInScope(enrollmentId, institutionId);
+    await this.assertYearInScope(academicYearId, institutionId);
+    await this.assertGroupInScope(groupId, institutionId);
     try {
       // Obtener estructura académica efectiva del grupo
-      const structure = await this.templatesService.getEffectiveStructureForGroup(groupId, academicYearId);
+      const structure = await this.templatesService.getEffectiveStructureForGroupInScope(groupId, academicYearId, institutionId);
       
       if (!structure.areas || structure.areas.length === 0) {
         console.warn(`[Enrollment] No academic structure found for group ${groupId} in year ${academicYearId}`);
@@ -1170,7 +1287,7 @@ export class EnrollmentService {
 
       // 🔥 Obtener docentes asignados al grupo para incluir en snapshot
       const teacherAssignments = await this.prisma.teacherAssignment.findMany({
-        where: { groupId, academicYearId },
+        where: { groupId, academicYearId, institutionId },
         include: {
           teacher: { select: { id: true, firstName: true, lastName: true } },
         },
@@ -1185,11 +1302,9 @@ export class EnrollmentService {
       );
 
       // Crear snapshot de áreas y asignaturas en transacción
-      // Obtener institutionId de la matrícula
-      const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: enrollmentId }, select: { institutionId: true } });
-      const instId = enr!.institutionId;
+      const instId = institutionId;
 
-      await this.prisma.$transaction(async (tx) => {
+      await this.runTransaction(async (tx) => {
         for (const templateArea of structure.areas) {
           // Crear EnrollmentArea (snapshot del área)
           const enrollmentArea = await tx.enrollmentArea.create({
@@ -1237,8 +1352,8 @@ export class EnrollmentService {
       });
 
     } catch (error) {
-      // No fallar la matrícula si el snapshot falla, solo loguear
-      console.error(`[Enrollment] Error creating academic snapshot for enrollment ${enrollmentId}:`, error);
+      // Surface the failure so the complete movement rolls back; never report a partial save as successful.
+      throw error;
     }
   }
 
@@ -1246,13 +1361,15 @@ export class EnrollmentService {
    * Obtiene la estructura académica de una matrícula específica
    * Usa el snapshot si existe, o calcula la estructura efectiva como fallback
    */
-  async getEnrollmentAcademicStructure(enrollmentId: string) {
+  async getEnrollmentAcademicStructure(enrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentInScope(enrollmentId, institutionId);
     // Intentar obtener snapshot
     const enrollmentAreas = await this.prisma.enrollmentArea.findMany({
-      where: { enrollmentId },
+      where: { enrollmentId, institutionId },
       include: {
         area: true,
         enrollmentSubjects: {
+          where: { institutionId },
           include: { subject: true },
           orderBy: { order: 'asc' },
         },
@@ -1268,8 +1385,8 @@ export class EnrollmentService {
     }
 
     // Fallback: calcular estructura efectiva (para matrículas antiguas sin snapshot)
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: enrollmentId },
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: enrollmentId, institutionId },
       select: { groupId: true, academicYearId: true },
     });
 
@@ -1277,9 +1394,10 @@ export class EnrollmentService {
       throw new NotFoundException('Matrícula no encontrada');
     }
 
-    const structure = await this.templatesService.getEffectiveStructureForGroup(
+    const structure = await this.templatesService.getEffectiveStructureForGroupInScope(
       enrollment.groupId,
       enrollment.academicYearId,
+      institutionId,
     );
 
     return {
@@ -1293,9 +1411,15 @@ export class EnrollmentService {
    * Regenera el snapshot académico de una matrícula
    * Útil para matrículas antiguas o si se necesita actualizar manualmente
    */
-  async regenerateAcademicSnapshot(enrollmentId: string): Promise<{ created: number; deleted: number }> {
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: enrollmentId },
+  async regenerateAcademicSnapshot(enrollmentId: string, institutionId: string) {
+    await this.assertEnrollmentInScope(enrollmentId, institutionId);
+    return this.runTransaction(tx => this.forTransaction(tx).regenerateSnapshotInTransaction(enrollmentId, institutionId));
+  }
+
+  private async regenerateSnapshotInTransaction(enrollmentId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: enrollmentId, institutionId },
       select: { groupId: true, academicYearId: true },
     });
 
@@ -1303,17 +1427,24 @@ export class EnrollmentService {
       throw new NotFoundException('Matrícula no encontrada');
     }
 
+    await this.assertYearInScope(enrollment.academicYearId, institutionId);
+    await this.assertGroupInScope(enrollment.groupId, institutionId);
+    // Do not erase an existing historical structure when destination setup is missing.
+    const structure = await this.templatesService.getEffectiveStructureForGroupInScope(enrollment.groupId, enrollment.academicYearId, institutionId);
+    if (!structure.areas?.length && await this.prisma.enrollmentArea.count({ where: { enrollmentId, institutionId } })) {
+      throw new BadRequestException('El grupo destino no tiene estructura académica configurada. Configure su plantilla antes de mover la matrícula.');
+    }
     // Eliminar snapshot existente
     const deleted = await this.prisma.enrollmentArea.deleteMany({
-      where: { enrollmentId },
+      where: { enrollmentId, institutionId },
     });
 
     // Crear nuevo snapshot
-    await this.createAcademicSnapshot(enrollmentId, enrollment.groupId, enrollment.academicYearId);
+    await this.createAcademicSnapshot(enrollmentId, enrollment.groupId, enrollment.academicYearId, institutionId);
 
     // Contar nuevos registros
     const created = await this.prisma.enrollmentArea.count({
-      where: { enrollmentId },
+      where: { enrollmentId, institutionId },
     });
 
     return { created, deleted: deleted.count };

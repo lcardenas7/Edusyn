@@ -498,130 +498,10 @@
     "fingerprint": "bfdc6a5882a8e7f913ad339f633c89373431d598b9d5b99e8f03cf668d3e3710"
   },
   {
-    "key": "modules/academic/enrollment-reports.controller.ts#EnrollmentReportsController.getEnrollmentListExcel @Get('list/:academicYearId/excel')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "7cf5fe4d8d6db63e390f97efd873878aca0c3ff197479e1644c1873fa4b9b7cd"
-  },
-  {
-    "key": "modules/academic/enrollment-reports.controller.ts#EnrollmentReportsController.getEnrollmentListPdf @Get('list/:academicYearId/pdf')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "9ebeec7e732e897ff9801d89f834b4669eada0d7640930fd37078497065cef91"
-  },
-  {
-    "key": "modules/academic/enrollment-reports.controller.ts#EnrollmentReportsController.getStatsByGradePdf @Get('stats/:academicYearId/pdf')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "6cf264bcdeda0b4e3577985e18f4c8037a681e851c41cd45948b0c1d0e79afdb"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.changeGroup @Post(':enrollmentId/change-group')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "0356770c5ffd21e4d7afac527f6946525b395a152a2fa96ea66851413a5f35e4"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.createStudentAndEnroll @Post('create-and-enroll')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "b7458e22f21fcddce381155276585ecfbc3793c4448ce382c056e318e11676c4"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.enrollStudent @Post()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1af072e5bcdb6d61e5775498f8d9bc4776b0e9f2e2bae4f413e386f2cdfca285"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getEnrollmentAcademicStructure @Get(':enrollmentId/academic-structure')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "4255b13157e326d36bbdcbc41086a08053087de2ab8564b933ca31c1b6dab24b"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getEnrollmentById @Get(':enrollmentId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "3a71473c2e86681fb58277622dfec616abb6e69eaa746d609d2d887edadb035d"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getEnrollmentHistory @Get(':enrollmentId/history')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "b536e4579256b8e3b678a6f0c3a99e953eea7fcd0a4d7898bf6c4feabfb31144"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getEnrollments @Get()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "6f2b036bf0a4f58e09cc952670838d32aed9f98940a5f39f65cb2d89e65d2ea8"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getEnrollmentStats @Get('stats/:academicYearId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "7ead5e6c5050e4ea47f3b39642310c239c8cb6de6f3fd900f6bb8ef6b1c5a2d1"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getGroupCapacity @Get('capacity/:academicYearId/group/:groupId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "66f2446b6497ed4dda27202a477e3ae84129fa67a6233668456f20e569387bc5"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.getStudentEnrollmentHistory @Get('student/:studentId/history')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1aaa84ce6aec047d52bb3e0f0e6be1d310ac1bc517345857e43886679915da04"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.reactivateStudent @Post(':enrollmentId/reactivate')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1d343329a65ed34c92cab736cf4dc35e9864276fde2c78617a22e6713f07862c"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.regenerateAcademicSnapshot @Post(':enrollmentId/regenerate-snapshot')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1902e5f72c2102ec4d3e80845d933497c802ad3a3ee24189c622e88599b83ff8"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.transferStudent @Post(':enrollmentId/transfer')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "4ece4dc51f8ca1407df29dce61dfe317adfa2df17aa765e1f9e4e15d2c3ee90b"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.updateGroupCapacity @Put('capacity/group/:groupId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "ad7d23a31c516034fa9ab35ef64c05732c0a75150e903ecff2649b23ef8f0adf"
-  },
-  {
-    "key": "modules/academic/enrollment.controller.ts#EnrollmentController.withdrawStudent @Post(':enrollmentId/withdraw')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "817248fb9bf658d511f96bf4b1e8ebbcf1caa2781256271cdf281b5bd2954455"
-  },
-  {
-    "key": "modules/academic/grade-change.controller.ts#GradeChangeController.executeChange @Post('execute')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c85154ebd26346524618b9d5f43bd22d17e52588def54393a096190358e8fa8b"
-  },
-  {
     "key": "modules/academic/grade-change.controller.ts#GradeChangeController.getGradeChangeRules @Get('rules')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "79747a91d3f72eeeb04975ed811398be8331e95b5ac07d98cfaf8d86b0f1073d"
-  },
-  {
-    "key": "modules/academic/grade-change.controller.ts#GradeChangeController.validateChange @Post('validate')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "5cc7a2f38073b8763d59d21b317bfdb25f687dbc8275ecd46d757280fcde596b"
+    "kind": "non-institutional",
+    "reason": "Catálogo declarativo estático de tipos de movimiento y requisitos; este método no consulta Prisma ni datos institucionales. Su contenido de reglas aún requiere revisión funcional.",
+    "fingerprint": "085e863a7847709aa3257426f958b1bf0ade778fbecf4f24027ed7a654e419c8"
   },
   {
     "key": "modules/academic/grades.controller.ts#GradesController.delete @Delete(':id')",
@@ -948,12 +828,6 @@
     "fingerprint": "f8a18c983ab9763390ff2a6ec5b76e8e33e5635721e71e0632bdd77fc637969b"
   },
   {
-    "key": "modules/academic/templates.controller.ts#TemplatesController.getEffectiveStructureForGroup @Get('groups/:groupId/effective-structure')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "d51e002dc6f2e943ddd41fb05673787441214365456f8e78a9203179e8727cbe"
-  },
-  {
     "key": "modules/academic/templates.controller.ts#TemplatesController.getEnums @Get('enums')",
     "kind": "pending-audit",
     "reason": "Deuda previa en academic: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -1071,61 +945,55 @@
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getByAssignmentAndDate @Get('by-assignment/:teacherAssignmentId')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "8074745b33d3bd844c2e4bce1bf196eabaee8bece021405078204a30d523330b"
+    "fingerprint": "e443005693e1b132b7ffdcbeab14b148af4d45f001a59aab540a3b7e99392c9e"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getByStudent @Get('by-student/:studentEnrollmentId')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "d65e9fac5139a6e921cf2eb2b0737e78c0709c0926727ff02f9c0ab0503ed266"
+    "fingerprint": "7b75e914a93e3b3237f2c86a0a65482550fa54c442c091a49d8eee5a22befcca"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getConsolidatedReport @Get('report/consolidated')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "21b80176c0e2af536d1ea3f3f9a47c954769c09054ce87b76d5c6def5b84d6e1"
+    "fingerprint": "cf563cfa36b0c623b9c6cd03028d6c964a176ffb6b1538209a7dd1cf4fe4ef9e"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getDetailedReport @Get('detailed-report')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "398ce15fbeb134065b14e50fdb8e2f66ac4276c9d628b246b4704dce976d0c35"
+    "fingerprint": "bc0eba6c615049e48509dee6995d87f68ccfb142d78be3fa830be29076f5b3e8"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getGroupAttendanceReport @Get('report/:teacherAssignmentId')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "5da7bdd0505035eb4390811c81918eef9140ca07595aa0401b2dc4dab0618064"
+    "fingerprint": "e95bc7a2f37dd2c029f1fa0cb7d89549023688eec0f107c357a1596b7413e4a6"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getReportByGroup @Get('report-by-group/:groupId')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "a936e5fcd7066c6a40286ba0efe6adda89f7f55ffa94afa78003d3e30e5e89af"
-  },
-  {
-    "key": "modules/attendance/attendance.controller.ts#AttendanceController.getStudentSummary @Get('summary/:studentEnrollmentId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "02cb4cbcf83c3f083876605f6926a627b58ec59f410a9e0bfa880337c8ed15b7"
+    "fingerprint": "2611750c3bbb74152dfc9e4a8c6fae3bc9699422f98a8385ee4f84686c5ce5f3"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.getTeacherComplianceReport @Get('report/teacher-compliance')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "3904040cd3aacc76496df55e88a31934be90aadab0c46f7cbb09f5414121ba51"
+    "fingerprint": "77d7485398241fce1872799fb31010c9f70425f1ef0589a1022bf0fe07f18be5"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.recordBulk @Post()",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "08bb04f53b70251f2209a3002d6003ef86d6b7ca5162fda113059ad95ee02a3a"
+    "fingerprint": "2df12b687884b258d69dc32250882ca21f90cdcceefcd82d8cb5153fb0a41030"
   },
   {
     "key": "modules/attendance/attendance.controller.ts#AttendanceController.update @Put(':id')",
     "kind": "pending-audit",
     "reason": "Deuda previa en attendance: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "5843e2541c1a0dbcd5fd300901a4e92b62b47b1988e9e03ea819d2756a6b618c"
+    "fingerprint": "ff03c19104afabd6506813a0ab8c5fa8d9d9f76853ad8ab1d1ce79ff2bc83595"
   },
   {
     "key": "modules/attendance/tutoring-attendance.controller.ts#TutoringAttendanceController.getByGroupAndDate @Get('by-group')",
@@ -2664,12 +2532,6 @@
     "fingerprint": "2ea33940e76d9fb7bb98b70e12a451b70362a8130791b8e4bb298abcf11b4915"
   },
   {
-    "key": "modules/evaluation/student-grades.controller.ts#StudentGradesController.getAnnualGrade @Get('annual-grade')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "59a9a86165d516a26f9878c98c8cf79ba809efa1e1b65de1fc39e67069f7c4c7"
-  },
-  {
     "key": "modules/evaluation/student-grades.controller.ts#StudentGradesController.getByActivity @Get('by-activity')",
     "kind": "pending-audit",
     "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -2680,18 +2542,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "89bfb45343602b1ace47ad9ef4aa16181ff2a843cdc9de8ee646594fc6ecf5d8"
-  },
-  {
-    "key": "modules/evaluation/student-grades.controller.ts#StudentGradesController.getComponentAverage @Get('component-average')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "0110d16909d2d113786fd24a01dc816164d5c08179bd95108c2e99ad9f2a4713"
-  },
-  {
-    "key": "modules/evaluation/student-grades.controller.ts#StudentGradesController.getTermGrade @Get('term-grade')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c0fba943a844cd3e91d73fb59e7728a288b4f0751488946cbe67b1980549e311"
   },
   {
     "key": "modules/evaluation/student-grades.controller.ts#StudentGradesController.upsert @Post()",

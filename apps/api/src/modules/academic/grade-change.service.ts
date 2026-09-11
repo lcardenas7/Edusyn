@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { GradeStage, EnrollmentMovementType } from '@prisma/client';
+import { GradeStage, EnrollmentMovementType, Prisma } from '@prisma/client';
 import { ChangeGradeDto, ValidateGradeChangeDto, GradeChangeType } from './dto/grade-change.dto';
 import { AttendanceService } from '../attendance/attendance.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
@@ -19,12 +19,26 @@ export class GradeChangeService {
     private readonly enrollmentService: EnrollmentService,
   ) {}
 
+  private async assertEnrollmentInScope(id: string, institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const enrollment = await this.prisma.studentEnrollment.findFirst({ where: { id, institutionId }, select: { id: true } });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+  }
+
+  private async assertGroupInScope(id: string, institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const group = await this.prisma.group.findFirst({ where: { id, campus: { institutionId }, grade: { institutionId } }, select: { id: true } });
+    if (!group) throw new NotFoundException('Grupo destino no encontrado');
+  }
+
   /**
    * Valida si un cambio de grado es permitido
    */
-  async validateGradeChange(dto: ValidateGradeChangeDto) {
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: dto.enrollmentId },
+  async validateGradeChange(dto: ValidateGradeChangeDto, institutionId: string) {
+    await this.assertEnrollmentInScope(dto.enrollmentId, institutionId);
+    await this.assertGroupInScope(dto.newGroupId, institutionId);
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: dto.enrollmentId, institutionId },
       include: {
         student: true,
         group: {
@@ -40,20 +54,24 @@ export class GradeChangeService {
       throw new NotFoundException('Matrícula no encontrada');
     }
 
+    if (enrollment.academicYear.status === 'CLOSED') throw new ForbiddenException('El año lectivo no permite modificaciones');
+
     if (enrollment.status !== 'ACTIVE') {
       throw new BadRequestException(`No se puede modificar una matrícula en estado ${enrollment.status}`);
     }
+    if (enrollment.groupId === dto.newGroupId) throw new BadRequestException('Seleccione un grupo diferente al actual');
 
-    const rulesCtx = await this.institutionContext.getContext(enrollment.institutionId);
+    const rulesCtx = await this.institutionContext.getContext(institutionId);
 
-    const newGroup = await this.prisma.group.findUnique({
-      where: { id: dto.newGroupId },
+    const newGroup = await this.prisma.group.findFirst({
+      where: { id: dto.newGroupId, campus: { institutionId }, grade: { institutionId } },
       include: {
         grade: true,
         _count: {
           select: {
             studentEnrollments: {
               where: {
+                institutionId,
                 academicYearId: enrollment.academicYearId,
                 status: 'ACTIVE',
               },
@@ -83,8 +101,8 @@ export class GradeChangeService {
       newGroup.grade
     );
 
-    const promotionAssessment = gradeChangeType === GradeChangeType.PROMOTION
-      ? await this.buildPromotionAssessment(enrollment, rulesCtx)
+    const promotionAssessment = gradeChangeType === GradeChangeType.PROMOTION && dto.movementType !== EnrollmentMovementType.ADMINISTRATIVE
+      ? await this.buildPromotionAssessment(enrollment, rulesCtx, institutionId)
       : null;
 
     // Validaciones según el tipo de cambio
@@ -111,13 +129,31 @@ export class GradeChangeService {
   /**
    * Ejecuta el cambio de grado/grupo con todas las validaciones
    */
-  async changeGrade(dto: ChangeGradeDto) {
+  async changeGrade(dto: ChangeGradeDto, institutionId: string) {
+    // Reject foreign resources before starting a transaction or consulting academic data.
+    if (dto.academicActId) {
+      if (!institutionId || !await this.prisma.academicAct.findFirst({ where: { id: dto.academicActId, institutionId }, select: { id: true } })) throw new NotFoundException('Acta académica no encontrada');
+    }
+    await this.assertEnrollmentInScope(dto.enrollmentId, institutionId);
+    await this.assertGroupInScope(dto.newGroupId, institutionId);
+    return this.prisma.$transaction(async tx => {
+      const service = new GradeChangeService(tx as PrismaService, this.attendanceService, this.studentGradesService, this.institutionContext, this.enrollmentService.forTransaction(tx));
+      return service.changeGradeInTransaction(dto, institutionId);
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30000 });
+  }
+
+  private async changeGradeInTransaction(dto: ChangeGradeDto, institutionId: string) {
+    if (dto.academicActId) {
+      if (!institutionId) throw new NotFoundException('Institución no encontrada');
+      const act = await this.prisma.academicAct.findFirst({ where: { id: dto.academicActId, institutionId }, select: { id: true } });
+      if (!act) throw new NotFoundException('Acta académica no encontrada');
+    }
     // Primero validar (respetando si es una corrección administrativa)
     const validation = await this.validateGradeChange({
       enrollmentId: dto.enrollmentId,
       newGroupId: dto.newGroupId,
       movementType: dto.movementType,
-    });
+    }, institutionId);
 
     const isAdministrativeCorrection = dto.movementType === EnrollmentMovementType.ADMINISTRATIVE;
 
@@ -127,22 +163,22 @@ export class GradeChangeService {
       );
     }
 
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: dto.enrollmentId },
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: dto.enrollmentId, institutionId },
       include: {
         group: { include: { grade: true } },
         student: true,
       },
     });
 
-    const newGroup = await this.prisma.group.findUnique({
-      where: { id: dto.newGroupId },
+    const newGroup = await this.prisma.group.findFirst({
+      where: { id: dto.newGroupId, campus: { institutionId }, grade: { institutionId } },
       include: { grade: true },
     });
 
     // Para promociones/demociones se requiere acta, SALVO que sea una corrección
     // administrativa (error de matrícula): en ese caso el admin lo asume y queda auditado.
-    if (dto.gradeChangeType !== GradeChangeType.SAME_GRADE && !dto.academicActId && !isAdministrativeCorrection) {
+    if (validation.gradeChangeType !== GradeChangeType.SAME_GRADE && !dto.academicActId && !isAdministrativeCorrection) {
       throw new BadRequestException(
         'Para cambios de grado se requiere el ID de un acta académica que respalde la decisión, o marcarlo como corrección administrativa'
       );
@@ -150,11 +186,15 @@ export class GradeChangeService {
 
     // Verificar que el acta exista y esté aprobada
     if (dto.academicActId) {
-      const act = await this.prisma.academicAct.findUnique({
-        where: { id: dto.academicActId },
+      const act = await this.prisma.academicAct.findFirst({
+        where: { id: dto.academicActId, institutionId },
       });
 
-      if (!act || act.approvalDate === null) {
+      if (!act) throw new NotFoundException('Acta académica no encontrada');
+      if (act.academicYearId !== enrollment!.academicYearId || (act.studentEnrollmentId && act.studentEnrollmentId !== dto.enrollmentId)) {
+        throw new BadRequestException('El acta debe corresponder al año lectivo y a la matrícula que se modifica.');
+      }
+      if (!act.approvalDate) {
         throw new BadRequestException('El acta académica no existe o no está aprobada');
       }
     }
@@ -164,7 +204,7 @@ export class GradeChangeService {
     const previousGradeId = enrollment!.group.gradeId;
 
     const updatedEnrollment = await this.prisma.studentEnrollment.update({
-      where: { id: dto.enrollmentId },
+      where: { id: dto.enrollmentId, institutionId },
       data: {
         groupId: dto.newGroupId,
       },
@@ -190,7 +230,7 @@ export class GradeChangeService {
         dto.enrollmentId,
         previousGroupId,
         dto.newGroupId,
-        enrollment!.academicYearId,
+        enrollment!.academicYearId, institutionId,
       );
     }
 
@@ -198,7 +238,7 @@ export class GradeChangeService {
     // grado tiene otra malla (áreas/asignaturas/pesos) y/o docentes. Sin esto, los boletines,
     // promedios y la promoción seguirían usando la estructura del grupo anterior.
     // docs/AUDITORIA_MOVIMIENTO_NOTAS.md (Fase 1). En cambio de grado NO migra notas: solo la estructura.
-    await this.enrollmentService.regenerateAcademicSnapshot(dto.enrollmentId);
+    await this.enrollmentService.regenerateAcademicSnapshot(dto.enrollmentId, institutionId);
 
     // Crear evento de auditoría
     await this.createGradeChangeEvent({
@@ -221,7 +261,7 @@ export class GradeChangeService {
       movementType: dto.movementType,
       academicActId: dto.academicActId,
       performedById: dto.performedById,
-    });
+    }, institutionId);
 
     return updatedEnrollment;
   }
@@ -364,10 +404,10 @@ export class GradeChangeService {
     };
   }
 
-  private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext) {
+  private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext, institutionId: string) {
     const teacherAssignments = await this.prisma.teacherAssignment.findMany({
       where: {
-        groupId: enrollment.groupId,
+        institutionId, groupId: enrollment.groupId,
         academicYearId: enrollment.academicYearId,
       },
       include: {
@@ -380,7 +420,7 @@ export class GradeChangeService {
         const result = await this.studentGradesService.calculateAnnualGrade(
           enrollment.id,
           assignment.id,
-          enrollment.academicYearId,
+          enrollment.academicYearId, institutionId,
         );
 
         return {
@@ -400,7 +440,7 @@ export class GradeChangeService {
       .filter((entry) => entry.annualGrade === null || entry.annualGrade < rulesCtx.minPassingGrade)
       .map((entry) => entry.subjectName);
 
-    const attendance = await this.attendanceService.getStudentSummary(enrollment.id);
+    const attendance = await this.attendanceService.getStudentSummary(enrollment.id, institutionId);
 
     const promotionData: StudentPromotionData = {
       studentId: enrollment.studentId,
@@ -435,14 +475,14 @@ export class GradeChangeService {
     movementType: EnrollmentMovementType;
     academicActId?: string;
     performedById?: string;
-  }) {
+  }, institutionId: string) {
     if (!data.performedById) {
       throw new BadRequestException('No se pudo determinar el usuario que realiza el cambio de grado');
     }
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.enrollmentId }, select: { institutionId: true } });
+    await this.assertEnrollmentInScope(data.enrollmentId, institutionId);
     await this.prisma.enrollmentEvent.create({
       data: {
-        institutionId: enr!.institutionId,
+        institutionId,
         enrollmentId: data.enrollmentId,
         type: data.type as any,
         previousValue: data.previousValue,

@@ -7,24 +7,27 @@ import * as ExcelJS from 'exceljs';
 export class EnrollmentReportsService {
   constructor(private prisma: PrismaService) {}
 
+  private async loadYearInScope(id: string, institutionId: string, filters: { gradeId?: string; groupId?: string } = {}) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const year = await this.prisma.academicYear.findFirst({ where: { id, institutionId }, include: { institution: true } });
+    if (!year) throw new NotFoundException('Año lectivo no encontrado');
+    if (filters.groupId && !await this.prisma.group.findFirst({ where: { id: filters.groupId, campus: { institutionId }, grade: { institutionId } }, select: { id: true } })) throw new NotFoundException('Grupo no encontrado');
+    if (filters.gradeId && !await this.prisma.grade.findFirst({ where: { id: filters.gradeId, institutionId }, select: { id: true } })) throw new NotFoundException('Grado no encontrado');
+    return year;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // REPORTE PDF: LISTADO DE MATRICULADOS
   // ═══════════════════════════════════════════════════════════════════════════
 
   async generateEnrollmentListPdf(
     academicYearId: string,
-    filters?: { gradeId?: string; groupId?: string; status?: string }
+    filters: { gradeId?: string; groupId?: string; status?: string } | undefined, institutionId: string
   ): Promise<Buffer> {
-    const academicYear = await this.prisma.academicYear.findUnique({
-      where: { id: academicYearId },
-      include: { institution: true },
-    });
-
-    if (!academicYear) {
-      throw new NotFoundException('Año lectivo no encontrado');
-    }
+    const academicYear = await this.loadYearInScope(academicYearId, institutionId, filters);
 
     const whereClause: any = {
+      institutionId,
       academicYearId,
       ...(filters?.status && { status: filters.status }),
       ...(filters?.groupId && { groupId: filters.groupId }),
@@ -136,18 +139,12 @@ export class EnrollmentReportsService {
 
   async generateEnrollmentListExcel(
     academicYearId: string,
-    filters?: { gradeId?: string; groupId?: string; status?: string }
+    filters: { gradeId?: string; groupId?: string; status?: string } | undefined, institutionId: string
   ): Promise<Buffer> {
-    const academicYear = await this.prisma.academicYear.findUnique({
-      where: { id: academicYearId },
-      include: { institution: true },
-    });
-
-    if (!academicYear) {
-      throw new NotFoundException('Año lectivo no encontrado');
-    }
+    const academicYear = await this.loadYearInScope(academicYearId, institutionId, filters);
 
     const whereClause: any = {
+      institutionId,
       academicYearId,
       ...(filters?.status && { status: filters.status }),
       ...(filters?.groupId && { groupId: filters.groupId }),
@@ -257,24 +254,17 @@ export class EnrollmentReportsService {
   // REPORTE PDF: ESTADÍSTICAS POR GRADO
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async generateStatsByGradePdf(academicYearId: string): Promise<Buffer> {
-    const academicYear = await this.prisma.academicYear.findUnique({
-      where: { id: academicYearId },
-      include: { institution: true },
-    });
-
-    if (!academicYear) {
-      throw new NotFoundException('Año lectivo no encontrado');
-    }
+  async generateStatsByGradePdf(academicYearId: string, institutionId: string): Promise<Buffer> {
+    const academicYear = await this.loadYearInScope(academicYearId, institutionId);
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { academicYearId },
+      where: { academicYearId, institutionId },
       include: {
         group: {
           include: {
             grade: true,
             _count: {
-              select: { studentEnrollments: true },
+              select: { studentEnrollments: { where: { institutionId, academicYearId } } },
             },
           },
         },

@@ -989,14 +989,17 @@ export class TemplatesService {
   // Resuelve la herencia: Plantilla → Grado → Grupo (con excepciones)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getEffectiveStructureForGroup(groupId: string, academicYearId: string) {
+  async getEffectiveStructureForGroupInScope(groupId: string, academicYearId: string, institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const year = await this.prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId }, select: { id: true } });
+    if (!year) throw new NotFoundException('Año lectivo no encontrado');
     // Obtener el grupo con su grado
-    const group = await this.prisma.group.findUnique({
-      where: { id: groupId },
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, campus: { institutionId }, grade: { institutionId } },
       include: {
         grade: true,
         subjectExceptions: {
-          where: { academicYearId },
+          where: { academicYearId, subject: { area: { institutionId } } },
           include: { subject: true },
         },
       },
@@ -1007,15 +1010,17 @@ export class TemplatesService {
     }
 
     // Obtener la plantilla asignada al grado PARA ESTE AÑO
-    const gradeTemplate = await this.prisma.gradeTemplate.findUnique({
-      where: { gradeId_academicYearId: { gradeId: group.gradeId, academicYearId } },
+    const gradeTemplate = await this.prisma.gradeTemplate.findFirst({
+      where: { gradeId: group.gradeId, academicYearId, template: { institutionId }, grade: { institutionId }, academicYear: { institutionId } },
       include: {
         template: {
           include: {
             templateAreas: {
+              where: { area: { institutionId } },
               include: {
                 area: true,
                 templateSubjects: {
+                  where: { subject: { area: { institutionId } } },
                   include: { subject: true },
                   orderBy: { order: 'asc' },
                 },

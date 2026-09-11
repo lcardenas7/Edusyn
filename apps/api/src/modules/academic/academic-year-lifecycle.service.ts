@@ -572,7 +572,7 @@ export class AcademicYearLifecycleService {
 
     const writes: PromotionWrite[] = [];
     for (const enrollment of enrollments) {
-      const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
+      const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx, institutionId);
 
       // YC-4: sin datos académicos NO se reprueba automáticamente. Un estudiante sin
       // notas (matrícula tardía, adopción del sistema a mitad de año) quedaría
@@ -640,7 +640,7 @@ export class AcademicYearLifecycleService {
     return { writes, promotedCount, repeatedCount, graduatedCount, reviewPendingCount, withdrawnCount };
   }
 
-  private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext) {
+  private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext, institutionId: string) {
     const teacherAssignments = await this.prisma.teacherAssignment.findMany({
       where: {
         groupId: enrollment.groupId,
@@ -656,7 +656,7 @@ export class AcademicYearLifecycleService {
         const result = await this.studentGradesService.calculateAnnualGrade(
           enrollment.id,
           assignment.id,
-          enrollment.academicYearId,
+          enrollment.academicYearId, institutionId,
         );
 
         return {
@@ -676,7 +676,7 @@ export class AcademicYearLifecycleService {
       .filter((entry) => entry.annualGrade === null || entry.annualGrade < rulesCtx.minPassingGrade)
       .map((entry) => entry.subjectName);
 
-    const attendance = await this.attendanceService.getStudentSummary(enrollment.id);
+    const attendance = await this.attendanceService.getStudentSummary(enrollment.id, institutionId);
 
     const promotionData: StudentPromotionData = {
       studentId: enrollment.studentId,
@@ -757,7 +757,7 @@ export class AcademicYearLifecycleService {
     const previews: PromotionPreview[] = [];
 
     for (const enrollment of enrollments) {
-      const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
+      const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx, institutionId);
 
       // YC-4: sin datos académicos → revisión manual (se sugiere mantener ACTIVE),
       // nunca promoción/repitencia automática.

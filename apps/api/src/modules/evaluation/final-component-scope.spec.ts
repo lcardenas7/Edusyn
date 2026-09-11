@@ -157,6 +157,9 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
     const scopeFindMany = jest.fn().mockResolvedValue(opts.reglas ?? []);
 
     const prisma: any = {
+      studentEnrollment: { findFirst: jest.fn(async ({ where }: any) => where.institutionId === 'inst-A' ? { id: where.id, academicYearId: 'y1' } : null) },
+      academicYear: { findFirst: jest.fn(async ({ where }: any) => where.institutionId === 'inst-A' ? { id: where.id } : null) },
+
       academicTerm: {
         findMany: jest.fn().mockResolvedValue([
           { id: 'p1', name: 'P1', type: 'PERIOD', weightPercentage: 20 },
@@ -165,7 +168,7 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
           { id: 'p4', name: 'P4', type: 'PERIOD', weightPercentage: 20 },
         ]),
       },
-      teacherAssignment: { findUnique: jest.fn().mockResolvedValue({ subjectId: MAT, group: { gradeId: G8 } }) },
+      teacherAssignment: { findFirst: jest.fn().mockResolvedValue({ academicYearId: 'y1', subjectId: MAT, group: { gradeId: G8 } }) },
       finalComponent: {
         findMany: jest.fn().mockResolvedValue([
           { id: FC1, name: 'Prueba Semestral I', weightPercentage: 10, order: 1, scopeMode: mode },
@@ -174,14 +177,14 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
       },
       finalComponentScope: { findMany: scopeFindMany },
       periodFinalGrade: {
-        findUnique: jest.fn(async (a: any) => {
-          const n = notasT[a.where.studentEnrollmentId_academicTermId_subjectId.academicTermId];
+        findFirst: jest.fn(async (a: any) => {
+          const n = notasT[a.where.academicTermId];
           return n === null || n === undefined ? null : { finalScore: n };
         }),
       },
       finalComponentGrade: {
-        findUnique: jest.fn(async (a: any) => {
-          const n = notasC[a.where.studentEnrollmentId_teacherAssignmentId_finalComponentId.finalComponentId];
+        findFirst: jest.fn(async (a: any) => {
+          const n = notasC[a.where.finalComponentId];
           return n === null || n === undefined ? null : { grade: n };
         }),
       },
@@ -198,7 +201,7 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
       notasPorTermino: NOTAS_PERIODOS,
       notasPorComponente: { [FC1]: 3.0, [FC2]: 3.0 },
     });
-    const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
     expect(annualGrade).toBe(3.8); // (4×80 + 3×20)/100
     expect(sources).toHaveLength(6);
   });
@@ -211,7 +214,7 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
       ],
       notasPorTermino: NOTAS_PERIODOS,
     });
-    const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
     expect(sources).toHaveLength(4);
     expect(sources.some((s) => s.type === 'final_component')).toBe(false);
     expect(annualGrade).toBe(4.0); // renormalizado sobre 80
@@ -226,7 +229,7 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
       notasPorTermino: { p1: 5.0, p2: 5.0, p3: 5.0, p4: 5.0 },
     });
     // Con 0 saldría (5×80 + 0×20)/100 = 4.0. Excluyendo: 5.0.
-    expect((await svc.calculateAnnualGrade('e1', 'ta1', 'y1')).annualGrade).toBe(5.0);
+    expect((await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A')).annualGrade).toBe(5.0);
   });
 
   it('la EXCEPCIÓN por asignatura rescata la fuente para Matemáticas', async () => {
@@ -239,14 +242,14 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
       notasPorTermino: NOTAS_PERIODOS,
       notasPorComponente: { [FC1]: 3.0 },
     });
-    const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const { annualGrade, sources } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
     expect(sources.filter((s) => s.type === 'final_component')).toHaveLength(1);
     expect(annualGrade).toBe(3.9); // (4×80 + 3×10)/90
   });
 
   it('SELECTED_GRADES sin reglas: ninguna fuente entra en el cálculo', async () => {
     const { svc } = makeService({ scopeMode: 'SELECTED_GRADES', notasPorTermino: NOTAS_PERIODOS });
-    const { sources, annualGrade } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    const { sources, annualGrade } = await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
     expect(sources.filter((s) => s.type === 'final_component')).toHaveLength(0);
     expect(annualGrade).toBe(4.0);
   });
@@ -254,13 +257,13 @@ describe('D-19 · efecto en calculateAnnualGrade', () => {
   it('no consulta el alcance si la institución no tiene componentes', async () => {
     const { svc, prisma, scopeFindMany } = makeService({ notasPorTermino: NOTAS_PERIODOS });
     prisma.finalComponent.findMany.mockResolvedValue([]);
-    await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
     expect(scopeFindMany).not.toHaveBeenCalled();
   });
 
   it('consulta el alcance UNA sola vez, no una por componente', async () => {
     const { svc, scopeFindMany } = makeService({ notasPorTermino: NOTAS_PERIODOS });
-    await svc.calculateAnnualGrade('e1', 'ta1', 'y1');
+    await svc.calculateAnnualGrade('e1', 'ta1', 'y1', 'inst-A');
     expect(scopeFindMany).toHaveBeenCalledTimes(1);
   });
 });

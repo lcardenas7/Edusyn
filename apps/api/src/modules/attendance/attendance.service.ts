@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
@@ -178,13 +178,17 @@ export class AttendanceService {
     });
   }
 
-  async getStudentSummary(studentEnrollmentId: string, academicTermId?: string) {
-    const whereClause: any = { studentEnrollmentId };
+  async getStudentSummary(studentEnrollmentId: string, institutionId: string, academicTermId?: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const enrollment = await this.prisma.studentEnrollment.findFirst({ where: { id: studentEnrollmentId, institutionId }, select: { id: true, academicYearId: true } });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+    const whereClause: any = { studentEnrollmentId, institutionId };
 
     if (academicTermId) {
-      const term = await this.prisma.academicTerm.findUnique({
-        where: { id: academicTermId },
+      const term = await this.prisma.academicTerm.findFirst({
+        where: { id: academicTermId, academicYear: { institutionId } },
       });
+      if (!term || term.academicYearId !== enrollment.academicYearId) throw new NotFoundException('Período no encontrado');
       if (term?.startDate && term?.endDate) {
         whereClause.date = {
           gte: term.startDate,

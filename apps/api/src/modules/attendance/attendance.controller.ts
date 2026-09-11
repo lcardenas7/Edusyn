@@ -6,7 +6,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AttendanceService } from './attendance.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { resolveInstitutionId, requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('attendance')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -58,11 +58,13 @@ export class AttendanceController {
 
   @Get('summary/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
-  getStudentSummary(
+  async getStudentSummary(
+    @Request() req: any,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
-    return this.attendanceService.getStudentSummary(studentEnrollmentId, academicTermId);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.attendanceService.getStudentSummary(studentEnrollmentId, institutionId, academicTermId);
   }
 
   @Get('report/consolidated')

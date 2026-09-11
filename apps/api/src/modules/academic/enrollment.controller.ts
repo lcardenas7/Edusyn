@@ -38,10 +38,11 @@ export class EnrollmentController {
   @Post()
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
   async enrollStudent(@Body() dto: Omit<EnrollStudentDto, 'enrolledById'>, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.enrollmentService.enrollStudent({
       ...dto,
       enrolledById: req.user.id,
-    });
+    }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -54,27 +55,12 @@ export class EnrollmentController {
     @Body() dto: Omit<CreateStudentAndEnrollDto, 'enrolledById' | 'institutionId'>,
     @Request() req: any,
   ) {
-    // Obtener institutionId del JWT
-    let institutionId = req.user?.institutionId;
-    
-    // Si no viene en el JWT, buscar en InstitutionUser
-    if (!institutionId && req.user?.id) {
-      const institutionUser = await this.prisma.institutionUser.findFirst({
-        where: { userId: req.user.id },
-        select: { institutionId: true }
-      });
-      institutionId = institutionUser?.institutionId;
-    }
-
-    if (!institutionId) {
-      throw new UnauthorizedException('No se pudo determinar la institución del usuario');
-    }
-
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.enrollmentService.createStudentAndEnroll({
       ...dto,
       institutionId,
       enrolledById: req.user.id,
-    });
+    }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -98,13 +84,14 @@ export class EnrollmentController {
 
   @Get()
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
-  async getEnrollments(
+  async getEnrollments(@Request() req: any,
     @Query('academicYearId') academicYearId?: string,
     @Query('gradeId') gradeId?: string,
     @Query('groupId') groupId?: string,
     @Query('status') status?: EnrollmentStatus,
     @Query('search') search?: string,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     const filters: EnrollmentFilters = {
       academicYearId,
       gradeId,
@@ -112,7 +99,7 @@ export class EnrollmentController {
       status,
       search,
     };
-    return this.enrollmentService.getEnrollments(filters);
+    return this.enrollmentService.getEnrollments(filters, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -121,8 +108,9 @@ export class EnrollmentController {
 
   @Get(':enrollmentId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
-  async getEnrollmentById(@Param('enrollmentId') enrollmentId: string) {
-    return this.enrollmentService.getEnrollmentById(enrollmentId);
+  async getEnrollmentById(@Request() req: any, @Param('enrollmentId') enrollmentId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.getEnrollmentById(enrollmentId, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -131,8 +119,9 @@ export class EnrollmentController {
 
   @Get(':enrollmentId/history')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
-  async getEnrollmentHistory(@Param('enrollmentId') enrollmentId: string) {
-    return this.enrollmentService.getEnrollmentHistory(enrollmentId);
+  async getEnrollmentHistory(@Request() req: any, @Param('enrollmentId') enrollmentId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.getEnrollmentHistory(enrollmentId, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -141,8 +130,9 @@ export class EnrollmentController {
 
   @Get('student/:studentId/history')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
-  async getStudentEnrollmentHistory(@Param('studentId') studentId: string) {
-    return this.enrollmentService.getStudentEnrollmentHistory(studentId);
+  async getStudentEnrollmentHistory(@Request() req: any, @Param('studentId') studentId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.getStudentEnrollmentHistory(studentId, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -151,8 +141,9 @@ export class EnrollmentController {
 
   @Get('stats/:academicYearId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR')
-  async getEnrollmentStats(@Param('academicYearId') academicYearId: string) {
-    return this.enrollmentService.getEnrollmentStats(academicYearId);
+  async getEnrollmentStats(@Request() req: any, @Param('academicYearId') academicYearId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.getEnrollmentStats(academicYearId, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -166,12 +157,13 @@ export class EnrollmentController {
     @Body() body: { reason: string; observations?: string },
     @Request() req: any,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.enrollmentService.withdrawStudent({
       enrollmentId,
       reason: body.reason,
       observations: body.observations,
       performedById: req.user.id,
-    });
+    }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -185,13 +177,14 @@ export class EnrollmentController {
     @Body() body: { reason: string; destinationInstitution?: string; observations?: string },
     @Request() req: any,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.enrollmentService.transferStudent({
       enrollmentId,
       reason: body.reason,
       destinationInstitution: body.destinationInstitution,
       observations: body.observations,
       performedById: req.user.id,
-    });
+    }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -210,6 +203,7 @@ export class EnrollmentController {
     },
     @Request() req: any,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.enrollmentService.changeGroup({
       enrollmentId,
       newGroupId: body.newGroupId,
@@ -217,7 +211,7 @@ export class EnrollmentController {
       movementType: body.movementType,
       observations: body.observations,
       performedById: req.user.id,
-    });
+    }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -231,12 +225,13 @@ export class EnrollmentController {
     @Body() body: { reason: string; observations?: string },
     @Request() req: any,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.enrollmentService.reactivateStudent({
       enrollmentId,
       reason: body.reason,
       observations: body.observations,
       performedById: req.user.id,
-    });
+    }, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -256,20 +251,22 @@ export class EnrollmentController {
 
   @Get('capacity/:academicYearId/group/:groupId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
-  async getGroupCapacity(
+  async getGroupCapacity(@Request() req: any,
     @Param('groupId') groupId: string,
     @Param('academicYearId') academicYearId: string,
   ) {
-    return this.enrollmentService.getGroupCapacity(groupId, academicYearId);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.getGroupCapacity(groupId, academicYearId, institutionId);
   }
 
   @Put('capacity/group/:groupId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR')
-  async updateGroupCapacity(
+  async updateGroupCapacity(@Request() req: any,
     @Param('groupId') groupId: string,
     @Body() body: { maxCapacity: number | null },
   ) {
-    return this.enrollmentService.updateGroupCapacity(groupId, body.maxCapacity);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.updateGroupCapacity(groupId, body.maxCapacity, institutionId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -278,13 +275,15 @@ export class EnrollmentController {
 
   @Get(':enrollmentId/academic-structure')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
-  async getEnrollmentAcademicStructure(@Param('enrollmentId') enrollmentId: string) {
-    return this.enrollmentService.getEnrollmentAcademicStructure(enrollmentId);
+  async getEnrollmentAcademicStructure(@Request() req: any, @Param('enrollmentId') enrollmentId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.getEnrollmentAcademicStructure(enrollmentId, institutionId);
   }
 
   @Post(':enrollmentId/regenerate-snapshot')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN')
-  async regenerateAcademicSnapshot(@Param('enrollmentId') enrollmentId: string) {
-    return this.enrollmentService.regenerateAcademicSnapshot(enrollmentId);
+  async regenerateAcademicSnapshot(@Request() req: any, @Param('enrollmentId') enrollmentId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.enrollmentService.regenerateAcademicSnapshot(enrollmentId, institutionId);
   }
 }

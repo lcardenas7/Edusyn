@@ -41,9 +41,12 @@ describe('calculateAnnualGrade — línea base antes del alcance por grado', () 
     const notasC = opts.notasPorComponente ?? {};
 
     const prisma: any = {
+      studentEnrollment: { findFirst: jest.fn(async ({ where }: any) => where.institutionId === 'inst-A' ? { id: where.id, academicYearId: 'y-1' } : null) },
+      academicYear: { findFirst: jest.fn(async ({ where }: any) => where.institutionId === 'inst-A' ? { id: where.id } : null) },
+
       academicTerm: { findMany: jest.fn().mockResolvedValue(opts.terminos) },
       teacherAssignment: {
-        findUnique: jest.fn().mockResolvedValue({ subjectId: 'subj-1', group: { gradeId: 'grade-1' } }),
+        findFirst: jest.fn().mockResolvedValue({ academicYearId: 'y-1', subjectId: 'subj-1', group: { gradeId: 'grade-1' } }),
       },
       finalComponent: {
         findMany: jest.fn().mockResolvedValue((opts.componentes ?? []).map((c) => ({ ...c, scopeMode: 'ALL_GRADES' }))),
@@ -53,15 +56,15 @@ describe('calculateAnnualGrade — línea base antes del alcance por grado', () 
       // tras la migración y el que debe reproducir el comportamiento histórico.
       finalComponentScope: { findMany: jest.fn().mockResolvedValue([]) },
       periodFinalGrade: {
-        findUnique: jest.fn(async (args: any) => {
-          const termId = args.where.studentEnrollmentId_academicTermId_subjectId.academicTermId;
+        findFirst: jest.fn(async (args: any) => {
+          const termId = args.where.academicTermId;
           const nota = notasT[termId];
           return nota === null || nota === undefined ? null : { finalScore: nota };
         }),
       },
       finalComponentGrade: {
-        findUnique: jest.fn(async (args: any) => {
-          const compId = args.where.studentEnrollmentId_teacherAssignmentId_finalComponentId.finalComponentId;
+        findFirst: jest.fn(async (args: any) => {
+          const compId = args.where.finalComponentId;
           const nota = notasC[compId];
           return nota === null || nota === undefined ? null : { grade: nota };
         }),
@@ -87,7 +90,7 @@ describe('calculateAnnualGrade — línea base antes del alcance por grado', () 
   ];
 
   const anual = (svc: StudentGradesService) =>
-    svc.calculateAnnualGrade('enr-1', 'ta-1', 'y-1').then((r) => r.annualGrade);
+    svc.calculateAnnualGrade('enr-1', 'ta-1', 'y-1', 'inst-A').then((r) => r.annualGrade);
 
   // ═════════════════════════════════════════════════════════════════════════
   // R1 · La ausencia NUNCA vale 0
@@ -188,7 +191,7 @@ describe('calculateAnnualGrade — línea base antes del alcance por grado', () 
         notasPorTermino: { p1: 4.0, p2: null, p3: null, p4: null },
         notasPorComponente: { fc1: 3.0, fc2: null },
       });
-      const { sources } = await svc.calculateAnnualGrade('enr-1', 'ta-1', 'y-1');
+      const { sources } = await svc.calculateAnnualGrade('enr-1', 'ta-1', 'y-1', 'inst-A');
 
       expect(sources).toHaveLength(6); // 4 términos + 2 componentes
       expect(sources.filter((s) => s.type === 'period')).toHaveLength(4);

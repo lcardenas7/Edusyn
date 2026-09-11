@@ -58,14 +58,17 @@ export class StudentGradesController {
   @Get('component-average')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE')
   async getComponentAverage(
+    @Request() req: any,
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
     @Query('componentId') componentId: string,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     const average = await this.studentGradesService.calculateComponentAverage(
       studentEnrollmentId,
       academicTermId,
       componentId,
+      institutionId,
     );
     return { average };
   }
@@ -73,28 +76,34 @@ export class StudentGradesController {
   @Get('term-grade')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE')
   async getTermGrade(
+    @Request() req: any,
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicTermId') academicTermId: string,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.studentGradesService.calculateTermGrade(
       studentEnrollmentId,
       teacherAssignmentId,
       academicTermId,
+      institutionId,
     );
   }
 
   @Get('annual-grade')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE')
   async getAnnualGrade(
+    @Request() req: any,
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('teacherAssignmentId') teacherAssignmentId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.studentGradesService.calculateAnnualGrade(
       studentEnrollmentId,
       teacherAssignmentId,
       academicYearId,
+      institutionId,
     );
   }
 

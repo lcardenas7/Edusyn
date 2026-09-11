@@ -301,9 +301,11 @@ export class TemplatesController {
   @Get('groups/:groupId/effective-structure')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getEffectiveStructureForGroup(
+    @Request() req: any,
     @Param('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,
   ) {
-    return this.templatesService.getEffectiveStructureForGroup(groupId, academicYearId);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.templatesService.getEffectiveStructureForGroupInScope(groupId, academicYearId, institutionId);
   }
 }

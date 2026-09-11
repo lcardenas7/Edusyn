@@ -1,3 +1,5 @@
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import {
   Controller,
   Post,
@@ -16,7 +18,7 @@ import { ChangeGradeDto, ValidateGradeChangeDto } from './dto/grade-change.dto';
 @Controller('grade-change')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class GradeChangeController {
-  constructor(private readonly gradeChangeService: GradeChangeService) {}
+  constructor(private readonly gradeChangeService: GradeChangeService, private readonly prisma: PrismaService) {}
 
   /**
    * Valida si un cambio de grado/grupo es permitido
@@ -27,7 +29,8 @@ export class GradeChangeController {
     @Body() dto: ValidateGradeChangeDto,
     @Request() req: any,
   ) {
-    return this.gradeChangeService.validateGradeChange(dto);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.gradeChangeService.validateGradeChange(dto, institutionId);
   }
 
   /**
@@ -39,8 +42,9 @@ export class GradeChangeController {
     @Body() dto: ChangeGradeDto,
     @Request() req: any,
   ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     // Quién realiza el cambio: usuario autenticado (para la auditoría / FK del evento).
-    return this.gradeChangeService.changeGrade({ ...dto, performedById: req.user.id });
+    return this.gradeChangeService.changeGrade({ ...dto, performedById: req.user.id }, institutionId);
   }
 
   /**

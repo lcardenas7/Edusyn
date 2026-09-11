@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertStudentGradeDto } from './dto/upsert-student-grade.dto';
@@ -16,6 +16,26 @@ export class StudentGradesService {
     private readonly prisma: PrismaService,
     private readonly gradeAudit: GradeAuditService,
   ) {}
+
+  private async assertEnrollmentScope(id: string, institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const enrollment = await this.prisma.studentEnrollment.findFirst({ where: { id, institutionId }, select: { id: true, academicYearId: true } });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+    return enrollment;
+  }
+
+  private async assertTermScope(id: string, institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada');
+    const term = await this.prisma.academicTerm.findFirst({ where: { id, academicYear: { institutionId } }, select: { id: true, academicYearId: true } });
+    if (!term) throw new NotFoundException('Período no encontrado');
+    return term;
+  }
+
+  private async loadAssignmentInScope(id: string, institutionId: string) {
+    const assignment = await this.prisma.teacherAssignment.findFirst({ where: { id, institutionId }, select: { id: true, academicYearId: true, subjectId: true, group: { select: { gradeId: true } } } });
+    if (!assignment) throw new NotFoundException('Asignación no encontrada');
+    return assignment;
+  }
 
   async upsert(dto: UpsertStudentGradeDto, actor?: GradeAuditActor, batchId?: string) {
     const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
@@ -130,11 +150,16 @@ export class StudentGradesService {
   async calculateComponentAverage(
     studentEnrollmentId: string,
     academicTermId: string,
-    componentId: string,
+    componentId: string, institutionId: string,
   ): Promise<number | null> {
+    const enrollment = await this.assertEnrollmentScope(studentEnrollmentId, institutionId);
+    const term = await this.assertTermScope(academicTermId, institutionId);
+    if (enrollment.academicYearId !== term.academicYearId) throw new NotFoundException("Coordenada académica no encontrada");
+    const component = await this.prisma.evaluationComponent.findFirst({ where: { id: componentId, institutionId }, select: { id: true } });
+    if (!component) throw new NotFoundException("Componente no encontrado");
     const grades = await this.prisma.studentGrade.findMany({
       where: {
-        studentEnrollmentId,
+        institutionId, studentEnrollmentId,
         evaluativeActivity: {
           academicTermId,
           componentId,
@@ -181,14 +206,15 @@ export class StudentGradesService {
   async calculateTermGrade(
     studentEnrollmentId: string,
     teacherAssignmentId: string,
-    academicTermId: string,
+    academicTermId: string, institutionId: string,
   ): Promise<{ grade: number | null; components: { componentId: string; name: string; average: number | null; percentage: number }[] }> {
-    const plan = await this.prisma.evaluationPlan.findUnique({
+    const enrollment = await this.assertEnrollmentScope(studentEnrollmentId, institutionId);
+    const term = await this.assertTermScope(academicTermId, institutionId);
+    const assignment = await this.loadAssignmentInScope(teacherAssignmentId, institutionId);
+    if (enrollment.academicYearId !== term.academicYearId || assignment.academicYearId !== term.academicYearId) throw new NotFoundException('Coordenada académica no encontrada');
+    const plan = await this.prisma.evaluationPlan.findFirst({
       where: {
-        teacherAssignmentId_academicTermId: {
-          teacherAssignmentId,
-          academicTermId,
-        },
+        teacherAssignmentId, academicTermId, teacherAssignment: { institutionId },
       },
       include: {
         components: {
@@ -203,7 +229,7 @@ export class StudentGradesService {
 
     // Leer de PartialGrade (fuente de verdad desde la planilla)
     const partials = await this.prisma.partialGrade.findMany({
-      where: { studentEnrollmentId, teacherAssignmentId, academicTermId },
+      where: { studentEnrollmentId, teacherAssignmentId, academicTermId, institutionId },
     });
 
     let componentResults: { componentId: string; name: string; average: number | null; percentage: number }[];
@@ -236,7 +262,7 @@ export class StudentGradesService {
           const avg = await this.calculateComponentAverage(
             studentEnrollmentId,
             academicTermId,
-            cw.componentId,
+            cw.componentId, institutionId,
           );
           return {
             componentId: cw.componentId,
@@ -375,14 +401,19 @@ export class StudentGradesService {
   async calculateAnnualGrade(
     studentEnrollmentId: string,
     teacherAssignmentId: string,
-    academicYearId: string,
+    academicYearId: string, institutionId: string,
   ): Promise<{
     annualGrade: number | null;
     sources: Array<{ id: string; name: string; type: 'period' | 'final_component'; grade: number | null; weight: number }>;
   }> {
+    const enrollment = await this.assertEnrollmentScope(studentEnrollmentId, institutionId);
+    const year = await this.prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId }, select: { id: true } });
+    if (!year) throw new NotFoundException('Año lectivo no encontrado');
+    const assignment = await this.loadAssignmentInScope(teacherAssignmentId, institutionId);
+    if (enrollment.academicYearId !== academicYearId || assignment.academicYearId !== academicYearId) throw new NotFoundException('Coordenada académica no encontrada');
     // Fuente 1: Períodos académicos
     const terms = await this.prisma.academicTerm.findMany({
-      where: { academicYearId },
+      where: { academicYearId, academicYear: { institutionId } },
       orderBy: { order: 'asc' },
     });
 
@@ -391,10 +422,6 @@ export class StudentGradesService {
     // `group.gradeId` se añade para resolver el alcance de las fuentes finales
     // (D-19): una prueba semestral puede no aplicar a un grado o a una
     // asignatura concreta de ese grado.
-    const assignment = await this.prisma.teacherAssignment.findUnique({
-      where: { id: teacherAssignmentId },
-      select: { subjectId: true, group: { select: { gradeId: true } } },
-    });
     const subjectId = assignment?.subjectId ?? null;
     const gradeId = assignment?.group?.gradeId ?? null;
 
@@ -408,12 +435,12 @@ export class StudentGradesService {
               studentEnrollmentId,
               teacherAssignmentId,
               subjectId,
-              term.id,
+              term.id, institutionId,
             )
           : (await this.calculateTermGrade(
               studentEnrollmentId,
               teacherAssignmentId,
-              term.id,
+              term.id, institutionId,
             )).grade;
         return {
           id: term.id,
@@ -427,7 +454,7 @@ export class StudentGradesService {
 
     // Fuente 2: Componentes finales (pruebas semestrales, proyecto final, etc.)
     const allFinalComponents = await this.prisma.finalComponent.findMany({
-      where: { academicYearId },
+      where: { academicYearId, institutionId },
       orderBy: { order: 'asc' },
     });
 
@@ -441,6 +468,7 @@ export class StudentGradesService {
     const scopeRules = allFinalComponents.length
       ? await this.prisma.finalComponentScope.findMany({
           where: {
+            institutionId,
             finalComponentId: { in: allFinalComponents.map((fc) => fc.id) },
             ...(gradeId ? { gradeId } : {}),
           },
@@ -457,13 +485,9 @@ export class StudentGradesService {
 
     const componentSources = await Promise.all(
       finalComponents.map(async (fc) => {
-        const gradeRecord = await this.prisma.finalComponentGrade.findUnique({
+        const gradeRecord = await this.prisma.finalComponentGrade.findFirst({
           where: {
-            studentEnrollmentId_teacherAssignmentId_finalComponentId: {
-              studentEnrollmentId,
-              teacherAssignmentId,
-              finalComponentId: fc.id,
-            },
+            institutionId, studentEnrollmentId, teacherAssignmentId, finalComponentId: fc.id,
           },
         });
         return {
@@ -508,15 +532,11 @@ export class StudentGradesService {
     studentEnrollmentId: string,
     teacherAssignmentId: string,
     subjectId: string,
-    academicTermId: string,
+    academicTermId: string, institutionId: string,
   ): Promise<number | null> {
-    const pfg = await this.prisma.periodFinalGrade.findUnique({
+    const pfg = await this.prisma.periodFinalGrade.findFirst({
       where: {
-        studentEnrollmentId_academicTermId_subjectId: {
-          studentEnrollmentId,
-          academicTermId,
-          subjectId,
-        },
+        institutionId, studentEnrollmentId, academicTermId, subjectId,
       },
       select: { finalScore: true },
     });
@@ -525,7 +545,7 @@ export class StudentGradesService {
     const recomputed = await this.calculateTermGrade(
       studentEnrollmentId,
       teacherAssignmentId,
-      academicTermId,
+      academicTermId, institutionId,
     );
     return recomputed.grade;
   }
