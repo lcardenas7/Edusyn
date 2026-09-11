@@ -1,0 +1,113 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const workspace=path.resolve(__dirname,'../../..');
+process.chdir(workspace);
+const harness=path.join(workspace,'apps/web/qa-enrollment-inclusion.html');
+(async()=>{
+ const browser=await chromium.launch({channel:'msedge',headless:true});
+ if(fs.existsSync(harness)) throw Error('Remove the previous local QA harness before running this test.');
+ fs.mkdirSync('tmp',{recursive:true});
+ fs.writeFileSync(harness,fs.readFileSync(path.join(__dirname,'fixtures/enrollment-inclusion.html')));
+ const context=await browser.newContext({viewport:{width:1440,height:1000}});
+ await context.addInitScript(()=>localStorage.setItem('token','synthetic-local-test'));
+ let role='ADMIN_INSTITUTIONAL', historyFails=false, configFails=false;
+ const mutations=[], errors=[], requests=[];
+ const year={id:'year-A',year:2026,name:'Año de prueba',status:'ACTIVE',isCurrent:true};
+ const group={id:'group-A',name:'A',grade:{id:'grade-A',name:'Primero'},campus:{id:'campus-A',name:'Sede de prueba'}};
+ const group2={...group,id:'group-A2',name:'B'};
+ const student={id:'student-A',firstName:'María',lastName:'Prueba',documentNumber:'SYN-123',documentType:'TI',guardians:[]};
+ const enrollment={id:'enr-A',student,group,academicYear:year,academicYearId:year.id,status:'ACTIVE',enrollmentType:'NEW',enrollmentDate:'2026-02-01'};
+ const plan={id:'plan-A',studentEnrollmentId:'enr-A',status:'ACTIVE',planType:'APD',supportStrategy:'Lectura acompañada',followUpDate:'2026-01-01',studentEnrollment:{student},activities:[],progressLogs:[]};
+ await context.route('**/*',async route=>{
+  const u=new URL(route.request().url());
+  if(u.hostname!=='127.0.0.1'){await route.abort();return;}
+  if(!u.pathname.startsWith('/api/')){await route.continue();return;}
+  const path=u.pathname.slice(4);requests.push(path);
+  let body=[];let status=200;
+  if(route.request().method()!=='GET')mutations.push({path,body:route.request().postDataJSON()});
+  if(path==='/auth/me')body={id:'actor',firstName:'Usuario',lastName:'Prueba',roles:[role],institution:{id:'school-A',name:'Colegio sintético'}};
+  else if(path==='/academic-years/institution/school-A'||path==='/academic-terms/years')body=[year];
+  else if(path==='/academic-years/institution/school-A/current')body=year;
+  else if(path==='/groups')body=[group,group2];
+  else if(path==='/enrollments')body=u.searchParams.get('search')==='inexistente'?[]:[enrollment];
+  else if(path==='/enrollments/enr-A')body=enrollment;
+  else if(path==='/enrollments/enr-A/history'){body=historyFails?{message:'Fallo sintético'}:[{id:'event-A',type:'CREATED',createdAt:'2026-01-01',performedBy:{firstName:'Actor',lastName:'Prueba'}}];status=historyFails?500:200;}
+  else if(path==='/grade-change/validate')body={canChange:true,gradeChangeType:'SAME_GRADE',currentGrade:group.grade,newGrade:group.grade,warnings:[],requirements:[],restrictions:[]};
+  else if(path==='/grade-change/execute')body=enrollment;
+  else if(path==='/students')body=[{...student,enrollments:[enrollment]}];
+  else if(path==='/apd/config'){body=configFails?{message:'Fallo sintético'}:{enableDifferentialSupport:true,allowTeacherAccess:true};status=configFails?500:200;}
+  else if(path==='/academic-terms')body=[{id:'term-A',name:'Período 1',academicYearId:'year-A'}];
+  else if(path==='/teacher-assignments')body=[{id:'ta-A',group}];
+  else if(path==='/pedagogical-support/by-group/group-A')body=[plan];
+  else if(path==='/apd/plans/plan-A')body=plan;
+  else if(path==='/apd/categories')body=[{id:'category-A',name:'Apoyos pedagógicos',active:true}];
+  else if(path==='/academic/students/by-group')body=[{...student,enrollmentId:'enr-A'}];
+  else if(path==='/academic-grades'||path==='/grades')body=[group.grade];
+  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+ });
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ const open=async path=>page.goto('http://127.0.0.1:5179/qa-enrollment-inclusion.html?start='+encodeURIComponent(path));
+ try{
+  await open('/enrollments');
+  await page.getByRole('heading',{name:'Gestión de Matrículas'}).waitFor();
+  assert(await page.getByPlaceholder('Buscar por nombre, documento...').isVisible());
+  await page.getByRole('button',{name:'Cambiar grupo',exact:true}).click();
+  await page.getByRole('heading',{name:'Cambiar de Grupo',exact:true}).waitFor();
+  await page.locator('select').last().selectOption('ADMINISTRATIVE');
+  await page.locator('select').nth(4).selectOption('group-A2');
+  await page.getByPlaceholder('Ej: Reubicación por cupos, compatibilidad de horarios, etc.').fill('Reubicación de prueba');
+  await page.screenshot({path:'tmp/matriculas-cambio.png'});
+  await page.getByRole('button',{name:'Revisar y confirmar cambio'}).click();
+  await page.getByText('Cambio realizado exitosamente').waitFor();
+  assert(mutations.some(m=>m.path==='/grade-change/execute'&&m.body.newGroupId==='group-A2'));
+  historyFails=true;
+  await page.getByTitle('Ver historial').click();
+  await page.getByRole('alert').filter({hasText:'No se pudo cargar el historial'}).waitFor();
+  assert.equal(await page.getByRole('heading',{name:/Historial de/}).count(),0);
+  await page.getByPlaceholder('Buscar por nombre, documento...').fill('inexistente');
+  await page.getByText('No hay matrículas que coincidan con estos filtros.').waitFor();
+  await page.getByRole('button',{name:'Limpiar filtros',exact:true}).first().click();
+  await page.getByText('Prueba María',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Nueva Matrícula',exact:true}).click();
+  await page.getByRole('heading',{name:/Nuevo Estudiante/}).waitFor();
+  await open('/students');
+  await page.getByTitle('Editar',{exact:true}).first().click();
+  await page.getByRole('button',{name:'Cambiar grupo / gestionar matrícula'}).click();
+  await page.getByRole('heading',{name:'Cambiar de Grupo',exact:true}).waitFor();
+  await open('/differential-support');
+  await page.getByText('Lectura acompañada',{exact:true}).waitFor();
+  await page.getByRole('combobox',{name:'Filtrar seguimiento'}).selectOption('due');
+  await page.getByRole('button',{name:'Registrar avance',exact:true}).waitFor();
+  await page.screenshot({path:'tmp/inclusion-seguimiento.png'});
+  await page.getByTitle('Editar plan y fecha de seguimiento').click();
+  await page.getByRole('heading',{name:'Editar Plan',exact:true}).waitFor();
+  await page.locator('input[type=date]').first().fill('2026-12-01');
+  await page.getByRole('button',{name:'Actualizar',exact:true}).last().click();
+  await page.getByRole('status').filter({hasText:'Plan actualizado'}).waitFor();
+  assert(mutations.some(m=>m.path==='/apd/plans/plan-A'&&m.body.followUpDate==='2026-12-01'));
+  await page.getByRole('button',{name:'Registrar avance',exact:true}).click();
+  await page.getByRole('heading',{name:/Registrar Progreso/}).waitFor();
+  await open('/differential-support');role='DOCENTE';await open('/differential-support');
+  await page.getByText('Lectura acompañada',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Resumen institucional',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Perfiles de apoyo',exact:true}).click();
+  await page.getByRole('button',{name:/Nuevo Perfil/}).click();
+  await page.locator('select').filter({has:page.locator('option[value="grade-A"]')}).selectOption('grade-A');
+  await page.locator('select').filter({has:page.locator('option[value="group-A"]')}).selectOption('group-A');
+  await page.locator('select').filter({has:page.locator('option[value="student-A"]')}).selectOption('student-A');
+  assert(requests.includes('/academic/students/by-group'));
+  await page.setViewportSize({width:390,height:844});
+  await open('/differential-support');
+  await page.getByText('Lectura acompañada',{exact:true}).waitFor();
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),'Inclusion overflows the mobile viewport');
+  await page.screenshot({path:'tmp/inclusion-mobile.png'});
+  configFails=true;await open('/differential-support');
+  await page.getByRole('alert').filter({hasText:'No se pudo cargar la configuración'}).waitFor();
+  assert.equal(errors.length,0,errors.join('\n'));
+  console.log('Smoke passed: visible filters, group move, history failure, empty search, real enrollment form, inclusion agenda, teacher entry, config retry.');
+ }catch(e){console.error(e);console.error('Page:',await page.locator('body').innerText());console.error({errors,requests});await page.screenshot({path:'tmp/ui-failure.png'});process.exitCode=1;}
+ finally{await browser.close();fs.unlinkSync(harness);}
+})();
+

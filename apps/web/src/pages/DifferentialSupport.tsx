@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { filterFollowUpPlans, followUpState, type FollowUpFilter } from '../lib/inclusion-follow-up'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Heart, Plus, Save, CheckCircle, Clock, XCircle, Users, FileText, Calendar,
@@ -66,6 +67,11 @@ type Tab = 'profiles' | 'plans' | 'dashboard' | 'config'
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function DifferentialSupport() {
+  const { user, institution } = useAuth()
+  return <DifferentialSupportContent key={String(institution?.id) + ':' + String(user?.id)} />
+}
+
+function DifferentialSupportContent() {
   const { user, institution: authInstitution } = useAuth()
   const institutionId = authInstitution?.id
 
@@ -73,9 +79,17 @@ export default function DifferentialSupport() {
   const [moduleEnabled, setModuleEnabled] = useState(false)
   const [allowTeacher, setAllowTeacher] = useState(true)
   const [configLoading, setConfigLoading] = useState(true)
+  const [configError, setConfigError] = useState('')
+  const [configAttempt, setConfigAttempt] = useState(0)
+  const [plansError, setPlansError] = useState('')
+  const [profilesError, setProfilesError] = useState('')
+  const [planFilter, setPlanFilter] = useState<FollowUpFilter>('all')
+  const [planSearch, setPlanSearch] = useState('')
+  const plansRequest = useRef(0)
+  const profilesRequest = useRef(0)
 
-  // Tabs - Dashboard por defecto para mayor impacto visual
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  // El seguimiento está disponible para todos los roles con acceso al módulo.
+  const [activeTab, setActiveTab] = useState<Tab>('plans')
 
   // Categories (configurable)
   const [categories, setCategories] = useState<any[]>([])
@@ -159,14 +173,16 @@ export default function DifferentialSupport() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  const isAdmin = user?.roles?.some((r: any) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r.role?.name || r.name))
-  const isCoordinator = user?.roles?.some((r: any) => ['COORDINADOR'].includes(r.role?.name || r.name))
-  const isRector = user?.roles?.some((r: any) => ['RECTOR'].includes(r.role?.name || r.name))
+  const isAdmin = user?.roles?.some((r: any) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(typeof r === 'string' ? r : r.role?.name || r.name))
+  const isCoordinator = user?.roles?.some((r: any) => ['COORDINADOR'].includes(typeof r === 'string' ? r : r.role?.name || r.name))
+  const isRector = user?.roles?.some((r: any) => ['RECTOR'].includes(typeof r === 'string' ? r : r.role?.name || r.name))
   const canConfigure = isAdmin || isRector
   const canViewDashboard = isAdmin || isRector || isCoordinator
 
   const showMsg = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text }); setTimeout(() => setMessage(null), 4000)
+    const next = { type, text }
+    setMessage(next)
+    if (type === 'success') setTimeout(() => setMessage(current => current === next ? null : current), 5000)
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -174,16 +190,24 @@ export default function DifferentialSupport() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   useEffect(() => {
+    let cancelled = false
+    setConfigLoading(true); setConfigError('')
     const load = async () => {
       try {
         const res = await apdApi.getConfig()
+        if (cancelled) return
         setModuleEnabled(res.data?.enableDifferentialSupport || false)
         setAllowTeacher(res.data?.allowTeacherAccess ?? true)
-      } catch (err: any) { if (err.response?.status === 403) setModuleEnabled(false) }
-      finally { setConfigLoading(false) }
+      } catch (err: any) { if (!cancelled) setConfigError(err.response?.status === 403 ? 'No tiene acceso al módulo de Inclusión con el rol actual.' : 'No se pudo cargar la configuración de Inclusión. Intente nuevamente.') }
+      finally { if (!cancelled) setConfigLoading(false) }
     }
     load()
-  }, [])
+    return () => { cancelled = true }
+  }, [configAttempt])
+
+  useEffect(() => {
+    if (!configLoading && !moduleEnabled && canConfigure) setActiveTab('config')
+  }, [configLoading, moduleEnabled, canConfigure])
 
   const loadCategories = useCallback(async () => {
     try { const res = await apdApi.getCategories(); setCategories(res.data || []) } catch { setCategories([]) }
@@ -202,18 +226,21 @@ export default function DifferentialSupport() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   const loadProfiles = async () => {
-    setProfilesLoading(true)
+    const request = ++profilesRequest.current
+    setProfilesLoading(true); setProfilesError('')
     try {
       const params: any = {}
       if (profileFilter) params.active = profileFilter
       if (profileSearch) params.search = profileSearch
       const res = await apdApi.getProfiles(params)
-      setProfiles(res.data || [])
-    } catch { /* ignore */ }
-    finally { setProfilesLoading(false) }
+      if (request === profilesRequest.current) setProfiles(res.data || [])
+    } catch { if (request === profilesRequest.current) setProfilesError('No se pudieron cargar los perfiles. Intente nuevamente.') }
+    finally { if (request === profilesRequest.current) setProfilesLoading(false) }
   }
 
-  useEffect(() => { if (moduleEnabled && activeTab === 'profiles') loadProfiles() }, [moduleEnabled, activeTab, profileFilter])
+  useEffect(() => {
+    if (moduleEnabled && activeTab === 'profiles') { const timer = setTimeout(loadProfiles, 250); return () => { clearTimeout(timer); profilesRequest.current++ } }
+  }, [moduleEnabled, activeTab, profileFilter, profileSearch])
 
   const openProfileDetail = async (profileId: string) => {
     try { const res = await apdApi.getProfile(profileId); setSelectedProfile(res.data) }
@@ -266,13 +293,13 @@ export default function DifferentialSupport() {
     try {
       const common = {
         supportCategory: profileForm.supportCategory, supportCategoryId: profileForm.supportCategoryId || undefined,
-        pedagogicalNotes: profileForm.pedagogicalNotes || undefined, learningBarriers: profileForm.learningBarriers || undefined,
-        strengths: profileForm.strengths || undefined, supportNeeds: profileForm.supportNeeds || undefined,
-        learningStyleObservations: profileForm.learningStyleObservations || undefined,
-        parentConsentAccepted: profileForm.parentConsentAccepted, consentDate: profileForm.consentDate || undefined,
+        pedagogicalNotes: profileForm.pedagogicalNotes, learningBarriers: profileForm.learningBarriers,
+        strengths: profileForm.strengths, supportNeeds: profileForm.supportNeeds,
+        learningStyleObservations: profileForm.learningStyleObservations,
+        parentConsentAccepted: profileForm.parentConsentAccepted, consentDate: profileForm.consentDate,
       }
       if (editingProfile) {
-        await apdApi.updateProfile(editingProfile.id, { ...common, active: profileForm.parentConsentAccepted })
+        await apdApi.updateProfile(editingProfile.id, { ...common, active: profileForm.parentConsentAccepted && editingProfile.active })
         showMsg('success', 'Perfil actualizado correctamente')
       } else {
         if (!profileForm.studentId) { showMsg('error', 'Seleccione un estudiante'); setSaving(false); return }
@@ -299,35 +326,49 @@ export default function DifferentialSupport() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   useEffect(() => {
-    if (!moduleEnabled || activeTab !== 'plans') return
+    if (!moduleEnabled) return
     const load = async () => {
       try {
         const res = await academicYearsApi.getAll(); const years = res.data || []; setAcademicYears(years)
         const current = years.find((y: any) => y.isCurrent) || years.find((y: any) => y.status === 'ACTIVE') || years.sort((a: any, b: any) => b.year - a.year)[0]
         if (current) setSelectedYearId(current.id)
-      } catch { /* ignore */ }
+      } catch { showMsg('error', 'No se pudieron cargar los años académicos.') }
     }
     load()
-  }, [moduleEnabled, activeTab])
+  }, [moduleEnabled])
 
   useEffect(() => {
+    setTerms([]); setSelectedTermId(''); setPlans([])
     if (!selectedYearId) return
-    const load = async () => { try { const res = await academicTermsApi.getAll(selectedYearId); setTerms(res.data || []); if (res.data?.length > 0) setSelectedTermId(res.data[0].id) } catch { setTerms([]) } }
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await academicTermsApi.getAll(selectedYearId)
+        if (cancelled) return
+        const next = res.data || []; const now = new Date()
+        const current = next.find((t: any) => t.startDate && t.endDate && new Date(t.startDate) <= now && new Date(t.endDate) >= now) || next[0]
+        setTerms(next); setSelectedTermId(current?.id || '')
+      } catch { if (!cancelled) showMsg('error', 'No se pudieron cargar los períodos.') }
+    }
     load()
+    return () => { cancelled = true }
   }, [selectedYearId])
 
   useEffect(() => {
+    setGroups([]); setSelectedGroupId(''); setPlans([])
     if (!selectedYearId) return
+    let cancelled = false
     const load = async () => {
       try {
         const res = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
+        if (cancelled) return
         const uniqueGroups = new Map<string, any>()
         ;(res.data || []).forEach((a: any) => { if (a.group && !uniqueGroups.has(a.group.id)) uniqueGroups.set(a.group.id, { id: a.group.id, name: a.group.name, gradeName: a.group.grade?.name }) })
-        const allGroups = Array.from(uniqueGroups.values()); setGroups(allGroups)
-        if (allGroups.length > 0) setSelectedGroupId(allGroups[0].id); else setSelectedGroupId('')
-      } catch { setGroups([]) }
+        const next = Array.from(uniqueGroups.values()); setGroups(next); setSelectedGroupId(next[0]?.id || '')
+      } catch { if (!cancelled) showMsg('error', 'No se pudieron cargar los grupos.') }
     }
     load()
+    return () => { cancelled = true }
   }, [selectedYearId])
 
   useEffect(() => {
@@ -337,13 +378,18 @@ export default function DifferentialSupport() {
   }, [selectedGroupId, selectedYearId, institutionId])
 
   const loadPlans = async () => {
-    if (!selectedGroupId || !selectedTermId) { setPlans([]); return }
-    setPlansLoading(true)
-    try { const { pedagogicalSupportApi } = await import('../lib/api'); const res = await pedagogicalSupportApi.getByGroup(selectedGroupId, selectedTermId); setPlans(res.data || []) }
-    catch { setPlans([]) } finally { setPlansLoading(false) }
+    const request = ++plansRequest.current
+    if (!selectedGroupId || !selectedTermId) { setPlans([]); setPlansLoading(false); return }
+    setPlansLoading(true); setPlansError('')
+    try { const { pedagogicalSupportApi } = await import('../lib/api'); const res = await pedagogicalSupportApi.getByGroup(selectedGroupId, selectedTermId); if (request === plansRequest.current) setPlans(res.data || []) }
+    catch { if (request === plansRequest.current) setPlansError('No se pudieron cargar los planes. Intente nuevamente.') } finally { if (request === plansRequest.current) setPlansLoading(false) }
   }
 
-  useEffect(() => { if (moduleEnabled && activeTab === 'plans') loadPlans() }, [selectedGroupId, selectedTermId, activeTab, moduleEnabled])
+  useEffect(() => {
+    setPlans([]); setPlansError('')
+    if (moduleEnabled && activeTab === 'plans') loadPlans()
+    return () => { plansRequest.current++ }
+  }, [selectedGroupId, selectedTermId, activeTab, moduleEnabled])
 
   const openCreatePlan = () => {
     setEditingPlan(null)
@@ -351,19 +397,36 @@ export default function DifferentialSupport() {
     setShowPlanModal(true)
   }
 
+  const openEditPlan = async (planId: string) => {
+    try {
+      const { data: plan } = await apdApi.getPlan(planId)
+      const lines = (value: unknown) => Array.isArray(value) ? value.join('\n') : ''
+      setEditingPlan(plan)
+      setPlanForm({
+        studentEnrollmentId: plan.studentEnrollmentId, planType: plan.planType || 'APD',
+        supportStrategy: plan.supportStrategy || '', familyCommitment: plan.familyCommitment || '',
+        followUpDate: plan.followUpDate?.slice(0, 10) || '', observations: plan.observations || '',
+        objectives: lines(plan.objectives), adaptationStrategies: lines(plan.adaptationStrategies),
+        evaluationAdjustments: lines(plan.evaluationAdjustments), planApprovedByFamily: !!plan.planApprovedByFamily,
+        familyApprovalDate: plan.familyApprovalDate?.slice(0, 10) || '', familySignatureUrl: plan.familySignatureUrl || '',
+      })
+      setShowPlanModal(true)
+    } catch { showMsg('error', 'No se pudo abrir el plan para editar. Intente nuevamente.') }
+  }
+
   const handleSavePlan = async () => {
     if (!planForm.studentEnrollmentId || !planForm.supportStrategy) { showMsg('error', 'Estudiante y estrategia de apoyo son obligatorios'); return }
     setSaving(true)
     try {
-      const objectives = planForm.objectives ? planForm.objectives.split('\n').filter(Boolean) : undefined
-      const adaptationStrategies = planForm.adaptationStrategies ? planForm.adaptationStrategies.split('\n').filter(Boolean) : undefined
-      const evaluationAdjustments = planForm.evaluationAdjustments ? planForm.evaluationAdjustments.split('\n').filter(Boolean) : undefined
+      const objectives = planForm.objectives ? planForm.objectives.split('\n').filter(Boolean) : []
+      const adaptationStrategies = planForm.adaptationStrategies ? planForm.adaptationStrategies.split('\n').filter(Boolean) : []
+      const evaluationAdjustments = planForm.evaluationAdjustments ? planForm.evaluationAdjustments.split('\n').filter(Boolean) : []
       const common = {
         planType: planForm.planType, supportStrategy: planForm.supportStrategy,
-        familyCommitment: planForm.familyCommitment || undefined, followUpDate: planForm.followUpDate || undefined,
-        observations: planForm.observations || undefined, objectives, adaptationStrategies, evaluationAdjustments,
+        familyCommitment: planForm.familyCommitment, followUpDate: planForm.followUpDate,
+        observations: planForm.observations, objectives, adaptationStrategies, evaluationAdjustments,
         planApprovedByFamily: planForm.planApprovedByFamily,
-        familyApprovalDate: planForm.familyApprovalDate || undefined, familySignatureUrl: planForm.familySignatureUrl || undefined,
+        familyApprovalDate: planForm.familyApprovalDate, familySignatureUrl: planForm.familySignatureUrl,
       }
       if (editingPlan) { await apdApi.updatePlan(editingPlan.id, common); showMsg('success', 'Plan actualizado') }
       else { await apdApi.createPlan({ studentEnrollmentId: planForm.studentEnrollmentId, academicTermId: selectedTermId, ...common }); showMsg('success', 'Plan creado correctamente') }
@@ -532,11 +595,18 @@ export default function DifferentialSupport() {
     return { active, completed, total: plans.length }
   }, [plans])
 
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  const visiblePlans = filterFollowUpPlans(plans, planFilter, planSearch, today)
+  const dueCount = plans.filter(p => followUpState(p, today) === 'due').length
+  const unscheduledCount = plans.filter(p => followUpState(p, today) === 'unscheduled').length
+
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (configLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" /></div>
+
+  if (configError) return <div role="alert" className="max-w-2xl mx-auto mt-12 rounded-xl border border-red-200 bg-red-50 p-6 text-red-800"><p>{configError}</p><button onClick={() => setConfigAttempt(n => n + 1)} className="mt-3 underline font-medium">Reintentar</button></div>
 
   if (!moduleEnabled && !canConfigure) return (
     <div className="max-w-2xl mx-auto mt-12">
@@ -554,18 +624,24 @@ export default function DifferentialSupport() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2"><Heart className="w-6 h-6 text-purple-600" />Inclusión Educativa</h1>
-          <p className="text-sm text-slate-500 mt-1">Acompañamiento Pedagógico Diferencial — Perfiles, planes y seguimiento</p>
+          <p className="text-sm text-slate-500 mt-1">Reconozca fortalezas, acuerde apoyos y acompañe cada avance.</p>
         </div>
       </div>
 
-      {message && <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{message.text}</div>}
+      {message && <div role={message.type === 'error' ? 'alert' : 'status'} className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-xl p-3 rounded-lg text-sm font-medium shadow-lg flex gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}><span className="flex-1">{message.text}</span><button aria-label="Cerrar mensaje" onClick={() => setMessage(null)}><X className="w-4 h-4" /></button></div>}
+
+      {moduleEnabled && <div className="grid sm:grid-cols-3 gap-3 mb-6">
+        <button onClick={() => { setActiveTab('profiles'); setSelectedProfile(null) }} className="text-left p-4 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100"><span className="block text-sm font-semibold text-purple-900">1. Conocer al estudiante</span><span className="text-xs text-purple-700">Fortalezas, barreras y apoyos acordados con la familia.</span></button>
+        <button onClick={() => setActiveTab('plans')} className="text-left p-4 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100"><span className="block text-sm font-semibold text-teal-900">2. Preparar los apoyos</span><span className="text-xs text-teal-700">Planes, actividades y compromisos para el grupo.</span></button>
+        <button onClick={() => { setActiveTab('plans'); setPlanFilter('due') }} className="text-left p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100"><span className="block text-sm font-semibold text-amber-900">3. Revisar los avances</span><span className="text-xs text-amber-700">Seguimientos pendientes y próximos pasos.</span></button>
+      </div>}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-slate-100 rounded-xl p-1 overflow-x-auto">
         {([
-          { key: 'profiles' as Tab, icon: Users, label: 'Perfiles', show: true },
-          { key: 'plans' as Tab, icon: ClipboardList, label: 'Planes y Actividades', show: moduleEnabled },
-          { key: 'dashboard' as Tab, icon: BarChart3, label: 'Dashboard', show: moduleEnabled && canViewDashboard },
+          { key: 'profiles' as Tab, icon: Users, label: 'Perfiles de apoyo', show: moduleEnabled },
+          { key: 'plans' as Tab, icon: ClipboardList, label: 'Seguimiento y planes', show: moduleEnabled },
+          { key: 'dashboard' as Tab, icon: BarChart3, label: 'Resumen institucional', show: moduleEnabled && canViewDashboard },
           { key: 'config' as Tab, icon: Settings, label: 'Configuración', show: canConfigure },
         ]).filter(t => t.show).map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === t.key ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
@@ -577,6 +653,7 @@ export default function DifferentialSupport() {
       {/* ═════════ TAB: PERFILES ═════════ */}
       {activeTab === 'profiles' && moduleEnabled && (
         <div>
+          {profilesError && <div role="alert" className="mb-4 p-3 bg-red-50 text-red-800 rounded-lg">{profilesError} <button onClick={loadProfiles} className="underline">Reintentar</button></div>}
           {selectedProfile ? (
             <div>
               <button onClick={() => setSelectedProfile(null)} className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 mb-4">← Volver a la lista</button>
@@ -690,7 +767,17 @@ export default function DifferentialSupport() {
             </div>
           </div>
 
-          {plans.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2 items-center">
+            <input aria-label="Buscar planes por estudiante o estrategia" placeholder="Buscar estudiante, documento o estrategia" value={planSearch} onChange={e => setPlanSearch(e.target.value)} className="flex-1 min-w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            <select aria-label="Filtrar seguimiento" value={planFilter} onChange={e => setPlanFilter(e.target.value as FollowUpFilter)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+              <option value="all">Todos los planes</option><option value="due">Por revisar: hoy o vencidos ({dueCount})</option><option value="unscheduled">Sin fecha de seguimiento ({unscheduledCount})</option><option value="active">Activos</option><option value="completed">Completados</option>
+            </select>
+            <button onClick={loadPlans} className="text-sm text-purple-700 underline">Actualizar</button>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">La agenda corresponde al grupo y período seleccionados. Registre el avance y acuerde la próxima fecha de seguimiento.</p>
+          {plansError && <div role="alert" className="mb-4 p-3 bg-red-50 text-red-800 rounded-lg">{plansError} <button onClick={loadPlans} className="underline">Reintentar</button></div>}
+
+          {!plansLoading && !plansError && plans.length > 0 && (
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-white rounded-xl border border-slate-200 p-4 text-center"><div className="text-2xl font-bold text-slate-900">{planStats.total}</div><div className="text-xs text-slate-500">Total</div></div>
               <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 text-center"><div className="text-2xl font-bold text-amber-700">{planStats.active}</div><div className="text-xs text-amber-600">Activos</div></div>
@@ -700,26 +787,28 @@ export default function DifferentialSupport() {
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {plansLoading ? <div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" /></div>
-            : plans.length === 0 ? <div className="p-8 text-center text-slate-500"><ClipboardList className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="font-medium">No hay planes de acompañamiento</p><p className="text-sm mt-1">{selectedGroupId && selectedTermId ? 'Cree un nuevo plan para comenzar.' : 'Seleccione grupo y período.'}</p></div>
-            : <div>{plans.map((plan: any) => {
+            : plansError ? null : visiblePlans.length === 0 ? <div className="p-8 text-center text-slate-500"><ClipboardList className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="font-medium">No hay planes de acompañamiento</p><p className="text-sm mt-1">{selectedGroupId && selectedTermId ? (plans.length ? 'No hay coincidencias. Cambie el filtro o la búsqueda.' : 'Cree un nuevo plan para comenzar.') : 'Seleccione grupo y período.'}</p></div>
+            : <div>{visiblePlans.map((plan: any) => {
               const student = plan.studentEnrollment?.student
               const studentName = student ? `${student.lastName} ${student.firstName}` : 'Estudiante'
               const isExpanded = expandedPlanId === plan.id
               return (
                 <div key={plan.id} className="border-b border-slate-100 last:border-0">
-                  <div className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 cursor-pointer" onClick={() => setExpandedPlanId(isExpanded ? null : plan.id)}>
+                  <div className="flex flex-wrap items-center gap-4 px-5 py-4 hover:bg-slate-50 cursor-pointer" onClick={() => setExpandedPlanId(isExpanded ? null : plan.id)}>
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-slate-900 flex items-center gap-2">{studentName}{renderPlanTypeBadge(plan.planType)}</div>
                       <div className="text-xs text-slate-500 truncate">{plan.supportStrategy}</div>
+                      {plan.status === 'ACTIVE' && <div className={followUpState(plan, today) === 'due' ? 'text-xs text-amber-800 mt-1' : 'text-xs text-slate-500 mt-1'}>{plan.followUpDate ? 'Seguimiento: ' + plan.followUpDate.slice(0, 10).split('-').reverse().join('/') : 'Sin fecha de seguimiento'}{followUpState(plan, today) === 'due' ? ' · Por revisar' : ''}</div>}
                     </div>
                     <div className="w-32 hidden sm:block">{renderProgressBar(plan.progressPercentage)}</div>
                     <div>{renderStatusBadge(plan.status)}</div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       {plan.status === 'ACTIVE' && (<>
+                        <button onClick={() => openEditPlan(plan.id)} className="p-1.5 text-slate-500 hover:text-purple-700 hover:bg-purple-50 rounded-lg" title="Editar plan y fecha de seguimiento"><Edit3 className="w-4 h-4" /></button>
                         <button onClick={() => { loadPlanDetail(plan.id) }} className="p-1.5 text-slate-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Ver detalle"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => openCreateActivity(plan.id)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Agregar actividad"><Activity className="w-4 h-4" /></button>
-                        <button onClick={() => openCreateProgressLog(plan.id)} className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Registrar progreso"><TrendingUp className="w-4 h-4" /></button>
+                        <button onClick={() => openCreateProgressLog(plan.id)} className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Registrar progreso"><TrendingUp className="w-4 h-4 inline mr-1" /><span className="text-xs">Registrar avance</span></button>
                         <button onClick={() => handlePlanStatusChange(plan.id, 'COMPLETED')} className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Completar"><CheckCircle className="w-4 h-4" /></button>
                       </>)}
                     </div>

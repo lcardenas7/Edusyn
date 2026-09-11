@@ -1,3 +1,4 @@
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { confirmDialog } from '../components/ui/confirm'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
@@ -92,6 +93,8 @@ const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
 
 export default function Students() {
   const { institution } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [students, setStudents] = useState<Student[]>([])
   const [rawStudents, setRawStudents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -364,25 +367,6 @@ export default function Students() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
-          <p className="mt-4 text-red-600">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
   const filteredStudents = students.filter(s => {
     const matchesSearch = `${s.firstName} ${s.lastName} ${s.documentNumber}`.toLowerCase().includes(search.toLowerCase())
     const matchesGrade = filterGrade === 'ALL' || s.group?.startsWith(filterGrade)
@@ -410,6 +394,20 @@ export default function Students() {
     setShowModal(true)
   }
 
+  useEffect(() => {
+    if (searchParams.get('new') !== '1' || !institution?.id || loading) return
+    handleOpenNew()
+    setSearchParams({}, { replace: true })
+  }, [searchParams, institution?.id, loading])
+
+  const handleManageEnrollment = async () => {
+    if (!editingStudent) return
+    if (JSON.stringify(formData) !== JSON.stringify(editingStudent) && !(await confirmDialog('Hay cambios personales sin guardar. ¿Desea salir sin guardarlos para gestionar la matrícula?'))) return
+    const enrollment = editingRawStudent?.enrollments?.find((e: any) => e.status === 'ACTIVE' && (e.academicYearId || e.academicYear?.id) === currentAcademicYear?.id)
+      || editingRawStudent?.enrollments?.find((e: any) => e.status === 'ACTIVE')
+    navigate(enrollment ? '/enrollments?enrollmentId=' + encodeURIComponent(enrollment.id) : '/enrollments?search=' + encodeURIComponent(editingStudent.documentNumber))
+  }
+
   const handleEdit = (student: Student) => {
     setEditingStudent(student)
     setFormData(student)
@@ -426,6 +424,10 @@ export default function Students() {
     }
 
     // Validar grupo si se va a matricular
+    if (!editingStudent && enrollNow && !currentAcademicYear) {
+      setSaveMessage({ type: 'error', text: 'No hay un año académico activo disponible. Revise la configuración del año o desmarque la matrícula inmediata para guardar solo los datos personales.' })
+      return
+    }
     if (!editingStudent && enrollNow && !selectedGroupId) {
       setSaveMessage({ type: 'error', text: 'Seleccione un grupo para matricular al estudiante' })
       return
@@ -485,6 +487,8 @@ export default function Students() {
               })
             } catch (err) {
               console.error('Error updating guardian:', err)
+              setSaveMessage({ type: 'error', text: 'Los datos personales se guardaron, pero no se pudo actualizar el acudiente. Revise sus datos e intente guardar nuevamente.' })
+              return
             }
           } else {
             // Crear acudiente y vincularlo
@@ -503,6 +507,8 @@ export default function Students() {
               })
             } catch (err) {
               console.error('Error creating guardian:', err)
+              setSaveMessage({ type: 'error', text: 'Los datos personales se guardaron, pero no se pudo vincular el acudiente. Revise sus datos e intente guardar nuevamente.' })
+              return
             }
           }
         }
@@ -1810,6 +1816,25 @@ export default function Students() {
     if (bulkUpdateFileRef.current) bulkUpdateFileRef.current.value = ''
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
+          <p className="mt-4 text-red-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       {viewMode === 'list' ? (
@@ -2314,10 +2339,12 @@ export default function Students() {
                     <option value="F">Femenino</option>
                   </select>
                 </div>
-                {editingStudent && formData.group && (
+                {editingStudent && (
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Grupo Actual</label>
-                    <input type="text" value={formData.group} disabled className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 text-sm" />
+                    <p className="text-sm text-slate-700">{formData.group || 'Sin grupo asignado'}</p>
+                    <button type="button" onClick={handleManageEnrollment} className="mt-2 text-sm font-medium text-blue-700 underline">Cambiar grupo / gestionar matrícula</button>
+                    <p className="mt-1 text-xs text-slate-500">El movimiento se realiza en Matrículas para conservar las notas, la asistencia y el historial. Guarde primero los cambios personales.</p>
                   </div>
                 )}
                 </div>

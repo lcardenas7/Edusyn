@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { confirmDialog } from '../components/ui/confirm'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   Users, 
   Plus, 
@@ -21,9 +21,10 @@ import {
   Save,
   X
 } from 'lucide-react'
-import { enrollmentsApi, academicYearLifecycleApi, groupsApi, gradeChangeApi } from '../lib/api'
+import { enrollmentsApi, academicYearLifecycleApi, groupsApi, gradeChangeApi, academicActsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
+import { enrollmentCsv } from '../lib/enrollment-export'
 
 interface Student {
   id: string
@@ -83,7 +84,12 @@ interface EnrollmentFilters {
 
 const Enrollments: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestId = useRef(0)
+
   const { institution } = useAuth()
+  const institutionRef = useRef(institution?.id)
+  institutionRef.current = institution?.id
   
   // Estado principal
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
@@ -100,12 +106,11 @@ const Enrollments: React.FC = () => {
     status: '',
     search: ''
   })
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
   const [allGroups, setAllGroups] = useState<Group[]>([])
   
   // Modales y acciones
   const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null)
-  const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [showChangeGroupModal, setShowChangeGroupModal] = useState(false)
@@ -114,6 +119,8 @@ const Enrollments: React.FC = () => {
   // Estados de carga
   const [actionLoading, setActionLoading] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [academicActs, setAcademicActs] = useState<any[]>([])
   
   // Estados para modales funcionales
   const [availableGroups, setAvailableGroups] = useState<Group[]>([])
@@ -122,60 +129,53 @@ const Enrollments: React.FC = () => {
   // Formularios
   const [withdrawForm, setWithdrawForm] = useState({ reason: '', observations: '' })
   const [transferForm, setTransferForm] = useState({ reason: '', destinationInstitution: '', observations: '' })
-  const [changeGroupForm, setChangeGroupForm] = useState({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '' })
+  const [changeGroupForm, setChangeGroupForm] = useState({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '', academicActId: '' })
   
   // Estados para validación de cambio de grado
   const [gradeChangeValidation, setGradeChangeValidation] = useState<any>(null)
   const [validatingChange, setValidatingChange] = useState(false)
 
   useEffect(() => {
-    if (institution?.id) {
-      loadAcademicYears()
-      loadAllGroups()
-    }
-  }, [institution])
+    let cancelled = false
+    requestId.current++
+    setEnrollments([]); setAllGroups([]); setAcademicYears([]); setCurrentYear(null)
+    setSelectedEnrollment(null); setShowChangeGroupModal(false); setShowWithdrawModal(false)
+    setShowTransferModal(false); setShowHistoryModal(false); setActionError(''); setSuccessMessage('')
+    setFilters({ academicYearId: '', gradeId: '', groupId: '', status: '', search: searchParams.get('search') || '' })
+    if (!institution?.id) { setLoading(false); return }
+    setLoading(true); setError('')
+    Promise.all([
+      academicYearLifecycleApi.getByInstitution(institution.id),
+      groupsApi.getAll({ institutionId: institution.id }),
+    ]).then(([yearsResponse, groupsResponse]) => {
+      if (cancelled) return
+      const years: AcademicYear[] = yearsResponse.data || []
+      const current = years.find(y => y.status === 'ACTIVE') || [...years].sort((a,b) => b.year-a.year)[0]
+      setAcademicYears(years); setAllGroups(groupsResponse.data || []); setCurrentYear(current || null)
+      setFilters(prev => ({ ...prev, academicYearId: current?.id || '' }))
+      if (!years.length) setLoading(false)
+    }).catch(() => { if (!cancelled) { setError('No se pudieron cargar los años y grupos. Intente actualizar la página.'); setLoading(false) } })
+    return () => { cancelled = true; requestId.current++ }
+  }, [institution?.id])
 
   useEffect(() => {
-    if (filters.academicYearId || currentYear) {
-      loadEnrollments()
-    }
-  }, [filters, currentYear])
+    if (academicYears.length) loadEnrollments()
+    return () => { requestId.current++ }
+  }, [filters, academicYears, institution?.id])
 
-  const loadAcademicYears = async () => {
-    try {
-      const response = await academicYearLifecycleApi.getByInstitution(institution!.id)
-      const years = response.data
-      setAcademicYears(years)
-      
-      // Obtener año actual
-      try {
-        const currentResponse = await academicYearLifecycleApi.getCurrent(institution!.id)
-        if (currentResponse.data) {
-          setCurrentYear(currentResponse.data)
-          setFilters(prev => ({ ...prev, academicYearId: currentResponse.data.id }))
-        } else if (years.length > 0) {
-          // Si no hay año actual, usar el más reciente
-          const latest = years.sort((a: AcademicYear, b: AcademicYear) => b.year - a.year)[0]
-          setCurrentYear(latest)
-          setFilters(prev => ({ ...prev, academicYearId: latest.id }))
-        }
-      } catch (err) {
-        console.error('Error loading current year:', err)
-      }
-    } catch (err) {
-      console.error('Error loading academic years:', err)
-      setError('Error al cargar años académicos')
-    }
-  }
-
-  const loadAllGroups = async () => {
-    try {
-      const response = await groupsApi.getAll({ institutionId: institution!.id })
-      setAllGroups(response.data || [])
-    } catch (err) {
-      console.error('Error loading groups:', err)
-    }
-  }
+  useEffect(() => {
+    const enrollmentId = searchParams.get('enrollmentId')
+    if (!enrollmentId || !institution?.id || !academicYears.length) return
+    let cancelled = false
+    enrollmentsApi.getById(enrollmentId).then(response => {
+      if (cancelled) return
+      const enrollment: Enrollment = response.data
+      setFilters({ academicYearId: enrollment.academicYear.id, search: enrollment.student.documentNumber, gradeId: '', groupId: '', status: '' })
+      handleChangeGroup(enrollment)
+      setSearchParams({}, { replace: true })
+    }).catch(() => { if (!cancelled) setError('No se pudo abrir la matrícula solicitada.') })
+    return () => { cancelled = true }
+  }, [searchParams, academicYears, institution?.id])
 
   // Extraer grados únicos de los grupos
   const uniqueGrades = allGroups.reduce((acc: { id: string; name: string }[], g: Group) => {
@@ -191,52 +191,62 @@ const Enrollments: React.FC = () => {
     : allGroups
 
   const loadEnrollments = async () => {
-    if (!filters.academicYearId) return
+    if (!institution?.id) return
+    const currentRequest = ++requestId.current
     
     setLoading(true)
     setError('')
     
     try {
       const response = await enrollmentsApi.getAll({
-        academicYearId: filters.academicYearId,
+        academicYearId: filters.academicYearId || undefined,
         gradeId: filters.gradeId || undefined,
         groupId: filters.groupId || undefined,
         status: filters.status || undefined,
         search: filters.search || undefined
       })
-      setEnrollments(response.data)
+      if (currentRequest === requestId.current) setEnrollments(response.data)
     } catch (err: any) {
       console.error('Error loading enrollments:', err)
-      setError(err.response?.data?.message || 'Error al cargar matrículas')
+      if (currentRequest === requestId.current) setError(err.response?.data?.message || 'Error al cargar matrículas')
     } finally {
-      setLoading(false)
+      if (currentRequest === requestId.current) setLoading(false)
     }
   }
 
   const handleWithdraw = async (enrollment: Enrollment) => {
+    setActionError('')
     setSelectedEnrollment(enrollment)
     setShowWithdrawModal(true)
   }
 
   const handleTransfer = async (enrollment: Enrollment) => {
+    setActionError('')
     setSelectedEnrollment(enrollment)
     setShowTransferModal(true)
   }
 
   const handleChangeGroup = async (enrollment: Enrollment) => {
+    setActionError('')
     setSelectedEnrollment(enrollment)
+    setChangeGroupForm({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '', academicActId: '' })
+    setGradeChangeValidation(null)
     setShowChangeGroupModal(true)
   }
 
   const handleViewHistory = async (enrollment: Enrollment) => {
     setSelectedEnrollment(enrollment)
+    setEnrollmentHistory([])
+    setActionError('')
+    const institutionAtStart = institutionRef.current
     try {
       const response = await enrollmentsApi.getHistory(enrollment.id)
+      if (institutionAtStart !== institutionRef.current) return
       setEnrollmentHistory(response.data)
+      setShowHistoryModal(true)
     } catch (err) {
-      console.error('Error loading history:', err)
+      setActionError('No se pudo cargar el historial. Intente abrirlo nuevamente.')
     }
-    setShowHistoryModal(true)
   }
 
   const getStatusColor = (status: string) => {
@@ -295,7 +305,7 @@ const Enrollments: React.FC = () => {
       loadEnrollments()
     } catch (err: any) {
       console.error('Error withdrawing student:', err)
-      setError(err.response?.data?.message || 'Error al retirar estudiante')
+      setActionError(err.response?.data?.message || 'Error al retirar estudiante')
     } finally {
       setActionLoading('')
     }
@@ -313,7 +323,7 @@ const Enrollments: React.FC = () => {
       loadEnrollments()
     } catch (err: any) {
       console.error('Error transferring student:', err)
-      setError(err.response?.data?.message || 'Error al transferir estudiante')
+      setActionError(err.response?.data?.message || 'Error al transferir estudiante')
     } finally {
       setActionLoading('')
     }
@@ -321,6 +331,12 @@ const Enrollments: React.FC = () => {
 
   const executeChangeGroup = async () => {
     if (!selectedEnrollment || !changeGroupForm.newGroupId || !changeGroupForm.reason) return
+    setActionError('')
+    const changesGrade = availableGroups.some(g => g.id === changeGroupForm.newGroupId && g.grade.id !== selectedEnrollment.group.grade.id)
+    if (changesGrade && changeGroupForm.movementType === 'ACADEMIC' && !changeGroupForm.academicActId) {
+      setActionError('Seleccione el acta académica aprobada que respalda el cambio de grado.')
+      return
+    }
     
     // Primero validar el cambio
     setValidatingChange(true)
@@ -335,14 +351,14 @@ const Enrollments: React.FC = () => {
 
       // Si no está permitido, mostrar error
       if (!validation.data.canChange) {
-        setError(`Cambio no permitido: ${validation.data.restrictions.join(', ')}`)
+        setActionError(`Cambio no permitido: ${validation.data.restrictions.join(', ')}`)
         setValidatingChange(false)
         return
       }
 
       // Si hay advertencias, mostrarlas pero permitir continuar
       if (validation.data.warnings.length > 0) {
-        console.warn('Advertencias de cambio:', validation.data.warnings)
+        if (!(await confirmDialog(validation.data.warnings.join('\n') + '\n\n¿Desea continuar?'))) return
       }
 
       // Si es cambio de grado (no mismo grado), requerir confirmación adicional
@@ -351,7 +367,7 @@ const Enrollments: React.FC = () => {
         const confirmMsg = isAdminCorrection
           ? `Corrección administrativa de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nEste cambio NO requiere acta, pero quedará registrado en la auditoría de la matrícula (con el motivo, la fecha y tu usuario). Úsalo solo para corregir errores de matrícula.\n\n¿Deseas continuar?`
           : `¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`
-        if (!(await confirmDialog(confirmMsg, { danger: true }))) {
+        if (!(await confirmDialog(confirmMsg, { danger: true, confirmLabel: 'Confirmar cambio' }))) {
           setValidatingChange(false)
           return
         }
@@ -365,40 +381,54 @@ const Enrollments: React.FC = () => {
         gradeChangeType: validation.data.gradeChangeType,
         movementType: changeGroupForm.movementType,
         reason: changeGroupForm.reason,
-        observations: changeGroupForm.observations
+        observations: changeGroupForm.observations,
+        academicActId: changeGroupForm.academicActId || undefined
       })
       
       setSuccessMessage('Cambio realizado exitosamente')
       setShowChangeGroupModal(false)
-      setChangeGroupForm({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '' })
+      setChangeGroupForm({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '', academicActId: '' })
       setGradeChangeValidation(null)
       loadEnrollments()
     } catch (err: any) {
       console.error('Error changing group:', err)
-      setError(err.response?.data?.message || 'Error al realizar el cambio')
+      setActionError(err.response?.data?.message || 'Error al realizar el cambio')
     } finally {
       setActionLoading('')
       setValidatingChange(false)
     }
   }
 
-  // Cargar grupos disponibles para cambio de grupo
   useEffect(() => {
-    if (showChangeGroupModal && institution?.id) {
-      groupsApi.getAll({ institutionId: institution.id }).then(response => {
-        setAvailableGroups(response.data)
-      }).catch(err => {
-        console.error('Error loading groups:', err)
-      })
-    }
-  }, [showChangeGroupModal, institution])
+    if (!showChangeGroupModal || !institution?.id || !selectedEnrollment) return
+    let cancelled = false
+    setAvailableGroups(allGroups); setAcademicActs([])
+    academicActsApi.getAll(institution.id, selectedEnrollment.academicYear.id).then(response => {
+      if (!cancelled) setAcademicActs((response.data || []).filter((act: any) => act.approvalDate))
+    }).catch(() => { if (!cancelled) setActionError('No se pudieron cargar las actas aprobadas. Reabra el cambio de grupo para reintentar.') })
+    return () => { cancelled = true }
+  }, [showChangeGroupModal, institution?.id, selectedEnrollment, allGroups])
+
+  const clearFilters = () => setFilters({ academicYearId: currentYear?.id || '', gradeId: '', groupId: '', status: '', search: '' })
+  const hasFilters = !!(filters.gradeId || filters.groupId || filters.status || filters.search)
+  const selectedYear = academicYears.find(y => y.id === filters.academicYearId)
+  const exportFilteredEnrollments = () => {
+    const rows = [
+      ['Documento', 'Estudiante', 'Año académico', 'Grado', 'Grupo', 'Estado'],
+      ...enrollments.map(e => [e.student.documentNumber, [e.student.lastName, e.student.secondLastName, e.student.firstName, e.student.secondName].filter(Boolean).join(' '), e.academicYear.name, e.group.grade.name, e.group.name, e.status]),
+    ]
+    const url = URL.createObjectURL(new Blob([enrollmentCsv(rows)], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url; link.download = 'matriculas-filtradas.csv'; link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Gestión de Matrículas</h1>
               <p className="text-slate-600 mt-1">Administra las matrículas de estudiantes</p>
@@ -409,10 +439,10 @@ const Enrollments: React.FC = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
               >
                 <Calendar className="w-4 h-4" />
-                Wizard Año
+                Preparar año académico
               </button>
               <button
-                onClick={() => setShowEnrollModal(true)}
+                onClick={() => navigate('/students?new=1')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -422,25 +452,25 @@ const Enrollments: React.FC = () => {
           </div>
 
           {/* Año académico actual */}
-          {currentYear && (
+          {selectedYear && (
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${
-                    currentYear.status === 'ACTIVE' ? 'bg-green-500' :
-                    currentYear.status === 'CLOSED' ? 'bg-red-500' : 'bg-yellow-500'
+                    selectedYear.status === 'ACTIVE' ? 'bg-green-500' :
+                    selectedYear.status === 'CLOSED' ? 'bg-red-500' : 'bg-yellow-500'
                   }`} />
                   <div>
-                    <span className="font-medium">{currentYear.name}</span>
-                    <span className="ml-2 text-sm text-slate-500">({currentYear.year})</span>
+                    <span className="font-medium">{selectedYear.name}</span>
+                    <span className="ml-2 text-sm text-slate-500">({selectedYear.year})</span>
                   </div>
                 </div>
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                  currentYear.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                  currentYear.status === 'CLOSED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                  selectedYear.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                  selectedYear.status === 'CLOSED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
                 }`}>
-                  {currentYear.status === 'ACTIVE' ? 'Activo' :
-                   currentYear.status === 'CLOSED' ? 'Cerrado' : 'Borrador'}
+                  {selectedYear.status === 'ACTIVE' ? 'Activo' :
+                   selectedYear.status === 'CLOSED' ? 'Cerrado' : 'Borrador'}
                 </span>
               </div>
             </div>
@@ -456,7 +486,7 @@ const Enrollments: React.FC = () => {
               className="flex items-center gap-2 px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
             >
               <Filter className="w-4 h-4" />
-              {showFilters ? 'Ocultar' : 'Mostrar'} Filtros
+              {showFilters ? 'Ocultar' : 'Mostrar'} filtros{hasFilters ? ' · Hay filtros activos' : ''}
             </button>
           </div>
 
@@ -540,10 +570,10 @@ const Enrollments: React.FC = () => {
 
               <div className="flex items-center justify-end">
                 <button
-                  onClick={loadEnrollments}
+                  onClick={clearFilters}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Aplicar Filtros
+                  Limpiar filtros
                 </button>
               </div>
             </div>
@@ -557,10 +587,7 @@ const Enrollments: React.FC = () => {
               <h2 className="text-lg font-semibold text-slate-900">
                 Matrículas {enrollments.length > 0 && `(${enrollments.length})`}
               </h2>
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
-                <Download className="w-4 h-4" />
-                Exportar
-              </button>
+              <button onClick={exportFilteredEnrollments} disabled={loading || !!error || !enrollments.length} className="inline-flex items-center gap-2 text-sm text-blue-700 disabled:opacity-50"><Download className="w-4 h-4" />Exportar lista filtrada</button>
             </div>
           </div>
 
@@ -576,13 +603,14 @@ const Enrollments: React.FC = () => {
           ) : enrollments.length === 0 ? (
             <div className="p-6 text-center">
               <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-4">No hay matrículas registradas</p>
+              <p className="text-slate-500 mb-4">{hasFilters ? 'No hay matrículas que coincidan con estos filtros.' : 'No hay matrículas registradas para el año seleccionado.'}</p>
+              {hasFilters && <button onClick={clearFilters} className="block mx-auto mb-4 text-blue-700 underline">Limpiar filtros</button>}
               <button
-                onClick={() => setShowEnrollModal(true)}
+                onClick={() => navigate('/students?new=1')}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Crear Primera Matrícula
+                Nueva matrícula
               </button>
             </div>
           ) : (
@@ -669,7 +697,7 @@ const Enrollments: React.FC = () => {
                                 className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded"
                                 title="Cambiar de grupo"
                               >
-                                <Edit2 className="w-4 h-4" />
+                                <span className="inline-flex items-center gap-1 text-blue-700"><Edit2 className="w-4 h-4" /> Cambiar grupo</span>
                               </button>
                               
                               <button
@@ -710,25 +738,11 @@ const Enrollments: React.FC = () => {
         )}
       </div>
 
-      {/* Modales (placeholder por ahora) */}
-      {showEnrollModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Nueva Matrícula</h3>
-            <p className="text-slate-600 mb-4">Modal de matrícula en desarrollo...</p>
-            <button
-              onClick={() => setShowEnrollModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      {actionError && <div role="alert" className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-lg w-[calc(100%-2rem)] rounded-lg border border-red-300 bg-red-50 text-red-800 p-4 shadow-lg flex gap-3"><span className="flex-1">{actionError}</span><button aria-label="Cerrar mensaje" onClick={() => setActionError('')}><X className="w-5 h-5" /></button></div>}
 
       {showWithdrawModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Retirar Estudiante</h3>
               <button
@@ -808,7 +822,7 @@ const Enrollments: React.FC = () => {
 
       {showTransferModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Transferir Estudiante</h3>
               <button
@@ -901,7 +915,7 @@ const Enrollments: React.FC = () => {
 
       {showChangeGroupModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Cambiar de Grupo</h3>
               <button
@@ -1038,6 +1052,17 @@ const Enrollments: React.FC = () => {
                 )}
               </div>
 
+              {changeGroupForm.movementType === 'ACADEMIC' && availableGroups.some(g => g.id === changeGroupForm.newGroupId && g.grade.id !== selectedEnrollment.group.grade.id) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="movement-act">Acta académica aprobada *</label>
+                  <select id="movement-act" value={changeGroupForm.academicActId} onChange={e => setChangeGroupForm(prev => ({ ...prev, academicActId: e.target.value }))} className="w-full border border-slate-300 rounded-lg px-3 py-2">
+                    <option value="">Seleccione el acta que respalda el cambio</option>
+                    {academicActs.map(act => <option key={act.id} value={act.id}>{act.actNumber} — {act.title || act.actType}</option>)}
+                  </select>
+                  {!academicActs.length && <p className="text-sm text-amber-700 mt-1">No hay actas aprobadas disponibles en este año. Gestione la aprobación antes de realizar un cambio académico de grado.</p>}
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Motivo del cambio *
@@ -1086,7 +1111,7 @@ const Enrollments: React.FC = () => {
                 ) : (
                   <>
                     <Edit2 className="w-4 h-4" />
-                    {gradeChangeValidation?.gradeChangeType !== 'SAME_GRADE' ? 'Cambiar Grado' : 'Cambiar Grupo'}
+                    Revisar y confirmar cambio
                   </>
                 )}
               </button>

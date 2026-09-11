@@ -1,0 +1,15 @@
+<!doctype html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider, useAuth } from '/src/contexts/AuthContext.tsx';
+import Enrollments from '/src/pages/Enrollments.tsx';
+import Students from '/src/pages/Students.tsx';
+import Inclusion from '/src/pages/DifferentialSupport.tsx';
+import { DialogHost } from '/src/components/ui/confirm.tsx';
+import '/src/index.css';
+const initial = new URLSearchParams(location.search).get('start') || '/enrollments';
+history.replaceState({}, '', initial);
+function Screens() { const {isLoading}=useAuth(); return isLoading ? null : React.createElement(React.Fragment,null,React.createElement(Routes,null,React.createElement(Route,{path:'/enrollments',element:React.createElement(Enrollments)}),React.createElement(Route,{path:'/students',element:React.createElement(Students)}),React.createElement(Route,{path:'/differential-support',element:React.createElement(Inclusion)})),React.createElement(DialogHost)); }
+createRoot(document.getElementById('root')).render(React.createElement(AuthProvider,null,React.createElement(BrowserRouter,null,React.createElement(Screens))));
+</script></body></html>

@@ -1,12 +1,12 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-10. Base: origin/staging 996263f806c85490c52000b0c001449dc7f2dd1d.
+Fecha: 2026-09-11. Base de esta entrega: origin/staging 000d435b.
 
-Bloque 0 publicado con deuda explícita. Bloque 1: Taller auditado en servicios con pruebas A/B, 40 pruebas nuevas, entrega lista para staging. Resto de módulos y bloques 2–4 pendientes. No constituye cierre global del aislamiento.
+Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: mejoras de uso verificadas; auditoría A/B de su servicio pendiente. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1110 declaraciones de ruta (incluye SSE y dos rutas de app), 246 con llamada directa, incondicional y esperada a requireInstitutionId, 805 pendientes de calibración y 59 excepciones no institucionales.
+1110 declaraciones de ruta (incluye SSE y dos rutas de app), 271 con llamada directa, incondicional y esperada a requireInstitutionId, 779 pendientes de calibración y 60 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -19,10 +19,10 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | Módulo | Rutas | Resolución directa | Pendiente calibrar | No institucional | Estado de auditoría |
 |---|---:|---:|---:|---:|---|
 | abp | 66 | 0 | 66 | 0 | Pendiente de auditoría A/B por módulo |
-| academic | 159 | 54 | 105 | 0 | Pendiente de auditoría A/B por módulo |
+| academic | 159 | 75 | 83 | 1 | Parcial: Matrículas integral + dependencias; PostgreSQL sintético y resto de academic pendientes. Ver AUDITORIA_AISLAMIENTO_MATRICULAS.md |
 | achievements | 46 | 42 | 4 | 0 | Pendiente de auditoría A/B por módulo |
-| apd | 32 | 31 | 1 | 0 | Pendiente de auditoría A/B por módulo |
-| attendance | 17 | 0 | 17 | 0 | Pendiente de auditoría A/B por módulo |
+| apd | 32 | 31 | 1 | 0 | Mejoras de uso verificadas; 32 rutas/servicio aún pendientes de auditoría A/B. Ver REVISION_FLUJOS_MATRICULAS_INCLUSION.md |
+| attendance | 17 | 1 | 16 | 0 | Parcial: resumen usado por Matrículas corregido; resto de rutas y HTTP del resumen pendientes |
 | auth | 7 | 0 | 4 | 3 | Pendiente de auditoría A/B por módulo |
 | capabilities | 5 | 3 | 2 | 0 | Pendiente de auditoría A/B por módulo |
 | classroom | 98 | 0 | 98 | 0 | Pendiente de auditoría A/B por módulo |
@@ -32,7 +32,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | edulab-persistence | 0 | 0 | 0 | 0 | Pendiente; frontera EduLab, no modificar |
 | edusyn-play | 57 | 0 | 17 | 40 | Parcialmente no aplica; puentes institucionales pendientes |
 | elections | 22 | 7 | 15 | 0 | Pendiente de auditoría A/B por módulo |
-| evaluation | 66 | 12 | 54 | 0 | Pendiente de auditoría A/B por módulo |
+| evaluation | 66 | 15 | 51 | 0 | Parcial: cálculos usados por Matrículas corregidos; demás operaciones y HTTP de cálculos pendientes |
 | finance | 54 | 0 | 54 | 0 | Pendiente de auditoría A/B por módulo |
 | gamification | 2 | 0 | 2 | 0 | Pendiente de auditoría A/B por módulo |
 | iam | 44 | 7 | 37 | 0 | Pendiente de auditoría A/B por módulo |
@@ -68,7 +68,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 ## Riesgos y siguiente trabajo
 
-Taller: auditoría de sus once rutas y servicio terminada; HTTP pendiente. Siguiente: enrollment, luego templates, learning-route, attendance, preventive-cuts, observer y classroom. Matrículas incluye traslados de notas/asistencia/tutorías en su servicio de 1.321 líneas, además de reportes (415 líneas). El usuario eligió auditoría integral del flujo: se incluyen traslados de notas, asistencia y tutorías antes de marcarlo cerrado. Matrículas en inventario, todavía sin correcciones. Continuar con los demás módulos; no modificar la frontera EduLab sin resolver el conflicto con el alcance de 39 módulos.
+Taller: once rutas y servicio revisados, HTTP pendiente. Matrículas: correcciones integrales y laboratorio HTTP con JWT real y Prisma simulado. Faltan contención/rollback con PostgreSQL sintético y las dependencias HTTP de plantillas, notas y asistencia. Inclusión: recorridos mejorados y comprobados con un colegio ficticio; servicio APD y planes pedagógicos aún sin auditoría integral A/B. Continuar con estos puntos y luego templates, learning-route, attendance, preventive-cuts, observer y classroom. No modificar la frontera EduLab.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
@@ -76,4 +76,9 @@ Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; lab
 
 Verificado: 83 suites / 1.232 pruebas API (13 del contrato estructural), 19 archivos / 203 pruebas web, tipos API/web y build Nest correctos. El cliente Prisma se generó exclusivamente dentro del worktree para coincidir con el esquema; no se ejecutaron migraciones ni conexiones a bases. Ningún dato real modificado. Push a staging confirmado: afe9f388. Railway pendiente de verificar; no promovido a producción. Ver docs/AUDITORIA_BLOQUE_0_BLINDAJE.md para límites del contrato.
 
-Checkpoint Taller: 84 suites / 1.272 pruebas API, tipos API y build Nest correctos; 40 pruebas nuevas del módulo. La suite se repitió fuera del sandbox tras un fallo de lectura de una dependencia y pasó completa. Web conserva 203 pruebas y tipos aprobados, sin cambios. Push de Taller pendiente.
+Checkpoint Taller: 84 suites / 1.272 pruebas API, tipos API y build Nest correctos; 40 pruebas nuevas del módulo. La suite se repitió fuera del sandbox tras un fallo de lectura de una dependencia y pasó completa. Web conserva 203 pruebas y tipos aprobados, sin cambios. Push de Taller confirmado: 000d435b.
+
+
+Checkpoint Matrículas/Inclusión (2026-09-11): 86 suites / 1.383 pruebas API aprobadas; 111 nuevas (63 servicios + 48 HTTP). Tipos API/web aprobados. Navegador local sintético: recorridos de Matrículas, edición de estudiante, agenda y edición de planes, selección de estudiante en perfiles y vista móvil aprobados. Pruebas HTTP no conectan PostgreSQL ni certifican RLS. Ver los dos documentos de esta entrega para alcance y pendientes.
+
+Verificación final de la entrega: build Nest aprobado; web 21 archivos / 208 pruebas, tipos aprobados y smoke de navegador reproducible aprobado. No se verificó Railway ni se promovió a producción.
