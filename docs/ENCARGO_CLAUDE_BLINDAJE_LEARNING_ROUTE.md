@@ -32,9 +32,15 @@ Puedes ajustar `learning-route.module.ts` si es imprescindible. Si una firma cam
 
 ## Contrato estructural y archivos compartidos
 
-No edites `apps/api/src/common/security/institution-route-exceptions.json`, `docs/ESTADO_BLINDAJE.md` ni `docs/REGISTRO_DESPLIEGUES.md` durante el trabajo paralelo: Astra los integra para evitar conflictos.
+Actualización autorizada por Astra el 2026-09-11 tras la consulta de Claude: puedes modificar `apps/api/src/common/security/institution-route-exceptions.json` en un commit final separado, limitado a las entradas de learning-route que hayas auditado. Retira únicamente excepciones obsoletas por resolución directa; reclasifica catálogos globales solo con evidencia. No elimines automáticamente las 16 entradas. No edites `docs/ESTADO_BLINDAJE.md` ni `docs/REGISTRO_DESPLIEGUES.md`: Astra los integra.
 
-En `ENTREGA_CLAUDE_LEARNING_ROUTE.md`, entrega la lista exacta de claves de excepciones que deben retirarse o reclasificarse, con motivo. El contrato estructural puede señalar excepciones obsoletas al añadir resolución: informa esas entradas exactas; no regeneres toda la lista. Todas las demás pruebas deben pasar. Indica también la fila propuesta para el estado del módulo y el registro de publicación.
+En `ENTREGA_CLAUDE_LEARNING_ROUTE.md`, entrega la lista exacta de claves retiradas o reclasificadas, con motivo, y el hash del commit separado. La suite completa, incluido el contrato estructural, debe quedar en verde. No regeneres toda la lista. Indica también la fila propuesta para el estado del módulo y el registro de publicación.
+
+## Decisiones de matrícula y errores autorizadas
+
+Usa la matrícula ACTIVE del estudiante autenticado que corresponda a la institución y, cuando el modelo exponga esas relaciones, al año/grupo del aula de la ruta. No selecciones simplemente por createdAt descendente. Si varias matrículas compatibles identifican al mismo estudiante, usa esa identidad sin mezclar colegios. Una ambigüedad real que siga sin resolverse devuelve 409, documentado y probado; no inventes una prioridad temporal.
+
+Sin matrícula compatible, devuelve 404 igual que ante un recurso ajeno. Sustituir el error genérico actual que termina en 500 es una corrección autorizada: documenta el cambio de comportamiento y añade el caso HTTP. Valida primero la pertenencia de la ruta al contexto del actor para no revelar recursos de otro colegio.
 
 ## Entrega e integración
 
