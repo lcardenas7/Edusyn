@@ -1,6 +1,7 @@
 import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import { useMemo } from 'react'
+import { htmlSeguro } from '../lib/html'
 
 interface RichTextEditorProps {
   value: string
@@ -59,13 +60,14 @@ export function isRichTextEmpty(html: string | undefined | null): boolean {
   return stripped.length === 0
 }
 
-// Render HTML content safely with proper styling
+// Pinta HTML de usuario con formato. SIEMPRE limpio: antes se insertaba crudo, y en el foro
+// escriben estudiantes (ver `lib/html.ts`).
 export function RichContent({ html, className = '' }: { html: string; className?: string }) {
   if (!html || isRichTextEmpty(html)) return null
   return (
     <div
       className={`rich-content prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-blockquote:my-2 prose-blockquote:border-l-blue-400 prose-a:text-blue-600 ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: htmlSeguro(html) }}
     />
   )
 }
