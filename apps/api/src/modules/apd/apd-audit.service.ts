@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAuditAction } from '@prisma/client';
 
 @Injectable()
 export class ApdAuditService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private assertInstitution(institutionId: string) {
+    if (!institutionId) throw new NotFoundException('Institución no encontrada.');
+  }
 
   async log(params: {
     institutionId: string;
@@ -15,6 +19,7 @@ export class ApdAuditService {
     details?: any;
     ipAddress?: string;
   }) {
+    this.assertInstitution(params.institutionId);
     return this.prisma.apdAuditLog.create({
       data: {
         institutionId: params.institutionId,
@@ -28,9 +33,11 @@ export class ApdAuditService {
     });
   }
 
-  async getByEntity(entityType: string, entityId: string) {
+  async getByEntity(entityType: string, entityId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    if (!entityType || !entityId) throw new NotFoundException('Recurso no encontrado.');
     return this.prisma.apdAuditLog.findMany({
-      where: { entityType, entityId },
+      where: { institutionId, entityType, entityId },
       include: {
         user: { select: { id: true, firstName: true, lastName: true } },
       },
@@ -43,6 +50,7 @@ export class ApdAuditService {
     limit?: number;
     offset?: number;
   }) {
+    this.assertInstitution(institutionId);
     return this.prisma.apdAuditLog.findMany({
       where: {
         institutionId,

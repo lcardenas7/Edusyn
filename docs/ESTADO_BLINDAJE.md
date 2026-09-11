@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-11. Base de esta entrega: origin/staging ee1cbb3a; correcciones de Inclusión en 9ae32d6b.
 
-Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: mejoras de uso y acceso por rol; 39 pruebas de perfiles/planes y 18 HTTP del contexto de trabajo. Auditoría del resto del módulo pendiente. No constituye cierre global del aislamiento.
+Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Inclusión: contexto, perfiles/planes, actividades y avances con 93 pruebas de servicios/auxiliares y 50 HTTP. Auditoría del resto del módulo pendiente. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
@@ -21,7 +21,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | abp | 66 | 0 | 66 | 0 | Pendiente de auditoría A/B por módulo |
 | academic | 159 | 75 | 83 | 1 | Parcial: Matrículas integral + dependencias; PostgreSQL sintético y resto de academic pendientes. Ver AUDITORIA_AISLAMIENTO_MATRICULAS.md |
 | achievements | 46 | 42 | 4 | 0 | Pendiente de auditoría A/B por módulo |
-| apd | 35 | 34 | 1 | 0 | Parcial: contexto de trabajo con 18 pruebas HTTP y perfiles/planes con 39 de servicio. Resto pendiente. Ver AUDITORIA_AISLAMIENTO_INCLUSION.md |
+| apd | 35 | 34 | 1 | 0 | Parcial: contexto, perfiles/planes, actividades y avances; 93 pruebas de servicio/auxiliares y 50 HTTP. Participantes, adjuntos, firmas, materias, agregaciones y PostgreSQL pendientes. Ver AUDITORIA_AISLAMIENTO_INCLUSION.md |
 | attendance | 17 | 1 | 16 | 0 | Parcial: resumen usado por Matrículas corregido; resto de rutas y HTTP del resumen pendientes |
 | auth | 7 | 0 | 4 | 3 | Pendiente de auditoría A/B por módulo |
 | capabilities | 5 | 3 | 2 | 0 | Pendiente de auditoría A/B por módulo |
@@ -84,3 +84,5 @@ Checkpoint Matrículas/Inclusión (2026-09-11): 86 suites / 1.383 pruebas API ap
 Verificación final de la entrega: build Nest aprobado; web 21 archivos / 208 pruebas, tipos aprobados y smoke de navegador reproducible aprobado. No se verificó Railway ni se promovió a producción.
 
 Checkpoint adicional de Inclusión: 88 suites / 1.440 pruebas API y 22 archivos / 214 pruebas web aprobados después de integrar staging ee1cbb3a. 57 pruebas nuevas de Inclusión (39 de servicio y 18 HTTP). Build Nest y tipos API/web aprobados; navegador sintético de Matrículas e Inclusión aprobado. Los 39 módulos conservan su estado explícito: este checkpoint no cierra APD ni el aislamiento global.
+
+Checkpoint de actividades y avances de Inclusión (base ff81a71b): 90 suites / 1.526 pruebas API y 22 archivos / 214 pruebas web aprobados. 86 pruebas nuevas (54 servicios/auxiliares, 32 HTTP), tipos API/web y build Nest aprobados. Retirar la guarda de creación hace fallar ambos casos A/B; restaurarla devuelve las 54 pruebas de servicio a verde. Inventario sin cambios: 1.113 rutas, 274 directas, 779 pendientes de calibración y 60 excepciones no institucionales. No se ha probado PostgreSQL sintético ni se declara APD cerrado.

@@ -3,18 +3,35 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAuditService } from './apd-audit.service';
 import { ApdProgressService } from './apd-progress.service';
 
 @Injectable()
 export class ApdService {
+  private transactional = false;
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: ApdAuditService,
     private readonly progress: ApdProgressService,
   ) {}
+
+  private async withTransaction<T>(action: (service: ApdService) => Promise<T>): Promise<T> {
+    try {
+      return await this.prisma.$transaction(async tx => {
+        const client = tx as PrismaService;
+        const service = new ApdService(client, new ApdAuditService(client), new ApdProgressService(client));
+        service.transactional = true;
+        return action(service);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30000 });
+    } catch (error) {
+      if (error?.code === 'P2034') throw new ConflictException('El plan cambió durante el guardado. Actualice e intente nuevamente.');
+      throw error;
+    }
+  }
 
   private assertInstitution(institutionId: string) {
     if (!institutionId) throw new NotFoundException('Institución no encontrada.');
@@ -50,6 +67,17 @@ export class ApdService {
     });
     if (!plan) throw new NotFoundException('Plan no encontrado.');
     return plan;
+  }
+
+  private async loadActivityInScope(activityId: string, institutionId: string) {
+    this.assertInstitution(institutionId);
+    this.assertResourceId(activityId);
+    const activity = await this.prisma.supportActivity.findFirst({
+      where: { id: activityId, supportPlan: { institutionId } },
+      select: { id: true, supportPlanId: true },
+    });
+    if (!activity) throw new NotFoundException('Actividad no encontrada.');
+    return activity;
   }
 
   private async assertWorkspaceGroup(groupId: string, institutionId: string) {
@@ -633,19 +661,12 @@ export class ApdService {
     institutionId: string,
     userId: string,
   ) {
-    const plan = await this.prisma.pedagogicalSupportPlan.findUnique({
-      where: { id: data.supportPlanId },
-    });
-    if (!plan) {
-      throw new NotFoundException('Plan no encontrado.');
-    }
-    if (plan.institutionId !== institutionId) {
-      throw new ForbiddenException('El plan no pertenece a esta institución.');
-    }
+    await this.loadPlanInScope(data.supportPlanId, institutionId);
+    if (!this.transactional) return this.withTransaction(service => service.createActivity(data, institutionId, userId));
 
     const activity = await this.prisma.supportActivity.create({
       data: {
-        supportPlanId: data.supportPlanId,
+        supportPlan: { connect: { id: data.supportPlanId, institutionId } },
         topic: data.topic,
         originalActivityDescription: data.originalActivityDescription || null,
         teacherFinalActivity: data.teacherFinalActivity || null,
@@ -664,7 +685,7 @@ export class ApdService {
     });
 
     // Recalcular progreso
-    await this.progress.recalculate(data.supportPlanId);
+    await this.progress.recalculate(data.supportPlanId, institutionId);
 
     return activity;
   }
@@ -684,26 +705,18 @@ export class ApdService {
     },
     userId: string,
   ) {
-    const activity = await this.prisma.supportActivity.findUnique({
-      where: { id: activityId },
-      include: { supportPlan: { select: { id: true, institutionId: true } } },
-    });
-    if (!activity) {
-      throw new NotFoundException('Actividad no encontrada.');
-    }
-    if (activity.supportPlan.institutionId !== institutionId) {
-      throw new ForbiddenException('La actividad no pertenece a esta institución.');
-    }
+    const activity = await this.loadActivityInScope(activityId, institutionId);
 
     // Validar score
     if (data.studentPerformanceScore !== undefined) {
-      if (data.studentPerformanceScore < 0 || data.studentPerformanceScore > 100) {
-        throw new BadRequestException('El puntaje debe estar entre 0 y 100.');
+      if (!Number.isInteger(data.studentPerformanceScore) || data.studentPerformanceScore < 0 || data.studentPerformanceScore > 100) {
+        throw new BadRequestException('El puntaje debe ser un entero entre 0 y 100.');
       }
     }
+    if (!this.transactional) return this.withTransaction(service => service.updateActivity(activityId, institutionId, data, userId));
 
     const updated = await this.prisma.supportActivity.update({
-      where: { id: activityId },
+      where: { id: activityId, supportPlan: { institutionId } },
       data: {
         ...(data.topic !== undefined && { topic: data.topic }),
         ...(data.originalActivityDescription !== undefined && { originalActivityDescription: data.originalActivityDescription }),
@@ -726,7 +739,7 @@ export class ApdService {
     });
 
     // Recalcular progreso
-    await this.progress.recalculate(activity.supportPlan.id);
+    await this.progress.recalculate(activity.supportPlanId, institutionId);
 
     return updated;
   }
@@ -744,27 +757,19 @@ export class ApdService {
     institutionId: string,
     userId: string,
   ) {
+    await this.loadPlanInScope(data.supportPlanId, institutionId);
     // Validar indicador
-    if (data.progressIndicator < 1 || data.progressIndicator > 5) {
-      throw new BadRequestException('El indicador de progreso debe estar entre 1 y 5.');
+    if (!Number.isInteger(data.progressIndicator) || data.progressIndicator < 1 || data.progressIndicator > 5) {
+      throw new BadRequestException('El indicador de progreso debe ser un entero entre 1 y 5.');
     }
-
-    const plan = await this.prisma.pedagogicalSupportPlan.findUnique({
-      where: { id: data.supportPlanId },
-    });
-    if (!plan) {
-      throw new NotFoundException('Plan no encontrado.');
-    }
-    if (plan.institutionId !== institutionId) {
-      throw new ForbiddenException('El plan no pertenece a esta institución.');
-    }
+    if (!this.transactional) return this.withTransaction(service => service.createProgressLog(data, institutionId, userId));
 
     const log = await this.prisma.supportProgressLog.create({
       data: {
-        supportPlanId: data.supportPlanId,
+        supportPlan: { connect: { id: data.supportPlanId, institutionId } },
         progressIndicator: data.progressIndicator,
         qualitativeObservation: data.qualitativeObservation || null,
-        createdById: userId,
+        createdBy: { connect: { id: userId } },
       },
       include: {
         createdBy: { select: { id: true, firstName: true, lastName: true } },
@@ -781,7 +786,7 @@ export class ApdService {
     });
 
     // Recalcular progreso
-    const newPercentage = await this.progress.recalculate(data.supportPlanId);
+    const newPercentage = await this.progress.recalculate(data.supportPlanId, institutionId);
 
     await this.audit.log({
       institutionId,

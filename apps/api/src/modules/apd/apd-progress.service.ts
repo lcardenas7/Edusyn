@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -11,7 +11,7 @@ import { Decimal } from '@prisma/client/runtime/library';
  *     + (avg(progressIndicator) / 5) * 30
  * 
  * Reglas:
- * - Si no hay actividades → 0%
+ * - Sin actividades ni avances → 0%; solo avances → promedio / 5
  * - Si no hay logs → solo ponderar actividades (100% del peso en actividades)
  * - Recalcular automáticamente al actualizar actividad o progress log
  */
@@ -19,23 +19,26 @@ import { Decimal } from '@prisma/client/runtime/library';
 export class ApdProgressService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async recalculate(supportPlanId: string): Promise<number> {
+  async recalculate(supportPlanId: string, institutionId: string): Promise<number> {
+    if (!institutionId || !supportPlanId || !await this.prisma.pedagogicalSupportPlan.findFirst({
+      where: { id: supportPlanId, institutionId }, select: { id: true },
+    })) throw new NotFoundException('Plan no encontrado.');
     const [activities, logs] = await Promise.all([
       this.prisma.supportActivity.findMany({
-        where: { supportPlanId },
+        where: { supportPlanId, supportPlan: { institutionId } },
         select: { completionStatus: true },
       }),
       this.prisma.supportProgressLog.findMany({
-        where: { supportPlanId },
+        where: { supportPlanId, supportPlan: { institutionId } },
         select: { progressIndicator: true },
       }),
     ]);
 
     const totalActivities = activities.length;
 
-    // Si no hay actividades → 0%
+    // Sin actividades ni avances → 0%.
     if (totalActivities === 0 && logs.length === 0) {
-      await this.updatePlanProgress(supportPlanId, 0);
+      await this.updatePlanProgress(supportPlanId, institutionId, 0);
       return 0;
     }
 
@@ -73,16 +76,17 @@ export class ApdProgressService {
     // Redondear a 2 decimales
     percentage = Math.round(percentage * 100) / 100;
 
-    await this.updatePlanProgress(supportPlanId, percentage);
+    await this.updatePlanProgress(supportPlanId, institutionId, percentage);
     return percentage;
   }
 
   private async updatePlanProgress(
     supportPlanId: string,
+    institutionId: string,
     percentage: number,
   ) {
     await this.prisma.pedagogicalSupportPlan.update({
-      where: { id: supportPlanId },
+      where: { id: supportPlanId, institutionId },
       data: { progressPercentage: new Decimal(percentage) },
     });
   }
