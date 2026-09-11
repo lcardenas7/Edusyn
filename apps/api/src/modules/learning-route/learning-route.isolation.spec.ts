@@ -170,7 +170,7 @@ describe('Rutas de aprendizaje · aislamiento de servicio', () => {
       expect(data.apdAi.generateEnglishLessonSlides).toHaveBeenCalledTimes(1);
       expect(r.slides).toBe(1);
       // Las indicaciones de la ruta viajan a Valeria junto con las del paso.
-      expect(data.apdAi.generateEnglishLessonSlides.mock.calls[0][0]).toMatchObject({
+      expect((data.apdAi.generateEnglishLessonSlides as jest.Mock).mock.calls[0][0]).toMatchObject({
         skill: 'READING', level: 'A2', instructions: expect.stringContaining('Extra'),
       });
     });
