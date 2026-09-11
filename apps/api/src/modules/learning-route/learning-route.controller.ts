@@ -1,12 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
-import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { LearningRouteService } from './learning-route.service';
 import { CompetencyEvidenceService } from './competency-evidence.service';
 
+/**
+ * Rutas de aprendizaje (HTTP).
+ *
+ * **La institución la pone el ACTOR, nunca el recurso que nombra el cliente.** Antes solo dos de
+ * las dieciséis rutas la resolvían, y el resto pasaba el id recibido directo al servicio.
+ *
+ * Dos rutas no son institucionales y se documentan como tales: `competencies` lee el catálogo
+ * global CEFR (`Competency` no tiene `institutionId` en el esquema) y `generate` solo le pide un
+ * borrador a Valeria, sin tocar la base.
+ */
 @Controller('learning-routes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LearningRouteController {
@@ -16,7 +26,8 @@ export class LearningRouteController {
     private readonly prisma: PrismaService,
   ) {}
 
-  // Grafo de competencias (para el selector de competencia objetivo)
+  // Grafo de competencias (para el selector de competencia objetivo).
+  // CATÁLOGO GLOBAL comprobado: `Competency` no lleva institución en el esquema.
   @Get('competencies')
   @Roles('DOCENTE', 'COORDINADOR')
   async competencies(@Query('framework') framework?: string, @Query('level') level?: string, @Query('skill') skill?: string) {
@@ -25,26 +36,65 @@ export class LearningRouteController {
 
   @Get('classroom/:classroomId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
-  async byClassroom(@Param('classroomId') classroomId: string) {
-    return this.service.listByClassroom(classroomId);
+  async byClassroom(@Request() req: any, @Param('classroomId') classroomId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.listByClassroom(institutionId, classroomId);
   }
 
   @Get(':routeId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
-  async getOne(@Param('routeId') routeId: string) {
-    return this.service.getRoute(routeId);
+  async getOne(@Request() req: any, @Param('routeId') routeId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.getRoute(institutionId, routeId);
   }
 
-  // Progreso del estudiante autenticado en una ruta (% dominado + por paso)
+  /**
+   * Progreso del estudiante autenticado en una ruta (% dominado + por paso).
+   *
+   * Tres cosas, en este orden: la institución sale del actor; la RUTA tiene que ser de esa
+   * institución (si no, 404, para no revelar que existe); y solo entonces se busca la matrícula.
+   *
+   * **La matrícula ya no se elige por «la última creada».** Se exige `ACTIVE`, de la institución
+   * de la ruta y del año y grupo del aula de esa ruta —las relaciones que el esquema expone:
+   * ruta → aula → asignación docente → (año, grupo)—. Sin matrícula compatible responde 404,
+   * igual que un recurso ajeno; antes lanzaba un error genérico que terminaba en 500. Si dos
+   * matrículas compatibles apuntan a estudiantes distintos hay ambigüedad real de identidad: se
+   * responde 409 en vez de adivinar.
+   */
   @Get(':routeId/progress')
   @Roles('ESTUDIANTE')
   async myProgress(@Param('routeId') routeId: string, @Request() req: any) {
-    const enrollment = await this.prisma.studentEnrollment.findFirst({
-      where: { student: { userId: req.user.id }, status: 'ACTIVE' },
-      orderBy: { createdAt: 'desc' }, select: { studentId: true },
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+
+    const route = await this.prisma.learningRoute.findFirst({
+      where: { id: routeId, institutionId },
+      select: {
+        id: true,
+        classroom: { select: { teacherAssignment: { select: { academicYearId: true, groupId: true } } } },
+      },
     });
-    if (!enrollment) throw new Error('No se encontró matrícula activa');
-    return this.evidence.getRouteProgress(routeId, enrollment.studentId);
+    if (!route) throw new NotFoundException('Ruta no encontrada');
+
+    const asignacion = route.classroom?.teacherAssignment;
+    const matriculas = await this.prisma.studentEnrollment.findMany({
+      where: {
+        student: { userId: req.user.id },
+        institutionId,
+        status: 'ACTIVE',
+        ...(asignacion?.academicYearId ? { academicYearId: asignacion.academicYearId } : {}),
+        ...(asignacion?.groupId ? { groupId: asignacion.groupId } : {}),
+      },
+      select: { studentId: true },
+    });
+
+    const estudiantes = [...new Set(matriculas.map((m) => m.studentId))];
+    if (estudiantes.length === 0) throw new NotFoundException('Ruta no encontrada');
+    if (estudiantes.length > 1) {
+      // Dos identidades de estudiante bajo el mismo usuario: no se elige una por antigüedad.
+      throw new ConflictException('Tu usuario está asociado a más de un estudiante en este grupo. Comunícate con la institución.');
+    }
+
+    return this.evidence.getRouteProgress(institutionId, routeId, estudiantes[0]);
   }
 
   @Post()
@@ -52,12 +102,18 @@ export class LearningRouteController {
   async create(@Request() req: any, @Body() body: {
     classroomId: string; title: string; description?: string; targetCompetencyId?: string; targetLevel?: string;
   }) {
-    const institutionId = await resolveInstitutionId(this.prisma as any, req);
-    if (!institutionId) throw new Error('No se pudo resolver la institución');
-    return this.service.createRoute(institutionId, body);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.createRoute(institutionId, {
+      classroomId: body.classroomId,
+      title: body.title,
+      description: body.description,
+      targetCompetencyId: body.targetCompetencyId,
+      targetLevel: body.targetLevel,
+    });
   }
 
-  // Valeria arma la ruta: genera un plan (preview, no persiste)
+  // Valeria arma la ruta: genera un plan (preview, no persiste).
+  // NO INSTITUCIONAL: no hay operación de base en este camino.
   @Post('generate')
   @Roles('DOCENTE', 'COORDINADOR')
   async generate(@Body() body: {
@@ -74,8 +130,7 @@ export class LearningRouteController {
   async fromPlan(@Request() req: any, @Body() body: {
     classroomId: string; plan: any; instructions?: string; sourceMaterial?: string;
   }) {
-    const institutionId = await resolveInstitutionId(this.prisma as any, req);
-    if (!institutionId) throw new Error('No se pudo resolver la institución');
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.service.createFromPlan(institutionId, body.classroomId, body.plan, {
       instructions: body.instructions, sourceMaterial: body.sourceMaterial,
     });
@@ -83,63 +138,89 @@ export class LearningRouteController {
 
   @Put(':routeId')
   @Roles('DOCENTE', 'COORDINADOR')
-  async update(@Param('routeId') routeId: string, @Body() body: any) {
-    return this.service.updateRoute(routeId, body);
+  async update(@Request() req: any, @Param('routeId') routeId: string, @Body() body: {
+    title?: string; description?: string; targetCompetencyId?: string | null; targetLevel?: string; isPublished?: boolean;
+  }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.updateRoute(institutionId, routeId, {
+      title: body.title,
+      description: body.description,
+      targetCompetencyId: body.targetCompetencyId,
+      targetLevel: body.targetLevel,
+      isPublished: body.isPublished,
+    });
   }
 
   @Delete(':routeId')
   @Roles('DOCENTE', 'COORDINADOR')
-  async remove(@Param('routeId') routeId: string) {
-    return this.service.deleteRoute(routeId);
+  async remove(@Request() req: any, @Param('routeId') routeId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.deleteRoute(institutionId, routeId);
   }
 
   @Post(':routeId/steps')
   @Roles('DOCENTE', 'COORDINADOR')
-  async addStep(@Param('routeId') routeId: string, @Body() body: {
+  async addStep(@Request() req: any, @Param('routeId') routeId: string, @Body() body: {
     title: string; activityId?: string; competencyId?: string; sortOrder?: number;
   }) {
-    return this.service.addStep(routeId, body);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.addStep(institutionId, routeId, {
+      title: body.title, activityId: body.activityId, competencyId: body.competencyId, sortOrder: body.sortOrder,
+    });
   }
 
   // Crea una actividad propia de la ruta (oculta de Actividades) + el paso
   @Post(':routeId/steps/new-activity')
   @Roles('DOCENTE', 'COORDINADOR')
-  async addStepWithNewActivity(@Param('routeId') routeId: string, @Body() body: {
+  async addStepWithNewActivity(@Request() req: any, @Param('routeId') routeId: string, @Body() body: {
     title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number;
   }) {
-    return this.service.addStepWithNewActivity(routeId, body);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.addStepWithNewActivity(institutionId, routeId, {
+      title: body.title, activityType: body.activityType, description: body.description,
+      competencyId: body.competencyId, maxScore: body.maxScore,
+    });
   }
 
   @Put(':routeId/steps/reorder')
   @Roles('DOCENTE', 'COORDINADOR')
-  async reorder(@Param('routeId') routeId: string, @Body() body: { stepIds: string[] }) {
-    return this.service.reorderSteps(routeId, body.stepIds);
+  async reorder(@Request() req: any, @Param('routeId') routeId: string, @Body() body: { stepIds: string[] }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.reorderSteps(institutionId, routeId, body?.stepIds);
   }
 
   // Valeria genera la lección interactiva (ejercicios) del paso
   @Post('steps/:stepId/generate-lesson')
   @Roles('DOCENTE', 'COORDINADOR')
-  async generateStepLesson(@Param('stepId') stepId: string, @Body() body?: { instructions?: string }) {
-    return this.service.generateStepLesson(stepId, body?.instructions);
+  async generateStepLesson(@Request() req: any, @Param('stepId') stepId: string, @Body() body?: { instructions?: string }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.generateStepLesson(institutionId, stepId, body?.instructions);
   }
 
   // Actualizar un paso (enlazar/quitar actividad, competencia, título)
   @Put('steps/:stepId')
   @Roles('DOCENTE', 'COORDINADOR')
-  async updateStep(@Param('stepId') stepId: string, @Body() body: { title?: string; activityId?: string | null; competencyId?: string | null }) {
-    return this.service.updateStep(stepId, body);
+  async updateStep(@Request() req: any, @Param('stepId') stepId: string, @Body() body: { title?: string; activityId?: string | null; competencyId?: string | null }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.updateStep(institutionId, stepId, {
+      title: body.title, activityId: body.activityId, competencyId: body.competencyId,
+    });
   }
 
   // Crear una actividad propia de la ruta y adjuntarla a un paso existente
   @Post('steps/:stepId/activity')
   @Roles('DOCENTE', 'COORDINADOR')
-  async createStepActivity(@Param('stepId') stepId: string, @Body() body: { activityType?: string; description?: string; maxScore?: number }) {
-    return this.service.createStepActivity(stepId, body);
+  async createStepActivity(@Request() req: any, @Param('stepId') stepId: string, @Body() body: { activityType?: string; description?: string; maxScore?: number }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.createStepActivity(institutionId, stepId, {
+      activityType: body.activityType, description: body.description, maxScore: body.maxScore,
+    });
   }
 
   @Delete('steps/:stepId')
   @Roles('DOCENTE', 'COORDINADOR')
-  async removeStep(@Param('stepId') stepId: string) {
-    return this.service.deleteStep(stepId);
+  async removeStep(@Request() req: any, @Param('stepId') stepId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.deleteStep(institutionId, stepId);
   }
 }
