@@ -106,6 +106,8 @@ export function SelectorAula({
             {role === 'docente' ? 'Estas son tus aulas. ¿Por dónde empezamos?' : 'Estas son tus clases.'}
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        {role === 'docente' && onCrear && <button type="button" onClick={onCrear} className="min-h-btn rounded-lg bg-accent px-4 text-body-sm font-medium text-white">Crear aula</button>}
         {onVolverAlActual && (
           <button
             type="button"
@@ -115,6 +117,7 @@ export function SelectorAula({
             Volver al aula de siempre
           </button>
         )}
+        </div>
       </header>
 
       <p className="mb-5 rounded-card border border-accent/25 bg-accent/[0.06] px-4 py-3 text-body-sm text-ink-secondary">
@@ -226,6 +229,9 @@ function TarjetaAula({
       <span className="flex min-w-0 flex-1 flex-col p-4">
         <span className="block text-h3 leading-tight font-bold break-words text-ink-primary">{titular}</span>
         {secundario && <span className="mt-0.5 block truncate text-body-sm text-ink-secondary">{secundario}</span>}
+        {aula.academicYear && <span className="mt-2 text-body-sm font-medium text-ink-secondary">
+          Año {aula.academicYear}{aula.academicYearStatus === 'CLOSED' ? ' · Cerrado' : aula.academicYearStatus === 'DRAFT' ? ' · En preparación' : ''}
+        </span>}
 
         {/* Avance real, no decorativo: sale de las actividades del aula. Si todavía no ha
             llegado, no se dibuja una barra vacía que parezca un cero. */}

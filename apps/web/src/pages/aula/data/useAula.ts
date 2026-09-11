@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { classroomApi } from '../../../lib/api'
+import { classroomApi, academicYearLifecycleApi } from '../../../lib/api'
 import { parseApiError } from '../../../lib/toast'
 import type { ActivityLike } from '../model/activityState'
 import type { AnnouncementLike } from '../model/today'
@@ -172,6 +172,8 @@ export interface AulaListada {
   color?: string | null
   estudiantes: number | null
   activa: boolean
+  academicYear?: number | null
+  academicYearStatus?: string | null
 }
 
 export interface EstadoAulas {
@@ -196,9 +198,18 @@ export function useAulas(rol: Rol): EstadoAulas {
 
     classroomApi
       .list(rol === 'estudiante' ? 'student' : undefined)
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        const raw = Array.isArray(data) ? data : []
+        // El docente puede conservar aulas de varios años para el mismo grupo.
+        // El estudiante no consulta el endpoint administrativo de años.
+        const yearIds = rol === 'docente'
+          ? [...new Set<string>(raw.map((c: any) => c.teacherAssignment?.academicYearId).filter(Boolean))] : []
+        const years = new Map(await Promise.all(yearIds.map(async id => {
+          const response = await academicYearLifecycleApi.getById(id)
+          return [id, response.data] as const
+        })))
         if (!vivo) return
-        const lista = (Array.isArray(data) ? data : []).map((c: any) => ({
+        const lista = raw.map((c: any) => ({
           id: c.id,
           titulo: c.title,
           asignatura: c.teacherAssignment?.subject?.name ?? null,
@@ -208,6 +219,8 @@ export function useAulas(rol: Rol): EstadoAulas {
           estudiantes: typeof c.studentCount === 'number' ? c.studentCount : null,
           // `isActive` existe en el tipo y no se usaba en ninguna parte (hallazgo B6).
           activa: c.isActive !== false,
+          academicYear: years.get(c.teacherAssignment?.academicYearId)?.year ?? null,
+          academicYearStatus: years.get(c.teacherAssignment?.academicYearId)?.status ?? null,
         }))
         setAulas(lista)
       })

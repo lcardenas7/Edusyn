@@ -18,7 +18,6 @@
 import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { alertDialog } from '../../components/ui/confirm'
 import { AulaShell } from './ui/AulaShell'
 import { AulaState, EmptyState } from './ui/EmptyState'
 import { LiveSessionBanner } from './ui/LiveSessionBanner'
@@ -31,16 +30,19 @@ import { Unidades } from './views/Unidades'
 import { Notas } from './views/Notas'
 import { Estudiantes } from './views/Estudiantes'
 import { CrearActividad } from './ui/CrearActividad'
+import { GestionarAula, type GestionAula } from './ui/GestionarAula'
 import { useAula, useAulas, type Rol } from './data/useAula'
 import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
 import { useProgresoAulas } from './data/useProgresoAulas'
 import { buildTeacherToday, buildStudentToday } from './model/today'
 import { PERIOD_ALL } from './model/list'
+import type { Herramienta } from './views/HerramientasAula'
+const HerramientasAula = lazy(() => import('./views/HerramientasAula'))
 
 const LessonEditor = lazy(() => import('../../components/LessonEditor'))
 // Rutas y Expedición ya son componentes propios y reutilizables: se montan en el shell nuevo
-// sin tocarlos. El Foro todavía vive dentro de Classroom.tsx y por eso sigue con puente.
+// sin duplicar sus datos. Foro y editores se cargan dentro de HerramientasAula.
 const LearningRoutesTab = lazy(() => import('../../components/LearningRoutesTab'))
 const AbpTab = lazy(() => import('../../components/AbpTab'))
 
@@ -56,7 +58,7 @@ function DetalleCargado({
   rol,
   totalEstudiantes,
   onVolver,
-  onIrAlAulaActual,
+  onAbrirHerramientas,
   onAbrirActividad,
   onEditarLeccion,
 }: {
@@ -66,7 +68,7 @@ function DetalleCargado({
   totalEstudiantes?: number | null
   onEditarLeccion: (a: { id: string; title: string; gameType?: string }) => void
   onVolver: () => void
-  onIrAlAulaActual: () => void
+  onAbrirHerramientas: () => void
   onAbrirActividad: (id: string) => void
 }) {
   const { actividad, miEntrega, entregas, cargando, error, recargar } = useActividad(activityId, rol)
@@ -96,7 +98,7 @@ function DetalleCargado({
           entregas={entregas}
           onVolver={onVolver}
           onCambio={recargar}
-          onIrAlAulaActual={onIrAlAulaActual}
+          onAbrirHerramientas={onAbrirHerramientas}
           aulaId={aulaId}
           totalEstudiantes={totalEstudiantes}
           onAbrirActividad={onAbrirActividad}
@@ -123,6 +125,9 @@ export default function AulaVirtual() {
   const { classroomId, vista: vistaParam, activityId } = useParams()
   const [params, setParams] = useSearchParams()
   const [creando, setCreando] = useState(false)
+  const [tipoCreacion, setTipoCreacion] = useState<string | undefined>()
+  const abrirCreacion = (tipo?: string) => { setTipoCreacion(tipo); setCreando(true) }
+  const [gestionAula, setGestionAula] = useState<GestionAula | null>(null)
   // El editor de lecciones y juegos SÍ es reutilizable, así que se abre aquí mismo en vez de
   // mandar al aula anterior.
   const [editandoLeccion, setEditandoLeccion] = useState<{ id: string; title: string; gameType?: string } | null>(null)
@@ -194,22 +199,26 @@ export default function AulaVirtual() {
     [classroomId, navigate],
   )
 
-  /**
-   * Puente al aula actual para lo que todavía no se ha traído. Se avisa ANTES de saltar: un
-   * botón que te cambia de aula sin decírtelo se siente como un error de la aplicación.
-   */
-  const irAlAulaActualPara = useCallback(
-    async (que: 'crear' | 'valeria' | 'editar') => {
-      const textos: Record<typeof que, string> = {
-        crear: 'Crear actividades todavía se hace en el aula de siempre. Te llevamos allí; abre esta misma aula y usa "Nueva Actividad". Lo que crees aparecerá también aquí.',
-        valeria: 'Pedirle contenido a Valeria todavía se hace en el aula de siempre. Te llevamos allí.',
-        editar: 'Editar una actividad todavía se hace en el aula de siempre. Te llevamos allí.',
-      }
-      await alertDialog(textos[que], { title: 'Esto aún vive en el aula anterior' })
-      navigate('/classroom')
+  const abrirHerramienta = useCallback(
+    (herramienta: Herramienta, id?: string) => {
+      const q = new URLSearchParams(params)
+      q.set('herramienta', herramienta)
+      q.delete('actividad')
+      if (id) q.set('actividad', id)
+      setParams(q)
     },
-    [navigate],
+    [params, setParams],
   )
+  const cerrarHerramienta = () => {
+    const q = new URLSearchParams(params)
+    q.delete('herramienta')
+    q.delete('actividad')
+    setParams(q)
+    recargar()
+  }
+  const herramientaParam = params.get('herramienta')
+  const herramienta = ['actividades', 'materiales', 'anuncios', 'foro'].includes(herramientaParam ?? '')
+    ? herramientaParam as Herramienta : null
 
   const verActividades = useCallback(
     (estado?: string) => {
@@ -225,7 +234,7 @@ export default function AulaVirtual() {
 
   if (!classroomId) {
     return (
-      <SelectorAula
+      <><SelectorAula
         nombre={nombre}
         role={rol}
         aulas={listado.aulas}
@@ -235,7 +244,13 @@ export default function AulaVirtual() {
         onEntrar={(id) => navigate(`/aula/${id}/hoy`)}
         onVolverAlActual={() => navigate('/classroom')}
         avances={avances}
+        onCrear={rol === 'docente' ? () => setGestionAula('crear') : undefined}
       />
+      {gestionAula && rol === 'docente' && <GestionarAula modo="crear" onCerrar={() => setGestionAula(null)} onGuardado={id => {
+        setGestionAula(null)
+        listado.recargar()
+        if (id) navigate(`/aula/${id}/hoy`)
+      }} />}</>
     )
   }
 
@@ -275,13 +290,25 @@ export default function AulaVirtual() {
           <LiveSessionBanner
             session={session}
             role={rol}
-            // El reproductor del quiz vive en el aula actual; hasta que se traiga, el enlace
-            // lleva allí en vez de dejar el aviso muerto.
-            onEntrar={() => navigate('/classroom')}
+            // Abre la actividad exacta dentro del mismo shell.
+            onEntrar={() => abrirHerramienta('actividades', session.activityId)}
           />
         ) : undefined
       }
     >
+      {!herramienta && !activityId && (vista === 'hoy' || vista === 'unidades' || vista === 'actividades') && (
+        <div className="mx-auto mb-5 flex max-w-5xl flex-wrap gap-2" aria-label="Herramientas del aula">
+          {(vista === 'hoy' ? ['anuncios'] as const : vista === 'unidades' ? ['materiales'] as const : rol === 'docente' ? ['actividades'] as const : []).map(h => (
+            <button key={h} type="button" onClick={() => abrirHerramienta(h)} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm font-medium text-ink-primary hover:bg-surface-2">
+              {h === 'anuncios' ? 'Ver y gestionar anuncios' : h === 'materiales' ? 'Abrir materiales' : 'Herramientas de actividades'}
+            </button>
+          ))}
+          {rol === 'docente' && vista === 'hoy' && <>
+            <button type="button" onClick={() => setGestionAula('color')} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary">Color del aula</button>
+            <button type="button" onClick={() => setGestionAula('copiar')} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary">Copiar aula</button>
+          </>}
+        </div>
+      )}
       <AulaState
         loading={cargando}
         error={error}
@@ -289,14 +316,20 @@ export default function AulaVirtual() {
         isEmpty={false}
         empty={null}
       >
-        {activityId ? (
+        {herramienta || vista === 'foro' ? (
+          <Suspense fallback={<p role="status">Cargando herramientas del aula…</p>}>
+            <HerramientasAula key={`${classroomId}:${herramienta ?? 'foro'}:${params.get('actividad') ?? ''}`}
+              classroomId={classroomId} herramienta={herramienta ?? 'foro'} activityId={params.get('actividad') ?? undefined}
+              rol={rol} onCambio={recargar} onVolver={herramienta ? cerrarHerramienta : () => irA('hoy')} />
+          </Suspense>
+        ) : activityId ? (
           <DetalleCargado
             activityId={activityId}
             aulaId={classroomId}
             rol={rol}
             totalEstudiantes={aula?.estudiantes ?? null}
             onVolver={() => verActividades()}
-            onIrAlAulaActual={() => irAlAulaActualPara('editar')}
+            onAbrirHerramientas={() => abrirHerramienta('actividades', activityId)}
             onAbrirActividad={abrirActividad}
             onEditarLeccion={setEditandoLeccion}
           />
@@ -312,12 +345,9 @@ export default function AulaVirtual() {
             onAbrirActividad={abrirActividad}
             onVerActividades={verActividades}
             totalEstudiantes={aula?.estudiantes ?? null}
-            // Crear todavía vive en el aula actual (el formulario por intención y el editor de
-            // preguntas no son componentes reutilizables). Se ofrece igual: sin estos botones
-            // el docente entra al aula nueva y no encuentra por dónde crear, que es peor que
-            // un puente honesto.
-            onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
-            onValeria={rol === 'docente' ? () => irAlAulaActualPara('valeria') : undefined}
+            // Creación por intención y herramientas completas dentro de la misma aula.
+            onCrear={rol === 'docente' ? tipo => tipo === 'MATERIAL' ? abrirHerramienta('materiales') : abrirCreacion(tipo) : undefined}
+            onValeria={rol === 'docente' ? () => abrirHerramienta('actividades') : undefined}
           />
         ) : vista === 'unidades' ? (
           <Unidades
@@ -339,8 +369,8 @@ export default function AulaVirtual() {
             }}
             onAbrirActividad={abrirActividad}
             totalEstudiantes={aula?.estudiantes ?? null}
-            onAbrirMaterial={() => irAlAulaActualPara('editar')}
-            onCrear={() => setCreando(true)}
+            onAbrirMaterial={() => abrirHerramienta('materiales')}
+            onCrear={() => abrirCreacion()}
           />
         ) : vista === 'actividades' ? (
           <Actividades
@@ -351,7 +381,7 @@ export default function AulaVirtual() {
             filtroEstadoInicial={filtroEstado}
             onAbrirActividad={abrirActividad}
             totalEstudiantes={aula?.estudiantes ?? null}
-            onCrear={rol === 'docente' ? () => setCreando(true) : undefined}
+            onCrear={rol === 'docente' ? () => abrirCreacion() : undefined}
           />
         ) : vista === 'notas' ? (
           <Notas
@@ -378,16 +408,19 @@ export default function AulaVirtual() {
           <div className="mx-auto max-w-3xl">
             <EmptyState
               scene="sin-unidades"
-              title={`"${vistaLabel(vista)}" todavía no está en el aula nueva`}
-              detail="Se irán trayendo una por una. Mientras tanto puedes usarla en el aula actual, con los mismos datos."
-              secondary={{ label: 'Abrir el aula actual', onClick: () => navigate('/classroom') }}
+              title={`No tienes acceso a "${vistaLabel(vista)}"`}
+              detail="Selecciona una de las secciones disponibles para tu rol."
+              secondary={{ label: 'Volver a Hoy', onClick: () => irA('hoy') }}
             />
           </div>
         )}
       </AulaState>
+      {gestionAula && rol === 'docente' && <GestionarAula modo={gestionAula} classroomId={classroomId} colorInicial={aula?.color}
+        onCerrar={() => setGestionAula(null)} onGuardado={() => { setGestionAula(null); recargar(); listado.recargar() }} />}
       {creando && (
         <CrearActividad
           aulaId={classroomId}
+          tipoInicial={tipoCreacion}
           unidades={aula?.secciones ?? []}
           periodos={aula?.periodos ?? []}
           periodoActual={aula?.periodoActual?.id ?? null}
@@ -399,9 +432,10 @@ export default function AulaVirtual() {
               // Lecciones y juegos se editan aquí: LessonEditor es un componente propio.
               const gameType = (nueva as { metadata?: { gameType?: string } }).metadata?.gameType
               setEditandoLeccion({ id: nueva.id, title: nueva.title, gameType })
+            } else if (siguiente === 'preguntas') {
+              navigate(`/aula/${classroomId}/actividades/${nueva.id}?herramienta=actividades&actividad=${nueva.id}`)
             } else {
-              // El resto abre su detalle; las preguntas de quiz todavía se añaden en el aula
-              // anterior, y el detalle lo dice.
+              // El detalle ofrece las herramientas del tipo de actividad creado.
               abrirActividad(nueva.id)
             }
           }}

@@ -20,7 +20,7 @@ import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
 import { FilterChip, FilterStrip } from '../components/ui/FilterChip'
 import { ClassroomPicker } from '../components/ui/ClassroomPicker'
 import { SectionPicker } from '../components/ui/SectionPicker'
-import { confirmDialog, alertDialog } from '../components/ui/confirm'
+import { confirmDialog, alertDialog, promptDialog } from '../components/ui/confirm'
 import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
@@ -963,7 +963,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
 // TAB: ANUNCIOS (separada del Inicio)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
+export function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   classroom: any; isTeacher: boolean; onReload: () => void; setError: (e: string) => void
 }) {
   const [showForm, setShowForm] = useState(false)
@@ -1212,7 +1212,7 @@ function ImagePreview({ url, name, onExpand }: { url: string; name?: string; onE
 // TAB: CONTENIDO (Secciones + Materiales con formularios mejorados)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function ContentTab({ classroom, isTeacher, onReload, setError }: {
+export function ContentTab({ classroom, isTeacher, onReload, setError }: {
   classroom: any; isTeacher: boolean; onReload: () => void; setError: (e: string) => void
 }) {
   const sections: Section[] = classroom.sections || []
@@ -2093,13 +2093,14 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
   AUTO_GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Auto-calificado' },
 }
 
-function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: {
-  classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void
+export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError, initialActivityId }: {
+  classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void; initialActivityId?: string
 }) {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+  const openedInitialActivity = useRef<string | null>(null)
   const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL')
   const [workFilter, setWorkFilter] = useState<string>('ALL') // filtro por estado de trabajo (pendiente/por calificar/etc.)
   const [periodFilter, setPeriodFilter] = useState<string>('ALL') // organizador primario: por período académico
@@ -2255,7 +2256,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const sections: Section[] = [...baseSections, ...extraSections.filter(e => !baseSections.some(s => s.id === e.id))]
 
   const quickCreateSection = async () => {
-    const title = window.prompt('Nombre de la nueva sección (p. ej. "Unidad 1" o "Semana 3"):')?.trim()
+    const title = (await promptDialog('Nombre de la nueva sección (p. ej. "Unidad 1" o "Semana 3"):', { title: 'Nueva sección' }))?.trim()
     if (!title) return
     try {
       const { data } = await classroomApi.createSection(classroom.id, { title })
@@ -2271,7 +2272,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setLoading(true)
       const { data } = await classroomApi.listActivities(classroom.id, isStudent ? 'student' : undefined)
       setActivities(data)
-    } catch {} finally { setLoading(false) }
+    } catch { setError('No se pudieron cargar las actividades. Vuelve a intentarlo.') } finally { setLoading(false) }
   }, [classroom.id, isStudent])
 
   const svgToDataUrl = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
@@ -2937,6 +2938,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }
   }
 
+  useEffect(() => {
+    if (loading || !initialActivityId || openedInitialActivity.current === initialActivityId) return
+    const activity = activities.find(a => a.id === initialActivityId)
+    if (!activity) return
+    openedInitialActivity.current = initialActivityId
+    void openActivity(activity)
+  }, [loading, activities, initialActivityId])
+
   const handleStudentSubmit = async () => {
     if (!selectedActivity) return
     try {
@@ -3000,11 +3009,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const handleReturn = async (sub: Submission) => {
-    const fb = prompt('Retroalimentación para el estudiante (opcional):')
+    const fb = await promptDialog('Retroalimentación para el estudiante (opcional):', { title: 'Devolver entrega', confirmLabel: 'Devolver' })
+    if (fb === null) return
     try {
       await classroomApi.returnSubmission(sub.id, { feedback: fb || undefined })
       if (selectedActivity) openActivity(selectedActivity)
-    } catch {}
+    } catch { setError('No se pudo devolver la entrega. Vuelve a intentarlo.') }
   }
 
   const openFile = async (url: string) => {
@@ -5202,7 +5212,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 </div>
                 <div className="flex justify-end gap-3">
                   {activities.find(a => a.id === showScheduleModal)?.scheduledPublishAt && (
-                    <button onClick={() => { handlePublish(showScheduleModal, false); setShowScheduleModal(null) }} className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl">
+                    <button onClick={() => { handlePublish(showScheduleModal, true); setShowScheduleModal(null) }} className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl">
                       Cancelar programación
                     </button>
                   )}
@@ -6500,7 +6510,7 @@ interface ForumPostData {
   replies?: ForumPostData[];
 }
 
-function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
+export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   classroom: any; isTeacher: boolean; isStudent: boolean; user: any; setError: (e: string) => void
 }) {
   const [posts, setPosts] = useState<ForumPostData[]>([])

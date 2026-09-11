@@ -402,7 +402,7 @@ function Demo() {
             }
             onVolver={() => setVista('actividades')}
             onCambio={() => alert('Recargar')}
-            onIrAlAulaActual={() => alert('Ir al aula actual')}
+            onAbrirHerramientas={() => alert('Abrir herramientas de la actividad')}
             aulaId={aula.id}
             onAbrirActividad={(id) => alert(`Abrir la copia ${id}`)}
             now={AHORA}

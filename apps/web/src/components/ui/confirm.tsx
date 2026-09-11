@@ -12,7 +12,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
 
-type DialogKind = 'confirm' | 'alert'
+type DialogKind = 'confirm' | 'alert' | 'prompt'
 interface DialogState {
   kind: DialogKind
   title?: string
@@ -20,6 +20,7 @@ interface DialogState {
   confirmLabel: string
   cancelLabel: string
   danger: boolean
+  input?: { value: string }
   resolve: (ok: boolean) => void
 }
 
@@ -28,7 +29,7 @@ let listener: ((s: DialogState | null) => void) | null = null
 function open(state: Omit<DialogState, 'resolve'>): Promise<boolean> {
   return new Promise(resolve => {
     if (!listener) { // Sin host montado: degradar al nativo para no bloquear.
-      resolve(state.kind === 'alert' ? true : window.confirm(state.message))
+      resolve(state.kind === 'alert' ? true : state.kind === 'prompt' ? false : window.confirm(state.message))
       return
     }
     listener({ ...state, resolve })
@@ -51,6 +52,14 @@ export function alertDialog(message: string, opts: { title?: string } = {}): Pro
   return open({ kind: 'alert', message, title: opts.title, confirmLabel: 'Entendido', cancelLabel: '', danger: false })
 }
 
+/** Cancelar devuelve null; confirmar una respuesta vacía devuelve ''. */
+export async function promptDialog(message: string, opts: { title?: string; confirmLabel?: string } = {}): Promise<string | null> {
+  const input = { value: '' }
+  const accepted = await open({ kind: 'prompt', message, title: opts.title, input,
+    confirmLabel: opts.confirmLabel ?? 'Guardar', cancelLabel: 'Cancelar', danger: false })
+  return accepted ? input.value : null
+}
+
 export function DialogHost() {
   const [state, setState] = useState<DialogState | null>(null)
   useEffect(() => { listener = setState; return () => { listener = null } }, [])
@@ -59,7 +68,7 @@ export function DialogHost() {
     if (!state) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close(false)
-      if (e.key === 'Enter') close(true)
+      if (e.key === 'Enter' && state.kind !== 'prompt') close(true)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -70,7 +79,7 @@ export function DialogHost() {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-ink-primary/40 backdrop-blur-sm" onClick={() => close(false)}>
-      <div className="bg-surface-1 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={state.title || state.message} className="bg-surface-1 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-5 flex gap-3">
           <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${state.danger ? 'bg-red-50 text-red-600' : 'bg-violet-50 text-violet-600'}`}>
             {state.danger ? <AlertTriangle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
@@ -78,15 +87,18 @@ export function DialogHost() {
           <div className="flex-1 min-w-0 pt-0.5">
             {state.title && <h3 className="font-bold text-ink-primary mb-1">{state.title}</h3>}
             <p className="text-sm text-ink-secondary whitespace-pre-line">{state.message}</p>
+            {state.input && <textarea autoFocus aria-label={state.message} rows={3} value={state.input.value}
+              onChange={e => { state.input!.value = e.target.value; setState({ ...state }) }}
+              className="mt-3 w-full rounded-lg border border-hairline bg-surface-1 p-3 text-ink-primary focus:ring-2 focus:ring-accent" />}
           </div>
         </div>
         <div className="px-5 py-3 bg-surface-2 flex justify-end gap-2">
-          {state.kind === 'confirm' && (
+          {state.kind !== 'alert' && (
             <button onClick={() => close(false)} className="px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-surface-3 rounded-lg">{state.cancelLabel}</button>
           )}
           <button
             onClick={() => close(true)}
-            autoFocus
+            autoFocus={state.kind !== 'prompt'}
             className={`px-4 py-2 text-sm font-bold text-white rounded-lg ${state.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-violet-600 hover:bg-violet-700'}`}
           >
             {state.confirmLabel}
