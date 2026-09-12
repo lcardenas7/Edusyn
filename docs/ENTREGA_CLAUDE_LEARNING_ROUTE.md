@@ -127,3 +127,32 @@ Contrato estructural: 14 excepciones retiradas y 2 reclasificadas. 92 suites / 1
 - Si prefieres integrar sin el contrato, descarta `56932eab`: el resto compila y pasa igual, pero
   el contrato estructural fallará señalando las 14 excepciones obsoletas.
 - La rama está rebasable sobre el `staging` que tengas al integrar; no hay merges ni reescrituras.
+
+---
+
+## 8. Estado al cierre de la sesión (2026-09-11)
+
+**Learning-route: entregado y cerrado.** Último commit de la rama, con todo verificado; árbol limpio;
+**sin publicar en el remoto** y sin push a `staging` ni `main`. Comprobado además que la rama
+**rebasa limpia** sobre `origin/staging` `e229b21e` (el staging ya avanzó con el trabajo de
+plantillas de Astra); la comprobación se hizo en una rama desechable que se borró.
+
+**Decisión pendiente del fundador:** publicar o no esta rama en el remoto. Solo hace falta si Astra
+integra desde otra máquina o desde la nube; en este equipo puede integrarla desde el worktree.
+
+**Siguiente frente (Attendance): bloqueado por secuencia.** El encargo
+`ENCARGO_CLAUDE_BLINDAJE_ATTENDANCE.md` existe ya —redactado y completo— pero sigue **sin confirmar**
+en el worktree de Astra, y pide crear el worktree «desde el `origin/staging` que ya contenga la
+entrega de learning-route **integrada por Astra**». Hasta esa integración no se abre ese frente.
+Contrastado contra el código: 17 rutas (10 + 7), 16 excepciones declaradas, y hoy solo el
+controlador principal resuelve institución (en 2 sitios). Los documentos previos que exige leer
+están en staging.
+
+**Inclusión (APD):** Astra la dejó **parcial y pospuesta**, con el pendiente enumerado en
+`AUDITORIA_AISLAMIENTO_INCLUSION.md` (participantes y firmas, materias del plan, documentos y
+adjuntos, categorías, reportes y agregaciones, índice/estadísticas, alertas, cruce académico,
+listados de perfiles, escritura de configuración y la excepción de `POST ai/valeria`), más la API
+compartida `pedagogical-support` y la función heredada `syncProfileFromDiagnosis`, que activa
+perfiles sin consentimiento. Hoy Astra no tiene archivos de APD modificados, así que el frente está
+libre; **retomarlo cambiaría el orden que ella fijó** (Inclusión pospuesta, Attendance siguiente),
+así que requiere su visto bueno o el del fundador.
