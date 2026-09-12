@@ -3882,24 +3882,6 @@
     "fingerprint": "2ae922363d27ce4668fc1470e1442c15b062f653dd67552327a8fc42e14eed1b"
   },
   {
-    "key": "modules/staff-leave/staff-leave.controller.ts#StaffLeaveController.cancel @Patch(':id/cancel')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en staff-leave: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "238618512a43f5dc0805a5fe311371c2179eed38a6cddf9fde82d76df6272646"
-  },
-  {
-    "key": "modules/staff-leave/staff-leave.controller.ts#StaffLeaveController.findById @Get(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en staff-leave: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "73d51185f72da338b444d1bbf9118e4df43cb02dc528d7bab547eabd9aaf8425"
-  },
-  {
-    "key": "modules/staff-leave/staff-leave.controller.ts#StaffLeaveController.review @Patch(':id/review')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en staff-leave: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "f8bc9e96198ca70542fb9373bad65ee44f63898b652ca1630ba2d0338c9d844f"
-  },
-  {
     "key": "modules/storage/storage-public.controller.ts#StoragePublicController.servePublicFile @Get('public')",
     "kind": "pending-audit",
     "reason": "Deuda previa en storage: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -4024,30 +4006,6 @@
     "kind": "non-institutional",
     "reason": "Catálogo declarativo estático de instrumentos e intenciones; no consulta Prisma ni datos de una institución. TallerController.catalog devuelve constantes del catálogo.",
     "fingerprint": "e7d08141322f4e49462583efab56929d31724aff635d9e7ff13ff59fa0514aca"
-  },
-  {
-    "key": "modules/teacher-schedule/teacher-schedule.controller.ts#TeacherScheduleController.create @Post()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en teacher-schedule: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "1aa73cd9bce1f433f6b77e0d0cf8d897fcbf7293f0d2a6ac41e5bd5e19b94017"
-  },
-  {
-    "key": "modules/teacher-schedule/teacher-schedule.controller.ts#TeacherScheduleController.findMine @Get()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en teacher-schedule: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "8eea24e971480ff65f28b332d12872f4155cb5eab520d2abff562a764938dbf6"
-  },
-  {
-    "key": "modules/teacher-schedule/teacher-schedule.controller.ts#TeacherScheduleController.remove @Delete(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en teacher-schedule: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "73c5b279fcc0a38a8fa72e2056ac83d2b93a1a2a7d111134ec30f3d6a5e537d3"
-  },
-  {
-    "key": "modules/teacher-schedule/teacher-schedule.controller.ts#TeacherScheduleController.update @Put(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en teacher-schedule: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c5539f45213743ab79f2c245c0a9f426ad26990319789e0bea801dbaf9df964d"
   },
   {
     "key": "modules/teacher-workspace/teacher-workspace.controller.ts#TeacherWorkspaceController.addLink @Post('resources/link')",
