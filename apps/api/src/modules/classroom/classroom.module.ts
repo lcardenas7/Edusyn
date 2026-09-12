@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ClassroomController } from './classroom.controller';
+import { ClassroomB1Controller } from './classroom-b1.controller';
 import { ClassroomService } from './classroom.service';
 import { ClassroomCronService } from './classroom.cron';
 import { AttitudinalService } from './attitudinal.service';
@@ -17,7 +18,8 @@ import { FormativeEvaluationController } from './formative-evaluation.controller
 
 @Module({
   imports: [PrismaModule, ApdModule, GamificationModule, LearningRouteModule, EvaluationModule],
-  controllers: [ClassroomController, FormativeEvaluationController],
+  // Las rutas literales restantes preceden a @Get(':id') de B1.
+  controllers: [ClassroomController, ClassroomB1Controller, FormativeEvaluationController],
   providers: [ClassroomService, ClassroomCronService, AttitudinalService, FormativeEvaluationService, LessonService, CompletionService, ActivityGatingService, ClassroomTenantAccessService],
   exports: [ClassroomService, AttitudinalService, LessonService, ActivityGatingService],
 })
