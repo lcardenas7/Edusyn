@@ -2,11 +2,11 @@
 
 Fecha: 2026-09-11. Base publicada anterior: origin/staging e229b21e; Learning Route integrado y verificado hasta eaa57408.
 
-Bloque 0, Taller, Matrículas, la parte declarada de Inclusión y Plantillas están publicados. Learning Route queda cerrado en la aplicación: 14 rutas institucionales y 2 no institucionales justificadas, con 52 pruebas de servicio y 40 HTTP. Attendance es el siguiente frente delegado. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
+Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas y Learning Route están publicados. Cortes preventivos queda cerrado en aplicación: sus 8 rutas institucionales tienen 38 pruebas de servicio y 46 HTTP. Attendance es el frente delegado a Claude y Observer el siguiente frente propio. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1113 declaraciones de ruta (incluye SSE y dos rutas de app), 307 con llamada directa, incondicional y esperada a requireInstitutionId, 743 pendientes de calibración y 63 excepciones no institucionales.
+1113 declaraciones de ruta (incluye SSE y dos rutas de app), 315 con llamada directa, incondicional y esperada a requireInstitutionId, 735 pendientes de calibración y 63 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -32,7 +32,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | edulab-persistence | 0 | 0 | 0 | 0 | Pendiente; frontera EduLab, no modificar |
 | edusyn-play | 57 | 0 | 17 | 40 | Parcialmente no aplica; puentes institucionales pendientes |
 | elections | 22 | 7 | 15 | 0 | Pendiente de auditoría A/B por módulo |
-| evaluation | 66 | 15 | 51 | 0 | Parcial: cálculos usados por Matrículas corregidos; demás operaciones y HTTP de cálculos pendientes |
+| evaluation | 66 | 23 | 43 | 0 | Parcial: Cortes preventivos 8/8 cerrado en aplicación y cálculos usados por Matrículas corregidos; resto de evaluation pendiente. Ver AUDITORIA_AISLAMIENTO_PREVENTIVE_CUTS.md |
 | finance | 54 | 0 | 54 | 0 | Pendiente de auditoría A/B por módulo |
 | gamification | 2 | 0 | 2 | 0 | Pendiente de auditoría A/B por módulo |
 | iam | 44 | 7 | 37 | 0 | Pendiente de auditoría A/B por módulo |
@@ -90,3 +90,5 @@ Checkpoint de actividades y avances de Inclusión (base ff81a71b): 90 suites / 1
 Checkpoint Plantillas (base 38614231): 21 rutas institucionales y 1 catálogo estático revisados; 100 pruebas nuevas de servicio y 67 HTTP. Suite API completa: 92 suites / 1.693 pruebas. Web: 22 archivos / 214 pruebas. Tipos API/web y build Nest aprobados. Se retiran 19 excepciones y se reclasifica el catálogo, sin cambiar otras rutas. La prueba de mutación detecta quitar la guarda de año. PostgreSQL sintético y el resto de academic siguen pendientes. Inclusión permanece pospuesta; Claude tiene instrucciones versionadas para learning-route.
 
 Checkpoint Learning Route (eaa57408): 16/16 rutas clasificadas; 14 institucionales y 2 no institucionales justificadas. La revisión de integración corrigió cuatro transacciones que usaban el cliente Prisma exterior, revalidó dentro de `tx`, acotó la escritura idempotente de evidencia y añadió pruebas contra relaciones institucionales inconsistentes y rollback. Focal: 3 suites / 105 pruebas. Suite completa: 94 suites / 1.785 pruebas API; web 22 archivos / 214 pruebas; tipos API/web y build Nest aprobados. PostgreSQL/RLS, cuota IA y autorización dentro del colegio no se declaran cubiertos.
+
+Checkpoint Cortes preventivos (2022be74 + 172cd375): 8/8 rutas resuelven institución del actor; configuración, alertas, grupos, asignaciones, matrículas, períodos y motor de nota a fecha quedan acotados. Ejecución completa atómica. 38 pruebas de servicio y 46 HTTP; mutación de la guarda del período rompe 5 casos y, restaurada, el focal con contrato pasa 97/97. Suite completa: 96 suites / 1.869 pruebas API; tipos API/web y build Nest aprobados; web conserva 22 archivos / 214 pruebas ya verificados en esta sesión. PostgreSQL/RLS, autorización intrainstitucional y semántica histórica de roster/asignaciones quedan aparte.

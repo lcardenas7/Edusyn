@@ -62,3 +62,13 @@ no vacíos porque el esquema genera CUID; exigir UUID rechazaba identificadores 
   entre dos ejecuciones simultáneas pertenecen a trabajos separados.
 
 No se modificaron esquema, migraciones ni RLS, y las pruebas usan dos instituciones sintéticas.
+
+## Verificación
+
+- Servicio: 38 pruebas A/B, coordenadas mixtas, caminos legítimos y rollback.
+- HTTP: 46 pruebas con Nest, JWT, `JwtStrategy`, `RolesGuard` y `ValidationPipe` reales.
+- Contrato estructural: 13 pruebas; focal combinado 97/97.
+- Mutación: retirar la guarda institucional de `termInScope` hace fallar cinco pruebas; restaurarla
+  devuelve el conjunto a verde.
+- Suite API completa: 96 suites / 1.869 pruebas. Tipos API/web y build Nest aprobados. Suite web ya
+  verificada en esta sesión: 22 archivos / 214 pruebas.
