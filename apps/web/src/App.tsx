@@ -50,6 +50,12 @@ import WorkspaceV2Page from './pages/WorkspaceV2'
 import SpaceDetailPage from './pages/WorkspaceV2/SpaceDetail'
 import Classroom from './pages/Classroom'
 import AulaVirtual from './pages/aula'
+import Caracteristicas from './pages/public/Caracteristicas'
+import Precios from './pages/public/Precios'
+import CasosDeExito from './pages/public/CasosDeExito'
+import PreguntasFrecuentes from './pages/public/PreguntasFrecuentes'
+import Recursos from './pages/public/Recursos'
+import Contacto from './pages/public/Contacto'
 import Layout from './components/Layout'
 import PlayLayout from './components/play/PlayLayout'
 import { PlayAuthProvider, usePlayAuth } from './contexts/PlayAuthContext'
@@ -223,6 +229,14 @@ function App() {
       <Routes>
         {/* Landing Page - Página principal pública */}
         <Route path="/" element={<LandingPage />} />
+
+        {/* Páginas públicas de marketing - URLs propias para indexación (SEO) */}
+        <Route path="/caracteristicas" element={<Caracteristicas />} />
+        <Route path="/precios" element={<Precios />} />
+        <Route path="/casos-de-exito" element={<CasosDeExito />} />
+        <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
+        <Route path="/recursos" element={<Recursos />} />
+        <Route path="/contacto" element={<Contacto />} />
 
         {/* Login por institución (multi-tenant) */}
         <Route path="/login" element={<InstitutionLogin />} />
