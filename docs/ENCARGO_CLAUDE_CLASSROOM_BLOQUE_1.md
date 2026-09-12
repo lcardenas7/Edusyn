@@ -1,4 +1,10 @@
-# Encargo encadenado para Claude — Classroom Bloque 1 (17/98)
+# ENCARGO CANCELADO PARA CLAUDE — Classroom Bloque 1 (17/98)
+
+> **No ejecutar este documento.** El 2026-09-12 el usuario reasignó PostgreSQL a Claude y
+> Classroom Bloque 1 a Kimi. La instrucción vigente para Claude es
+> `docs/ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md`; la de Classroom es
+> `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md`. Este archivo se conserva únicamente para que una copia
+> antigua del plan no produzca trabajo duplicado.
 
 Fecha: 2026-09-12. Ejecutar **después de entregar Observer y después de que Astra lo integre**.
 
@@ -101,4 +107,3 @@ Entrega `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md` y
 Bloque 4, mutaciones, comandos/resultados y “Qué NO cubre”. Ejecuta focal + contrato, suite API,
 tipos/build API y pruebas/tipos web. PostgreSQL/RLS, archivos de storage, las otras 81 rutas y el
 cron permanecen expresamente pendientes.
-

@@ -1,5 +1,9 @@
 # Plan medido de blindaje de Classroom
 
+> **Responsable vigente del Bloque 1:** Kimi, según
+> `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md`. La asignación anterior a Claude quedó cancelada para
+> evitar trabajo duplicado. Los bloques posteriores no tienen responsable hasta nueva integración.
+
 Fecha: 2026-09-12. Estado: **0/98 rutas cerradas**. Este documento organiza el trabajo; no acredita aislamiento.
 
 ## Medición
@@ -72,9 +76,9 @@ completas, guarda y escritura con el mismo `tx`, cruces A→B/B→A, ids secunda
 efectos y HTTP real de Nest. El estado se expresa siempre como `n/98`; separar archivos o terminar
 un servicio no permite decir “Classroom cerrado”.
 
-El primer tramo quedó delegado de forma encadenada en
-`docs/ENCARGO_CLAUDE_CLASSROOM_BLOQUE_1.md`: Claude lo inicia en un worktree nuevo solo después de
-que Observer esté integrado en `origin/staging`.
+El primer tramo está delegado a Kimi en `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md`. Puede comenzar
+desde el `origin/staging` vigente en un worktree nuevo; no depende de Observer. El documento anterior
+para Claude está cancelado y se conserva solo como aviso contra una ejecución duplicada.
 
 ## Pruebas existentes
 

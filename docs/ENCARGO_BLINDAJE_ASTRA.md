@@ -2,6 +2,12 @@
 
 Fecha: 2026-09-10 · Autor: Claude · Destinatario: **Astra**
 
+> **Actualización de coordinación, 2026-09-12:** la asignación nominal original cambió por decisión
+> del usuario. Claude conserva Observer y después ejecuta el laboratorio PostgreSQL sintético; Kimi
+> toma Classroom Bloque 1 (17/98). La fuente vigente es
+> `docs/COORDINACION_BLINDAJE_AGENTES.md`. La frontera sigue igual: este trabajo puede medir RLS,
+> pero no modificar políticas, roles o migraciones RLS sin un encargo posterior explícito.
+
 > **Objetivo:** dejar el aislamiento multiinstitución de Edusyn **verificablemente cerrado**, para
 > poder pasar a construir funcionalidad nueva sin arrastrar esta deuda.
 >
@@ -259,13 +265,14 @@ Es otro eje y merece su propio encargo; aquí solo déjalo **inventariado**.
   `institutionId`.
 - **Nada de `reset`, `--force`, ni reescribir historial.**
 
-## RLS — la frontera con Kimi
+## RLS — frontera persistente
 
 **No abras una segunda línea de RLS.** Nada de crear funciones de contexto, cambiar ownership,
 modificar políticas ni escribir migraciones correctivas de RLS.
 
-Si encuentras un hallazgo de RLS: **documéntalo y entrégalo**, siguiendo el modelo de
-`docs/security/HANDOFF-RLS-DESDE-CONSOLIDACION.md` — evidencia, no solución.
+La reasignación del 2026-09-12 permite a Claude ejecutar el laboratorio local y producir evidencia,
+según `docs/ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md`; no autoriza cambios de RLS. Si aparece un
+hallazgo: **documéntalo y entrégalo** como evidencia, no como solución improvisada.
 
 Y no confundas las dos capas: **RLS reproducible = FAIL** no significa **RLS actual = FAIL**.
 

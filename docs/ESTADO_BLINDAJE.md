@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-12. Attendance integrado sobre origin/staging 009fb852 y revisado en 70726854 + ddb1f058; este estado forma parte del lote de publicación a staging.
 
-Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route, Cortes preventivos y Attendance están publicados. Staff Leave y Teacher Schedule quedan cerrados en aplicación en el siguiente lote: 11 rutas y 106 pruebas nuevas. Observer es el siguiente frente delegado y Classroom tiene un plan medido, todavía 0/98. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
+Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route, Cortes preventivos y Attendance están publicados. Staff Leave y Teacher Schedule quedan cerrados en aplicación en el siguiente lote: 11 rutas y 106 pruebas nuevas. Observer continúa delegado a Claude. Por decisión del usuario, Claude ejecutará después el laboratorio PostgreSQL sintético y Kimi toma Classroom Bloque 1, exactamente 17/98 rutas; Classroom continúa 0/98 hasta integrar esa entrega. Inclusión permanece pospuesta. Ver `COORDINACION_BLINDAJE_AGENTES.md`. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
