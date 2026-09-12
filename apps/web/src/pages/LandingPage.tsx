@@ -41,8 +41,14 @@ import {
   Trophy,
   RefreshCw
 } from 'lucide-react'
+import { useSeo } from '../hooks/useSeo'
 
 export default function LandingPage() {
+  useSeo(
+    'Edusyn - Sistema de Gestión Académica con IA para Colegios',
+    'Edusyn: plataforma colombiana de gestión académica. Matrículas, notas, boletines conforme al Decreto 1290, aula virtual y comunicación institucional en un solo lugar.',
+  )
+
   // Smooth scroll para enlaces internos
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -68,31 +74,32 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
+              <img src="/brand/edusyn-icon.png" alt="Edusyn" className="w-10 h-10 object-contain" />
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 EduSyn
               </span>
             </div>
 
             {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+            <nav className="hidden md:flex items-center gap-7">
+              <Link to="/caracteristicas" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
                 Características
-              </a>
-              <a href="#about" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Conócenos
-              </a>
-              <a href="#modules" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Módulos
-              </a>
-              <a href="#benefits" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Beneficios
-              </a>
-              <a href="#contact" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+              </Link>
+              <Link to="/precios" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+                Precios
+              </Link>
+              <Link to="/casos-de-exito" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+                Casos de Éxito
+              </Link>
+              <Link to="/preguntas-frecuentes" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+                Preguntas Frecuentes
+              </Link>
+              <Link to="/recursos" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+                Recursos
+              </Link>
+              <Link to="/contacto" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
                 Contacto
-              </a>
+              </Link>
             </nav>
 
             {/* CTA Button */}
@@ -740,9 +747,7 @@ export default function LandingPage() {
             {/* Logo and Description */}
             <div className="lg:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <GraduationCap className="w-7 h-7 text-white" />
-                </div>
+                <img src="/brand/edusyn-icon.png" alt="Edusyn" className="w-12 h-12 object-contain" />
                 <span className="text-3xl font-bold text-white">EduSyn</span>
               </div>
               <p className="text-slate-400 mb-6 max-w-md">
@@ -766,9 +771,11 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Enlaces Rápidos</h4>
               <ul className="space-y-3">
-                <li><a href="#features" className="text-slate-400 hover:text-white transition-colors">Características</a></li>
-                <li><a href="#modules" className="text-slate-400 hover:text-white transition-colors">Módulos</a></li>
-                <li><a href="#benefits" className="text-slate-400 hover:text-white transition-colors">Beneficios</a></li>
+                <li><Link to="/caracteristicas" className="text-slate-400 hover:text-white transition-colors">Características</Link></li>
+                <li><Link to="/precios" className="text-slate-400 hover:text-white transition-colors">Precios</Link></li>
+                <li><Link to="/casos-de-exito" className="text-slate-400 hover:text-white transition-colors">Casos de Éxito</Link></li>
+                <li><Link to="/preguntas-frecuentes" className="text-slate-400 hover:text-white transition-colors">Preguntas Frecuentes</Link></li>
+                <li><Link to="/recursos" className="text-slate-400 hover:text-white transition-colors">Recursos</Link></li>
                 <li><Link to="/login" className="text-slate-400 hover:text-white transition-colors">Iniciar Sesión</Link></li>
               </ul>
             </div>
