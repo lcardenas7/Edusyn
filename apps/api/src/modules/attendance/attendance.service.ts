@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
@@ -10,12 +10,101 @@ import {
   type DateRange,
 } from '../../engines/AttendanceSchedulingEngine';
 
+/**
+ * Asistencia por asignatura.
+ *
+ * **Aislamiento (2026-09-11).** Nueve de las diez rutas HTTP entraban con el identificador del
+ * cliente y consultaban por id: `recordBulk` cargaba la asignación docente por id y **deducía de
+ * esa fila el colegio y el año**, así que registraba asistencia —y auditoría— dentro de otra
+ * institución; `update` cargaba y actualizaba por id; las lecturas y los cinco reportes aceptaban
+ * asignación, matrícula, grupo, año o materia sin contexto. Ahora la institución la pone el ACTOR y
+ * cada operación valida la cadena real del esquema:
+ *
+ *   asignación docente → institución (propia) · matrícula → institución (propia)
+ *   grupo → sede → institución   ·   materia → área → institución
+ *   registro de asistencia → institución (propia) + su asignación y su matrícula
+ *
+ * `Group` y `Subject` **no tienen `institutionId`** en el esquema: se acotan por `campus` y `area`.
+ * Un recurso ajeno responde 404, igual que uno inexistente.
+ */
 @Injectable()
 export class AttendanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly attendanceAudit: AttendanceAuditService,
   ) {}
+
+  // ─── Guardas de pertenencia ────────────────────────────────────────────────
+
+  /** Fecha válida. Un parámetro mal formado es 400, no un `Invalid Date` que envenena la consulta. */
+  private fecha(valor: string | Date, campo = 'fecha'): Date {
+    const d = valor instanceof Date ? valor : new Date(valor);
+    if (Number.isNaN(d.getTime())) throw new BadRequestException(`La ${campo} no es válida`);
+    return d;
+  }
+
+  private fechaOpcional(valor: string | undefined, campo: string): Date | undefined {
+    return valor === undefined || valor === null || valor === '' ? undefined : this.fecha(valor, campo);
+  }
+
+  /** La asignación docente, solo si es de esta institución (y su año/grupo/materia también). */
+  private async assignmentInScope(institutionId: string, teacherAssignmentId: string) {
+    if (!teacherAssignmentId) throw new BadRequestException('Se requiere la asignación');
+    const assignment = await this.prisma.teacherAssignment.findFirst({
+      where: {
+        id: teacherAssignmentId,
+        institutionId,
+        academicYear: { institutionId },
+        group: { campus: { institutionId } },
+      },
+      select: { id: true, institutionId: true, academicYearId: true, groupId: true, subjectId: true, teacherId: true },
+    });
+    if (!assignment) throw new NotFoundException('Asignación no encontrada');
+    return assignment;
+  }
+
+  /** La matrícula, solo si es de esta institución. */
+  private async enrollmentInScope(institutionId: string, studentEnrollmentId: string) {
+    if (!studentEnrollmentId) throw new BadRequestException('Se requiere la matrícula');
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: studentEnrollmentId, institutionId, group: { campus: { institutionId } } },
+      select: { id: true, academicYearId: true, groupId: true, studentId: true, status: true },
+    });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+    return enrollment;
+  }
+
+  /** El año lectivo, solo si es de esta institución. */
+  private async yearInScope(institutionId: string, academicYearId: string) {
+    if (!academicYearId) throw new BadRequestException('Se requiere el año lectivo');
+    const year = await this.prisma.academicYear.findFirst({
+      where: { id: academicYearId, institutionId },
+      select: { id: true, startDate: true, endDate: true },
+    });
+    if (!year) throw new NotFoundException('Año lectivo no encontrado');
+    return year;
+  }
+
+  /** El grupo, por su sede: `Group` no lleva `institutionId` propio. */
+  private async groupInScope(institutionId: string, groupId: string) {
+    if (!groupId) throw new BadRequestException('Se requiere el grupo');
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, campus: { institutionId } },
+      select: { id: true, campusId: true },
+    });
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+    return group;
+  }
+
+  /** La materia, por su área: `Subject` no lleva `institutionId` propio. */
+  private async subjectInScope(institutionId: string, subjectId: string) {
+    const subject = await this.prisma.subject.findFirst({
+      where: { id: subjectId, area: { institutionId } },
+      select: { id: true },
+    });
+    if (!subject) throw new NotFoundException('Asignatura no encontrada');
+    return subject;
+  }
 
   /**
    * M-3: impide modificar asistencia de una fecha que cae dentro de un período FINALIZED.
@@ -38,104 +127,145 @@ export class AttendanceService {
     }
   }
 
-  async recordBulk(dto: RecordAttendanceDto, actor?: AttendanceAuditActor) {
-    const date = new Date(dto.date);
-    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: dto.teacherAssignmentId }, select: { institutionId: true, academicYearId: true } });
-    const instId = ta!.institutionId;
-    await this.guardAttendanceDateNotFinalized(ta!.academicYearId, date);
+  /**
+   * Registro masivo de asistencia.
+   *
+   * La institución la pone el ACTOR. Antes se cargaba la asignación por id **sin institución** y de
+   * esa fila se deducían el colegio y el año: con el id de otra institución se escribía asistencia
+   * y auditoría dentro de ella.
+   *
+   * Las matrículas tienen que ser de la misma institución **y del grupo y año de la asignación**:
+   * sin eso se podía colgar un registro de un estudiante de otro curso —o de otro colegio— a una
+   * asignación propia. Registro y auditoría van en una sola transacción, revalidando dentro.
+   */
+  async recordBulk(dto: RecordAttendanceDto, institutionId: string, actor?: AttendanceAuditActor) {
+    const date = this.fecha(dto.date);
+    const assignment = await this.assignmentInScope(institutionId, dto.teacherAssignmentId);
+    await this.guardAttendanceDateNotFinalized(assignment.academicYearId, date);
+
+    const registros = Array.isArray(dto.records) ? dto.records : [];
+    if (registros.length === 0) throw new BadRequestException('No se recibió ningún registro de asistencia');
+
+    const enrollmentIds = [...new Set(registros.map((r) => r.studentEnrollmentId))];
+    const validas = await this.prisma.studentEnrollment.findMany({
+      where: {
+        id: { in: enrollmentIds },
+        institutionId,
+        groupId: assignment.groupId,
+        academicYearId: assignment.academicYearId,
+        group: { campus: { institutionId } },
+      },
+      select: { id: true },
+    });
+    if (validas.length !== enrollmentIds.length) throw new NotFoundException('Matrícula no encontrada');
 
     // Estado previo (para auditoría forense: estado anterior vs nuevo)
-    const enrollmentIds = dto.records.map((r) => r.studentEnrollmentId);
     const existing = await this.prisma.attendanceRecord.findMany({
-      where: { teacherAssignmentId: dto.teacherAssignmentId, date, studentEnrollmentId: { in: enrollmentIds } },
-      select: { studentEnrollmentId: true, status: true },
+      where: { institutionId, teacherAssignmentId: dto.teacherAssignmentId, date, studentEnrollmentId: { in: enrollmentIds } },
+      select: { id: true, studentEnrollmentId: true, status: true },
     });
-    const prevMap = new Map(existing.map((e) => [e.studentEnrollmentId, e.status as string]));
+    const prevMap = new Map(existing.map((e) => [e.studentEnrollmentId, { id: e.id, status: e.status as string }]));
 
-    const operations = dto.records.map((record) =>
-      this.prisma.attendanceRecord.upsert({
-        where: {
-          teacherAssignmentId_studentEnrollmentId_date: {
-            teacherAssignmentId: dto.teacherAssignmentId,
-            studentEnrollmentId: record.studentEnrollmentId,
-            date,
-          },
-        },
-        update: {
-          status: record.status,
-          observations: record.observations,
-        },
-        create: {
-          institutionId: instId,
-          teacherAssignmentId: dto.teacherAssignmentId,
-          studentEnrollmentId: record.studentEnrollmentId,
-          date,
-          status: record.status,
-          observations: record.observations,
-        },
-      }),
-    );
+    return this.prisma.$transaction(async () => {
+      // Revalidación DENTRO de la transacción: cierra la carrera entre la guarda y la escritura.
+      const sigueSiendoPropia = await this.prisma.teacherAssignment.count({
+        where: { id: dto.teacherAssignmentId, institutionId },
+      });
+      if (sigueSiendoPropia !== 1) throw new NotFoundException('Asignación no encontrada');
 
-    const results = await this.prisma.$transaction(operations);
+      const results: any[] = [];
+      const auditEvents: AttendanceAuditEventInput[] = [];
 
-    // Auditoría: CREATE si no existía; UPDATE solo si el estado cambió
-    const auditEvents: AttendanceAuditEventInput[] = [];
-    dto.records.forEach((record, i) => {
-      const prev = prevMap.get(record.studentEnrollmentId);
-      const saved: any = results[i];
-      if (prev === undefined) {
-        auditEvents.push({
-          institutionId: instId, action: 'CREATE', attendanceRecordId: saved?.id,
-          studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: dto.teacherAssignmentId,
-          date, previousStatus: null, newStatus: record.status,
-        });
-      } else if (prev !== record.status) {
-        auditEvents.push({
-          institutionId: instId, action: 'UPDATE', attendanceRecordId: saved?.id,
-          studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: dto.teacherAssignmentId,
-          date, previousStatus: prev, newStatus: record.status,
-        });
+      for (const record of registros) {
+        const previo = prevMap.get(record.studentEnrollmentId);
+        if (previo) {
+          // `upsert` por la clave única sola cruzaría instituciones si dos filas compartieran
+          // clave: se actualiza acotado por institución.
+          const filas = await this.prisma.attendanceRecord.updateMany({
+            where: { id: previo.id, institutionId },
+            data: { status: record.status, observations: record.observations },
+          });
+          if (filas.count !== 1) throw new NotFoundException('Registro de asistencia no encontrado');
+          results.push({ id: previo.id, studentEnrollmentId: record.studentEnrollmentId, status: record.status });
+          if (previo.status !== record.status) {
+            auditEvents.push({
+              institutionId, action: 'UPDATE', attendanceRecordId: previo.id,
+              studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: dto.teacherAssignmentId,
+              date, previousStatus: previo.status, newStatus: record.status,
+            });
+          }
+        } else {
+          const creado = await this.prisma.attendanceRecord.create({
+            data: {
+              institutionId,
+              teacherAssignmentId: dto.teacherAssignmentId,
+              studentEnrollmentId: record.studentEnrollmentId,
+              date,
+              status: record.status,
+              observations: record.observations,
+            },
+          });
+          results.push(creado);
+          auditEvents.push({
+            institutionId, action: 'CREATE', attendanceRecordId: creado.id,
+            studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: dto.teacherAssignmentId,
+            date, previousStatus: null, newStatus: record.status,
+          });
+        }
       }
-    });
-    await this.attendanceAudit.recordMany(auditEvents, actor);
 
-    return results;
+      await this.attendanceAudit.recordMany(auditEvents, actor);
+      return results;
+    });
   }
 
-  async update(id: string, dto: UpdateAttendanceDto, actor?: AttendanceAuditActor) {
-    const record = await this.prisma.attendanceRecord.findUnique({
-      where: { id },
+  /**
+   * Corrige un registro. Antes se cargaba y se actualizaba por id: con el id de otra institución se
+   * editaba su asistencia y se escribía su auditoría. La fila se busca acotada —también por la
+   * relación, por si una FK histórica quedó incoherente— y la escritura va con `updateMany` sobre
+   * la misma institución. Solo se editan estado y observaciones.
+   */
+  async update(id: string, dto: UpdateAttendanceDto, institutionId: string, actor?: AttendanceAuditActor) {
+    const record = await this.prisma.attendanceRecord.findFirst({
+      where: {
+        id, institutionId,
+        teacherAssignment: { institutionId },
+        studentEnrollment: { institutionId },
+      },
       select: {
         date: true, status: true, institutionId: true,
         studentEnrollmentId: true, teacherAssignmentId: true,
         teacherAssignment: { select: { academicYearId: true } },
       },
     });
-    if (record?.teacherAssignment) {
-      await this.guardAttendanceDateNotFinalized(record.teacherAssignment.academicYearId, record.date);
-    }
-    const result = await this.prisma.attendanceRecord.update({
-      where: { id },
-      data: {
-        status: dto.status,
-        observations: dto.observations,
-      },
+    if (!record) throw new NotFoundException('Registro de asistencia no encontrado');
+    await this.guardAttendanceDateNotFinalized(record.teacherAssignment.academicYearId, record.date);
+
+    return this.prisma.$transaction(async () => {
+      const filas = await this.prisma.attendanceRecord.updateMany({
+        where: { id, institutionId },
+        data: { status: dto.status, observations: dto.observations },
+      });
+      if (filas.count !== 1) throw new NotFoundException('Registro de asistencia no encontrado');
+
+      if (record.status !== dto.status) {
+        await this.attendanceAudit.recordMany([{
+          institutionId, action: 'UPDATE', attendanceRecordId: id,
+          studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: record.teacherAssignmentId,
+          date: record.date, previousStatus: record.status as string, newStatus: dto.status,
+        }], actor);
+      }
+      return this.prisma.attendanceRecord.findFirst({ where: { id, institutionId } });
     });
-    if (record && record.status !== dto.status) {
-      await this.attendanceAudit.recordMany([{
-        institutionId: record.institutionId, action: 'UPDATE', attendanceRecordId: id,
-        studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: record.teacherAssignmentId,
-        date: record.date, previousStatus: record.status as string, newStatus: dto.status,
-      }], actor);
-    }
-    return result;
   }
 
-  async getByAssignmentAndDate(teacherAssignmentId: string, date: string) {
+  async getByAssignmentAndDate(teacherAssignmentId: string, date: string, institutionId: string) {
+    await this.assignmentInScope(institutionId, teacherAssignmentId);
     return this.prisma.attendanceRecord.findMany({
       where: {
+        institutionId,
         teacherAssignmentId,
-        date: new Date(date),
+        date: this.fecha(date),
       },
       include: {
         studentEnrollment: {
@@ -154,15 +284,19 @@ export class AttendanceService {
     });
   }
 
-  async getByStudent(studentEnrollmentId: string, startDate?: string, endDate?: string) {
+  async getByStudent(studentEnrollmentId: string, institutionId: string, startDate?: string, endDate?: string) {
+    await this.enrollmentInScope(institutionId, studentEnrollmentId);
+    const desde = this.fechaOpcional(startDate, 'fecha inicial');
+    const hasta = this.fechaOpcional(endDate, 'fecha final');
     return this.prisma.attendanceRecord.findMany({
       where: {
+        institutionId,
         studentEnrollmentId,
-        ...(startDate || endDate
+        ...(desde || hasta
           ? {
               date: {
-                ...(startDate && { gte: new Date(startDate) }),
-                ...(endDate && { lte: new Date(endDate) }),
+                ...(desde && { gte: desde }),
+                ...(hasta && { lte: hasta }),
               },
             }
           : {}),
@@ -219,33 +353,29 @@ export class AttendanceService {
     return summary;
   }
 
-  async getGroupAttendanceReport(teacherAssignmentId: string, startDate: string, endDate: string) {
-    const assignment = await this.prisma.teacherAssignment.findUnique({
-      where: { id: teacherAssignmentId },
-      include: {
-        group: true,
-        subject: true,
-      },
-    });
-
-    if (!assignment) {
-      throw new Error('Teacher assignment not found');
-    }
+  async getGroupAttendanceReport(teacherAssignmentId: string, startDate: string, endDate: string, institutionId: string) {
+    // Antes cargaba la asignación por id y, si no existía, lanzaba un `Error` genérico → 500.
+    const assignment = await this.assignmentInScope(institutionId, teacherAssignmentId);
+    const desde = this.fecha(startDate, 'fecha inicial');
+    const hasta = this.fecha(endDate, 'fecha final');
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         groupId: assignment.groupId,
         academicYearId: assignment.academicYearId,
         status: 'ACTIVE',
+        group: { campus: { institutionId } },
       },
       include: {
         student: true,
         attendanceRecords: {
           where: {
+            institutionId,
             teacherAssignmentId,
             date: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
+              gte: desde,
+              lte: hasta,
             },
           },
         },
@@ -287,14 +417,21 @@ export class AttendanceService {
 
   // Reporte de asistencia por grupo (para reportes administrativos)
   // OPTIMIZADO: 2 queries batch + agrupación en memoria (antes: N+1)
-  async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string; includeWithdrawn?: boolean }) {
+  async getReportByGroup(groupId: string, academicYearId: string, institutionId: string, params?: { startDate?: string; endDate?: string; subjectId?: string; includeWithdrawn?: boolean }) {
+    // Grupo, año y materia se validan ANTES de tocar matrículas o registros: el grupo se acota por
+    // su sede porque `Group` no tiene institución propia.
+    await this.groupInScope(institutionId, groupId);
+    await this.yearInScope(institutionId, academicYearId);
+    if (params?.subjectId) await this.subjectInScope(institutionId, params.subjectId);
     // QUERY 1: Obtener todos los estudiantes del grupo.
     // Por defecto solo matrículas ACTIVE. `includeWithdrawn` suma las retiradas:
     // su asistencia existe en la base y sin esta opción era invisible en todo reporte.
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         groupId,
         academicYearId,
+        group: { campus: { institutionId } },
         ...(params?.includeWithdrawn ? {} : { status: 'ACTIVE' }),
       },
       include: {
@@ -315,18 +452,24 @@ export class AttendanceService {
     // Cada extremo se aplica por separado: exigir ambos hacía que "desde X" sin
     // "hasta" se ignorara en silencio y el reporte saliera con todo el año.
     const dateFilter: any = {};
-    if (params?.startDate || params?.endDate) {
+    const desde = this.fechaOpcional(params?.startDate, 'fecha inicial');
+    const hasta = this.fechaOpcional(params?.endDate, 'fecha final');
+    if (desde || hasta) {
       dateFilter.date = {
-        ...(params?.startDate && { gte: new Date(params.startDate) }),
-        ...(params?.endDate && { lte: new Date(params.endDate) }),
+        ...(desde && { gte: desde }),
+        ...(hasta && { lte: hasta }),
       };
     }
 
     const allRecords = await this.prisma.attendanceRecord.findMany({
       where: {
+        institutionId,
         studentEnrollmentId: { in: enrollmentIds },
+        teacherAssignment: {
+          institutionId,
+          ...(params?.subjectId ? { subjectId: params.subjectId } : {}),
+        },
         ...dateFilter,
-        ...(params?.subjectId ? { teacherAssignment: { subjectId: params.subjectId } } : {}),
       },
     });
 
@@ -372,19 +515,25 @@ export class AttendanceService {
   // OPTIMIZADO: 3 queries batch + agrupación en memoria (antes: N+1 doble por grupo y asignatura)
   async getConsolidatedReport(params: {
     academicYearId: string;
-    institutionId?: string;
+    institutionId: string;
     startDate?: string;
     endDate?: string;
     subjectId?: string;
     includeWithdrawn?: boolean;
   }) {
+    // La institución ya no es opcional: antes, si el resolvedor no la daba, el reporte se armaba
+    // solo con el año y una petición con el año de otro colegio devolvía sus datos.
+    const institutionId = params.institutionId;
+    await this.yearInScope(institutionId, params.academicYearId);
+    if (params.subjectId) await this.subjectInScope(institutionId, params.subjectId);
     // QUERY 1: Obtener enrollments con grupo y grado (para mapear groupId → gradeName).
     // El academicYearId ya acota a una institución, pero se filtra también por
     // institutionId cuando el controlador lo resuelve: defensa en profundidad.
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         academicYearId: params.academicYearId,
-        ...(params.institutionId ? { institutionId: params.institutionId } : {}),
+        group: { campus: { institutionId } },
         ...(params.includeWithdrawn ? {} : { status: 'ACTIVE' }),
       },
       select: {
@@ -411,18 +560,24 @@ export class AttendanceService {
     // QUERY 2: Batch — TODOS los registros de asistencia del año con teacherAssignment.subjectId
     // Cada extremo del rango se aplica por separado (ver getReportByGroup).
     const dateFilter: any = {};
-    if (params.startDate || params.endDate) {
+    const desdeC = this.fechaOpcional(params.startDate, 'fecha inicial');
+    const hastaC = this.fechaOpcional(params.endDate, 'fecha final');
+    if (desdeC || hastaC) {
       dateFilter.date = {
-        ...(params.startDate && { gte: new Date(params.startDate) }),
-        ...(params.endDate && { lte: new Date(params.endDate) }),
+        ...(desdeC && { gte: desdeC }),
+        ...(hastaC && { lte: hastaC }),
       };
     }
 
     const allRecords = await this.prisma.attendanceRecord.findMany({
       where: {
+        institutionId,
         studentEnrollmentId: { in: enrollmentIds },
+        teacherAssignment: {
+          institutionId,
+          ...(params.subjectId ? { subjectId: params.subjectId } : {}),
+        },
         ...dateFilter,
-        ...(params.subjectId ? { teacherAssignment: { subjectId: params.subjectId } } : {}),
       },
       select: {
         studentEnrollmentId: true,
@@ -436,7 +591,7 @@ export class AttendanceService {
     // QUERY 3: Obtener nombres de asignaturas (1 query)
     const subjectIds = [...new Set(allRecords.map(r => r.teacherAssignment.subjectId))];
     const subjects = await this.prisma.subject.findMany({
-      where: { id: { in: subjectIds } },
+      where: { id: { in: subjectIds }, area: { institutionId } },
       select: { id: true, name: true },
     });
     const subjectNameMap = new Map(subjects.map(s => [s.id, s.name]));
@@ -498,15 +653,25 @@ export class AttendanceService {
   // OPTIMIZADO: 2 queries batch + agrupación en memoria (antes: N+1)
   async getTeacherComplianceReport(params: {
     academicYearId: string;
+    institutionId: string;
     teacherId?: string;
     groupId?: string;
     subjectId?: string;
     startDate?: string;
     endDate?: string;
   }) {
+    // Año, grupo y materia se validan antes de listar asignaciones: con el año de otro colegio
+    // este reporte devolvía sus asignaciones, sus docentes y su cumplimiento.
+    const institutionId = params.institutionId;
+    await this.yearInScope(institutionId, params.academicYearId);
+    if (params.groupId) await this.groupInScope(institutionId, params.groupId);
+    if (params.subjectId) await this.subjectInScope(institutionId, params.subjectId);
+
     // QUERY 1: Obtener todas las asignaciones de docentes
     const whereClause: any = {
+      institutionId,
       academicYearId: params.academicYearId,
+      group: { campus: { institutionId } },
     };
 
     if (params.teacherId) whereClause.teacherId = params.teacherId;
@@ -529,15 +694,18 @@ export class AttendanceService {
 
     // QUERY 2: Batch — TODOS los registros de asistencia de todas las asignaciones
     const dateFilter: any = {};
-    if (params.startDate || params.endDate) {
+    const desdeT = this.fechaOpcional(params.startDate, 'fecha inicial');
+    const hastaT = this.fechaOpcional(params.endDate, 'fecha final');
+    if (desdeT || hastaT) {
       dateFilter.date = {
-        ...(params.startDate && { gte: new Date(params.startDate) }),
-        ...(params.endDate && { lte: new Date(params.endDate) }),
+        ...(desdeT && { gte: desdeT }),
+        ...(hastaT && { lte: hastaT }),
       };
     }
 
     const allRecords = await this.prisma.attendanceRecord.findMany({
       where: {
+        institutionId,
         teacherAssignmentId: { in: assignmentIds },
         ...dateFilter,
       },
@@ -558,28 +726,27 @@ export class AttendanceService {
     // ─── Calcular clases programadas usando AttendanceSchedulingEngine ───
     // Cada extremo se resuelve por separado: con solo "desde" se tomaba todo el
     // año, y las clases programadas dejaban de cuadrar con las registradas.
+    // El año ya se validó arriba dentro de la institución: se reutiliza en vez de volver a
+    // consultarlo por id sin filtro.
+    const anio = await this.prisma.academicYear.findFirst({
+      where: { id: params.academicYearId, institutionId },
+      select: { startDate: true, endDate: true },
+    });
     let rangeStart: Date;
     let rangeEnd: Date;
-    if (params.startDate || params.endDate) {
-      const yearForRange = await this.prisma.academicYear.findUnique({
-        where: { id: params.academicYearId },
-        select: { startDate: true, endDate: true },
-      });
-      rangeStart = params.startDate ? new Date(params.startDate) : (yearForRange?.startDate || new Date(new Date().getFullYear(), 0, 1));
-      rangeEnd = params.endDate ? new Date(params.endDate) : (yearForRange?.endDate || new Date());
+    if (desdeT || hastaT) {
+      rangeStart = desdeT ?? (anio?.startDate || new Date(new Date().getFullYear(), 0, 1));
+      rangeEnd = hastaT ?? (anio?.endDate || new Date());
     } else {
-      const academicYear = await this.prisma.academicYear.findUnique({
-        where: { id: params.academicYearId },
-        select: { startDate: true, endDate: true },
-      });
-      rangeStart = academicYear?.startDate ? new Date(academicYear.startDate) : new Date();
-      rangeEnd = academicYear?.endDate ? new Date(academicYear.endDate) : new Date();
+      rangeStart = anio?.startDate ? new Date(anio.startDate) : new Date();
+      rangeEnd = anio?.endDate ? new Date(anio.endDate) : new Date();
     }
     const dateRange: DateRange = { start: rangeStart, end: rangeEnd };
 
     // QUERY 3: Obtener entradas de horario para las asignaciones (si existen)
     const scheduleEntries = await this.prisma.scheduleEntry.findMany({
       where: {
+        institutionId,
         teacherAssignmentId: { in: assignmentIds },
         academicYearId: params.academicYearId,
       },
@@ -665,6 +832,7 @@ export class AttendanceService {
   // Reporte detallado de asistencia
   async getDetailedReport(params: {
     academicYearId: string;
+    institutionId: string;
     groupId?: string;
     startDate?: string;
     endDate?: string;
@@ -675,20 +843,34 @@ export class AttendanceService {
     includeWithdrawn?: boolean;
     limit?: number;
   }) {
-    const whereClause: any = {};
+    // Cada referencia recibida se valida antes de contar y listar: año, grupo, materia y matrícula.
+    const institutionId = params.institutionId;
+    await this.yearInScope(institutionId, params.academicYearId);
+    if (params.groupId) await this.groupInScope(institutionId, params.groupId);
+    if (params.subjectId) await this.subjectInScope(institutionId, params.subjectId);
+    if (params.studentEnrollmentId) await this.enrollmentInScope(institutionId, params.studentEnrollmentId);
+
+    const whereClause: any = { institutionId };
 
     whereClause.studentEnrollment = {
+      institutionId,
       academicYearId: params.academicYearId,
+      group: { campus: { institutionId } },
       ...(params.groupId ? { groupId: params.groupId } : {}),
       // Coherente con el resto de reportes: por defecto solo matrículas ACTIVE.
       ...(params.includeWithdrawn ? {} : { status: 'ACTIVE' }),
     };
 
+    // La asignación SIEMPRE se acota, haya o no filtros de materia o docente.
+    whereClause.teacherAssignment = { institutionId };
+
     // Cada extremo del rango se aplica por separado (ver getReportByGroup).
-    if (params.startDate || params.endDate) {
+    const desdeD = this.fechaOpcional(params.startDate, 'fecha inicial');
+    const hastaD = this.fechaOpcional(params.endDate, 'fecha final');
+    if (desdeD || hastaD) {
       whereClause.date = {
-        ...(params.startDate && { gte: new Date(params.startDate) }),
-        ...(params.endDate && { lte: new Date(params.endDate) }),
+        ...(desdeD && { gte: desdeD }),
+        ...(hastaD && { lte: hastaD }),
       };
     }
 

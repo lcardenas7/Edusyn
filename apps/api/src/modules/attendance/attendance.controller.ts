@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Put, Get, Body, Param, Query, UseGuards, Request, BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,8 +6,19 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AttendanceService } from './attendance.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { resolveInstitutionId, requireInstitutionId } from '../../common/utils/institution-resolver';
+import { requireInstitutionId, resolveInstitutionId } from '../../common/utils/institution-resolver';
 
+/** Roles con alcance institucional: ven y editan dentro de SU colegio. */
+const ROLES_INSTITUCIONALES = ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE'];
+
+/**
+ * Asistencia por asignatura (HTTP).
+ *
+ * **La institución la pone el ACTOR, nunca el recurso que nombra el cliente.** Antes solo
+ * `summary` la resolvía; las otras nueve pasaban la asignación, la matrícula, el grupo, el año o la
+ * materia recibidos directo al servicio, y el consolidado aceptaba incluso `institutionId` por
+ * query para cualquier usuario.
+ */
 @Controller('attendance')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AttendanceController {
@@ -16,44 +27,94 @@ export class AttendanceController {
     private readonly prisma: PrismaService,
   ) {}
 
+  /**
+   * Contexto institucional obligatorio, como error de petición y no de servidor.
+   *
+   * `requireInstitutionId` lanza un `Error` genérico cuando no puede resolver la institución y Nest
+   * lo traduce a **500**. Una sesión sin institución es una petición inválida, no un fallo del
+   * servidor. El resolvedor vive fuera de los ficheros que este encargo permite tocar, así que la
+   * comprobación se hace aquí, ANTES de la llamada real —que se conserva literal y sin envolver
+   * porque es la evidencia que lee el contrato estructural de rutas—. Para un usuario normal
+   * `resolveInstitutionId` no consulta la base: lee el claim del JWT.
+   */
+  private async exigeContexto(req: any, institutionIdSolicitada?: string): Promise<void> {
+    const resuelta = await resolveInstitutionId(this.prisma as any, req, institutionIdSolicitada);
+    if (!resuelta) throw new BadRequestException('No se pudo determinar la institución. Cierre sesión y vuelva a iniciar.');
+  }
+
   /** Actor (quién hace el cambio) del JWT para la auditoría forense. */
   private actorFrom(req: any): { userId?: string; name?: string; role?: string } {
+    const roles = this.rolesOf(req);
+    return { userId: req?.user?.id, name: req?.user?.email, role: roles.join(', ') || undefined };
+  }
+
+  private rolesOf(req: any): string[] {
     const roles = req?.user?.roles;
-    const role = Array.isArray(roles)
-      ? roles.map((r: any) => (typeof r === 'string' ? r : r?.role?.name || r?.roleName || r?.name)).filter(Boolean).join(', ')
-      : undefined;
-    return { userId: req?.user?.id, name: req?.user?.email, role: role || undefined };
+    return Array.isArray(roles)
+      ? roles.map((r: any) => (typeof r === 'string' ? r : r?.role?.name || r?.roleName || r?.name)).filter(Boolean)
+      : [];
+  }
+
+  /** ¿El actor tiene alcance institucional, o es una familia/estudiante? */
+  private tieneAlcanceInstitucional(req: any): boolean {
+    return req?.user?.isSuperAdmin === true || this.rolesOf(req).some((r) => ROLES_INSTITUCIONALES.includes(r));
+  }
+
+  /**
+   * Un ESTUDIANTE solo consulta la matrícula ligada a SU sesión.
+   *
+   * Las rutas `by-student` y `summary` admiten el rol ESTUDIANTE, y con la matrícula de un
+   * compañero devolvían su asistencia. La comprobación va **dentro de la institución** y responde
+   * 404 —igual que un recurso ajeno— para no revelar que la matrícula existe.
+   */
+  private async assertMatriculaDelActor(req: any, institutionId: string, studentEnrollmentId: string) {
+    if (this.tieneAlcanceInstitucional(req)) return;
+    const propia = await this.prisma.studentEnrollment.count({
+      where: { id: studentEnrollmentId, institutionId, student: { userId: req?.user?.id, institutionId } },
+    });
+    if (propia !== 1) throw new NotFoundException('Matrícula no encontrada');
   }
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  recordBulk(@Body() dto: RecordAttendanceDto, @Request() req: any) {
-    return this.attendanceService.recordBulk(dto, this.actorFrom(req));
+  async recordBulk(@Body() dto: RecordAttendanceDto, @Request() req: any) {
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.attendanceService.recordBulk(dto, institutionId, this.actorFrom(req));
   }
 
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto, @Request() req: any) {
-    return this.attendanceService.update(id, dto, this.actorFrom(req));
+  async update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto, @Request() req: any) {
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.attendanceService.update(id, dto, institutionId, this.actorFrom(req));
   }
 
   @Get('by-assignment/:teacherAssignmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  getByAssignmentAndDate(
+  async getByAssignmentAndDate(
+    @Request() req: any,
     @Param('teacherAssignmentId') teacherAssignmentId: string,
     @Query('date') date: string,
   ) {
-    return this.attendanceService.getByAssignmentAndDate(teacherAssignmentId, date);
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.attendanceService.getByAssignmentAndDate(teacherAssignmentId, date, institutionId);
   }
 
   @Get('by-student/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
-  getByStudent(
+  async getByStudent(
+    @Request() req: any,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.attendanceService.getByStudent(studentEnrollmentId, startDate, endDate);
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    await this.assertMatriculaDelActor(req, institutionId, studentEnrollmentId);
+    return this.attendanceService.getByStudent(studentEnrollmentId, institutionId, startDate, endDate);
   }
 
   @Get('summary/:studentEnrollmentId')
@@ -63,7 +124,9 @@ export class AttendanceController {
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
+    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
+    await this.assertMatriculaDelActor(req, institutionId, studentEnrollmentId);
     return this.attendanceService.getStudentSummary(studentEnrollmentId, institutionId, academicTermId);
   }
 
@@ -78,7 +141,10 @@ export class AttendanceController {
     @Query('includeWithdrawn') includeWithdrawn?: string,
     @Query('institutionId') institutionId?: string,
   ) {
-    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    // `institutionId` de la query solo lo honra el resolvedor para SuperAdmin; a un usuario
+    // institucional se le ignora y se usa el de su sesión.
+    await this.exigeContexto(req, institutionId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.attendanceService.getConsolidatedReport({
       academicYearId,
       institutionId: instId,
@@ -91,7 +157,7 @@ export class AttendanceController {
 
   @Get('report/teacher-compliance')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
-  getTeacherComplianceReport(
+  async getTeacherComplianceReport(
     @Request() req: any,
     @Query('academicYearId') academicYearId: string,
     @Query('teacherId') teacherId?: string,
@@ -100,11 +166,16 @@ export class AttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const userRoles: string[] = (req.user?.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
-    const isAdminScope = userRoles.some((role) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(role));
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    // Límite existente que se conserva: un docente solo ve su propio cumplimiento.
+    const userRoles = this.rolesOf(req);
+    const isAdminScope = req.user?.isSuperAdmin === true
+      || userRoles.some((role) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(role));
 
     return this.attendanceService.getTeacherComplianceReport({
       academicYearId,
+      institutionId,
       teacherId: isAdminScope ? teacherId : req.user?.id,
       groupId,
       subjectId,
@@ -115,17 +186,21 @@ export class AttendanceController {
 
   @Get('report/:teacherAssignmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  getGroupAttendanceReport(
+  async getGroupAttendanceReport(
+    @Request() req: any,
     @Param('teacherAssignmentId') teacherAssignmentId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
-    return this.attendanceService.getGroupAttendanceReport(teacherAssignmentId, startDate, endDate);
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.attendanceService.getGroupAttendanceReport(teacherAssignmentId, startDate, endDate, institutionId);
   }
 
   @Get('report-by-group/:groupId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
-  getReportByGroup(
+  async getReportByGroup(
+    @Request() req: any,
     @Param('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,
     @Query('startDate') startDate?: string,
@@ -133,7 +208,9 @@ export class AttendanceController {
     @Query('subjectId') subjectId?: string,
     @Query('includeWithdrawn') includeWithdrawn?: string,
   ) {
-    return this.attendanceService.getReportByGroup(groupId, academicYearId, {
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.attendanceService.getReportByGroup(groupId, academicYearId, institutionId, {
       startDate,
       endDate,
       subjectId,
@@ -143,7 +220,8 @@ export class AttendanceController {
 
   @Get('detailed-report')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
-  getDetailedReport(
+  async getDetailedReport(
+    @Request() req: any,
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId?: string,
     @Query('startDate') startDate?: string,
@@ -155,8 +233,11 @@ export class AttendanceController {
     @Query('includeWithdrawn') includeWithdrawn?: string,
     @Query('limit') limit?: string,
   ) {
+    await this.exigeContexto(req);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.getDetailedReport({
       academicYearId,
+      institutionId,
       groupId,
       startDate,
       endDate,
