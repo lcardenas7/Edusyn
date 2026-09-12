@@ -23,7 +23,16 @@ export interface AttendanceAuditEventInput {
 
 /**
  * Registro forense de cambios de asistencia (append-only).
- * Regla de oro: auditar NUNCA debe romper el registro de asistencia.
+ *
+ * **Cambio 2026-09-11.** La regla anterior era «auditar nunca debe romper el registro de
+ * asistencia»: el fallo se tragaba con un `catch` y solo quedaba una línea de log. Sus dos
+ * llamadores escriben la asistencia y la auditoría dentro de la MISMA transacción, así que
+ * tragarse el error dejaba exactamente lo que el encargo prohíbe: la nota de asistencia cambiada
+ * y ningún rastro de quién la cambió —una escritura parcial disfrazada de éxito.
+ *
+ * Ahora el fallo se registra y **se propaga**: la transacción revierte y el usuario recibe un
+ * error en vez de un cambio sin trazabilidad. Es un cambio de comportamiento deliberado; queda
+ * documentado en `docs/AUDITORIA_AISLAMIENTO_ATTENDANCE.md`.
  */
 @Injectable()
 export class AttendanceAuditService {
@@ -52,7 +61,10 @@ export class AttendanceAuditService {
         })),
       });
     } catch (err: any) {
+      // Se deja rastro en el log Y se propaga: quien llama está dentro de una transacción y debe
+      // revertir la escritura de asistencia que acaba de hacer.
       this.logger.error(`No se pudo registrar auditoría de asistencia (${events.length} eventos): ${err?.message || err}`);
+      throw err;
     }
   }
 }
