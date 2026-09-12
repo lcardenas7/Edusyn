@@ -4,7 +4,14 @@ import { LearningIdentityService } from '../gamification/learning-identity.servi
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
 import { ClassroomActor, ClassroomTenantAccessService } from './classroom-tenant-access.service';
-import { CreateClassroomDto, UpdateClassroomDto } from './dto/classroom-b1.dto';
+import {
+  AssignStudentsDto,
+  CreateActivityDto,
+  CreateClassroomDto,
+  PublishActivityDto,
+  UpdateActivityDto,
+  UpdateClassroomDto,
+} from './dto/classroom-b1.dto';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
 import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
@@ -531,27 +538,9 @@ export class ClassroomService {
   // ACTIVITIES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async createActivity(classroomId: string, teacherId: string, dto: {
-    sectionId?: string | null;
-    academicTermId?: string | null;
-    type: string;
-    title: string;
-    description?: string;
-    maxScore?: number;
-    dueDate?: string | null;
-    openDate?: string | null;
-    allowLateSubmit?: boolean;
-    attachmentUrl?: string;
-    attachmentName?: string;
-    shuffleQuestions?: boolean;
-    showResults?: boolean;
-    maxAttempts?: number;
-    timeLimitMinutes?: number;
-    rubricId?: string;
-    gameType?: string; // juego suelto (WORDSEARCH/CROSSWORD): marca para rotular sin abrir la lección
-    audioResponse?: boolean; // TASK con respuesta en audio: el alumno graba/sube un audio
-  }) {
-    const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
+  async createActivity(actor: ClassroomActor, classroomId: string, dto: CreateActivityDto) {
+    const classroom = await this.access.classroomInScope(actor, classroomId);
+    this.access.assertCanManageClassroom(actor, classroom);
     // Sección OPCIONAL: si se pasa, debe pertenecer al aula; si no, actividad sin sección.
     if (dto.sectionId) {
       const section = await this.prisma.classroomSection.findFirst({
@@ -599,8 +588,19 @@ export class ClassroomService {
     });
   }
 
-  async listActivities(classroomId: string, userId: string, role: 'teacher' | 'student') {
+  async listActivities(actor: ClassroomActor, classroomId: string) {
+    // 404 para aula ajena/inexistente/incoherente ANTES de listar nada.
+    const scope = await this.access.classroomInScope(actor, classroomId);
+    const userId = actor.userId;
+    // La rama la decide el JWT (roles de la sesión), NUNCA el query `role` del
+    // cliente: antes omitirlo llevaba a un estudiante por la rama docente y le
+    // mostraba borradores y conteos de calificación.
+    const role: 'teacher' | 'student' = actor.roles.includes('ESTUDIANTE') ? 'student' : 'teacher';
+
     if (role === 'teacher') {
+      // La rama docente exige gestionar el aula: en alcance sin ser el docente → 403
+      // (antes cualquier DOCENTE/COORDINADOR/ACUDIENTE de cualquier colegio la veía).
+      this.access.assertCanManageClassroom(actor, scope);
       // Teachers see all activities EXCEPT las propias de una ruta (isRouteScoped),
       // que se gestionan desde el mapa de la ruta, no en esta lista.
       const activities = await this.prisma.classroomActivity.findMany({
@@ -634,16 +634,15 @@ export class ClassroomService {
     // Students see only published activities — ordered by publication date (newest first).
     // Las propias de una ruta se hacen desde el mapa de la ruta, no en esta lista.
     //
-    // La matrícula se resuelve ANTES de consultar: hace falta tanto para ocultar las
-    // actividades restringidas a estudiantes concretos (recuperación, refuerzo) como
-    // para el candado por dependencias.
-    const enr = await this.resolveStudentEnrollment(classroomId, userId);
+    // La matrícula se resuelve ANTES de consultar y es OBLIGATORIA: sin matrícula
+    // ACTIVA compatible (institución + año + grupo del aula) se responde 404 para no
+    // revelar que el aula existe. Antes un estudiante de otro colegio veía las
+    // actividades publicadas no restringidas de cualquier aula.
+    const enr = await this.access.studentEnrollmentInClassroom(actor, scope);
+    if (!enr) throw new NotFoundException('Aula no encontrada');
 
     // Actividad restringida (isRestrictedToAssigned) → solo la ven los asignados.
-    // Sin matrícula resuelta no se puede probar la asignación: se muestran solo las abiertas.
-    const assignedFilter = enr
-      ? { OR: [{ isRestrictedToAssigned: false }, { assignedStudents: { some: { studentEnrollmentId: enr } } }] }
-      : { isRestrictedToAssigned: false };
+    const assignedFilter = { OR: [{ isRestrictedToAssigned: false }, { assignedStudents: { some: { studentEnrollmentId: enr } } }] };
 
     const activities = await this.prisma.classroomActivity.findMany({
       where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false, ...assignedFilter },
@@ -664,33 +663,12 @@ export class ClassroomService {
     });
 
     // Estado de candado por dependencias (Fase 4). Backend autoritativo; la UI solo pinta.
-    // Sin reglas o sin matrícula → todo libre (retrocompatible).
-    let gate = new Map<string, { locked: boolean; requirements: any[] }>();
-    if (enr) gate = await this.gating.evaluateForStudent(classroomId, enr);
+    const gate = await this.gating.evaluateForStudent(classroomId, enr);
 
     return activities.map((a) => {
       const g = gate.get(a.id);
       return { ...a, locked: g?.locked ?? false, requirements: g?.requirements ?? [] };
     });
-  }
-
-  /** Enrollment ACTIVO del estudiante en el aula (por grupo/año del teacherAssignment). */
-  private async resolveStudentEnrollment(classroomId: string, userId: string): Promise<string | null> {
-    const cr = await this.prisma.classroom.findUnique({
-      where: { id: classroomId },
-      select: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
-    });
-    if (!cr) return null;
-    const enrollment = await this.prisma.studentEnrollment.findFirst({
-      where: {
-        student: { userId },
-        groupId: cr.teacherAssignment.groupId,
-        academicYearId: cr.teacherAssignment.academicYearId,
-        status: 'ACTIVE',
-      },
-      select: { id: true },
-    });
-    return enrollment?.id ?? null;
   }
 
   /** Mapa activityId → prerrequisitos configurados (con título/condición) del aula. */
@@ -720,54 +698,61 @@ export class ClassroomService {
 
   /** Reemplaza el conjunto de prerrequisitos de una actividad (Fase 4). */
   async setActivityDependencies(
+    actor: ClassroomActor,
     activityId: string,
-    teacherId: string,
     prerequisites: { prerequisiteId: string; condition?: string; minScore?: number | null }[],
   ) {
-    const activity = await this.validateActivityOwnership(activityId, teacherId);
-    const classroomId = activity.classroomId;
+    // Guarda + validaciones + escrituras en UNA transacción interactiva (antes era
+    // $transaction([...]) de arrays sin guarda institucional). Un lote mixto con un
+    // prerrequisito ajeno revienta completo: 404 y no se escribe nada.
+    const classroomId = await this.prisma.$transaction(async (tx) => {
+      const activity = await this.access.activityInScope(actor, activityId, tx);
+      this.access.assertCanManageClassroom(actor, activity.classroom);
 
-    const validIds = new Set(
-      (await this.prisma.classroomActivity.findMany({ where: { classroomId }, select: { id: true } })).map((a) => a.id),
-    );
-
-    // Grafo actual SIN las aristas de esta actividad (se reemplazan).
-    const otherEdges = (await this.gating.getClassroomEdges(classroomId)).filter((e) => e.activityId !== activityId);
-    const accepted: DependencyEdge[] = [...otherEdges];
-
-    const valid = ['SUBMITTED', 'GRADED', 'MIN_SCORE', 'COMPLETED'];
-    const clean: { prerequisiteId: string; condition: string; minScore: number | null }[] = [];
-    const seen = new Set<string>();
-    for (const p of prerequisites || []) {
-      const prerequisiteId = p?.prerequisiteId;
-      if (!prerequisiteId || seen.has(prerequisiteId)) continue;
-      seen.add(prerequisiteId);
-      if (prerequisiteId === activityId) throw new BadRequestException('Una actividad no puede depender de sí misma');
-      if (!validIds.has(prerequisiteId)) throw new BadRequestException('El prerrequisito debe pertenecer a la misma aula');
-      if (validateNewDependency(accepted, activityId, prerequisiteId) === 'CYCLE') {
-        throw new BadRequestException('Esa configuración crearía un ciclo de dependencias');
+      // Dedup silencioso (comportamiento previo, gana la primera ocurrencia) y luego
+      // validación por id: ajeno/inexistente → 404 primero; misma institución pero
+      // otra aula → 400; auto-dependencia → 400.
+      const byId = new Map<string, { condition?: string; minScore?: number | null }>();
+      for (const p of prerequisites || []) {
+        const prerequisiteId = p?.prerequisiteId;
+        if (!prerequisiteId || byId.has(prerequisiteId)) continue;
+        byId.set(prerequisiteId, p);
       }
-      const condition = valid.includes(p.condition || '') ? (p.condition as string) : 'SUBMITTED';
-      const minScore = condition === 'MIN_SCORE' && p.minScore != null ? p.minScore : null;
-      accepted.push({ activityId, prerequisiteId });
-      clean.push({ prerequisiteId, condition, minScore });
-    }
+      await this.access.assertDependenciesValid(actor, activity, [...byId.keys()], tx);
 
-    await this.prisma.$transaction([
-      this.prisma.activityDependency.deleteMany({ where: { activityId } }),
-      ...clean.map((c) =>
-        this.prisma.activityDependency.create({
+      // Grafo actual SIN las aristas de esta actividad (se reemplazan), leído en tx.
+      const otherEdges = (await this.gating.getClassroomEdges(activity.classroomId, tx)).filter((e) => e.activityId !== activityId);
+      const accepted: DependencyEdge[] = [...otherEdges];
+
+      const valid = ['SUBMITTED', 'GRADED', 'MIN_SCORE', 'COMPLETED'];
+      const clean: { prerequisiteId: string; condition: string; minScore: number | null }[] = [];
+      for (const [prerequisiteId, p] of byId) {
+        if (validateNewDependency(accepted, activityId, prerequisiteId) === 'CYCLE') {
+          throw new BadRequestException('Esa configuración crearía un ciclo de dependencias');
+        }
+        const condition = valid.includes(p.condition || '') ? (p.condition as string) : 'SUBMITTED';
+        const minScore = condition === 'MIN_SCORE' && p.minScore != null ? p.minScore : null;
+        accepted.push({ activityId, prerequisiteId });
+        clean.push({ prerequisiteId, condition, minScore });
+      }
+
+      await tx.activityDependency.deleteMany({ where: { activityId } });
+      for (const c of clean) {
+        await tx.activityDependency.create({
           data: { activityId, prerequisiteId: c.prerequisiteId, condition: c.condition as any, minScore: c.minScore },
-        }),
-      ),
-    ]);
+        });
+      }
+      return activity.classroomId;
+    });
 
     return (await this.getDependencyMapForClassroom(classroomId)).get(activityId) || [];
   }
 
-  async getActivity(activityId: string, userId: string, role: 'teacher' | 'student') {
-    const activity = await this.prisma.classroomActivity.findUnique({
-      where: { id: activityId },
+  async getActivity(actor: ClassroomActor, activityId: string) {
+    // 404 para actividad ajena/inexistente/incoherente ANTES de la lectura rica.
+    await this.access.activityInScope(actor, activityId);
+    const activity = await this.prisma.classroomActivity.findFirst({
+      where: { id: activityId, classroom: { institutionId: actor.institutionId } },
       include: {
         section: { select: { id: true, title: true } },
         classroom: {
@@ -787,12 +772,14 @@ export class ClassroomService {
         _count: { select: { submissions: true } },
       },
     });
-    if (!activity) throw new NotFoundException('Actividad no encontrada');
+    if (!activity) throw new NotFoundException('Actividad no encontrada'); // carrera
+
+    // La rama la decide el JWT, nunca el query `role` del cliente.
+    const role: 'teacher' | 'student' = actor.roles.includes('ESTUDIANTE') ? 'student' : 'teacher';
 
     if (role === 'teacher') {
-      if (activity.classroom.teacherAssignment.teacherId !== userId) {
-        throw new ForbiddenException('No tiene permisos sobre esta actividad');
-      }
+      // En alcance pero sin gestionar el aula → 403 (antes: 403 si teacherId ≠ userId).
+      this.access.assertCanManageClassroom(actor, activity.classroom);
       return activity;
     }
 
@@ -801,76 +788,86 @@ export class ClassroomService {
       throw new NotFoundException('Actividad no encontrada');
     }
 
+    // Matrícula ACTIVA compatible OBLIGATORIA: sin ella se responde 404 (no revelar
+    // existencia). Antes bastaba con que la actividad fuera pública y no restringida,
+    // incluso para un estudiante de otro colegio.
+    const enr = await this.access.studentEnrollmentInClassroom(actor, activity.classroom);
+    if (!enr) throw new NotFoundException('Actividad no encontrada');
+
     // Restringida a estudiantes concretos: solo la abren los asignados. Se responde
     // 404 (no 403) para no revelar que la actividad existe.
     if (activity.isRestrictedToAssigned) {
-      const enr = await this.resolveStudentEnrollment(activity.classroom.id, userId);
-      const assigned = enr
-        ? await this.prisma.activityAssignment.count({ where: { activityId, studentEnrollmentId: enr } })
-        : 0;
+      const assigned = await this.prisma.activityAssignment.count({ where: { activityId, studentEnrollmentId: enr } });
       if (!assigned) throw new NotFoundException('Actividad no encontrada');
     }
     return activity;
   }
 
-  async updateActivity(activityId: string, teacherId: string, dto: {
-    title?: string;
-    description?: string;
-    maxScore?: number;
-    dueDate?: string | null;
-    openDate?: string | null;
-    allowLateSubmit?: boolean;
-    isVisible?: boolean;
-    attachmentUrl?: string;
-    attachmentName?: string;
-  }) {
-    await this.validateActivityOwnership(activityId, teacherId);
+  async updateActivity(actor: ClassroomActor, activityId: string, dto: UpdateActivityDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const activity = await this.access.activityInScope(actor, activityId, tx);
+      this.access.assertCanManageClassroom(actor, activity.classroom);
 
-    const data: any = {};
-    if (dto.title !== undefined) data.title = dto.title;
-    if (dto.description !== undefined) data.description = dto.description;
-    if (dto.maxScore !== undefined) data.maxScore = dto.maxScore;
-    if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? parseClassroomDate(dto.dueDate) : null;
-    if (dto.openDate !== undefined) data.openDate = dto.openDate ? parseClassroomDate(dto.openDate) : null;
-    if (dto.allowLateSubmit !== undefined) data.allowLateSubmit = dto.allowLateSubmit;
-    if (dto.isVisible !== undefined) data.isVisible = dto.isVisible;
-    if (dto.attachmentUrl !== undefined) {
-      data.metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
-    }
+      const data: any = {};
+      if (dto.title !== undefined) data.title = dto.title;
+      if (dto.description !== undefined) data.description = dto.description;
+      if (dto.maxScore !== undefined) data.maxScore = dto.maxScore;
+      if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? parseClassroomDate(dto.dueDate) : null;
+      if (dto.openDate !== undefined) data.openDate = dto.openDate ? parseClassroomDate(dto.openDate) : null;
+      if (dto.allowLateSubmit !== undefined) data.allowLateSubmit = dto.allowLateSubmit;
+      if (dto.isVisible !== undefined) data.isVisible = dto.isVisible;
+      if (dto.attachmentUrl !== undefined) {
+        data.metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
+      }
 
-    return this.prisma.classroomActivity.update({
-      where: { id: activityId },
-      data,
-      include: {
-        section: { select: { id: true, title: true } },
-        _count: { select: { submissions: true } },
-      },
-    });
-  }
-
-  async publishActivity(activityId: string, teacherId: string, dto?: { scheduledPublishAt?: string }) {
-    await this.validateActivityOwnership(activityId, teacherId);
-
-    // Si se envía una fecha programada, no publicar aún
-    if (dto?.scheduledPublishAt) {
-      return this.prisma.classroomActivity.update({
-        where: { id: activityId },
-        data: { scheduledPublishAt: parseClassroomDate(dto.scheduledPublishAt), isPublished: false },
+      // Escritura acotada: nada de update por id desnudo; 404 si sale del alcance en carrera.
+      const result = await tx.classroomActivity.updateMany({
+        where: { id: activityId, classroom: { institutionId: actor.institutionId } },
+        data,
       });
-    }
+      if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
 
-    // Publicar inmediatamente y limpiar cualquier programación previa
-    return this.prisma.classroomActivity.update({
-      where: { id: activityId },
-      data: { isPublished: true, isVisible: true, scheduledPublishAt: null, publishedAt: new Date() },
+      return tx.classroomActivity.findUnique({
+        where: { id: activityId },
+        include: {
+          section: { select: { id: true, title: true } },
+          _count: { select: { submissions: true } },
+        },
+      });
     });
   }
 
-  async unpublishActivity(activityId: string, teacherId: string) {
-    await this.validateActivityOwnership(activityId, teacherId);
-    return this.prisma.classroomActivity.update({
-      where: { id: activityId },
-      data: { isPublished: false, scheduledPublishAt: null },
+  async publishActivity(actor: ClassroomActor, activityId: string, dto?: PublishActivityDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const activity = await this.access.activityInScope(actor, activityId, tx);
+      this.access.assertCanManageClassroom(actor, activity.classroom);
+
+      // Si se envía una fecha programada, no publicar aún; si no, publicar ya y
+      // limpiar cualquier programación previa (semántica previa conservada).
+      const data = dto?.scheduledPublishAt
+        ? { scheduledPublishAt: parseClassroomDate(dto.scheduledPublishAt), isPublished: false }
+        : { scheduledPublishAt: null, isPublished: true, isVisible: true, publishedAt: new Date() };
+
+      const result = await tx.classroomActivity.updateMany({
+        where: { id: activityId, classroom: { institutionId: actor.institutionId } },
+        data,
+      });
+      if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
+      return tx.classroomActivity.findUnique({ where: { id: activityId } });
+    });
+  }
+
+  async unpublishActivity(actor: ClassroomActor, activityId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const activity = await this.access.activityInScope(actor, activityId, tx);
+      this.access.assertCanManageClassroom(actor, activity.classroom);
+
+      const result = await tx.classroomActivity.updateMany({
+        where: { id: activityId, classroom: { institutionId: actor.institutionId } },
+        data: { isPublished: false, scheduledPublishAt: null },
+      });
+      if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
+      return tx.classroomActivity.findUnique({ where: { id: activityId } });
     });
   }
 
@@ -897,52 +894,74 @@ export class ClassroomService {
 
   /**
    * Asignar estudiantes específicos a una actividad (para recuperación, refuerzo, etc.)
+   *
+   * Guarda + validación de CADA destinatario + deleteMany + createMany + flag de
+   * restricción en UNA transacción interactiva. Un lote mixto (una matrícula ajena
+   * entre válidas) falla COMPLETO con 404 y no escribe nada; antes se aceptaban
+   * matrículas arbitrarias sin validar — riesgo cross-tenant de escritura.
    */
-  async assignStudentsToActivity(activityId: string, teacherId: string, dto: {
-    studentEnrollmentIds: string[];
-    isRestrictedToAssigned: boolean;
-  }) {
-    await this.validateActivityOwnership(activityId, teacherId);
+  async assignStudentsToActivity(actor: ClassroomActor, activityId: string, dto: AssignStudentsDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const activity = await this.access.activityInScope(actor, activityId, tx);
+      this.access.assertCanManageClassroom(actor, activity.classroom);
 
-    // Clear existing assignments
-    await this.prisma.activityAssignment.deleteMany({
-      where: { activityId },
-    });
+      // Cada matrícula debe ser compatible con el aula (institución + año + grupo).
+      for (const studentEnrollmentId of dto.studentEnrollmentIds) {
+        await this.access.enrollmentInScope(actor, studentEnrollmentId, activity.classroom, tx);
+      }
 
-    // Create new assignments
-    if (dto.studentEnrollmentIds.length > 0) {
-      await this.prisma.activityAssignment.createMany({
-        data: dto.studentEnrollmentIds.map(studentEnrollmentId => ({
-          activityId,
-          studentEnrollmentId,
-        })),
+      // Clear existing assignments
+      await tx.activityAssignment.deleteMany({
+        where: { activityId },
       });
-    }
 
-    // Update restriction flag
-    return this.prisma.classroomActivity.update({
-      where: { id: activityId },
-      data: { isRestrictedToAssigned: dto.isRestrictedToAssigned },
-      include: {
-        assignedStudents: {
-          include: {
-            studentEnrollment: {
-              include: { student: { select: { firstName: true, lastName: true, secondLastName: true } } },
+      // Create new assignments
+      if (dto.studentEnrollmentIds.length > 0) {
+        await tx.activityAssignment.createMany({
+          data: dto.studentEnrollmentIds.map(studentEnrollmentId => ({
+            activityId,
+            studentEnrollmentId,
+          })),
+        });
+      }
+
+      // Update restriction flag (escritura acotada, 404 si sale del alcance en carrera)
+      const result = await tx.classroomActivity.updateMany({
+        where: { id: activityId, classroom: { institutionId: actor.institutionId } },
+        data: { isRestrictedToAssigned: dto.isRestrictedToAssigned },
+      });
+      if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
+
+      return tx.classroomActivity.findUnique({
+        where: { id: activityId },
+        include: {
+          assignedStudents: {
+            include: {
+              studentEnrollment: {
+                include: { student: { select: { firstName: true, lastName: true, secondLastName: true } } },
+              },
             },
           },
         },
-      },
+      });
     });
   }
 
   /**
    * Obtener estudiantes asignados a una actividad
    */
-  async getActivityAssignments(activityId: string, teacherId: string) {
-    await this.validateActivityOwnership(activityId, teacherId);
+  async getActivityAssignments(actor: ClassroomActor, activityId: string) {
+    // 404 para actividad ajena ANTES de tocar PII; 403 en alcance sin gestionarla.
+    const activity = await this.access.activityInScope(actor, activityId);
+    this.access.assertCanManageClassroom(actor, activity.classroom);
 
     return this.prisma.activityAssignment.findMany({
-      where: { activityId },
+      where: {
+        activityId,
+        // Defensa adicional de lectura: filas históricas ajenas (escritas cuando el
+        // alta no validaba) no se devuelven aunque sigan colgadas de la actividad.
+        studentEnrollment: { institutionId: actor.institutionId },
+      },
       include: {
         studentEnrollment: {
           include: { student: { select: { id: true, firstName: true, lastName: true, secondLastName: true, photo: true } } },
@@ -954,9 +973,14 @@ export class ClassroomService {
   /**
    * Obtener estudiantes del aula para asignar a actividades
    */
-  async getClassroomStudentsForAssignment(classroomId: string, teacherId: string) {
-    const classroom = await this.prisma.classroom.findUnique({
-      where: { id: classroomId },
+  async getClassroomStudentsForAssignment(actor: ClassroomActor, classroomId: string) {
+    // 404 para aula ajena ANTES de tocar PII; 403 en alcance sin gestionarla
+    // (antes: 403 solo por teacherId, sin filtro institucional).
+    const classroom = await this.access.classroomInScope(actor, classroomId);
+    this.access.assertCanManageClassroom(actor, classroom);
+
+    const cr = await this.prisma.classroom.findFirst({
+      where: { id: classroomId, institutionId: actor.institutionId },
       select: {
         id: true,
         teacherAssignment: {
@@ -966,7 +990,7 @@ export class ClassroomService {
               select: {
                 id: true,
                 studentEnrollments: {
-                  where: { status: 'ACTIVE' },
+                  where: { status: 'ACTIVE', institutionId: actor.institutionId },
                   select: {
                     id: true,
                     student: { select: { id: true, firstName: true, lastName: true, secondLastName: true, photo: true } },
@@ -978,12 +1002,9 @@ export class ClassroomService {
         },
       },
     });
+    if (!cr) throw new NotFoundException('Aula no encontrada'); // carrera
 
-    if (!classroom || classroom.teacherAssignment.teacherId !== teacherId) {
-      throw new ForbiddenException('No tiene acceso a este aula');
-    }
-
-    return classroom.teacherAssignment.group.studentEnrollments.map(e => ({
+    return cr.teacherAssignment.group.studentEnrollments.map(e => ({
       enrollmentId: e.id,
       studentId: e.student.id,
       firstName: e.student.firstName,
@@ -993,22 +1014,29 @@ export class ClassroomService {
     }));
   }
 
-  async deleteActivity(activityId: string, teacherId: string, force = false) {
-    await this.validateActivityOwnership(activityId, teacherId);
+  async deleteActivity(actor: ClassroomActor, activityId: string, force = false) {
+    return this.prisma.$transaction(async (tx) => {
+      const activity = await this.access.activityInScope(actor, activityId, tx);
+      this.access.assertCanManageClassroom(actor, activity.classroom);
 
-    const submissionCount = await this.prisma.activitySubmission.count({ where: { activityId } });
+      const submissionCount = await tx.activitySubmission.count({ where: { activityId } });
 
-    if (submissionCount > 0 && !force) {
-      return {
-        success: false,
-        requiresConfirmation: true,
-        submissionCount,
-        message: `Esta actividad tiene ${submissionCount} entrega(s). ¿Está seguro de eliminarla? Se perderán todas las entregas y calificaciones.`,
-      };
-    }
+      if (submissionCount > 0 && !force) {
+        return {
+          success: false,
+          requiresConfirmation: true,
+          submissionCount,
+          message: `Esta actividad tiene ${submissionCount} entrega(s). ¿Está seguro de eliminarla? Se perderán todas las entregas y calificaciones.`,
+        };
+      }
 
-    await this.prisma.classroomActivity.delete({ where: { id: activityId } });
-    return { success: true };
+      // Borrado acotado por institución; 404 si sale del alcance en carrera.
+      const result = await tx.classroomActivity.deleteMany({
+        where: { id: activityId, classroom: { institutionId: actor.institutionId } },
+      });
+      if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
+      return { success: true };
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

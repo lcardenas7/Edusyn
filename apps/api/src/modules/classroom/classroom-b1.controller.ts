@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -6,7 +6,15 @@ import { ClassroomService } from './classroom.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { ClassroomActor } from './classroom-tenant-access.service';
-import { CreateClassroomDto, UpdateClassroomDto } from './dto/classroom-b1.dto';
+import {
+  AssignStudentsDto,
+  CreateActivityDto,
+  CreateClassroomDto,
+  PublishActivityDto,
+  SetActivityDependenciesDto,
+  UpdateActivityDto,
+  UpdateClassroomDto,
+} from './dto/classroom-b1.dto';
 
 /**
  * Classroom Bloque 1 — rutas blindadas (17/98).
@@ -101,5 +109,95 @@ export class ClassroomB1Controller {
   async getStudents(@Param('id') id: string, @Request() req: any) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.service.getStudents(this.actorFrom(req, institutionId), id);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ACTIVITIES Y DESTINATARIOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post(':id/activities')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async createActivity(@Param('id') classroomId: string, @Request() req: any, @Body() dto: CreateActivityDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.createActivity(this.actorFrom(req, institutionId), classroomId, dto);
+  }
+
+  @Get(':id/activities')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
+  async listActivities(@Param('id') classroomId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    // El query `role` ya no se lee: la rama se deriva de los roles del JWT.
+    return this.service.listActivities(this.actorFrom(req, institutionId), classroomId);
+  }
+
+  @Get('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
+  async getActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.getActivity(this.actorFrom(req, institutionId), activityId);
+  }
+
+  @Put('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() dto: UpdateActivityDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.updateActivity(this.actorFrom(req, institutionId), activityId, dto);
+  }
+
+  // Dependencias/prerrequisitos (Fase 4): reemplaza el conjunto de prerrequisitos
+  // de la actividad. Misma aula + institución, sin ciclo/duplicado/auto-dependencia.
+  @Put('activities/:activityId/dependencies')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async setActivityDependencies(
+    @Param('activityId') activityId: string,
+    @Request() req: any,
+    @Body() dto: SetActivityDependenciesDto,
+  ) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.setActivityDependencies(this.actorFrom(req, institutionId), activityId, dto.prerequisites || []);
+  }
+
+  @Put('activities/:activityId/publish')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async publishActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() dto?: PublishActivityDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.publishActivity(this.actorFrom(req, institutionId), activityId, dto);
+  }
+
+  @Put('activities/:activityId/unpublish')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async unpublishActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.unpublishActivity(this.actorFrom(req, institutionId), activityId);
+  }
+
+  @Put('activities/:activityId/assign-students')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async assignStudentsToActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() dto: AssignStudentsDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.assignStudentsToActivity(this.actorFrom(req, institutionId), activityId, dto);
+  }
+
+  @Get('activities/:activityId/assignments')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getActivityAssignments(@Param('activityId') activityId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.getActivityAssignments(this.actorFrom(req, institutionId), activityId);
+  }
+
+  @Get(':id/students-for-assignment')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getClassroomStudentsForAssignment(@Param('id') classroomId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.getClassroomStudentsForAssignment(this.actorFrom(req, institutionId), classroomId);
+  }
+
+  @Delete('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteActivity(@Param('activityId') activityId: string, @Request() req: any, @Query('force') force?: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    // `force` se conserva: es una bandera funcional (confirmar borrado con entregas),
+    // no un selector de privilegio como lo era `role`.
+    return this.service.deleteActivity(this.actorFrom(req, institutionId), activityId, force === 'true');
   }
 }

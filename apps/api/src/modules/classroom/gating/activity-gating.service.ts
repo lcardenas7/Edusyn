@@ -25,8 +25,8 @@ export class ActivityGatingService {
   ) {}
 
   /** Aristas de dependencia del aula (para validación de grafo). */
-  async getClassroomEdges(classroomId: string): Promise<DependencyEdge[]> {
-    const rows = await this.prisma.activityDependency.findMany({
+  async getClassroomEdges(classroomId: string, db: any = this.prisma): Promise<DependencyEdge[]> {
+    const rows = await db.activityDependency.findMany({
       where: { activity: { classroomId } },
       select: { activityId: true, prerequisiteId: true },
     });
