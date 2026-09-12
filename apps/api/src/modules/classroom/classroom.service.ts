@@ -58,7 +58,14 @@ export class ClassroomService {
     const assignmentIds = assignments.map(a => a.id);
 
     const classrooms = await this.prisma.classroom.findMany({
-      where: { teacherAssignmentId: { in: assignmentIds }, isActive: true },
+      where: {
+        teacherAssignmentId: { in: assignmentIds },
+        isActive: true,
+        // La institución también se exige en el aula misma: una fila histórica
+        // incoherente (aula de A colgada de una asignación de B) no se lista.
+        institutionId,
+        isPersonal: false,
+      },
       include: {
         teacherAssignment: {
           include: {
@@ -111,6 +118,10 @@ export class ClassroomService {
     const classrooms = await this.prisma.classroom.findMany({
       where: {
         isActive: true,
+        // Misma defensa que en listForTeacher: la institución se exige en el aula,
+        // no solo a través de la matrícula (filas incoherentes históricas fuera).
+        institutionId,
+        isPersonal: false,
         teacherAssignment: {
           OR: enrollments.map(e => ({
             groupId: e.groupId,
@@ -989,7 +1000,15 @@ export class ClassroomService {
               select: {
                 id: true,
                 studentEnrollments: {
-                  where: { status: 'ACTIVE', institutionId: actor.institutionId },
+                  // PII filtrada por la cadena del aula: grupo + AÑO + institución,
+                  // y el estudiante debe ser de la institución (una matrícula
+                  // incoherente que dice A pero cuelga de un estudiante de B queda fuera).
+                  where: {
+                    status: 'ACTIVE',
+                    institutionId: actor.institutionId,
+                    academicYearId: classroom.teacherAssignment.academicYearId,
+                    student: { institutionId: actor.institutionId },
+                  },
                   select: {
                     id: true,
                     student: { select: { id: true, firstName: true, lastName: true, secondLastName: true, photo: true } },
