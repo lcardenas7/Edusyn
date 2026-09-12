@@ -206,3 +206,20 @@ redundancia: las dos guardas hacen falta por separado.
 - **Otros módulos.** Matrículas, Plantillas, APD, Classroom, Evaluation, Observer, R1 y EduLab no
   se han tocado. Ninguna firma pública usada por Matrículas ha cambiado de forma incompatible:
   `getStudentSummary(studentEnrollmentId, institutionId, academicTermId?)` conserva su firma.
+
+---
+
+## 9. Revisión de integración de Astra — 2026-09-12
+
+La auditoría inicial afirmaba atomicidad, pero las operaciones usaban `this.prisma` dentro del
+callback y la auditoría escribía con el cliente raíz. El doble restauraba una instantánea aunque el
+servicio ignorara `tx`, así que no detectaba el defecto. La corrección `70726854` mueve al mismo
+cliente transaccional la guarda, matrículas, lectura previa, escrituras y auditoría; el fixture
+entrega un `tx` distinto y una prueba hace fallar expresamente cualquier escritura por el cliente
+raíz. También se validan las ramas grado, jornada/sede, año, estudiante y materia/área.
+
+El parche común propuesto por Claude se aplicó: `requireInstitutionId` produce 400 cuando una
+sesión no tiene contexto. Los controladores dejaron de resolver dos veces. La suite focal final es
+68 pruebas de servicio + 56 HTTP; el contrato estructural conserva 17/17 rutas directas. Una
+mutación posterior que dejó `assignmentInScope` en `where: { id }` hizo fallar cuatro casos A/B de
+servicio (lectura y reporte, en ambas direcciones); restaurada la guarda, 68/68 volvió a verde.

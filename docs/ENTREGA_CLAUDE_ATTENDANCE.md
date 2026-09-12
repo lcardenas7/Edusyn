@@ -251,3 +251,27 @@ Y un parche que **no** pude aplicar por estar fuera de los ficheros permitidos:
 - **Rendimiento** de las guardas en volumen real: no medido.
 - **`tutoring-attendance` no tiene auditoría forense** equivalente a `AttendanceAuditEvent`. No la
   he añadido porque sería una función nueva, no un blindaje. Queda señalado.
+
+---
+
+## 9. Revisión de integración de Astra — 2026-09-12
+
+La entrega no se integró sin cambios. La revisión encontró que los callbacks de las tres
+operaciones anunciadas como atómicas ignoraban el argumento `tx` y seguían leyendo/escribiendo con
+`this.prisma`; `AttendanceAuditService` también escribía con el cliente raíz. El fixture restauraba
+una instantánea global y por eso las pruebas de rollback pasaban sin distinguir ambos clientes.
+
+Corrección `70726854`:
+
+- validación, lectura previa, escritura y auditoría usan el mismo cliente `tx`;
+- el doble entrega un objeto transaccional distinto y una prueba prohíbe las escrituras del cliente
+  raíz, por lo que revertir al patrón anterior vuelve la suite roja;
+- asignación, matrícula y grupo validan también grado, jornada/sede, año, estudiante y materia/área,
+  de modo que una relación histórica incoherente no se acepta por tener una sola rama correcta;
+- `requireInstitutionId` lanza `BadRequestException` desde el helper común. Se retiró el doble
+  `resolveInstitutionId` de los controladores de Attendance y quedó una sola resolución por ruta;
+- la prueba de carrera se adaptó a la guarda transaccional real.
+
+Resultado focal revisado: 124 pruebas de Attendance (68 servicio, 56 HTTP), 15 del resolvedor y 13
+del contrato estructural, todas verdes. Los resultados completos se registran en
+`ESTADO_BLINDAJE.md` y la bitácora al publicar.

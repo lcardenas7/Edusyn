@@ -1,12 +1,12 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-11. Base publicada anterior: origin/staging e229b21e; Learning Route integrado y verificado hasta eaa57408.
+Fecha: 2026-09-12. Attendance integrado sobre origin/staging 009fb852 y revisado en 70726854 + ddb1f058; este estado forma parte del lote de publicación a staging.
 
-Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas y Learning Route están publicados. Cortes preventivos queda cerrado en aplicación: sus 8 rutas institucionales tienen 38 pruebas de servicio y 46 HTTP. Attendance es el frente delegado a Claude y Observer el siguiente frente propio. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
+Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route y Cortes preventivos están publicados. Attendance queda cerrado en aplicación tras revisar la entrega de Claude: 17 rutas, transacciones reales y 124 pruebas propias (68 de servicio y 56 HTTP), además de 15 del resolvedor común. Observer es el siguiente frente delegado. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1113 declaraciones de ruta (incluye SSE y dos rutas de app), 315 con llamada directa, incondicional y esperada a requireInstitutionId, 735 pendientes de calibración y 63 excepciones no institucionales.
+1113 declaraciones de ruta (incluye SSE y dos rutas de app), 331 con llamada directa, incondicional y esperada a requireInstitutionId, 719 pendientes de calibración y 63 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -22,7 +22,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | academic | 159 | 94 | 63 | 2 | Parcial: Matrículas y Plantillas corregidas con pruebas de servicio y HTTP. PostgreSQL sintético y resto de academic pendientes. Ver AUDITORIA_AISLAMIENTO_MATRICULAS.md y AUDITORIA_AISLAMIENTO_PLANTILLAS.md |
 | achievements | 46 | 42 | 4 | 0 | Pendiente de auditoría A/B por módulo |
 | apd | 35 | 34 | 1 | 0 | Parcial: contexto, perfiles/planes, actividades y avances; 93 pruebas de servicio/auxiliares y 50 HTTP. Participantes, adjuntos, firmas, materias, agregaciones y PostgreSQL pendientes. Ver AUDITORIA_AISLAMIENTO_INCLUSION.md |
-| attendance | 17 | 1 | 16 | 0 | Parcial: resumen usado por Matrículas corregido; resto de rutas y HTTP del resumen pendientes |
+| attendance | 17 | 17 | 0 | 0 | Cerrado en aplicación: institución del actor, relaciones completas, transacciones y auditoría con `tx`, 68 pruebas de servicio + 56 HTTP. RLS y siete permisos finos del Bloque 4 pendientes. Ver AUDITORIA_AISLAMIENTO_ATTENDANCE.md |
 | auth | 7 | 0 | 4 | 3 | Pendiente de auditoría A/B por módulo |
 | capabilities | 5 | 3 | 2 | 0 | Pendiente de auditoría A/B por módulo |
 | classroom | 98 | 0 | 98 | 0 | Pendiente de auditoría A/B por módulo |
@@ -68,7 +68,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 ## Riesgos y siguiente trabajo
 
-Prioridad indicada por el usuario el 2026-09-11: posponer Inclusión y seguir attendance → preventive-cuts → observer → classroom. Learning Route y Plantillas ya fueron integrados. Taller conserva HTTP pendiente. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas y asistencia pendientes. No modificar la frontera EduLab.
+Prioridad indicada por el usuario: posponer Inclusión y seguir el blindaje por riesgo. Learning Route, Plantillas, Cortes preventivos y Attendance ya fueron integrados; Observer continúa por encargo paralelo y Classroom queda después. Taller conserva HTTP pendiente. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas pendientes; Attendance ya cerró su dependencia. No modificar la frontera EduLab.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
@@ -92,3 +92,5 @@ Checkpoint Plantillas (base 38614231): 21 rutas institucionales y 1 catálogo es
 Checkpoint Learning Route (eaa57408): 16/16 rutas clasificadas; 14 institucionales y 2 no institucionales justificadas. La revisión de integración corrigió cuatro transacciones que usaban el cliente Prisma exterior, revalidó dentro de `tx`, acotó la escritura idempotente de evidencia y añadió pruebas contra relaciones institucionales inconsistentes y rollback. Focal: 3 suites / 105 pruebas. Suite completa: 94 suites / 1.785 pruebas API; web 22 archivos / 214 pruebas; tipos API/web y build Nest aprobados. PostgreSQL/RLS, cuota IA y autorización dentro del colegio no se declaran cubiertos.
 
 Checkpoint Cortes preventivos (2022be74 + 172cd375): 8/8 rutas resuelven institución del actor; configuración, alertas, grupos, asignaciones, matrículas, períodos y motor de nota a fecha quedan acotados. Ejecución completa atómica. 38 pruebas de servicio y 46 HTTP; mutación de la guarda del período rompe 5 casos y, restaurada, el focal con contrato pasa 97/97. Suite completa: 96 suites / 1.869 pruebas API; tipos API/web y build Nest aprobados; web conserva 22 archivos / 214 pruebas ya verificados en esta sesión. PostgreSQL/RLS, autorización intrainstitucional y semántica histórica de roster/asignaciones quedan aparte.
+
+Checkpoint Attendance (d50bce46…ddb1f058, revisión 70726854): 17/17 rutas directas y 0 excepciones. La revisión corrigió callbacks que ignoraban `tx`, hizo transaccionales la guarda, las escrituras y la auditoría, amplió las cadenas relacionales y corrigió a 400 el contexto institucional ausente. 68 pruebas de servicio + 56 HTTP; mutación central rompe cuatro cruces y el cliente raíz prohibido dentro de la transacción queda probado. Suite completa combinada: 98 suites / 1.993 pruebas API; web 22/214; tipos API/web y build Nest aprobados. Inventario: 1.113 rutas, 331 directas, 719 pendientes y 63 no institucionales. PostgreSQL/RLS y siete permisos finos del Bloque 4 siguen aparte.
