@@ -53,7 +53,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | staff-leave | 7 | 7 | 0 | 0 | Cerrado en aplicación: solicitudes, PII, alcance personal/administrativo y decisiones atómicas; 31 pruebas de servicio + 49 HTTP. Ver AUDITORIA_AISLAMIENTO_STAFF_LEAVE.md |
 | storage | 7 | 0 | 7 | 0 | Pendiente de auditoría A/B por módulo |
 | superadmin | 13 | 0 | 0 | 13 | No aplica tenant único; autorización global pendiente |
-| taller | 11 | 10 | 0 | 1 | Servicios auditados, 40 pruebas; HTTP pendiente. Ver AUDITORIA_AISLAMIENTO_TALLER.md |
+| taller | 11 | 10 | 0 | 1 | Parcial: 40 pruebas de servicio + 24 HTTP A/B; cadena histórica equipo→proyecto→aula y miembros→matrícula y atomicidad general pendientes. Ver AUDITORIA_AISLAMIENTO_TALLER.md |
 | teacher-schedule | 4 | 4 | 0 | 0 | Cerrado en aplicación: agenda por institución + actor, mutaciones atómicas y RolesGuard; 12 pruebas de servicio + 14 HTTP. Ver AUDITORIA_AISLAMIENTO_TEACHER_SCHEDULE.md |
 | teacher-workspace | 61 | 0 | 61 | 0 | Pendiente de auditoría A/B por módulo |
 | timetabling | 46 | 0 | 46 | 0 | Pendiente de auditoría A/B por módulo |
@@ -68,7 +68,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 ## Riesgos y siguiente trabajo
 
-Prioridad indicada por el usuario: posponer Inclusión y seguir el blindaje por riesgo. Learning Route, Plantillas, Cortes preventivos y Attendance ya fueron integrados; Observer continúa por encargo paralelo y Classroom queda después. Taller conserva HTTP pendiente. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas pendientes; Attendance ya cerró su dependencia. No modificar la frontera EduLab.
+Prioridad indicada por el usuario: posponer Inclusión y seguir el blindaje por riesgo. Learning Route, Plantillas, Cortes preventivos y Attendance ya fueron integrados. Las entregas Observer y Classroom B1 recibidas requieren correcciones de revisión adversarial antes de integrarlas; ver `COORDINACION_BLINDAJE_AGENTES.md`. Taller ya tiene HTTP A/B, pero conserva cadenas históricas y atomicidad pendientes. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas pendientes; Attendance ya cerró su dependencia. No modificar la frontera EduLab.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
@@ -96,3 +96,9 @@ Checkpoint Cortes preventivos (2022be74 + 172cd375): 8/8 rutas resuelven institu
 Checkpoint Attendance (d50bce46…ddb1f058, revisión 70726854): 17/17 rutas directas y 0 excepciones. La revisión corrigió callbacks que ignoraban `tx`, hizo transaccionales la guarda, las escrituras y la auditoría, amplió las cadenas relacionales y corrigió a 400 el contexto institucional ausente. 68 pruebas de servicio + 56 HTTP; mutación central rompe cuatro cruces y el cliente raíz prohibido dentro de la transacción queda probado. Suite completa combinada: 98 suites / 1.993 pruebas API; web 22/214; tipos API/web y build Nest aprobados. Inventario: 1.113 rutas, 331 directas, 719 pendientes y 63 no institucionales. PostgreSQL/RLS y siete permisos finos del Bloque 4 siguen aparte.
 
 Checkpoint Staff Leave + Teacher Schedule (97f85691, a43db832, 4fd6d9c4): 11/11 rutas directas y siete excepciones retiradas. Permisos laborales quedan acotados por institución, actor y membresías; revisión/cancelación son atómicas. Agenda personal queda acotada por institución + identidad y rechaza estudiantes. 106 pruebas nuevas; focal con contrato 119/119. Suite completa: 102 suites / 2.099 pruebas API; tipos y build Nest aprobados. Inventario: 1.113 rutas, 338 directas, 712 pendientes y 63 no institucionales. Classroom sigue 0/98: su partición está medida, no cerrada.
+
+Checkpoint HTTP Taller (2026-09-12): 24 pruebas HTTP nuevas con JWT y guards reales sobre las diez
+rutas institucionales A→B/B→A, mismo usuario en ambos colegios y catálogo estático. Focal Taller
+2 suites / 64 pruebas; suite API completa 103 suites / 2.123 pruebas; tipos API/web y build Nest
+aprobados. No cambia el inventario de rutas. El módulo permanece parcial por las relaciones
+históricas equipo/proyecto/aula y miembro/matrícula, atomicidad general y PostgreSQL/RLS.

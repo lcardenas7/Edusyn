@@ -48,9 +48,16 @@ No existen acciones de aprobar, rechazar, calificar o descargar archivos en este
 
 ## Qué NO cubre
 
-- Laboratorio HTTP con JWT real, guards, interceptores y PostgreSQL: pendiente del Bloque 3. La llamada al controlador en una prueba no equivale a HTTP autenticado.
+- El laboratorio HTTP local añadido el 2026-09-12 usa JWT, `JwtAuthGuard` y `RolesGuard` reales y
+  cubre las 10 rutas institucionales en ambas direcciones A→B/B→A, más catálogo, ausencia de JWT,
+  rol de voto y el mismo usuario en A/B. La persistencia sigue siendo un doble que filtra `where`:
+  **no** acredita el interceptor global, PostgreSQL ni RLS.
 - Autorización exhaustiva por asignación docente, acudientes y roles: pendiente del inventario del Bloque 4. Se conserva el control de miembros/autor/docente existente; 403 dentro del mismo colegio no se convierte artificialmente en fallo de aislamiento.
-- Integridad general de datos históricos: relaciones internas de equipo, proyecto, matrícula e instrumento se presuponen coherentes salvo el caso sintético de lectura secundaria. No se auditan ni corrigen filas reales.
+- Integridad general de datos históricos: `resolveActor` carga equipo, proyecto y miembros, pero no
+  comprueba toda la cadena equipo→proyecto→aula y miembro→matrícula→estudiante/año/grupo en sus
+  relaciones incluidas. `TallerInstrument` y `TallerObject` guardan varias referencias lógicas sin
+  FK institucional compuesta. Las pruebas HTTP nuevas demuestran el rechazo en la guarda directa,
+  no certifican esas incoherencias; Taller sigue **parcial** hasta auditarlas y probarlas.
 - `stationId` es una referencia lógica de fase (por ejemplo `phase:1`), no una FK a otro colegio. No se introduce una consulta inventada ni migración para ella.
 - Atomicidad global de varias escrituras, serialización de votos, huérfanos y conflictos concurrentes fuera de los casos descritos. La prueba de carrera simula el resultado, no usa transacciones PostgreSQL reales.
 - Lecturas de tablas Taller desde otros módulos, por ejemplo ABP, pertenecen a su auditoría. Este resultado solo cubre TallerController/TallerService.
@@ -59,3 +66,9 @@ No existen acciones de aprobar, rechazar, calificar o descargar archivos en este
 ## Verificación y entrega
 
 84 suites / 1.272 pruebas API, contrato estructural, tipos API y build Nest aprobados; ver ESTADO_BLINDAJE.md para el checkpoint de entrega actualizado. La verificación web del Bloque 0 sigue vigente: ningún archivo web cambia en Taller.
+
+Checkpoint HTTP 2026-09-12: `taller.http-isolation.spec.ts` y
+`apps/api/test/fixtures/taller-http.fixture.ts` agregan 24 pruebas HTTP. Focal Taller:
+2 suites / 64 pruebas verdes; suite API completa 103 suites / 2.123 pruebas verdes;
+TypeScript API/web y build Nest limpios. No se tocaron producción, bases compartidas,
+migraciones ni políticas RLS.
