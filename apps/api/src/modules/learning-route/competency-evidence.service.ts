@@ -28,14 +28,23 @@ export class CompetencyEvidenceService {
     score: number; idempotencyKey: string;
   }) {
     const score = Math.max(0, Math.min(100, Math.round(p.score)));
-    await this.prisma.competencyEvidence.upsert({
-      where: { idempotencyKey: p.idempotencyKey },
-      create: {
+    const existing = await this.prisma.competencyEvidence.findFirst({
+      where: { idempotencyKey: p.idempotencyKey, institutionId: p.institutionId },
+      select: { id: true },
+    });
+    if (existing) {
+      await this.prisma.competencyEvidence.updateMany({
+        where: { id: existing.id, institutionId: p.institutionId },
+        data: { score },
+      });
+      return;
+    }
+    await this.prisma.competencyEvidence.create({
+      data: {
         institutionId: p.institutionId, studentId: p.studentId, studentEnrollmentId: p.studentEnrollmentId,
         competencyId: p.competencyId, source: p.source, sourceRef: p.sourceRef, routeStepId: p.routeStepId,
         score, idempotencyKey: p.idempotencyKey,
       },
-      update: { score }, // si se recalifica, refresca el puntaje
     });
   }
 
@@ -56,7 +65,13 @@ export class CompetencyEvidenceService {
     try {
       if (!p.activityId || p.scorePercent == null || !p.institutionId) return;
       const steps = await this.prisma.learningRouteStep.findMany({
-        where: { activityId: p.activityId, competencyId: { not: null }, institutionId: p.institutionId },
+        where: {
+          activityId: p.activityId,
+          competencyId: { not: null },
+          institutionId: p.institutionId,
+          route: { institutionId: p.institutionId, classroom: { institutionId: p.institutionId } },
+          activity: { classroom: { institutionId: p.institutionId } },
+        },
         select: { id: true, competencyId: true },
       });
       for (const s of steps) {
@@ -90,10 +105,14 @@ export class CompetencyEvidenceService {
    */
   async getRouteProgress(institutionId: string, routeId: string, studentId: string) {
     const route = await this.prisma.learningRoute.findFirst({
-      where: { id: routeId, institutionId },
+      where: { id: routeId, institutionId, classroom: { institutionId } },
       include: {
         targetCompetency: { select: { id: true } },
-        steps: { orderBy: { sortOrder: 'asc' }, select: { id: true, title: true, competencyId: true } },
+        steps: {
+          where: { institutionId },
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, title: true, competencyId: true },
+        },
       },
     });
     if (!route) throw new NotFoundException('Ruta no encontrada');

@@ -239,4 +239,65 @@ describe('Rutas de aprendizaje · aislamiento de servicio', () => {
         .rejects.toBeInstanceOf(BadRequestException);
     });
   });
+
+  describe('integridad relacional y transacciones reales', () => {
+    it('rechaza una ruta cuya institución no coincide con la de su aula', async () => {
+      const route = data.rows.learningRoute.find((row) => row.id === 'route-A');
+      const foreignClassroom = data.rows.classroom.find((row) => row.id === 'classroom-B');
+      route.classroomId = foreignClassroom.id;
+      route.classroom = foreignClassroom;
+
+      await expect(data.service.getRoute(A, route.id)).rejects.toBeInstanceOf(NotFoundException);
+      noWrites(data.prisma);
+    });
+
+    it('rechaza un paso cuya institución no coincide con la de su ruta', async () => {
+      const step = data.rows.learningRouteStep.find((row) => row.id === 'step-A');
+      const foreignRoute = data.rows.learningRoute.find((row) => row.id === 'route-B');
+      step.routeId = foreignRoute.id;
+      step.route = foreignRoute;
+
+      await expect(data.service.updateStep(A, step.id, { title: 'No debe persistir' }))
+        .rejects.toBeInstanceOf(NotFoundException);
+      expect(data.prisma.learningRouteStep.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('usa el cliente transaccional para revalidar y escribir', async () => {
+      const originalTransaction = data.prisma.$transaction;
+      const delegates = Object.keys(data.rows);
+      data.prisma.$transaction = jest.fn(async (callback: any) => {
+        const tx: any = {};
+        const originals: Array<[any, string, any]> = [];
+        for (const model of delegates) {
+          tx[model] = { ...data.prisma[model] };
+          for (const method of Object.keys(data.prisma[model])) {
+            const original = data.prisma[model][method];
+            originals.push([data.prisma[model], method, original]);
+            data.prisma[model][method] = jest.fn(async () => {
+              throw new Error(`Se usó el cliente raíz dentro de la transacción: ${model}.${method}`);
+            });
+          }
+        }
+        try {
+          return await callback(tx);
+        } finally {
+          for (const [delegate, method, original] of originals) delegate[method] = original;
+        }
+      });
+
+      await expect(data.service.createStepActivity(A, 'step-A', {})).resolves.toEqual(
+        expect.objectContaining({ activityId: expect.any(String) }),
+      );
+      expect(data.prisma.$transaction).toHaveBeenCalledTimes(1);
+      data.prisma.$transaction = originalTransaction;
+    });
+
+    it('revierte la actividad si falla el enlace del paso', async () => {
+      const before = data.rows.classroomActivity.length;
+      data.prisma.learningRouteStep.updateMany.mockRejectedValueOnce(new Error('fallo intermedio'));
+
+      await expect(data.service.createStepActivity(A, 'step-A', {})).rejects.toThrow('fallo intermedio');
+      expect(data.rows.classroomActivity).toHaveLength(before);
+    });
+  });
 });

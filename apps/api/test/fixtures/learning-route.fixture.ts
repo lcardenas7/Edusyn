@@ -117,7 +117,11 @@ export function fixture() {
       create: jest.fn(async ({ data: input }: any) => {
         const row: any = { id: `new-${++nextId}`, ...input };
         // Una ruta nueva nace con su lista de pasos, como la trae Prisma con `include`.
-        if (model === 'learningRoute') row.steps = row.steps ?? [];
+        if (model === 'learningRoute') {
+          row.steps = row.steps ?? [];
+          row.classroom = rows.classroom.find((c) => c.id === row.classroomId);
+          row.targetCompetency = rows.competency.find((c) => c.id === row.targetCompetencyId);
+        }
         data.push(row);
         if (model === 'learningRouteStep') {
           const route = rows.learningRoute.find((r) => r.id === row.routeId);
@@ -163,7 +167,10 @@ export function fixture() {
   // Igual que en producción: dentro del contexto de tenant la transacción se aplana.
   prisma.$transaction = jest.fn(async (arg: any) => {
     if (Array.isArray(arg)) return Promise.all(arg);
-    const before = JSON.parse(JSON.stringify(rows, (k, v) => (k === 'route' || k === 'classroom' || k === 'teacherAssignment' ? undefined : v)));
+    // Las relaciones inversas no son enumerables, así que el snapshot no forma ciclos. Deben
+    // conservarse las colecciones de nivel superior (`rows.classroom`, etc.): el replacer previo
+    // también las eliminaba y ocultaba el error original con un TypeError al intentar restaurar.
+    const before = JSON.parse(JSON.stringify(rows));
     try {
       return await arg(prisma);
     } catch (error) {

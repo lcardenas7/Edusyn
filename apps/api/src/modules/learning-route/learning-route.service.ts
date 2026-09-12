@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAiService } from '../apd/ai/apd-ai.service';
 import type { ApdAiRoutePlan } from '../apd/ai/apd-ai.interfaces';
@@ -28,9 +29,13 @@ export class LearningRouteService {
   // ─── Guardas de pertenencia ────────────────────────────────────────────────
 
   /** La ruta, solo si es de esta institución. 404 si no existe o es ajena. */
-  private async routeInScope(institutionId: string, routeId: string) {
-    const route = await this.prisma.learningRoute.findFirst({
-      where: { id: routeId, institutionId },
+  private async routeInScope(
+    institutionId: string,
+    routeId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const route = await db.learningRoute.findFirst({
+      where: { id: routeId, institutionId, classroom: { institutionId } },
       select: { id: true, institutionId: true, classroomId: true, title: true, instructions: true, sourceMaterial: true },
     });
     if (!route) throw new NotFoundException('Ruta no encontrada');
@@ -38,9 +43,17 @@ export class LearningRouteService {
   }
 
   /** El paso, con su ruta, solo si es de esta institución. */
-  private async stepInScope(institutionId: string, stepId: string) {
-    const step = await this.prisma.learningRouteStep.findFirst({
-      where: { id: stepId, institutionId },
+  private async stepInScope(
+    institutionId: string,
+    stepId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const step = await db.learningRouteStep.findFirst({
+      where: {
+        id: stepId,
+        institutionId,
+        route: { institutionId, classroom: { institutionId } },
+      },
       select: {
         id: true, routeId: true, title: true, activityId: true, institutionId: true,
         competency: { select: { skill: true, level: true } },
@@ -52,8 +65,12 @@ export class LearningRouteService {
   }
 
   /** El aula, solo si es de esta institución. */
-  private async classroomInScope(institutionId: string, classroomId: string) {
-    const classroom = await this.prisma.classroom.findFirst({
+  private async classroomInScope(
+    institutionId: string,
+    classroomId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const classroom = await db.classroom.findFirst({
       where: { id: classroomId, institutionId },
       select: { id: true },
     });
@@ -65,8 +82,13 @@ export class LearningRouteService {
    * Una actividad solo puede enlazarse a un paso si vive en el AULA de la ruta.
    * `ClassroomActivity` no tiene `institutionId`: la pertenencia se comprueba por su aula.
    */
-  private async assertActivityBelongsToRoute(institutionId: string, classroomId: string, activityId: string) {
-    const activity = await this.prisma.classroomActivity.findFirst({
+  private async assertActivityBelongsToRoute(
+    institutionId: string,
+    classroomId: string,
+    activityId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const activity = await db.classroomActivity.findFirst({
       where: { id: activityId, classroomId, classroom: { institutionId } },
       select: { id: true },
     });
@@ -75,8 +97,11 @@ export class LearningRouteService {
   }
 
   /** La competencia existe en el catálogo global. Se valida antes de persistir la referencia. */
-  private async assertCompetencyExists(competencyId: string) {
-    const competency = await this.prisma.competency.findUnique({ where: { id: competencyId }, select: { id: true } });
+  private async assertCompetencyExists(
+    competencyId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const competency = await db.competency.findUnique({ where: { id: competencyId }, select: { id: true } });
     if (!competency) throw new NotFoundException('Competencia no encontrada');
     return competency;
   }
@@ -91,8 +116,12 @@ export class LearningRouteService {
   }
 
   /** Resuelve la primera competencia del grafo para (nivel, habilidad). */
-  private async resolveCompetencyId(level: string, skill: string): Promise<string | undefined> {
-    const c = await this.prisma.competency.findFirst({
+  private async resolveCompetencyId(
+    level: string,
+    skill: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<string | undefined> {
+    const c = await db.competency.findFirst({
       where: { framework: 'CEFR', level, skill, isActive: true },
       orderBy: { sortOrder: 'asc' }, select: { id: true },
     });
@@ -118,20 +147,20 @@ export class LearningRouteService {
     const targetCompetencyId = await this.resolveCompetencyId(plan.targetLevel, plan.targetSkill);
 
     // Ruta y pasos, en una sola operación: si un paso falla, no queda media ruta.
-    const routeId: string = await this.prisma.$transaction(async () => {
+    const routeId: string = await this.prisma.$transaction(async (tx) => {
       const route = await this.createRoute(institutionId, {
         classroomId, title: plan.title, description: plan.description,
         targetCompetencyId, targetLevel: plan.targetLevel,
-      });
+      }, tx);
       if (opts?.instructions || opts?.sourceMaterial) {
-        await this.prisma.learningRoute.updateMany({
+        await tx.learningRoute.updateMany({
           where: { id: route.id, institutionId },
           data: { instructions: opts.instructions, sourceMaterial: opts.sourceMaterial },
         });
       }
       for (const step of pasos) {
-        const competencyId = await this.resolveCompetencyId(plan.targetLevel, step.skill);
-        await this.addStep(institutionId, route.id, { title: step.title, competencyId });
+        const competencyId = await this.resolveCompetencyId(plan.targetLevel, step.skill, tx);
+        await this.addStep(institutionId, route.id, { title: step.title, competencyId }, tx);
       }
       return route.id;
     });
@@ -163,25 +192,25 @@ export class LearningRouteService {
     description?: string;
     targetCompetencyId?: string;
     targetLevel?: string;
-  }) {
-    await this.classroomInScope(institutionId, dto.classroomId);
+  }, db: Prisma.TransactionClient | PrismaService = this.prisma) {
+    await this.classroomInScope(institutionId, dto.classroomId, db);
     if (!dto.title?.trim()) throw new BadRequestException('El título es obligatorio');
 
     // Si se da competencia objetivo, derivar el nivel para mostrar.
     let targetLevel = dto.targetLevel;
     if (dto.targetCompetencyId) {
-      const comp = await this.prisma.competency.findUnique({
+      const comp = await db.competency.findUnique({
         where: { id: dto.targetCompetencyId }, select: { id: true, level: true },
       });
       if (!comp) throw new NotFoundException('Competencia no encontrada');
       if (!targetLevel) targetLevel = comp.level ?? undefined;
     }
 
-    const max = await this.prisma.learningRoute.aggregate({
+    const max = await db.learningRoute.aggregate({
       where: { classroomId: dto.classroomId, institutionId }, _max: { sortOrder: true },
     });
 
-    return this.prisma.learningRoute.create({
+    return db.learningRoute.create({
       data: {
         institutionId,
         classroomId: dto.classroomId,
@@ -214,10 +243,11 @@ export class LearningRouteService {
 
   async getRoute(institutionId: string, routeId: string) {
     const route = await this.prisma.learningRoute.findFirst({
-      where: { id: routeId, institutionId },
+      where: { id: routeId, institutionId, classroom: { institutionId } },
       include: {
         targetCompetency: { select: { code: true, statement: true, level: true, skill: true } },
         steps: {
+          where: { institutionId },
           orderBy: { sortOrder: 'asc' },
           include: {
             activity: { select: { id: true, title: true, type: true, isPublished: true } },
@@ -276,21 +306,21 @@ export class LearningRouteService {
   // ─── Pasos ───────────────────────────────────────────────────────────────
   async addStep(institutionId: string, routeId: string, dto: {
     title: string; activityId?: string; competencyId?: string; sortOrder?: number;
-  }) {
-    const route = await this.routeInScope(institutionId, routeId);
+  }, db: Prisma.TransactionClient | PrismaService = this.prisma) {
+    const route = await this.routeInScope(institutionId, routeId, db);
     if (!dto.title?.trim()) throw new BadRequestException('El título del paso es obligatorio');
-    if (dto.activityId) await this.assertActivityBelongsToRoute(institutionId, route.classroomId, dto.activityId);
-    if (dto.competencyId) await this.assertCompetencyExists(dto.competencyId);
+    if (dto.activityId) await this.assertActivityBelongsToRoute(institutionId, route.classroomId, dto.activityId, db);
+    if (dto.competencyId) await this.assertCompetencyExists(dto.competencyId, db);
 
     let sortOrder = dto.sortOrder;
     if (sortOrder === undefined || sortOrder === null) {
-      const max = await this.prisma.learningRouteStep.aggregate({
+      const max = await db.learningRouteStep.aggregate({
         where: { routeId, institutionId }, _max: { sortOrder: true },
       });
       sortOrder = (max._max.sortOrder ?? -1) + 1;
     }
 
-    return this.prisma.learningRouteStep.create({
+    return db.learningRouteStep.create({
       data: {
         institutionId: route.institutionId,
         routeId,
@@ -320,10 +350,11 @@ export class LearningRouteService {
     if (dto.competencyId) await this.assertCompetencyExists(dto.competencyId);
 
     // Actividad y paso van juntos: una actividad huérfana quedaría oculta en el aula.
-    return this.prisma.$transaction(async () => {
-      const activity = await this.prisma.classroomActivity.create({
+    return this.prisma.$transaction(async (tx) => {
+      const scopedRoute = await this.routeInScope(institutionId, routeId, tx);
+      const activity = await tx.classroomActivity.create({
         data: {
-          classroomId: route.classroomId,
+          classroomId: scopedRoute.classroomId,
           type: (dto.activityType || 'TASK') as any,
           title: dto.title.trim(),
           description: dto.description,
@@ -335,7 +366,7 @@ export class LearningRouteService {
       });
       return this.addStep(institutionId, routeId, {
         title: dto.title.trim(), activityId: activity.id, competencyId: dto.competencyId,
-      });
+      }, tx);
     });
   }
 
@@ -371,32 +402,34 @@ export class LearningRouteService {
       instructions, sourceMaterial: step.route.sourceMaterial ?? undefined,
     });
 
-    return this.prisma.$transaction(async () => {
+    return this.prisma.$transaction(async (tx) => {
+      const scopedStep = await this.stepInScope(institutionId, stepId, tx);
       // Asegurar una actividad LESSON propia de la ruta para este paso.
-      let activityId = step.activityId ?? undefined;
+      let activityId = scopedStep.activityId ?? undefined;
       const existingActivity = activityId
-        ? await this.prisma.classroomActivity.findFirst({
-            where: { id: activityId, classroomId: step.route.classroomId, classroom: { institutionId } },
+        ? await tx.classroomActivity.findFirst({
+            where: { id: activityId, classroomId: scopedStep.route.classroomId, classroom: { institutionId } },
             select: { id: true, type: true },
           })
         : null;
       if (!existingActivity || existingActivity.type !== 'LESSON') {
-        const created = await this.prisma.classroomActivity.create({
+        const created = await tx.classroomActivity.create({
           data: {
-            classroomId: step.route.classroomId, type: 'LESSON', title: step.title,
+            classroomId: scopedStep.route.classroomId, type: 'LESSON', title: scopedStep.title,
             isRouteScoped: true, isPublished: true, isVisible: true, maxScore: 100,
           },
         });
         activityId = created.id;
-        await this.prisma.learningRouteStep.updateMany({
+        const linked = await tx.learningRouteStep.updateMany({
           where: { id: stepId, institutionId }, data: { activityId },
         });
+        if (linked.count === 0) throw new NotFoundException('Paso no encontrado');
       }
 
       // Reemplazar la lección (regenerable).
-      const existingLesson = await this.prisma.lesson.findUnique({ where: { activityId }, select: { id: true } });
-      if (existingLesson) await this.prisma.lesson.delete({ where: { id: existingLesson.id } });
-      await this.prisma.lesson.create({
+      const existingLesson = await tx.lesson.findUnique({ where: { activityId }, select: { id: true } });
+      if (existingLesson) await tx.lesson.delete({ where: { id: existingLesson.id } });
+      await tx.lesson.create({
         data: {
           activityId: activityId!,
           title: draft.title,
@@ -450,20 +483,22 @@ export class LearningRouteService {
   /** Crea una actividad propia de la ruta y la ADJUNTA a un paso existente (que no tenía). */
   async createStepActivity(institutionId: string, stepId: string, dto: { activityType?: string; description?: string; maxScore?: number }) {
     const step = await this.stepInScope(institutionId, stepId);
-    return this.prisma.$transaction(async () => {
-      const activity = await this.prisma.classroomActivity.create({
+    return this.prisma.$transaction(async (tx) => {
+      const scopedStep = await this.stepInScope(institutionId, stepId, tx);
+      const activity = await tx.classroomActivity.create({
         data: {
-          classroomId: step.route.classroomId,
+          classroomId: scopedStep.route.classroomId,
           type: (dto.activityType || 'TASK') as any,
-          title: step.title,
+          title: scopedStep.title,
           description: dto.description,
           maxScore: dto.maxScore ?? 100,
           isRouteScoped: true, isPublished: true, isVisible: true,
         },
       });
-      await this.prisma.learningRouteStep.updateMany({
+      const linked = await tx.learningRouteStep.updateMany({
         where: { id: stepId, institutionId }, data: { activityId: activity.id },
       });
+      if (linked.count === 0) throw new NotFoundException('Paso no encontrado');
       return { activityId: activity.id };
     });
   }
@@ -484,16 +519,16 @@ export class LearningRouteService {
     const ids = [...new Set(Array.isArray(stepIds) ? stepIds : [])];
     if (ids.length === 0) throw new BadRequestException('No se recibieron pasos para ordenar');
 
-    const propios = await this.prisma.learningRouteStep.count({
-      where: { id: { in: ids }, routeId, institutionId },
-    });
-    if (propios !== ids.length) throw new NotFoundException('Paso no encontrado');
-
-    await this.prisma.$transaction(
-      ids.map((id, i) => this.prisma.learningRouteStep.updateMany({
+    await this.prisma.$transaction(async (tx) => {
+      await this.routeInScope(institutionId, routeId, tx);
+      const propios = await tx.learningRouteStep.count({
+        where: { id: { in: ids }, routeId, institutionId },
+      });
+      if (propios !== ids.length) throw new NotFoundException('Paso no encontrado');
+      await Promise.all(ids.map((id, i) => tx.learningRouteStep.updateMany({
         where: { id, routeId, institutionId }, data: { sortOrder: i },
-      })),
-    );
+      })));
+    });
     return this.getRoute(institutionId, routeId);
   }
 }
