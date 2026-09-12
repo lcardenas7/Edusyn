@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
+import { ClassroomTenantAccessService } from './classroom-tenant-access.service';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
 import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
@@ -33,6 +34,7 @@ export class ClassroomService {
     private readonly identity: LearningIdentityService,
     private readonly evidence: CompetencyEvidenceService,
     private readonly gating: ActivityGatingService,
+    private readonly access: ClassroomTenantAccessService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════

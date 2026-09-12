@@ -6,6 +6,7 @@ import { AttitudinalService } from './attitudinal.service';
 import { LessonService } from './lesson.service';
 import { CompletionService } from './gating/completion.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
+import { ClassroomTenantAccessService } from './classroom-tenant-access.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { ApdModule } from '../apd/apd.module';
 import { GamificationModule } from '../gamification/gamification.module';
@@ -17,7 +18,7 @@ import { FormativeEvaluationController } from './formative-evaluation.controller
 @Module({
   imports: [PrismaModule, ApdModule, GamificationModule, LearningRouteModule, EvaluationModule],
   controllers: [ClassroomController, FormativeEvaluationController],
-  providers: [ClassroomService, ClassroomCronService, AttitudinalService, FormativeEvaluationService, LessonService, CompletionService, ActivityGatingService],
+  providers: [ClassroomService, ClassroomCronService, AttitudinalService, FormativeEvaluationService, LessonService, CompletionService, ActivityGatingService, ClassroomTenantAccessService],
   exports: [ClassroomService, AttitudinalService, LessonService, ActivityGatingService],
 })
 export class ClassroomModule {}
