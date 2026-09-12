@@ -906,12 +906,6 @@
     "fingerprint": "25103efaff60fb01912a76a953c03fa56d6634574ac8550a92da58a056d30391"
   },
   {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.assignStudentsToActivity @Put('activities/:activityId/assign-students')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "85ae6eb23236334ff5122e51fb461fd770dd7bc5652e7645d4bc2eaa7f3645cd"
-  },
-  {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.bulkUpdateSlides @Put('lessons/:lessonId/slides/bulk')",
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -934,18 +928,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "e8adc23346403173d3f6c2d11e6e15f77392c0542d95976ce6a536fa94a6e140"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.create @Post()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "9dcb1e84fd812e67150a05e44ab7a7d76ba0a0853e4bd995e0612d00c5b09b85"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.createActivity @Post(':id/activities')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "0dd3d36743b7862dcb9b2d272397c2e85abde0b76027fb1d3da845538e47bfa6"
   },
   {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.createAnnouncement @Post(':id/announcements')",
@@ -994,12 +976,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "6dbf43bfc901c2adda9e578d6296a305855cfc551cc451fcb7a7c096d7679608"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.deleteActivity @Delete('activities/:activityId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "2a3cf0596623e23eaadb1bd7605c50c7bc1ad720ea2c83d62cbb4e5999a8bdbb"
   },
   {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.deleteAnnouncement @Delete('announcements/:announcementId')",
@@ -1080,18 +1056,6 @@
     "fingerprint": "db112ba703a6ec986e9e2c9bc8cd29adb8a6b41f3e0b3c8c26383faf5ef76d7e"
   },
   {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.getActivity @Get('activities/:activityId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "a14d0d361346bd558dbda309314e3accd864eb7a3e84636551b83c7547ee3d33"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.getActivityAssignments @Get('activities/:activityId/assignments')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "718cd3cec2024815ee22aa1cf0e232aef565c4f1757032bbcba7b4fb9276b58b"
-  },
-  {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.getAllLessonProgress @Get('lessons/:lessonId/progress')",
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -1102,24 +1066,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "6946dbcb61f47db5f3aa7bc53460ee98901d90c870c1ce6e8cb4fb2cf5678df4"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.getAvailableAssignments @Get('available-assignments')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "32b859c233dab3a5962cbc7321aaeeb2afb5b68108f7c409ecf440719f298fb7"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.getById @Get(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "ac804480ec39e6372187b735aa1af4942963d0c21021b9bac0a8e2bbd73ef3f1"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.getClassroomStudentsForAssignment @Get(':id/students-for-assignment')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "b09e4b0ff49ea60ae748f2f8ec925461a738e67b971b845b21552a1d30f35096"
   },
   {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.getForumPost @Get('forum/:postId')",
@@ -1200,12 +1146,6 @@
     "fingerprint": "d41fc87dac54feb233fd0fad9ea265d98fcad203938eb3ed84c26450347b0e7d"
   },
   {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.getStudents @Get(':id/students')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c7625883086e1e38f75d27cccd01b2c999fc82c8407d0a17ee35a8e74ec9f1e0"
-  },
-  {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.gradeSubmission @Put('submissions/:submissionId/grade')",
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -1216,18 +1156,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "6b82c069fe413e974159d258a6e2f1294178d4ea1d9dbf494689629d8cc3471c"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.list @Get()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "b7fe68ed7eef1ebd04d0213aace7173f909bc137c27a69b031bc5eecc894d255"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.listActivities @Get(':id/activities')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "490a5ec2aa5dd63a7e7a3186c7a38bba5720882a48c8caa4b9b4e5b9735a32cd"
   },
   {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.listClassroomsForCopy @Get(':id/classrooms-for-copy')",
@@ -1278,12 +1206,6 @@
     "fingerprint": "4141b5dbb2dedc62e67face14825ba768227cf253bc25e2c20a2ce7356bca575"
   },
   {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.publishActivity @Put('activities/:activityId/publish')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "f87db9bf0a14ca13f7893ba731891242c5f590cffa77f70186f994001fb888de"
-  },
-  {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.reorderQuestions @Put('activities/:activityId/questions/reorder')",
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
@@ -1324,12 +1246,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "31ae23ad2874297d4eb372ae1daa25f7593d0a7cb3e30db7d0cdde85cc4bbbff"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.setActivityDependencies @Put('activities/:activityId/dependencies')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "3acf248d0722ed17ce5afeb8d31d003f8ab3162935e3c1ea788b3992bbb6cf36"
   },
   {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.startLesson @Post('lessons/:lessonId/start')",
@@ -1384,24 +1300,6 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "343b7f24f09fdb69b71be0530308ba81d183048d1620c64c06e907d898d17db7"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.unpublishActivity @Put('activities/:activityId/unpublish')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "f477e2cead35d0b2c87275cb46add06e04af5444d48fe5155e6491ff0ecef0ba"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.update @Put(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "d2b35277a058f53f32607bd01a574e9c6fb02cd989424b8337191d6fe10bd086"
-  },
-  {
-    "key": "modules/classroom/classroom.controller.ts#ClassroomController.updateActivity @Put('activities/:activityId')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en classroom: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "6c949b46656dfac6beac3eb35aacf2838eb9a496b5980a57ea78183ae07093c3"
   },
   {
     "key": "modules/classroom/classroom.controller.ts#ClassroomController.updateAnnouncement @Put('announcements/:announcementId')",
