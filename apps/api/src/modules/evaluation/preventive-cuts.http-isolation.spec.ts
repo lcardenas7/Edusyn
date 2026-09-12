@@ -211,7 +211,7 @@ describe('Cortes preventivos · aislamiento HTTP con JWT, roles y servicio reale
     await request(app.getHttpServer())
       .get('/preventive-cuts/config?academicTermId=term-A')
       .auth(token(undefined, 'DOCENTE'), { type: 'bearer' })
-      .expect(500);
+      .expect(400);
     expect(fixture.calls).toEqual([]);
     expectNoEffects();
   });
