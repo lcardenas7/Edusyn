@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -14,11 +24,42 @@ export class StaffLeaveController {
     private readonly prisma: PrismaService,
   ) {}
 
+  private rolesOf(req: any): string[] {
+    return (req?.user?.roles || [])
+      .map((role: any) =>
+        typeof role === 'string' ? role : role?.role?.name || role?.name,
+      )
+      .filter(Boolean);
+  }
+
+  private canManageAll(req: any): boolean {
+    return (
+      req?.user?.isSuperAdmin === true ||
+      this.rolesOf(req).some((role) =>
+        ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(
+          role,
+        ),
+      )
+    );
+  }
+
   // Docente crea solicitud
   @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'ORIENTADOR', 'SECRETARIA')
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN_INSTITUTIONAL',
+    'COORDINADOR',
+    'DOCENTE',
+    'RECTOR',
+    'ORIENTADOR',
+    'SECRETARIA',
+  )
   async create(@Body() data: any, @Req() req: any) {
-    const institutionId = await requireInstitutionId(this.prisma as any, req, data.institutionId);
+    const institutionId = await requireInstitutionId(
+      this.prisma as any,
+      req,
+      data.institutionId,
+    );
     return this.staffLeaveService.create({
       ...data,
       institutionId,
@@ -28,9 +69,24 @@ export class StaffLeaveController {
 
   // Mis solicitudes (docente ve las suyas)
   @Get('my-requests')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'ORIENTADOR', 'SECRETARIA')
-  async findMyRequests(@Req() req: any, @Query('institutionId') institutionId?: string) {
-    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN_INSTITUTIONAL',
+    'COORDINADOR',
+    'DOCENTE',
+    'RECTOR',
+    'ORIENTADOR',
+    'SECRETARIA',
+  )
+  async findMyRequests(
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(
+      this.prisma as any,
+      req,
+      institutionId,
+    );
     return this.staffLeaveService.findMyRequests(req.user.id, instId);
   }
 
@@ -46,7 +102,11 @@ export class StaffLeaveController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    const instId = await requireInstitutionId(
+      this.prisma as any,
+      req,
+      institutionId,
+    );
     return this.staffLeaveService.findAll(instId, {
       status: status as any,
       requesterId,
@@ -58,23 +118,46 @@ export class StaffLeaveController {
 
   // Detalle de una solicitud
   @Get(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'ORIENTADOR', 'SECRETARIA')
-  async findById(@Param('id') id: string) {
-    return this.staffLeaveService.findById(id);
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN_INSTITUTIONAL',
+    'COORDINADOR',
+    'DOCENTE',
+    'RECTOR',
+    'ORIENTADOR',
+    'SECRETARIA',
+  )
+  async findById(@Param('id') id: string, @Req() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.staffLeaveService.findById(
+      id,
+      institutionId,
+      this.canManageAll(req) ? undefined : req.user.id,
+    );
   }
 
   // Revisar (aprobar/rechazar) — solo rector/admin/coordinador
   @Patch(':id/review')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async review(@Param('id') id: string, @Body() data: any, @Req() req: any) {
-    return this.staffLeaveService.review(id, req.user.id, data);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.staffLeaveService.review(id, institutionId, req.user.id, data);
   }
 
   // Cancelar (solo el solicitante)
   @Patch(':id/cancel')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'ORIENTADOR', 'SECRETARIA')
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN_INSTITUTIONAL',
+    'COORDINADOR',
+    'DOCENTE',
+    'RECTOR',
+    'ORIENTADOR',
+    'SECRETARIA',
+  )
   async cancel(@Param('id') id: string, @Req() req: any) {
-    return this.staffLeaveService.cancel(id, req.user.id);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.staffLeaveService.cancel(id, institutionId, req.user.id);
   }
 
   // Estadísticas
@@ -86,7 +169,11 @@ export class StaffLeaveController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    const instId = await requireInstitutionId(
+      this.prisma as any,
+      req,
+      institutionId,
+    );
     return this.staffLeaveService.getStats(instId, startDate, endDate);
   }
 }
