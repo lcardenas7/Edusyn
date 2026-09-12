@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
-import { ClassroomActor, ClassroomTenantAccessService } from './classroom-tenant-access.service';
+import { ClassroomActor, ClassroomTenantAccessService, esVistaEstudiante } from './classroom-tenant-access.service';
 import {
   AssignStudentsDto,
   CreateActivityDto,
@@ -52,8 +52,18 @@ export class ClassroomService {
   async listForTeacher(actor: ClassroomActor) {
     const teacherId = actor.userId;
     const institutionId = actor.institutionId;
+    // Cadena completa exigida ya en la consulta (revisión Astra): una asignación que
+    // dice A pero cuelga de un año, grupo/sede/grado o materia/área de B no entra.
+    const cadenaAsignacion = {
+      academicYear: { institutionId },
+      group: {
+        campus: { institutionId },
+        grade: { institutionId },
+      },
+      subject: { area: { institutionId } },
+    };
     const assignments = await this.prisma.teacherAssignment.findMany({
-      where: { teacherId, institutionId, endDate: null },
+      where: { teacherId, institutionId, endDate: null, ...cadenaAsignacion },
       select: { id: true },
     });
     const assignmentIds = assignments.map(a => a.id);
@@ -66,6 +76,12 @@ export class ClassroomService {
         // incoherente (aula de A colgada de una asignación de B) no se lista.
         institutionId,
         isPersonal: false,
+        // …y la cadena completa de la asignación del aula (defensa en profundidad:
+        // no basta con la lista de ids de arriba).
+        teacherAssignment: {
+          institutionId,
+          ...cadenaAsignacion,
+        },
       },
       include: {
         teacherAssignment: {
@@ -81,7 +97,9 @@ export class ClassroomService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Enrich with student count
+    // Enrich with student count. El conteo también exige institución y estudiante de la
+    // institución (revisión Astra): una matrícula incoherente que dice A pero apunta a un
+    // estudiante de B ya no infla el número.
     const result = await Promise.all(
       classrooms.map(async (c) => {
         const studentCount = await this.prisma.studentEnrollment.count({
@@ -89,6 +107,8 @@ export class ClassroomService {
             groupId: c.teacherAssignment.groupId,
             academicYearId: c.teacherAssignment.academicYearId,
             status: 'ACTIVE',
+            institutionId,
+            student: { institutionId },
           },
         });
         return { ...c, studentCount };
@@ -101,9 +121,20 @@ export class ClassroomService {
   async listForStudent(actor: ClassroomActor) {
     const studentId = actor.userId;
     const institutionId = actor.institutionId;
-    // Find active enrollments
+    // Find active enrollments. El estudiante debe ser de la institución (revisión Astra):
+    // una matrícula incoherente que dice A pero apunta a un estudiante de B no acredita
+    // nada; la cadena año/grupo también se exige aquí.
     const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { student: { userId: studentId }, institutionId, status: 'ACTIVE' },
+      where: {
+        student: { userId: studentId, institutionId },
+        institutionId,
+        status: 'ACTIVE',
+        academicYear: { institutionId },
+        group: {
+          campus: { institutionId },
+          grade: { institutionId },
+        },
+      },
       select: { id: true, groupId: true, academicYearId: true },
     });
 
@@ -124,6 +155,13 @@ export class ClassroomService {
         institutionId,
         isPersonal: false,
         teacherAssignment: {
+          institutionId,
+          academicYear: { institutionId },
+          group: {
+            campus: { institutionId },
+            grade: { institutionId },
+          },
+          subject: { area: { institutionId } },
           OR: enrollments.map(e => ({
             groupId: e.groupId,
             academicYearId: e.academicYearId,
@@ -156,13 +194,21 @@ export class ClassroomService {
   async getAvailableAssignments(actor: ClassroomActor) {
     const teacherId = actor.userId;
     const institutionId = actor.institutionId;
-    // Assignments that don't yet have a classroom
+    // Assignments that don't yet have a classroom. Cadena completa (revisión Astra):
+    // una asignación que dice A pero cuelga de año, grupo/sede/grado o materia/área de B
+    // no se ofrece para crear aula.
     return this.prisma.teacherAssignment.findMany({
       where: {
         teacherId,
         institutionId,
         endDate: null,
         classroom: null,
+        academicYear: { institutionId },
+        group: {
+          campus: { institutionId },
+          grade: { institutionId },
+        },
+        subject: { area: { institutionId } },
       },
       include: {
         group: { include: { grade: true } },
@@ -173,35 +219,48 @@ export class ClassroomService {
   }
 
   async create(actor: ClassroomActor, dto: CreateClassroomDto) {
-    // Asignación en alcance con la cadena completa (ajena/inexistente → 404);
-    // el actor debe ser el docente asignado (comportamiento previo: teacherId-only).
-    const assignment = await this.access.assignmentInScope(actor, dto.teacherAssignmentId);
-    this.access.assertCanUseAssignment(actor, assignment);
+    // Guarda + comprobación de duplicado + escritura en UNA transacción (revisión
+    // Astra): si la asignación sale de alcance antes de escribir, no se crea el aula.
+    return this.prisma.$transaction(async (tx) => {
+      // Asignación en alcance con la cadena completa (ajena/inexistente → 404);
+      // el actor debe ser el docente asignado (comportamiento previo: teacherId-only).
+      const assignment = await this.access.assignmentInScope(actor, dto.teacherAssignmentId, tx);
+      this.access.assertCanUseAssignment(actor, assignment);
 
-    // Check if classroom already exists
-    const existing = await this.prisma.classroom.findUnique({
-      where: { teacherAssignmentId: dto.teacherAssignmentId },
-    });
-    if (existing) throw new ForbiddenException('Ya existe un aula para esta asignación');
+      // Check if classroom already exists
+      const existing = await tx.classroom.findUnique({
+        where: { teacherAssignmentId: dto.teacherAssignmentId },
+      });
+      if (existing) throw new ForbiddenException('Ya existe un aula para esta asignación');
 
-    const title = dto.title || `${assignment.subject.name} - ${assignment.group.grade.name} ${assignment.group.name}`;
+      const title = dto.title || `${assignment.subject.name} - ${assignment.group.grade.name} ${assignment.group.name}`;
 
-    return this.prisma.classroom.create({
-      data: {
-        institutionId: actor.institutionId,
-        teacherAssignmentId: dto.teacherAssignmentId,
-        title,
-        description: dto.description,
-        color: dto.color,
-      },
-      include: {
-        teacherAssignment: {
-          include: {
-            group: { include: { grade: true } },
-            subject: true,
+      try {
+        return await tx.classroom.create({
+          data: {
+            institutionId: actor.institutionId,
+            teacherAssignmentId: dto.teacherAssignmentId,
+            title,
+            description: dto.description,
+            color: dto.color,
           },
-        },
-      },
+          include: {
+            teacherAssignment: {
+              include: {
+                group: { include: { grade: true } },
+                subject: true,
+              },
+            },
+          },
+        });
+      } catch (error: any) {
+        // Carrera: Classroom.teacherAssignmentId es @unique; la colisión se traduce al
+        // comportamiento funcional de siempre, sin crear ningún vínculo cruzado.
+        if (error?.code === 'P2002') {
+          throw new ForbiddenException('Ya existe un aula para esta asignación');
+        }
+        throw error;
+      }
     });
   }
 
@@ -211,6 +270,11 @@ export class ClassroomService {
     const scope = await this.access.classroomInScope(actor, classroomId);
     await this.access.assertCanViewClassroom(actor, scope);
 
+    // Proyección específica de estudiante (revisión Astra): el controlador no tiene
+    // filtro posterior, así que la consulta misma exige visibilidad en secciones y
+    // materiales y el conteo solo cubre actividades publicadas y visibles (sin
+    // borradores). El docente/admin conserva la carga rica completa que usa su pantalla.
+    const vistaEstudiante = esVistaEstudiante(actor, scope);
     const classroom = await this.prisma.classroom.findFirst({
       where: { id: classroomId, institutionId: actor.institutionId, isPersonal: false },
       include: {
@@ -222,13 +286,15 @@ export class ClassroomService {
           },
         },
         sections: {
-          where: { /* all visible to teacher, filtered for students in controller */ },
+          where: vistaEstudiante ? { isVisible: true } : {},
           orderBy: { sortOrder: 'asc' },
           include: {
-            materials: { orderBy: { sortOrder: 'asc' } },
+            materials: vistaEstudiante
+              ? { where: { isVisible: true }, orderBy: { sortOrder: 'asc' } }
+              : { orderBy: { sortOrder: 'asc' } },
             academicTerm: { select: { id: true, name: true, order: true } },
             activities: {
-              where: { isPublished: true },
+              where: vistaEstudiante ? { isPublished: true, isVisible: true } : { isPublished: true },
               orderBy: { sortOrder: 'asc' },
               select: { id: true, type: true, title: true, dueDate: true, isPublished: true, maxScore: true, academicTermId: true, publishedAt: true, createdAt: true },
             },
@@ -241,7 +307,9 @@ export class ClassroomService {
             author: { select: { id: true, firstName: true, lastName: true } },
           },
         },
-        _count: { select: { activities: true } },
+        _count: vistaEstudiante
+          ? { select: { activities: { where: { isPublished: true, isVisible: true } } } }
+          : { select: { activities: true } },
       },
     });
 
@@ -250,8 +318,13 @@ export class ClassroomService {
     // Período académico actual del año del aula (para mostrarlo a docente y estudiante
     // sin exponer el endpoint de términos, restringido a personal). Se prioriza el
     // período cuyo rango de fechas contiene hoy; si no, el primer período ABIERTO.
+    // Los períodos deben pertenecer al año DE LA INSTITUCIÓN (revisión Astra).
     const periods = await this.prisma.academicTerm.findMany({
-      where: { academicYearId: classroom.teacherAssignment.academicYearId, type: 'PERIOD' },
+      where: {
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        type: 'PERIOD',
+        academicYear: { institutionId: actor.institutionId },
+      },
       orderBy: { order: 'asc' },
       select: { id: true, name: true, order: true, startDate: true, endDate: true, status: true },
     });
@@ -550,59 +623,84 @@ export class ClassroomService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createActivity(actor: ClassroomActor, classroomId: string, dto: CreateActivityDto) {
-    const classroom = await this.access.classroomInScope(actor, classroomId);
-    this.access.assertCanManageClassroom(actor, classroom);
-    // Sección OPCIONAL: si se pasa, debe pertenecer al aula; si no, actividad sin sección.
-    if (dto.sectionId) {
-      const section = await this.prisma.classroomSection.findFirst({
-        where: { id: dto.sectionId, classroom: { id: classroomId } },
+    // Guarda + validaciones de vínculos + escritura en UNA transacción (revisión Astra):
+    // si el aula sale de alcance antes de escribir, no se crea la actividad.
+    return this.prisma.$transaction(async (tx) => {
+      const classroom = await this.access.classroomInScope(actor, classroomId, tx);
+      this.access.assertCanManageClassroom(actor, classroom);
+
+      // Sección OPCIONAL: si se pasa, debe pertenecer al aula (que ya está en alcance con
+      // la cadena completa). Un id ajeno o de otra aula responde 404, indistinguible de
+      // inexistente (antes 403, que confirmaba que la sección existía).
+      if (dto.sectionId) {
+        const section = await tx.classroomSection.findFirst({
+          where: { id: dto.sectionId, classroom: { id: classroomId, institutionId: actor.institutionId } },
+        });
+        if (!section) throw new NotFoundException('Sección no encontrada');
+      }
+
+      // Período OPCIONAL: debe ser de la institución Y del año del aula (uno de otro año
+      // del mismo colegio es incompatible → 404, revisión Astra).
+      if (dto.academicTermId) {
+        const term = await tx.academicTerm.findFirst({
+          where: { id: dto.academicTermId, academicYear: { institutionId: actor.institutionId } },
+        });
+        if (!term || term.academicYearId !== classroom.teacherAssignment.academicYearId) {
+          throw new NotFoundException('Período no encontrado');
+        }
+      }
+
+      // Rúbrica OPCIONAL: debe ser de la institución del actor.
+      if (dto.rubricId) {
+        const rubric = await tx.attitudinalRubric.findFirst({
+          where: { id: dto.rubricId, institutionId: actor.institutionId },
+        });
+        if (!rubric) throw new NotFoundException('Rúbrica no encontrada');
+      }
+
+      // Build metadata
+      let metadata: any = undefined;
+      if (dto.attachmentUrl) {
+        metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
+      }
+      if (dto.gameType) {
+        metadata = { ...(metadata || {}), gameType: dto.gameType };
+      }
+      if (dto.audioResponse) {
+        metadata = { ...(metadata || {}), audioResponse: true };
+      }
+
+      return tx.classroomActivity.create({
+        data: {
+          classroomId,
+          sectionId: dto.sectionId || null,
+          academicTermId: dto.academicTermId || null,
+          type: dto.type as any,
+          title: dto.title,
+          description: dto.description,
+          maxScore: dto.maxScore,
+          dueDate: dto.dueDate ? parseClassroomDate(dto.dueDate) : undefined,
+          openDate: dto.openDate ? parseClassroomDate(dto.openDate) : undefined,
+          allowLateSubmit: dto.allowLateSubmit ?? false,
+          shuffleQuestions: dto.shuffleQuestions ?? false,
+          showResults: dto.showResults ?? true,
+          maxAttempts: dto.maxAttempts ?? 1,
+          timeLimitMinutes: dto.timeLimitMinutes,
+          metadata,
+          rubricId: dto.rubricId || undefined,
+          isPublished: false,
+        },
+        include: {
+          section: { select: { id: true, title: true } },
+          _count: { select: { submissions: true } },
+        },
       });
-      if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
-    }
-
-    // Build metadata
-    let metadata: any = undefined;
-    if (dto.attachmentUrl) {
-      metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
-    }
-    if (dto.gameType) {
-      metadata = { ...(metadata || {}), gameType: dto.gameType };
-    }
-    if (dto.audioResponse) {
-      metadata = { ...(metadata || {}), audioResponse: true };
-    }
-
-    return this.prisma.classroomActivity.create({
-      data: {
-        classroomId,
-        sectionId: dto.sectionId || null,
-        academicTermId: dto.academicTermId || null,
-        type: dto.type as any,
-        title: dto.title,
-        description: dto.description,
-        maxScore: dto.maxScore,
-        dueDate: dto.dueDate ? parseClassroomDate(dto.dueDate) : undefined,
-        openDate: dto.openDate ? parseClassroomDate(dto.openDate) : undefined,
-        allowLateSubmit: dto.allowLateSubmit ?? false,
-        shuffleQuestions: dto.shuffleQuestions ?? false,
-        showResults: dto.showResults ?? true,
-        maxAttempts: dto.maxAttempts ?? 1,
-        timeLimitMinutes: dto.timeLimitMinutes,
-        metadata,
-        rubricId: dto.rubricId || undefined,
-        isPublished: false,
-      },
-      include: {
-        section: { select: { id: true, title: true } },
-        _count: { select: { submissions: true } },
-      },
     });
   }
 
   async listActivities(actor: ClassroomActor, classroomId: string) {
     // 404 para aula ajena/inexistente/incoherente ANTES de listar nada.
     const scope = await this.access.classroomInScope(actor, classroomId);
-    const userId = actor.userId;
     // La rama la decide el JWT (roles de la sesión), NUNCA el query `role` del
     // cliente: antes omitirlo llevaba a un estudiante por la rama docente y le
     // mostraba borradores y conteos de calificación.
@@ -661,7 +759,10 @@ export class ClassroomService {
         section: { select: { id: true, title: true, academicTermId: true } },
         submissions: {
           where: {
-            studentEnrollment: { student: { userId } },
+            // Por la matrícula YA VALIDADA de esta aula (revisión Astra), no por
+            // student.userId: una entrega del mismo usuario ligada a otra matrícula
+            // (otro año, o una fila incoherente) no es su entrega aquí.
+            studentEnrollmentId: enr,
           },
           select: {
             id: true, status: true, score: true, submittedAt: true, feedback: true, attemptNumber: true,
@@ -811,7 +912,10 @@ export class ClassroomService {
       const assigned = await this.prisma.activityAssignment.count({ where: { activityId, studentEnrollmentId: enr } });
       if (!assigned) throw new NotFoundException('Actividad no encontrada');
     }
-    return activity;
+    // El estudiante NO recibe el conteo interno de entregas del docente
+    // (_count.submissions) ni agregados docentes (revisión Astra).
+    const { _count, ...actividadParaEstudiante } = activity as any;
+    return actividadParaEstudiante;
   }
 
   async updateActivity(actor: ClassroomActor, activityId: string, dto: UpdateActivityDto) {
@@ -971,7 +1075,19 @@ export class ClassroomService {
         activityId,
         // Defensa adicional de lectura: filas históricas ajenas (escritas cuando el
         // alta no validaba) no se devuelven aunque sigan colgadas de la actividad.
-        studentEnrollment: { institutionId: actor.institutionId },
+        // Cadena completa de la matrícula (revisión Astra): institución + estudiante
+        // de la institución + año y grupo del aula + año/grupo íntegros.
+        studentEnrollment: {
+          institutionId: actor.institutionId,
+          student: { institutionId: actor.institutionId },
+          academicYearId: activity.classroom.teacherAssignment.academicYearId,
+          groupId: activity.classroom.teacherAssignment.groupId,
+          academicYear: { institutionId: actor.institutionId },
+          group: {
+            campus: { institutionId: actor.institutionId },
+            grade: { institutionId: actor.institutionId },
+          },
+        },
       },
       include: {
         studentEnrollment: {
