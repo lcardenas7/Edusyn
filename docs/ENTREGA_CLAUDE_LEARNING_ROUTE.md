@@ -156,3 +156,18 @@ compartida `pedagogical-support` y la función heredada `syncProfileFromDiagnosi
 perfiles sin consentimiento. Hoy Astra no tiene archivos de APD modificados, así que el frente está
 libre; **retomarlo cambiaría el orden que ella fijó** (Inclusión pospuesta, Attendance siguiente),
 así que requiere su visto bueno o el del fundador.
+
+## 9. Revisión e integración por Astra
+
+Integrado sobre `origin/staging` `e229b21e`. La revisión independiente detectó que cuatro
+callbacks de `$transaction` llamaban al cliente Prisma exterior y que la cadena denormalizada
+paso→ruta→aula no se comprobaba completa. El parche `eaa57408` hace que todas las lecturas y
+escrituras internas usen `tx`, revalida antes de escribir, comprueba las relaciones institucionales
+y acota la actualización idempotente de evidencia.
+
+Se añadieron cuatro pruebas que fallan si se usa el cliente raíz dentro de una transacción, si no
+hay rollback ante un fallo intermedio o si ruta/paso contienen instituciones contradictorias. El
+resultado combinado es 52 pruebas de servicio + 40 HTTP; junto con el contrato, 105 focales. Suite
+final: 94 suites / 1.785 pruebas API, 22 archivos / 214 pruebas web, tipos API/web y build Nest en
+verde. La entrega queda integrada; Attendance puede partir del staging que contenga `eaa57408` y
+el commit documental posterior.

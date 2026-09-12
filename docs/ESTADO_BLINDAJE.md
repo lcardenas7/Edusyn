@@ -1,12 +1,12 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-11. Base de esta entrega: origin/staging 38614231; Plantillas añadida a la revisión de aplicación.
+Fecha: 2026-09-11. Base publicada anterior: origin/staging e229b21e; Learning Route integrado y verificado hasta eaa57408.
 
-Bloque 0 y Taller publicados. Matrículas: flujo integral corregido, 63 pruebas de servicios y 48 HTTP; cierre operativo parcial (PostgreSQL sintético pendiente). Plantillas: 21 rutas institucionales corregidas y catálogo estático, con 100 pruebas nuevas de servicio y 67 HTTP. Inclusión queda pospuesta por el usuario: contexto, perfiles/planes, actividades y avances tienen 93 pruebas de servicios/auxiliares y 50 HTTP; el resto sigue pendiente. No constituye cierre global del aislamiento.
+Bloque 0, Taller, Matrículas, la parte declarada de Inclusión y Plantillas están publicados. Learning Route queda cerrado en la aplicación: 14 rutas institucionales y 2 no institucionales justificadas, con 52 pruebas de servicio y 40 HTTP. Attendance es el siguiente frente delegado. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1113 declaraciones de ruta (incluye SSE y dos rutas de app), 293 con llamada directa, incondicional y esperada a requireInstitutionId, 759 pendientes de calibración y 61 excepciones no institucionales.
+1113 declaraciones de ruta (incluye SSE y dos rutas de app), 307 con llamada directa, incondicional y esperada a requireInstitutionId, 743 pendientes de calibración y 63 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -38,7 +38,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | iam | 44 | 7 | 37 | 0 | Pendiente de auditoría A/B por módulo |
 | institution-config | 14 | 0 | 14 | 0 | Pendiente de auditoría A/B por módulo |
 | institution-context | 0 | 0 | 0 | 0 | Pendiente de auditoría A/B por módulo |
-| learning-route | 16 | 0 | 16 | 0 | Pendiente: encargo específico publicado para Claude en ENCARGO_CLAUDE_BLINDAJE_LEARNING_ROUTE.md; ejecución no confirmada |
+| learning-route | 16 | 14 | 0 | 2 | Cerrado en aplicación: actor institucional en 14 rutas; catálogo CEFR y generación sin persistencia justificadas. Cadena ruta→aula y paso→ruta validada, transacciones reales, 52 pruebas de servicio y 40 HTTP. Bloque 4, PostgreSQL/RLS y cuota IA quedan aparte. Ver AUDITORIA_AISLAMIENTO_LEARNING_ROUTE.md |
 | live-session | 27 | 0 | 27 | 0 | Pendiente de auditoría A/B por módulo |
 | management-tasks | 19 | 4 | 15 | 0 | Pendiente de auditoría A/B por módulo |
 | men-reports | 5 | 0 | 5 | 0 | Pendiente de auditoría A/B por módulo |
@@ -68,7 +68,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 ## Riesgos y siguiente trabajo
 
-Prioridad indicada por el usuario el 2026-09-11: posponer Inclusión, con pendientes en REGISTRO_DESPLIEGUES.md y AUDITORIA_AISLAMIENTO_INCLUSION.md, y retomar academic/templates → learning-route → attendance → preventive-cuts → observer → classroom. Taller conserva HTTP pendiente. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de plantillas, notas y asistencia pendientes. No modificar la frontera EduLab.
+Prioridad indicada por el usuario el 2026-09-11: posponer Inclusión y seguir attendance → preventive-cuts → observer → classroom. Learning Route y Plantillas ya fueron integrados. Taller conserva HTTP pendiente. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas y asistencia pendientes. No modificar la frontera EduLab.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
@@ -88,3 +88,5 @@ Checkpoint adicional de Inclusión: 88 suites / 1.440 pruebas API y 22 archivos 
 Checkpoint de actividades y avances de Inclusión (base ff81a71b): 90 suites / 1.526 pruebas API y 22 archivos / 214 pruebas web aprobados. 86 pruebas nuevas (54 servicios/auxiliares, 32 HTTP), tipos API/web y build Nest aprobados. Retirar la guarda de creación hace fallar ambos casos A/B; restaurarla devuelve las 54 pruebas de servicio a verde. Inventario sin cambios: 1.113 rutas, 274 directas, 779 pendientes de calibración y 60 excepciones no institucionales. No se ha probado PostgreSQL sintético ni se declara APD cerrado.
 
 Checkpoint Plantillas (base 38614231): 21 rutas institucionales y 1 catálogo estático revisados; 100 pruebas nuevas de servicio y 67 HTTP. Suite API completa: 92 suites / 1.693 pruebas. Web: 22 archivos / 214 pruebas. Tipos API/web y build Nest aprobados. Se retiran 19 excepciones y se reclasifica el catálogo, sin cambiar otras rutas. La prueba de mutación detecta quitar la guarda de año. PostgreSQL sintético y el resto de academic siguen pendientes. Inclusión permanece pospuesta; Claude tiene instrucciones versionadas para learning-route.
+
+Checkpoint Learning Route (eaa57408): 16/16 rutas clasificadas; 14 institucionales y 2 no institucionales justificadas. La revisión de integración corrigió cuatro transacciones que usaban el cliente Prisma exterior, revalidó dentro de `tx`, acotó la escritura idempotente de evidencia y añadió pruebas contra relaciones institucionales inconsistentes y rollback. Focal: 3 suites / 105 pruebas. Suite completa: 94 suites / 1.785 pruebas API; web 22 archivos / 214 pruebas; tipos API/web y build Nest aprobados. PostgreSQL/RLS, cuota IA y autorización dentro del colegio no se declaran cubiertos.

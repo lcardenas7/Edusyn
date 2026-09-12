@@ -89,6 +89,13 @@ evidencia → institución + estudiante            (CompetencyEvidence tiene ins
 > **Lo que estas pruebas NO demuestran:** el aislamiento de PostgreSQL. Todo se ejerce contra un
 > doble en memoria; RLS es el programa aparte de Kimi. Aquí se demuestra la guarda de la aplicación.
 
+### Revisión de integración de Astra
+
+La integración añadió cuatro pruebas de servicio (52 de servicio, 40 HTTP): uso obligatorio del
+cliente `tx`, rollback ante fallo intermedio y rechazo de ruta/paso con instituciones
+denormalizadas contradictorias. También corrigió las cuatro operaciones compuestas para que usen
+el cliente transaccional real. Total focal con contrato: 105 pruebas.
+
 ## 5. Cambios de comportamiento (declarados)
 
 | Antes | Ahora |
