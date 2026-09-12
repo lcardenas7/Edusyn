@@ -21,7 +21,7 @@ servicios acotados, relaciones completas, pruebas A/B y HTTP, atomicidad y docum
 | Agente | Trabajo actual | Trabajo siguiente | No debe tocar |
 |---|---|---|---|
 | Claude | Corregir Observer según `REVISION_ASTRA_OBSERVER_20260912.md` | `ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md`, después de que Astra integre Observer corregido | Classroom, Inclusión, R1, EduLab, producción y datos compartidos |
-| Kimi | Corregir Classroom B1 según `REVISION_ASTRA_CLASSROOM_B1_20260912.md` | Esperar integración y nuevo encargo para B2 | Observer, laboratorio PostgreSQL, RLS, otras 81 rutas de Classroom, cron, R1 y EduLab |
+| Kimi | Corregir Classroom B1 según `REVISION_ASTRA_CLASSROOM_B1_20260912.md` | `ENCARGO_KIMI_CLASSROOM_BLOQUE_2.md`, solo tras integrar B1 corregido | Observer, laboratorio PostgreSQL, RLS, otras rutas de Classroom fuera de B1/B2, cron, R1 y EduLab |
 | Astra | Integración, revisión adversarial, estado, bitácora y siguiente módulo | Continuar el blindaje por riesgo | Trabajo no entregado de Claude/Kimi |
 
 El anterior `ENCARGO_CLAUDE_CLASSROOM_BLOQUE_1.md` queda **cancelado y reasignado a Kimi**. Claude
@@ -59,3 +59,7 @@ considera pendiente de integración.
 > `codex/blindaje-classroom-b1-kimi` con pruebas rojas antes y verdes después. No hagas push a
 > staging. Son exactamente 17 de 98 rutas; no toques las otras 81, el cron, RLS ni PostgreSQL.
 > No declares Classroom cerrado.
+
+Después de que Astra integre B1 y actualice `ESTADO_BLINDAJE.md` a 17/98, Kimi puede leer
+`docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_2.md` desde el nuevo `origin/staging` y ejecutar ese segundo
+tramo en **otro** worktree; su techo declarado es 36/98.

@@ -2,7 +2,9 @@
 
 > **Responsable vigente del Bloque 1:** Kimi, según
 > `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md`. La asignación anterior a Claude quedó cancelada para
-> evitar trabajo duplicado. Los bloques posteriores no tienen responsable hasta nueva integración.
+> evitar trabajo duplicado. El Bloque 2 queda reservado a Kimi en
+> `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_2.md`, con inicio condicionado a la integración del B1
+> corregido. Los bloques posteriores no tienen responsable todavía.
 
 Fecha: 2026-09-12. Estado: **0/98 rutas cerradas**. Este documento organiza el trabajo; no acredita aislamiento.
 
