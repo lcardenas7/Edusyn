@@ -30,8 +30,13 @@ Publicado hasta 95b2e3e5: contexto de trabajo, perfiles/planes, actividades y av
 
 Los pendientes operativos de Matrículas (PostgreSQL sintético y dependencias HTTP compartidas) siguen abiertos; posponer Inclusión no los da por resueltos.
 
+### Siguiente encargo para Claude — Attendance
+
+Después de entregar `learning-route`, Claude puede continuar con `docs/ENCARGO_CLAUDE_BLINDAJE_ATTENDANCE.md` en un worktree y rama nuevos. El encargo cubre las 17 rutas de asistencia regular y tutoría, reportes, auditoría, atomicidad, pruebas A/B/HTTP y un commit separado de excepciones. No hacer push directo a staging. Astra conserva la integración y los archivos de estado compartidos.
+
 | Fecha | Entorno | Commit | Migración | Cambio |
 |-------|---------|--------|-----------|--------|
+| 2026-09-11 | staging | e229b21e | No | Plantillas: 21 rutas institucionales con contexto del actor, catálogo estático explícito, referencias/actualizaciones/borrados acotados, predeterminadas por año y transacciones en operaciones compuestas. 167 pruebas nuevas (100 servicio y 67 HTTP); total API 92 suites / 1.693 pruebas, web 214, tipos API/web y Nest aprobados. Prueba de mutación detecta retirar la guarda de año. Push 38614231..e229b21e confirmado. PostgreSQL sintético, resto de academic y Railway pendientes. Sin producción ni RLS. |
 | 2026-09-11 | staging | 38614231 | No | Aclaración autorizada del encargo de Claude: excepciones de learning-route en commit separado, suite completa verde, matrícula activa compatible con institución/año/grupo del aula, 404 sin matrícula compatible y 409 ante ambigüedad real. Push documental edf5feb7..38614231 confirmado. |
 | 2026-09-11 | staging | edf5feb7 | No | Continuidad: Inclusión pospuesta por el usuario; pendientes anotados y encargo específico publicado para Claude sobre learning-route, con worktree independiente, pruebas, límites y entrega de commits sin push directo a staging. Astra continúa Plantillas. Push documental 95b2e3e5..edf5feb7 confirmado. |
 | 2026-09-11 | staging | 95b2e3e5 | No | Blindaje APD: actividades, avances, recálculo y auditoría acotados por institución; mutación/auditoría/porcentaje en transacción serializable. 86 pruebas nuevas (54 servicio/auxiliares y 32 HTTP), 90 suites / 1.526 pruebas API, 214 web, tipos API/web y Nest aprobados. Prueba de mutación A/B detecta retirar la guarda. Push ff81a71b..95b2e3e5 confirmado; APD sigue parcial, PostgreSQL sintético y Railway pendientes. Sin producción ni RLS. |
