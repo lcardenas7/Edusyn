@@ -13,7 +13,7 @@ describe('StudentGradesService.calculateTermGradeAtDate', () => {
 
   function makeService(opts: { plan?: any; partials?: any[] }) {
     const prisma: any = {
-      evaluationPlan: { findUnique: jest.fn().mockResolvedValue(opts.plan ?? null) },
+      evaluationPlan: { findFirst: jest.fn().mockResolvedValue(opts.plan ?? null) },
       partialGrade: {
         findMany: jest.fn().mockImplementation(({ where }: any) => {
           const upper = where?.createdAt?.lte as Date | undefined;
@@ -33,13 +33,13 @@ describe('StudentGradesService.calculateTermGradeAtDate', () => {
         { componentType: 'COGNITIVO', score: 4.0, createdAt: new Date('2026-06-10') },
       ],
     });
-    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff);
+    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff, 'inst-1');
     expect(res.grade).toBe(3.0);
   });
 
   it('SIN parciales → null (genuinamente sin datos)', async () => {
     const svc = makeService({ plan: null, partials: [] });
-    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff);
+    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff, 'inst-1');
     expect(res.grade).toBeNull();
   });
 
@@ -57,7 +57,7 @@ describe('StudentGradesService.calculateTermGradeAtDate', () => {
         { componentType: 'ACTITUDINAL', score: 4.0, createdAt: new Date('2026-06-01') },
       ],
     });
-    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff);
+    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff, 'inst-1');
     expect(res.grade).toBe(3.0); // (2*0.5 + 4*0.5)
   });
 
@@ -69,7 +69,7 @@ describe('StudentGradesService.calculateTermGradeAtDate', () => {
         { componentType: 'COGNITIVO', score: 5.0, createdAt: new Date('2026-08-01') }, // fuera (después del corte)
       ],
     });
-    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff);
+    const res = await svc.calculateTermGradeAtDate('e1', 'ta1', 't1', cutoff, 'inst-1');
     expect(res.grade).toBe(2.0); // solo cuenta la del 1 de junio
   });
 });

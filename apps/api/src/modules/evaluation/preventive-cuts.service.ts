@@ -1,5 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { PerformanceLevel, PreventiveAlertStatus } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PerformanceLevel, PreventiveAlertStatus, type Prisma } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import * as http from 'http';
 import * as https from 'https';
@@ -49,39 +49,143 @@ export class PreventiveCutsService {
     private readonly storageService: SupabaseStorageService,
   ) {}
 
-  async upsertConfig(dto: UpsertPreventiveCutConfigDto) {
+  private async termInScope(
+    institutionId: string,
+    academicTermId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const term = await db.academicTerm.findFirst({
+      where: { id: academicTermId, academicYear: { institutionId } },
+      include: { academicYear: { include: { institution: true } } },
+    });
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+    return term;
+  }
+
+  private async groupInScope(
+    institutionId: string,
+    groupId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const group = await db.group.findFirst({
+      where: {
+        id: groupId,
+        campus: { institutionId },
+        grade: { institutionId },
+      },
+      include: { grade: true },
+    });
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+    return group;
+  }
+
+  private async assignmentInScope(
+    institutionId: string,
+    teacherAssignmentId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const assignment = await db.teacherAssignment.findFirst({
+      where: {
+        id: teacherAssignmentId,
+        institutionId,
+        academicYear: { institutionId },
+        group: { campus: { institutionId }, grade: { institutionId } },
+        subject: { area: { institutionId } },
+      },
+      include: { academicYear: true },
+    });
+    if (!assignment) throw new NotFoundException('Asignación docente no encontrada');
+    return assignment;
+  }
+
+  private async enrollmentInScope(
+    institutionId: string,
+    studentEnrollmentId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const enrollment = await db.studentEnrollment.findFirst({
+      where: {
+        id: studentEnrollmentId,
+        institutionId,
+        academicYear: { institutionId },
+        group: { campus: { institutionId }, grade: { institutionId } },
+        student: { institutionId },
+      },
+      select: { id: true, academicYearId: true, groupId: true },
+    });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+    return enrollment;
+  }
+
+  private validDate(value: Date | undefined, label: string): Date | undefined {
+    if (value === undefined) return undefined;
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+      throw new BadRequestException(`${label} inválida`);
+    }
+    return value;
+  }
+
+  private validThreshold(value: number | undefined): number | undefined {
+    if (value === undefined) return undefined;
+    if (!Number.isFinite(value) || value < 1 || value > 5) {
+      throw new BadRequestException('El umbral debe estar entre 1.0 y 5.0');
+    }
+    return value;
+  }
+
+  async upsertConfig(institutionId: string, dto: UpsertPreventiveCutConfigDto) {
+    await this.termInScope(institutionId, dto.academicTermId);
+    const cutoffDate = this.validDate(dto.cutoffDate, 'Fecha de corte')!;
+    const riskThresholdScore = this.validThreshold(dto.riskThresholdScore)!;
     return this.prisma.preventiveCutConfig.upsert({
       where: { academicTermId: dto.academicTermId },
       update: {
-        cutoffDate: dto.cutoffDate,
-        riskThresholdScore: dto.riskThresholdScore,
+        cutoffDate,
+        riskThresholdScore,
       },
       create: {
         academicTermId: dto.academicTermId,
-        cutoffDate: dto.cutoffDate,
-        riskThresholdScore: dto.riskThresholdScore,
+        cutoffDate,
+        riskThresholdScore,
       },
     });
   }
 
-  async getConfig(academicTermId: string) {
-    return this.prisma.preventiveCutConfig.findUnique({
-      where: { academicTermId },
+  async getConfig(institutionId: string, academicTermId: string) {
+    await this.termInScope(institutionId, academicTermId);
+    return this.prisma.preventiveCutConfig.findFirst({
+      where: { academicTermId, academicTerm: { academicYear: { institutionId } } },
     });
   }
 
-  async listAlerts(params: {
+  async listAlerts(institutionId: string, params: {
     teacherAssignmentId?: string;
     academicTermId?: string;
     studentEnrollmentId?: string;
     status?: PreventiveAlertStatus;
   }) {
+    if (params.status && !Object.values(PreventiveAlertStatus).includes(params.status)) {
+      throw new BadRequestException('Estado de alerta inválido');
+    }
+    await Promise.all([
+      params.teacherAssignmentId
+        ? this.assignmentInScope(institutionId, params.teacherAssignmentId)
+        : Promise.resolve(),
+      params.academicTermId ? this.termInScope(institutionId, params.academicTermId) : Promise.resolve(),
+      params.studentEnrollmentId
+        ? this.enrollmentInScope(institutionId, params.studentEnrollmentId)
+        : Promise.resolve(),
+    ]);
     return this.prisma.preventiveAlert.findMany({
       where: {
+        institutionId,
         teacherAssignmentId: params.teacherAssignmentId,
         academicTermId: params.academicTermId,
         studentEnrollmentId: params.studentEnrollmentId,
         status: params.status,
+        teacherAssignment: { institutionId, academicYear: { institutionId } },
+        studentEnrollment: { institutionId, academicYear: { institutionId }, student: { institutionId } },
+        academicTerm: { academicYear: { institutionId } },
       },
       include: {
         studentEnrollment: {
@@ -101,32 +205,42 @@ export class PreventiveCutsService {
     });
   }
 
-  async updateAlert(id: string, dto: UpdatePreventiveAlertDto) {
-    return this.prisma.preventiveAlert.update({
-      where: { id },
-      data: {
-        status: dto.status as any,
-        recoveryPlan: dto.recoveryPlan,
-        meetingAt: dto.meetingAt,
-        notes: dto.notes,
-      },
+  async updateAlert(institutionId: string, id: string, dto: UpdatePreventiveAlertDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const alert = await tx.preventiveAlert.findFirst({
+        where: {
+          id,
+          institutionId,
+          teacherAssignment: { institutionId, academicYear: { institutionId } },
+          studentEnrollment: { institutionId, academicYear: { institutionId }, student: { institutionId } },
+          academicTerm: { academicYear: { institutionId } },
+        },
+        select: { id: true },
+      });
+      if (!alert) throw new NotFoundException('Alerta preventiva no encontrada');
+      const updated = await tx.preventiveAlert.updateMany({
+        where: { id, institutionId },
+        data: {
+          status: dto.status as any,
+          recoveryPlan: dto.recoveryPlan,
+          meetingAt: dto.meetingAt,
+          notes: dto.notes,
+        },
+      });
+      if (updated.count === 0) throw new NotFoundException('Alerta preventiva no encontrada');
+      return tx.preventiveAlert.findFirst({ where: { id, institutionId } });
     });
   }
 
-  async execute(dto: ExecutePreventiveCutDto) {
-    const teacherAssignment = await this.prisma.teacherAssignment.findUnique({
-      where: { id: dto.teacherAssignmentId },
-      include: {
-        academicYear: true,
-      },
-    });
-
-    if (!teacherAssignment) {
-      throw new BadRequestException('teacherAssignmentId inválido');
+  async execute(institutionId: string, dto: ExecutePreventiveCutDto) {
+    const teacherAssignment = await this.assignmentInScope(institutionId, dto.teacherAssignmentId);
+    const term = await this.termInScope(institutionId, dto.academicTermId);
+    if (term.academicYearId !== teacherAssignment.academicYearId) {
+      throw new NotFoundException('Período académico no encontrado');
     }
 
-    const config = await this.prisma.preventiveCutConfig.findUnique({
-      where: { academicTermId: dto.academicTermId },
+    const config = await this.prisma.preventiveCutConfig.findFirst({
+      where: { academicTermId: dto.academicTermId, academicTerm: { academicYear: { institutionId } } },
     });
 
     if (!config && !dto.cutoffDate) {
@@ -135,14 +249,18 @@ export class PreventiveCutsService {
       );
     }
 
-    const cutoffDate = dto.cutoffDate ?? config!.cutoffDate;
-    const threshold = Number(config?.riskThresholdScore ?? 3.0);
+    const cutoffDate = this.validDate(dto.cutoffDate ?? config!.cutoffDate, 'Fecha de corte')!;
+    const threshold = this.validThreshold(Number(config?.riskThresholdScore ?? 3.0))!;
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         academicYearId: teacherAssignment.academicYearId,
         groupId: teacherAssignment.groupId,
         status: 'ACTIVE',
+        academicYear: { institutionId },
+        group: { campus: { institutionId }, grade: { institutionId } },
+        student: { institutionId },
       },
       include: {
         student: true,
@@ -152,13 +270,14 @@ export class PreventiveCutsService {
       },
     });
 
-    const alerts = await Promise.all(
+    const computed = await Promise.all(
       enrollments.map(async (enrollment) => {
         const termGrade = await this.studentGradesService.calculateTermGradeAtDate(
           enrollment.id,
           teacherAssignment.id,
           dto.academicTermId,
           cutoffDate,
+          institutionId,
         );
 
         const computedGrade = termGrade.grade;
@@ -168,7 +287,7 @@ export class PreventiveCutsService {
         if (computedGrade !== null) {
           const scale = await this.prisma.performanceScale.findFirst({
             where: {
-              institutionId: teacherAssignment.academicYear.institutionId,
+              institutionId,
               minScore: { lte: computedGrade },
               maxScore: { gte: computedGrade },
             },
@@ -176,52 +295,72 @@ export class PreventiveCutsService {
           performanceLevel = scale?.level ?? null;
         }
 
-        const existing = await this.prisma.preventiveAlert.findUnique({
-          where: {
-            teacherAssignmentId_studentEnrollmentId_academicTermId: {
-              teacherAssignmentId: teacherAssignment.id,
-              studentEnrollmentId: enrollment.id,
-              academicTermId: dto.academicTermId,
-            },
-          },
-        });
-
         const nextStatus: PreventiveAlertStatus = isRisk
           ? PreventiveAlertStatus.OPEN
           : PreventiveAlertStatus.RESOLVED;
 
-        const statusToPersist =
-          existing?.status === PreventiveAlertStatus.IN_RECOVERY
-            ? existing.status
-            : nextStatus;
-
-        return this.prisma.preventiveAlert.upsert({
-          where: {
-            teacherAssignmentId_studentEnrollmentId_academicTermId: {
-              teacherAssignmentId: teacherAssignment.id,
-              studentEnrollmentId: enrollment.id,
-              academicTermId: dto.academicTermId,
-            },
-          },
-          update: {
-            cutoffDate,
-            computedGrade: computedGrade === null ? null : computedGrade,
-            performanceLevel,
-            status: statusToPersist,
-          },
-          create: {
-            institutionId: teacherAssignment.institutionId,
-            teacherAssignmentId: teacherAssignment.id,
-            studentEnrollmentId: enrollment.id,
-            academicTermId: dto.academicTermId,
-            cutoffDate,
-            computedGrade: computedGrade === null ? null : computedGrade,
-            performanceLevel,
-            status: statusToPersist,
-          },
-        });
+        return { enrollment, computedGrade, performanceLevel, nextStatus };
       }),
     );
+
+    // El lote se confirma completo o no se confirma: un fallo en un estudiante no deja un corte
+    // parcialmente actualizado. Las coordenadas se revalidan dentro de la misma transacción.
+    const alerts = await this.prisma.$transaction(async (tx) => {
+      const [scopedAssignment, scopedTerm] = await Promise.all([
+        this.assignmentInScope(institutionId, teacherAssignment.id, tx),
+        this.termInScope(institutionId, dto.academicTermId, tx),
+      ]);
+      if (scopedTerm.academicYearId !== scopedAssignment.academicYearId) {
+        throw new NotFoundException('Período académico no encontrado');
+      }
+
+      const persisted: any[] = [];
+      for (const item of computed) {
+        const scopedEnrollment = await this.enrollmentInScope(institutionId, item.enrollment.id, tx);
+        if (
+          scopedEnrollment.academicYearId !== scopedAssignment.academicYearId ||
+          scopedEnrollment.groupId !== scopedAssignment.groupId
+        ) {
+          throw new NotFoundException('Matrícula no encontrada');
+        }
+          const existing = await tx.preventiveAlert.findFirst({
+            where: {
+              institutionId,
+              teacherAssignmentId: teacherAssignment.id,
+              studentEnrollmentId: item.enrollment.id,
+              academicTermId: dto.academicTermId,
+            },
+          });
+          const statusToPersist = existing?.status === PreventiveAlertStatus.IN_RECOVERY
+            ? existing.status
+            : item.nextStatus;
+          const data = {
+            cutoffDate,
+            computedGrade: item.computedGrade === null ? null : item.computedGrade,
+            performanceLevel: item.performanceLevel,
+            status: statusToPersist,
+          };
+          if (existing) {
+            const updated = await tx.preventiveAlert.updateMany({
+              where: { id: existing.id, institutionId },
+              data,
+            });
+            if (updated.count === 0) throw new NotFoundException('Alerta preventiva no encontrada');
+            persisted.push({ ...existing, ...data });
+            continue;
+          }
+          persisted.push(await tx.preventiveAlert.create({
+            data: {
+              institutionId,
+              teacherAssignmentId: teacherAssignment.id,
+              studentEnrollmentId: item.enrollment.id,
+              academicTermId: dto.academicTermId,
+              ...data,
+            },
+          }));
+      }
+      return persisted;
+    });
 
     const inRisk = alerts.filter((a) => a.status !== PreventiveAlertStatus.RESOLVED);
 
@@ -241,35 +380,33 @@ export class PreventiveCutsService {
   // cerrar el período y poder entregar/descargar un PDF.
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async executeGroupView(params: {
+  async executeGroupView(institutionId: string, params: {
     academicTermId: string;
     groupId: string;
     cutoffDate?: Date;
     threshold?: number;
   }): Promise<GroupCutResult> {
-    const term = await this.prisma.academicTerm.findUnique({
-      where: { id: params.academicTermId },
-      include: { academicYear: { include: { institution: true } } },
-    });
-    if (!term) throw new BadRequestException('academicTermId inválido');
+    const term = await this.termInScope(institutionId, params.academicTermId);
+    const group = await this.groupInScope(institutionId, params.groupId);
 
-    const group = await this.prisma.group.findUnique({
-      where: { id: params.groupId },
-      include: { grade: true },
-    });
-    if (!group) throw new BadRequestException('groupId inválido');
-
-    const config = await this.prisma.preventiveCutConfig.findUnique({
-      where: { academicTermId: params.academicTermId },
+    const config = await this.prisma.preventiveCutConfig.findFirst({
+      where: {
+        academicTermId: params.academicTermId,
+        academicTerm: { academicYear: { institutionId } },
+      },
     });
 
-    const cutoffDate = params.cutoffDate ?? config?.cutoffDate ?? new Date();
-    const threshold = Number(params.threshold ?? config?.riskThresholdScore ?? 3.0);
+    const cutoffDate = this.validDate(params.cutoffDate ?? config?.cutoffDate ?? new Date(), 'Fecha de corte')!;
+    const threshold = this.validThreshold(Number(params.threshold ?? config?.riskThresholdScore ?? 3.0))!;
 
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: {
+        institutionId,
         academicYearId: term.academicYearId,
         groupId: params.groupId,
+        academicYear: { institutionId },
+        group: { campus: { institutionId }, grade: { institutionId } },
+        subject: { area: { institutionId } },
       },
       include: { subject: true },
     });
@@ -281,9 +418,13 @@ export class PreventiveCutsService {
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
+        institutionId,
         academicYearId: term.academicYearId,
         groupId: params.groupId,
         status: 'ACTIVE',
+        academicYear: { institutionId },
+        group: { campus: { institutionId }, grade: { institutionId } },
+        student: { institutionId },
       },
       include: { student: true },
       orderBy: { student: { lastName: 'asc' } },
@@ -298,6 +439,7 @@ export class PreventiveCutsService {
               a.id,
               params.academicTermId,
               cutoffDate,
+              institutionId,
             );
             const grade = res.grade;
             // Una materia sin actividades calificadas aún NO es "en riesgo":
@@ -359,14 +501,14 @@ export class PreventiveCutsService {
   }
 
   // ── PDF: consolidado del grupo ──────────────────────────────────────────────
-  async generateGroupPdf(params: {
+  async generateGroupPdf(institutionId: string, params: {
     academicTermId: string;
     groupId: string;
     cutoffDate?: Date;
     threshold?: number;
     showGrades?: boolean; // false = "sin notas" (marca X en materias en riesgo)
   }): Promise<Buffer> {
-    const data = await this.executeGroupView(params);
+    const data = await this.executeGroupView(institutionId, params);
     const showGrades = params.showGrades !== false;
     const brand = this.brandColor(data.institution.primaryColor);
     const logo = await this.resolveLogoBuffer(data.institution.logo);
@@ -453,7 +595,7 @@ export class PreventiveCutsService {
   }
 
   // ── PDF: detalle de un estudiante (para entregar al acudiente) ──────────────
-  async generateStudentPdf(params: {
+  async generateStudentPdf(institutionId: string, params: {
     academicTermId: string;
     groupId: string;
     studentEnrollmentId: string;
@@ -461,11 +603,12 @@ export class PreventiveCutsService {
     threshold?: number;
     showGrades?: boolean; // false = "sin notas" (marca X en materias en riesgo)
   }): Promise<Buffer> {
-    const data = await this.executeGroupView(params);
+    await this.enrollmentInScope(institutionId, params.studentEnrollmentId);
+    const data = await this.executeGroupView(institutionId, params);
     const student = data.students.find(
       (s) => s.studentEnrollmentId === params.studentEnrollmentId,
     );
-    if (!student) throw new BadRequestException('Estudiante no encontrado en el grupo');
+    if (!student) throw new NotFoundException('Estudiante no encontrado en el grupo');
     const showGrades = params.showGrades !== false;
     const brand = this.brandColor(data.institution.primaryColor);
     const logo = await this.resolveLogoBuffer(data.institution.logo);

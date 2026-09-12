@@ -1812,7 +1812,7 @@ export class ReportsService {
     if (scope === 'partial') {
       if (!termId) throw new BadRequestException('El corte parcial requiere un período (termId).');
       cutoffDate = opts?.cutoffDate ?? new Date();
-      rows = await this.loadPartialFailedRows(academicYearId, groupId, termId, cutoffDate);
+      rows = await this.loadPartialFailedRows(institutionId, academicYearId, groupId, termId, cutoffDate);
       meta = { source: 'live', scope: 'partial', cutoffDate: cutoffDate.toISOString() };
     } else {
       const res = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode: opts?.reportMode });
@@ -1882,6 +1882,7 @@ export class ReportsService {
    * con el mismo motor del Corte Preventivo. grade === null = "sin datos aún" (no reprobado).
    */
   private async loadPartialFailedRows(
+    institutionId: string,
     academicYearId: string,
     groupId: string,
     termId: string,
@@ -1909,7 +1910,9 @@ export class ReportsService {
       const studentName = [enr.student.lastName, enr.student.secondLastName, enr.student.firstName, enr.student.secondName]
         .filter(Boolean).join(' ');
       for (const a of assignments) {
-        const res = await this.studentGradesService.calculateTermGradeAtDate(enr.id, a.id, termId, cutoffDate);
+        const res = await this.studentGradesService.calculateTermGradeAtDate(
+          enr.id, a.id, termId, cutoffDate, institutionId,
+        );
         rows.push({
           studentEnrollmentId: enr.id,
           studentName,

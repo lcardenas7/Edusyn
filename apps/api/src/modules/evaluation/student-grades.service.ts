@@ -179,13 +179,19 @@ export class StudentGradesService {
     academicTermId: string,
     componentId: string,
     cutoffDate: Date,
+    institutionId: string,
   ): Promise<number | null> {
     const grades = await this.prisma.studentGrade.findMany({
       where: {
+        institutionId,
         studentEnrollmentId,
+        studentEnrollment: { institutionId, academicYear: { institutionId }, student: { institutionId } },
         evaluativeActivity: {
+          institutionId,
           academicTermId,
           componentId,
+          academicTerm: { academicYear: { institutionId } },
+          teacherAssignment: { institutionId, academicYear: { institutionId } },
           OR: [{ dueDate: null }, { dueDate: { lte: cutoffDate } }],
         },
       },
@@ -293,16 +299,18 @@ export class StudentGradesService {
     teacherAssignmentId: string,
     academicTermId: string,
     cutoffDate: Date,
+    institutionId: string,
   ): Promise<{ grade: number | null; components: { componentId: string; name: string; average: number | null; percentage: number }[] }> {
-    const plan = await this.prisma.evaluationPlan.findUnique({
+    const plan = await this.prisma.evaluationPlan.findFirst({
       where: {
-        teacherAssignmentId_academicTermId: {
-          teacherAssignmentId,
-          academicTermId,
-        },
+        teacherAssignmentId,
+        academicTermId,
+        teacherAssignment: { institutionId, academicYear: { institutionId } },
+        academicTerm: { academicYear: { institutionId } },
       },
       include: {
         components: {
+          where: { component: { institutionId } },
           include: {
             component: true,
           },
@@ -317,9 +325,13 @@ export class StudentGradesService {
     upperBound.setHours(23, 59, 59, 999);
     const partials = await this.prisma.partialGrade.findMany({
       where: {
+        institutionId,
         studentEnrollmentId,
         teacherAssignmentId,
         academicTermId,
+        studentEnrollment: { institutionId, academicYear: { institutionId }, student: { institutionId } },
+        teacherAssignment: { institutionId, academicYear: { institutionId } },
+        academicTerm: { academicYear: { institutionId } },
         createdAt: { lte: upperBound },
       },
     });
@@ -360,6 +372,7 @@ export class StudentGradesService {
             academicTermId,
             cw.componentId,
             cutoffDate,
+            institutionId,
           );
           return {
             componentId: cw.componentId,

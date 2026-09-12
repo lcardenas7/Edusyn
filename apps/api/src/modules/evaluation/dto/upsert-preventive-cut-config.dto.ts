@@ -1,8 +1,9 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsNumber, IsUUID, Max, Min } from 'class-validator';
+import { IsDate, IsNotEmpty, IsNumber, IsString, Max, Min } from 'class-validator';
 
 export class UpsertPreventiveCutConfigDto {
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   academicTermId: string;
 
   @Type(() => Date)

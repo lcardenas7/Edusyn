@@ -1,11 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsOptional, IsUUID } from 'class-validator';
+import { IsDate, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class ExecutePreventiveCutDto {
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   teacherAssignmentId: string;
 
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   academicTermId: string;
 
   @IsOptional()

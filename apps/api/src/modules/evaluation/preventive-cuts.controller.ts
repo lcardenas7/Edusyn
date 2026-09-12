@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -19,39 +20,49 @@ import { ExecutePreventiveCutDto } from './dto/execute-preventive-cut.dto';
 import { UpsertPreventiveCutConfigDto } from './dto/upsert-preventive-cut-config.dto';
 import { UpdatePreventiveAlertDto } from './dto/update-preventive-alert.dto';
 import { PreventiveCutsService } from './preventive-cuts.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('preventive-cuts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PreventiveCutsController {
-  constructor(private readonly preventiveCutsService: PreventiveCutsService) {}
+  constructor(
+    private readonly preventiveCutsService: PreventiveCutsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post('config')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async upsertConfig(@Body() dto: UpsertPreventiveCutConfigDto) {
-    return this.preventiveCutsService.upsertConfig(dto);
+  async upsertConfig(@Request() req: any, @Body() dto: UpsertPreventiveCutConfigDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.preventiveCutsService.upsertConfig(institutionId, dto);
   }
 
   @Get('config')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getConfig(@Query('academicTermId') academicTermId: string) {
-    return this.preventiveCutsService.getConfig(academicTermId);
+  async getConfig(@Request() req: any, @Query('academicTermId') academicTermId: string) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.preventiveCutsService.getConfig(institutionId, academicTermId);
   }
 
   @Post('execute')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async execute(@Body() dto: ExecutePreventiveCutDto) {
-    return this.preventiveCutsService.execute(dto);
+  async execute(@Request() req: any, @Body() dto: ExecutePreventiveCutDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.preventiveCutsService.execute(institutionId, dto);
   }
 
   @Get('alerts')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async listAlerts(
+    @Request() req: any,
     @Query('teacherAssignmentId') teacherAssignmentId?: string,
     @Query('academicTermId') academicTermId?: string,
     @Query('studentEnrollmentId') studentEnrollmentId?: string,
     @Query('status') status?: PreventiveAlertStatus,
   ) {
-    return this.preventiveCutsService.listAlerts({
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.preventiveCutsService.listAlerts(institutionId, {
       teacherAssignmentId,
       academicTermId,
       studentEnrollmentId,
@@ -61,20 +72,23 @@ export class PreventiveCutsController {
 
   @Patch('alerts/:id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async updateAlert(@Param('id') id: string, @Body() dto: UpdatePreventiveAlertDto) {
-    return this.preventiveCutsService.updateAlert(id, dto);
+  async updateAlert(@Request() req: any, @Param('id') id: string, @Body() dto: UpdatePreventiveAlertDto) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.preventiveCutsService.updateAlert(institutionId, id, dto);
   }
 
   // ── Corte preventivo consolidado por grupo (solo lectura) ──────────────────
   @Get('group-view')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async groupView(
+    @Request() req: any,
     @Query('academicTermId') academicTermId: string,
     @Query('groupId') groupId: string,
     @Query('cutoffDate') cutoffDate?: string,
     @Query('threshold') threshold?: string,
   ) {
-    return this.preventiveCutsService.executeGroupView({
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.preventiveCutsService.executeGroupView(institutionId, {
       academicTermId,
       groupId,
       cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
@@ -85,6 +99,7 @@ export class PreventiveCutsController {
   @Get('pdf/group')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async groupPdf(
+    @Request() req: any,
     @Res() res: Response,
     @Query('academicTermId') academicTermId: string,
     @Query('groupId') groupId: string,
@@ -92,7 +107,8 @@ export class PreventiveCutsController {
     @Query('threshold') threshold?: string,
     @Query('showGrades') showGrades?: string,
   ) {
-    const pdf = await this.preventiveCutsService.generateGroupPdf({
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    const pdf = await this.preventiveCutsService.generateGroupPdf(institutionId, {
       academicTermId,
       groupId,
       cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
@@ -107,6 +123,7 @@ export class PreventiveCutsController {
   @Get('pdf/student')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async studentPdf(
+    @Request() req: any,
     @Res() res: Response,
     @Query('academicTermId') academicTermId: string,
     @Query('groupId') groupId: string,
@@ -115,7 +132,8 @@ export class PreventiveCutsController {
     @Query('threshold') threshold?: string,
     @Query('showGrades') showGrades?: string,
   ) {
-    const pdf = await this.preventiveCutsService.generateStudentPdf({
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    const pdf = await this.preventiveCutsService.generateStudentPdf(institutionId, {
       academicTermId,
       groupId,
       studentEnrollmentId,
