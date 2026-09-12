@@ -56,6 +56,15 @@ const TEACHER_ASSIGNMENT_SELECT = {
  */
 const VIEW_ADMIN_ROLES = ['ADMIN_INSTITUTIONAL', 'RECTOR', 'COORDINADOR'];
 
+/** ¿El actor ve el aula solo como estudiante (ni docente asignado, ni admin, ni SuperAdmin)? */
+export const esVistaEstudiante = (
+  actor: ClassroomActor,
+  classroom: { teacherAssignment: { teacherId: string } },
+): boolean =>
+  !actor.isSuperAdmin &&
+  classroom.teacherAssignment.teacherId !== actor.userId &&
+  !actor.roles.some((r) => VIEW_ADMIN_ROLES.includes(r));
+
 /**
  * Servicio compartido de acceso institucional para Classroom Bloque 1 (17 rutas).
  *
