@@ -390,14 +390,32 @@ describe('Asistencia · aislamiento por servicio', () => {
     expect(conteo(data.rows, 'tutoringAttendance', A)).toBe(2);
   });
 
-  it('la revalidación dentro de la transacción cierra la carrera guarda→escritura', async () => {
-    // La asignación deja de ser de este colegio justo después de pasar la guarda.
-    data.prisma.teacherAssignment.count.mockResolvedValueOnce(0);
+  it('la validación dentro de la transacción rechaza una asignación que ya no está en alcance', async () => {
+    data.tx.teacherAssignment.findFirst.mockResolvedValueOnce(null);
     await expect(data.service.recordBulk(
       { teacherAssignmentId: 'ta-A', date: new Date('2026-03-06T00:00:00.000Z').toISOString(), records: [{ studentEnrollmentId: 'enr-A1', status: 'PRESENT' as any }] },
       A,
     )).rejects.toBeInstanceOf(NotFoundException);
     expect(conteo(data.rows, 'attendanceRecord', A)).toBe(2);
     noAudit(data.prisma);
+  });
+
+  it('escritura y auditoría usan el cliente transaccional recibido, no el cliente raíz', async () => {
+    data.prisma.attendanceRecord.updateMany = jest.fn(async () => {
+      throw new Error('se usó el cliente raíz para escribir asistencia');
+    });
+    data.prisma.attendanceAuditEvent.createMany = jest.fn(async () => {
+      throw new Error('se usó el cliente raíz para escribir auditoría');
+    });
+
+    await expect(data.service.recordBulk(
+      { teacherAssignmentId: 'ta-A', date: DIA.toISOString(), records: [{ studentEnrollmentId: 'enr-A1', status: 'ABSENT' as any }] },
+      A,
+    )).resolves.toHaveLength(1);
+
+    expect(data.prisma.attendanceRecord.updateMany).not.toHaveBeenCalled();
+    expect(data.prisma.attendanceAuditEvent.createMany).not.toHaveBeenCalled();
+    expect(data.tx.attendanceRecord.updateMany).toHaveBeenCalledTimes(1);
+    expect(data.tx.attendanceAuditEvent.createMany).toHaveBeenCalledTimes(1);
   });
 });

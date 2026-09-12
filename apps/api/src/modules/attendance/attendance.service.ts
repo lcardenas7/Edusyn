@@ -55,7 +55,12 @@ export class AttendanceService {
         id: teacherAssignmentId,
         institutionId,
         academicYear: { institutionId },
-        group: { campus: { institutionId } },
+        group: {
+          campus: { institutionId },
+          grade: { institutionId },
+          shift: { campus: { institutionId } },
+        },
+        subject: { area: { institutionId } },
       },
       select: { id: true, institutionId: true, academicYearId: true, groupId: true, subjectId: true, teacherId: true },
     });
@@ -67,7 +72,17 @@ export class AttendanceService {
   private async enrollmentInScope(institutionId: string, studentEnrollmentId: string) {
     if (!studentEnrollmentId) throw new BadRequestException('Se requiere la matrícula');
     const enrollment = await this.prisma.studentEnrollment.findFirst({
-      where: { id: studentEnrollmentId, institutionId, group: { campus: { institutionId } } },
+      where: {
+        id: studentEnrollmentId,
+        institutionId,
+        academicYear: { institutionId },
+        student: { institutionId },
+        group: {
+          campus: { institutionId },
+          grade: { institutionId },
+          shift: { campus: { institutionId } },
+        },
+      },
       select: { id: true, academicYearId: true, groupId: true, studentId: true, status: true },
     });
     if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
@@ -89,7 +104,12 @@ export class AttendanceService {
   private async groupInScope(institutionId: string, groupId: string) {
     if (!groupId) throw new BadRequestException('Se requiere el grupo');
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, campus: { institutionId } },
+      where: {
+        id: groupId,
+        campus: { institutionId },
+        grade: { institutionId },
+        shift: { campus: { institutionId } },
+      },
       select: { id: true, campusId: true },
     });
     if (!group) throw new NotFoundException('Grupo no encontrado');
@@ -110,8 +130,12 @@ export class AttendanceService {
    * M-3: impide modificar asistencia de una fecha que cae dentro de un período FINALIZED.
    * Solo bloquea cuando hay certeza (el período tiene rango de fechas que contiene la fecha).
    */
-  private async guardAttendanceDateNotFinalized(academicYearId: string, date: Date): Promise<void> {
-    const finalizedTerm = await this.prisma.academicTerm.findFirst({
+  private async guardAttendanceDateNotFinalized(
+    academicYearId: string,
+    date: Date,
+    db: Pick<PrismaService, 'academicTerm'> = this.prisma,
+  ): Promise<void> {
+    const finalizedTerm = await db.academicTerm.findFirst({
       where: {
         academicYearId,
         status: 'FINALIZED',
@@ -140,38 +164,53 @@ export class AttendanceService {
    */
   async recordBulk(dto: RecordAttendanceDto, institutionId: string, actor?: AttendanceAuditActor) {
     const date = this.fecha(dto.date);
-    const assignment = await this.assignmentInScope(institutionId, dto.teacherAssignmentId);
-    await this.guardAttendanceDateNotFinalized(assignment.academicYearId, date);
-
     const registros = Array.isArray(dto.records) ? dto.records : [];
     if (registros.length === 0) throw new BadRequestException('No se recibió ningún registro de asistencia');
-
     const enrollmentIds = [...new Set(registros.map((r) => r.studentEnrollmentId))];
-    const validas = await this.prisma.studentEnrollment.findMany({
-      where: {
-        id: { in: enrollmentIds },
-        institutionId,
-        groupId: assignment.groupId,
-        academicYearId: assignment.academicYearId,
-        group: { campus: { institutionId } },
-      },
-      select: { id: true },
-    });
-    if (validas.length !== enrollmentIds.length) throw new NotFoundException('Matrícula no encontrada');
 
-    // Estado previo (para auditoría forense: estado anterior vs nuevo)
-    const existing = await this.prisma.attendanceRecord.findMany({
-      where: { institutionId, teacherAssignmentId: dto.teacherAssignmentId, date, studentEnrollmentId: { in: enrollmentIds } },
-      select: { id: true, studentEnrollmentId: true, status: true },
-    });
-    const prevMap = new Map(existing.map((e) => [e.studentEnrollmentId, { id: e.id, status: e.status as string }]));
-
-    return this.prisma.$transaction(async () => {
-      // Revalidación DENTRO de la transacción: cierra la carrera entre la guarda y la escritura.
-      const sigueSiendoPropia = await this.prisma.teacherAssignment.count({
-        where: { id: dto.teacherAssignmentId, institutionId },
+    return this.prisma.$transaction(async (tx) => {
+      // La guarda, las matrículas, el estado previo, las escrituras y la auditoría usan el MISMO
+      // cliente transaccional. Así no queda una ventana entre validar y escribir.
+      const assignment = await tx.teacherAssignment.findFirst({
+        where: {
+          id: dto.teacherAssignmentId,
+          institutionId,
+          academicYear: { institutionId },
+          group: {
+            campus: { institutionId },
+            grade: { institutionId },
+            shift: { campus: { institutionId } },
+          },
+          subject: { area: { institutionId } },
+        },
+        select: { id: true, academicYearId: true, groupId: true },
       });
-      if (sigueSiendoPropia !== 1) throw new NotFoundException('Asignación no encontrada');
+      if (!assignment) throw new NotFoundException('Asignación no encontrada');
+      await this.guardAttendanceDateNotFinalized(assignment.academicYearId, date, tx);
+
+      const validas = await tx.studentEnrollment.findMany({
+        where: {
+          id: { in: enrollmentIds },
+          institutionId,
+          groupId: assignment.groupId,
+          academicYearId: assignment.academicYearId,
+          academicYear: { institutionId },
+          student: { institutionId },
+          group: {
+            campus: { institutionId },
+            grade: { institutionId },
+            shift: { campus: { institutionId } },
+          },
+        },
+        select: { id: true },
+      });
+      if (validas.length !== enrollmentIds.length) throw new NotFoundException('Matrícula no encontrada');
+
+      const existing = await tx.attendanceRecord.findMany({
+        where: { institutionId, teacherAssignmentId: dto.teacherAssignmentId, date, studentEnrollmentId: { in: enrollmentIds } },
+        select: { id: true, studentEnrollmentId: true, status: true },
+      });
+      const prevMap = new Map(existing.map((e) => [e.studentEnrollmentId, { id: e.id, status: e.status as string }]));
 
       const results: any[] = [];
       const auditEvents: AttendanceAuditEventInput[] = [];
@@ -181,7 +220,7 @@ export class AttendanceService {
         if (previo) {
           // `upsert` por la clave única sola cruzaría instituciones si dos filas compartieran
           // clave: se actualiza acotado por institución.
-          const filas = await this.prisma.attendanceRecord.updateMany({
+          const filas = await tx.attendanceRecord.updateMany({
             where: { id: previo.id, institutionId },
             data: { status: record.status, observations: record.observations },
           });
@@ -195,7 +234,7 @@ export class AttendanceService {
             });
           }
         } else {
-          const creado = await this.prisma.attendanceRecord.create({
+          const creado = await tx.attendanceRecord.create({
             data: {
               institutionId,
               teacherAssignmentId: dto.teacherAssignmentId,
@@ -214,7 +253,7 @@ export class AttendanceService {
         }
       }
 
-      await this.attendanceAudit.recordMany(auditEvents, actor);
+      await this.attendanceAudit.recordMany(auditEvents, actor, tx);
       return results;
     });
   }
@@ -226,23 +265,34 @@ export class AttendanceService {
    * la misma institución. Solo se editan estado y observaciones.
    */
   async update(id: string, dto: UpdateAttendanceDto, institutionId: string, actor?: AttendanceAuditActor) {
-    const record = await this.prisma.attendanceRecord.findFirst({
-      where: {
-        id, institutionId,
-        teacherAssignment: { institutionId },
-        studentEnrollment: { institutionId },
-      },
-      select: {
-        date: true, status: true, institutionId: true,
-        studentEnrollmentId: true, teacherAssignmentId: true,
-        teacherAssignment: { select: { academicYearId: true } },
-      },
-    });
-    if (!record) throw new NotFoundException('Registro de asistencia no encontrado');
-    await this.guardAttendanceDateNotFinalized(record.teacherAssignment.academicYearId, record.date);
+    return this.prisma.$transaction(async (tx) => {
+      const record = await tx.attendanceRecord.findFirst({
+        where: {
+          id,
+          institutionId,
+          teacherAssignment: {
+            institutionId,
+            academicYear: { institutionId },
+            group: { campus: { institutionId }, grade: { institutionId } },
+            subject: { area: { institutionId } },
+          },
+          studentEnrollment: {
+            institutionId,
+            academicYear: { institutionId },
+            student: { institutionId },
+            group: { campus: { institutionId }, grade: { institutionId } },
+          },
+        },
+        select: {
+          date: true, status: true, institutionId: true,
+          studentEnrollmentId: true, teacherAssignmentId: true,
+          teacherAssignment: { select: { academicYearId: true } },
+        },
+      });
+      if (!record) throw new NotFoundException('Registro de asistencia no encontrado');
+      await this.guardAttendanceDateNotFinalized(record.teacherAssignment.academicYearId, record.date, tx);
 
-    return this.prisma.$transaction(async () => {
-      const filas = await this.prisma.attendanceRecord.updateMany({
+      const filas = await tx.attendanceRecord.updateMany({
         where: { id, institutionId },
         data: { status: dto.status, observations: dto.observations },
       });
@@ -253,9 +303,9 @@ export class AttendanceService {
           institutionId, action: 'UPDATE', attendanceRecordId: id,
           studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: record.teacherAssignmentId,
           date: record.date, previousStatus: record.status as string, newStatus: dto.status,
-        }], actor);
+        }], actor, tx);
       }
-      return this.prisma.attendanceRecord.findFirst({ where: { id, institutionId } });
+      return tx.attendanceRecord.findFirst({ where: { id, institutionId } });
     });
   }
 

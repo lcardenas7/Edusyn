@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Get, Body, Param, Query, UseGuards, Request, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Put, Get, Body, Param, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,7 +6,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AttendanceService } from './attendance.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { requireInstitutionId, resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 /** Roles con alcance institucional: ven y editan dentro de SU colegio. */
 const ROLES_INSTITUCIONALES = ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE'];
@@ -26,21 +26,6 @@ export class AttendanceController {
     private readonly attendanceService: AttendanceService,
     private readonly prisma: PrismaService,
   ) {}
-
-  /**
-   * Contexto institucional obligatorio, como error de petición y no de servidor.
-   *
-   * `requireInstitutionId` lanza un `Error` genérico cuando no puede resolver la institución y Nest
-   * lo traduce a **500**. Una sesión sin institución es una petición inválida, no un fallo del
-   * servidor. El resolvedor vive fuera de los ficheros que este encargo permite tocar, así que la
-   * comprobación se hace aquí, ANTES de la llamada real —que se conserva literal y sin envolver
-   * porque es la evidencia que lee el contrato estructural de rutas—. Para un usuario normal
-   * `resolveInstitutionId` no consulta la base: lee el claim del JWT.
-   */
-  private async exigeContexto(req: any, institutionIdSolicitada?: string): Promise<void> {
-    const resuelta = await resolveInstitutionId(this.prisma as any, req, institutionIdSolicitada);
-    if (!resuelta) throw new BadRequestException('No se pudo determinar la institución. Cierre sesión y vuelva a iniciar.');
-  }
 
   /** Actor (quién hace el cambio) del JWT para la auditoría forense. */
   private actorFrom(req: any): { userId?: string; name?: string; role?: string } {
@@ -78,7 +63,6 @@ export class AttendanceController {
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async recordBulk(@Body() dto: RecordAttendanceDto, @Request() req: any) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.recordBulk(dto, institutionId, this.actorFrom(req));
   }
@@ -86,7 +70,6 @@ export class AttendanceController {
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto, @Request() req: any) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.update(id, dto, institutionId, this.actorFrom(req));
   }
@@ -98,7 +81,6 @@ export class AttendanceController {
     @Param('teacherAssignmentId') teacherAssignmentId: string,
     @Query('date') date: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.getByAssignmentAndDate(teacherAssignmentId, date, institutionId);
   }
@@ -111,7 +93,6 @@ export class AttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     await this.assertMatriculaDelActor(req, institutionId, studentEnrollmentId);
     return this.attendanceService.getByStudent(studentEnrollmentId, institutionId, startDate, endDate);
@@ -124,7 +105,6 @@ export class AttendanceController {
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     await this.assertMatriculaDelActor(req, institutionId, studentEnrollmentId);
     return this.attendanceService.getStudentSummary(studentEnrollmentId, institutionId, academicTermId);
@@ -143,7 +123,6 @@ export class AttendanceController {
   ) {
     // `institutionId` de la query solo lo honra el resolvedor para SuperAdmin; a un usuario
     // institucional se le ignora y se usa el de su sesión.
-    await this.exigeContexto(req, institutionId);
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.attendanceService.getConsolidatedReport({
       academicYearId,
@@ -166,7 +145,6 @@ export class AttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     // Límite existente que se conserva: un docente solo ve su propio cumplimiento.
     const userRoles = this.rolesOf(req);
@@ -192,7 +170,6 @@ export class AttendanceController {
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.getGroupAttendanceReport(teacherAssignmentId, startDate, endDate, institutionId);
   }
@@ -208,7 +185,6 @@ export class AttendanceController {
     @Query('subjectId') subjectId?: string,
     @Query('includeWithdrawn') includeWithdrawn?: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.getReportByGroup(groupId, academicYearId, institutionId, {
       startDate,
@@ -233,7 +209,6 @@ export class AttendanceController {
     @Query('includeWithdrawn') includeWithdrawn?: string,
     @Query('limit') limit?: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.attendanceService.getDetailedReport({
       academicYearId,

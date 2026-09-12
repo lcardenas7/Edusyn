@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
 
 /**
  * Resuelve el institutionId de forma SEGURA respetando roles.
@@ -87,7 +88,9 @@ export async function requireInstitutionId(
   const institutionId = await resolveInstitutionId(prisma, req, queryInstitutionId);
   
   if (!institutionId) {
-    throw new Error('No se pudo determinar la institución. Por favor, cierre sesión y vuelva a iniciar.');
+    throw new BadRequestException(
+      'No se pudo determinar la institución. Por favor, cierre sesión y vuelva a iniciar.',
+    );
   }
   
   return institutionId;

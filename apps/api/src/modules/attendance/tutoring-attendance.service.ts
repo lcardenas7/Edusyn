@@ -34,7 +34,12 @@ export class TutoringAttendanceService {
   private async groupInScope(institutionId: string, groupId: string) {
     if (!groupId) throw new BadRequestException('Se requiere el grupo');
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, campus: { institutionId } },
+      where: {
+        id: groupId,
+        campus: { institutionId },
+        grade: { institutionId },
+        shift: { campus: { institutionId } },
+      },
       select: { id: true, directorId: true, campusId: true },
     });
     if (!group) throw new NotFoundException('Grupo no encontrado');
@@ -45,7 +50,17 @@ export class TutoringAttendanceService {
   private async enrollmentInScope(institutionId: string, studentEnrollmentId: string) {
     if (!studentEnrollmentId) throw new BadRequestException('Se requiere la matrícula');
     const enrollment = await this.prisma.studentEnrollment.findFirst({
-      where: { id: studentEnrollmentId, institutionId, group: { campus: { institutionId } } },
+      where: {
+        id: studentEnrollmentId,
+        institutionId,
+        academicYear: { institutionId },
+        student: { institutionId },
+        group: {
+          campus: { institutionId },
+          grade: { institutionId },
+          shift: { campus: { institutionId } },
+        },
+      },
       select: { id: true, groupId: true, academicYearId: true },
     });
     if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
@@ -125,60 +140,71 @@ export class TutoringAttendanceService {
   }) {
     const institutionId = dto.institutionId;
     const date = this.fecha(dto.date);
-    const group = await this.groupInScope(institutionId, dto.groupId);
-
-    // Verificar que la feature está habilitada
-    const enabled = await this.isTutoringEnabled(institutionId);
-    if (!enabled) {
-      throw new ForbiddenException('La asistencia de tutoría no está habilitada para esta institución');
-    }
-
-    // Admin/Rector/Coordinador pueden registrar en cualquier grupo; docente solo en su grupo dirigido
-    const isAdmin = dto.isSuperAdmin === true
-      || (dto.userRoles || []).some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
-    if (!isAdmin && group.directorId !== dto.teacherId) {
-      throw new ForbiddenException('Solo el director de grupo puede registrar asistencia de tutoría');
-    }
-
     const registros = Array.isArray(dto.records) ? dto.records : [];
     if (registros.length === 0) throw new BadRequestException('No se recibió ningún registro de asistencia');
-
     const enrollmentIds = [...new Set(registros.map((r) => r.studentEnrollmentId))];
-    const validas = await this.prisma.studentEnrollment.findMany({
-      where: {
-        id: { in: enrollmentIds },
-        institutionId,
-        groupId: dto.groupId,
-        group: { campus: { institutionId } },
-      },
-      select: { id: true },
-    });
-    if (validas.length !== enrollmentIds.length) throw new NotFoundException('Matrícula no encontrada');
 
-    const existentes = await this.prisma.tutoringAttendance.findMany({
-      where: { institutionId, groupId: dto.groupId, date, studentEnrollmentId: { in: enrollmentIds } },
-      select: { id: true, studentEnrollmentId: true },
-    });
-    const previos = new Map(existentes.map((e) => [e.studentEnrollmentId, e.id]));
-
-    return this.prisma.$transaction(async () => {
-      const sigueSiendoPropio = await this.prisma.group.count({
-        where: { id: dto.groupId, campus: { institutionId } },
+    return this.prisma.$transaction(async (tx) => {
+      const group = await tx.group.findFirst({
+        where: {
+          id: dto.groupId,
+          campus: { institutionId },
+          grade: { institutionId },
+          shift: { campus: { institutionId } },
+        },
+        select: { id: true, directorId: true },
       });
-      if (sigueSiendoPropio !== 1) throw new NotFoundException('Grupo no encontrado');
+      if (!group) throw new NotFoundException('Grupo no encontrado');
+
+      const mod = await tx.institutionModule.findFirst({
+        where: { institutionId, module: 'ATTENDANCE', isActive: true },
+        select: { features: true },
+      });
+      if (!mod?.features.includes('TUTORING_ATTENDANCE')) {
+        throw new ForbiddenException('La asistencia de tutoría no está habilitada para esta institución');
+      }
+
+      const isAdmin = dto.isSuperAdmin === true
+        || (dto.userRoles || []).some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+      if (!isAdmin && group.directorId !== dto.teacherId) {
+        throw new ForbiddenException('Solo el director de grupo puede registrar asistencia de tutoría');
+      }
+
+      const validas = await tx.studentEnrollment.findMany({
+        where: {
+          id: { in: enrollmentIds },
+          institutionId,
+          groupId: dto.groupId,
+          academicYear: { institutionId },
+          student: { institutionId },
+          group: {
+            campus: { institutionId },
+            grade: { institutionId },
+            shift: { campus: { institutionId } },
+          },
+        },
+        select: { id: true },
+      });
+      if (validas.length !== enrollmentIds.length) throw new NotFoundException('Matrícula no encontrada');
+
+      const existentes = await tx.tutoringAttendance.findMany({
+        where: { institutionId, groupId: dto.groupId, date, studentEnrollmentId: { in: enrollmentIds } },
+        select: { id: true, studentEnrollmentId: true },
+      });
+      const previos = new Map(existentes.map((e) => [e.studentEnrollmentId, e.id]));
 
       const resultados: any[] = [];
       for (const record of registros) {
         const previo = previos.get(record.studentEnrollmentId);
         if (previo) {
-          const filas = await this.prisma.tutoringAttendance.updateMany({
+          const filas = await tx.tutoringAttendance.updateMany({
             where: { id: previo, institutionId },
             data: { status: record.status, observations: record.observations, teacherId: dto.teacherId },
           });
           if (filas.count !== 1) throw new NotFoundException('Registro de tutoría no encontrado');
           resultados.push({ id: previo, studentEnrollmentId: record.studentEnrollmentId, status: record.status });
         } else {
-          resultados.push(await this.prisma.tutoringAttendance.create({
+          resultados.push(await tx.tutoringAttendance.create({
             data: {
               institutionId,
               groupId: dto.groupId,

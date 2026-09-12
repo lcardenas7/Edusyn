@@ -165,7 +165,7 @@ export function fixture() {
 
     const campus = { id: `campus-${x}`, institutionId, name: `Sede ${x}` };
     const grade = { id: `grade-${x}`, institutionId, name: `Grado ${x}` };
-    const shift = { id: `shift-${x}`, institutionId, name: 'Mañana' };
+    const shift = { id: `shift-${x}`, campusId: campus.id, campus, name: 'Mañana' };
     rows.campus.push(campus);
     rows.grade.push(grade);
     rows.shift.push(shift);
@@ -207,7 +207,7 @@ export function fixture() {
       rows.student.push(student);
       const enrollment: any = {
         id: `enr-${x}${sufijo}`, institutionId, studentId: student.id, student,
-        academicYearId: academicYear.id, groupId: group.id, group, status: 'ACTIVE',
+        academicYearId: academicYear.id, academicYear, groupId: group.id, group, status: 'ACTIVE',
       };
       inversa(enrollment, 'attendanceRecords', [] as any[]);
       rows.studentEnrollment.push(enrollment);
@@ -303,11 +303,17 @@ export function fixture() {
    * sobre el mismo cliente). Si la función lanza, el estado vuelve atrás: es lo que permite
    * afirmar que un fallo intermedio —o de auditoría— no deja asistencia escrita a medias.
    */
+  // Objeto distinto, con los mismos dobles como punto de partida. Así una prueba puede sustituir
+  // un método del cliente raíz y demostrar que el callback usa realmente el cliente `tx` recibido.
+  const tx: any = Object.fromEntries(
+    Object.entries(prisma).map(([modelo, delegate]: [string, any]) => [modelo, { ...delegate }]),
+  );
+
   prisma.$transaction = jest.fn(async (arg: any) => {
     if (Array.isArray(arg)) return Promise.all(arg);
     const antes = instantanea(rows);
     try {
-      return await arg(prisma);
+      return await arg(tx);
     } catch (error) {
       restaurar(rows, antes);
       throw error;
@@ -317,7 +323,7 @@ export function fixture() {
   const audit = new AttendanceAuditService(prisma);
   const service = new AttendanceService(prisma, audit);
   const tutoring = new TutoringAttendanceService(prisma);
-  return { prisma, rows, service, tutoring, audit };
+  return { prisma, tx, rows, service, tutoring, audit };
 }
 
 /** Ninguna escritura, en ningún modelo. Se afirma sobre lo que NO ocurrió. */

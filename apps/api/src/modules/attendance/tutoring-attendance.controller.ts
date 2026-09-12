@@ -4,7 +4,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PrismaService } from '../../prisma/prisma.service';
-import { requireInstitutionId, resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { TutoringAttendanceService } from './tutoring-attendance.service';
 
 /**
@@ -23,28 +23,12 @@ export class TutoringAttendanceController {
   ) {}
 
   /**
-   * Contexto institucional obligatorio, como error de petición y no de servidor.
-   *
-   * `requireInstitutionId` lanza un `Error` genérico cuando no puede resolver la institución y Nest
-   * lo traduce a **500**. Una sesión sin institución es una petición inválida, no un fallo del
-   * servidor. El resolvedor vive fuera de los ficheros que este encargo permite tocar, así que la
-   * comprobación se hace aquí, ANTES de la llamada real —que se conserva literal y sin envolver
-   * porque es la evidencia que lee el contrato estructural de rutas—. Para un usuario normal
-   * `resolveInstitutionId` no consulta la base: lee el claim del JWT.
-   */
-  private async exigeContexto(req: any, institutionIdSolicitada?: string): Promise<void> {
-    const resuelta = await resolveInstitutionId(this.prisma as any, req, institutionIdSolicitada);
-    if (!resuelta) throw new BadRequestException('No se pudo determinar la institución. Cierre sesión y vuelva a iniciar.');
-  }
-
-  /**
    * Verifica si la tutoría está habilitada y retorna los grupos que dirige el docente
    */
   @Get('status')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getStatus(@Request() req: any, @Query('institutionId') institutionId?: string) {
     // `institutionId` de la query solo lo honra el resolvedor para SuperAdmin.
-    await this.exigeContexto(req, institutionId);
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     const enabled = await this.tutoringService.isTutoringEnabled(instId);
 
@@ -97,7 +81,6 @@ export class TutoringAttendanceController {
   ) {
     // Antes la institución salía del grupo del cuerpo: con un grupo ajeno se escribía tutoría en
     // otra institución y «solo el director» se comprobaba contra el director de ese grupo.
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     const userRoles: string[] = this.rolesOf(req);
     return this.tutoringService.recordBulk({
@@ -121,7 +104,6 @@ export class TutoringAttendanceController {
     @Query('groupId') groupId: string,
     @Query('date') date: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.tutoringService.getByGroupAndDate(groupId, date, institutionId);
   }
@@ -137,7 +119,6 @@ export class TutoringAttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.tutoringService.getStudentSummary(studentEnrollmentId, institutionId, startDate, endDate);
   }
@@ -158,7 +139,6 @@ export class TutoringAttendanceController {
     if (!groupId || !academicYearId) {
       throw new BadRequestException('Se requiere grupo y año académico');
     }
-    await this.exigeContexto(req);
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     await this.tutoringService.assertCanReadGroupReport(groupId, institutionId, req.user.id, this.rolesOf(req), req.user?.isSuperAdmin === true);
     return this.tutoringService.getReportByGroup(groupId, academicYearId, institutionId, { startDate, endDate, includeWithdrawn: includeWithdrawn === 'true' });
@@ -181,7 +161,6 @@ export class TutoringAttendanceController {
     @Query('includeWithdrawn') includeWithdrawnRaw?: string,
   ) {
     const includeWithdrawn = includeWithdrawnRaw === 'true';
-    await this.exigeContexto(req, institutionId);
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     if (!academicYearId) throw new BadRequestException('Se requiere el año académico');
 
@@ -226,7 +205,6 @@ export class TutoringAttendanceController {
   ) {
     // Esta ruta cambia CONFIGURACIÓN institucional: `institutionId` del cuerpo solo lo honra el
     // resolvedor para SuperAdmin; a un ADMIN_INSTITUTIONAL se le ignora y manda el de su sesión.
-    await this.exigeContexto(req, body.institutionId);
     const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
 
     // Buscar o crear el módulo ATTENDANCE

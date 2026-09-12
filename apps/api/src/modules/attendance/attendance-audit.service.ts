@@ -40,10 +40,14 @@ export class AttendanceAuditService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async recordMany(events: AttendanceAuditEventInput[], actor?: AttendanceAuditActor): Promise<void> {
+  async recordMany(
+    events: AttendanceAuditEventInput[],
+    actor?: AttendanceAuditActor,
+    db: Pick<PrismaService, 'attendanceAuditEvent'> = this.prisma,
+  ): Promise<void> {
     if (!events.length) return;
     try {
-      await this.prisma.attendanceAuditEvent.createMany({
+      await db.attendanceAuditEvent.createMany({
         data: events.map((e) => ({
           institutionId: e.institutionId,
           action: e.action,

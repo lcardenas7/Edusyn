@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { resolveInstitutionId, isSuperAdmin, requireInstitutionId } from './institution-resolver';
 
 /**
@@ -115,6 +116,7 @@ describe('requireInstitutionId', () => {
     const { prisma } = prismaMock([]);
     const req = { user: { id: 'u1', institutionId: null, isSuperAdmin: false } };
     await expect(requireInstitutionId(prisma, req)).rejects.toThrow(/No se pudo determinar la institución/);
+    await expect(requireInstitutionId(prisma, req)).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('devuelve la institución del JWT para un usuario normal', async () => {
