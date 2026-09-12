@@ -76,33 +76,66 @@ export class TeacherScheduleService {
     id: string,
     data: Partial<TeacherScheduleBlockInput>,
   ) {
-    await this.ensureOwned(institutionId, teacherId, id);
-    const clean = this.validate({ ...data }, true);
-    return this.prisma.teacherScheduleBlock.update({
-      where: { id },
-      data: clean,
+    return this.prisma.$transaction(async (tx) => {
+      const current = await this.ensureOwned(tx, institutionId, teacherId, id);
+      // Validar el intervalo final completo: cambiar solo una de las horas no puede dejar inicio
+      // >= fin aunque el otro extremo no viaje en el cuerpo.
+      const clean = this.validate({
+        dayOfWeek: current.dayOfWeek,
+        startTime: current.startTime,
+        endTime: current.endTime,
+        type: current.type,
+        title: current.title,
+        location: current.location,
+        color: current.color,
+        notes: current.notes,
+        ...data,
+      });
+      return tx.teacherScheduleBlock.update({
+        where: { id, institutionId, teacherId },
+        data: clean,
+      });
     });
   }
 
   async remove(institutionId: string, teacherId: string, id: string) {
-    await this.ensureOwned(institutionId, teacherId, id);
-    await this.prisma.teacherScheduleBlock.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await this.ensureOwned(tx, institutionId, teacherId, id);
+      const deleted = await tx.teacherScheduleBlock.deleteMany({
+        where: { id, institutionId, teacherId },
+      });
+      if (deleted.count !== 1) {
+        throw new NotFoundException('Bloque de horario no encontrado');
+      }
+    });
     return { ok: true };
   }
 
   /** Verifica que el bloque exista y pertenezca al docente autenticado (anti-IDOR). */
   private async ensureOwned(
+    prisma: Pick<PrismaService, 'teacherScheduleBlock'>,
     institutionId: string,
     teacherId: string,
     id: string,
   ) {
-    const block = await this.prisma.teacherScheduleBlock.findFirst({
+    const block = await prisma.teacherScheduleBlock.findFirst({
       where: { id, institutionId, teacherId },
-      select: { id: true },
+      select: {
+        id: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        type: true,
+        title: true,
+        location: true,
+        color: true,
+        notes: true,
+      },
     });
     if (!block) {
       throw new NotFoundException('Bloque de horario no encontrado');
     }
+    return block;
   }
 
   /**
@@ -133,7 +166,9 @@ export class TeacherScheduleService {
 
     if (data.startTime !== undefined || !partial) {
       if (!HHMM.test(data.startTime ?? '')) {
-        throw new BadRequestException('Hora de inicio inválida (formato HH:mm)');
+        throw new BadRequestException(
+          'Hora de inicio inválida (formato HH:mm)',
+        );
       }
       out.startTime = data.startTime as string;
     }
@@ -160,7 +195,8 @@ export class TeacherScheduleService {
       out.title = title;
     }
 
-    if (data.location !== undefined) out.location = data.location?.trim() || null;
+    if (data.location !== undefined)
+      out.location = data.location?.trim() || null;
     if (data.color !== undefined) out.color = data.color || null;
     if (data.notes !== undefined) out.notes = data.notes?.trim() || null;
 

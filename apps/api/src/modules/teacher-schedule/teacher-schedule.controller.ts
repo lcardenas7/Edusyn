@@ -8,9 +8,12 @@ import {
   Param,
   UseGuards,
   Request,
-  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { TeacherScheduleService } from './teacher-schedule.service';
 import type { TeacherScheduleBlockInput } from './teacher-schedule.service';
 
@@ -19,26 +22,24 @@ import type { TeacherScheduleBlockInput } from './teacher-schedule.service';
  * Siempre operan sobre el docente autenticado: teacherId = req.user.id.
  */
 @Controller('teacher-schedule')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
 export class TeacherScheduleController {
-  constructor(private readonly service: TeacherScheduleService) {}
-
-  private institution(req: any): string {
-    const institutionId = req.user?.institutionId;
-    if (!institutionId) {
-      throw new BadRequestException('No hay institución en la sesión');
-    }
-    return institutionId;
-  }
+  constructor(
+    private readonly service: TeacherScheduleService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   async findMine(@Request() req) {
-    return this.service.findMine(this.institution(req), req.user.id);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.findMine(institutionId, req.user.id);
   }
 
   @Post()
   async create(@Request() req, @Body() body: TeacherScheduleBlockInput) {
-    return this.service.create(this.institution(req), req.user.id, body);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.create(institutionId, req.user.id, body);
   }
 
   @Put(':id')
@@ -47,11 +48,13 @@ export class TeacherScheduleController {
     @Param('id') id: string,
     @Body() body: Partial<TeacherScheduleBlockInput>,
   ) {
-    return this.service.update(this.institution(req), req.user.id, id, body);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.update(institutionId, req.user.id, id, body);
   }
 
   @Delete(':id')
   async remove(@Request() req, @Param('id') id: string) {
-    return this.service.remove(this.institution(req), req.user.id, id);
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.remove(institutionId, req.user.id, id);
   }
 }
