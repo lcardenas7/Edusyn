@@ -206,7 +206,7 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
       service().assignStudentsToActivity(docenteA(), 'act-A-restr', { studentEnrollmentIds: ['enr-A2', 'enr-B1'], isRestrictedToAssigned: true }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(data.rows.activityAssignment.length).toBe(antes); // aa-A1 intacta, nada nuevo
-    expect(data.rows.activityAssignment.map((a: any) => a.id)).toEqual(['aa-A1', 'aa-B1']);
+    expect(data.rows.activityAssignment.map((a: any) => a.id)).toEqual(['aa-A1', 'aa-B1', 'aa-inc-A']);
     noWrites(data);
   });
 
@@ -216,7 +216,7 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
         service().assignStudentsToActivity(docenteA(), 'act-A-restr', { studentEnrollmentIds: [ajena], isRestrictedToAssigned: false }),
       ).rejects.toBeInstanceOf(NotFoundException);
     }
-    expect(data.rows.activityAssignment).toHaveLength(2);
+    expect(data.rows.activityAssignment).toHaveLength(3);
   });
 
   it('un fallo a mitad de la escritura revierte TODA la transacción de destinatarios', async () => {
@@ -225,7 +225,7 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
       service().assignStudentsToActivity(docenteA(), 'act-A-restr', { studentEnrollmentIds: ['enr-A2'], isRestrictedToAssigned: true }),
     ).rejects.toThrow('Fallo forzado');
     // El deleteMany previo se revirtió: aa-A1 sigue ahí y no quedó nada a medias.
-    expect(data.rows.activityAssignment.map((a: any) => a.id)).toEqual(['aa-A1', 'aa-B1']);
+    expect(data.rows.activityAssignment.map((a: any) => a.id)).toEqual(['aa-A1', 'aa-B1', 'aa-inc-A']);
     const act = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-restr');
     expect(act.isRestrictedToAssigned).toBe(true); // valor original, no el del lote fallido
   });
@@ -277,13 +277,14 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
   // ═══════════════════════════════════════════════════════════════════════════
   // Flujos legítimos con contenido y conteos comprobables.
   // ═══════════════════════════════════════════════════════════════════════════
-  it('el docente lista sus aulas con el conteo funcional de estudiantes del grupo/año', async () => {
+  it('el docente lista sus aulas con el conteo de estudiantes filtrado por institución y estudiante', async () => {
     const lista = await service().listForTeacher(docenteA());
     const aula = lista.find((c: any) => c.id === 'class-A');
     expect(aula).toBeDefined();
-    // Conteo funcional previo (groupId+academicYearId+ACTIVE): incluye la fila
-    // incoherente histórica; la ruta de PII (getStudents) sí la excluye por cadena.
-    expect(aula.studentCount).toBe(3);
+    // El conteo exige institutionId + student.institutionId: la fila incoherente
+    // (enr-inc-A, matrícula que dice A con estudiante de B) queda fuera. Cambia el
+    // número antes contaminado (3 → 2), como pide la revisión de Astra.
+    expect(aula.studentCount).toBe(2);
   });
 
   it('el estudiante lista exactamente sus aulas institucionales con su matrícula resuelta', async () => {
@@ -296,10 +297,10 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
     expect(listaB.map((c: any) => c.id)).toEqual(['class-B']);
   });
 
-  it('getById del docente trae secciones, anuncios, conteos y el período vigente', async () => {
+  it('getById del docente trae secciones (incluida la oculta), anuncios, conteos y el período vigente', async () => {
     const aula = await service().getById(docenteA(), 'class-A');
     expect(aula.title).toBe('Aula A');
-    expect(aula.sections).toHaveLength(1);
+    expect(aula.sections).toHaveLength(2); // el docente conserva también la sección oculta
     expect(aula.sections[0].activities.map((a: any) => a.id)).toEqual(['act-A-dep']); // solo publicadas
     expect(aula.announcements).toHaveLength(1);
     expect(aula._count.activities).toBe(4);
@@ -357,16 +358,18 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
     expect(lista.map((e: any) => e.enrollmentId).sort()).toEqual(['enr-A1', 'enr-A2']);
   });
 
-  it('createActivity crea borrador en el aula propia; sección ajena al aula → 403', async () => {
+  it('createActivity crea borrador en el aula propia; sección ajena al aula → 404', async () => {
     const act = await service().createActivity(docenteA(), 'class-A', {
       type: 'TASK', title: 'Nueva tarea', sectionId: 'section-A1', dueDate: '2026-03-10',
     });
     expect(act.isPublished).toBe(false);
     expect(act.classroomId).toBe('class-A');
     expect(new Date(act.dueDate).toISOString()).toBe('2026-03-10T05:00:00.000Z'); // fecha Colombia
+    // Revisión de Astra: la sección se valida por la cadena completa y un id ajeno
+    // responde 404 (antes 403, que confirmaba que la sección existía en otro aula/colegio).
     await expect(
       service().createActivity(docenteA(), 'class-A', { type: 'TASK', title: 'x', sectionId: 'section-B1' }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('updateActivity edita la actividad propia con fecha parseada; fecha inválida → 400', async () => {
@@ -407,7 +410,7 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
 
   it('deleteActivity pide confirmación con entregas y borra con force', async () => {
     const confirmacion = await service().deleteActivity(docenteA(), 'act-A-pub', false);
-    expect(confirmacion).toMatchObject({ success: false, requiresConfirmation: true, submissionCount: 2 });
+    expect(confirmacion).toMatchObject({ success: false, requiresConfirmation: true, submissionCount: 3 });
     expect(data.rows.classroomActivity.find((a) => a.id === 'act-A-pub')).toBeDefined();
     const borrada = await service().deleteActivity(docenteA(), 'act-A-pub', true);
     expect(borrada).toEqual({ success: true });
@@ -416,10 +419,131 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
     expect(data.prisma.classroomActivity.deleteMany).not.toHaveBeenCalled();
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Revisión adversarial de Astra (2026-09-12): regresiones de los 5 defectos.
+  // ═══════════════════════════════════════════════════════════════════════════
+  it('getActivityAssignments NO devuelve el destinatario incoherente preexistente ni PII de B', async () => {
+    // aa-inc-A cuelga de enr-inc-A (matrícula que dice A con estudiante de B), escrita
+    // cuando el alta no validaba. La lectura debe exigir la cadena completa de la
+    // matrícula: institución + estudiante de la institución + año y grupo del aula.
+    const lista = await service().getActivityAssignments(docenteA(), 'act-A-restr');
+    expect(lista.map((a: any) => a.id)).toEqual(['aa-A1']);
+    expect(JSON.stringify(lista)).not.toContain('DeB');
+    // Indistinguible de un recurso inexistente.
+    await expect(service().getActivityAssignments(docenteA(), 'act-que-no-existe')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service().getActivityAssignments(docenteA(), 'act-B-restr')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('los tres listados exigen la cadena completa: año, grupo/sede/grado y materia/área de B quedan fuera', async () => {
+    // available-assignments: las tres asignaciones incoherentes SIN aula no se ofrecen.
+    const disp = await service().getAvailableAssignments(docenteA());
+    expect(disp.map((t: any) => t.id)).toEqual(['ta-disponible-A']);
+    // listForTeacher: las aulas colgadas de asignaciones con año o materia de B (y la de
+    // grupo de B) no se listan aunque digan institución A y sean del docente.
+    const aulas = await service().listForTeacher(docenteA());
+    const ids = aulas.map((c: any) => c.id);
+    expect(ids).toContain('class-A');
+    expect(ids).not.toContain('class-inc-A');
+    expect(ids).not.toContain('class-inc-year-A');
+    expect(ids).not.toContain('class-inc-subject-A');
+  });
+
+  it('una matrícula A que apunta a un estudiante de B NO lista el aula (listForStudent)', async () => {
+    // Actor con sesión en A pero userId del estudiante de B: enr-inc-A es la única
+    // matrícula "compatible" y es incoherente (student.institutionId = B) → no acredita.
+    const actorHibrido = actorDe({ institutionId: A, userId: 'user-B1', roles: ['ESTUDIANTE'] });
+    const lista = await service().listForStudent(actorHibrido);
+    expect(lista).toEqual([]);
+  });
+
+  it('getById del estudiante aplica proyección: sin sección/material ocultos y conteo solo de publicadas', async () => {
+    const aula = await service().getById(estudianteA1(), 'class-A');
+    expect(aula.studentEnrollmentId).toBe('enr-A1');
+    // Solo la sección visible y solo sus materiales visibles.
+    expect(aula.sections.map((s: any) => s.id)).toEqual(['section-A1']);
+    expect(aula.sections[0].materials.map((m: any) => m.id)).toEqual(['mat-A1']);
+    expect(JSON.stringify(aula.sections)).not.toContain('Unidad oculta');
+    expect(JSON.stringify(aula.sections)).not.toContain('Material oculto');
+    // El conteo no incluye el borrador (el docente sí lo cuenta: 4).
+    expect(aula._count.activities).toBe(3);
+    // El docente conserva lo que usa su pantalla.
+    const delDocente = await service().getById(docenteA(), 'class-A');
+    expect(delDocente.sections).toHaveLength(2);
+    expect(delDocente._count.activities).toBe(4);
+  });
+
+  it('getActivity del estudiante omite el conteo interno de entregas; el docente lo conserva', async () => {
+    const delAlumno = await service().getActivity(estudianteA1(), 'act-A-pub');
+    expect(delAlumno.id).toBe('act-A-pub');
+    expect(delAlumno._count).toBeUndefined();
+    const delDocente = await service().getActivity(docenteA(), 'act-A-pub');
+    expect(delDocente._count.submissions).toBe(3);
+  });
+
+  it('listActivities filtra la entrega del actor por la matrícula YA VALIDADA, no por userId', async () => {
+    // sub-A1-old es del mismo usuario pero cuelga de su matrícula del año viejo: no es
+    // su entrega en esta aula y no puede aparecer (con filtro por userId sería la
+    // primera por attemptNumber).
+    const lista = await service().listActivities(estudianteA1(), 'class-A');
+    const pub = lista.find((a: any) => a.id === 'act-A-pub');
+    expect(pub.submissions).toHaveLength(1);
+    expect(pub.submissions[0].id).toBe('sub-A1');
+    expect(pub.submissions[0].studentEnrollmentId ?? 'enr-A1').toBe('enr-A1');
+  });
+
+  it('createActivity valida academicTermId, rubricId y sectionId contra institución y año del aula', async () => {
+    // Período de B, período de otro año de A y rúbrica de B: 404 ANTES de escribir.
+    for (const dto of [
+      { type: 'TASK', title: 'x', academicTermId: 'term-B' },
+      { type: 'TASK', title: 'x', academicTermId: 'term-old-A' },
+      { type: 'TASK', title: 'x', rubricId: 'rubric-B' },
+      { type: 'TASK', title: 'x', sectionId: 'section-B1' },
+    ]) {
+      await expect(service().createActivity(docenteA(), 'class-A', dto)).rejects.toBeInstanceOf(NotFoundException);
+    }
+    noWrites(data);
+    // Los compatibles sí crean.
+    const act = await service().createActivity(docenteA(), 'class-A', {
+      type: 'TASK', title: 'Compatible', academicTermId: 'term-A', rubricId: 'rubric-A', sectionId: 'section-A1',
+    });
+    expect(act.academicTermId).toBe('term-A');
+    expect(act.rubricId).toBe('rubric-A');
+  });
+
+  it('create y createActivity comparten tx para guarda, validaciones y escritura', async () => {
+    await service().create(docenteA(), { teacherAssignmentId: 'ta-disponible-A' });
+    expect(data.calls.every((c) => c.inTransaction)).toBe(true);
+    expect(data.tx.classroom.create).toHaveBeenCalledTimes(1);
+    expect(data.prisma.classroom.create).not.toHaveBeenCalled();
+
+    const data2 = fixture();
+    await data2.service.createActivity(docenteA(), 'class-A', { type: 'TASK', title: 'x' });
+    expect(data2.calls.every((c) => c.inTransaction)).toBe(true);
+    expect(data2.tx.classroomActivity.create).toHaveBeenCalledTimes(1);
+    expect(data2.prisma.classroomActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('si el create de actividad falla, no queda ningún efecto (guarda + validaciones revertidas)', async () => {
+    const antes = data.rows.classroomActivity.length;
+    data.fail('classroomActivity.create');
+    await expect(
+      service().createActivity(docenteA(), 'class-A', { type: 'TASK', title: 'x', academicTermId: 'term-A' }),
+    ).rejects.toThrow('Fallo forzado');
+    expect(data.rows.classroomActivity.length).toBe(antes);
+  });
+
+  it('una colisión de unicidad al crear aula se traduce al 403 funcional, sin vínculo cruzado', async () => {
+    // Carrera: la comprobación de duplicado pasó pero la base rechaza por @unique.
+    data.fail('classroom.create', 1, { code: 'P2002' });
+    await expect(service().create(docenteA(), { teacherAssignmentId: 'ta-disponible-A' }))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    expect(data.rows.classroom.filter((c: any) => c.teacherAssignmentId === 'ta-disponible-A')).toEqual([]);
+  });
+
   it('los conteos por colegio no se movieron con todos los rechazos', () => {
-    expect(conteo(data.rows, 'classroom', A)).toBe(5); // class-A, class-otro-A, huerfana, inc, personal
+    expect(conteo(data.rows, 'classroom', A)).toBe(7); // class-A, class-otro-A, huerfana, inc, personal, inc-year, inc-subject
     expect(conteo(data.rows, 'classroom', B)).toBe(1);
-    expect(conteo(data.rows, 'studentEnrollment', A)).toBe(5); // A1-A4 + inc
+    expect(conteo(data.rows, 'studentEnrollment', A)).toBe(6); // A1-A4 + inc + A1-old
     expect(conteo(data.rows, 'studentEnrollment', B)).toBe(1);
   });
 });

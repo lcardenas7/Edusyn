@@ -44,6 +44,7 @@ const MODELOS = [
   'subject', 'user', 'student', 'studentEnrollment', 'teacherAssignment', 'classroom',
   'classroomSection', 'classroomMaterial', 'classroomAnnouncement', 'classroomActivity',
   'activityDependency', 'activityAssignment', 'activitySubmission', 'lessonProgress',
+  'attitudinalRubric',
 ];
 
 function mismoValor(a: any, b: any): boolean {
@@ -153,8 +154,12 @@ function proyectar(row: any, args: any): any {
       if (!config || typeof config !== 'object') continue; // true (escalar) o relación sin más
       if (rel === '_count') {
         const conteos: Record<string, number> = {};
-        for (const coleccion of Object.keys(config.select ?? {})) {
-          const valor = row[coleccion];
+        for (const [coleccion, conf] of Object.entries(config.select ?? {}) as any) {
+          let valor = row[coleccion];
+          // _count filtrado de Prisma (p. ej. activities: { where: { isPublished: true } }).
+          if (conf && typeof conf === 'object' && conf.where) {
+            valor = (Array.isArray(valor) ? valor : []).filter((hijo: any) => matches(hijo, conf.where));
+          }
           conteos[coleccion] = Array.isArray(valor) ? valor.length : 0;
         }
         if (salida === row) salida = { ...row };
@@ -293,6 +298,19 @@ export function fixture() {
     startDate: new Date('2025-01-15T00:00:00.000Z'), endDate: new Date('2025-11-30T00:00:00.000Z'),
   };
   rows.academicYear.push(yearOldA);
+  // Período del año VIEJO de A: un academicTermId de otro año del mismo colegio debe
+  // responder 404 al crear actividad (incompatible con el año del aula).
+  rows.academicTerm.push({
+    id: 'term-old-A', name: 'Período viejo A', type: 'PERIOD', institutionId: A,
+    academicYearId: yearOldA.id, academicYear: yearOldA, status: 'CLOSED',
+    startDate: new Date('2025-02-01T00:00:00.000Z'), endDate: new Date('2025-06-30T00:00:00.000Z'),
+  });
+
+  // Rúbricas actitudinales (tienen institutionId propio): rubricId ajeno → 404.
+  rows.attitudinalRubric.push(
+    { id: 'rubric-A', institutionId: A, name: 'Rúbrica A', isActive: true },
+    { id: 'rubric-B', institutionId: B, name: 'Rúbrica B', isActive: true },
+  );
 
   // El otro docente de A: su propia asignación y su propia aula (en group2-A).
   const taOtroA: any = {
@@ -358,9 +376,71 @@ export function fixture() {
   rows.classroom.push(classPersonalA);
   oculta(taPersonalA, 'classroom', classPersonalA);
 
+  // 5-7. Asignaciones de A con UNA rama de la cadena colgando de B (año, grupo, materia),
+  //    SIN aula: available-assignments no puede ofrecerlas aunque institutionId diga A.
+  const asignacionInc = (id: string, extra: any) => {
+    const ta: any = {
+      id, institutionId: A,
+      academicYearId: 'year-A', academicYear: rows.academicYear.find((y) => y.id === 'year-A'),
+      groupId: 'group-A', group: rows.group.find((g) => g.id === 'group-A'),
+      subjectId: 'subject-A', subject: rows.subject.find((s) => s.id === 'subject-A'),
+      teacherId: teacherShared.id, teacher: teacherShared,
+      startDate: new Date('2026-01-15T00:00:00.000Z'), endDate: null, ...extra,
+    };
+    rows.teacherAssignment.push(ta);
+    return ta;
+  };
+  asignacionInc('ta-inc-year-A', {
+    academicYearId: 'year-B', academicYear: rows.academicYear.find((y) => y.id === 'year-B'),
+  });
+  asignacionInc('ta-inc-group-A', {
+    groupId: 'group-B', group: rows.group.find((g) => g.id === 'group-B'),
+  });
+  asignacionInc('ta-inc-subject-A', {
+    subjectId: 'subject-B', subject: rows.subject.find((s) => s.id === 'subject-B'),
+  });
+  for (const id of ['ta-inc-year-A', 'ta-inc-group-A', 'ta-inc-subject-A']) {
+    oculta(rows.teacherAssignment.find((t) => t.id === id), 'classroom', null);
+  }
+  // 8-9. Lo mismo pero CON aula: listForTeacher no puede listar esas aulas aunque la
+  //    asignación sea del docente y diga institución A.
+  const ta2IncYearA = asignacionInc('ta2-inc-year-A', {
+    academicYearId: 'year-B', academicYear: rows.academicYear.find((y) => y.id === 'year-B'),
+  });
+  const ta2IncSubjectA = asignacionInc('ta2-inc-subject-A', {
+    subjectId: 'subject-B', subject: rows.subject.find((s) => s.id === 'subject-B'),
+  });
+  for (const [ta, id] of [[ta2IncYearA, 'class-inc-year-A'], [ta2IncSubjectA, 'class-inc-subject-A']] as const) {
+    const c: any = {
+      id, institutionId: A, teacherAssignmentId: ta.id, title: `Aula incoherente ${id}`,
+      description: null, coverImage: null, color: null, isActive: true, ownerUserId: null, isPersonal: false,
+      createdAt: new Date('2026-02-01T00:00:00.000Z'), teacherAssignment: ta,
+    };
+    rows.classroom.push(c);
+    oculta(ta, 'classroom', c);
+  }
+
   // ─── Actividades ──────────────────────────────────────────────────────────
   const classA = rows.classroom.find((c) => c.id === 'class-A');
   const classB = rows.classroom.find((c) => c.id === 'class-B');
+
+  // Sección OCULTA de class-A (con un material visible dentro) y un material OCULTO en la
+  // sección visible: la proyección de estudiante de getById no puede entregar ninguno de
+  // los dos; el docente conserva ambos.
+  const sectionA2: any = {
+    id: 'section-A2', classroomId: classA.id, title: 'Unidad oculta A', description: null,
+    sortOrder: 2, isVisible: false, academicTermId: null,
+  };
+  oculta(sectionA2, 'classroom', classA);
+  rows.classroomSection.push(sectionA2);
+  rows.classroomMaterial.push({
+    id: 'mat-A1-oculto', sectionId: 'section-A1', type: 'LINK', title: 'Material oculto A',
+    content: null, fileUrl: null, isVisible: false, sortOrder: 2,
+  });
+  rows.classroomMaterial.push({
+    id: 'mat-A2', sectionId: 'section-A2', type: 'LINK', title: 'Material de sección oculta',
+    content: null, fileUrl: null, isVisible: true, sortOrder: 1,
+  });
   const actividad = (id: string, classroom: any, extra: any = {}) => {
     const act: any = {
       id, classroomId: classroom.id, sectionId: null, academicTermId: null,
@@ -427,6 +507,10 @@ export function fixture() {
   // 4. Matrícula incoherente: dice institución A y cuelga de group-A/year-A, pero el
   //    estudiante es de B. Las guardas por cadena (student.institutionId) deben rechazarla.
   matricula('enr-inc-A', studentB1, 'group-A', 'year-A', A);
+  // Matrícula del MISMO estudiante A1 pero en el año viejo: una entrega ligada a ella NO
+  // es la entrega del actor en esta aula (el filtro debe ser por studentEnrollmentId
+  // validado, no por student.userId).
+  matricula('enr-A1-old', studentA1, 'group-A', 'year-old-A', A);
 
   // ─── Destinatarios y entregas ─────────────────────────────────────────────
   const destinatario = (id: string, activityId: string, studentEnrollmentId: string) => {
@@ -437,6 +521,10 @@ export function fixture() {
   };
   destinatario('aa-A1', 'act-A-restr', 'enr-A1');
   destinatario('aa-B1', 'act-B-restr', 'enr-B1');
+  // Destinatario PREEXISTENTE incoherente (escrito cuando el alta no validaba): cuelga de
+  // enr-inc-A (matrícula que dice A pero cuyo estudiante es de B). La lectura de
+  // destinatarios no puede devolverlo: filtraría PII de un menor de B.
+  destinatario('aa-inc-A', 'act-A-restr', 'enr-inc-A');
 
   const entrega = (id: string, activityId: string, studentEnrollmentId: string, status: string, score: number | null) => {
     const sub: any = {
@@ -449,6 +537,17 @@ export function fixture() {
   };
   entrega('sub-A1', 'act-A-pub', 'enr-A1', 'SUBMITTED', null); // pendiente de calificar
   entrega('sub-A2', 'act-A-pub', 'enr-A2', 'GRADED', 4);
+  // Entrega del mismo usuario A1 pero ligada a su matrícula del AÑO VIEJO: no es su
+  // entrega en esta aula. attemptNumber mayor para que, si el filtro fuera por
+  // student.userId, fuera la primera en aparecer.
+  const subOld: any = {
+    id: 'sub-A1-old', activityId: 'act-A-pub', studentEnrollmentId: 'enr-A1-old',
+    status: 'GRADED', score: 5, attemptNumber: 2,
+    submittedAt: new Date('2025-03-01T00:00:00.000Z'), feedback: null,
+    studentEnrollment: rows.studentEnrollment.find((e) => e.id === 'enr-A1-old'),
+  };
+  oculta(subOld, 'activity', rows.classroomActivity.find((a) => a.id === 'act-A-pub'));
+  rows.activitySubmission.push(subOld);
 
   // ─── Colecciones inversas calculadas (siempre sincronizadas) ──────────────
   for (const classroom of rows.classroom) {
@@ -473,7 +572,7 @@ export function fixture() {
   // ─── Doble de Prisma ──────────────────────────────────────────────────────
   const calls: Array<{ model: string; method: string; args: any; inTransaction: boolean }> = [];
   let siguienteId = 0;
-  let fallo: { point: string; remaining: number } | null = null;
+  let fallo: { point: string; remaining: number; props?: Record<string, any> } | null = null;
   let enTransaccion = false;
 
   function buildClient(esTx: boolean) {
@@ -490,7 +589,11 @@ export function fixture() {
           }
           calls.push({ model: modelo, method, args, inTransaction: esTx });
           if (fallo && fallo.point === `${modelo}.${method}` && esTx) {
-            if (--fallo.remaining === 0) { fallo = null; throw new Error(`Fallo forzado en ${modelo}.${method}`); }
+            if (--fallo.remaining === 0) {
+              const props = fallo.props;
+              fallo = null;
+              throw Object.assign(new Error(`Fallo forzado en ${modelo}.${method}`), props);
+            }
           }
           return fn(args);
         });
@@ -528,6 +631,14 @@ export function fixture() {
       });
       registrar('aggregate', (args) => ({ _count: data.filter((row) => matches(row, args.where)).length }));
       registrar('create', (args) => {
+        // Unicidad real del esquema: Classroom.teacherAssignmentId es @unique. La carrera
+        // se traduce a P2002, como haría PostgreSQL.
+        if (modelo === 'classroom') {
+          const duplicado = rows.classroom.find((c) => c.teacherAssignmentId === args.data.teacherAssignmentId);
+          if (duplicado) {
+            throw Object.assign(new Error('Unique constraint failed on teacherAssignmentId'), { code: 'P2002' });
+          }
+        }
         const row: any = { id: `nuevo-${++siguienteId}`, ...args.data };
         data.push(row);
         // Relaciones embebidas mínimas para que la respuesta y los filtros sigan siendo reales.
@@ -633,9 +744,9 @@ export function fixture() {
     completion,
     /** Escrituras registradas (en raíz o en tx). */
     writes: () => calls.filter((call) => METODOS_ESCRITURA.includes(call.method)),
-    /** Fuerza un fallo en la N-ésima llamada a `modelo.metodo` dentro de tx. */
-    fail(point: string, occurrence = 1) {
-      fallo = { point, remaining: occurrence };
+    /** Fuerza un fallo en la N-ésima llamada a `modelo.metodo` dentro de tx (props extra, p. ej. code P2002). */
+    fail(point: string, occurrence = 1, props?: Record<string, any>) {
+      fallo = { point, remaining: occurrence, props };
     },
   };
 }
