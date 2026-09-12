@@ -22,6 +22,30 @@
 
 ## Historial (más reciente arriba)
 
+### Landing pública multipágina, precios por estudiante y logo real — 2026-09-12
+
+`staging` en `5ed368c9` (cherry-pick de `cb4cd3f9` sobre `origin/staging`, worktree aislado en
+`edusyn-wt-landing-deploy`). Sin migración, solo `apps/web`.
+
+- Páginas públicas con URL propia para SEO (antes eran anclas de una sola página sin indexar):
+  `/caracteristicas`, `/precios`, `/casos-de-exito`, `/preguntas-frecuentes`, `/recursos`,
+  `/contacto`. Hook `useSeo` para title/meta description por ruta. `sitemap.xml` y `robots.txt`
+  nuevos.
+- `Precios.tsx`: modelo por estudiante/año (Esencial $3.500, Crecimiento $5.200, Integral $7.800,
+  Institucional $11.500), calibrado contra precios públicos de Quid y Q10 (ver
+  `mercado-precios-competencia.md` en memoria). Calculadora con stepper de estudiantes y toggle
+  mensual/anual con ahorro.
+- Logo real de Edusyn (icono sin marca de agua, recortado y con fondo transparente) reemplaza el
+  placeholder `GraduationCap` en nav, footer y `LandingPage.tsx`; favicon actualizado.
+- Aislado del WIP sin confirmar de Valeria conversacional (`apd-ai.service.ts` y relacionados, ver
+  entrada pendiente más abajo) — commit propio (`cb4cd3f9` en `feat/aula-rediseno`), sin mezclar.
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio antes del commit. Cherry-pick sin
+  conflictos en los archivos de contenido; único conflicto (orden de imports en `App.tsx` con el
+  refactor de code-splitting ya en `staging`/`main`) resuelto a mano, revisado visualmente.
+- **Pendiente:** confirmación del usuario para desplegar a `main` (producción) — ver bloque
+  "Pendiente de commit y despliegue" si aplica, o repetir el cherry-pick de `cb4cd3f9` sobre
+  `origin/main` cuando se autorice.
+
 ### Continuidad de Inclusión — 2026-09-11
 
 Por indicación del usuario, se pospone continuar Inclusión y se retoma el orden del encargo de blindaje: academic/templates, learning-route, attendance, preventive-cuts, observer y finalmente classroom. No declarar APD terminado.
