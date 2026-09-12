@@ -25,10 +25,10 @@ Classroom. El recuento coincide; no hay diferencias que justificar.
 Estado final: las 17 rutas viven ahora en `classroom-b1.controller.ts`, cada una con su llamada
 directa e incondicional a `requireInstitutionId` (es lo que lee el contrato estructural), y los 17
 manejadores antiguos están **borrados** del controlador original (imports y decoradores restantes,
-byte a byte idénticos). Las 17 entradas de `institution-route-exceptions.json` se conservan a
-propósito: el contrato estructural las reporta como «Remove obsolete exception» (17 errores
-esperados) hasta que una fase posterior haga el commit de retirada. **Classroom NO está cerrado:
-va 17/98.**
+byte a byte idénticos). Las 17 entradas de `institution-route-exceptions.json` se retiraron en el
+commit `9ac64f02` (solo ese fichero, 102 líneas eliminadas) y el contrato estructural quedó en
+verde (13/13). **Classroom NO está cerrado: va 17/98** — las otras 81 rutas conservan su
+excepción `pending-audit`.
 
 ---
 
@@ -222,18 +222,28 @@ directa y se revirtieron con `git checkout --`.
 
 ## 7. Verificación ejecutada
 
+Estado final de la rama (tras la fase correctiva, ver §10):
+
 | Comando | Resultado |
 |---|---|
-| `npm test -- --runInBand classroom-b1` (apps/api) | 104 suites, **2240 pruebas**; 2239 verdes y 1 roja: el contrato estructural, que reporta exactamente los 17 «Remove obsolete exception» esperados y quedará en verde con el commit de retirada de excepciones (fase posterior) |
+| `jest --runInBand classroom-b1 institution-route-contract` (apps/api) | 104 suites, **2255 pruebas**, todas verdes — incluido el contrato estructural (13/13) tras el commit `9ac64f02` |
+| Suite API completa `--runInBand` | 104 suites, **2255 pruebas**, todas verdes |
 | `npx tsc --noEmit` (apps/api) | limpio |
-| Referencia antes de mutar | 2239/1 (misma única roja) |
-| Tras mutación 1 | 21 rojas (20 nuevas) → restaurada → 2239/1 |
-| Tras mutación 2 | 5 rojas (4 nuevas) → restaurada → 2239/1 |
-| `git diff` post-mutaciones | vacío en `apps/api/src` (solo queda `package-lock.json`, suciedad preexistente de `npm install`, no comprometida) |
+| `npm run build` (apps/api) | correcto |
+| `vitest run` (apps/web) | 22 ficheros, **214 pruebas**, verdes |
+| `npx tsc --noEmit` (apps/web) | limpio |
+| `git diff --check origin/staging...HEAD` | limpio |
 
-Nota: dos ejecuciones de la suite murieron a mitad con el código de salida 3221226505
+Primera entrega (pre-revisión): la referencia era 2239/1, la única roja el contrato con los 17
+«Remove obsolete exception» esperados; mutación 1 → 21 rojas (20 nuevas) → restaurada → 2239/1;
+mutación 2 → 5 rojas (4 nuevas) → restaurada → 2239/1. `git diff` vacío en `apps/api/src` tras
+cada restauración (solo queda `package-lock.json`, suciedad preexistente de `npm install`, no
+comprometida).
+
+Nota: varias ejecuciones de la suite murieron a mitad con el código de salida 3221226505
 (0xC0000409, fallo transitorio del proceso en Windows, sin relación con el código); la repetición
-inmediata dio el resultado completo y consistente.
+inmediata —o jest invocado directamente con el `node.exe` del runtime— dio el resultado completo
+y consistente.
 
 ---
 
@@ -249,16 +259,13 @@ inmediata dio el resultado completo y consistente.
 - **Storage / archivos.** Los materiales y entregas con fichero no se han auditado.
 - **Autorización fina dentro del colegio.** Los huecos del §4 siguen abiertos por decisión
   explícita del encargo.
-- **El conteo funcional de estudiantes del listado docente.** El `studentEnrollment.count` de
-  `listForTeacher` sigue siendo el conteo por grupo/año preexistente (sin filtro institucional en
-  ese agregado); queda documentado en las pruebas y no cambia comportamiento.
 - **Rendimiento.** Las guardas añaden consultas de validación acotadas y baratas, no medidas en
   volumen real.
 - **Datos históricos ya incoherentes.** Las guardas impiden crear nuevas incoherencias y filtran
-  las existentes, pero no reparan filas mal ligadas que ya estén en la base.
-- **El retiro de las 17 excepciones del contrato estructural.** Es un commit separado de una fase
-  posterior (integración de Astra), como manda el encargo. Tampoco se han editado
-  `ESTADO_BLINDAJE.md` ni `REGISTRO_DESPLIEGUES.md`.
+  las existentes en lectura, pero no reparan filas mal ligadas que ya estén en la base (p. ej. el
+  destinatario incoherente preexistente se filtra al leer, no se borra).
+- **`ESTADO_BLINDAJE.md` y `REGISTRO_DESPLIEGUES.md`.** No se han editado; los actualiza Astra al
+  integrar.
 
 ---
 
@@ -271,9 +278,86 @@ inmediata dio el resultado completo y consistente.
 | `9d8ae2ac` | Las 11 rutas de actividades/destinatarios, 11 manejadores borrados del controlador original, servicio, DTOs, `activity-gating.service.ts` (parámetro `db` opcional para usar el cliente transaccional) |
 | `7f1d9417` | Defecto funcional encontrado por el fixture: institución + `isPersonal` en los listados y año + `student.institutionId` en estudiantes-para-asignación |
 | `aa16df0f` | `test/fixtures/classroom-b1.fixture.ts`, `classroom-b1.isolation.spec.ts` (34), `classroom-b1.http-isolation.spec.ts` (40) |
+| `0177a8f7` | Esta auditoría y la entrega |
+| `9ac64f02` | Retirada de las 17 excepciones (**solo** `institution-route-exceptions.json`, −102 líneas); contrato estructural en verde |
+| `48ec81c5` | Correcciones de la revisión adversarial de Astra (§10): los 5 defectos en `classroom.service.ts` + helper `esVistaEstudiante` |
+| `3d5a7869` | Laboratorio ampliado (fixture + doble) y 15 pruebas nuevas de regresión (89 en total: 44 servicio + 45 HTTP) |
 
 Desviaciones declaradas respecto al plan inicial: se eliminó el helper privado muerto
 `resolveStudentEnrollment`; `ActivityGatingService.getClassroomEdges` acepta un `db` opcional
 (sin cambio de comportamiento fuera de las transacciones); los DTOs de actividad aceptan los 4
 campos extra que el front ya enviaba; `getActivityAssignments` filtra además por
 `studentEnrollment.institutionId`.
+
+---
+
+## 10. Revisión adversarial de Astra — 2026-09-12
+
+La primera entrega (punta `9ac64f02`) **no se integró**: la revisión
+(`docs/REVISION_ASTRA_CLASSROOM_B1_20260912.md`) encontró 5 defectos bloqueantes. Correcciones en
+`48ec81c5` (producción) y `3d5a7869` (laboratorio y pruebas). Las 15 pruebas nuevas **fallan
+contra `9ac64f02`** (25 rojas en total: las 15 nuevas más las 10 cuyas aserciones cambiaron por
+las nuevas filas del fixture) y **pasan tras la corrección** (2255/2255 verde).
+
+### Los 5 defectos y su corrección
+
+1. **`getActivityAssignments` filtraba `studentEnrollment.institutionId` pero no el estudiante,
+   el año, el grupo ni la cadena.** Con un destinatario preexistente colgado de `enr-inc-A`
+   (matrícula que dice A con estudiante de B, escrita cuando el alta no validaba) la lectura
+   devolvía nombre y foto de un menor de B. La consulta exige ahora la cadena completa de la
+   matrícula (institución + `student.institutionId` + año y grupo del aula + año/grupo íntegros).
+   Regresión: el fixture añade el destinatario incoherente preexistente `aa-inc-A` y las pruebas
+   de servicio y HTTP demuestran que no se devuelve (solo `aa-A1`), sin PII de B, con 404
+   indistinguible de inexistente en ambas direcciones.
+2. **`listForTeacher`, `listForStudent` y `getAvailableAssignments` no exigían la cadena completa
+   en la consulta.** Una asignación que dice A pero cuelga de un año, grupo/sede/grado o
+   materia/área de B se ofrecía y sus aulas se listaban. Las tres consultas exigen ahora
+   `academicYear.institutionId`, `group.{campus,grade}.institutionId` y
+   `subject.area.institutionId` (y el aula repite la cadena); `listForStudent` exige además
+   `student.institutionId` en la matrícula, y el conteo de estudiantes del docente filtra
+   `institutionId` + `student.institutionId` —**el número cambia de 3 a 2** para el aula del
+   fixture porque antes lo inflaba la fila incoherente. Regresión: 5 asignaciones incoherentes
+   nuevas (3 sin aula, 2 con aula) y el actor híbrido (sesión en A, `userId` de un estudiante de
+   B) que ya no lista nada.
+3. **`getById` entregaba al estudiante la carga rica cruda**: secciones y materiales ocultos y
+   `_count.activities` contando borradores. Hay proyección específica de estudiante **en la
+   consulta** (el controlador no tiene filtro posterior): secciones `isVisible`, materiales
+   `isVisible`, actividades publicadas y visibles, `_count.activities` solo publicadas/visibles
+   (3 en vez de 4) y períodos limitados al año de la institución. El docente/admin conserva la
+   carga completa que usa su pantalla (2 secciones, conteo 4). Regresión: sección oculta con
+   material visible dentro y material oculto en sección visible; el estudiante no recibe ninguno.
+4. **`getActivity` devolvía `_count.submissions` al estudiante** (conteo interno del docente) y
+   **`listActivities` filtraba la entrega del actor por `student.userId`**. La rama estudiante
+   omite `_count` (y no hay respuestas/resúmenes docentes en esa carga: las preguntas no se
+   incluyen en esta consulta), y la entrega se filtra por la `studentEnrollmentId` **ya
+   validada**. Regresión: `sub-A1-old`, una entrega del mismo usuario ligada a su matrícula del
+   año viejo con `attemptNumber` mayor —con el filtro viejo habría sido la primera en aparecer—;
+   el docente conserva `_count.submissions` (3).
+5. **`create` y `createActivity` no compartían transacción entre guarda y escritura**, y
+   `createActivity` aceptaba `academicTermId`, `rubricId` y `sectionId` sin validar. Ahora guarda,
+   comprobación de duplicado, validaciones y escritura comparten `tx` (el doble veta el cliente
+   raíz dentro del callback): la sección debe pertenecer al aula (ajena → **404**, antes 403 que
+   confirmaba existencia), el período debe ser de la institución **y del año del aula** (de B o de
+   otro año de A → 404), la rúbrica debe ser de la institución (de B → 404), y la unicidad de
+   `Classroom.teacherAssignmentId` (`@unique`) cubre la carrera: el P2002 se traduce al 403
+   funcional de «Ya existe un aula para esta asignación» sin crear vínculos cruzados. Regresión:
+   ids ajenos/incompatibles → 404 sin escritura; fallo intermedio del `create` sin efecto;
+   colisión P2002 traducida; todas las llamadas de ambas creaciones ocurren dentro de `tx`.
+
+### Mutaciones temporales de la fase correctiva (restauradas, nunca committeadas)
+
+- **(a) Validación `student.institutionId` retirada** de `getActivityAssignments`: **3 pruebas en
+  rojo** —`getActivityAssignments NO devuelve el destinatario incoherente…` (servicio y HTTP) y
+  `getActivityAssignments devuelve los destinatarios propios…` (vuelve a 2 filas)—. Restaurada →
+  2255/2255.
+- **(b) Proyección de estudiante desactivada** en `getById`: **2 pruebas en rojo** —las de
+  proyección de servicio y HTTP—. Restaurada → 2255/2255.
+
+### Cambios de comportamiento adicionales de esta fase
+
+- El conteo de estudiantes del listado docente filtra institución y estudiante: un número antes
+  contaminado por una fila incoherente puede bajar (3 → 2 en el fixture).
+- Una sección que no pertenece al aula al crear actividad responde 404 (antes 403).
+- El estudiante deja de recibir `_count` en `getActivity` y su `_count.activities` en `getById`
+  cuenta solo publicadas/visibles.
+- `create` y `createActivity` ejecutan todo dentro de una transacción interactiva.

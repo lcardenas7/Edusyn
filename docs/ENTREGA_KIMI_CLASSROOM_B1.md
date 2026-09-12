@@ -16,18 +16,20 @@ Auditoría completa: `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md`
 - Las 17 rutas viven en el nuevo `classroom-b1.controller.ts`, cada una con
   `requireInstitutionId` directo e incondicional; los 17 manejadores antiguos están borrados de
   `classroom.controller.ts`.
-- **Las 17 entradas de `institution-route-exceptions.json` NO se han retirado**: el encargo las
-  reserva a un commit separado de la fase de integración. Por eso el contrato estructural sigue en
-  rojo a propósito con exactamente 17 mensajes `Remove obsolete exception`.
-- 74 pruebas nuevas (34 de servicio + 40 HTTP) sobre un fixture A/B exclusivo con filas
+- **Las 17 entradas de `institution-route-exceptions.json` se retiraron en `9ac64f02`** (commit
+  que toca solo ese fichero) y el contrato estructural quedó en verde (13/13).
+- 89 pruebas de aislamiento (44 de servicio + 45 HTTP) sobre un fixture A/B exclusivo con filas
   incoherentes por cada cadena crítica.
-- Suite API completa: 2240 pruebas, 2239 verdes; la única roja es la del contrato por las 17
-  excepciones pendientes (esperado). `tsc --noEmit` limpio.
+- Suite API completa: **2255 pruebas, todas verdes**; contrato estructural incluido.
+  `tsc --noEmit` limpio; `nest build` correcto; web 214/214 y tsc web limpio.
 - El fixture encontró un **defecto funcional real** en mi propio blindaje (listados sin
   `institutionId`/`isPersonal` y estudiantes-para-asignación sin año ni `student.institutionId`),
   corregido en `7f1d9417` antes de cerrar pruebas.
-- Dos mutaciones temporales ejecutadas y revertidas (guarda aula→institución: 20 pruebas nuevas en
-  rojo; rol desde `?role`: 4 nuevas en rojo). Producción restaurada y `git diff` vacío.
+- La **revisión adversarial de Astra** (`docs/REVISION_ASTRA_CLASSROOM_B1_20260912.md`) encontró
+  5 defectos bloqueantes en la primera entrega; corregidos en `48ec81c5` + `3d5a7869` (ver §4a).
+- Cuatro mutaciones temporales ejecutadas y revertidas en total (guarda aula→institución: 20
+  rojas nuevas; rol desde `?role`: 4; validación `student.institutionId`: 3; proyección de
+  estudiante: 2). Producción restaurada y `git diff` vacío tras cada una.
 - No se tocaron las otras 81 rutas de Classroom, otros módulos, el esquema Prisma, migraciones,
   RLS, ni `ESTADO_BLINDAJE.md` / `REGISTRO_DESPLIEGUES.md` (los actualiza Astra al integrar).
 
@@ -42,11 +44,16 @@ Auditoría completa: `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md`
 | 3 | `9d8ae2ac` | `fix(classroom): blinda las 11 rutas de actividades y destinatarios` | 11 rutas en el nuevo controlador, 11 manejadores borrados, servicio, DTOs, `activity-gating.service.ts` (parámetro `db` opcional) |
 | 4 | `7f1d9417` | `fix(classroom): las listas del bloque 1 exigen la institucion en el aula y la cadena del estudiante` | Defecto funcional encontrado por el fixture (ver §2) |
 | 5 | `aa16df0f` | `test(classroom): fixture A/B y pruebas de aislamiento del bloque 1` | `test/fixtures/classroom-b1.fixture.ts`, `classroom-b1.isolation.spec.ts` (34), `classroom-b1.http-isolation.spec.ts` (40) |
-| 6 | *(este doc)* | `docs(classroom): auditoria y entrega del bloque 1` | `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md`, `docs/ENTREGA_KIMI_CLASSROOM_B1.md` |
-| 7 | **NO existe** | retirada de las 17 excepciones | **Pendiente: fase de integración (Astra).** Será un commit separado que toque **solo** `institution-route-exceptions.json`. |
+| 6 | `0177a8f7` | `docs(classroom): auditoria y entrega del bloque 1` | `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md`, `docs/ENTREGA_KIMI_CLASSROOM_B1.md` |
+| 7 | `9ac64f02` | `fix(classroom): retira las 17 excepciones del bloque 1` | **solo** `institution-route-exceptions.json` (−102 líneas); contrato en verde |
+| 8 | `48ec81c5` | `fix(classroom): cadena completa en listados y destinatarios, proyeccion de estudiante y creacion transaccional` | Corrección de los 5 defectos de la revisión de Astra (§4a) |
+| 9 | `3d5a7869` | `test(classroom): laboratorio de la revision de Astra para el bloque 1` | Fixture/doble ampliados + 15 pruebas de regresión (fallan contra `9ac64f02`, pasan tras el 8) |
+| 10 | *(este doc)* | `docs(classroom): correccion de la entrega del bloque 1` | Los dos docs rectificados |
 
-Los commits 1–6 dejan el contrato estructural en rojo a propósito (17 `Remove obsolete
-exception`); el commit 7, cuando se haga, lo cerrará para estas 17 rutas.
+Los commits 1–6 dejaban el contrato estructural en rojo a propósito (17 `Remove obsolete
+exception`); el 7 lo cerró. El 8 corrige producción y el 9 aporta el laboratorio que lo demuestra
+(al igual que el contrato en su momento, el commit 8 deja rojas solo las aserciones que el 9
+actualiza: el laboratorio y la corrección se verificaron juntos antes de separar los commits).
 
 `package-lock.json` aparece modificado en el worktree desde antes del bloque (artefacto de
 `npm install`); **no está comprometido** en ningún commit.
@@ -106,25 +113,33 @@ rojo antes de la entrega y el commit lo corrige; quedan fijados por tests.
 
 ## 3. Cómo reproducir la verificación
 
-Desde `apps/api` del worktree:
+Desde `apps/api` del worktree (si el `npm.cmd` de Windows muere con el transitorio 3221226505,
+invocar jest directamente con el `node.exe` del runtime: mismos binarios, resultado completo):
 
 ```bash
-npm test -- --runInBand classroom-b1
+npm test -- --runInBand classroom-b1 institution-route-contract
+npm test -- --runInBand
 npx tsc --noEmit
+npm run build
+cd ../web && npm test && npx tsc --noEmit
+git diff --check origin/staging...HEAD
 ```
 
-Resultados obtenidos en esta rama (2026-09-12):
+Resultados obtenidos en esta rama (2026-09-12, estado final tras la fase correctiva):
 
 | Comando | Resultado |
 |---|---|
-| `npm test -- --runInBand classroom-b1` | 104 suites · **2240** pruebas · 2239 verdes; la única roja es `institution-route-contract.spec.ts` con exactamente los **17** `Remove obsolete exception` esperados |
-| `npx tsc --noEmit` | limpio |
-| Referencia → mutación 1 → restauración | 2239/1 → 21 rojas → 2239/1 |
-| Referencia → mutación 2 → restauración | 2239/1 → 5 rojas → 2239/1 |
-| `git diff` en `apps/api/src` tras las mutaciones | vacío |
+| Focal `classroom-b1 institution-route-contract` | 104 suites · **2255** pruebas · **todas verdes** (contrato 13/13 incluido) |
+| Suite API completa `--runInBand` | 104 suites · **2255** pruebas · **todas verdes** |
+| `npx tsc --noEmit` (api) | limpio |
+| `npm run build` (api) | correcto |
+| `vitest run` (web) | 22 ficheros · **214** pruebas · verdes |
+| `npx tsc --noEmit` (web) | limpio |
+| `git diff --check origin/staging...HEAD` | limpio |
 
-### Pruebas de mutación (resumen; detalle y lista completa en la auditoría, §6)
+### Pruebas de mutación (resumen; detalle y listas completas en la auditoría, §6 y §10)
 
+Primera entrega:
 - **Mutación 1** (`classroomInScope` reducido a `where: { id }`): **20 pruebas nuevas en rojo**
   (11 de servicio + 9 HTTP). Las rutas colgadas de `activityInScope` y la lectura rica de
   `getById` siguieron en 404 por defensa en profundidad: cada guarda hace falta por separado.
@@ -132,7 +147,15 @@ Resultados obtenidos en esta rama (2026-09-12):
   nuevas en rojo**, las cuatro de `?role=student/teacher/inventado/ausente`. Bajo la mutación, un
   estudiante con `?role=teacher` recuperaba la rama docente: el defecto original, reproducido.
 
-No se publican scripts temporales; ambas mutaciones se revirtieron con `git checkout --`.
+Fase correctiva:
+- **Mutación (a)** (validación `student.institutionId` retirada de `getActivityAssignments`):
+  **3 pruebas en rojo** (las dos nuevas de destinatario incoherente + la legítima de
+  destinatarios, que vuelve a 2 filas).
+- **Mutación (b)** (proyección de estudiante desactivada en `getById`): **2 pruebas en rojo**
+  (las de proyección de servicio y HTTP).
+
+No se publican scripts temporales; todas las mutaciones se revirtieron con `git checkout --` y la
+suite volvió a 2255/2255 tras cada restauración.
 
 ---
 
@@ -164,12 +187,37 @@ Desviaciones respecto al plan inicial, todas declaradas: se eliminó el helper p
 
 ---
 
+## 4a. Corrección tras la revisión adversarial de Astra (2026-09-12)
+
+La primera entrega (punta `9ac64f02`) **no se integró**: la revisión
+(`docs/REVISION_ASTRA_CLASSROOM_B1_20260912.md`) encontró 5 defectos bloqueantes. Detalle
+completo en la auditoría, §10. Resumen:
+
+1. **`getActivityAssignments`** ahora exige la cadena completa de la matrícula (institución +
+   `student.institutionId` + año y grupo del aula): un destinatario preexistente incoherente
+   (`aa-inc-A` → estudiante de B) ya no filtra PII de un menor de B.
+2. **`listForTeacher`/`listForStudent`/`getAvailableAssignments`** exigen la cadena completa en
+   la consulta; `listForStudent` exige `student.institutionId`; el conteo de estudiantes filtra
+   institución y estudiante (**el número del fixture baja de 3 a 2**: antes lo inflaba la fila
+   incoherente —cambio de comportamiento deliberado pedido por la revisión).
+3. **`getById`** tiene proyección de estudiante en la consulta: sin secciones/materiales ocultos,
+   `_count.activities` solo publicadas/visibles, períodos del año de la institución. El docente
+   conserva su carga completa.
+4. **`getActivity`** omite `_count.submissions` en la rama estudiante; **`listActivities`** filtra
+   la entrega del actor por la `studentEnrollmentId` ya validada (no por `student.userId`).
+5. **`create`/`createActivity`** ejecutan guarda + validaciones + escritura en una transacción;
+   `sectionId`/`academicTermId`/`rubricId` ajenos o incompatibles → 404 antes de escribir
+   (sección ajena: antes 403); la carrera de creación de aula la cubre el `@unique` de base y el
+   P2002 se traduce al 403 funcional.
+
+Las 15 pruebas nuevas **fallan contra `9ac64f02`** (25 rojas en total con las aserciones
+actualizadas) y **pasan tras la corrección** (2255/2255). Dos mutaciones temporales más
+(`student.institutionId`: 3 rojas; proyección de estudiante: 2 rojas), restauradas y en verde.
+
+---
+
 ## 5. Pendiente explícito (no es parte de esta entrega)
 
-- **Commit de retirada de las 17 excepciones** de
-  `apps/api/src/common/security/institution-route-exceptions.json`: commit separado, solo ese
-  fichero, en la fase de integración. Las otras 81 huellas de Classroom y las del resto de módulos
-  no se tocan.
 - **`ESTADO_BLINDAJE.md` y `REGISTRO_DESPLIEGUES.md`**: los actualiza Astra al integrar; no los he
   editado.
 - **Las otras 81 rutas de Classroom** (secciones, materiales, anuncios, entregas, rúbricas, Live
@@ -183,7 +231,7 @@ Desviaciones respecto al plan inicial, todas declaradas: se eliminó el helper p
 
 | Módulo | Rutas | Resueltas | Excepciones | Estado | Evidencia |
 |---|---|---|---|---|---|
-| Classroom | 98 | 17 (Bloque 1) | 81 pendientes + 17 por retirar | Bloque 1 blindado en aplicación; módulo NO cerrado | `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md` · 74 pruebas A/B · rama `codex/blindaje-classroom-b1-kimi` |
+| Classroom | 98 | 17 (Bloque 1) | 81 pendientes | Bloque 1 blindado en aplicación (revisión Astra corregida); módulo NO cerrado | `docs/AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md` · 89 pruebas A/B · rama `codex/blindaje-classroom-b1-kimi` |
 
 ---
 
