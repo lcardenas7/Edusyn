@@ -2364,54 +2364,6 @@
     "fingerprint": "30dd12a5cb524f362999a88957072faa27b7e0ad760e343432786a484576d03f"
   },
   {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.execute @Post('execute')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "8524fba78c69761a93eac48c5d8d8e71abd040da7b9f05b24da905ec1dfd8fc5"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.getConfig @Get('config')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "440a6ff4fcd57478660e7bc8f452cae3afa3b2ca77332208c4270fe51e99f011"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.groupPdf @Get('pdf/group')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "d027f139565dd8123014074a24e064af913377d6de4994e1f4ac8d6dd28e13c7"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.groupView @Get('group-view')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "2e303a355b10fdf721125f086da744c2c39914d6f8a8dc4d729e19a580524e31"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.listAlerts @Get('alerts')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "c35b065bdf290a9f70ec490c9126ea6df0e0390f19f30b8fe941185d6f074310"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.studentPdf @Get('pdf/student')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "eb120d0e66c7f8267e691773ac278e7893ae49033fc472a04af5531bd04fcb70"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.updateAlert @Patch('alerts/:id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "a2c3867ca68f4890756dbf9d1aad38943a84e564b9ffb8fbddab81df014012a9"
-  },
-  {
-    "key": "modules/evaluation/preventive-cuts.controller.ts#PreventiveCutsController.upsertConfig @Post('config')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "7d71d24a4b98ba379327749f6355b8efaaf55204d5e457708805c4fce11e2276"
-  },
-  {
     "key": "modules/evaluation/student-grades.controller.ts#StudentGradesController.bulkUpsert @Post('bulk')",
     "kind": "pending-audit",
     "reason": "Deuda previa en evaluation: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
