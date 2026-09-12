@@ -20,8 +20,8 @@ servicios acotados, relaciones completas, pruebas A/B y HTTP, atomicidad y docum
 
 | Agente | Trabajo actual | Trabajo siguiente | No debe tocar |
 |---|---|---|---|
-| Claude | Terminar `Observer` según `ENCARGO_CLAUDE_BLINDAJE_OBSERVER.md` | `ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md`, después de que Astra integre Observer | Classroom, Inclusión, R1, EduLab, producción y datos compartidos |
-| Kimi | `ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md`, 17/98 rutas | Esperar integración y nuevo encargo | Observer, laboratorio PostgreSQL, RLS, otras 81 rutas de Classroom, cron, R1 y EduLab |
+| Claude | Corregir Observer según `REVISION_ASTRA_OBSERVER_20260912.md` | `ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md`, después de que Astra integre Observer corregido | Classroom, Inclusión, R1, EduLab, producción y datos compartidos |
+| Kimi | Corregir Classroom B1 según `REVISION_ASTRA_CLASSROOM_B1_20260912.md` | Esperar integración y nuevo encargo para B2 | Observer, laboratorio PostgreSQL, RLS, otras 81 rutas de Classroom, cron, R1 y EduLab |
 | Astra | Integración, revisión adversarial, estado, bitácora y siguiente módulo | Continuar el blindaje por riesgo | Trabajo no entregado de Claude/Kimi |
 
 El anterior `ENCARGO_CLAUDE_CLASSROOM_BLOQUE_1.md` queda **cancelado y reasignado a Kimi**. Claude
@@ -34,6 +34,11 @@ puede integrar Observer y Classroom B1 en el orden en que superen revisión. Cla
 PostgreSQL después de que Observer aparezca integrado en `origin/staging`, para que el laboratorio
 mida la base publicada y no una rama de entrega.
 
+La revisión adversarial de las puntas `41025531` y `9ac64f02` encontró defectos bloqueantes.
+Ninguna de las dos ramas se integra ni se declara cerrada hasta las correcciones y pruebas de los
+dos documentos `REVISION_ASTRA_*_20260912.md`. Los 28 y 17 retiros de excepciones existen solo en
+esas ramas y no alteran aún el inventario de staging.
+
 Cada entrega debe incluir ruta del worktree, rama, base exacta, commits en orden, ficheros, pruebas,
 mutaciones o fallos provocados, cambios de comportamiento y límites. Una entrega sin esos datos se
 considera pendiente de integración.
@@ -42,13 +47,15 @@ considera pendiente de integración.
 
 **Claude**
 
-> Termina Observer según `docs/ENCARGO_CLAUDE_BLINDAJE_OBSERVER.md`. Cuando Astra confirme que fue
-> integrado, lee `docs/ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md` desde el nuevo `origin/staging` y
-> ejecútalo completo en un worktree nuevo. No hagas push a staging y no empieces Classroom.
+> Lee `docs/REVISION_ASTRA_OBSERVER_20260912.md` en `origin/staging` y corrige tu rama
+> `codex/blindaje-observer-claude` con pruebas rojas antes y verdes después. No hagas push a
+> staging. Cuando Astra integre Observer corregido, lee
+> `docs/ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md` desde el nuevo `origin/staging` y ejecútalo
+> completo en un worktree nuevo. No empieces Classroom.
 
 **Kimi**
 
-> Lee `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md` en `origin/staging` y ejecútalo completo en un
-> worktree nuevo. Son exactamente 17 de 98 rutas; no toques las otras 81, el cron, RLS ni
-> PostgreSQL. No hagas push a staging y no declares Classroom cerrado.
-
+> Lee `docs/REVISION_ASTRA_CLASSROOM_B1_20260912.md` en `origin/staging` y corrige tu rama
+> `codex/blindaje-classroom-b1-kimi` con pruebas rojas antes y verdes después. No hagas push a
+> staging. Son exactamente 17 de 98 rutas; no toques las otras 81, el cron, RLS ni PostgreSQL.
+> No declares Classroom cerrado.
