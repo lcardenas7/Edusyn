@@ -3,7 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 import { ActivityGatingService } from './gating/activity-gating.service';
-import { ClassroomTenantAccessService } from './classroom-tenant-access.service';
+import { ClassroomActor, ClassroomTenantAccessService } from './classroom-tenant-access.service';
+import { CreateClassroomDto, UpdateClassroomDto } from './dto/classroom-b1.dto';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
 import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
@@ -41,7 +42,9 @@ export class ClassroomService {
   // CLASSROOMS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async listForTeacher(teacherId: string, institutionId: string) {
+  async listForTeacher(actor: ClassroomActor) {
+    const teacherId = actor.userId;
+    const institutionId = actor.institutionId;
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: { teacherId, institutionId, endDate: null },
       select: { id: true },
@@ -81,7 +84,9 @@ export class ClassroomService {
     return result;
   }
 
-  async listForStudent(studentId: string, institutionId: string) {
+  async listForStudent(actor: ClassroomActor) {
+    const studentId = actor.userId;
+    const institutionId = actor.institutionId;
     // Find active enrollments
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: { student: { userId: studentId }, institutionId, status: 'ACTIVE' },
@@ -130,7 +135,9 @@ export class ClassroomService {
     }));
   }
 
-  async getAvailableAssignments(teacherId: string, institutionId: string) {
+  async getAvailableAssignments(actor: ClassroomActor) {
+    const teacherId = actor.userId;
+    const institutionId = actor.institutionId;
     // Assignments that don't yet have a classroom
     return this.prisma.teacherAssignment.findMany({
       where: {
@@ -147,18 +154,11 @@ export class ClassroomService {
     });
   }
 
-  async create(teacherId: string, institutionId: string, dto: {
-    teacherAssignmentId: string;
-    title?: string;
-    description?: string;
-    color?: string;
-  }) {
-    // Validate ownership
-    const assignment = await this.prisma.teacherAssignment.findFirst({
-      where: { id: dto.teacherAssignmentId, teacherId, institutionId, endDate: null },
-      include: { group: { include: { grade: true } }, subject: true },
-    });
-    if (!assignment) throw new ForbiddenException('Asignación no encontrada o no pertenece al docente');
+  async create(actor: ClassroomActor, dto: CreateClassroomDto) {
+    // Asignación en alcance con la cadena completa (ajena/inexistente → 404);
+    // el actor debe ser el docente asignado (comportamiento previo: teacherId-only).
+    const assignment = await this.access.assignmentInScope(actor, dto.teacherAssignmentId);
+    this.access.assertCanUseAssignment(actor, assignment);
 
     // Check if classroom already exists
     const existing = await this.prisma.classroom.findUnique({
@@ -170,7 +170,7 @@ export class ClassroomService {
 
     return this.prisma.classroom.create({
       data: {
-        institutionId,
+        institutionId: actor.institutionId,
         teacherAssignmentId: dto.teacherAssignmentId,
         title,
         description: dto.description,
@@ -187,9 +187,14 @@ export class ClassroomService {
     });
   }
 
-  async getById(classroomId: string, userId: string) {
-    const classroom = await this.prisma.classroom.findUnique({
-      where: { id: classroomId },
+  async getById(actor: ClassroomActor, classroomId: string) {
+    // Guarda completa ANTES de cualquier lectura rica: aula ajena/inexistente → 404
+    // indistinguible; sin permiso de vista sobre un aula en alcance → 403/404 según rol.
+    const scope = await this.access.classroomInScope(actor, classroomId);
+    await this.access.assertCanViewClassroom(actor, scope);
+
+    const classroom = await this.prisma.classroom.findFirst({
+      where: { id: classroomId, institutionId: actor.institutionId, isPersonal: false },
       include: {
         teacherAssignment: {
           include: {
@@ -239,51 +244,51 @@ export class ClassroomService {
       periods[periods.length - 1] ||
       null;
 
-    // Add studentEnrollmentId for students (needed for Live Quiz tracking)
-    const student = await this.prisma.student.findUnique({ where: { userId } });
-    if (student) {
-      const enrollment = await this.prisma.studentEnrollment.findFirst({
-        where: {
-          studentId: student.id,
-          groupId: classroom.teacherAssignment.groupId,
-          academicYearId: classroom.teacherAssignment.academicYearId,
-          status: 'ACTIVE',
-        },
-        select: { id: true },
-      });
-      return { ...classroom, studentEnrollmentId: enrollment?.id, currentPeriod, academicPeriods: periods };
+    // Add studentEnrollmentId for students (needed for Live Quiz tracking).
+    // Acotado: solo matrículas del actor dentro de la institución y compatibles
+    // con grupo/año del aula (antes se resolvía sin filtro institucional).
+    const studentEnrollmentId = await this.access.studentEnrollmentInClassroom(actor, scope);
+    if (studentEnrollmentId) {
+      return { ...classroom, studentEnrollmentId, currentPeriod, academicPeriods: periods };
     }
 
     return { ...classroom, currentPeriod, academicPeriods: periods };
   }
 
-  async update(classroomId: string, teacherId: string, dto: {
-    title?: string;
-    description?: string;
-    color?: string;
-    coverImage?: string;
-    isActive?: boolean;
-  }) {
-    await this.validateClassroomOwnership(classroomId, teacherId);
-    return this.prisma.classroom.update({
-      where: { id: classroomId },
-      data: {
-        ...(dto.title !== undefined && { title: dto.title }),
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.color !== undefined && { color: dto.color }),
-        ...(dto.coverImage !== undefined && { coverImage: dto.coverImage }),
-        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-      },
+  async update(actor: ClassroomActor, classroomId: string, dto: UpdateClassroomDto) {
+    // Guarda + escritura acotada en la MISMA transacción: nada de update por id desnudo.
+    return this.prisma.$transaction(async (tx) => {
+      const classroom = await this.access.classroomInScope(actor, classroomId, tx);
+      this.access.assertCanManageClassroom(actor, classroom);
+
+      const result = await tx.classroom.updateMany({
+        where: { id: classroomId, institutionId: actor.institutionId, isPersonal: false },
+        data: {
+          ...(dto.title !== undefined && { title: dto.title }),
+          ...(dto.description !== undefined && { description: dto.description }),
+          ...(dto.color !== undefined && { color: dto.color }),
+          ...(dto.coverImage !== undefined && { coverImage: dto.coverImage }),
+          ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        },
+      });
+      // Carrera: el aula salió del alcance entre la guarda y la escritura.
+      if (result.count === 0) throw new NotFoundException('Aula no encontrada');
+      return tx.classroom.findUnique({ where: { id: classroomId } });
     });
   }
 
-  async getStudents(classroomId: string, teacherId: string) {
-    const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
+  async getStudents(actor: ClassroomActor, classroomId: string) {
+    // 404 para aula ajena ANTES de tocar PII de estudiantes; 403 si está en alcance
+    // pero el actor no gestiona el aula.
+    const classroom = await this.access.classroomInScope(actor, classroomId);
+    this.access.assertCanManageClassroom(actor, classroom);
     return this.prisma.studentEnrollment.findMany({
       where: {
         groupId: classroom.teacherAssignment.groupId,
         academicYearId: classroom.teacherAssignment.academicYearId,
         status: 'ACTIVE',
+        institutionId: actor.institutionId,
+        student: { institutionId: actor.institutionId },
       },
       include: {
         student: {

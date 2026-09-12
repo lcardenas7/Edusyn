@@ -30,61 +30,10 @@ export class ClassroomController {
   // CLASSROOMS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  @Get()
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
-  async list(@Request() req: any, @Query('role') role?: string) {
-    const { userId, institutionId } = await this.resolveCtx(req);
-    if (role === 'student') {
-      return this.service.listForStudent(userId, institutionId);
-    }
-    return this.service.listForTeacher(userId, institutionId);
-  }
-
-  @Get('available-assignments')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async getAvailableAssignments(@Request() req: any) {
-    const { userId, institutionId } = await this.resolveCtx(req);
-    return this.service.getAvailableAssignments(userId, institutionId);
-  }
-
-  @Post()
-  @Roles('DOCENTE', 'COORDINADOR')
-  async create(@Request() req: any, @Body() body: {
-    teacherAssignmentId: string;
-    title?: string;
-    description?: string;
-    color?: string;
-  }) {
-    const { userId, institutionId } = await this.resolveCtx(req);
-    return this.service.create(userId, institutionId, body);
-  }
-
-  @Get(':id')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
-  async getById(@Param('id') id: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getById(id, userId);
-  }
-
-  @Put(':id')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async update(@Param('id') id: string, @Request() req: any, @Body() body: {
-    title?: string;
-    description?: string;
-    color?: string;
-    coverImage?: string;
-    isActive?: boolean;
-  }) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.update(id, userId, body);
-  }
-
-  @Get(':id/students')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async getStudents(@Param('id') id: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getStudents(id, userId);
-  }
+  // Las 6 rutas de aulas (GET /, GET /available-assignments, POST /,
+  // GET /:id, PUT /:id, GET /:id/students) se movieron blindadas a
+  // classroom-b1.controller.ts (Bloque 1). Imports y decoradores de esta clase
+  // quedan intactos para preservar las huellas de las rutas pendientes.
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTIONS
