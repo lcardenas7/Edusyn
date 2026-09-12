@@ -89,9 +89,9 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
       if (body) req.send(JSON.parse(JSON.stringify(body).replaceAll('FOREIGN', ajeno)));
       await req.expect(404);
       noWrites(data);
-      expect(conteo(data.rows, 'classroom', A)).toBe(5);
+      expect(conteo(data.rows, 'classroom', A)).toBe(7);
       expect(conteo(data.rows, 'classroom', B)).toBe(1);
-      expect(data.rows.activityAssignment).toHaveLength(2);
+      expect(data.rows.activityAssignment).toHaveLength(3);
       expect(data.rows.activityDependency).toHaveLength(1);
     });
 
@@ -255,7 +255,7 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
       .auth(token(A), { type: 'bearer' })
       .send({ studentEnrollmentIds: ['enr-A2', 'enr-B1'], isRestrictedToAssigned: true })
       .expect(404);
-    expect(data.rows.activityAssignment.map((a: any) => a.id)).toEqual(['aa-A1', 'aa-B1']);
+    expect(data.rows.activityAssignment.map((a: any) => a.id)).toEqual(['aa-A1', 'aa-B1', 'aa-inc-A']);
     noWrites(data);
   });
 
@@ -275,7 +275,7 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
     const ids = r.body.map((c: any) => c.id);
     expect(ids).toContain('class-A');
     expect(ids).not.toContain('class-B');
-    expect(r.body.find((c: any) => c.id === 'class-A').studentCount).toBe(3);
+    expect(r.body.find((c: any) => c.id === 'class-A').studentCount).toBe(2); // sin la matrícula incoherente
     // El mismo usuario con sesión en B solo ve lo de B.
     const rB = await http().get('/classrooms').auth(token(B), { type: 'bearer' }).expect(200);
     expect(rB.body.map((c: any) => c.id)).toEqual(['class-B']);
@@ -300,7 +300,7 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
 
   it('getById legítimo del docente trae contenido; el del estudiante trae su matrícula', async () => {
     const delDocente = await http().get('/classrooms/class-A').auth(token(A), { type: 'bearer' }).expect(200);
-    expect(delDocente.body.sections).toHaveLength(1);
+    expect(delDocente.body.sections).toHaveLength(2); // incluida la sección oculta
     expect(delDocente.body.announcements).toHaveLength(1);
     expect(delDocente.body.currentPeriod?.id).toBe('term-A');
     const delAlumno = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
@@ -388,11 +388,78 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
       .delete('/classrooms/activities/act-A-pub')
       .auth(token(A), { type: 'bearer' })
       .expect(200);
-    expect(confirmacion.body).toMatchObject({ success: false, requiresConfirmation: true, submissionCount: 2 });
+    expect(confirmacion.body).toMatchObject({ success: false, requiresConfirmation: true, submissionCount: 3 });
     const borrada = await http()
       .delete('/classrooms/activities/act-A-pub?force=true')
       .auth(token(A), { type: 'bearer' })
       .expect(200);
     expect(borrada.body).toEqual({ success: true });
+  });
+
+  // ─── Revisión adversarial de Astra (2026-09-12): regresiones HTTP ──────────
+  it('assignments NO devuelve el destinatario incoherente preexistente ni PII de B', async () => {
+    const r = await http()
+      .get('/classrooms/activities/act-A-restr/assignments')
+      .auth(token(A), { type: 'bearer' })
+      .expect(200);
+    expect(r.body.map((a: any) => a.id)).toEqual(['aa-A1']);
+    expect(JSON.stringify(r.body)).not.toContain('DeB');
+    // Indistinguible de un recurso inexistente.
+    const ajena = await http().get('/classrooms/activities/act-B-restr/assignments').auth(token(A), { type: 'bearer' });
+    const inexistente = await http().get('/classrooms/activities/act-que-no-existe/assignments').auth(token(A), { type: 'bearer' });
+    expect(ajena.status).toBe(404);
+    expect(inexistente.status).toBe(404);
+    expect(ajena.body.message).toBe(inexistente.body.message);
+  });
+
+  it('el listado del docente no incluye aulas con la cadena incoherente (año, grupo o materia de B)', async () => {
+    const r = await http().get('/classrooms').auth(token(A), { type: 'bearer' }).expect(200);
+    const ids = r.body.map((c: any) => c.id);
+    expect(ids).toContain('class-A');
+    expect(ids).not.toContain('class-inc-A');
+    expect(ids).not.toContain('class-inc-year-A');
+    expect(ids).not.toContain('class-inc-subject-A');
+  });
+
+  it('getById del estudiante: sin sección/material ocultos y conteo solo de publicadas', async () => {
+    const r = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(r.body.sections.map((s: any) => s.id)).toEqual(['section-A1']);
+    expect(r.body.sections[0].materials.map((m: any) => m.id)).toEqual(['mat-A1']);
+    expect(JSON.stringify(r.body)).not.toContain('Unidad oculta');
+    expect(JSON.stringify(r.body)).not.toContain('Material oculto');
+    expect(r.body._count.activities).toBe(3);
+  });
+
+  it('getActivity del estudiante no expone el conteo interno de entregas', async () => {
+    const r = await http()
+      .get('/classrooms/activities/act-A-pub')
+      .auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' })
+      .expect(200);
+    expect(r.body._count).toBeUndefined();
+    const docente = await http().get('/classrooms/activities/act-A-pub').auth(token(A), { type: 'bearer' }).expect(200);
+    expect(docente.body._count.submissions).toBe(3);
+  });
+
+  it('createActivity con academicTermId, rubricId o sectionId ajenos/incompatibles responde 404 sin escribir', async () => {
+    for (const extra of [
+      { academicTermId: 'term-B' },
+      { academicTermId: 'term-old-A' },
+      { rubricId: 'rubric-B' },
+      { sectionId: 'section-B1' },
+    ]) {
+      await http()
+        .post('/classrooms/class-A/activities')
+        .auth(token(A), { type: 'bearer' })
+        .send({ type: 'TASK', title: 'intrusa', ...extra })
+        .expect(404);
+    }
+    noWrites(data);
+    const legit = await http()
+      .post('/classrooms/class-A/activities')
+      .auth(token(A), { type: 'bearer' })
+      .send({ type: 'TASK', title: 'compatible', academicTermId: 'term-A', rubricId: 'rubric-A', sectionId: 'section-A1' })
+      .expect(201);
+    expect(legit.body.academicTermId).toBe('term-A');
+    expect(legit.body.rubricId).toBe('rubric-A');
   });
 });
