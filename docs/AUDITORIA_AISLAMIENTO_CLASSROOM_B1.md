@@ -1,0 +1,279 @@
+# Auditoría de aislamiento · Classroom Bloque 1
+
+Fecha: 2026-09-12 · Autor: Kimi · Base: `origin/staging` en `a61fba2d`
+Rama: `codex/blindaje-classroom-b1-kimi` · Worktree propio (`worktrees/classroom-b1-kimi`), sin
+reutilizar los de Attendance ni de otros bloques.
+
+Alcance: **17 de las 98 rutas** de `apps/api/src/modules/classroom` — las 6 de aulas y las 11 de
+actividades y destinatarios que el encargo del Bloque 1 delimita. Las otras 81 (secciones,
+materiales, anuncios, entregas, rúbricas, Live Quiz, Edusyn Play, etc.) **no se han tocado** y
+siguen con su excepción documentada.
+
+---
+
+## 1. Inventario reconciliado
+
+Recontado sobre la base: **17 declaraciones HTTP**, exactamente como decía el encargo.
+
+| Fichero (antes) | Rutas movidas |
+|---|---|
+| `classroom.controller.ts` | 17 (6 de aulas + 11 de actividades/destinatarios) |
+
+Estado en la tabla de partida: 0 resoluciones directas y 17 excepciones `pending-audit` de
+Classroom. El recuento coincide; no hay diferencias que justificar.
+
+Estado final: las 17 rutas viven ahora en `classroom-b1.controller.ts`, cada una con su llamada
+directa e incondicional a `requireInstitutionId` (es lo que lee el contrato estructural), y los 17
+manejadores antiguos están **borrados** del controlador original (imports y decoradores restantes,
+byte a byte idénticos). Las 17 entradas de `institution-route-exceptions.json` se conservan a
+propósito: el contrato estructural las reporta como «Remove obsolete exception» (17 errores
+esperados) hasta que una fase posterior haga el commit de retirada. **Classroom NO está cerrado:
+va 17/98.**
+
+---
+
+## 2. Las 17 rutas, una por una
+
+`REQ` = la ruta llama a `requireInstitutionId` de forma directa e incondicional. Todas lo hacen
+ahora. «Cadena completa» = `classroom.institutionId` + `teacherAssignment.institutionId` +
+`academicYear.institutionId` + `group.{campus,grade}.institutionId` + `subject.area.institutionId`.
+
+### Aulas
+
+| # | Ruta | Roles | Qué pasaba antes | Qué pasa ahora |
+|---|---|---|---|---|
+| 1 | `GET /classrooms` | DOCENTE, COORDINADOR, ESTUDIANTE, ACUDIENTE | **El query `?role` decidía la rama**: `?role=student` → vista estudiante; cualquier otra cosa (incluido omitirlo) → vista docente. Un estudiante que no enviara el query atravesaba la rama de docente (borradores y conteos docentes); cualquiera podía autoconcederse la rama que quisiera. La consulta de aulas no filtraba por `institutionId` ni `isPersonal` (dependía solo de los ids de asignación) y el conteo de estudiantes no acotaba por institución. | REQ. El query `role` **deja de leerse**: la rama la decide el JWT (ESTUDIANTE → vista de estudiante; el resto → vista docente). Aulas acotadas por institución + `isPersonal: false` + asignaciones vigentes del docente en ESTA institución; estudiante solo por sus matrículas ACTIVAS con cadena íntegra. |
+| 2 | `GET /classrooms/available-assignments` | DOCENTE, COORDINADOR | Resolvía institución y filtraba por docente, pero sin validar la cadena de la asignación (año, grupo/sede/grado, materia/área). | REQ. Asignaciones vigentes del docente acotadas por institución en las cuatro relaciones. |
+| 3 | `POST /classrooms` | DOCENTE, COORDINADOR | Resolvía institución y exigía `teacherId` propio, pero un ajeno respondía **403** (confirmaba existencia) y no se validaba la cadena relacional de la asignación. Cuerpo sin DTO (sin lista blanca). | REQ + `assignmentInScope` (cadena completa + vigente) → ajena/inexistente/incoherente responde **404**; solo ENTONCES ownership → 403 si la asignación es de otro docente del mismo colegio. DTO con lista blanca (`whitelist`). |
+| 4 | `GET /classrooms/:id` | DOCENTE, COORDINADOR, ESTUDIANTE, ACUDIENTE | **El defecto más grave del bloque**: `findUnique({ where: { id } })` y se devolvía el aula COMPLETA —secciones, materiales, anuncios, conteos, datos del docente— **sin comprobar institución ni permiso alguno**. Cualquier usuario autenticado con cualquiera de los 4 roles leía el aula de cualquier colegio. | REQ + `classroomInScope` (cadena completa; ajena/inexistente/incoherente/personal → **404** indistinguible, ANTES de cualquier lectura rica) + `assertCanViewClassroom`: docente asignado, SuperAdmin, rol administrativo institucional, o estudiante con matrícula ACTIVA compatible (institución + año + grupo del aula). La lectura rica se repite acotada por `institutionId` (defensa en profundidad). |
+| 5 | `PUT /classrooms/:id` | DOCENTE, COORDINADOR | Ownership por `teacherId` sobre `findUnique` por id: un aula ajena respondía **403** (existencia confirmada) y la escritura era un `update` por id desnudo, sin institución ni cadena. | REQ + `classroomInScope` → **404**; ownership → 403 solo dentro del colegio. Escritura con `updateMany` acotado (`id` + `institutionId`) con `count === 1`, dentro de `$transaction` que revalida. DTO con lista blanca. |
+| 6 | `GET /classrooms/:id/students` | DOCENTE, COORDINADOR | Ownership por `teacherId`, aula ajena → 403. La lista de matrículas se armaba por `groupId`+`academicYearId`+`status` **sin institución** y devolvía PII (nombre, email) del grupo. | REQ + `classroomInScope` → 404 + ownership → 403. Matrículas acotadas por `institutionId` + `student.institutionId` + cadena año/grupo. |
+
+### Actividades y destinatarios
+
+| # | Ruta | Roles | Qué pasaba antes | Qué pasa ahora |
+|---|---|---|---|---|
+| 7 | `POST /classrooms/:id/activities` | DOCENTE, COORDINADOR | Ownership por `teacherId` (ajena → 403), sin cadena institucional. Cuerpo sin DTO. | REQ + `classroomInScope` → 404 + `assertCanManageClassroom` → 403. Creación dentro de `$transaction`. DTO con lista blanca (acepta además `shuffleQuestions`, `showResults`, `maxAttempts`, `timeLimitMinutes`, que el front ya enviaba). |
+| 8 | `GET /classrooms/:id/activities` | DOCENTE, COORDINADOR, ESTUDIANTE, ACUDIENTE | **`?role` decidía la rama** (mismo defecto que la ruta 1): el estudiante que omitía el query veía borradores, respuestas internas y conteos de entregas del docente. Sin cadena institucional. | REQ + `classroomInScope` → 404. Rama derivada del JWT. La rama estudiante exige matrícula ACTIVA compatible verificada → si no, **404**; solo actividades publicadas, sin conteos internos. ACUDIENTE → 404 (ver §5). |
+| 9 | `GET /classrooms/activities/:activityId` | DOCENTE, COORDINADOR, ESTUDIANTE, ACUDIENTE | `findUnique` por id + ownership solo para gestión; lectura sin institución y **`?role` otra vez** como selector de privilegio. | REQ + `activityInScope` (actividad colgando de un aula con cadena completa) → 404. Rama por JWT; estudiante sin matrícula compatible → 404. |
+| 10 | `PUT /classrooms/activities/:activityId` | DOCENTE, COORDINADOR | Ownership por `teacherId`; `update` por id desnudo; sin institución. | REQ + `activityInScope` → 404 + manage → 403. `updateMany` acotado con `count === 1` en `$transaction`. DTO con lista blanca (mismos 4 campos extra inertes que en crear). |
+| 11 | `PUT /classrooms/activities/:activityId/publish` | DOCENTE, COORDINADOR | Ownership por `teacherId`; `update` desnudo. `scheduledPublishAt` sin validación de colegio (la procesa el cron, fuera de alcance). | REQ + `activityInScope` → 404 + manage → 403. `updateMany` acotado en `$transaction`. Regla funcional de `scheduledPublishAt` conservada. |
+| 12 | `PUT /classrooms/activities/:activityId/unpublish` | DOCENTE, COORDINADOR | Ídem. | Ídem que 11, con la regla funcional de despublicar conservada. |
+| 13 | `PUT /classrooms/activities/:activityId/dependencies` | DOCENTE, COORDINADOR | Ownership por `teacherId`; los prerrequisitos se aceptaban por id **sin validar existencia ni colegio**, y solo se comprobaba «misma aula» parcialmente. | REQ + `activityInScope` → 404 + manage → 403 + `assertDependenciesValid`: cada prerrequisito existe y cuelga de aula de la institución (404 antes de revelar), no es la propia actividad (400) y pertenece a la MISMA aula (400). Reescritura atómica en `$transaction`; detección de ciclos conservada sobre el grafo existente. |
+| 14 | `PUT /classrooms/activities/:activityId/assign-students` | DOCENTE, COORDINADOR | **Segundo defecto grave**: tras el ownership, `deleteMany` + `createMany` con los `studentEnrollmentIds` del cuerpo **sin validar ni uno** —matrículas de otro colegio, de otro grupo o inexistentes— y **sin transacción**: un fallo a mitad dejaba la actividad sin destinatarios. | REQ + `activityInScope` → 404 + manage → 403 + `enrollmentInScope` por CADA id (misma institución, año y grupo del aula, estudiante de la institución, cadena íntegra; cualquiera ajena/inexistente → 404 y **nada se escribe**). `deleteMany`+`createMany` dentro de `$transaction` que revalida; un lote mixto revierte completo. |
+| 15 | `GET /classrooms/activities/:activityId/assignments` | DOCENTE, COORDINADOR | Ownership por `teacherId`; lista de destinatarios sin acotar por institución. | REQ + `activityInScope` → 404 + manage → 403. Lectura acotada además por `studentEnrollment.institutionId`. |
+| 16 | `GET /classrooms/:id/students-for-assignment` | DOCENTE, COORDINADOR | `findUnique` por id + comparación de `teacherId` (ajena → 403); matrículas del grupo por `status: 'ACTIVE'` **sin año académico ni institución** (mezclaba años y, con una fila incoherente, colegios). | REQ + `classroomInScope` → 404 + manage → 403. Matrículas por año **y** grupo del aula + `institutionId` + `student.institutionId` + cadena íntegra. |
+| 17 | `DELETE /classrooms/activities/:activityId` | DOCENTE, COORDINADOR | Ownership por `teacherId`; borrado por id desnudo. `force` como bandera funcional. | REQ + `activityInScope` → 404 + manage → 403. Borrado acotado en `$transaction`. `force` se conserva (es funcional, no un selector de privilegio como `role`). |
+
+---
+
+## 3. Cadenas relacionales del esquema
+
+Comprobadas contra `schema.prisma`, no asumidas:
+
+- `Classroom` **sí** tiene `institutionId` propio (a diferencia de `Group` en Attendance).
+- `Group` **no tiene** `institutionId`: se valida por `group.campus.institutionId` **y**
+  `group.grade.institutionId`. (La cadena acordada para Classroom es `group.{campus,grade}`;
+  no se exige `shift` — ver `docs/PLAN_BLINDAJE_CLASSROOM.md`.)
+- `Subject` **no tiene** `institutionId`: se valida por `subject.area.institutionId`.
+- `TeacherAssignment`, `AcademicYear`, `StudentEnrollment`, `Student`, `ClassroomActivity` sí
+  llevan `institutionId` propio… **y aun así** se filtra también por la relación, porque hay FKs
+  históricas que pueden no ser coherentes (lección 2 de `eaa57408`). El fixture incluye una fila
+  incoherente por cada cadena crítica y las pruebas demuestran que responden 404 **para su propia
+  institución**.
+- Aulas personales de Edusyn Play (`isPersonal`/`ownerUserId`) no son institucionales: estas 17
+  rutas responden 404 para ellas, indistinguible de un id ajeno.
+- `Guardian` **no tiene `userId`**: no existe forma de acreditar la relación acudiente→estudiante
+  (ver §5).
+
+Guardas compartidas (`classroom-tenant-access.service.ts`; aceptan `tx` para ejecutarse dentro de
+la transacción interactiva con el mismo cliente):
+
+| Guarda | Acota por | Falla con |
+|---|---|---|
+| `classroomInScope` | cadena completa del aula + `isPersonal: false` | 404 |
+| `activityInScope` | actividad → aula con cadena completa | 404 |
+| `assignmentInScope` | cadena completa + `endDate: null` | 404 |
+| `assertCanManageClassroom` / `assertCanUseAssignment` | `teacherId` del JWT | 403 |
+| `assertCanViewClassroom` | docente asignado / SuperAdmin / rol admin / matrícula ACTIVA | 403 o 404 según rol |
+| `studentEnrollmentInClassroom` | estudiante del actor + institución + año + grupo del aula | (null → 404) |
+| `enrollmentInScope` | institución + año + grupo del aula + estudiante de la institución | 404 |
+| `assertDependenciesValid` | existencia + institución + misma aula | 404 / 400 |
+
+---
+
+## 4. Huecos de autorización fina (enumerados, NO modificados)
+
+El encargo prohíbe inventar o ampliar permisos internos. Lo que sigue queda **igual que antes**
+y se declara como pendiente para una decisión de producto:
+
+1. La **gestión** de aula y actividades (crear desde asignación, editar, publicar, destinatarios,
+   dependencias, borrar) sigue siendo **solo del docente asignado**: COORDINADOR/RECTOR/
+   ADMIN_INSTITUTIONAL que no sean el docente reciben 403, exactamente como antes. No se amplió.
+2. A la inversa, un **COORDINADOR** (rol admitido por `@Roles`) puede intentar gestionar y recibe
+   403 salvo que sea el docente de la asignación: comportamiento preexistente conservado.
+3. La vista del aula para roles administrativos (ADMIN_INSTITUTIONAL/RECTOR/COORDINADOR) es de
+   **todo el colegio**, no de sus dependencias concretas: ya era así en la práctica (antes era
+   peor: era de todo el sistema) y no se ha inventado un límite más fino.
+4. Ninguna de estas rutas distingue permisos entre docentes del mismo colegio más allá del
+   ownership por `teacherId` que ya existía.
+
+Ninguno de estos huecos cruza colegios: son de autorización dentro de la misma institución.
+
+---
+
+## 5. Cambios de comportamiento deliberados
+
+Todos derivados de las reglas del encargo (404 indistinguible en la frontera; el rol jamás del
+cliente; ninguna escritura parcial):
+
+1. **El query `role` deja de existir** en `GET /classrooms`, `GET /classrooms/:id/activities` y
+   `GET /classrooms/activities/:activityId`. Enviarlo como `student`, `teacher` o un valor
+   inventado **no cambia la rama ni el permiso** (probado expresamente). Un ESTUDIANTE real que
+   antes omitía el query y caía en la rama docente ahora recibe su vista de estudiante.
+2. **ACUDIENTE pasa de «leer cualquier aula» a 404.** El esquema no vincula `Guardian` con
+   cuentas de usuario (no hay `userId`), así que no se puede acreditar la relación
+   acudiente→estudiante; se responde 404 para no revelar existencia. Antes un ACUDIENTE leía el
+   aula completa de cualquier colegio por id.
+3. **Estudiante sin matrícula compatible → 404** en las rutas de vista (antes: acceso por id
+   sin más). Estudiante A no ve a otro estudiante de A fuera de su aula ni nada de B.
+4. **Ids ajenos pasan de 403 a 404** en gestión y vista: el 403 anterior confirmaba la existencia
+   del aula/actividad de otro colegio. El 403 se reserva para falta de permiso **dentro** del
+   colegio (p. ej. el otro docente de A contra el aula del docente compartido).
+5. **Aulas personales de Edusyn Play → 404** en estas rutas (antes se colaban si el id encajaba).
+6. **DTOs con lista blanca** (`whitelist: true`, `forbidNonWhitelisted`): campos falsificados en
+   el cuerpo (p. ej. `institutionId`, `teacherId`, `studentEnrollmentIds` con forma errónea)
+   reciben **400**. Los DTOs de crear/editar actividad aceptan además `shuffleQuestions`,
+   `showResults`, `maxAttempts` y `timeLimitMinutes` porque el front ya los enviaba; se aplican
+   igual que antes.
+7. **`assignStudentsToActivity` es atómico**: un lote con una sola matrícula ajena, inexistente o
+   de otro grupo/año **falla completo** (404) y no toca los destinatarios actuales; antes borraba
+   primero y creaba después sin validar nada.
+
+Además, un defecto funcional encontrado por el fixture durante el blindaje y corregido en
+`7f1d9417`: los listados (`listForTeacher`/`listForStudent`) consultaban las aulas sin
+`institutionId` ni `isPersonal`, y `getClassroomStudentsForAssignment` listaba matrículas sin año
+ni `student.institutionId`. Con filas incoherentes o aulas personales, esas consultas cruzaban
+colegios. Las pruebas de servicio los fijan.
+
+---
+
+## 6. Pruebas
+
+Fixture A/B exclusivo: `apps/api/test/fixtures/classroom-b1.fixture.ts`. Instituciones A y B, el
+mismo usuario docente vinculado a ambas (para que `userId` no oculte la falta de institución), otro
+docente dentro de A, aulas/asignaciones/grupos/grados/sedes/jornadas/años/materias/áreas de A y B,
+estudiantes compatible/otro grupo/otro año/otro estudiante de A/estudiante de B, actividades
+publicadas, borradores, dirigidas y con dependencias, destinatarios de A y B, un aula personal de
+Edusyn Play y **una fila histórica incoherente por cada cadena crítica** (aula de A con asignación
+de B, aula de A con grupo de sede de B, matrícula que dice A con estudiante de B).
+
+El doble de Prisma **aplica filtros de verdad** (igualdad, `in`, `not`, comparaciones, `contains`,
+`OR`/`AND`/`NOT`, relaciones anidadas) y entrega un `tx` **distinto** del cliente raíz en
+`$transaction`: toma instantánea, revierte si el callback lanza, y **falla expresamente** si dentro
+del callback se usa el cliente raíz —así las escrituras fuera de la transacción no pueden pasar
+inadvertidas.
+
+| Suite | Pruebas | Qué demuestra |
+|---|---|---|
+| `classroom-b1.isolation.spec.ts` | 34 | Rechazo por servicio en ambas direcciones A→B/B→A (15 operaciones × 2), 404 indistinguible, filas incoherentes, aula personal, ACUDIENTE, SuperAdmin, docente compartido con el mismo `userId`, atomicidad de lotes mixtos, y casos legítimos con contenido y conteos comprobables. |
+| `classroom-b1.http-isolation.spec.ts` | 40 | Las 17 rutas por HTTP real con `JwtAuthGuard`, estrategia JWT (tokens firmados localmente), `RolesGuard` y `ValidationPipe` reales; solo Prisma es doble. Matriz de 15 rutas con id en ambas direcciones, `role` como query (student/teacher/inventado/ausente), `institutionId` y `teacherId` falsificados en cuerpo, sin token, roles no autorizados, y casos legítimos. |
+
+Cobertura afirmada también sobre lo que **no** ocurrió: `noWrites` (ningún método de escritura en
+ningún modelo tras un intento cruzado), cero lecturas PII secundarias (`student`/
+`studentEnrollment`) antes del 404, y conteo de filas por institución antes/después.
+
+### Pruebas de mutación (código restaurado y suite en verde tras cada una)
+
+**Mutación 1 — guarda aula→institución retirada.** Se dejó `classroomInScope` con
+`where: { id }` únicamente. Resultado: **21 pruebas en rojo** (20 nuevas + el contrato
+estructural ya rojo por las excepciones pendientes):
+
+- Servicio (11): `update`, `getStudents`, `createActivity` y `listActivities` cruzados en ambas
+  direcciones (8); las dos filas incoherentes respondiendo 200 para su propia institución (2);
+  el otro docente de A recibiendo 403 **fuera** de su colegio en vez de 404 (1).
+- HTTP (9): `PUT /classrooms/:id`, `GET /classrooms/:id/students`,
+  `POST /classrooms/:id/activities` y `GET /classrooms/:id/activities` con id del otro colegio,
+  en ambas direcciones (8); más el caso «el otro docente de A recibe 403 dentro de su colegio y
+  404 fuera» (1).
+
+Detalle útil para quien revise: bajo esta mutación, las rutas que cuelgan de `activityInScope`
+(publicar, dependencias, destinatarios, borrado…) **siguieron en 404**, porque esa guarda valida
+la cadena del aula por su cuenta, y `GET /classrooms/:id` cruzado siguió en 404 porque la lectura
+rica se repite con `institutionId`. Es defensa en profundidad real, no redundancia: la mutación
+solo rompió las rutas que dependían exclusivamente de `classroomInScope`.
+
+**Mutación 2 — rol derivado del query.** Se reintrodujo `?role` en `GET /classrooms`,
+`GET /classrooms/:id/activities` y `GET /classrooms/activities/:activityId`, sobrescribiendo los
+roles del actor con lo que enviara el cliente (`student` → rama estudiante; cualquier otro valor →
+rama docente). Resultado: **5 pruebas en rojo** (4 nuevas + el contrato):
+
+- `?role=student no cambia la rama ni el permiso`
+- `?role=teacher no cambia la rama ni el permiso`
+- `?role=inventado no cambia la rama ni el permiso`
+- `la respuesta del estudiante es idéntica con y sin el query role`
+
+Bajo la mutación, un estudiante con `?role=teacher` (o cualquier valor) recibía la rama docente
+con borradores y conteos internos —exactamente el defecto original. Tras restaurar, la suite focal
+volvió a su referencia. No se publican scripts temporales; las mutaciones se aplicaron con edición
+directa y se revirtieron con `git checkout --`.
+
+---
+
+## 7. Verificación ejecutada
+
+| Comando | Resultado |
+|---|---|
+| `npm test -- --runInBand classroom-b1` (apps/api) | 104 suites, **2240 pruebas**; 2239 verdes y 1 roja: el contrato estructural, que reporta exactamente los 17 «Remove obsolete exception» esperados y quedará en verde con el commit de retirada de excepciones (fase posterior) |
+| `npx tsc --noEmit` (apps/api) | limpio |
+| Referencia antes de mutar | 2239/1 (misma única roja) |
+| Tras mutación 1 | 21 rojas (20 nuevas) → restaurada → 2239/1 |
+| Tras mutación 2 | 5 rojas (4 nuevas) → restaurada → 2239/1 |
+| `git diff` post-mutaciones | vacío en `apps/api/src` (solo queda `package-lock.json`, suciedad preexistente de `npm install`, no comprometida) |
+
+Nota: dos ejecuciones de la suite murieron a mitad con el código de salida 3221226505
+(0xC0000409, fallo transitorio del proceso en Windows, sin relación con el código); la repetición
+inmediata dio el resultado completo y consistente.
+
+---
+
+## 8. Qué NO cubre esta auditoría
+
+- **Las otras 81 rutas de Classroom.** Secciones, materiales, anuncios, entregas, rúbricas, Live
+  Quiz, Edusyn Play y demás conservan su excepción `pending-audit` y su comportamiento anterior.
+  **Classroom va 17/98; el bloque NO cierra el módulo.**
+- **El cron `processScheduledPublications`.** Publica actividades programadas sin actor ni
+  institución resuelta; queda pendiente para otro bloque.
+- **PostgreSQL y RLS.** Todo lo demostrado es la guarda de la **aplicación**. No se ha tocado el
+  esquema, ni migraciones, ni políticas RLS, ni staging/producción.
+- **Storage / archivos.** Los materiales y entregas con fichero no se han auditado.
+- **Autorización fina dentro del colegio.** Los huecos del §4 siguen abiertos por decisión
+  explícita del encargo.
+- **El conteo funcional de estudiantes del listado docente.** El `studentEnrollment.count` de
+  `listForTeacher` sigue siendo el conteo por grupo/año preexistente (sin filtro institucional en
+  ese agregado); queda documentado en las pruebas y no cambia comportamiento.
+- **Rendimiento.** Las guardas añaden consultas de validación acotadas y baratas, no medidas en
+  volumen real.
+- **Datos históricos ya incoherentes.** Las guardas impiden crear nuevas incoherencias y filtran
+  las existentes, pero no reparan filas mal ligadas que ya estén en la base.
+- **El retiro de las 17 excepciones del contrato estructural.** Es un commit separado de una fase
+  posterior (integración de Astra), como manda el encargo. Tampoco se han editado
+  `ESTADO_BLINDAJE.md` ni `REGISTRO_DESPLIEGUES.md`.
+
+---
+
+## 9. Ficheros
+
+| Commit | Contenido |
+|---|---|
+| `46e13d58` | `classroom-tenant-access.service.ts` (nuevo), `classroom.module.ts`, `classroom.service.ts`, ajustes de `classroom.service.spec.ts` y `classroom-copy-contract.spec.ts` a las nuevas firmas |
+| `d9f86f42` | `classroom-b1.controller.ts` (nuevo) con las 6 rutas de aulas, `dto/classroom-b1.dto.ts` (nuevo), 6 manejadores borrados de `classroom.controller.ts`, servicio |
+| `9d8ae2ac` | Las 11 rutas de actividades/destinatarios, 11 manejadores borrados del controlador original, servicio, DTOs, `activity-gating.service.ts` (parámetro `db` opcional para usar el cliente transaccional) |
+| `7f1d9417` | Defecto funcional encontrado por el fixture: institución + `isPersonal` en los listados y año + `student.institutionId` en estudiantes-para-asignación |
+| `aa16df0f` | `test/fixtures/classroom-b1.fixture.ts`, `classroom-b1.isolation.spec.ts` (34), `classroom-b1.http-isolation.spec.ts` (40) |
+
+Desviaciones declaradas respecto al plan inicial: se eliminó el helper privado muerto
+`resolveStudentEnrollment`; `ActivityGatingService.getClassroomEdges` acepta un `db` opcional
+(sin cambio de comportamiento fuera de las transacciones); los DTOs de actividad aceptan los 4
+campos extra que el front ya enviaba; `getActivityAssignments` filtra además por
+`studentEnrollment.institutionId`.
