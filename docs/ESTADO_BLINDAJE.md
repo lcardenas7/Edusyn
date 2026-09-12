@@ -2,11 +2,11 @@
 
 Fecha: 2026-09-12. Attendance integrado sobre origin/staging 009fb852 y revisado en 70726854 + ddb1f058; este estado forma parte del lote de publicación a staging.
 
-Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route y Cortes preventivos están publicados. Attendance queda cerrado en aplicación tras revisar la entrega de Claude: 17 rutas, transacciones reales y 124 pruebas propias (68 de servicio y 56 HTTP), además de 15 del resolvedor común. Observer es el siguiente frente delegado. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
+Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route, Cortes preventivos y Attendance están publicados. Staff Leave y Teacher Schedule quedan cerrados en aplicación en el siguiente lote: 11 rutas y 106 pruebas nuevas. Observer es el siguiente frente delegado y Classroom tiene un plan medido, todavía 0/98. Inclusión permanece pospuesta por el usuario y Matrículas conserva el pendiente de PostgreSQL sintético. No constituye cierre global del aislamiento.
 
 ## Medición reproducible
 
-1113 declaraciones de ruta (incluye SSE y dos rutas de app), 331 con llamada directa, incondicional y esperada a requireInstitutionId, 719 pendientes de calibración y 63 excepciones no institucionales.
+1113 declaraciones de ruta (incluye SSE y dos rutas de app), 338 con llamada directa, incondicional y esperada a requireInstitutionId, 712 pendientes de calibración y 63 excepciones no institucionales.
 
 Este criterio es deliberadamente más estricto que contar menciones de institución: helpers de controlador, resolveInstitutionId, interceptores y resolución en servicios quedan pendientes de revisión, NO se cuentan como vulnerabilidades confirmadas. Las cifras 731/339 del encargo no son comparables con estas columnas. Se cuentan declaraciones de decorador, no todas las combinaciones de prefijos/versiones HTTP.
 
@@ -25,7 +25,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | attendance | 17 | 17 | 0 | 0 | Cerrado en aplicación: institución del actor, relaciones completas, transacciones y auditoría con `tx`, 68 pruebas de servicio + 56 HTTP. RLS y siete permisos finos del Bloque 4 pendientes. Ver AUDITORIA_AISLAMIENTO_ATTENDANCE.md |
 | auth | 7 | 0 | 4 | 3 | Pendiente de auditoría A/B por módulo |
 | capabilities | 5 | 3 | 2 | 0 | Pendiente de auditoría A/B por módulo |
-| classroom | 98 | 0 | 98 | 0 | Pendiente de auditoría A/B por módulo |
+| classroom | 98 | 0 | 98 | 0 | Pendiente: inventario técnico y partición 17→36→52→87→93→98 definidos; ninguna ruta acreditada todavía. Ver PLAN_BLINDAJE_CLASSROOM.md |
 | communications | 17 | 7 | 10 | 0 | Pendiente de auditoría A/B por módulo |
 | dashboard | 19 | 13 | 6 | 0 | Pendiente de auditoría A/B por módulo |
 | documents | 9 | 3 | 6 | 0 | Pendiente de auditoría A/B por módulo |
@@ -50,11 +50,11 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | permissions | 8 | 0 | 8 | 0 | Pendiente de auditoría A/B por módulo |
 | recovery | 33 | 33 | 0 | 0 | Auditoría A/B previa documentada; HTTP pendiente |
 | reports | 49 | 2 | 47 | 0 | Pendiente de auditoría A/B por módulo |
-| staff-leave | 7 | 4 | 3 | 0 | Pendiente de auditoría A/B por módulo |
+| staff-leave | 7 | 7 | 0 | 0 | Cerrado en aplicación: solicitudes, PII, alcance personal/administrativo y decisiones atómicas; 31 pruebas de servicio + 49 HTTP. Ver AUDITORIA_AISLAMIENTO_STAFF_LEAVE.md |
 | storage | 7 | 0 | 7 | 0 | Pendiente de auditoría A/B por módulo |
 | superadmin | 13 | 0 | 0 | 13 | No aplica tenant único; autorización global pendiente |
 | taller | 11 | 10 | 0 | 1 | Servicios auditados, 40 pruebas; HTTP pendiente. Ver AUDITORIA_AISLAMIENTO_TALLER.md |
-| teacher-schedule | 4 | 0 | 4 | 0 | Pendiente de auditoría A/B por módulo |
+| teacher-schedule | 4 | 4 | 0 | 0 | Cerrado en aplicación: agenda por institución + actor, mutaciones atómicas y RolesGuard; 12 pruebas de servicio + 14 HTTP. Ver AUDITORIA_AISLAMIENTO_TEACHER_SCHEDULE.md |
 | teacher-workspace | 61 | 0 | 61 | 0 | Pendiente de auditoría A/B por módulo |
 | timetabling | 46 | 0 | 46 | 0 | Pendiente de auditoría A/B por módulo |
 
@@ -94,3 +94,5 @@ Checkpoint Learning Route (eaa57408): 16/16 rutas clasificadas; 14 institucional
 Checkpoint Cortes preventivos (2022be74 + 172cd375): 8/8 rutas resuelven institución del actor; configuración, alertas, grupos, asignaciones, matrículas, períodos y motor de nota a fecha quedan acotados. Ejecución completa atómica. 38 pruebas de servicio y 46 HTTP; mutación de la guarda del período rompe 5 casos y, restaurada, el focal con contrato pasa 97/97. Suite completa: 96 suites / 1.869 pruebas API; tipos API/web y build Nest aprobados; web conserva 22 archivos / 214 pruebas ya verificados en esta sesión. PostgreSQL/RLS, autorización intrainstitucional y semántica histórica de roster/asignaciones quedan aparte.
 
 Checkpoint Attendance (d50bce46…ddb1f058, revisión 70726854): 17/17 rutas directas y 0 excepciones. La revisión corrigió callbacks que ignoraban `tx`, hizo transaccionales la guarda, las escrituras y la auditoría, amplió las cadenas relacionales y corrigió a 400 el contexto institucional ausente. 68 pruebas de servicio + 56 HTTP; mutación central rompe cuatro cruces y el cliente raíz prohibido dentro de la transacción queda probado. Suite completa combinada: 98 suites / 1.993 pruebas API; web 22/214; tipos API/web y build Nest aprobados. Inventario: 1.113 rutas, 331 directas, 719 pendientes y 63 no institucionales. PostgreSQL/RLS y siete permisos finos del Bloque 4 siguen aparte.
+
+Checkpoint Staff Leave + Teacher Schedule (97f85691, a43db832, 4fd6d9c4): 11/11 rutas directas y siete excepciones retiradas. Permisos laborales quedan acotados por institución, actor y membresías; revisión/cancelación son atómicas. Agenda personal queda acotada por institución + identidad y rechaza estudiantes. 106 pruebas nuevas; focal con contrato 119/119. Suite completa: 102 suites / 2.099 pruebas API; tipos y build Nest aprobados. Inventario: 1.113 rutas, 338 directas, 712 pendientes y 63 no institucionales. Classroom sigue 0/98: su partición está medida, no cerrada.
