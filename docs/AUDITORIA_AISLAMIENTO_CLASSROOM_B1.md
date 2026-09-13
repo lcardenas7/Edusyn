@@ -1,6 +1,9 @@
 # Auditoría de aislamiento · Classroom Bloque 1
 
-Fecha: 2026-09-12 · Autor: Kimi · Base: `origin/staging` en `a61fba2d`
+Fecha: 2026-09-12 · Autor: Kimi · Base: `origin/staging` en `2ebb2515`
+(la auditoría empezó sobre `a61fba2d`; la rama se rebaseó a `165d07e6` y después a `2ebb2515`,
+ambas limpias — los hashes anteriores a esta edición citados por Astra, p. ej. `9ac64f02` o
+`48ec81c5`, identifican los mismos cambios antes de los rebases).
 Rama: `codex/blindaje-classroom-b1-kimi` · Worktree propio (`worktrees/classroom-b1-kimi`), sin
 reutilizar los de Attendance ni de otros bloques.
 
@@ -176,8 +179,11 @@ inadvertidas.
 
 | Suite | Pruebas | Qué demuestra |
 |---|---|---|
-| `classroom-b1.isolation.spec.ts` | 34 | Rechazo por servicio en ambas direcciones A→B/B→A (15 operaciones × 2), 404 indistinguible, filas incoherentes, aula personal, ACUDIENTE, SuperAdmin, docente compartido con el mismo `userId`, atomicidad de lotes mixtos, y casos legítimos con contenido y conteos comprobables. |
-| `classroom-b1.http-isolation.spec.ts` | 40 | Las 17 rutas por HTTP real con `JwtAuthGuard`, estrategia JWT (tokens firmados localmente), `RolesGuard` y `ValidationPipe` reales; solo Prisma es doble. Matriz de 15 rutas con id en ambas direcciones, `role` como query (student/teacher/inventado/ausente), `institutionId` y `teacherId` falsificados en cuerpo, sin token, roles no autorizados, y casos legítimos. |
+| `classroom-b1.isolation.spec.ts` | 44 | Rechazo por servicio en ambas direcciones A→B/B→A (15 operaciones × 2), 404 indistinguible, filas incoherentes, aula personal, ACUDIENTE, SuperAdmin, docente compartido con el mismo `userId`, atomicidad de lotes mixtos, proyección de estudiante, destinatario incoherente y casos legítimos con contenido y conteos comprobables. |
+| `classroom-b1.http-isolation.spec.ts` | 54 | Las 17 rutas por HTTP real con `JwtAuthGuard`, estrategia JWT (tokens firmados localmente), `RolesGuard` y `ValidationPipe` reales; solo Prisma es doble. Matriz de 15 rutas con id en ambas direcciones, `role` como query (student/teacher/inventado/ausente), `institutionId` y `teacherId` falsificados en cuerpo, sin token, roles no autorizados, proyecciones con FK cruzada (A→B, B→A e intra-colegio), estudiante no asignado y casos legítimos. |
+| `classroom-b1-adversarial-review.spec.ts` | 5 | Las 5 filtraciones de proyección de la segunda revisión de Astra (cherry-pick de `7460d706`): fallaban contra la entrega anterior y pasan tras la corrección (§11). |
+
+Total: **103 pruebas** de aislamiento del bloque (49 de servicio + 54 HTTP).
 
 Cobertura afirmada también sobre lo que **no** ocurrió: `noWrites` (ningún método de escritura en
 ningún modelo tras un intento cruzado), cero lecturas PII secundarias (`student`/
@@ -222,28 +228,30 @@ directa y se revirtieron con `git checkout --`.
 
 ## 7. Verificación ejecutada
 
-Estado final de la rama (tras la fase correctiva, ver §10):
+Estado final de la rama (tras la segunda fase correctiva, §11, y el rebase sobre `2ebb2515`):
 
 | Comando | Resultado |
 |---|---|
-| `jest --runInBand classroom-b1 institution-route-contract` (apps/api) | 104 suites, **2255 pruebas**, todas verdes — incluido el contrato estructural (13/13) tras el commit `9ac64f02` |
-| Suite API completa `--runInBand` | 104 suites, **2255 pruebas**, todas verdes |
+| `jest --runInBand classroom-b1 institution-route-contract` (apps/api) | 106 suites, **2293 pruebas**, todas verdes — incluido el contrato estructural (13/13) |
+| Suite API completa `--runInBand` | 106 suites, **2293 pruebas**, todas verdes |
 | `npx tsc --noEmit` (apps/api) | limpio |
 | `npm run build` (apps/api) | correcto |
 | `vitest run` (apps/web) | 22 ficheros, **214 pruebas**, verdes |
 | `npx tsc --noEmit` (apps/web) | limpio |
 | `git diff --check origin/staging...HEAD` | limpio |
 
-Primera entrega (pre-revisión): la referencia era 2239/1, la única roja el contrato con los 17
-«Remove obsolete exception» esperados; mutación 1 → 21 rojas (20 nuevas) → restaurada → 2239/1;
-mutación 2 → 5 rojas (4 nuevas) → restaurada → 2239/1. `git diff` vacío en `apps/api/src` tras
-cada restauración (solo queda `package-lock.json`, suciedad preexistente de `npm install`, no
-comprometida).
+Historial de cifras: primera entrega 2239/1 (la única roja el contrato con los 17 «Remove obsolete
+exception» esperados); primera fase correctiva 104/2255; segunda fase correctiva **106/2293**
+(105/2279 al heredar Taller de staging + 1 suite/5 pruebas del spec adversarial de Astra + 9
+pruebas HTTP nuevas de esta fase). Mutaciones: 1 → 21 rojas (20 nuevas) → restaurada; 2 → 5 rojas
+(4 nuevas) → restaurada; fase correctiva 1: (a) 3 rojas, (b) 2 rojas; fase correctiva 2: (a)–(f)
+2/2/2/2/1/1 rojas (detalle §11). `git diff` vacío en `apps/api/src` tras cada restauración (solo
+queda `package-lock.json`, suciedad preexistente de `npm install`, no comprometida ni descartada).
 
 Nota: varias ejecuciones de la suite murieron a mitad con el código de salida 3221226505
-(0xC0000409, fallo transitorio del proceso en Windows, sin relación con el código); la repetición
-inmediata —o jest invocado directamente con el `node.exe` del runtime— dio el resultado completo
-y consistente.
+(0xC0000409) o 127 (fallos transitorios del proceso en Windows, sin relación con el código); la
+repetición inmediata —o jest invocado directamente con el `node.exe` del runtime— dio el
+resultado completo y consistente.
 
 ---
 
@@ -271,17 +279,26 @@ y consistente.
 
 ## 9. Ficheros
 
+Hashes **tras el rebase final sobre `2ebb2515`** (los dos rebases reescribieron la rama; los
+hashes citados en las revisiones de Astra identifican los mismos cambios antes de los rebases):
+
 | Commit | Contenido |
 |---|---|
-| `46e13d58` | `classroom-tenant-access.service.ts` (nuevo), `classroom.module.ts`, `classroom.service.ts`, ajustes de `classroom.service.spec.ts` y `classroom-copy-contract.spec.ts` a las nuevas firmas |
-| `d9f86f42` | `classroom-b1.controller.ts` (nuevo) con las 6 rutas de aulas, `dto/classroom-b1.dto.ts` (nuevo), 6 manejadores borrados de `classroom.controller.ts`, servicio |
-| `9d8ae2ac` | Las 11 rutas de actividades/destinatarios, 11 manejadores borrados del controlador original, servicio, DTOs, `activity-gating.service.ts` (parámetro `db` opcional para usar el cliente transaccional) |
-| `7f1d9417` | Defecto funcional encontrado por el fixture: institución + `isPersonal` en los listados y año + `student.institutionId` en estudiantes-para-asignación |
-| `aa16df0f` | `test/fixtures/classroom-b1.fixture.ts`, `classroom-b1.isolation.spec.ts` (34), `classroom-b1.http-isolation.spec.ts` (40) |
-| `0177a8f7` | Esta auditoría y la entrega |
-| `9ac64f02` | Retirada de las 17 excepciones (**solo** `institution-route-exceptions.json`, −102 líneas); contrato estructural en verde |
-| `48ec81c5` | Correcciones de la revisión adversarial de Astra (§10): los 5 defectos en `classroom.service.ts` + helper `esVistaEstudiante` |
-| `3d5a7869` | Laboratorio ampliado (fixture + doble) y 15 pruebas nuevas de regresión (89 en total: 44 servicio + 45 HTTP) |
+| `331dfba4` | `classroom-tenant-access.service.ts` (nuevo), `classroom.module.ts`, `classroom.service.ts`, ajustes de `classroom.service.spec.ts` y `classroom-copy-contract.spec.ts` a las nuevas firmas |
+| `0e207af1` | `classroom-b1.controller.ts` (nuevo) con las 6 rutas de aulas, `dto/classroom-b1.dto.ts` (nuevo), 6 manejadores borrados de `classroom.controller.ts`, servicio |
+| `4e09d0bf` | Las 11 rutas de actividades/destinatarios, 11 manejadores borrados del controlador original, servicio, DTOs, `activity-gating.service.ts` (parámetro `db` opcional para usar el cliente transaccional) |
+| `09ad82df` | Defecto funcional encontrado por el fixture: institución + `isPersonal` en los listados y año + `student.institutionId` en estudiantes-para-asignación |
+| `6966622b` | `test/fixtures/classroom-b1.fixture.ts`, `classroom-b1.isolation.spec.ts` (34), `classroom-b1.http-isolation.spec.ts` (40) |
+| `163cea0e` | Esta auditoría y la entrega |
+| `3a912ef5` | Retirada de las 17 excepciones (**solo** `institution-route-exceptions.json`, −102 líneas); contrato estructural en verde |
+| `9276fea8` | Correcciones de la primera revisión adversarial de Astra (§10): los 5 defectos en `classroom.service.ts` + helper `esVistaEstudiante` |
+| `20a27edf` | Laboratorio ampliado (fixture + doble) y 15 pruebas nuevas de regresión de la primera revisión |
+| `5644fc11` | Docs rectificados tras la primera revisión |
+| `8a93b589` | **Cherry-pick de `7460d706`**: `classroom-b1-adversarial-review.spec.ts` (solo ese archivo); las 5 pruebas se reprodujeron en rojo (`5 failed, 5 total`) antes de corregir |
+| `97548e42` | Correcciones de la segunda revisión (§11), **solo** `classroom.service.ts`: conteo de estudiante filtrado, actividades anidadas con `classroomId` + regla de destinatarios, coherencia de período de sección y secciones con guarda |
+| `dcde7626` | +7 pruebas HTTP de regresión de la segunda revisión (A→B, B→A, no asignado, createActivity incoherente) |
+| `fdc84b6f` | Fixture: `section-otro-A1` (sección de otra aula del MISMO colegio) + 2 pruebas intra-colegio |
+| *(pendiente)* | Esta auditoría y la entrega actualizadas con la segunda revisión |
 
 Desviaciones declaradas respecto al plan inicial: se eliminó el helper privado muerto
 `resolveStudentEnrollment`; `ActivityGatingService.getClassroomEdges` acepta un `db` opcional
@@ -361,3 +378,95 @@ las nuevas filas del fixture) y **pasan tras la corrección** (2255/2255 verde).
 - El estudiante deja de recibir `_count` en `getActivity` y su `_count.activities` en `getById`
   cuenta solo publicadas/visibles.
 - `create` y `createActivity` ejecutan todo dentro de una transacción interactiva.
+
+---
+
+## 11. Segunda revisión adversarial de Astra — 2026-09-12 (seguimiento)
+
+La rama ya corregida (punta `ea28a4ae` sobre `165d07e6` en ese momento) **siguió sin integrarse**:
+la segunda revisión (`docs/REVISION_ASTRA_CLASSROOM_B1_SEGUIMIENTO_20260912.md`, escrita sobre el
+worktree `blindaje-astra`) añadió cinco pruebas adversariales en el commit `7460d706` (rama
+`codex/review-classroom-b1-astra`, worktree `classroom-b1-review-astra`, que no se tocó) y las
+**cinco fallaban** contra mi entrega. También detectó la cifra desactualizada `104/2255` en la
+entrega (el estado real ya era 105/2279 por la herencia de Taller en staging).
+
+Incorporación y reproducción: `git cherry-pick 7460d706` (solo
+`classroom-b1-adversarial-review.spec.ts`; hash local `d1a93c7b`, `8a93b589` tras el rebase) y
+reproducción exacta con `jest --runInBand --runTestsByPath
+src/modules/classroom/classroom-b1-adversarial-review.spec.ts`: **`5 failed, 5 total`**. Corrección
+en `97548e42` (solo `classroom.service.ts`); laboratorio en `dcde7626` y `fdc84b6f`.
+
+### Los 5 defectos y su corrección
+
+1. **`listForStudent` devolvía `_count.activities` sin filtrar** (4 en `class-A`: contaba el
+   borrador), mientras `getById` ya proyectaba (3). El conteo del listado de estudiante se calcula
+   ahora por aula con `classroomActivity.count` filtrado por `isPublished` + `isVisible` + la
+   regla de destinatarios (`OR`: no restringida / asignada a la matrícula ya validada de ESA
+   aula). El docente conserva su total legítimo en `listForTeacher`. Roja al reproducir:
+   «el listado de aulas no cuenta borradores para estudiantes» → ahora pasa (3 para A1; el HTTP
+   demuestra además 2 para A2, que no está asignado a la restringida, y 2 en `class-B` sin
+   contaminación de A).
+2. **`getById` anidaba las actividades de cada sección por `sectionId` + publicación/visibilidad
+   SIN exigir `activity.classroomId = classroomId`.** Con `act-B-pub.sectionId = 'section-A1'`, el
+   estudiante de A recibía el título `SECRETO-DE-B`. La consulta anidada exige ahora `classroomId`
+   del aula en ambas ramas (docente y estudiante): la FK cruzada no se materializa. Roja al
+   reproducir: «una actividad de B enlazada a una sección de A no aparece en el aula de A» → ahora
+   pasa; el HTTP cubre A→B, B→A y el cruce intra-colegio (`act-otro-A` enlazada a `section-A1`).
+3. **`getById` incluía `act-A-restr` en la sección de `enr-A2`, que no está asignado.** La
+   matrícula ACTIVA verificada del actor se resuelve **antes** de la lectura rica y se usa en el
+   filtro Prisma anidado (`OR`: `isRestrictedToAssigned: false` / `assignedStudents.some` con esa
+   matrícula) — la misma regla que `listActivities`; nunca pertenencia por `userId` suelto. El
+   `_count.activities` de estudiante aplica la misma regla. Roja al reproducir: «una actividad
+   restringida no aparece en la sección de un estudiante sin asignación» → ahora pasa (el asignado
+   A1 sí la ve en la sección).
+4. **Una sección de A con `academicTermId = term-B` entregaba el nombre/año de B.** `getById`
+   exige coherencia EN la consulta de secciones: `academicTermId` nulo O período del año y de la
+   institución del aula; una FK cruzada omite la sección COMPLETA (ni el nombre ajeno viaja).
+   `createActivity` exige la misma coherencia al aceptar `sectionId` (404 sin escribir), y las
+   secciones devueltas en listados de estudiante pasan por la misma guarda. Roja al reproducir:
+   «una sección de A con periodo de B no entrega el nombre del periodo ajeno» → ahora pasa; HTTP
+   en ambas direcciones y para el docente.
+5. **`getActivity('act-A-pub')` devolvía el título `Unidad B` cuando la actividad tenía
+   `sectionId = section-B1`.** La relación `section` (to-one, no filtrable en el `include`) se
+   resuelve ahora con guarda en una consulta aparte (`seccionesGuardadas`): `id` ∈ referenciadas +
+   `classroomId` del aula + `classroom.institutionId` + coherencia de período; FK nula o cruzada →
+   `section: null` **sin leer la sección ajena**. Aplicado en `getActivity` (ambas ramas),
+   `listActivities` (ambas ramas, en lote) y `updateActivity` (dentro de la tx); `createActivity`
+   ya validaba la sección antes de escribir. Roja al reproducir: «una actividad de A enlazada a
+   una sección de B no entrega el título de B» → ahora pasa; HTTP A→B, B→A e intra-colegio.
+
+### Pruebas HTTP añadidas (9)
+
+En `classroom-b1.http-isolation.spec.ts`: conteo de estudiante en `GET /classrooms` (asignado 3,
+no asignado 2, B sin contaminación); actividad de otra aula enlazada a sección propia en
+`GET /classrooms/:id` (A→B, B→A e intra-colegio, estudiante y docente); restringida en sección
+para estudiante no asignado vs asignado; sección con período cruzado omitida (A→B y B→A);
+`GET /classrooms/activities/:id` con sección cruzada → `null` (A→B y B→A, estudiante y docente);
+`GET /classrooms/:id/activities` resuelve la sección propia (`Unidad A`) y devuelve `null` con FK
+cruzada; `createActivity` con sección propia de período incoherente → 404 sin escribir. El doble
+sigue filtrando de verdad (los `where` anidados y la resolución con guarda se evalúan sobre las
+filas, no sobre respuestas prefijadas).
+
+### Mutaciones temporales de esta fase (restauradas con `git checkout --`, verde tras cada una)
+
+| Mutación | Rojas | Pruebas que se pusieron en rojo |
+|---|---|---|
+| (a) Conteo de `listForStudent` sin filtro de publicación/destinatarios | **2** | adversarial «…no cuenta borradores…» + HTTP «GET /classrooms del estudiante no cuenta borradores…» |
+| (b) Actividades anidadas de `getById` sin `classroomId` | **2** | adversarial «actividad de B enlazada a sección de A…» + HTTP «…otra aula enlazada a una sección propia (A→B y B→A)» |
+| (c) Actividades anidadas de `getById` sin regla de destinatarios | **2** | adversarial «…restringida…estudiante sin asignación» + HTTP «…no muestra la restringida en la sección…» |
+| (d) Secciones de `getById` sin coherencia de período | **2** | adversarial «…sección de A con periodo de B…» + HTTP «…omite la sección cuyo período cuelga de otro colegio…» |
+| (e) Guarda de secciones (`seccionesGuardadas`) sin `classroomId` | **0 → 1** | Primera pasada **sin rojas**: la pata `classroom.institutionId` ya cubría A↔B. Se reforzó el laboratorio con `section-otro-A1` (otra aula del MISMO colegio) + 2 pruebas, y entonces: HTTP «…FK de sección cruzada dentro del MISMO colegio…». La pata de institución queda demostrada por la reproducción original (5/5 en rojo). |
+| (f) `createActivity` sin coherencia de período de la sección | **1** | HTTP «createActivity rechaza una sección propia con período incoherente…» |
+
+### Cambios de comportamiento visibles de esta fase (deliberados)
+
+- El conteo de actividades del listado de estudiante baja: ya no cuenta borradores ni restringidas
+  que no son para ese estudiante (en el fixture: 4 → 3 para A1, 2 para A2).
+- Una sección cuyo período cuelga de otro año o colegio se omite completa del detalle del aula
+  (docente y estudiante) en vez de mostrar el nombre ajeno.
+- Una actividad con `sectionId` cruzado se sigue devolviendo con `section: null` (ni 404 ni datos
+  ajenos).
+- `getActivity`/`updateActivity` devuelven la sección como `{ id, title, academicTermId }` (antes
+  `{ id, title }`): aditivo, la misma forma que `listActivities`.
+- El fixture gana `section-otro-A1` (sección coherente del otro aula de A) para hacer demostrable
+  la guarda por `classroomId` dentro de la misma institución.
