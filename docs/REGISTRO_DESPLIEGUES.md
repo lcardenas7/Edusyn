@@ -22,6 +22,21 @@
 
 ## Historial (más reciente arriba)
 
+### Ajuste hero: imagen más grande, tarjetas menos invasivas — 2026-09-12
+
+`staging` en `8cc159a5` (cherry-pick sobre `bf824c49`, mismo worktree aislado). Sin migración,
+solo `apps/web/src/pages/LandingPage.tsx`.
+
+- Feedback directo del usuario sobre el hero recién desplegado: la captura se veía muy chica y
+  las tarjetas flotantes tapaban el contenido del reporte.
+- Columna de la imagen: de `lg:grid-cols-2` (50/50) a `lg:grid-cols-12` con texto en 5/12 e imagen
+  en 7/12.
+- Tarjetas flotantes reposicionadas a las esquinas exteriores del marco (`-left-3 -top-3` /
+  `-right-3 -bottom-3`, antes `top-1/4` / `bottom-1/4` que caía sobre el contenido), más pequeñas
+  y con fondo blanco semitransparente (`bg-white/95 backdrop-blur`).
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio; revisado visualmente en el navegador
+  a 1400px.
+
 ### Hero de landing con captura real y animación — 2026-09-12
 
 `staging` en `3ab458a9` (cherry-pick sobre `5ed368c9`, mismo worktree aislado). Sin migración,
