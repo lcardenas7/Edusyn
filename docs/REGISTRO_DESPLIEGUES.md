@@ -22,6 +22,40 @@
 
 ## Historial (más reciente arriba)
 
+### Landing pública: primer despliegue a producción + 3 fixes — 2026-09-13
+
+`main` (prod) en `be2ba5a7` — primera vez que la landing pública multipágina llega a producción
+(hasta ahora solo estaba en `staging`). `staging` en `da3f9225` (mismo commit de fixes,
+cherry-pickeado). Ambos en worktrees aislados (`worktrees/landing-production-20260913` para
+main, `edusyn-wt-landing-deploy` para staging). Sin migración, solo `apps/web`.
+
+- **Contexto:** otra sesión de Claude había aislado los 4 commits de la landing sobre `main` en
+  `worktrees/landing-production-20260913` y encontrado 3 bugs reales durante la revisión, dejando
+  las correcciones sin commitear. Esta sesión las verificó de forma independiente (no se confió
+  en el reporte previo) antes de publicar.
+- **Fix 1 — nav móvil ausente:** `PublicNav`/`LandingPage` — el menú (`hidden md:flex`) no tenía
+  ningún reemplazo en pantallas angostas, dejando la navegación pública inaccesible en móvil.
+  `LandingPage.tsx` ahora usa el `PublicNav` compartido, que agrega un botón de menú real con
+  panel desplegable. Confirmado con clic real en el botón (JS) en viewport 375×812: el panel abre
+  con los 6 enlaces.
+- **Fix 2 — colores de módulo invisibles en build:** `Caracteristicas.tsx` construía las clases de
+  Tailwind por interpolación (`` `from-${color}-500 to-${color}-600` ``), que el compilador no
+  puede detectar de forma estática — en un build real esas clases no existen en el CSS generado.
+  Se cambió a una clase completa literal por módulo. Confirmado: los 6 gradientes aparecen en el
+  CSS del build de producción (`grep from-<color>-500 dist/assets/*.css` → 1 cada uno).
+  Este bug lo introdujo esta misma sesión el 2026-09-12 al escribir `Caracteristicas.tsx`.
+- **Fix 3 — anual por debajo del mínimo del plan:** `Precios.tsx` aplicaba el descuento de
+  prepago anual (10/12) *después* de aplicar el piso (`minAnnual`), pudiendo mostrar un anual menor
+  al mínimo publicado del plan. Ahora el piso se aplica sobre el valor ya descontado. Se agregó
+  tope de estudiantes (1–100.000), leyenda "Tamaño orientativo / Mínimo anual" por plan, y
+  atributos de accesibilidad. Confirmado con 10 estudiantes: los 4 planes caen en su piso exacto
+  y ninguno muestra un "Ahorras..." falso.
+- **Verificación independiente de esta sesión** (no solo confiar en el reporte de la sesión
+  anterior): `npm install` en el worktree de producción, `npx tsc --noEmit` limpio, 182/182
+  pruebas de `apps/web` (16/16 archivos), `npm --workspace apps/web run build` exitoso, grep del
+  CSS generado confirmando los 6 degradados, y prueba manual en navegador (menú móvil real,
+  mínimo anual real) antes de publicar.
+
 ### Fix: tarjetas de highlights encajonadas en la columna de texto — 2026-09-12
 
 `staging` en `1b584024` (cherry-pick sobre `8d99d810`, mismo worktree aislado). Sin migración,
