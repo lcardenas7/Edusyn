@@ -116,8 +116,8 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-5">
               <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
                 <Award className="w-4 h-4" />
                 Sistema de Gestión Educativa Integral
@@ -166,7 +166,7 @@ export default function LandingPage() {
             </div>
 
             {/* Hero Image: captura real de Edusyn (institución demo, sin datos reales) */}
-            <div className="relative animate-fadeIn">
+            <div className="relative animate-fadeIn lg:col-span-7">
               <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-3 shadow-2xl">
                 <div className="rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
                   <img
@@ -177,22 +177,22 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Floating Cards */}
-              <div className="absolute -left-4 top-1/4 bg-white p-4 rounded-xl shadow-lg border border-slate-100 hidden lg:block animate-float">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+              {/* Floating Cards: en las esquinas exteriores, para no tapar el contenido */}
+              <div className="absolute -left-3 -top-3 sm:-left-5 sm:-top-5 bg-white/95 backdrop-blur px-3 py-2 rounded-lg shadow-md border border-slate-100 hidden lg:block animate-float">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-3.5 h-3.5 text-green-600" />
                   </div>
-                  <div className="text-sm font-medium text-slate-700">Notas actualizadas</div>
+                  <div className="text-xs font-semibold text-slate-700 whitespace-nowrap">Notas actualizadas</div>
                 </div>
               </div>
 
-              <div className="absolute -right-4 bottom-1/4 bg-white p-4 rounded-xl shadow-lg border border-slate-100 hidden lg:block animate-float-delayed">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Bell className="w-4 h-4 text-blue-600" />
+              <div className="absolute -right-3 -bottom-3 sm:-right-5 sm:-bottom-5 bg-white/95 backdrop-blur px-3 py-2 rounded-lg shadow-md border border-slate-100 hidden lg:block animate-float-delayed">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-3.5 h-3.5 text-blue-600" />
                   </div>
-                  <div className="text-sm font-medium text-slate-700">Nueva notificación</div>
+                  <div className="text-xs font-semibold text-slate-700 whitespace-nowrap">Nueva notificación</div>
                 </div>
               </div>
             </div>
