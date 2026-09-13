@@ -22,6 +22,18 @@
 
 ## Historial (más reciente arriba)
 
+### Fix: tarjetas de highlights encajonadas en la columna de texto — 2026-09-12
+
+`staging` en `1b584024` (cherry-pick sobre `8d99d810`, mismo worktree aislado). Sin migración,
+solo `apps/web/src/pages/LandingPage.tsx`.
+
+- El usuario reportó, con captura de staging, que las 3 tarjetas ("Gestión integral", "Multirol",
+  "Implementación rápida") se veían mal — quedaron anidadas dentro de la columna de texto
+  (5/12) del ajuste anterior en vez de ocupar el ancho completo de la sección.
+- Se movieron fuera del grid texto+imagen, a su propio bloque a ancho completo debajo, y se les
+  agregó icono de color (`Layers`/`Users`/`Zap`), más padding y hover-lift.
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio; revisado visualmente a 1400px.
+
 ### Ajuste hero: imagen más grande, tarjetas menos invasivas — 2026-09-12
 
 `staging` en `8cc159a5` (cherry-pick sobre `bf824c49`, mismo worktree aislado). Sin migración,
