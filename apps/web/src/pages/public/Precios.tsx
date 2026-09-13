@@ -105,34 +105,36 @@ export default function Precios() {
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-6">Un plan para cada tamaño de institución</h1>
         <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10">
-          Precio por estudiante al año, en pesos colombianos, sin impuestos aplicables. Ajusta el
-          número de estudiantes y elige cómo prefieres pagar.
+          Precio base por estudiante al año, en pesos colombianos, sin impuestos aplicables. Ajusta el
+          número de estudiantes y elige cómo prefieres pagar. El total respeta el mínimo anual de cada plan.
         </p>
 
         {/* Stepper de estudiantes */}
         <div className="max-w-md mx-auto mb-8">
-          <label className="block text-sm font-semibold text-slate-700 mb-3">
+          <label htmlFor="student-count" className="block text-sm font-semibold text-slate-700 mb-3">
             ¿Cuántos estudiantes tiene tu institución?
           </label>
           <div className="flex items-center justify-center gap-4">
             <button
               type="button"
-              onClick={() => setStudents((s) => Math.max(20, s - step))}
+              onClick={() => setStudents((s) => Math.max(1, s - step))}
               className="w-11 h-11 flex items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:border-blue-600 hover:text-blue-600 transition-all"
               aria-label="Menos estudiantes"
             >
               <Minus className="w-5 h-5" />
             </button>
             <input
+              id="student-count"
               type="number"
-              min={0}
+              min={1}
+              max={100000}
               value={students}
-              onChange={(e) => setStudents(Math.max(0, Number(e.target.value) || 0))}
+              onChange={(e) => setStudents(Math.max(1, Math.min(100000, Math.trunc(Number(e.target.value)) || 1)))}
               className="w-28 text-center text-2xl font-bold text-slate-900 border border-slate-300 rounded-xl py-2"
             />
             <button
               type="button"
-              onClick={() => setStudents((s) => s + step)}
+              onClick={() => setStudents((s) => Math.min(100000, s + step))}
               className="w-11 h-11 flex items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:border-blue-600 hover:text-blue-600 transition-all"
               aria-label="Más estudiantes"
             >
@@ -146,6 +148,7 @@ export default function Precios() {
           <button
             type="button"
             onClick={() => setCycle('monthly')}
+            aria-pressed={cycle === 'monthly'}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
               cycle === 'monthly' ? 'bg-blue-600 text-white shadow' : 'text-slate-600'
             }`}
@@ -155,11 +158,12 @@ export default function Precios() {
           <button
             type="button"
             onClick={() => setCycle('annual')}
+            aria-pressed={cycle === 'annual'}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
               cycle === 'annual' ? 'bg-blue-600 text-white shadow' : 'text-slate-600'
             }`}
           >
-            Anual <span className="opacity-80">(paga 10, usa 12)</span>
+            Anual <span className="opacity-80">(ahorra hasta 2 meses)</span>
           </button>
         </div>
       </section>
@@ -169,7 +173,7 @@ export default function Precios() {
           {PLANS.map((p) => {
             const isSuggested = p.name === suggested.name
             const rawAnnual = Math.max(p.perStudentYear * students, p.minAnnual)
-            const annualPrepay = rawAnnual * (10 / 12)
+            const annualPrepay = Math.max(p.perStudentYear * students * (10 / 12), p.minAnnual)
             const monthlyEquivalent = rawAnnual / 12
             const savings = rawAnnual - annualPrepay
             const bigPrice = cycle === 'annual' ? annualPrepay : monthlyEquivalent
@@ -198,6 +202,15 @@ export default function Precios() {
 
                 <h3 className="text-xl font-bold text-slate-900">{p.name}</h3>
                 <p className="text-sm text-slate-500 mb-4">{formatCOP(p.perStudentYear)}/estudiante/año</p>
+                <p className="text-xs text-slate-500 mb-4">
+                  Tamaño orientativo: {' '}
+                  {p.maxSize === Infinity
+                    ? 'Más de 1.500 estudiantes'
+                    : p.minSize <= 1
+                      ? `Hasta ${p.maxSize.toLocaleString('es-CO')} estudiantes`
+                      : `${p.minSize.toLocaleString('es-CO')} a ${p.maxSize.toLocaleString('es-CO')} estudiantes`}
+                  {' · '}Mínimo anual {formatCOP(p.minAnnual)}
+                </p>
 
                 <div className="text-3xl font-bold text-slate-900 mb-1">
                   {formatCOP(bigPrice)}
