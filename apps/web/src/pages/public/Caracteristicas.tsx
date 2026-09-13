@@ -9,27 +9,27 @@ import { useSeo } from '../../hooks/useSeo'
 
 const MODULES = [
   {
-    icon: GraduationCap, color: 'blue', title: 'Gestión académica',
+    icon: GraduationCap, gradient: 'from-blue-500 to-blue-600', title: 'Gestión académica',
     items: ['Años lectivos y períodos', 'Áreas y asignaturas', 'Planes de estudio', 'Escala de valoración institucional'],
   },
   {
-    icon: Users, color: 'indigo', title: 'Gestión de personas',
+    icon: Users, gradient: 'from-indigo-500 to-indigo-600', title: 'Gestión de personas',
     items: ['Estudiantes y matrículas', 'Docentes y carga académica', 'Acudientes y contactos', 'Personal administrativo'],
   },
   {
-    icon: ClipboardList, color: 'purple', title: 'Evaluación',
+    icon: ClipboardList, gradient: 'from-purple-500 to-purple-600', title: 'Evaluación',
     items: ['Actividades evaluativas', 'Registro de notas por período', 'Recuperaciones', 'Boletines conforme al Decreto 1290'],
   },
   {
-    icon: TrendingUp, color: 'green', title: 'Reportes y seguimiento',
+    icon: TrendingUp, gradient: 'from-green-500 to-green-600', title: 'Reportes y seguimiento',
     items: ['Estadísticas en tiempo real', 'Informes de desempeño', 'Exportación a Excel y PDF', 'Observador del estudiante'],
   },
   {
-    icon: MessageCircle, color: 'rose', title: 'Comunicación institucional',
+    icon: MessageCircle, gradient: 'from-rose-500 to-rose-600', title: 'Comunicación institucional',
     items: ['Circulares y comunicados', 'Notificaciones a familias', 'Canal directo con docentes', 'Calendario de eventos'],
   },
   {
-    icon: Monitor, color: 'violet', title: 'Aula virtual',
+    icon: Monitor, gradient: 'from-violet-500 to-violet-600', title: 'Aula virtual',
     items: ['Clases y contenidos digitales', 'Actividades y quices', 'Calificación integrada con el registro académico', 'Seguimiento del progreso por estudiante'],
   },
 ]
@@ -70,7 +70,7 @@ export default function Caracteristicas() {
           <div className="grid md:grid-cols-2 gap-8">
             {MODULES.map((m) => (
               <div key={m.title} className="bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100">
-                <div className={`bg-gradient-to-r from-${m.color}-500 to-${m.color}-600 p-6`}>
+                <div className={`bg-gradient-to-r ${m.gradient} p-6`}>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
                       <m.icon className="w-7 h-7 text-white" />

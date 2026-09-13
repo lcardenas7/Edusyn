@@ -41,6 +41,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { useSeo } from '../hooks/useSeo'
+import PublicNav from '../components/public/PublicNav'
 
 export default function LandingPage() {
   useSeo(
@@ -67,51 +68,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white scroll-smooth">
-      {/* Header/Navbar */}
-      <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-slate-100 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <img src="/brand/edusyn-icon.png" alt="Edusyn" className="w-10 h-10 object-contain" />
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                EduSyn
-              </span>
-            </div>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-7">
-              <Link to="/caracteristicas" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Características
-              </Link>
-              <Link to="/precios" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Precios
-              </Link>
-              <Link to="/casos-de-exito" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Casos de Éxito
-              </Link>
-              <Link to="/preguntas-frecuentes" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Preguntas Frecuentes
-              </Link>
-              <Link to="/recursos" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Recursos
-              </Link>
-              <Link to="/contacto" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
-                Contacto
-              </Link>
-            </nav>
-
-            {/* CTA Button */}
-            <Link 
-              to="/login" 
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2"
-            >
-              Iniciar Sesión
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicNav />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
