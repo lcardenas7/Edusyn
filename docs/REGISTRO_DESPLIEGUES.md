@@ -22,6 +22,25 @@
 
 ## Historial (más reciente arriba)
 
+### Hero de landing con captura real y animación — 2026-09-12
+
+`staging` en `3ab458a9` (cherry-pick sobre `5ed368c9`, mismo worktree aislado). Sin migración,
+solo `apps/web`.
+
+- Reemplaza el mockup ficticio de stat-cards del hero (`LandingPage.tsx`) por una captura real
+  de Edusyn — institución demo (`ied-del-saber`, datos de prueba, nunca una institución real),
+  reporte "Niveles por asignatura" (Bajo/Básico/Alto/Superior) — capturada con Playwright a
+  1440x950 @2x contra el entorno local efímero. Asset: `apps/web/public/screenshots/hero-dashboard.png`.
+- Las tarjetas flotantes (Notas actualizadas / Nueva notificación) ahora animan con `animate-float`
+  / `animate-float-delayed` (keyframes nuevos en `index.css`), sin cifras ni reseñas inventadas.
+- Efecto lateral aparte, no incluido en este commit: se detectó que el cliente de Prisma local
+  estaba desactualizado tras la migración `20260829120000_quiz_numeric_categorize` (faltaba
+  `prisma generate`, causaba `TS2367` en `classroom.service.ts` y el API no arrancaba). Se
+  regeneró localmente para poder levantar el entorno demo; no es un cambio de código ni se
+  desplegó — si el mismo síntoma aparece en staging/producción, correr `prisma generate` ahí.
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio antes del commit. Cherry-pick sin
+  conflictos.
+
 ### Landing pública multipágina, precios por estudiante y logo real — 2026-09-12
 
 `staging` en `5ed368c9` (cherry-pick de `cb4cd3f9` sobre `origin/staging`, worktree aislado en
