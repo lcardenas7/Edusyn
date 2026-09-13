@@ -493,6 +493,27 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
     expect(JSON.stringify(deB.body.sections)).not.toContain('act-A-pub');
   });
 
+  it('GET /classrooms/:id no materializa una actividad de OTRA AULA del mismo colegio enlazada a una sección propia', async () => {
+    const deOtraAula = data.rows.classroomActivity.find((a: any) => a.id === 'act-otro-A');
+    deOtraAula.sectionId = 'section-A1';
+    const alumno = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(alumno.body.sections)).not.toContain('act-otro-A');
+    const docente = await http().get('/classrooms/class-A').auth(token(A), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(docente.body.sections)).not.toContain('act-otro-A');
+  });
+
+  it('una FK de sección cruzada dentro del MISMO colegio se devuelve null en getActivity y listActivities', async () => {
+    const actividad = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-pub');
+    actividad.sectionId = 'section-otro-A1';
+    actividad.section = data.rows.classroomSection.find((s: any) => s.id === 'section-otro-A1');
+    const detalle = await http().get('/classrooms/activities/act-A-pub').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(detalle.body.section).toBeNull();
+    expect(JSON.stringify(detalle.body)).not.toContain('Unidad del otro aula A');
+    const lista = await http().get('/classrooms/class-A/activities').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(lista.body.find((a: any) => a.id === 'act-A-pub')?.section).toBeNull();
+    expect(JSON.stringify(lista.body)).not.toContain('Unidad del otro aula A');
+  });
+
   it('GET /classrooms/:id no muestra la restringida en la sección al estudiante sin asignación', async () => {
     const restringida = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-restr');
     restringida.sectionId = 'section-A1';

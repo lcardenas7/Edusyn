@@ -441,6 +441,15 @@ export function fixture() {
     id: 'mat-A2', sectionId: 'section-A2', type: 'LINK', title: 'Material de sección oculta',
     content: null, fileUrl: null, isVisible: true, sortOrder: 1,
   });
+  // Sección del OTRO aula de A (mismo colegio, otra aula): una FK cruzada dentro de la
+  // MISMA institución tampoco acredita pertenencia — la guarda de sección exige el
+  // classroomId del aula, no solo la institución.
+  const sectionOtroA: any = {
+    id: 'section-otro-A1', classroomId: classOtroA.id, title: 'Unidad del otro aula A',
+    description: null, sortOrder: 1, isVisible: true, academicTermId: null,
+  };
+  oculta(sectionOtroA, 'classroom', classOtroA);
+  rows.classroomSection.push(sectionOtroA);
   const actividad = (id: string, classroom: any, extra: any = {}) => {
     const act: any = {
       id, classroomId: classroom.id, sectionId: null, academicTermId: null,
