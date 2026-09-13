@@ -147,22 +147,6 @@ export default function LandingPage() {
                   Solicitar Demo
                 </a>
               </div>
-              
-              {/* Product highlights */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-slate-200">
-                <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-4 shadow-sm">
-                  <div className="text-sm font-semibold text-slate-900 mb-1">Gestión integral</div>
-                  <div className="text-slate-600 text-sm">Académico, asistencia, evaluación y reportes en un solo sistema.</div>
-                </div>
-                <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-4 shadow-sm">
-                  <div className="text-sm font-semibold text-slate-900 mb-1">Multirol</div>
-                  <div className="text-slate-600 text-sm">Docentes, directivos, estudiantes y acudientes con acceso por permisos.</div>
-                </div>
-                <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-4 shadow-sm">
-                  <div className="text-sm font-semibold text-slate-900 mb-1">Implementación rápida</div>
-                  <div className="text-slate-600 text-sm">Pensado para adaptarse a la operación real de tu institución.</div>
-                </div>
-              </div>
             </div>
 
             {/* Hero Image: captura real de Edusyn (institución demo, sin datos reales) */}
@@ -195,6 +179,31 @@ export default function LandingPage() {
                   <div className="text-xs font-semibold text-slate-700 whitespace-nowrap">Nueva notificación</div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Product highlights: ancho completo, debajo del bloque texto+imagen */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-16 pt-10 border-t border-slate-200">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <Layers className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-base font-semibold text-slate-900 mb-1.5">Gestión integral</div>
+              <div className="text-slate-600 text-sm">Académico, asistencia, evaluación y reportes en un solo sistema.</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div className="text-base font-semibold text-slate-900 mb-1.5">Multirol</div>
+              <div className="text-slate-600 text-sm">Docentes, directivos, estudiantes y acudientes con acceso por permisos.</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-base font-semibold text-slate-900 mb-1.5">Implementación rápida</div>
+              <div className="text-slate-600 text-sm">Pensado para adaptarse a la operación real de tu institución.</div>
             </div>
           </div>
         </div>
