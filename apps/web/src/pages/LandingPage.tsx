@@ -13,9 +13,8 @@ import {
   BarChart3, 
   Shield, 
   Clock, 
-  CheckCircle, 
+  CheckCircle,
   ArrowRight,
-  School,
   Calendar,
   FileText,
   Bell,
@@ -166,42 +165,20 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Hero Image/Illustration */}
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-8 shadow-2xl">
-                <div className="bg-white rounded-2xl p-6 shadow-lg">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <School className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-slate-900">Dashboard Institucional</div>
-                      <div className="text-sm text-slate-500">Vista en tiempo real</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-green-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">1,234</div>
-                      <div className="text-xs text-green-700">Estudiantes Activos</div>
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">98%</div>
-                      <div className="text-xs text-blue-700">Asistencia Hoy</div>
-                    </div>
-                    <div className="bg-purple-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">45</div>
-                      <div className="text-xs text-purple-700">Docentes</div>
-                    </div>
-                    <div className="bg-amber-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-amber-600">12</div>
-                      <div className="text-xs text-amber-700">Eventos Hoy</div>
-                    </div>
-                  </div>
+            {/* Hero Image: captura real de Edusyn (institución demo, sin datos reales) */}
+            <div className="relative animate-fadeIn">
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-3 shadow-2xl">
+                <div className="rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
+                  <img
+                    src="/screenshots/hero-dashboard.png"
+                    alt="Reporte de niveles de desempeño por asignatura en Edusyn"
+                    className="w-full h-auto block"
+                  />
                 </div>
               </div>
-              
+
               {/* Floating Cards */}
-              <div className="absolute -left-4 top-1/4 bg-white p-4 rounded-xl shadow-lg border border-slate-100 hidden lg:block">
+              <div className="absolute -left-4 top-1/4 bg-white p-4 rounded-xl shadow-lg border border-slate-100 hidden lg:block animate-float">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                     <CheckCircle className="w-4 h-4 text-green-600" />
@@ -209,8 +186,8 @@ export default function LandingPage() {
                   <div className="text-sm font-medium text-slate-700">Notas actualizadas</div>
                 </div>
               </div>
-              
-              <div className="absolute -right-4 bottom-1/4 bg-white p-4 rounded-xl shadow-lg border border-slate-100 hidden lg:block">
+
+              <div className="absolute -right-4 bottom-1/4 bg-white p-4 rounded-xl shadow-lg border border-slate-100 hidden lg:block animate-float-delayed">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <Bell className="w-4 h-4 text-blue-600" />
