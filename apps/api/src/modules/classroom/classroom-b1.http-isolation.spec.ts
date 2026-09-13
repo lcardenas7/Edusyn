@@ -462,4 +462,109 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
     expect(legit.body.academicTermId).toBe('term-A');
     expect(legit.body.rubricId).toBe('rubric-A');
   });
+
+  // ─── Segunda revisión adversarial de Astra (2026-09-12): proyecciones ──────
+  it('GET /classrooms del estudiante no cuenta borradores ni restringidas que no son para él', async () => {
+    const deA1 = await http().get('/classrooms').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    // act-A-pub + act-A-restr (asignada a enr-A1) + act-A-dep; el borrador no cuenta.
+    expect(deA1.body.find((c: any) => c.id === 'class-A')?._count.activities).toBe(3);
+    const deA2 = await http().get('/classrooms').auth(token(A, 'ESTUDIANTE', 'user-A2'), { type: 'bearer' }).expect(200);
+    // A2 NO está asignado a act-A-restr: para él el conteo es 2.
+    expect(deA2.body.find((c: any) => c.id === 'class-A')?._count.activities).toBe(2);
+    // B→A: el conteo del aula de B no se contamina con actividades de A.
+    const deB1 = await http().get('/classrooms').auth(token(B, 'ESTUDIANTE', 'user-B1'), { type: 'bearer' }).expect(200);
+    expect(deB1.body.map((c: any) => c.id)).toEqual(['class-B']);
+    expect(deB1.body[0]._count.activities).toBe(2); // act-B-pub + act-B-restr (asignada); borrador fuera
+  });
+
+  it('GET /classrooms/:id no materializa una actividad de otra aula enlazada a una sección propia (A→B y B→A)', async () => {
+    const ajena = data.rows.classroomActivity.find((a: any) => a.id === 'act-B-pub');
+    ajena.sectionId = 'section-A1';
+    ajena.title = 'SECRETO-DE-B';
+    const alumno = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(alumno.body)).not.toContain('SECRETO-DE-B');
+    // La rama docente tampoco la materializa.
+    const docente = await http().get('/classrooms/class-A').auth(token(A), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(docente.body.sections)).not.toContain('SECRETO-DE-B');
+    // Dirección B→A: una actividad de A enlazada a una sección de B no aparece en B.
+    const deA = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-pub');
+    deA.sectionId = 'section-B1';
+    const deB = await http().get('/classrooms/class-B').auth(token(B, 'ESTUDIANTE', 'user-B1'), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(deB.body.sections)).not.toContain('act-A-pub');
+  });
+
+  it('GET /classrooms/:id no muestra la restringida en la sección al estudiante sin asignación', async () => {
+    const restringida = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-restr');
+    restringida.sectionId = 'section-A1';
+    const sinAsignar = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A2'), { type: 'bearer' }).expect(200);
+    expect(sinAsignar.body.sections[0].activities.map((a: any) => a.id)).not.toContain('act-A-restr');
+    // El asignado sí la ve en la sección.
+    const asignado = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(asignado.body.sections[0].activities.map((a: any) => a.id)).toContain('act-A-restr');
+  });
+
+  it('GET /classrooms/:id omite la sección cuyo período cuelga de otro colegio, sin entregar su nombre (A→B y B→A)', async () => {
+    const seccion = data.rows.classroomSection.find((s: any) => s.id === 'section-A1');
+    seccion.academicTermId = 'term-B';
+    seccion.academicTerm = data.rows.academicTerm.find((t: any) => t.id === 'term-B');
+    const alumno = await http().get('/classrooms/class-A').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(alumno.body.sections)).not.toContain('term-B');
+    expect(JSON.stringify(alumno.body.sections)).not.toContain('Período 1 B');
+    // El docente tampoco recibe el nombre del período ajeno.
+    const docente = await http().get('/classrooms/class-A').auth(token(A), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(docente.body.sections)).not.toContain('Período 1 B');
+    // Dirección B→A: sección de B con período de A.
+    const seccionB = data.rows.classroomSection.find((s: any) => s.id === 'section-B1');
+    seccionB.academicTermId = 'term-A';
+    seccionB.academicTerm = data.rows.academicTerm.find((t: any) => t.id === 'term-A');
+    const deB = await http().get('/classrooms/class-B').auth(token(B, 'ESTUDIANTE', 'user-B1'), { type: 'bearer' }).expect(200);
+    expect(JSON.stringify(deB.body.sections)).not.toContain('term-A');
+    expect(JSON.stringify(deB.body.sections)).not.toContain('Período 1 A');
+  });
+
+  it('GET /classrooms/activities/:id devuelve la sección como null si cuelga de otra aula, sin leerla (A→B y B→A)', async () => {
+    const actividad = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-pub');
+    actividad.sectionId = 'section-B1';
+    actividad.section = data.rows.classroomSection.find((s: any) => s.id === 'section-B1');
+    const alumno = await http().get('/classrooms/activities/act-A-pub').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(alumno.body.section).toBeNull();
+    expect(JSON.stringify(alumno.body)).not.toContain('Unidad B');
+    const docente = await http().get('/classrooms/activities/act-A-pub').auth(token(A), { type: 'bearer' }).expect(200);
+    expect(docente.body.section).toBeNull();
+    expect(JSON.stringify(docente.body)).not.toContain('Unidad B');
+    // Dirección B→A.
+    const deB = data.rows.classroomActivity.find((a: any) => a.id === 'act-B-pub');
+    deB.sectionId = 'section-A1';
+    deB.section = data.rows.classroomSection.find((s: any) => s.id === 'section-A1');
+    const alumnoB = await http().get('/classrooms/activities/act-B-pub').auth(token(B, 'ESTUDIANTE', 'user-B1'), { type: 'bearer' }).expect(200);
+    expect(alumnoB.body.section).toBeNull();
+    expect(JSON.stringify(alumnoB.body)).not.toContain('Unidad A');
+  });
+
+  it('GET /classrooms/:id/activities resuelve la sección propia y devuelve null con FK cruzada', async () => {
+    // La sección propia y coherente se sigue devolviendo.
+    const antes = await http().get('/classrooms/class-A/activities').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(antes.body.find((a: any) => a.id === 'act-A-dep')?.section?.title).toBe('Unidad A');
+    // FK histórica cruzada: la relación se devuelve null sin leer la sección de B.
+    const actividad = data.rows.classroomActivity.find((a: any) => a.id === 'act-A-dep');
+    actividad.sectionId = 'section-B1';
+    actividad.section = data.rows.classroomSection.find((s: any) => s.id === 'section-B1');
+    const alumno = await http().get('/classrooms/class-A/activities').auth(token(A, 'ESTUDIANTE', 'user-A1'), { type: 'bearer' }).expect(200);
+    expect(alumno.body.find((a: any) => a.id === 'act-A-dep')?.section).toBeNull();
+    expect(JSON.stringify(alumno.body)).not.toContain('Unidad B');
+    const docente = await http().get('/classrooms/class-A/activities').auth(token(A), { type: 'bearer' }).expect(200);
+    expect(docente.body.find((a: any) => a.id === 'act-A-dep')?.section).toBeNull();
+  });
+
+  it('createActivity rechaza una sección propia con período incoherente (FK cruzada) sin escribir', async () => {
+    const seccion = data.rows.classroomSection.find((s: any) => s.id === 'section-A1');
+    seccion.academicTermId = 'term-B';
+    seccion.academicTerm = data.rows.academicTerm.find((t: any) => t.id === 'term-B');
+    await http()
+      .post('/classrooms/class-A/activities')
+      .auth(token(A), { type: 'bearer' })
+      .send({ type: 'TASK', title: 'intrusa', sectionId: 'section-A1' })
+      .expect(404);
+    noWrites(data);
+  });
 });
