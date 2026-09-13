@@ -184,11 +184,27 @@ export class ClassroomService {
       orderBy: { teacherAssignment: { subject: { name: 'asc' } } },
     });
 
-    // Add studentEnrollmentId to each classroom for Live Quiz tracking
-    return classrooms.map(c => ({
-      ...c,
-      studentEnrollmentId: enrollmentMap.get(`${c.teacherAssignment.groupId}-${c.teacherAssignment.academicYearId}`),
-    }));
+    // Matrícula validada por aula (Live Quiz) + conteo de actividades PARA EL
+    // ESTUDIANTE en la consulta (segunda revisión Astra): solo publicadas y
+    // visibles (sin borradores) y con la misma regla de destinatarios que
+    // listActivities — una restringida que no es para este estudiante tampoco se
+    // cuenta. El docente conserva su total legítimo en listForTeacher.
+    return Promise.all(
+      classrooms.map(async (c) => {
+        const studentEnrollmentId = enrollmentMap.get(`${c.teacherAssignment.groupId}-${c.teacherAssignment.academicYearId}`);
+        const activities = await this.prisma.classroomActivity.count({
+          where: {
+            classroomId: c.id,
+            isPublished: true,
+            isVisible: true,
+            ...(studentEnrollmentId
+              ? { OR: [{ isRestrictedToAssigned: false }, { assignedStudents: { some: { studentEnrollmentId } } }] }
+              : { isRestrictedToAssigned: false }),
+          },
+        });
+        return { ...c, _count: { ...c._count, activities }, studentEnrollmentId };
+      }),
+    );
   }
 
   async getAvailableAssignments(actor: ClassroomActor) {
@@ -275,6 +291,32 @@ export class ClassroomService {
     // materiales y el conteo solo cubre actividades publicadas y visibles (sin
     // borradores). El docente/admin conserva la carga rica completa que usa su pantalla.
     const vistaEstudiante = esVistaEstudiante(actor, scope);
+
+    // Matrícula ACTIVA verificada del actor, resuelta ANTES de la lectura rica
+    // (segunda revisión Astra): alimenta el filtro Prisma de destinatarios de las
+    // actividades anidadas. Nunca se acepta pertenencia por userId suelto.
+    const studentEnrollmentId = await this.access.studentEnrollmentInClassroom(actor, scope);
+    // La misma regla de destinatarios que listActivities: una actividad restringida
+    // solo se materializa para la matrícula asignada.
+    const reglaDestinatarios = studentEnrollmentId
+      ? { OR: [{ isRestrictedToAssigned: false }, { assignedStudents: { some: { studentEnrollmentId } } }] }
+      : { isRestrictedToAssigned: false };
+    // Sección coherente (segunda revisión Astra): si tiene período, éste es del AÑO
+    // y de la INSTITUCIÓN del aula; una FK histórica cruzada (p. ej. term-B en una
+    // sección de A) hace que la sección se omita COMPLETA en la consulta, sin leer
+    // ni entregar el nombre/año ajenos.
+    const seccionCoherente = {
+      OR: [
+        { academicTermId: null },
+        {
+          academicTerm: {
+            academicYearId: scope.teacherAssignment.academicYearId,
+            academicYear: { institutionId: actor.institutionId },
+          },
+        },
+      ],
+    };
+
     const classroom = await this.prisma.classroom.findFirst({
       where: { id: classroomId, institutionId: actor.institutionId, isPersonal: false },
       include: {
@@ -286,7 +328,7 @@ export class ClassroomService {
           },
         },
         sections: {
-          where: vistaEstudiante ? { isVisible: true } : {},
+          where: vistaEstudiante ? { isVisible: true, ...seccionCoherente } : seccionCoherente,
           orderBy: { sortOrder: 'asc' },
           include: {
             materials: vistaEstudiante
@@ -294,7 +336,13 @@ export class ClassroomService {
               : { orderBy: { sortOrder: 'asc' } },
             academicTerm: { select: { id: true, name: true, order: true } },
             activities: {
-              where: vistaEstudiante ? { isPublished: true, isVisible: true } : { isPublished: true },
+              // classroomId exigido EN la consulta anidada (segunda revisión Astra):
+              // una actividad de OTRA aula enlazada a esta sección por una FK
+              // cruzada no se materializa. En vista estudiante además la regla de
+              // destinatarios con la matrícula ya verificada.
+              where: vistaEstudiante
+                ? { classroomId, isPublished: true, isVisible: true, ...reglaDestinatarios }
+                : { classroomId, isPublished: true },
               orderBy: { sortOrder: 'asc' },
               select: { id: true, type: true, title: true, dueDate: true, isPublished: true, maxScore: true, academicTermId: true, publishedAt: true, createdAt: true },
             },
@@ -308,7 +356,7 @@ export class ClassroomService {
           },
         },
         _count: vistaEstudiante
-          ? { select: { activities: { where: { isPublished: true, isVisible: true } } } }
+          ? { select: { activities: { where: { isPublished: true, isVisible: true, ...reglaDestinatarios } } } }
           : { select: { activities: true } },
       },
     });
@@ -335,10 +383,8 @@ export class ClassroomService {
       periods[periods.length - 1] ||
       null;
 
-    // Add studentEnrollmentId for students (needed for Live Quiz tracking).
-    // Acotado: solo matrículas del actor dentro de la institución y compatibles
-    // con grupo/año del aula (antes se resolvía sin filtro institucional).
-    const studentEnrollmentId = await this.access.studentEnrollmentInClassroom(actor, scope);
+    // studentEnrollmentId ya se resolvió ANTES de la lectura rica (lo exige el
+    // filtro de destinatarios anidado); aquí solo se reutiliza para la respuesta.
     if (studentEnrollmentId) {
       return { ...classroom, studentEnrollmentId, currentPeriod, academicPeriods: periods };
     }
@@ -632,9 +678,23 @@ export class ClassroomService {
       // Sección OPCIONAL: si se pasa, debe pertenecer al aula (que ya está en alcance con
       // la cadena completa). Un id ajeno o de otra aula responde 404, indistinguible de
       // inexistente (antes 403, que confirmaba que la sección existía).
+      // Además debe ser COHERENTE (segunda revisión Astra): si tiene período, éste es
+      // del año y de la institución del aula; una sección con FK cruzada → 404.
       if (dto.sectionId) {
         const section = await tx.classroomSection.findFirst({
-          where: { id: dto.sectionId, classroom: { id: classroomId, institutionId: actor.institutionId } },
+          where: {
+            id: dto.sectionId,
+            classroom: { id: classroomId, institutionId: actor.institutionId },
+            OR: [
+              { academicTermId: null },
+              {
+                academicTerm: {
+                  academicYearId: classroom.teacherAssignment.academicYearId,
+                  academicYear: { institutionId: actor.institutionId },
+                },
+              },
+            ],
+          },
         });
         if (!section) throw new NotFoundException('Sección no encontrada');
       }
@@ -715,11 +775,15 @@ export class ClassroomService {
       const activities = await this.prisma.classroomActivity.findMany({
         where: { classroomId, isRouteScoped: false },
         include: {
-          section: { select: { id: true, title: true, academicTermId: true } },
           _count: { select: { submissions: true } },
         },
         orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
       });
+
+      // Secciones resueltas con guarda EN la consulta (segunda revisión Astra):
+      // una FK histórica cruzada (sección de otra aula/colegio) se devuelve como
+      // null SIN leer los datos ajenos.
+      const secciones = await this.seccionesGuardadas(activities, scope, actor.institutionId);
 
       // Conteo de entregas pendientes por calificar (SUBMITTED/LATE) por actividad.
       // Aditivo: alimenta el centro de control del docente ("Por calificar (n)") sin migración.
@@ -735,6 +799,7 @@ export class ClassroomService {
 
       return activities.map((a) => ({
         ...a,
+        section: (a.sectionId ? secciones.get(a.sectionId) : undefined) ?? null,
         gradingPending: pendingMap.get(a.id) || 0,
         prerequisites: prereqMap.get(a.id) || [],
       }));
@@ -756,7 +821,6 @@ export class ClassroomService {
     const activities = await this.prisma.classroomActivity.findMany({
       where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false, ...assignedFilter },
       include: {
-        section: { select: { id: true, title: true, academicTermId: true } },
         submissions: {
           where: {
             // Por la matrícula YA VALIDADA de esta aula (revisión Astra), no por
@@ -774,13 +838,64 @@ export class ClassroomService {
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
+    // Secciones con la misma guarda que la rama docente (segunda revisión Astra).
+    const secciones = await this.seccionesGuardadas(activities, scope, actor.institutionId);
+
     // Estado de candado por dependencias (Fase 4). Backend autoritativo; la UI solo pinta.
     const gate = await this.gating.evaluateForStudent(classroomId, enr);
 
     return activities.map((a) => {
       const g = gate.get(a.id);
-      return { ...a, locked: g?.locked ?? false, requirements: g?.requirements ?? [] };
+      return { ...a, section: (a.sectionId ? secciones.get(a.sectionId) : undefined) ?? null, locked: g?.locked ?? false, requirements: g?.requirements ?? [] };
     });
+  }
+
+  /**
+   * Secciones referenciadas por actividades, resueltas con guarda EN la consulta
+   * (segunda revisión Astra): solo se devuelven secciones que pertenecen al aula y
+   * son coherentes (su período, si lo tienen, es del año y de la institución del
+   * aula). Una FK histórica cruzada (sección de otra aula o colegio, o con período
+   * ajeno) resuelve a ausencia SIN leer los datos ajenos.
+   * Devuelve Map sectionId → { id, title, academicTermId }.
+   */
+  private async seccionesGuardadas(
+    activities: Array<{ sectionId: string | null }>,
+    classroom: { id: string; teacherAssignment: { academicYearId: string } },
+    institutionId: string,
+    tx?: any,
+  ) {
+    const ids = [...new Set(activities.map((a) => a.sectionId).filter((s): s is string => !!s))];
+    if (ids.length === 0) return new Map<string, any>();
+    const db = tx ?? this.prisma;
+    const secciones = await db.classroomSection.findMany({
+      where: {
+        id: { in: ids },
+        classroomId: classroom.id,
+        classroom: { institutionId },
+        OR: [
+          { academicTermId: null },
+          {
+            academicTerm: {
+              academicYearId: classroom.teacherAssignment.academicYearId,
+              academicYear: { institutionId },
+            },
+          },
+        ],
+      },
+      select: { id: true, title: true, academicTermId: true },
+    });
+    return new Map(secciones.map((s: any) => [s.id, s]));
+  }
+
+  /** Sección de UNA actividad con la misma guarda; FK nula o incoherente → null. */
+  private async seccionGuardadaDeActividad(
+    activity: { sectionId: string | null; classroom: { id: string; teacherAssignment: { academicYearId: string } } },
+    institutionId: string,
+    tx?: any,
+  ) {
+    if (!activity.sectionId) return null;
+    const secciones = await this.seccionesGuardadas([activity], activity.classroom, institutionId, tx);
+    return secciones.get(activity.sectionId) ?? null;
   }
 
   /** Mapa activityId → prerrequisitos configurados (con título/condición) del aula. */
@@ -866,7 +981,6 @@ export class ClassroomService {
     const activity = await this.prisma.classroomActivity.findFirst({
       where: { id: activityId, classroom: { institutionId: actor.institutionId } },
       include: {
-        section: { select: { id: true, title: true } },
         classroom: {
           select: {
             id: true, title: true, institutionId: true,
@@ -892,7 +1006,10 @@ export class ClassroomService {
     if (role === 'teacher') {
       // En alcance pero sin gestionar el aula → 403 (antes: 403 si teacherId ≠ userId).
       this.access.assertCanManageClassroom(actor, activity.classroom);
-      return activity;
+      // Sección con guarda (segunda revisión Astra): una FK histórica cruzada
+      // (sección de otra aula/colegio) se devuelve como null SIN leer la ajena.
+      const section = await this.seccionGuardadaDeActividad(activity, actor.institutionId);
+      return { ...activity, section };
     }
 
     // Student: must be published
@@ -915,7 +1032,10 @@ export class ClassroomService {
     // El estudiante NO recibe el conteo interno de entregas del docente
     // (_count.submissions) ni agregados docentes (revisión Astra).
     const { _count, ...actividadParaEstudiante } = activity as any;
-    return actividadParaEstudiante;
+    // Sección con la misma guarda que la rama docente (segunda revisión Astra):
+    // FK cruzada → null, sin leer datos de la sección ajena.
+    const section = await this.seccionGuardadaDeActividad(activity, actor.institutionId);
+    return { ...actividadParaEstudiante, section };
   }
 
   async updateActivity(actor: ClassroomActor, activityId: string, dto: UpdateActivityDto) {
@@ -942,13 +1062,26 @@ export class ClassroomService {
       });
       if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
 
-      return tx.classroomActivity.findUnique({
+      const actualizada = await tx.classroomActivity.findUnique({
         where: { id: activityId },
         include: {
-          section: { select: { id: true, title: true } },
           _count: { select: { submissions: true } },
         },
       });
+      // Sección con guarda dentro de la MISMA tx (segunda revisión Astra): una FK
+      // histórica cruzada se devuelve como null sin leer la sección ajena.
+      const section = await this.seccionGuardadaDeActividad(
+        {
+          sectionId: actualizada?.sectionId ?? null,
+          classroom: {
+            id: activity.classroomId,
+            teacherAssignment: { academicYearId: activity.classroom.teacherAssignment.academicYearId },
+          },
+        },
+        actor.institutionId,
+        tx,
+      );
+      return { ...actualizada, section };
     });
   }
 
