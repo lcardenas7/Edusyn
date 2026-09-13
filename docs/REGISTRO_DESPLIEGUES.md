@@ -22,6 +22,124 @@
 
 ## Historial (más reciente arriba)
 
+### Landing pública: primer despliegue a producción + 3 fixes — 2026-09-13
+
+`main` (prod) en `be2ba5a7` — primera vez que la landing pública multipágina llega a producción
+(hasta ahora solo estaba en `staging`). `staging` en `da3f9225` (mismo commit de fixes,
+cherry-pickeado). Ambos en worktrees aislados (`worktrees/landing-production-20260913` para
+main, `edusyn-wt-landing-deploy` para staging). Sin migración, solo `apps/web`.
+
+- **Contexto:** otra sesión de Claude había aislado los 4 commits de la landing sobre `main` en
+  `worktrees/landing-production-20260913` y encontrado 3 bugs reales durante la revisión, dejando
+  las correcciones sin commitear. Esta sesión las verificó de forma independiente (no se confió
+  en el reporte previo) antes de publicar.
+- **Fix 1 — nav móvil ausente:** `PublicNav`/`LandingPage` — el menú (`hidden md:flex`) no tenía
+  ningún reemplazo en pantallas angostas, dejando la navegación pública inaccesible en móvil.
+  `LandingPage.tsx` ahora usa el `PublicNav` compartido, que agrega un botón de menú real con
+  panel desplegable. Confirmado con clic real en el botón (JS) en viewport 375×812: el panel abre
+  con los 6 enlaces.
+- **Fix 2 — colores de módulo invisibles en build:** `Caracteristicas.tsx` construía las clases de
+  Tailwind por interpolación (`` `from-${color}-500 to-${color}-600` ``), que el compilador no
+  puede detectar de forma estática — en un build real esas clases no existen en el CSS generado.
+  Se cambió a una clase completa literal por módulo. Confirmado: los 6 gradientes aparecen en el
+  CSS del build de producción (`grep from-<color>-500 dist/assets/*.css` → 1 cada uno).
+  Este bug lo introdujo esta misma sesión el 2026-09-12 al escribir `Caracteristicas.tsx`.
+- **Fix 3 — anual por debajo del mínimo del plan:** `Precios.tsx` aplicaba el descuento de
+  prepago anual (10/12) *después* de aplicar el piso (`minAnnual`), pudiendo mostrar un anual menor
+  al mínimo publicado del plan. Ahora el piso se aplica sobre el valor ya descontado. Se agregó
+  tope de estudiantes (1–100.000), leyenda "Tamaño orientativo / Mínimo anual" por plan, y
+  atributos de accesibilidad. Confirmado con 10 estudiantes: los 4 planes caen en su piso exacto
+  y ninguno muestra un "Ahorras..." falso.
+- **Verificación independiente de esta sesión** (no solo confiar en el reporte de la sesión
+  anterior): `npm install` en el worktree de producción, `npx tsc --noEmit` limpio, 182/182
+  pruebas de `apps/web` (16/16 archivos), `npm --workspace apps/web run build` exitoso, grep del
+  CSS generado confirmando los 6 degradados, y prueba manual en navegador (menú móvil real,
+  mínimo anual real) antes de publicar.
+
+### Fix: tarjetas de highlights encajonadas en la columna de texto — 2026-09-12
+
+`staging` en `1b584024` (cherry-pick sobre `8d99d810`, mismo worktree aislado). Sin migración,
+solo `apps/web/src/pages/LandingPage.tsx`.
+
+- El usuario reportó, con captura de staging, que las 3 tarjetas ("Gestión integral", "Multirol",
+  "Implementación rápida") se veían mal — quedaron anidadas dentro de la columna de texto
+  (5/12) del ajuste anterior en vez de ocupar el ancho completo de la sección.
+- Se movieron fuera del grid texto+imagen, a su propio bloque a ancho completo debajo, y se les
+  agregó icono de color (`Layers`/`Users`/`Zap`), más padding y hover-lift.
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio; revisado visualmente a 1400px.
+
+### Ajuste hero: imagen más grande, tarjetas menos invasivas — 2026-09-12
+
+`staging` en `8cc159a5` (cherry-pick sobre `bf824c49`, mismo worktree aislado). Sin migración,
+solo `apps/web/src/pages/LandingPage.tsx`.
+
+- Feedback directo del usuario sobre el hero recién desplegado: la captura se veía muy chica y
+  las tarjetas flotantes tapaban el contenido del reporte.
+- Columna de la imagen: de `lg:grid-cols-2` (50/50) a `lg:grid-cols-12` con texto en 5/12 e imagen
+  en 7/12.
+- Tarjetas flotantes reposicionadas a las esquinas exteriores del marco (`-left-3 -top-3` /
+  `-right-3 -bottom-3`, antes `top-1/4` / `bottom-1/4` que caía sobre el contenido), más pequeñas
+  y con fondo blanco semitransparente (`bg-white/95 backdrop-blur`).
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio; revisado visualmente en el navegador
+  a 1400px.
+
+### Hero de landing con captura real y animación — 2026-09-12
+
+`staging` en `3ab458a9` (cherry-pick sobre `5ed368c9`, mismo worktree aislado). Sin migración,
+solo `apps/web`.
+
+- Reemplaza el mockup ficticio de stat-cards del hero (`LandingPage.tsx`) por una captura real
+  de Edusyn — institución demo (`ied-del-saber`, datos de prueba, nunca una institución real),
+  reporte "Niveles por asignatura" (Bajo/Básico/Alto/Superior) — capturada con Playwright a
+  1440x950 @2x contra el entorno local efímero. Asset: `apps/web/public/screenshots/hero-dashboard.png`.
+- Las tarjetas flotantes (Notas actualizadas / Nueva notificación) ahora animan con `animate-float`
+  / `animate-float-delayed` (keyframes nuevos en `index.css`), sin cifras ni reseñas inventadas.
+- Efecto lateral aparte, no incluido en este commit: se detectó que el cliente de Prisma local
+  estaba desactualizado tras la migración `20260829120000_quiz_numeric_categorize` (faltaba
+  `prisma generate`, causaba `TS2367` en `classroom.service.ts` y el API no arrancaba). Se
+  regeneró localmente para poder levantar el entorno demo; no es un cambio de código ni se
+  desplegó — si el mismo síntoma aparece en staging/producción, correr `prisma generate` ahí.
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio antes del commit. Cherry-pick sin
+  conflictos.
+
+### Landing pública multipágina, precios por estudiante y logo real — 2026-09-12
+
+`staging` en `5ed368c9` (cherry-pick de `cb4cd3f9` sobre `origin/staging`, worktree aislado en
+`edusyn-wt-landing-deploy`). Sin migración, solo `apps/web`.
+
+- Páginas públicas con URL propia para SEO (antes eran anclas de una sola página sin indexar):
+  `/caracteristicas`, `/precios`, `/casos-de-exito`, `/preguntas-frecuentes`, `/recursos`,
+  `/contacto`. Hook `useSeo` para title/meta description por ruta. `sitemap.xml` y `robots.txt`
+  nuevos.
+- `Precios.tsx`: modelo por estudiante/año (Esencial $3.500, Crecimiento $5.200, Integral $7.800,
+  Institucional $11.500), calibrado contra precios públicos de Quid y Q10 (ver
+  `mercado-precios-competencia.md` en memoria). Calculadora con stepper de estudiantes y toggle
+  mensual/anual con ahorro.
+- Logo real de Edusyn (icono sin marca de agua, recortado y con fondo transparente) reemplaza el
+  placeholder `GraduationCap` en nav, footer y `LandingPage.tsx`; favicon actualizado.
+- Aislado del WIP sin confirmar de Valeria conversacional (`apd-ai.service.ts` y relacionados, ver
+  entrada pendiente más abajo) — commit propio (`cb4cd3f9` en `feat/aula-rediseno`), sin mezclar.
+- **Verificación:** `npx tsc --noEmit` en `apps/web` limpio antes del commit. Cherry-pick sin
+  conflictos en los archivos de contenido; único conflicto (orden de imports en `App.tsx` con el
+  refactor de code-splitting ya en `staging`/`main`) resuelto a mano, revisado visualmente.
+- **Pendiente:** confirmación del usuario para desplegar a `main` (producción) — ver bloque
+  "Pendiente de commit y despliegue" si aplica, o repetir el cherry-pick de `cb4cd3f9` sobre
+  `origin/main` cuando se autorice.
+
+### Continuidad de Inclusión — 2026-09-11
+
+Por indicación del usuario, se pospone continuar Inclusión y se retoma el orden del encargo de blindaje: academic/templates, learning-route, attendance, preventive-cuts, observer y finalmente classroom. No declarar APD terminado.
+
+Publicado hasta 95b2e3e5: contexto de trabajo, perfiles/planes, actividades y avances. Quedan participantes, adjuntos, firmas, materias, categorías, agregaciones, relaciones históricas inconsistentes, sincronización desde diagnóstico, API compartida pedagogical-support y validación PostgreSQL sintética. Las reglas por asignación docente siguen inventariadas en el Bloque 4. Detalle y evidencia: docs/AUDITORIA_AISLAMIENTO_INCLUSION.md. Al retomarlo, leer esa auditoría y esta bitácora antes de modificar.
+
+Los pendientes operativos de Matrículas (PostgreSQL sintético y dependencias HTTP compartidas) siguen abiertos; posponer Inclusión no los da por resueltos.
+
+### Reasignación de frentes de blindaje — 2026-09-12
+
+Claude termina `docs/ENCARGO_CLAUDE_BLINDAJE_OBSERVER.md` y, una vez integrado por Astra, pasa a `docs/ENCARGO_CLAUDE_POSTGRESQL_BLINDAJE_B1.md`: laboratorio local desechable, transacciones/concurrencia real de Matrículas y evidencia RLS sin modificar políticas. Kimi toma `docs/ENCARGO_KIMI_CLASSROOM_BLOQUE_1.md`, exactamente 17/98 rutas de aulas y actividades. El anterior encargo Classroom para Claude queda cancelado. Ambos trabajan en worktrees/ramas separados, sin push directo a staging; Astra integra y actualiza los estados.
+
+Revisión adversarial posterior: las puntas Observer `41025531` y Classroom B1 `9ac64f02` **no se integraron** por hallazgos de filtrado relacional, PII y atomicidad descritos en `docs/REVISION_ASTRA_OBSERVER_20260912.md` y `docs/REVISION_ASTRA_CLASSROOM_B1_20260912.md`. Se publicaron únicamente documentación y correcciones exigidas en `77fa0475`, sin migración ni cambio de aplicación. El siguiente tramo de Kimi, Classroom B2 (19 rutas; 36/98 acumuladas), queda versionado pero no comienza hasta integrar B1 corregido. Claude conserva PostgreSQL B1 después de integrar Observer corregido.
+
 | Fecha | Entorno | Commit | Migración | Cambio |
 |-------|---------|--------|-----------|--------|
 | 2026-09-11 | `main` (prod) | `aa7ee9cc` | **No** | **Foro: vista previa legible y HTML de usuario siempre limpio** (probado antes en staging `7e2a1b7a`). Solo cliente web, cero migraciones, API sin cambios. (1) La lista del foro mostraba el HTML crudo del editor (`<p>Responde&nbsp;con…</p>`), reportado por el fundador con captura: la vista previa pasa a texto plano con `DOMParser`. (2) **Cerrado un XSS almacenado que estaba en producción:** `RichContent` insertaba el HTML de usuario sin limpiar y la API tampoco lo limpia; un estudiante podía publicar en el foro código que se ejecutaba en el navegador del docente. Ahora pasa por DOMPurify (conserva el formato del editor, quita lo ejecutable; enlaces con `rel=noopener noreferrer`). Verificado en navegador real: 7 cargas de ataque → 0 ejecuciones; sin limpiar, SÍ se ejecutan. `tsc`, 182/182 pruebas web y build sobre `main`; paquete servido `index-D3sgjccH.js` contiene la limpieza y la vista previa; la app arranca sin errores; API 200. **Recomendado, no bloqueante:** limpiar también en la API al guardar (defensa en profundidad para otros clientes). |
