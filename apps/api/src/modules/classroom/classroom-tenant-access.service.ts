@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -13,7 +14,7 @@ export interface ClassroomActor {
 }
 
 /** Cliente de datos: el PrismaService raíz o una transacción interactiva (tx). */
-type Db = any;
+type Db = Prisma.TransactionClient;
 
 /**
  * Cadena institucional completa de un aula. Classroom sí tiene institutionId;
@@ -21,7 +22,7 @@ type Db = any;
  * (A diferencia de Attendance no se exige shift: la cadena acordada para Classroom
  * es group.{campus,grade} — ver docs/PLAN_BLINDAJE_CLASSROOM.md).
  */
-const classroomScopeWhere = (institutionId: string) => ({
+const classroomScopeWhere = (institutionId: string): Prisma.ClassroomWhereInput => ({
   institutionId,
   // Edusyn Play: las aulas personales (isPersonal/ownerUserId) NO son institucionales.
   // Estas 17 rutas son exclusivamente institucionales: un aula personal responde 404,

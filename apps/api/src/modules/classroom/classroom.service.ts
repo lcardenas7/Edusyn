@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { b1SectionWhere, b1RubricArgs, b1DependencyWhere, b1SubmissionWhere } from './classroom-b1-relations';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
@@ -178,7 +180,7 @@ export class ClassroomService {
           },
         },
         _count: {
-          select: { sections: true, activities: true, announcements: true },
+          select: { announcements: true },
         },
       },
       orderBy: { teacherAssignment: { subject: { name: 'asc' } } },
@@ -202,7 +204,10 @@ export class ClassroomService {
               : { isRestrictedToAssigned: false }),
           },
         });
-        return { ...c, _count: { ...c._count, activities }, studentEnrollmentId };
+        const sections = await this.prisma.classroomSection.count({
+          where: b1SectionWhere(undefined, c.id, c.teacherAssignment.academicYearId, institutionId, true),
+        });
+        return { ...c, _count: { ...c._count, activities, sections }, studentEnrollmentId };
       }),
     );
   }
@@ -305,7 +310,7 @@ export class ClassroomService {
     // y de la INSTITUCIÓN del aula; una FK histórica cruzada (p. ej. term-B en una
     // sección de A) hace que la sección se omita COMPLETA en la consulta, sin leer
     // ni entregar el nombre/año ajenos.
-    const seccionCoherente = {
+    const seccionCoherente: Prisma.ClassroomSectionWhereInput = {
       OR: [
         { academicTermId: null },
         {
@@ -752,7 +757,7 @@ export class ClassroomService {
         },
         include: {
           section: { select: { id: true, title: true } },
-          _count: { select: { submissions: true } },
+          _count: { select: { submissions: { where: b1SubmissionWhere(actor.institutionId) } } },
         },
       });
     });
@@ -775,7 +780,7 @@ export class ClassroomService {
       const activities = await this.prisma.classroomActivity.findMany({
         where: { classroomId, isRouteScoped: false },
         include: {
-          _count: { select: { submissions: true } },
+          _count: { select: { submissions: { where: b1SubmissionWhere(actor.institutionId) } } },
         },
         orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
       });
@@ -789,7 +794,7 @@ export class ClassroomService {
       // Aditivo: alimenta el centro de control del docente ("Por calificar (n)") sin migración.
       const pendingGroups = await this.prisma.activitySubmission.groupBy({
         by: ['activityId'],
-        where: { activity: { classroomId }, status: { in: ['SUBMITTED', 'LATE'] } },
+        where: { activity: { classroomId }, ...b1SubmissionWhere(actor.institutionId), status: { in: ['SUBMITTED', 'LATE'] } },
         _count: { _all: true },
       });
       const pendingMap = new Map(pendingGroups.map((g) => [g.activityId, g._count._all]));
@@ -839,10 +844,10 @@ export class ClassroomService {
     });
 
     // Secciones con la misma guarda que la rama docente (segunda revisión Astra).
-    const secciones = await this.seccionesGuardadas(activities, scope, actor.institutionId);
+    const secciones = await this.seccionesGuardadas(activities, scope, actor.institutionId, undefined, true);
 
     // Estado de candado por dependencias (Fase 4). Backend autoritativo; la UI solo pinta.
-    const gate = await this.gating.evaluateForStudent(classroomId, enr);
+    const gate = await this.gating.evaluateForStudent(classroomId, enr, { institutionId: actor.institutionId });
 
     return activities.map((a) => {
       const g = gate.get(a.id);
@@ -862,46 +867,35 @@ export class ClassroomService {
     activities: Array<{ sectionId: string | null }>,
     classroom: { id: string; teacherAssignment: { academicYearId: string } },
     institutionId: string,
-    tx?: any,
+    tx?: Prisma.TransactionClient,
+    visibleOnly = false,
   ) {
     const ids = [...new Set(activities.map((a) => a.sectionId).filter((s): s is string => !!s))];
-    if (ids.length === 0) return new Map<string, any>();
+    if (ids.length === 0) return new Map<string, { id: string; title: string; academicTermId: string | null }>();
     const db = tx ?? this.prisma;
     const secciones = await db.classroomSection.findMany({
-      where: {
-        id: { in: ids },
-        classroomId: classroom.id,
-        classroom: { institutionId },
-        OR: [
-          { academicTermId: null },
-          {
-            academicTerm: {
-              academicYearId: classroom.teacherAssignment.academicYearId,
-              academicYear: { institutionId },
-            },
-          },
-        ],
-      },
+      where: b1SectionWhere(ids, classroom.id, classroom.teacherAssignment.academicYearId, institutionId, visibleOnly),
       select: { id: true, title: true, academicTermId: true },
     });
-    return new Map(secciones.map((s: any) => [s.id, s]));
+    return new Map(secciones.map((s) => [s.id, s]));
   }
 
   /** Sección de UNA actividad con la misma guarda; FK nula o incoherente → null. */
   private async seccionGuardadaDeActividad(
     activity: { sectionId: string | null; classroom: { id: string; teacherAssignment: { academicYearId: string } } },
     institutionId: string,
-    tx?: any,
+    tx?: Prisma.TransactionClient,
+    visibleOnly = false,
   ) {
     if (!activity.sectionId) return null;
-    const secciones = await this.seccionesGuardadas([activity], activity.classroom, institutionId, tx);
+    const secciones = await this.seccionesGuardadas([activity], activity.classroom, institutionId, tx, visibleOnly);
     return secciones.get(activity.sectionId) ?? null;
   }
 
   /** Mapa activityId → prerrequisitos configurados (con título/condición) del aula. */
   private async getDependencyMapForClassroom(classroomId: string) {
     const rows = await this.prisma.activityDependency.findMany({
-      where: { activity: { classroomId } },
+      where: b1DependencyWhere(classroomId),
       select: {
         id: true, activityId: true, prerequisiteId: true, condition: true, minScore: true,
         prerequisite: { select: { title: true, type: true } },
@@ -976,8 +970,20 @@ export class ClassroomService {
   }
 
   async getActivity(actor: ClassroomActor, activityId: string) {
-    // 404 para actividad ajena/inexistente/incoherente ANTES de la lectura rica.
-    await this.access.activityInScope(actor, activityId);
+    // Autorizar con escalares y aula en alcance antes de materializar relaciones.
+    const scope = await this.access.activityInScope(actor, activityId);
+    const studentView = actor.roles.includes('ESTUDIANTE');
+    if (!studentView) {
+      this.access.assertCanManageClassroom(actor, scope.classroom);
+    } else {
+      if (!scope.isPublished || !scope.isVisible) throw new NotFoundException('Actividad no encontrada');
+      const enrollmentId = await this.access.studentEnrollmentInClassroom(actor, scope.classroom);
+      if (!enrollmentId) throw new NotFoundException('Actividad no encontrada');
+      if (scope.isRestrictedToAssigned) {
+        const assigned = await this.prisma.activityAssignment.count({ where: { activityId, studentEnrollmentId: enrollmentId } });
+        if (!assigned) throw new NotFoundException('Actividad no encontrada');
+      }
+    }
     const activity = await this.prisma.classroomActivity.findFirst({
       where: { id: activityId, classroom: { institutionId: actor.institutionId } },
       include: {
@@ -987,55 +993,17 @@ export class ClassroomService {
             teacherAssignment: { select: { teacherId: true, groupId: true, academicYearId: true } },
           },
         },
-        rubric: {
-          include: {
-            criteria: {
-              include: { levels: { orderBy: { order: 'asc' } } },
-              orderBy: { order: 'asc' },
-            },
-          },
-        },
-        _count: { select: { submissions: true } },
+        // El estudiante no lee el agregado docente para descartarlo luego.
+        ...(!studentView ? { _count: { select: { submissions: { where: b1SubmissionWhere(actor.institutionId) } } } } : {}),
       },
     });
-    if (!activity) throw new NotFoundException('Actividad no encontrada'); // carrera
-
-    // La rama la decide el JWT, nunca el query `role` del cliente.
-    const role: 'teacher' | 'student' = actor.roles.includes('ESTUDIANTE') ? 'student' : 'teacher';
-
-    if (role === 'teacher') {
-      // En alcance pero sin gestionar el aula → 403 (antes: 403 si teacherId ≠ userId).
-      this.access.assertCanManageClassroom(actor, activity.classroom);
-      // Sección con guarda (segunda revisión Astra): una FK histórica cruzada
-      // (sección de otra aula/colegio) se devuelve como null SIN leer la ajena.
-      const section = await this.seccionGuardadaDeActividad(activity, actor.institutionId);
-      return { ...activity, section };
-    }
-
-    // Student: must be published
-    if (!activity.isPublished || !activity.isVisible) {
-      throw new NotFoundException('Actividad no encontrada');
-    }
-
-    // Matrícula ACTIVA compatible OBLIGATORIA: sin ella se responde 404 (no revelar
-    // existencia). Antes bastaba con que la actividad fuera pública y no restringida,
-    // incluso para un estudiante de otro colegio.
-    const enr = await this.access.studentEnrollmentInClassroom(actor, activity.classroom);
-    if (!enr) throw new NotFoundException('Actividad no encontrada');
-
-    // Restringida a estudiantes concretos: solo la abren los asignados. Se responde
-    // 404 (no 403) para no revelar que la actividad existe.
-    if (activity.isRestrictedToAssigned) {
-      const assigned = await this.prisma.activityAssignment.count({ where: { activityId, studentEnrollmentId: enr } });
-      if (!assigned) throw new NotFoundException('Actividad no encontrada');
-    }
-    // El estudiante NO recibe el conteo interno de entregas del docente
-    // (_count.submissions) ni agregados docentes (revisión Astra).
-    const { _count, ...actividadParaEstudiante } = activity as any;
-    // Sección con la misma guarda que la rama docente (segunda revisión Astra):
-    // FK cruzada → null, sin leer datos de la sección ajena.
-    const section = await this.seccionGuardadaDeActividad(activity, actor.institutionId);
-    return { ...actividadParaEstudiante, section };
+    if (!activity) throw new NotFoundException('Actividad no encontrada');
+    // La FK es nullable; WHERE institucional en el padre ANTES de criterios/niveles.
+    const rubric = activity.rubricId
+      ? await this.prisma.attitudinalRubric.findFirst(b1RubricArgs(activity.rubricId, actor.institutionId))
+      : null;
+    const section = await this.seccionGuardadaDeActividad(activity, actor.institutionId, undefined, studentView);
+    return { ...activity, rubric, section };
   }
 
   async updateActivity(actor: ClassroomActor, activityId: string, dto: UpdateActivityDto) {
@@ -1065,7 +1033,7 @@ export class ClassroomService {
       const actualizada = await tx.classroomActivity.findUnique({
         where: { id: activityId },
         include: {
-          _count: { select: { submissions: true } },
+          _count: { select: { submissions: { where: b1SubmissionWhere(actor.institutionId) } } },
         },
       });
       // Sección con guarda dentro de la MISMA tx (segunda revisión Astra): una FK

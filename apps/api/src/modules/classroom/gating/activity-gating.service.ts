@@ -64,11 +64,13 @@ export class ActivityGatingService {
    * su condición (AND). "Sticky unlock": si el estudiante ya inició/entregó la
    * actividad, no se vuelve a bloquear aunque cambien las dependencias.
    */
-  async evaluateForStudent(classroomId: string, studentEnrollmentId: string): Promise<Map<string, GateState>> {
+  async evaluateForStudent(classroomId: string, studentEnrollmentId: string, b1Scope?: { institutionId: string }): Promise<Map<string, GateState>> {
     const result = new Map<string, GateState>();
 
     const deps = await this.prisma.activityDependency.findMany({
-      where: { activity: { classroomId } },
+      where: {
+        activity: { classroomId },
+      },
       select: { activityId: true, prerequisiteId: true, condition: true, minScore: true },
     });
     if (!deps.length) return result; // sin reglas → todo libre (retrocompatible)
@@ -77,10 +79,24 @@ export class ActivityGatingService {
     const involvedIds = new Set<string>();
     for (const d of deps) { involvedIds.add(d.activityId); involvedIds.add(d.prerequisiteId); }
     const activities = await this.prisma.classroomActivity.findMany({
-      where: { id: { in: [...involvedIds] } },
-      select: { id: true, type: true, maxScore: true, title: true },
+      where: {
+        id: { in: [...involvedIds] },
+        ...(b1Scope ? { classroomId, classroom: { institutionId: b1Scope.institutionId } } : {}),
+      },
+      select: { id: true, type: true, maxScore: true, ...(!b1Scope ? { title: true } : {}) },
     });
-    const titleById = new Map(activities.map(a => [a.id, a.title]));
+    // B1: la completitud propia conserva su semántica aunque el docente oculte un
+    // prerrequisito después. Su título solo se lee con visibilidad acreditada.
+    const titledActivities = b1Scope ? await this.prisma.classroomActivity.findMany({
+      where: {
+        id: { in: activities.map(a => a.id) }, classroomId,
+        classroom: { institutionId: b1Scope.institutionId }, isPublished: true, isVisible: true,
+          OR: [{ isRestrictedToAssigned: false }, { assignedStudents: { some: { studentEnrollmentId } } }],
+      },
+      select: { id: true, title: true },
+    }) : activities;
+    const titleById = new Map(titledActivities.map(a => [a.id, a.title]));
+    const scopedIds = new Set(activities.map(a => a.id));
 
     const completion = await this.completion.getCompletionMap(
       activities.map(a => ({ id: a.id, type: a.type, maxScore: a.maxScore != null ? Number(a.maxScore) : null })),
@@ -104,6 +120,12 @@ export class ActivityGatingService {
       const requirements: PrerequisiteStatus[] = [];
       let anyPending = false;
       for (const r of rules) {
+        // Una FK histórica ajena no aporta título/id a la respuesta ni se convierte
+        // en permiso de acceso al descartar la regla. Queda bloqueada hasta repararla.
+        if (b1Scope && !scopedIds.has(r.prerequisiteId)) {
+          anyPending = true;
+          continue;
+        }
         const minScore = r.minScore != null ? Number(r.minScore) : null;
         const satisfied = satisfiesCondition(completion.get(r.prerequisiteId), r.condition, minScore);
         if (!satisfied) anyPending = true;
