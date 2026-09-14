@@ -49,6 +49,110 @@ describe('Classroom Bloque 1 · aislamiento HTTP con sesiones firmadas localment
 
   const http = () => request(app.getHttpServer());
 
+  describe.each([[A, 'A', 'B'], [B, 'B', 'A']])('relevo relaciones %s', (institution, own, foreign) => {
+    it('agregados docentes no cuentan entregas enlazadas a matrícula ajena', async () => {
+      const activity = data.rows.classroomActivity.find(a => a.id === `act-${own}-pub`);
+      const auth = token(institution);
+      const before = await http().get(`/classrooms/activities/${activity.id}`).auth(auth, { type: 'bearer' }).expect(200);
+      const listBefore = await http().get(`/classrooms/class-${own}/activities`).auth(auth, { type: 'bearer' }).expect(200);
+      data.rows.activitySubmission.push({ id: 'cross-submission', activityId: activity.id,
+        studentEnrollmentId: `enr-${foreign}1`, studentEnrollment: data.rows.studentEnrollment.find(e => e.id === `enr-${foreign}1`),
+        activity, status: 'SUBMITTED', score: null });
+      const after = await http().get(`/classrooms/activities/${activity.id}`).auth(auth, { type: 'bearer' }).expect(200);
+      expect(after.body._count.submissions).toBe(before.body._count.submissions);
+      const listAfter = await http().get(`/classrooms/class-${own}/activities`).auth(auth, { type: 'bearer' }).expect(200);
+      const item = listAfter.body.find(a => a.id === activity.id);
+      expect(item._count.submissions).toBe(before.body._count.submissions);
+      expect(item.gradingPending).toBe(listBefore.body.find(a => a.id === activity.id).gradingPending);
+      const updated = await http().put(`/classrooms/activities/${activity.id}`).auth(auth, { type: 'bearer' }).send({ title: activity.title }).expect(200);
+      expect(updated.body._count.submissions).toBe(before.body._count.submissions);
+    });
+
+    it('gating oculta título de prerrequisito no visible, conserva bloqueo', async () => {
+      const prerequisite = data.rows.classroomActivity.find(a => a.id === `act-${own}-draft`);
+      const dependent = data.rows.classroomActivity.find(a => a.id === `act-${own}-restr`);
+      data.rows.activityDependency.push({ id: 'hidden-edge', activityId: dependent.id, prerequisiteId: prerequisite.id, condition: 'SUBMITTED', minScore: null, activity: dependent, prerequisite });
+      const r = await http().get(`/classrooms/class-${own}/activities`).auth(token(institution, 'ESTUDIANTE', `user-${own}1`), { type: 'bearer' }).expect(200);
+      expect(JSON.stringify(r.body)).not.toContain(prerequisite.title);
+      expect(r.body.find(a => a.id === dependent.id).locked).toBe(true);
+      data.rows.activitySubmission.push({ id: 'hidden-completed', activityId: prerequisite.id,
+        studentEnrollmentId: `enr-${own}1`, status: 'SUBMITTED', score: null });
+      const completed = await http().get(`/classrooms/class-${own}/activities`).auth(token(institution, 'ESTUDIANTE', `user-${own}1`), { type: 'bearer' }).expect(200);
+      expect(completed.body.find(a => a.id === dependent.id).locked).toBe(false);
+      expect(JSON.stringify(completed.body)).not.toContain(prerequisite.title);
+    });
+
+    it('listado de aulas no cuenta secciones ocultas para el estudiante', async () => {
+      const section = data.rows.classroomSection.find(s => s.id === `section-${own}1`);
+      section.isVisible = false;
+      const student = await http().get('/classrooms').auth(token(institution, 'ESTUDIANTE', `user-${own}1`), { type: 'bearer' }).expect(200);
+      expect(student.body.find(c => c.id === `class-${own}`)._count.sections).toBe(0);
+      const teacher = await http().get('/classrooms').auth(token(institution), { type: 'bearer' }).expect(200);
+      expect(teacher.body.find(c => c.id === `class-${own}`)._count.sections).toBeGreaterThan(0);
+    });
+
+    it('rúbrica cruzada no materializa criterios/niveles ajenos, estudiante y docente', async () => {
+      const activity = data.rows.classroomActivity.find(a => a.id === `act-${own}-pub`);
+      activity.rubricId = `rubric-${foreign}`;
+      const rubric = data.rows.attitudinalRubric.find(r => r.id === activity.rubricId);
+      Object.defineProperty(rubric, 'criteria', { configurable: true, get: () => { throw new Error('LECTURA AJENA DE CRITERIOS'); } });
+      Object.defineProperty(activity, 'rubric', { configurable: true, get: () => { throw new Error('INCLUDE AJENO DE RUBRICA'); } });
+      for (const [role, user] of [['ESTUDIANTE', `user-${own}1`], ['DOCENTE', 'teacher-shared']]) {
+        const r = await http().get(`/classrooms/activities/${activity.id}`).auth(token(institution, role, user), { type: 'bearer' }).expect(200);
+        expect(r.body.rubric).toBeNull();
+      }
+      expect(data.calls.filter(c => c.model === 'attitudinalRubric' && c.args.include?.criteria).every(c => c.args.where.institutionId === institution)).toBe(true);
+      expect(data.calls.some(c => c.model === 'classroomActivity' && c.args.include?.rubric)).toBe(false);
+    });
+
+    it('rúbrica propia con criterios/niveles y ausencia de rúbrica conservan su respuesta', async () => {
+      const activity = data.rows.classroomActivity.find(a => a.id === `act-${own}-pub`);
+      const rubric = data.rows.attitudinalRubric.find(r => r.id === `rubric-${own}`);
+      Object.defineProperty(rubric, 'criteria', { configurable: true, value: [{ id: `criterion-${own}`, rubricId: rubric.id, name: 'Criterio propio', order: 0, levels: [{ id: `level-${own}`, criterionId: `criterion-${own}`, label: 'Nivel propio', order: 0 }] }] });
+      activity.rubricId = rubric.id;
+      Object.defineProperty(activity, 'rubric', { configurable: true, value: rubric });
+      const ownResponse = await http().get(`/classrooms/activities/${activity.id}`).auth(token(institution, 'ESTUDIANTE', `user-${own}1`), { type: 'bearer' }).expect(200);
+      expect(ownResponse.body.rubric.criteria[0].levels[0].label).toBe('Nivel propio');
+      activity.rubricId = null;
+      delete activity.rubric;
+      const without = await http().get(`/classrooms/activities/${activity.id}`).auth(token(institution, 'ESTUDIANTE', `user-${own}1`), { type: 'bearer' }).expect(200);
+      expect(without.body.rubric).toBeNull();
+    });
+
+    it('sección oculta es null en detalle/listado estudiante y visible para docente', async () => {
+      const activity = data.rows.classroomActivity.find(a => a.id === `act-${own}-pub`);
+      const section = data.rows.classroomSection.find(s => s.id === `section-${own}1`);
+      section.isVisible = false;
+      activity.sectionId = section.id;
+      for (const [role, user] of [['ESTUDIANTE', `user-${own}1`], ['DOCENTE', 'teacher-shared']]) {
+        const auth = token(institution, role, user);
+        const detail = await http().get(`/classrooms/activities/${activity.id}`).auth(auth, { type: 'bearer' }).expect(200);
+        const list = await http().get(`/classrooms/class-${own}/activities`).auth(auth, { type: 'bearer' }).expect(200);
+        for (const entry of [detail.body, list.body.find(a => a.id === activity.id)]) {
+          if (role === 'ESTUDIANTE') expect(entry.section).toBeNull();
+          else expect(entry.section.title).toBe(section.title);
+        }
+      }
+    });
+
+    it('prerrequisito histórico cruzado no lee su título en listado docente ni gating estudiante', async () => {
+      const ownActivity = data.rows.classroomActivity.find(a => a.id === `act-${own}-restr`);
+      const foreignActivity = data.rows.classroomActivity.find(a => a.id === `act-${foreign}-pub`);
+      const foreignTitle = foreignActivity.title;
+      let foreignReads = 0;
+      Object.defineProperty(foreignActivity, 'title', { configurable: true, enumerable: true,
+        get: () => { foreignReads++; return foreignTitle; } });
+      data.rows.activityDependency.push({ id: 'cross-edge', activityId: ownActivity.id, prerequisiteId: foreignActivity.id, condition: 'SUBMITTED', minScore: null, activity: ownActivity, prerequisite: foreignActivity });
+      for (const [role, user] of [['ESTUDIANTE', `user-${own}1`], ['DOCENTE', 'teacher-shared']]) {
+        const r = await http().get(`/classrooms/class-${own}/activities`).auth(token(institution, role, user), { type: 'bearer' }).expect(200);
+        expect(JSON.stringify(r.body)).not.toContain(foreignTitle);
+        expect(JSON.stringify(r.body)).not.toContain(foreignActivity.id);
+        if (role === 'ESTUDIANTE') expect(r.body.find(a => a.id === ownActivity.id).locked).toBe(true);
+      }
+      expect(foreignReads).toBe(0);
+    });
+  });
+
   const token = (
     institutionId: string | null,
     role = 'DOCENTE',
