@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { FormativeEvaluationService, peerRing, sanitizeDimensionInput, scoreAnswers } from './formative-evaluation.service';
+import { FormativeEvaluationService, peerRing, sanitizeDimensionInput, scoreAnswers, seededShuffle, shuffledPeerRing, validateManualPairs } from './formative-evaluation.service';
 
 describe('peerRing (peer-ring-v1)', () => {
   it('nadie se evalúa a sí mismo, sin duplicados, y cada estudiante da y recibe k evaluaciones', () => {
@@ -96,7 +96,7 @@ describe('FormativeEvaluationService.publish', () => {
       $transaction: jest.fn((cb: any) => cb({ formativeEvaluationAssignment: { createMany }, formativeEvaluationActivity: { update } })),
     };
     const result = await service(prisma).publish('act', 'inst', 'teacher');
-    expect(result).toEqual({ published: true, assignments: 9, algorithmVersion: 'peer-ring-v1' });
+    expect(result).toEqual({ published: true, assignments: 9, algorithmVersion: 'peer-shuffled-ring-v1' });
     const data = createMany.mock.calls[0][0].data;
     expect(data.filter((a: any) => a.dimensionId === 'dSelf').every((a: any) => a.evaluatorEnrollmentId === a.targetEnrollmentId)).toBe(true);
     expect(data.filter((a: any) => a.dimensionId === 'dPeer').some((a: any) => a.evaluatorEnrollmentId === a.targetEnrollmentId)).toBe(false);
@@ -159,5 +159,63 @@ describe('FormativeEvaluationService.sync', () => {
     const svc = service({ formativeGradeSync: { findUnique: jest.fn().mockResolvedValue(null) } });
     jest.spyOn(svc, 'previewSync').mockResolvedValue({ hash: 'nuevo', term: 'P1', rows: [], summary: { ready: 0, incomplete: 0, withoutComponent: 0 } });
     await expect(svc.sync('act', 'inst', 'teacher', { idempotencyKey: 'k', previewHash: 'viejo' })).rejects.toThrow('La previsualización cambió');
+  });
+});
+
+describe('reparto de coevaluación', () => {
+  const ids = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
+
+  it('el reparto automático es al azar pero reproducible con la misma semilla y equilibrado', () => {
+    expect(seededShuffle(ids, 'semilla-1')).toEqual(seededShuffle([...ids].reverse(), 'semilla-1'));
+    const a = shuffledPeerRing(ids, 2, 'semilla-1');
+    expect(a).toEqual(shuffledPeerRing(ids, 2, 'semilla-1'));
+    expect(a.every(p => p.evaluator !== p.target)).toBe(true);
+    for (const id of ids) {
+      expect(a.filter(p => p.evaluator === id)).toHaveLength(2);
+      expect(a.filter(p => p.target === id)).toHaveLength(2);
+    }
+    const distintas = ['s1', 's2', 's3', 's4', 's5'].map(seed => JSON.stringify(shuffledPeerRing(ids, 1, seed)));
+    expect(new Set(distintas).size).toBeGreaterThan(1);
+  });
+
+  it('valida el reparto manual', () => {
+    const ok = validateManualPairs([{ dimensionId: 'd', evaluator: 'e1', target: 'e2' }, { dimensionId: 'd', evaluator: 'e1', target: 'e2' }], ['d'], ids);
+    expect(ok).toEqual([{ dimensionId: 'd', evaluator: 'e1', target: 'e2' }]);
+    expect(() => validateManualPairs([{ dimensionId: 'd', evaluator: 'e1', target: 'e1' }], ['d'], ids)).toThrow('no puede coevaluarse');
+    expect(() => validateManualPairs([{ dimensionId: 'd', evaluator: 'e1', target: 'intruso' }], ['d'], ids)).toThrow('no está activo');
+    expect(() => validateManualPairs([{ dimensionId: 'otra', evaluator: 'e1', target: 'e2' }], ['d'], ids)).toThrow('no es de coevaluación');
+    expect(() => validateManualPairs([], ['d'], ids)).toThrow('al menos una pareja');
+    expect(() => validateManualPairs('x', ['d'], ids)).toThrow(BadRequestException);
+  });
+
+  it('publica con el reparto manual del docente', async () => {
+    const createMany = jest.fn();
+    const update = jest.fn();
+    const prisma = {
+      formativeEvaluationActivity: { findFirst: jest.fn().mockResolvedValue({ id: 'act', status: 'DRAFT', teacherAssignment: { groupId: 'g', academicYearId: 'y' }, dimensions: [{ id: 'dPeer', evaluatorType: 'PEER', peersPerStudent: 2 }] }) },
+      studentEnrollment: { findMany: jest.fn().mockResolvedValue([{ id: 'e1' }, { id: 'e2' }, { id: 'e3' }]) },
+      $transaction: jest.fn((cb: any) => cb({ formativeEvaluationAssignment: { createMany }, formativeEvaluationActivity: { update } })),
+    };
+    const result = await service(prisma).publish('act', 'inst', 'teacher', { peer: { mode: 'manual', pairs: [{ dimensionId: 'dPeer', evaluator: 'e1', target: 'e3' }, { dimensionId: 'dPeer', evaluator: 'e3', target: 'e2' }] } });
+    expect(result).toEqual({ published: true, assignments: 2, algorithmVersion: 'peer-manual-v1' });
+    expect(createMany.mock.calls[0][0].data.map((a: any) => a.evaluatorEnrollmentId + '>' + a.targetEnrollmentId)).toEqual(['e1>e3', 'e3>e2']);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ assignmentSeed: null, algorithmVersion: 'peer-manual-v1' }) }));
+  });
+
+  it('la vista previa y la publicación con la misma semilla dan el mismo reparto', async () => {
+    const activity = { id: 'act', status: 'DRAFT', teacherAssignment: { groupId: 'g', academicYearId: 'y' }, dimensions: [{ id: 'dPeer', label: 'Coevaluación', evaluatorType: 'PEER', peersPerStudent: 1 }] };
+    const students = ids.map(id => ({ id, student: { firstName: id, lastName: 'X' } }));
+    const createMany = jest.fn();
+    const prisma = {
+      formativeEvaluationActivity: { findFirst: jest.fn().mockResolvedValue(activity) },
+      studentEnrollment: { findMany: jest.fn().mockResolvedValue(students) },
+      $transaction: jest.fn((cb: any) => cb({ formativeEvaluationAssignment: { createMany }, formativeEvaluationActivity: { update: jest.fn() } })),
+    };
+    const svc = service(prisma);
+    const preview = await svc.peerPreview('act', 'inst', 'teacher', 'semilla-fija-123');
+    await svc.publish('act', 'inst', 'teacher', { peer: { mode: 'auto', seed: preview.seed } });
+    const published = createMany.mock.calls[0][0].data.map((a: any) => ({ evaluator: a.evaluatorEnrollmentId, target: a.targetEnrollmentId }));
+    expect(published).toEqual(preview.dimensions[0].pairs);
+    expect(preview.students[0]).toEqual({ id: 'e1', name: 'e1 X' });
   });
 });

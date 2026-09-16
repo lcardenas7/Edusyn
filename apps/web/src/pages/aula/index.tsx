@@ -45,6 +45,7 @@ const LessonEditor = lazy(() => import('../../components/LessonEditor'))
 // sin duplicar sus datos. Foro y editores se cargan dentro de HerramientasAula.
 const LearningRoutesTab = lazy(() => import('../../components/LearningRoutesTab'))
 const AbpTab = lazy(() => import('../../components/AbpTab'))
+const CrearConIAModal = lazy(() => import('../../components/classroom/CrearConIAModal'))
 const FormativeEvaluationsTab = lazy(() => import('../../components/classroom/FormativeEvaluationsTab'))
 const ConstruyeTab = lazy(() => import('../../features/construye/ConstruyeTab'))
 
@@ -129,6 +130,9 @@ export default function AulaVirtual() {
   const [creando, setCreando] = useState(false)
   const [tipoCreacion, setTipoCreacion] = useState<string | undefined>()
   const abrirCreacion = (tipo?: string) => { setTipoCreacion(tipo); setCreando(true) }
+  // "Crear con IA externa" se abre aquí mismo: antes solo existía dentro del editor clásico y
+  // había que entrar por Valeria y cerrarla para encontrarlo.
+  const [creandoConIA, setCreandoConIA] = useState(false)
   const [gestionAula, setGestionAula] = useState<GestionAula | null>(null)
   // El editor de lecciones y juegos SÍ es reutilizable, así que se abre aquí mismo en vez de
   // mandar al aula anterior.
@@ -358,6 +362,7 @@ export default function AulaVirtual() {
             // Creación por intención y herramientas completas dentro de la misma aula.
             onCrear={rol === 'docente' ? tipo => tipo === 'MATERIAL' ? abrirHerramienta('materiales') : abrirCreacion(tipo) : undefined}
             onValeria={rol === 'docente' ? () => abrirHerramienta('actividades', undefined, true) : undefined}
+            onCrearConIA={rol === 'docente' ? () => setCreandoConIA(true) : undefined}
           />
         ) : vista === 'unidades' ? (
           <Unidades
@@ -392,6 +397,7 @@ export default function AulaVirtual() {
             onAbrirActividad={abrirActividad}
             totalEstudiantes={aula?.estudiantes ?? null}
             onCrear={rol === 'docente' ? () => abrirCreacion() : undefined}
+            onCrearConIA={rol === 'docente' ? () => setCreandoConIA(true) : undefined}
           />
         ) : vista === 'notas' ? (
           <Notas
@@ -439,6 +445,20 @@ export default function AulaVirtual() {
       </AulaState>
       {gestionAula && rol === 'docente' && <GestionarAula modo={gestionAula} classroomId={classroomId} colorInicial={aula?.color}
         onCerrar={() => setGestionAula(null)} onGuardado={() => { setGestionAula(null); recargar(); listado.recargar() }} />}
+      {creandoConIA && rol === 'docente' && (
+        <Suspense fallback={null}>
+          <CrearConIAModal
+            classroomId={classroomId}
+            academicTermId={periodo !== PERIOD_ALL ? periodo : aula?.periodoActual?.id ?? undefined}
+            onClose={() => setCreandoConIA(false)}
+            onCreated={(id) => {
+              setCreandoConIA(false)
+              recargar()
+              abrirActividad(id)
+            }}
+          />
+        </Suspense>
+      )}
       {creando && (
         <CrearActividad
           aulaId={classroomId}

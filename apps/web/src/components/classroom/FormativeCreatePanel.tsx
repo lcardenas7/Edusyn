@@ -143,7 +143,7 @@ export default function FormativeCreatePanel({ mode, classroomId, terms, compone
       </button>
     </>}
 
-    {draft && <DraftEditor draft={draft} setDraft={setDraft} terms={terms} termId={termId} setTermId={setTermId} components={components} min={min} max={max} />}
+    {draft && <DraftEditor draft={draft} setDraft={setDraft} terms={terms} termId={termId} setTermId={setTermId} min={min} max={max} purpose={purpose} scale={scale} />}
 
     {draft && <div className="space-y-2">
       {problems.length > 0 && <ul className="space-y-0.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -157,22 +157,38 @@ export default function FormativeCreatePanel({ mode, classroomId, terms, compone
   </div>
 }
 
-function DraftEditor({ draft, setDraft, terms, termId, setTermId, components, min, max }: {
+function DraftEditor({ draft, setDraft, terms, termId, setTermId, min, max, purpose, scale }: {
   draft: Draft
   setDraft: (updater: (d: Draft | null) => Draft | null) => void
   terms: OpenTerm[]
   termId: string
   setTermId: (id: string) => void
-  components: GradebookComponent[]
   min: number
   max: number
+  purpose: string
+  scale: { min: number; max: number } | null
 }) {
+  const [aiFor, setAiFor] = useState<number | null>(null)
+  const [copiedFrom, setCopiedFrom] = useState<Record<number, string>>({})
   const update = (fn: (d: Draft) => Draft) => setDraft(d => (d ? fn(d) : d))
   const setDimension = (di: number, patch: Partial<DraftDimension>) => update(d => ({ ...d, dimensions: d.dimensions.map((x, i) => i === di ? { ...x, ...patch } : x) }))
   const setCriteria = (di: number, fn: (c: DraftCriterion[]) => DraftCriterion[]) => update(d => ({ ...d, dimensions: d.dimensions.map((x, i) => i === di ? { ...x, criteria: fn(x.criteria) } : x) }))
   const setCriterion = (di: number, ci: number, patch: Partial<DraftCriterion>) => setCriteria(di, cs => cs.map((c, j) => j === ci ? { ...c, ...patch } : c))
   const setLevel = (di: number, ci: number, li: number, patch: Partial<DraftLevel>) => setCriteria(di, cs => cs.map((c, j) => j !== ci ? c : { ...c, levels: c.levels.map((l, k) => k === li ? { ...l, ...patch } : l) }))
-  const addDimension = (type: EvaluatorType) => update(d => ({ ...d, dimensions: [...d.dimensions, blankDimension(type, min, max)] }))
+  // Una dimensión nueva no arranca en blanco si ya hay otra: copia sus criterios para ajustarlos
+  // (o se pide a la IA externa con el botón de la propia dimensión).
+  const addDimension = (type: EvaluatorType) => {
+    const base = draft.dimensions[0]
+    const fresh = blankDimension(type, min, max)
+    const dimension = base ? { ...fresh, criteria: base.criteria.map(c => ({ ...c, levels: c.levels.map(l => ({ ...l })) })) } : fresh
+    if (base) setCopiedFrom(x => ({ ...x, [draft.dimensions.length]: base.label || 'la primera dimensión' }))
+    update(d => ({ ...d, dimensions: [...d.dimensions, dimension] }))
+  }
+  const replaceFromAI = (di: number, incoming: DraftDimension) => {
+    setDimension(di, { criteria: incoming.criteria, peersPerStudent: draft.dimensions[di].evaluatorType === 'PEER' ? (incoming.peersPerStudent ?? draft.dimensions[di].peersPerStudent) : null })
+    setCopiedFrom(x => { const next = { ...x }; delete next[di]; return next })
+    setAiFor(null)
+  }
   const spreadWeights = (di: number) => setCriteria(di, cs => { const w = evenWeights(cs.length); return cs.map((c, i) => ({ ...c, weight: w[i] })) })
 
   return <div className="space-y-4">
@@ -195,15 +211,12 @@ function DraftEditor({ draft, setDraft, terms, termId, setTermId, components, mi
           <label className="block min-w-[180px] flex-1 text-xs font-semibold text-slate-600">Dimensión<input value={d.label} onChange={e => setDimension(di, { label: e.target.value })} className={`${fieldClass} mt-1`} /></label>
           <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">{TYPE_NAMES[d.evaluatorType]}</span>
           {d.evaluatorType === 'PEER' && <label className="block text-xs font-semibold text-slate-600">Compañeros por estudiante<input type="number" min={1} max={10} value={d.peersPerStudent ?? 2} onChange={e => setDimension(di, { peersPerStudent: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={`${fieldClass} mt-1 w-24`} /></label>}
-          <label className="block text-xs font-semibold text-slate-600">Destino en la planilla
-            <select value={d.evaluationComponentId || ''} onChange={e => setDimension(di, { evaluationComponentId: e.target.value || null })} className={`${fieldClass} mt-1`}>
-              <option value="">No enviar a la planilla</option>
-              {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={() => update(x => ({ ...x, dimensions: x.dimensions.filter((_, i) => i !== di) }))} disabled={draft.dimensions.length === 1} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:underline disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /> Quitar dimensión</button>
+          <button type="button" onClick={() => setAiFor(aiFor === di ? null : di)} className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:underline"><Sparkles className="h-3.5 w-3.5" /> Traer esta dimensión de una IA externa</button>
+          <button type="button" onClick={() => { setCopiedFrom({}); setAiFor(null); update(x => ({ ...x, dimensions: x.dimensions.filter((_, i) => i !== di) })) }} disabled={draft.dimensions.length === 1} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:underline disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /> Quitar dimensión</button>
         </div>
 
+        {copiedFrom[di] && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">Copiamos los criterios de «{copiedFrom[di]}». Ajústalos para que {d.evaluatorType === 'PEER' ? 'un compañero pueda observarlos' : 'el estudiante los piense sobre sí mismo'}, o tráelos de una IA externa.</p>}
+        {aiFor === di && <DimensionFromAI dimension={d} purpose={purpose || draft.description || draft.title} scale={scale} onUse={incoming => replaceFromAI(di, incoming)} onClose={() => setAiFor(null)} />}
         <div className="mt-3 space-y-3">
           {d.criteria.map((c, ci) => <div key={ci} className="rounded-lg bg-slate-50 p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -239,5 +252,46 @@ function DraftEditor({ draft, setDraft, terms, termId, setTermId, components, mi
       <button type="button" onClick={() => addDimension('PEER')} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50"><Plus className="h-3.5 w-3.5" /> Agregar coevaluación</button>
     </div>
     <p className="text-[11px] text-slate-400">Los niveles se muestran al estudiante en este orden. Escala de tu institución: {min} a {max}. {blankLevels(min, max).length} niveles por defecto.</p>
+  </div>
+}
+
+/** Pide a una IA externa solo una dimensión (p. ej. la coevaluación que se agregó después) y
+ * reemplaza sus criterios con la respuesta pegada. */
+function DimensionFromAI({ dimension, purpose, scale, onUse, onClose }: {
+  dimension: DraftDimension
+  purpose: string
+  scale: { min: number; max: number } | null
+  onUse: (incoming: DraftDimension) => void
+  onClose: () => void
+}) {
+  const [pasted, setPasted] = useState('')
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const prompt = useMemo(() => buildRubricPrompt({ purpose: purpose || dimension.label, types: [dimension.evaluatorType], minScore: scale?.min, maxScore: scale?.max }), [purpose, dimension.label, dimension.evaluatorType, scale])
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(prompt); setCopied(true); window.setTimeout(() => setCopied(false), 1800) }
+    catch { toast.error('No se pudo copiar. Selecciona el texto y cópialo manualmente.') }
+  }
+  const use = () => {
+    const result = parseRubricDraft(pasted)
+    if ('error' in result) { setError(result.error); return }
+    const match = result.draft.dimensions.find(x => x.evaluatorType === dimension.evaluatorType) ?? result.draft.dimensions[0]
+    onUse(match)
+  }
+  return <div className="mt-3 grid gap-3 rounded-lg border border-teal-200 bg-teal-50/40 p-3 lg:grid-cols-2">
+    <div className="rounded-lg bg-[#0d1822] p-3 text-white">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-teal-300">1. Petición para «{dimension.label}»</p>
+      <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-slate-200 [overflow-wrap:anywhere]">{prompt}</pre>
+      <button type="button" onClick={copy} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-teal-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-teal-300">{copied ? <Check className="h-3.5 w-3.5" /> : <Clipboard className="h-3.5 w-3.5" />} {copied ? 'Copiada' : 'Copiar petición'}</button>
+    </div>
+    <div className="flex flex-col">
+      <label className="text-[11px] font-bold uppercase tracking-wider text-teal-800">2. Pega la respuesta</label>
+      <textarea value={pasted} onChange={e => { setPasted(e.target.value); setError('') }} rows={6} className={`${fieldClass} mt-1 flex-1 font-mono text-xs`} />
+      {error && <p className="mt-1 text-xs text-rose-700">{error}</p>}
+      <div className="mt-2 flex gap-2">
+        <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">Cerrar</button>
+        <button type="button" disabled={!pasted.trim()} onClick={use} className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Usar estos criterios</button>
+      </div>
+    </div>
   </div>
 }

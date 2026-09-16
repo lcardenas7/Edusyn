@@ -35,6 +35,8 @@ export interface HoyProps {
   onVerActividades: (filtroEstado?: string) => void
   onCrear?: (tipo: 'TASK' | 'QUIZ' | 'LESSON' | 'MATERIAL') => void
   onValeria?: () => void
+  /** Flujo guiado con una IA externa (lección, quiz o tarea), sin pasar por el editor clásico. */
+  onCrearConIA?: () => void
   /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
   totalEstudiantes?: number | null
   now?: Date
@@ -60,7 +62,7 @@ function HoyEstudiante({
   const sinNada = t.siguiente === null && t.meToca.length === 0 && t.proximas.length === 0
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <header>
         <h1 className="text-h1 font-bold text-ink-primary">Hola, {nombre} 👋</h1>
         <p className="mt-1 text-body-sm text-ink-muted">
@@ -209,12 +211,13 @@ function HoyDocente({
   onVerActividades,
   onCrear,
   onValeria,
+  onCrearConIA,
   now = new Date(),
 }: HoyProps) {
   const t = buildTeacherToday(actividades, now)
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <header>
         <h1 className="text-h1 font-bold text-ink-primary">Hola, {nombre} 👋</h1>
         <p className="mt-1 text-body-sm text-ink-muted">
@@ -225,9 +228,9 @@ function HoyDocente({
       </header>
 
       {/* Crear: la acción más frecuente, al alcance y no escondida arriba a la derecha */}
-      {onCrear && (
+      {(onCrear || onCrearConIA) && (
         <section className="flex flex-wrap gap-2">
-          {CREAR.map((c) => (
+          {onCrear && CREAR.map((c) => (
             <button
               key={c.tipo}
               type="button"
@@ -244,6 +247,16 @@ function HoyDocente({
               className="inline-flex min-h-btn items-center gap-1.5 rounded-lg bg-accent px-3.5 text-body-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               <Sparkles className="h-4 w-4" aria-hidden="true" /> Pedirle a Valeria
+            </button>
+          )}
+          {onCrearConIA && (
+            <button
+              type="button"
+              onClick={onCrearConIA}
+              title="Genera una lección, un quiz o una tarea con ChatGPT, Gemini u otra IA y tráelo a Edusyn"
+              className="inline-flex min-h-btn items-center gap-1.5 rounded-lg border border-accent/40 bg-surface-1 px-3.5 text-body-sm font-medium text-accent transition-colors hover:bg-accent/5 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            >
+              <Sparkles className="h-4 w-4" aria-hidden="true" /> Crear con IA externa
             </button>
           )}
         </section>

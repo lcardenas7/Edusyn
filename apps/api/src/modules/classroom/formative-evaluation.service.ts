@@ -55,6 +55,59 @@ export function peerRing(ids: string[], k: number): Array<{ evaluator: string; t
   return pairs;
 }
 
+/** Barajado determinista a partir de una semilla (misma semilla → mismo orden), para que un
+ * reparto "al azar" se pueda auditar y reproducir exactamente. */
+export function seededShuffle<T>(items: T[], seed: string): T[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const next = () => { h += 0x6d2b79f5; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const out = [...items].sort();
+  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(next() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+  return out;
+}
+
+/** Reparto automático (peer-shuffled-ring-v1): se baraja la lista con la semilla y se aplica el
+ * anillo. Sigue siendo exactamente equilibrado (cada uno da y recibe k), pero los compañeros ya no
+ * dependen del orden de la lista. */
+export function shuffledPeerRing(ids: string[], k: number, seed: string): Array<{ evaluator: string; target: string }> {
+  const order = seededShuffle(ids, seed);
+  const steps = Math.min(k, order.length - 1);
+  if (steps < 1) throw new BadRequestException('Se requieren al menos dos estudiantes para coevaluación');
+  const pairs: Array<{ evaluator: string; target: string }> = [];
+  order.forEach((evaluator, i) => {
+    for (let step = 1; step <= steps; step++) pairs.push({ evaluator, target: order[(i + step) % order.length] });
+  });
+  return pairs;
+}
+
+export type PeerPlanInput = { mode?: unknown; seed?: unknown; pairs?: unknown };
+export type ManualPair = { dimensionId: string; evaluator: string; target: string };
+
+/** Valida un reparto manual: solo dimensiones de coevaluación de la actividad, estudiantes activos
+ * del grupo, nadie se evalúa a sí mismo, sin duplicados y al menos una pareja por dimensión. */
+export function validateManualPairs(raw: unknown, peerDimensionIds: string[], studentIds: string[]): ManualPair[] {
+  if (!Array.isArray(raw)) throw new BadRequestException('El reparto manual no tiene un formato válido');
+  const dims = new Set(peerDimensionIds);
+  const students = new Set(studentIds);
+  const seen = new Set<string>();
+  const pairs: ManualPair[] = [];
+  for (const item of raw as any[]) {
+    const dimensionId = item?.dimensionId, evaluator = item?.evaluator, target = item?.target;
+    if (!dims.has(dimensionId)) throw new BadRequestException('El reparto incluye una dimensión que no es de coevaluación');
+    if (!students.has(evaluator) || !students.has(target)) throw new BadRequestException('El reparto incluye un estudiante que no está activo en el grupo');
+    if (evaluator === target) throw new BadRequestException('Un estudiante no puede coevaluarse a sí mismo');
+    const key = `${dimensionId}|${evaluator}|${target}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    pairs.push({ dimensionId, evaluator, target });
+  }
+  for (const dimensionId of peerDimensionIds) {
+    if (!pairs.some(p => p.dimensionId === dimensionId)) throw new BadRequestException('Cada coevaluación necesita al menos una pareja');
+  }
+  if (pairs.length > studentIds.length * 20) throw new BadRequestException('El reparto tiene demasiadas parejas');
+  return pairs;
+}
+
 /** Revisa que las respuestas cubran cada criterio publicado exactamente una vez y calcula el
  * puntaje ponderado. */
 export function scoreAnswers(criteria: any[], answers: unknown): number {
@@ -265,23 +318,58 @@ export class FormativeEvaluationService {
     return this.prisma.formativeEvaluationDimension.update({ where: { id: dimensionId }, data: { evaluationComponentId: evaluationComponentId || null } });
   }
 
-  async publish(id: string, institutionId: string, userId: string) {
+  private async groupStudents(activity: { teacherAssignment: { groupId: string; academicYearId: string } }, institutionId: string) {
+    return this.prisma.studentEnrollment.findMany({
+      where: { institutionId, groupId: activity.teacherAssignment.groupId, academicYearId: activity.teacherAssignment.academicYearId, status: 'ACTIVE' },
+      select: { id: true, student: { select: { firstName: true, lastName: true } } },
+      orderBy: [{ student: { lastName: 'asc' } }, { student: { firstName: 'asc' } }],
+    });
+  }
+
+  /** Propuesta de reparto automático antes de publicar. El docente la ve, puede volver a sortear
+   * (otra semilla) o usarla como punto de partida del reparto manual. */
+  async peerPreview(id: string, institutionId: string, userId: string, seed?: string) {
+    const activity = await this.activityForTeacher(id, institutionId, userId);
+    if (activity.status !== 'DRAFT') throw new BadRequestException('Solo se puede preparar el reparto de un borrador');
+    const students = await this.groupStudents(activity, institutionId);
+    const ids = students.map(s => s.id);
+    const useSeed = typeof seed === 'string' && seed.length >= 8 && seed.length <= 64 ? seed : randomUUID();
+    const peerDimensions = activity.dimensions.filter(d => d.evaluatorType === 'PEER');
+    return {
+      seed: useSeed,
+      students: students.map(s => ({ id: s.id, name: `${s.student.firstName} ${s.student.lastName}`.trim() })),
+      dimensions: peerDimensions.map(d => ({
+        id: d.id, label: d.label, peersPerStudent: d.peersPerStudent || 1,
+        pairs: ids.length >= 2 ? shuffledPeerRing(ids, d.peersPerStudent || 1, useSeed + ':' + d.id) : [],
+      })),
+    };
+  }
+
+  async publish(id: string, institutionId: string, userId: string, body?: { peer?: PeerPlanInput }) {
     const activity = await this.activityForTeacher(id, institutionId, userId);
     if (activity.status !== 'DRAFT') throw new BadRequestException('Solo se puede publicar un borrador');
-    const students = await this.prisma.studentEnrollment.findMany({ where: { institutionId, groupId: activity.teacherAssignment.groupId, academicYearId: activity.teacherAssignment.academicYearId, status: 'ACTIVE' }, select: { id: true } });
+    const students = await this.groupStudents(activity, institutionId);
     if (!students.length) throw new BadRequestException('No hay estudiantes activos en el grupo');
     const ids = students.map(s => s.id);
+    const peerDimensions = activity.dimensions.filter(d => d.evaluatorType === 'PEER');
+    const manual = body?.peer?.mode === 'manual';
+    const seed = typeof body?.peer?.seed === 'string' && body.peer.seed.length >= 8 && body.peer.seed.length <= 64 ? body.peer.seed : randomUUID();
+    const manualPairs = manual ? validateManualPairs(body?.peer?.pairs, peerDimensions.map(d => d.id), ids) : [];
     const assignments: Prisma.FormativeEvaluationAssignmentCreateManyInput[] = [];
     for (const dimension of activity.dimensions) {
       if (dimension.evaluatorType === 'SELF') ids.forEach(studentId => assignments.push({ activityId: id, dimensionId: dimension.id, evaluatorEnrollmentId: studentId, targetEnrollmentId: studentId }));
-      else if (dimension.evaluatorType === 'PEER') peerRing(ids, dimension.peersPerStudent || 1).forEach(({ evaluator, target }) => assignments.push({ activityId: id, dimensionId: dimension.id, evaluatorEnrollmentId: evaluator, targetEnrollmentId: target }));
+      else if (dimension.evaluatorType === 'PEER') {
+        const pairs = manual ? manualPairs.filter(p => p.dimensionId === dimension.id) : shuffledPeerRing(ids, dimension.peersPerStudent || 1, seed + ':' + dimension.id);
+        pairs.forEach(({ evaluator, target }) => assignments.push({ activityId: id, dimensionId: dimension.id, evaluatorEnrollmentId: evaluator, targetEnrollmentId: target }));
+      }
       else throw new BadRequestException('Esta evaluación tiene una dimensión que todavía no se puede publicar');
     }
+    const algorithmVersion = peerDimensions.length ? (manual ? 'peer-manual-v1' : 'peer-shuffled-ring-v1') : 'self-only-v1';
     await this.prisma.$transaction(async tx => {
       await tx.formativeEvaluationAssignment.createMany({ data: assignments });
-      await tx.formativeEvaluationActivity.update({ where: { id }, data: { status: 'PUBLISHED', publishedAt: new Date(), publishedById: userId, assignmentSeed: randomUUID(), algorithmVersion: 'peer-ring-v1' } });
+      await tx.formativeEvaluationActivity.update({ where: { id }, data: { status: 'PUBLISHED', publishedAt: new Date(), publishedById: userId, assignmentSeed: manual ? null : seed, algorithmVersion } });
     });
-    return { published: true, assignments: assignments.length, algorithmVersion: 'peer-ring-v1' };
+    return { published: true, assignments: assignments.length, algorithmVersion };
   }
 
   async submit(assignmentId: string, institutionId: string, userId: string, body: { answers: Array<{ criterionId: string; levelId: string }>; comments?: Array<{ prompt?: string; text: string }> }) {
