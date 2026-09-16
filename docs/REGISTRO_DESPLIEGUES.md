@@ -22,6 +22,19 @@
 
 ## Historial (más reciente arriba)
 
+### Edusyn Crea: formularios en el preview — 2026-09-16
+
+`staging` en `13f9c44b` (web `e3ffd20f`, api `206d8bd4`, preview `3493683a`, todos SUCCESS; sin
+migración). Un estudiante probó una agenda con formulario y "Agregar tarea" no hacía nada:
+el iframe tenía `sandbox="allow-scripts"` y sin `allow-forms` Chrome **no dispara el evento
+`submit`** (verificado: 0 envíos sin el permiso, 1 con él). Se añadió `allow-forms`, autorizado
+por el usuario; la CSP del runner mantiene `form-action 'none'`, así que un envío real sigue
+bloqueado, y sigue sin `allow-same-origin`. Verificado contra el preview de staging: la agenda
+agrega la tarjeta y actualiza el contador. También se quitaron los textos fijos de la demo de
+residuos del aviso de error y del contexto que se copia para ChatGPT. **Pendiente conocido:** el
+aviso "Un recurso no pudo cargarse" salta si `index.html` enlaza `styles.css`/`app.js` (ya van
+en línea); es falsa alarma, no bloquea la app.
+
 ### Edusyn Crea (antes "Construye"): primera subida a staging — 2026-09-16
 
 > **Desplegado.** `staging` en `1d80089c` (desde `173248d7`, fast-forward). API
