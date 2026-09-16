@@ -24,8 +24,26 @@
 
 ### Edusyn Crea (antes "Construye"): primera subida a staging — 2026-09-16
 
-> **Estado al escribir esta fila: rama `deploy/crea-staging` lista, SIN push.** Requiere un
-> paso de infraestructura previo que no es de código (ver abajo).
+> **Desplegado.** `staging` en `1d80089c` (desde `173248d7`, fast-forward). API
+> `098c25de` SUCCESS, web `0a174b45` SUCCESS, preview `73c77ab9` SUCCESS. Migraciones
+> verificadas con `prisma migrate status`: 99/99, "up to date". Producción sin tocar
+> (`api` sigue en `9717dd1d`, `web` en `9f7a9328`). Pendiente: prueba del ciclo completo con un
+> usuario real (requiere iniciar sesión).
+
+**Servicio nuevo `crea-preview-staging`** (mismo proyecto y environment que el resto, creado por
+CLI). Dominio: `https://crea-preview-staging-production.up.railway.app`. Rama `staging`. Railway
+lo construye con **Railpack**, que ignora `railway.json` y las variables `NIXPACKS_*` (quedaron
+puestas, inertes). Lo que sí manda son dos variables del servicio:
+`RAILPACK_BUILD_CMD=npm run build --workspace construye-preview` y
+`RAILPACK_START_CMD=npx serve apps/construye-preview/dist -l $PORT`. Verificado: responde 200
+con la CSP, CORP y Referrer-Policy completas, y el runner ejecuta un proyecto. En
+`edusyn-web-staging` se añadió `VITE_CONSTRUYE_PREVIEW_ORIGIN` con ese dominio (el bundle
+publicado la contiene; `VITE_API_URL` no se tocó). La API expone `/api/construye/*` (401 sin
+sesión). Respaldo de las variables previas: fuera del repo. **Vuelta atrás:** revertir
+`1d80089c` y hacer push a `staging` (las tablas nuevas quedan vacías, no molestan).
+
+**Estado original de esta fila (antes del push):** rama `deploy/crea-staging` lista, sin push;
+requería el paso de infraestructura descrito abajo.
 
 **Qué trae.** El módulo completo de Edusyn Crea, que nunca ha estado en staging: backend
 (`modules/construye`, 5 modelos + 3 enums), el editor del estudiante y el panel del docente
