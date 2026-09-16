@@ -25,13 +25,23 @@ const DEMO_PROJECT: PreviewProject = {
   js: 'document.querySelector("#comprobar").addEventListener("click", () => { const selected = document.querySelector(\'input[name="residuo"]:checked\'); document.querySelector("#resultado").textContent = selected.value === "plástico" ? "Correcto" : "Intenta otra vez"; });',
 }
 
+// allow-forms: sin él Chrome no dispara ni siquiera el evento "submit", y cualquier app con
+// formulario (agregar una tarea, enviar una respuesta) parece rota. Es seguro: la CSP del runner
+// lleva form-action 'none', así que un envío real sigue bloqueado aunque el estudiante olvide
+// preventDefault(). Nunca allow-same-origin: esa es la barrera que aísla el código del estudiante.
+const PREVIEW_SANDBOX = 'allow-scripts allow-forms'
+
+function describePreviewProblem(event: PreviewEvent): string {
+  if (event.type === 'resource-error') return 'La página pide un archivo o imagen que no está dentro del proyecto.'
+  if (event.type === 'syntax-error') return 'El JavaScript tiene un error de escritura y no pudo ejecutarse.'
+  return 'El JavaScript encontró un error mientras se ejecutaba.'
+}
+
 function newInstanceId(): string { return crypto.getRandomValues(new Uint32Array(4)).join('-') }
 
 function createRepairPrompt(event: PreviewEvent | null): string {
   return [
     'Estoy construyendo una app escolar estática con HTML, CSS y JavaScript.',
-    'Objetivo: ayudar a estudiantes a separar residuos.',
-    'Comportamiento esperado: al pulsar “Comprobar”, la app debe indicar si la opción elegida es correcta.',
     'Error detectado: ' + (event?.message || 'No se recibió un error concreto.'),
     'Corrige solamente el archivo JavaScript necesario. No uses librerías, red, APIs, cuentas, secretos ni URLs externas. Devuelve únicamente el archivo completo.',
   ].join('\n')
@@ -451,7 +461,7 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
   if (compact) {
     return (
       <div className="relative h-full w-full overflow-hidden bg-slate-100">
-        <iframe ref={iframeRef} title="Preview aislado de Edusyn Crea" src={src} sandbox="allow-scripts" className="h-full w-full border-0" />
+        <iframe ref={iframeRef} title="Preview aislado de Edusyn Crea" src={src} sandbox={PREVIEW_SANDBOX} className="h-full w-full border-0" />
         {!ready && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/90"><Loader2 className="h-5 w-5 animate-spin text-indigo-600" /></div>}
         {ready && event && <div className="absolute inset-x-2 bottom-2 rounded-lg bg-amber-900/95 px-2 py-1.5 text-center text-[11px] font-medium text-white">Encontramos algo para revisar</div>}
       </div>
@@ -492,7 +502,7 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
                 ref={iframeRef}
                 title="Preview aislado de Edusyn Crea"
                 src={src}
-                sandbox="allow-scripts"
+                sandbox={PREVIEW_SANDBOX}
                 className="border-0"
                 style={{ width: preset.width, height: preset.height, transform: `scale(${viewportScale})`, transformOrigin: 'top left' }}
               />
@@ -658,12 +668,12 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
           {projectTooLarge && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Esta versión supera 500 KB. Reduzcan los archivos antes de probarla.</div>}
           {event ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
             <div className="mb-2 flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> Encontramos algo para revisar</div>
-            <p>El botón intenta usar una respuesta antes de que el estudiante elija una opción.</p>
+            <p>{describePreviewProblem(event)}</p>
             <p className="mt-2 text-xs text-amber-800">Error técnico: {event.message}</p>
             <button onClick={copyRepairContext} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-900 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-950">
               <Copy className="h-3.5 w-3.5" /> {copied ? 'Contexto copiado' : 'Copiar contexto para ChatGPT/DeepSeek'}
             </button>
-          </div> : <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">Prueba “Comprobar” sin seleccionar un residuo para ver cómo Edusyn explica el error.</div>}
+          </div> : <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">Si la app encuentra un error al ejecutarse, Edusyn lo explicará aquí.</div>}
           <a href={previewOrigin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:underline"><ExternalLink className="h-3.5 w-3.5" /> Abrir el origen aislado</a>
         </aside>
       </div>
