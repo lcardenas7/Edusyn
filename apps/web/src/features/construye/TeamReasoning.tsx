@@ -9,6 +9,7 @@ const PHASE_CHIPS = [
   { key: 'solution', label: 'Solución' },
   { key: 'plan', label: 'Plan v1' },
   { key: 'build', label: 'Versiones' },
+  { key: 'share', label: 'Compartir' },
 ] as const
 
 /** Avance del equipo en las cuatro fases, compacto para la tarjeta del docente. */
@@ -19,6 +20,7 @@ export function PhaseProgress({ brief, versionCount }: { brief: Partial<Construy
     solution: phaseState('solution', normalized),
     plan: phaseState('plan', normalized),
     build: buildPhaseState(versionCount, versionCount > 0),
+    share: phaseState('share', normalized),
   }
   return <ol className="mt-2 flex flex-wrap gap-1.5" aria-label="Avance del recorrido">
     {PHASE_CHIPS.map((chip, index) => {
@@ -35,8 +37,9 @@ const SECTIONS: { title: string; fields: { key: keyof ConstruyeTeamBrief; label:
   { title: '2. La solución', fields: [{ key: 'solution', label: 'Qué hará' }, { key: 'audience', label: 'Quién la usará' }, { key: 'screens', label: 'Cómo se vería' }] },
   { title: '3. Plan de la versión 1', fields: [{ key: 'features', label: 'Qué tendrá' }, { key: 'later', label: 'Para después' }, { key: 'successCheck', label: 'Cómo sabrán que funciona' }] },
 ]
+const SHARE_SECTION = { title: '5. Compartir y reflexionar', fields: [{ key: 'sharePitch', label: 'Presentación' }, { key: 'reflection', label: 'Qué aprendieron' }] } as { title: string; fields: { key: keyof ConstruyeTeamBrief; label: string }[] }
 
-type TimelineItem = { id: string; at: string; kind: 'version' | 'change' | 'teacher' | 'prompt'; title: string; lines: string[] }
+type TimelineItem = { id: string; at: string; kind: 'version' | 'change' | 'teacher' | 'prompt' | 'session'; title: string; lines: string[] }
 
 function timeline(detail: ConstruyeTeamDetail): TimelineItem[] {
   const evidence = evidenceByVersion(detail.journal)
@@ -44,7 +47,12 @@ function timeline(detail: ConstruyeTeamDetail): TimelineItem[] {
     const ev = evidence.get(version.id)
     return {
       id: version.id, at: version.createdAt, kind: 'version', title: `Versión ${version.number}: ${ev?.attempted || version.label || 'sin descripción'}`,
-      lines: ev ? [`Probaron: ${ev.tested}`, ...(ev.learned ? [`Aprendieron: ${ev.learned}`] : [])] : [],
+      lines: ev ? [
+        `Probaron: ${ev.tested}`,
+        ...(ev.explained ? [`Saben explicar: ${ev.explained}`] : []),
+        ...(ev.peerFeedback ? [`Otro equipo dijo: ${ev.peerFeedback}`] : []),
+        ...(ev.learned ? [`Aprendieron: ${ev.learned}`] : []),
+      ] : [],
     }
   })
   for (const entry of detail.journal) {
@@ -58,6 +66,8 @@ function timeline(detail: ConstruyeTeamDetail): TimelineItem[] {
       ] })
     } else if (entry.type === 'PROMPT_COPIED') {
       items.push({ id: entry.id, at: entry.createdAt, kind: 'prompt', title: entry.summary, lines: [] })
+    } else if (entry.type === 'SESSION_NOTE') {
+      items.push({ id: entry.id, at: entry.createdAt, kind: 'session', title: entry.summary, lines: info.kind === 'EXIT' && info.next ? [`Próxima vez: ${info.next}`] : [] })
     } else if (entry.type === 'TEACHER_COMMENT') {
       items.push({ id: entry.id, at: entry.createdAt, kind: 'teacher', title: entry.summary, lines: [] })
     }
@@ -66,7 +76,7 @@ function timeline(detail: ConstruyeTeamDetail): TimelineItem[] {
 }
 
 const KIND_STYLE: Record<TimelineItem['kind'], string> = {
-  version: 'bg-emerald-500', change: 'bg-violet-500', teacher: 'bg-slate-700', prompt: 'bg-cyan-500',
+  version: 'bg-emerald-500', change: 'bg-violet-500', teacher: 'bg-slate-700', prompt: 'bg-cyan-500', session: 'bg-amber-400',
 }
 
 /** Lo que el docente necesita para acompañar el razonamiento del equipo, no solo la entrega:
@@ -100,7 +110,7 @@ export default function TeamReasoning({ teamId }: { teamId: string }) {
       </dl>
     </div>)}
     <div>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-700">4. Construir y mejorar</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-700">4. Construir y probar</p>
       {items.length === 0
         ? <p className="mt-1 text-xs text-slate-400">Aún no hay versiones ni peticiones registradas.</p>
         : <ol className="mt-1 space-y-2">{items.map(item => <li key={item.id} className="flex gap-2 text-xs">
@@ -110,6 +120,15 @@ export default function TeamReasoning({ teamId }: { teamId: string }) {
             {item.lines.map(line => <p key={line} className="text-slate-500">{line}</p>)}
           </div>
         </li>)}</ol>}
+    </div>
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-700">{SHARE_SECTION.title}</p>
+      <dl className="mt-1 space-y-1 text-xs">
+        {SHARE_SECTION.fields.map(field => <div key={field.key}>
+          <dt className="inline font-semibold text-slate-600">{field.label}: </dt>
+          <dd className="inline whitespace-pre-line text-slate-700">{brief[field.key]?.toString().trim() || <em className="text-slate-400">sin escribir</em>}</dd>
+        </div>)}
+      </dl>
     </div>
   </div>
 }

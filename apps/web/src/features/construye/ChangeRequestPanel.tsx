@@ -64,6 +64,7 @@ export default function ChangeRequestPanel({ brief, project, onCopied, onClose }
         {ready
           ? <pre className="max-h-64 flex-1 overflow-auto whitespace-pre-wrap rounded-xl bg-[#0d1822] p-3 text-[11px] leading-5 text-slate-200">{prompt}</pre>
           : <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">Escriban qué quieren cambiar y cómo sabrán que salió bien para ver la petición.</div>}
+        {copied && <p className="mt-2 rounded-lg bg-violet-50 px-2 py-1.5 text-[11px] text-violet-800">Cuando la IA responda: antes de pegar, ubiquen qué parte de su código cambia y prueben lo que escribieron en “¿cómo sabrán que salió bien?”.</p>}
         <p className="mt-2 flex items-start gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Revisen que no haya nombres ni datos personales antes de copiarla.</p>
         <button type="button" disabled={!ready} onClick={copy} className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-300">
           {copied ? <Check className="h-3.5 w-3.5" /> : <Clipboard className="h-3.5 w-3.5" />}{copied ? 'Petición copiada' : 'Copiar petición'}

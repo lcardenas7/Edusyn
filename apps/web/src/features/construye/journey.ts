@@ -5,7 +5,8 @@ import type { PreviewProject } from './protocol'
  * arma las peticiones para la IA externa SOLO con lo que el equipo escribió. Nunca incluye
  * nombres, institución ni datos académicos. */
 
-export type JourneyPhaseKey = 'problem' | 'solution' | 'plan' | 'build'
+export type JourneyPhaseKey = 'problem' | 'solution' | 'plan' | 'build' | 'share'
+export type BriefPhaseKey = Exclude<JourneyPhaseKey, 'build'>
 export type JourneyPhaseState = 'pending' | 'started' | 'done'
 export type BriefField = Exclude<keyof ConstruyeTeamBrief, 'grade'>
 
@@ -13,6 +14,7 @@ export const EMPTY_BRIEF: ConstruyeTeamBrief = {
   problem: '', affected: '', whyItMatters: '',
   solution: '', audience: '', screens: '', subject: '', grade: '8.º', style: 'Claro, accesible y juvenil',
   features: '', later: '', successCheck: '',
+  sharePitch: '', reflection: '',
 }
 
 /** Completa un brief guardado (incluidos los de antes del recorrido) con los campos que le
@@ -24,16 +26,18 @@ export function normalizeBrief(brief: Partial<ConstruyeTeamBrief> | null | undef
 const MIN_TEXT = 3
 const filled = (value: string | undefined) => (value ?? '').trim().length >= MIN_TEXT
 
-export const PHASE_FIELDS: Record<Exclude<JourneyPhaseKey, 'build'>, { required: BriefField[]; optional: BriefField[] }> = {
+export const PHASE_FIELDS: Record<BriefPhaseKey, { required: BriefField[]; optional: BriefField[] }> = {
   problem: { required: ['problem', 'affected'], optional: ['whyItMatters'] },
-  solution: { required: ['solution', 'audience'], optional: ['screens'] },
-  plan: { required: ['features', 'successCheck'], optional: ['later'] },
+  solution: { required: ['solution', 'audience'], optional: ['screens', 'subject'] },
+  plan: { required: ['features', 'successCheck'], optional: ['later', 'style'] },
+  share: { required: ['sharePitch', 'reflection'], optional: [] },
 }
 
-export function phaseState(phase: Exclude<JourneyPhaseKey, 'build'>, brief: ConstruyeTeamBrief): JourneyPhaseState {
+export function phaseState(phase: BriefPhaseKey, brief: ConstruyeTeamBrief): JourneyPhaseState {
   const { required, optional } = PHASE_FIELDS[phase]
   if (required.every(field => filled(brief[field]))) return 'done'
-  return [...required, ...optional].some(field => filled(brief[field])) ? 'started' : 'pending'
+  // El estilo trae un valor por defecto: no cuenta como "empezaron" la fase.
+  return [...required, ...optional].some(field => field !== 'style' && filled(brief[field])) ? 'started' : 'pending'
 }
 
 export function buildPhaseState(versionCount: number, hasCode: boolean): JourneyPhaseState {
@@ -76,7 +80,7 @@ const optionalLine = (label: string, value: string) => (value.trim() ? [`- ${lab
 
 export function initialPrompt(brief: ConstruyeTeamBrief): string {
   return [
-    `Actúa como una guía de programación para estudiantes de ${brief.grade}. Queremos construir, paso a paso, una primera versión pequeña de una página web.`,
+    'Actúa como una guía de programación para estudiantes de colegio. Queremos construir, paso a paso, una primera versión pequeña de una página web.',
     '',
     'El problema',
     `- Qué ocurre: ${orPlaceholder(brief.problem, '[qué ocurre]')}`,
@@ -137,10 +141,22 @@ export interface VersionEvidenceInput {
   attempted: string
   tested: string
   learned: string
+  /** "Explicar antes de pegar": una parte del código que el equipo puede ubicar y explicar. */
+  explained: string
+  peerFeedback: string
 }
 
+export const EMPTY_EVIDENCE: VersionEvidenceInput = { attempted: '', tested: '', learned: '', explained: '', peerFeedback: '' }
+
 export function evidenceReady(evidence: VersionEvidenceInput): boolean {
-  return filled(evidence.attempted) && filled(evidence.tested)
+  return filled(evidence.attempted) && filled(evidence.tested) && filled(evidence.explained)
+}
+
+export const SESSION_MET_LABEL: Record<'yes' | 'partly' | 'no', string> = { yes: 'Sí', partly: 'En parte', no: 'No' }
+
+/** Notas de sesión de HOY (hora de Colombia), la más reciente primero. */
+export function todaySessionNotes<T extends { type: string; createdAt: string; detail?: unknown }>(journal: T[], today: string, dayOf: (iso: string) => string): T[] {
+  return journal.filter(entry => entry.type === 'SESSION_NOTE' && dayOf(entry.createdAt) === today)
 }
 
 /** Evidencia de cada versión, tomada de su entrada VERSION_CREATED en la bitácora. */

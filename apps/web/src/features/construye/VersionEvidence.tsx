@@ -2,7 +2,7 @@ import { AlertTriangle, CheckCircle2, Cloud, Eye, History, Loader2, Lock, X } fr
 import { useState } from 'react'
 import { formatBogota } from '../../lib/datetime'
 import type { ConstruyeVersionEvidence } from '../../lib/api/construye'
-import { evidenceReady, type VersionEvidenceInput } from './journey'
+import { EMPTY_EVIDENCE, evidenceReady, type VersionEvidenceInput } from './journey'
 
 export interface SavedVersionSummary {
   number: number
@@ -27,7 +27,7 @@ export function SaveVersionPanel({ nextNumber, changedFiles, untested, saving, b
   onConfirm: (evidence: VersionEvidenceInput) => void
   onCancel: () => void
 }) {
-  const [evidence, setEvidence] = useState<VersionEvidenceInput>({ attempted: '', tested: '', learned: '' })
+  const [evidence, setEvidence] = useState<VersionEvidenceInput>(EMPTY_EVIDENCE)
   const set = (key: keyof VersionEvidenceInput, value: string) => setEvidence(current => ({ ...current, [key]: value }))
   const valid = evidenceReady(evidence)
   const blocked = blockedBy.length > 0
@@ -65,22 +65,29 @@ export function SaveVersionPanel({ nextNumber, changedFiles, untested, saving, b
       <button type="button" onClick={onApplyFirst} className="inline-flex items-center gap-1 rounded-lg bg-amber-900 px-2.5 py-1 font-semibold text-white hover:bg-amber-950"><Eye className="h-3 w-3" /> Aplicar y probar primero</button>
     </div>}
 
-    <div className="mt-3 grid gap-3 md:grid-cols-3">
+    <div className="mt-3 grid gap-3 md:grid-cols-2">
       <label className="block text-xs font-semibold text-slate-700">Qué intentamos
         <input value={evidence.attempted} maxLength={120} onChange={event => set('attempted', event.target.value)} placeholder="Ej.: que el botón agregue la tarea" className={fieldClass} autoFocus />
       </label>
       <label className="block text-xs font-semibold text-slate-700">Qué probamos y qué pasó
         <input value={evidence.tested} maxLength={600} onChange={event => set('tested', event.target.value)} placeholder="Ej.: escribimos una tarea y apareció" className={fieldClass} />
       </label>
+      <label className="block text-xs font-semibold text-slate-700">Una parte del código que podemos explicar
+        <input value={evidence.explained} maxLength={800} onChange={event => set('explained', event.target.value)} placeholder="Ej.: en app.js, el addEventListener del formulario crea la tarjeta" className={fieldClass} />
+        <span className="mt-0.5 block text-[11px] font-normal text-slate-400">Explicar antes de pegar: “Explorar elementos” les ayuda a ubicarla.</span>
+      </label>
       <label className="block text-xs font-semibold text-slate-700">Qué aprendimos o mejoraríamos <span className="font-normal text-slate-400">(opcional)</span>
         <input value={evidence.learned} maxLength={600} onChange={event => set('learned', event.target.value)} placeholder="Ej.: falta poder borrar una tarea" className={fieldClass} />
       </label>
+      {nextNumber > 1 && <label className="block text-xs font-semibold text-slate-700 md:col-span-2">Qué nos dijo otro equipo al probarla <span className="font-normal text-slate-400">(opcional)</span>
+        <input value={evidence.peerFeedback} maxLength={800} onChange={event => set('peerFeedback', event.target.value)} placeholder="Me gustó… · Me confundió… · Les sugiero…" className={fieldClass} />
+      </label>}
     </div>
     <p className="mt-1 text-[11px] text-slate-400">¿La probaron en Computador y en Celular?</p>
 
     <div className="mt-3 flex justify-end gap-2">
       <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
-      <button type="button" disabled={!valid || saving || blocked} onClick={() => onConfirm({ attempted: evidence.attempted.trim(), tested: evidence.tested.trim(), learned: evidence.learned.trim() })} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+      <button type="button" disabled={!valid || saving || blocked} onClick={() => onConfirm({ attempted: evidence.attempted.trim(), tested: evidence.tested.trim(), learned: evidence.learned.trim(), explained: evidence.explained.trim(), peerFeedback: evidence.peerFeedback.trim() })} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cloud className="h-3.5 w-3.5" />} Guardar v{nextNumber}
       </button>
     </div>
@@ -112,6 +119,8 @@ export function VersionHistory({ versions, current }: { versions: SavedVersionSu
         </div>
         {version.evidence && <div className="ml-9 mt-0.5 space-y-0.5 text-slate-500">
           <p><span className="font-semibold text-slate-600">Probamos:</span> {version.evidence.tested}</p>
+          {version.evidence.explained && <p><span className="font-semibold text-slate-600">Sabemos explicar:</span> {version.evidence.explained}</p>}
+          {version.evidence.peerFeedback && <p><span className="font-semibold text-slate-600">Otro equipo dijo:</span> {version.evidence.peerFeedback}</p>}
           {version.evidence.learned && <p><span className="font-semibold text-slate-600">Aprendimos:</span> {version.evidence.learned}</p>}
         </div>}
       </li>)}

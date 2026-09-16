@@ -255,6 +255,10 @@ function NewTeamForm({ projectId, roster, takenEnrollmentIds, onCreated, onCance
   </div>
 }
 
+// Semáforo del docente: verde avanza, amarillo revisar, rojo apoyar ya (calculado en la API).
+const SIGNAL_STYLE = { green: 'bg-emerald-100 text-emerald-800', yellow: 'bg-amber-100 text-amber-800', red: 'bg-rose-100 text-rose-800' } as const
+const SIGNAL_DOT = { green: 'bg-emerald-500', yellow: 'bg-amber-500', red: 'bg-rose-500' } as const
+
 function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onCommented: () => void }) {
   const [comment, setComment] = useState('')
   const [sending, setSending] = useState(false)
@@ -300,7 +304,9 @@ function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onComme
   return <article className="rounded-2xl border border-hairline bg-surface-1 p-4">
     <header className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2"><Users2 className="h-4 w-4 text-indigo-600" /><h3 className="font-semibold text-slate-800">{team.name}</h3></div>
-      {team.needsAttention && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"><AlertTriangle className="h-3 w-3" /> Necesita apoyo</span>}
+      {team.signal
+        ? <span title={team.signal.reason} className={`inline-flex max-w-[55%] items-center gap-1.5 truncate rounded-full px-2 py-0.5 text-xs font-semibold ${SIGNAL_STYLE[team.signal.level]}`}><span className={`h-2 w-2 shrink-0 rounded-full ${SIGNAL_DOT[team.signal.level]}`} /> {team.signal.reason}</span>
+        : team.needsAttention && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"><AlertTriangle className="h-3 w-3" /> Necesita apoyo</span>}
     </header>
     <p className="mt-1 text-xs text-slate-500">{team.members.map((member) => `${member.studentEnrollment.student.firstName} (${ROLE_LABEL[member.role]})`).join(', ') || 'Sin integrantes'}</p>
     <PhaseProgress brief={team.brief} versionCount={team.latestVersion ? team.latestVersion.number : 0} />

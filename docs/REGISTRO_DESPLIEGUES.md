@@ -22,10 +22,35 @@
 
 ## Historial (más reciente arriba)
 
-### Edusyn Crea: recorrido pedagógico — 2026-09-16 · ⏳ SIN DESPLEGAR
+### Edusyn Crea: P1 del plan pedagógico (5 etapas, sesiones, semáforo) — 2026-09-16 · staging
 
-> **Pendiente de autorización.** Commit local en `deploy/crea-staging`; no se ha hecho push a
-> `staging` ni a `main`. Diseño y criterios: `docs/EDUSYN_CREA_RECORRIDO_PEDAGOGICO.md`.
+Push a `staging` autorizado por el usuario, junto con la entrada de abajo (van en el mismo push).
+**Lleva migración aditiva** `20260917010000_edusyn_crea_session_note`: agrega el valor
+`SESSION_NOTE` al enum `ConstruyeJournalType` (verificado antes del push: era la única
+pendiente en la base de staging). Plan: `docs/EDUSYN_CREA_PLAN_PEDAGOGICO.md` (sección 10, P1).
+
+**Qué trae (versión sencilla de cada punto de P1).**
+- **Etapa 5 "Compartir y reflexionar"**: presentación de 2 minutos con orden fijo y reflexión;
+  campos `sharePitch` y `reflection` en el brief (JSONB, sin migración).
+- **Prueba cruzada** sin permisos nuevos: el equipo probado anota en su evidencia lo que dijo el
+  otro equipo (`evidence.peerFeedback`, desde la v2).
+- **Explicar antes de pegar**: la evidencia exige "una parte del código que podemos explicar"
+  (`evidence.explained`; opcional en la API para clientes viejos).
+- **Tarjetas de meta y salida** por sesión (`SESSION_NOTE`, validadas en la API; solo el equipo).
+- **Semáforo del docente** (`signal` en el dashboard): rojo si pidió ayuda o reportó un bloqueo sin
+  versión ni comentario posterior; amarillo si lleva una semana sin actividad o no alcanzó su meta;
+  verde en otro caso. Reemplaza "Necesita apoyo".
+- **Simplificaciones**: sin grado en la interfaz ni en la petición; estilo pasa al plan;
+  encabezado del taller muestra el ciclo Pedir → Explicar → Probar → Guardar; "Ampliar taller" y
+  "Ver la app en grande".
+
+**Verificación previa.** `tsc` limpio (api y web), `prisma validate`, 22 pruebas del módulo y 447
+web, `vite build`. Recorrido visual con API simulada: meta y salida con bloqueo, etapa 5 completa,
+v2 con "explicar" y "otro equipo", semáforo verde/amarillo/rojo en el docente, consola sin errores.
+
+### Edusyn Crea: recorrido pedagógico — 2026-09-16 · staging (mismo push que la entrada de arriba)
+
+> Diseño y criterios: `docs/EDUSYN_CREA_RECORRIDO_PEDAGOGICO.md`.
 
 **Qué trae.** El recorrido problema → solución → plan de la versión 1 → construir y mejorar. La
 petición para la IA aparece al final del plan, armada con las decisiones del equipo y editable.

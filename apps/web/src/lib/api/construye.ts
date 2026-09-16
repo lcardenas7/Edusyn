@@ -44,6 +44,8 @@ export interface ConstruyeTeamBrief {
   features: string
   later: string
   successCheck: string
+  sharePitch: string
+  reflection: string
 }
 
 export interface ConstruyeBuildGate {
@@ -53,7 +55,13 @@ export interface ConstruyeBuildGate {
   missing: ('problem' | 'features' | 'successCheck')[]
 }
 
-export interface ConstruyeVersionEvidence { attempted: string; tested: string; learned: string }
+export interface ConstruyeVersionEvidence { attempted: string; tested: string; learned: string; explained?: string; peerFeedback?: string }
+
+export type ConstruyeSessionNote =
+  | { kind: 'GOAL'; goal: string }
+  | { kind: 'EXIT'; met: 'yes' | 'partly' | 'no'; blocker: string; next: string }
+
+export interface ConstruyeTeamSignal { level: 'green' | 'yellow' | 'red'; reason: string }
 
 export interface ConstruyeTeamMember {
   id: string
@@ -89,6 +97,8 @@ export interface ConstruyeDashboardTeam {
   briefUpdatedAt: string | null
   members: ConstruyeTeamMember[]
   buildGate?: ConstruyeBuildGate
+  /** Semáforo del docente (ausente en una API anterior). */
+  signal?: ConstruyeTeamSignal
   latestVersion: ConstruyeVersion | null
   recentMilestones: ConstruyeJournalEntry[]
   needsAttention: boolean

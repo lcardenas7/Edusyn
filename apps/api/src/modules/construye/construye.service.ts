@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 const ALLOWED_MEMBER_ROLES = new Set(['RESEARCH', 'DESIGN', 'DEVELOPMENT', 'TESTING', 'COORDINATION']);
 const ALLOWED_JOURNAL_TYPES = new Set([
   'BRIEF_UPDATED', 'SOURCE_ADDED', 'PROMPT_COPIED', 'AI_IMPORT_PROPOSED', 'AI_IMPORT_APPLIED',
-  'FILE_CHANGED', 'VERSION_CREATED', 'TEST_RECORDED', 'HELP_REQUESTED', 'TEACHER_COMMENT',
+  'FILE_CHANGED', 'VERSION_CREATED', 'TEST_RECORDED', 'HELP_REQUESTED', 'TEACHER_COMMENT', 'SESSION_NOTE',
 ]);
 const ALLOWED_FILES = new Set(['index.html', 'styles.css', 'app.js']);
 const MAX_FILE_BYTES = 250_000;
@@ -30,6 +30,9 @@ export type ConstruyeTeamBrief = {
   features: string;
   later: string;
   successCheck: string;
+  // Fase 5 — compartir y reflexionar
+  sharePitch: string;
+  reflection: string;
 };
 
 export type BuildGateMissing = 'problem' | 'features' | 'successCheck';
@@ -48,7 +51,7 @@ export function buildGate(brief: unknown, versionCount: number, unlockedByTeache
   return { canSaveFirstVersion: hasVersions || unlockedByTeacher || missing.length === 0, unlockedByTeacher, hasVersions, missing };
 }
 
-export type VersionEvidence = { attempted: string; tested: string; learned: string };
+export type VersionEvidence = { attempted: string; tested: string; learned: string; explained: string; peerFeedback: string };
 
 /** Evidencia breve de una versión. Es opcional para no romper clientes anteriores, pero si
  * llega debe traer qué intentaron y qué probaron. */
@@ -60,7 +63,47 @@ export function validateVersionEvidence(value: unknown): VersionEvidence | null 
   const tested = briefText(source.tested, 'Qué probaron', 600);
   if (!attempted) throw new BadRequestException('Cuenten qué intentaron en esta versión');
   if (!tested) throw new BadRequestException('Cuenten qué probaron en esta versión');
-  return { attempted, tested, learned: briefText(source.learned, 'Qué aprendieron', 600) };
+  return {
+    attempted, tested,
+    learned: briefText(source.learned, 'Qué aprendieron', 600),
+    explained: briefText(source.explained, 'Qué parte del código explican', 800),
+    peerFeedback: briefText(source.peerFeedback, 'Lo que dijo otro equipo', 800),
+  };
+}
+
+export type SessionNote = { kind: 'GOAL'; goal: string } | { kind: 'EXIT'; met: 'yes' | 'partly' | 'no'; blocker: string; next: string };
+
+/** Tarjetas de la rutina de cada sesión: la meta al empezar y la salida al terminar. */
+export function validateSessionNote(value: unknown): SessionNote {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  if (source.kind === 'GOAL') {
+    const goal = briefText(source.goal, 'La meta', 300);
+    if (!goal) throw new BadRequestException('Escriban la meta de hoy');
+    return { kind: 'GOAL', goal };
+  }
+  if (source.kind === 'EXIT') {
+    if (source.met !== 'yes' && source.met !== 'partly' && source.met !== 'no') throw new BadRequestException('Indiquen si cumplieron la meta');
+    return { kind: 'EXIT', met: source.met, blocker: briefText(source.blocker, 'El bloqueo', 400), next: briefText(source.next, 'Lo que sigue', 400) };
+  }
+  throw new BadRequestException('La nota de sesión no tiene un formato válido');
+}
+
+export type TeamSignal = { level: 'green' | 'yellow' | 'red'; reason: string };
+const INACTIVE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Semáforo del docente, calculado solo con la bitácora (entradas más recientes primero). Un
+ * pedido de ayuda o un bloqueo cuenta hasta que el equipo guarda una versión o el docente
+ * responde con un comentario. */
+export function teamSignal(journal: { type: string; createdAt: Date | string; detail?: any }[], now: Date = new Date()): TeamSignal {
+  const time = (entry?: { createdAt: Date | string }) => (entry ? new Date(entry.createdAt).getTime() : -Infinity);
+  const lastProgress = journal.find((entry) => entry.type === 'VERSION_CREATED' || entry.type === 'TEACHER_COMMENT');
+  const help = journal.find((entry) => entry.type === 'HELP_REQUESTED');
+  const exit = journal.find((entry) => entry.type === 'SESSION_NOTE' && entry.detail?.kind === 'EXIT');
+  if (help && time(help) > time(lastProgress)) return { level: 'red', reason: 'Pidió ayuda' };
+  if (exit?.detail?.blocker && time(exit) > time(lastProgress)) return { level: 'red', reason: `Bloqueo: ${String(exit.detail.blocker).slice(0, 120)}` };
+  if (!journal.length || now.getTime() - time(journal[0]) > INACTIVE_MS) return { level: 'yellow', reason: 'Sin actividad en la última semana' };
+  if (exit?.detail?.met === 'no' && time(exit) > time(lastProgress)) return { level: 'yellow', reason: 'No alcanzó la meta de su última sesión' };
+  return { level: 'green', reason: 'Avanza' };
 }
 
 const BUILD_UNLOCKED = 'BUILD_UNLOCKED';
@@ -101,6 +144,8 @@ export function validateTeamBrief(value: unknown): ConstruyeTeamBrief {
     features: briefText(source.features, 'La versión 1', 2500),
     later: briefText(source.later, 'Lo que queda para después', 1500),
     successCheck: briefText(source.successCheck, 'Cómo sabrán que funciona', 1000),
+    sharePitch: briefText(source.sharePitch, 'La presentación', 2000),
+    reflection: briefText(source.reflection, 'La reflexión', 2000),
   };
 }
 
@@ -302,15 +347,17 @@ export class ConstruyeService {
   async addJournalEntry(teamId: string, institutionId: string, userId: string, dto: any) {
     const { team, member } = await this.teamForUser(teamId, institutionId, userId);
     const type = ALLOWED_JOURNAL_TYPES.has(dto?.type) ? dto.type : 'HELP_REQUESTED';
+    if (type === 'SESSION_NOTE' && member === null) throw new ForbiddenException('Las notas de sesión son del equipo');
+    const detail = type === 'SESSION_NOTE' ? validateSessionNote(dto?.detail) : (dto?.detail && typeof dto.detail === 'object' ? dto.detail : undefined);
     if (member === null && type !== 'TEACHER_COMMENT') throw new ForbiddenException('El docente solo puede dejar comentarios de acompañamiento');
     if (member !== null && type === 'TEACHER_COMMENT') throw new ForbiddenException('Este tipo de entrada es solo para el docente');
-    return (this.prisma as any).construyeJournalEntry.create({ data: { institutionId, projectId: team.projectId, teamId, actorEnrollmentId: member?.studentEnrollmentId || null, actorUserId: member ? null : userId, type, summary: asShortText(dto?.summary, 'El mensaje', 1500), detail: dto?.detail && typeof dto.detail === 'object' ? dto.detail : undefined } });
+    return (this.prisma as any).construyeJournalEntry.create({ data: { institutionId, projectId: team.projectId, teamId, actorEnrollmentId: member?.studentEnrollmentId || null, actorUserId: member ? null : userId, type, summary: asShortText(dto?.summary, 'El mensaje', 1500), detail } });
   }
 
   async dashboard(projectId: string, institutionId: string, userId: string) {
     await this.projectForTeacher(projectId, institutionId, userId);
-    const teams = await (this.prisma as any).construyeTeam.findMany({ where: { projectId, institutionId }, include: { members: { include: { studentEnrollment: { include: { student: { select: { firstName: true, lastName: true } } } } } }, versions: { orderBy: { number: 'desc' }, take: 1 }, journal: { orderBy: { createdAt: 'desc' }, take: 5 } } });
+    const teams = await (this.prisma as any).construyeTeam.findMany({ where: { projectId, institutionId }, include: { members: { include: { studentEnrollment: { include: { student: { select: { firstName: true, lastName: true } } } } } }, versions: { orderBy: { number: 'desc' }, take: 1 }, journal: { orderBy: { createdAt: 'desc' }, take: 40 } } });
     const unlockedTeams = new Set((await (this.prisma as any).construyeJournalEntry.findMany({ where: { projectId, institutionId, type: 'TEACHER_COMMENT', actorUserId: { not: null }, detail: { path: ['kind'], equals: BUILD_UNLOCKED } }, select: { teamId: true } })).map((entry: any) => entry.teamId));
-    return teams.map((team: any) => ({ id: team.id, name: team.name, brief: team.brief || null, briefUpdatedAt: team.briefUpdatedAt || null, members: team.members, latestVersion: team.versions[0] || null, recentMilestones: team.journal, needsAttention: !team.versions.length || team.journal.some((entry: any) => entry.type === 'HELP_REQUESTED'), buildGate: buildGate(team.brief, team.versions.length, unlockedTeams.has(team.id)) }));
+    return teams.map((team: any) => ({ id: team.id, name: team.name, brief: team.brief || null, briefUpdatedAt: team.briefUpdatedAt || null, members: team.members, latestVersion: team.versions[0] || null, recentMilestones: team.journal.slice(0, 5), signal: teamSignal(team.journal), needsAttention: !team.versions.length || team.journal.some((entry: any) => entry.type === 'HELP_REQUESTED'), buildGate: buildGate(team.brief, team.versions.length, unlockedTeams.has(team.id)) }));
   }
 }

@@ -1,8 +1,9 @@
 import { AlertTriangle, History, Loader2, Rocket, Users2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '../../lib/toast'
-import { construyeApi, type ConstruyeTeamBrief, type ConstruyeTeamDetail } from '../../lib/api/construye'
+import { construyeApi, type ConstruyeSessionNote, type ConstruyeTeamBrief, type ConstruyeTeamDetail } from '../../lib/api/construye'
 import BriefBuilder from './BriefBuilder'
+import SessionCard from './SessionCard'
 import CodeWorkspace from './CodeWorkspace'
 import { evidenceByVersion, normalizeBrief, type ChangeRequest, type VersionEvidenceInput } from './journey'
 import { manifestToProject, oversizedFiles, projectToManifest } from './manifest'
@@ -79,6 +80,19 @@ export default function TeamWorkspace({ projectId }: { projectId: string }) {
     return true
   }
 
+  const saveSessionNote = async (note: ConstruyeSessionNote, summary: string): Promise<boolean> => {
+    if (!team) return false
+    try {
+      const { data: entry } = await construyeApi.addJournalEntry(team.team.id, { type: 'SESSION_NOTE', summary, detail: note })
+      setTeam((current) => current && { ...current, journal: [entry, ...current.journal] })
+      toast.success(note.kind === 'GOAL' ? 'Meta de la sesión guardada' : 'Salida guardada', 'Su docente puede verla en su panel.')
+      return true
+    } catch (error) {
+      toast.error(error)
+      return false
+    }
+  }
+
   const onChangeRequestCopied = (request: ChangeRequest) => logJournal(
     'PROMPT_COPIED',
     `El equipo preparó una petición de cambio: ${request.change.trim().slice(0, 200)}`,
@@ -114,6 +128,7 @@ export default function TeamWorkspace({ projectId }: { projectId: string }) {
         </div>
       </div>
     </section>
+    <SessionCard journal={team.journal} onSave={saveSessionNote} />
     <BriefBuilder
       initialBrief={team.team.brief}
       onSave={saveBrief}

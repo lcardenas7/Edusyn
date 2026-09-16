@@ -7837,6 +7837,7 @@ enum ConstruyeJournalType {
   TEST_RECORDED
   HELP_REQUESTED
   TEACHER_COMMENT
+  SESSION_NOTE
 }
 
 

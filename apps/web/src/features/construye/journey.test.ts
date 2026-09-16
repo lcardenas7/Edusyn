@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildPhaseState, changePrompt, changeRequestReady, evidenceReady, EMPTY_CHANGE_REQUEST, firstOpenPhase,
-  initialPrompt, localGate, normalizeBrief, phaseState, promptReady,
+  EMPTY_EVIDENCE, initialPrompt, localGate, normalizeBrief, phaseState, promptReady, todaySessionNotes,
 } from './journey'
 
 const complete = normalizeBrief({
@@ -59,6 +59,11 @@ describe('prompt inicial', () => {
     expect(prompt).toContain('qué parte del código cumple cada punto del plan')
   })
 
+  it('no depende del grado ni de datos del curso', () => {
+    expect(initialPrompt(complete)).toContain('estudiantes de colegio')
+    expect(initialPrompt(complete)).not.toContain('8.º')
+  })
+
   it('omite las decisiones opcionales vacías en vez de dejar un marcador', () => {
     const prompt = initialPrompt({ ...complete, whyItMatters: '', screens: '', later: '' })
     expect(prompt).not.toContain('Por qué importa')
@@ -94,8 +99,32 @@ describe('petición de cambio', () => {
 })
 
 describe('evidencia de versión', () => {
-  it('pide qué intentaron y qué probaron; lo aprendido es opcional', () => {
-    expect(evidenceReady({ attempted: 'Agregar tareas', tested: '', learned: '' })).toBe(false)
-    expect(evidenceReady({ attempted: 'Agregar tareas', tested: 'Agregué una y apareció', learned: '' })).toBe(true)
+  it('pide qué intentaron, qué probaron y qué parte del código explican; lo demás es opcional', () => {
+    const base = { ...EMPTY_EVIDENCE, attempted: 'Agregar tareas', tested: 'Agregué una y apareció' }
+    expect(evidenceReady(base)).toBe(false)
+    expect(evidenceReady({ ...base, explained: 'El addEventListener del formulario' })).toBe(true)
+  })
+})
+
+describe('etapa compartir', () => {
+  it('queda lista con la presentación y la reflexión', () => {
+    expect(phaseState('share', complete)).toBe('pending')
+    expect(phaseState('share', { ...complete, sharePitch: 'El problema era…' })).toBe('started')
+    expect(phaseState('share', { ...complete, sharePitch: 'El problema era…', reflection: 'Aprendimos a probar' })).toBe('done')
+  })
+
+  it('el estilo por defecto no cuenta como empezar el plan', () => {
+    expect(phaseState('plan', normalizeBrief(null))).toBe('pending')
+  })
+})
+
+describe('notas de sesión', () => {
+  it('toma solo las notas del día indicado', () => {
+    const journal = [
+      { type: 'SESSION_NOTE', createdAt: '2026-09-16T20:00:00Z', detail: { kind: 'GOAL' } },
+      { type: 'SESSION_NOTE', createdAt: '2026-09-15T20:00:00Z', detail: { kind: 'GOAL' } },
+      { type: 'VERSION_CREATED', createdAt: '2026-09-16T21:00:00Z' },
+    ]
+    expect(todaySessionNotes(journal, '2026-09-16', iso => iso.slice(0, 10))).toHaveLength(1)
   })
 })

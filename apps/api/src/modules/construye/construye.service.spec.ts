@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import { buildGate, ConstruyeService, validateStaticManifest, validateTeamBrief, validateVersionEvidence } from './construye.service';
+import { buildGate, ConstruyeService, teamSignal, validateSessionNote, validateStaticManifest, validateTeamBrief, validateVersionEvidence } from './construye.service';
 
-const EMPTY_JOURNEY = { affected: '', whyItMatters: '', solution: '', screens: '', later: '', successCheck: '' };
+const EMPTY_JOURNEY = { affected: '', whyItMatters: '', solution: '', screens: '', later: '', successCheck: '', sharePitch: '', reflection: '' };
 
 describe('validateStaticManifest', () => {
   it('acepta el conjunto estático mínimo', () => {
@@ -101,7 +101,7 @@ describe('recorrido pedagógico', () => {
 
   it('valida la evidencia de versión sin exigirla a clientes anteriores', () => {
     expect(validateVersionEvidence(undefined)).toBeNull();
-    expect(validateVersionEvidence({ attempted: ' Agregar tareas ', tested: 'Escribí una y apareció' })).toEqual({ attempted: 'Agregar tareas', tested: 'Escribí una y apareció', learned: '' });
+    expect(validateVersionEvidence({ attempted: ' Agregar tareas ', tested: 'Escribí una y apareció' })).toEqual({ attempted: 'Agregar tareas', tested: 'Escribí una y apareció', learned: '', explained: '', peerFeedback: '' });
     expect(() => validateVersionEvidence({ attempted: 'Algo' })).toThrow(BadRequestException);
     expect(() => validateVersionEvidence({ tested: 'Algo' })).toThrow(BadRequestException);
   });
@@ -134,7 +134,7 @@ describe('ConstruyeService.createVersion', () => {
     expect(tx.construyeVersion.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ number: 1, label: 'Primer formulario' }) }));
     expect(tx.construyeJournalEntry.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
       type: 'VERSION_CREATED',
-      detail: expect.objectContaining({ evidence: { attempted: 'Primer formulario', tested: 'Agregué una tarea', learned: '' } }),
+      detail: expect.objectContaining({ evidence: { attempted: 'Primer formulario', tested: 'Agregué una tarea', learned: '', explained: '', peerFeedback: '' } }),
     }) }));
   });
 
@@ -159,5 +159,49 @@ describe('ConstruyeService.unlockBuild', () => {
     await service.unlockBuild('team-1', 'institution-1', 'teacher-1', { reason: 'Trabajan en papel' });
     expect(create).toHaveBeenCalledWith({ data: expect.objectContaining({ actorUserId: 'teacher-1', type: 'TEACHER_COMMENT', detail: { kind: 'BUILD_UNLOCKED' } }) });
     await expect(service.unlockBuild('team-1', 'institution-1', 'otro-docente', {})).rejects.toThrow();
+  });
+});
+
+describe('etapa compartir, evidencia ampliada y notas de sesión', () => {
+  it('guarda la presentación y la reflexión del equipo', () => {
+    expect(validateTeamBrief({ sharePitch: 'Nuestro problema era…', reflection: 'Aprendimos a probar' })).toEqual(expect.objectContaining({ sharePitch: 'Nuestro problema era…', reflection: 'Aprendimos a probar' }));
+  });
+
+  it('acepta qué parte del código explican y lo que dijo otro equipo', () => {
+    expect(validateVersionEvidence({ attempted: 'Borrar tareas', tested: 'Borré una', explained: 'El botón está en app.js', peerFeedback: 'Les confundió el color' }))
+      .toEqual({ attempted: 'Borrar tareas', tested: 'Borré una', learned: '', explained: 'El botón está en app.js', peerFeedback: 'Les confundió el color' });
+  });
+
+  it('valida las tarjetas de meta y de salida', () => {
+    expect(validateSessionNote({ kind: 'GOAL', goal: ' Que se puedan borrar tareas ' })).toEqual({ kind: 'GOAL', goal: 'Que se puedan borrar tareas' });
+    expect(validateSessionNote({ kind: 'EXIT', met: 'partly', blocker: 'No sabemos borrar' })).toEqual({ kind: 'EXIT', met: 'partly', blocker: 'No sabemos borrar', next: '' });
+    expect(() => validateSessionNote({ kind: 'GOAL', goal: '' })).toThrow(BadRequestException);
+    expect(() => validateSessionNote({ kind: 'EXIT', met: 'tal vez' })).toThrow(BadRequestException);
+    expect(() => validateSessionNote({ kind: 'OTRA' })).toThrow(BadRequestException);
+  });
+});
+
+describe('teamSignal', () => {
+  const now = new Date('2026-09-20T15:00:00Z');
+  const at = (iso: string) => new Date(iso);
+
+  it('marca en rojo un pedido de ayuda hasta que hay avance o respuesta del docente', () => {
+    expect(teamSignal([{ type: 'HELP_REQUESTED', createdAt: at('2026-09-20T10:00:00Z') }, { type: 'VERSION_CREATED', createdAt: at('2026-09-19T10:00:00Z') }], now)).toEqual({ level: 'red', reason: 'Pidió ayuda' });
+    expect(teamSignal([{ type: 'TEACHER_COMMENT', createdAt: at('2026-09-20T11:00:00Z') }, { type: 'HELP_REQUESTED', createdAt: at('2026-09-20T10:00:00Z') }], now).level).toBe('green');
+  });
+
+  it('marca en rojo un bloqueo reportado en la salida', () => {
+    const signal = teamSignal([{ type: 'SESSION_NOTE', createdAt: at('2026-09-20T12:00:00Z'), detail: { kind: 'EXIT', met: 'partly', blocker: 'La lista no se actualiza' } }], now);
+    expect(signal).toEqual({ level: 'red', reason: 'Bloqueo: La lista no se actualiza' });
+  });
+
+  it('marca en amarillo la inactividad y la meta no cumplida', () => {
+    expect(teamSignal([], now).level).toBe('yellow');
+    expect(teamSignal([{ type: 'BRIEF_UPDATED', createdAt: at('2026-09-10T10:00:00Z') }], now).reason).toBe('Sin actividad en la última semana');
+    expect(teamSignal([{ type: 'SESSION_NOTE', createdAt: at('2026-09-20T12:00:00Z'), detail: { kind: 'EXIT', met: 'no', blocker: '' } }], now).level).toBe('yellow');
+  });
+
+  it('marca en verde a un equipo activo sin alertas', () => {
+    expect(teamSignal([{ type: 'BRIEF_UPDATED', createdAt: at('2026-09-20T10:00:00Z') }], now)).toEqual({ level: 'green', reason: 'Avanza' });
   });
 });
