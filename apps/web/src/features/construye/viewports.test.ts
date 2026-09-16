@@ -23,6 +23,13 @@ describe('computeViewportScale', () => {
     expect(computeViewportScale(960, 1280)).toBe(0.75)
   })
 
+  it('en la vista enfocada también limita por alto para que el dispositivo quepa entero', () => {
+    expect(computeViewportScale(1000, 390, 422, 844)).toBe(0.5)
+    expect(computeViewportScale(195, 390, 2000, 844)).toBe(0.5)
+    expect(computeViewportScale(1000, 390, 2000, 844)).toBe(1)
+    expect(computeViewportScale(1000, 390, 0, 844)).toBe(1)
+  })
+
   it('es seguro antes de haber medido el panel (evita un preview colapsado en el primer frame)', () => {
     expect(computeViewportScale(0, 1280)).toBe(1)
     expect(computeViewportScale(Number.NaN, 1280)).toBe(1)

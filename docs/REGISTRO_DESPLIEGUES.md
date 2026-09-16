@@ -22,6 +22,23 @@
 
 ## Historial (más reciente arriba)
 
+### Edusyn Crea: vista de celular, evidencias y guía de lectura — 2026-09-16
+
+Solo web, sin migración. A partir de la primera prueba del usuario en un portátil:
+- **"Guardar versión" se bloqueaba tras aplicar al preview** (comparaba contra lo aplicado, no
+  contra lo guardado). Ahora compara con la última versión guardada y abre un panel de
+  evidencia: qué archivos cambiaron, aviso si hay cambios sin probar, y una frase obligatoria
+  "¿qué lograron?" que viaja en `label` (el backend ya la aceptaba, 120 caracteres). Debajo del
+  taller, historial de evidencias con fecha y descripción.
+- **Preview:** marco de celular; "Ver en grande" pasa el MISMO iframe a pantalla completa (no se
+  recarga: la app conserva su estado) con cambio Computador/Celular y "Tamaño real / Ajustar a
+  pantalla"; la escala descuenta el relleno del contenedor (antes el preview quedaba más ancho
+  que su espacio); la guía lateral baja debajo de la vista cuando el panel mide menos de 900 px.
+- **Editor:** dos columnas desde 1280 px (antes 1536); guía "Cómo se lee" por archivo con una
+  anatomía anotada y preguntas para el equipo (contenido fijo, no analiza el código).
+Verificado en un harness local a 1366×768 contra el preview de staging: celular con marco,
+vista grande interactiva, guardar tras aplicar. `tsc` limpio, 432 pruebas web.
+
 ### Edusyn Crea: formularios en el preview — 2026-09-16
 
 `staging` en `13f9c44b` (web `e3ffd20f`, api `206d8bd4`, preview `3493683a`, todos SUCCESS; sin

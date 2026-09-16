@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Copy, ExternalLink, HelpCircle, Loader2, MousePointer2, Palette, Pencil, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Copy, ExternalLink, HelpCircle, Loader2, Maximize2, Minimize2, Monitor, MousePointer2, Palette, Pencil, RotateCcw, ShieldCheck, Smartphone, Sparkles, ZoomIn, ZoomOut } from 'lucide-react'
 import { explainCssDeclaration } from './cssProperties'
 import { classifyEditableValue, describeEditImpact, describeEditMediaWarning, editableControlLabel, formatColorValue, formatLengthValue, type CssValueEditRequest } from './cssEdits'
 import { normalizeNewText, type HtmlTextEditRequest } from './htmlEdits'
@@ -53,6 +53,8 @@ export interface PreviewFrameProps {
   /** Pantalla que representa el preview. Cambia solo el tamaño con el que se renderiza el
    * MISMO documento — nunca lo recarga ni lo reconstruye (ver comentario en el render). */
   viewport?: ViewportKey
+  /** Permite cambiar de pantalla desde la vista grande, donde la barra del taller queda oculta. */
+  onViewportChange?: (viewport: ViewportKey) => void
   /** Sin la ficha de diagnóstico ni el encabezado: solo el iframe, para incrustar en un
    * marco propio (p. ej. la vista de celular del docente). El aislamiento no cambia. */
   compact?: boolean
@@ -237,10 +239,28 @@ function TextChangeCard({ text, onEdit }: { text: SourceTextInfo; onEdit: (edit:
   )
 }
 
-export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, viewport = 'desktop', compact = false, exploreMode = false, onElementPicked, codePosition = null, codeFile = 'html', onNavigateToCssRule, onEditCssValue, onEditHtmlText, onApplyPlan }: PreviewFrameProps) {
+// Grosor del marco de celular (px en pantalla, no se escala): el iframe conserva su viewport
+// lógico de 390 px y el marco se dibuja alrededor.
+const DEVICE_FRAME_X = 24
+const DEVICE_FRAME_Y = 56
+const BROWSER_BAR_Y = 34
+const SCALE_LABEL_Y = 28
+// Por debajo de este ancho la guía pasa debajo de la vista: a su lado dejaba el preview de un
+// portátil en un tercio del panel.
+const SIDE_GUIDE_MIN_WIDTH = 900
+
+export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, viewport = 'desktop', onViewportChange, compact = false, exploreMode = false, onElementPicked, codePosition = null, codeFile = 'html', onNavigateToCssRule, onEditCssValue, onEditHtmlText, onApplyPlan }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const viewportShellRef = useRef<HTMLDivElement>(null)
   const [viewportScale, setViewportScale] = useState(1)
+  // Vista grande: el MISMO iframe pasa a ocupar la pantalla solo cambiando clases, sin
+  // desmontarse — la app del estudiante conserva su estado (tareas agregadas, etc.).
+  const [focused, setFocused] = useState(false)
+  // En la vista grande: "fit" encoge el dispositivo hasta que quepa entero; "real" lo muestra
+  // a su tamaño lógico (nunca más grande) y se desplaza para verlo completo.
+  const [focusZoom, setFocusZoom] = useState<'fit' | 'real'>('fit')
+  const rootRef = useRef<HTMLElement>(null)
+  const [sideGuide, setSideGuide] = useState(false)
   const preset = VIEWPORT_PRESETS[viewport]
   const [instanceId, setInstanceId] = useState(newInstanceId)
   const [ready, setReady] = useState(false)
@@ -364,12 +384,43 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
   useEffect(() => {
     const shell = viewportShellRef.current
     if (!shell) return
-    const update = () => setViewportScale(computeViewportScale(shell.clientWidth, preset.width))
+    // Se descuenta el relleno del contenedor y el marco del dispositivo: medir clientWidth a
+    // secas hacía que el preview fuera más ancho que su espacio y quedara recortado.
+    const update = () => {
+      const style = window.getComputedStyle(shell)
+      const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+      const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)
+      const frameX = viewport === 'mobile' ? DEVICE_FRAME_X : 0
+      const frameY = viewport === 'mobile' ? DEVICE_FRAME_Y : BROWSER_BAR_Y
+      const width = shell.clientWidth - padX - frameX
+      const fitHeight = focused && focusZoom === 'fit'
+      const height = fitHeight ? shell.clientHeight - padY - frameY - SCALE_LABEL_Y : undefined
+      setViewportScale(computeViewportScale(width, preset.width, height, fitHeight ? preset.height : undefined))
+    }
     update()
     const observer = new ResizeObserver(update)
     observer.observe(shell)
     return () => observer.disconnect()
-  }, [preset.width])
+  }, [preset.width, preset.height, viewport, focused, focusZoom])
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const update = () => setSideGuide(root.clientWidth >= SIDE_GUIDE_MIN_WIDTH)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(root)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!focused) return
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setFocused(false) }
+    window.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKeyDown); document.body.style.overflow = previousOverflow }
+  }, [focused])
 
   const viewportLabel = preset.label === 'Escritorio' ? 'Computador' : 'Celular'
 
@@ -469,23 +520,41 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
   }
 
   return (
-    <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
+    <section ref={rootRef} className={focused
+      ? 'fixed inset-0 z-[60] flex flex-col bg-white'
+      : 'overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-lg shadow-slate-900/5'}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5">
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><ShieldCheck className="h-4 w-4" /></span>
           <div><h2 className="font-bold text-slate-900">Así está quedando</h2><p className="text-xs text-slate-500">Vista previa protegida · sin acceso a datos de Edusyn</p></div>
         </div>
-        <button type="button" onClick={restart} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><RotateCcw className="h-3.5 w-3.5" /> Reiniciar prueba</button>
+        <div className="flex flex-wrap items-center gap-2">
+          {focused && onViewportChange && (
+            <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50" role="group" aria-label="Cómo ver el proyecto">
+              <button type="button" onClick={() => onViewportChange('desktop')} aria-pressed={viewport === 'desktop'} className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold ${viewport === 'desktop' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Monitor className="h-3.5 w-3.5" /> Computador</button>
+              <button type="button" onClick={() => onViewportChange('mobile')} aria-pressed={viewport === 'mobile'} className={`inline-flex items-center gap-1.5 border-l border-slate-200 px-3 py-2 text-xs font-semibold ${viewport === 'mobile' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Smartphone className="h-3.5 w-3.5" /> Celular</button>
+            </div>
+          )}
+          {focused && (
+            <button type="button" onClick={() => setFocusZoom(z => z === 'fit' ? 'real' : 'fit')} title={focusZoom === 'fit' ? 'Ver al tamaño real del dispositivo' : 'Encoger hasta que quepa en la pantalla'} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+              {focusZoom === 'fit' ? <><ZoomIn className="h-3.5 w-3.5" /> Tamaño real</> : <><ZoomOut className="h-3.5 w-3.5" /> Ajustar a pantalla</>}
+            </button>
+          )}
+          <button type="button" onClick={restart} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><RotateCcw className="h-3.5 w-3.5" /> Reiniciar prueba</button>
+          <button type="button" onClick={() => setFocused(v => !v)} title={focused ? 'Volver al taller (Esc)' : 'Ver la app en grande, sin el editor'} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${focused ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}>
+            {focused ? <><Minimize2 className="h-3.5 w-3.5" /> Volver al taller</> : <><Maximize2 className="h-3.5 w-3.5" /> Ver en grande</>}
+          </button>
+        </div>
       </header>
-      <div className="grid gap-4 bg-[#f8fafb] p-3 sm:p-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className={`grid gap-4 bg-[#f8fafb] p-3 sm:p-4 ${sideGuide ? 'grid-cols-[minmax(0,1fr)_300px]' : ''} ${focused ? 'min-h-0 flex-1 overflow-auto' : ''}`}>
         {/* El iframe se renderiza SIEMPRE a las dimensiones lógicas del preset y solo se
             encoge visualmente con transform: scale. Cambiar de viewport toca únicamente
             estilos del host: mismo src, misma key, mismo instanceId, ningún remount — por eso
             el documento, su JavaScript y la instrumentación de Explorar sobreviven al cambio.
             El contenedor exterior lleva el tamaño YA escalado porque transform no reserva
             espacio en el layout. */}
-        <div ref={viewportShellRef} className="min-w-0 rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_1px_1px,#cbd5e1_1px,transparent_0)] bg-[length:18px_18px] p-3 sm:p-5">
-          <div className="mx-auto" style={{ width: preset.width * viewportScale }}>
+        <div ref={viewportShellRef} className={`min-w-0 rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_1px_1px,#cbd5e1_1px,transparent_0)] bg-[length:18px_18px] p-3 sm:p-5 ${focused ? `${sideGuide ? 'h-full' : 'h-[calc(100dvh-7rem)]'} overflow-auto` : ''}`}>
+          <div className="mx-auto" style={{ width: preset.width * viewportScale + (viewport === 'mobile' ? DEVICE_FRAME_X : 0) }}>
             {viewport === 'desktop' && (
               <div className="flex items-center gap-1.5 rounded-t-xl border border-b-0 border-slate-200 bg-slate-100 px-3 py-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
@@ -494,8 +563,12 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
                 <span className="ml-2 truncate text-[11px] font-medium text-slate-500">Proyecto del equipo</span>
               </div>
             )}
+            {/* Marco de celular: el contenedor existe SIEMPRE (solo cambian sus clases) para
+                que pasar de Computador a Celular no desmonte el iframe. */}
+            <div className={viewport === 'mobile' ? 'relative rounded-[40px] bg-slate-900 px-3 py-7 shadow-2xl shadow-slate-900/30 ring-1 ring-slate-700' : ''}>
+              {viewport === 'mobile' && <span aria-hidden="true" className="absolute left-1/2 top-3 h-1.5 w-16 -translate-x-1/2 rounded-full bg-slate-700" />}
             <div
-              className={`overflow-hidden border border-slate-200 bg-white ${viewport === 'desktop' ? 'rounded-b-xl' : 'rounded-[20px]'}`}
+              className={`overflow-hidden bg-white ${viewport === 'desktop' ? 'rounded-b-xl border border-slate-200' : 'rounded-[18px]'}`}
               style={{ width: preset.width * viewportScale, height: preset.height * viewportScale }}
             >
               <iframe
@@ -507,12 +580,14 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
                 style={{ width: preset.width, height: preset.height, transform: `scale(${viewportScale})`, transformOrigin: 'top left' }}
               />
             </div>
+              {viewport === 'mobile' && <span aria-hidden="true" className="absolute bottom-2.5 left-1/2 h-1 w-24 -translate-x-1/2 rounded-full bg-slate-600" />}
+            </div>
             <p className="mt-2 text-center text-[11px] text-slate-400">
               {preset.label} · {preset.width} px{viewportScale < 1 && <span> · vista al {Math.round(viewportScale * 100)}%</span>}
             </p>
           </div>
         </div>
-        <aside className="space-y-3">
+        <aside className={`space-y-3 ${focused && sideGuide ? 'overflow-auto' : ''}`}>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Guía de comprensión</p>
             {ready ? <span className="flex items-center gap-2 font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Proyecto listo para probar</span>

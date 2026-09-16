@@ -55,16 +55,16 @@ export default function TeamWorkspace({ projectId }: { projectId: string }) {
     }
   }
 
-  const saveVersion = async (project: PreviewProject): Promise<boolean> => {
+  const saveVersion = async (project: PreviewProject, note: string): Promise<boolean> => {
     if (!team) return false
     const tooLarge = oversizedFiles(project)
     if (tooLarge.length) {
       toast.warning('Algún archivo es muy grande', `Reduce ${tooLarge.join(', ')} antes de guardar.`)
       return false
     }
-    const { data: version } = await construyeApi.createVersion(team.team.id, { manifest: projectToManifest(project) })
+    const { data: version } = await construyeApi.createVersion(team.team.id, { manifest: projectToManifest(project), label: note })
     setTeam((current) => current && { ...current, versions: [version, ...current.versions] })
-    toast.success(`Versión ${version.number} guardada`, 'Tu docente ya puede revisarla.')
+    toast.success(`Versión ${version.number} guardada como evidencia`, 'Tu docente ya puede revisarla en su panel.')
     return true
   }
 
@@ -110,7 +110,7 @@ export default function TeamWorkspace({ projectId }: { projectId: string }) {
     <CodeWorkspace
       initialProject={latest ? manifestToProject(latest.manifest) : undefined}
       onSaveVersion={saveVersion}
-      latestVersionLabel={latest ? `v${latest.number}` : undefined}
+      versions={team.versions}
       onHelpRequested={() => logJournal('HELP_REQUESTED', 'El equipo copió el contexto de ayuda para su IA externa.')}
     />
   </div>

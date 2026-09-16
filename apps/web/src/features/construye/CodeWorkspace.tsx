@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Cloud, Code2, Crosshair, Eye, FileCode2, FlaskConical, Layers3, Loader2, Maximize2, Minimize2, Monitor, MousePointer2, RotateCcw, Smartphone, Sparkles } from 'lucide-react'
+import { BookOpen, Check, ChevronDown, ChevronRight, Cloud, Code2, Crosshair, Eye, FileCode2, FlaskConical, Layers3, Maximize2, Minimize2, Monitor, MousePointer2, RotateCcw, Smartphone, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { createTextareaEditorAdapter } from './editorAdapter'
@@ -8,6 +8,8 @@ import { prepareHtmlTextForSource, replaceHtmlTextAtRange, type HtmlTextEditRequ
 import { describePlanFailure, executePlan, type ModificationPlan } from './plan'
 import { clampCssRuleRange, clampElementPickRange, fileTracksAppliedProject, type PreviewEvent } from './protocol'
 import { type ViewportKey } from './viewports'
+import { FILE_GUIDES } from './fileGuides'
+import { SaveVersionPanel, VersionHistory, type SavedVersionSummary } from './VersionEvidence'
 
 const SAMPLE: PreviewProject = {
   html: '<main>\n  <h1>Mi app escolar</h1>\n  <p>Escribe aquí el contenido de tu página.</p>\n  <button id="saludar">Probar</button>\n  <p id="mensaje"></p>\n</main>',
@@ -16,10 +18,10 @@ const SAMPLE: PreviewProject = {
 }
 
 type FileKey = keyof PreviewProject
-const FILES: { key: FileKey; label: string; learningLabel: string; description: string; activeClass: string; dotClass: string }[] = [
-  { key: 'html', label: 'index.html', learningLabel: 'Contenido', description: 'Lo que aparece en la página', activeClass: 'border-orange-300 bg-orange-50 text-orange-950', dotClass: 'bg-orange-500' },
-  { key: 'css', label: 'styles.css', learningLabel: 'Diseño', description: 'Colores, tamaños y espacios', activeClass: 'border-sky-300 bg-sky-50 text-sky-950', dotClass: 'bg-sky-500' },
-  { key: 'js', label: 'app.js', learningLabel: 'Acciones', description: 'Lo que ocurre al interactuar', activeClass: 'border-violet-300 bg-violet-50 text-violet-950', dotClass: 'bg-violet-500' },
+const FILES: { key: FileKey; label: string; learningLabel: string; description: string; activeClass: string; dotClass: string; accentClass: string }[] = [
+  { key: 'html', label: 'index.html', learningLabel: 'Contenido', description: 'Lo que aparece en la página', activeClass: 'border-orange-300 bg-orange-50 text-orange-950', dotClass: 'bg-orange-500', accentClass: 'text-orange-300' },
+  { key: 'css', label: 'styles.css', learningLabel: 'Diseño', description: 'Colores, tamaños y espacios', activeClass: 'border-sky-300 bg-sky-50 text-sky-950', dotClass: 'bg-sky-500', accentClass: 'text-sky-300' },
+  { key: 'js', label: 'app.js', learningLabel: 'Acciones', description: 'Lo que ocurre al interactuar', activeClass: 'border-violet-300 bg-violet-50 text-violet-950', dotClass: 'bg-violet-500', accentClass: 'text-violet-300' },
 ]
 const editorClassBase = 'crea-code-editor w-full resize-y bg-[#111827] px-5 py-5 font-mono text-[13px] leading-6 text-slate-100 outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400'
 
@@ -28,18 +30,24 @@ export interface CodeWorkspaceProps {
   initialProject?: PreviewProject
   /** Cuando se provee, habilita "Guardar versión". Debe devolver true si guardó (para
    * reflejar el cambio en el preview) o false si lo canceló tras avisar al equipo. */
-  onSaveVersion?: (project: PreviewProject) => Promise<boolean>
-  /** Texto corto de la última versión guardada, p. ej. "v3". */
-  latestVersionLabel?: string
+  onSaveVersion?: (project: PreviewProject, note: string) => Promise<boolean>
+  /** Versiones ya guardadas por el equipo, la más reciente primero. */
+  versions?: SavedVersionSummary[]
   /** Se reenvía al preview: se dispara cuando el equipo copia el contexto de ayuda. */
   onHelpRequested?: () => void
 }
 
-export default function CodeWorkspace({ initialProject, onSaveVersion, latestVersionLabel, onHelpRequested }: CodeWorkspaceProps) {
+export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], onHelpRequested }: CodeWorkspaceProps) {
   const [draft, setDraft] = useState<PreviewProject>(() => initialProject ?? SAMPLE)
   const [applied, setApplied] = useState<PreviewProject>(() => initialProject ?? SAMPLE)
   const [selected, setSelected] = useState<FileKey>('html')
   const [saving, setSaving] = useState(false)
+  // Lo último que quedó guardado como versión. Se compara contra esto (no contra lo aplicado
+  // al preview) para saber si hay algo nuevo que guardar: antes, aplicar al preview
+  // deshabilitaba "Guardar versión" y el equipo no podía guardar lo que acababa de probar.
+  const [savedProject, setSavedProject] = useState<PreviewProject | null>(() => initialProject ?? null)
+  const [savePanelOpen, setSavePanelOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(true)
   const [expanded, setExpanded] = useState(false)
   const [exploreMode, setExploreMode] = useState(false)
   const [viewport, setViewport] = useState<ViewportKey>('desktop')
@@ -61,6 +69,10 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, latestVer
   const changed = FILES.filter(({ key }) => draft[key] !== applied[key]).map(({ label }) => label)
   const update = (value: string) => setDraft(current => ({ ...current, [selected]: value }))
   const connected = Boolean(onSaveVersion)
+  const changedSinceSave = FILES.filter(({ key }) => !savedProject || draft[key] !== savedProject[key]).map(({ label }) => label)
+  const unsaved = changedSinceSave.length > 0
+  const latestVersion = versions[0]
+  const guide = FILE_GUIDES[selected]
   const editorClass = `${editorClassBase} ${expanded ? 'min-h-[60vh]' : 'min-h-[360px]'}`
   const activeFile = FILES.find(file => file.key === selected) ?? FILES[0]
 
@@ -261,12 +273,16 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, latestVer
     return () => { window.removeEventListener('keydown', onKeyDown); document.body.style.overflow = previousOverflow }
   }, [expanded])
 
-  const save = async () => {
+  const save = async (note: string) => {
     if (!onSaveVersion) return
     setSaving(true)
     try {
-      const saved = await onSaveVersion(draft)
-      if (saved) setApplied(draft)
+      const saved = await onSaveVersion(draft, note)
+      if (saved) {
+        setApplied(draft)
+        setSavedProject(draft)
+        setSavePanelOpen(false)
+      }
     } catch (error) {
       toast.error(error)
     } finally {
@@ -302,8 +318,8 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, latestVer
           <ChevronRight className="hidden h-3.5 w-3.5 text-slate-500 sm:block" />
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${hasChanges ? 'bg-amber-300 text-amber-950' : 'bg-white/10 text-slate-200'}`}><Eye className="h-3.5 w-3.5" /> 2. Apliquen al preview</span>
           <ChevronRight className="hidden h-3.5 w-3.5 text-slate-500 sm:block" />
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${connected && !hasChanges && latestVersionLabel ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-slate-200'}`}><Cloud className="h-3.5 w-3.5" /> 3. Guarden una versión</span>
-          <span className="ml-auto text-[11px] text-slate-400">{latestVersionLabel ? `Última evidencia: ${latestVersionLabel}` : 'Aún no hay una versión guardada'}</span>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${connected && !unsaved ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-slate-200'}`}><Cloud className="h-3.5 w-3.5" /> 3. Guarden una versión</span>
+          <span className="ml-auto text-[11px] text-slate-400">{latestVersion ? `Última evidencia: v${latestVersion.number}${unsaved ? ' · hay cambios sin guardar' : ''}` : 'Aún no hay una versión guardada'}</span>
         </div>
       </header>
 
@@ -313,7 +329,17 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, latestVer
           <div><p className="font-bold">Modo explorar encendido</p><p className="mt-0.5 text-xs leading-5 text-cyan-800">Haz clic en una parte de tu página para descubrir qué código la crea. También puedes poner el cursor en HTML o CSS para verla resaltada.</p></div>
         </div>}
 
-        <div className={`grid gap-4 ${expanded ? 'xl:grid-cols-[minmax(420px,.78fr)_minmax(640px,1.22fr)]' : '2xl:grid-cols-[minmax(380px,.78fr)_minmax(600px,1.22fr)]'}`}>
+        {savePanelOpen && connected && <SaveVersionPanel
+          nextNumber={(latestVersion?.number ?? 0) + 1}
+          changedFiles={changedSinceSave}
+          untested={hasChanges}
+          saving={saving}
+          onApplyFirst={() => { setApplied(draft); setSavePanelOpen(false) }}
+          onConfirm={save}
+          onCancel={() => setSavePanelOpen(false)}
+        />}
+
+        <div className={`grid gap-4 ${expanded ? 'lg:grid-cols-[minmax(360px,.85fr)_minmax(0,1.15fr)]' : 'xl:grid-cols-[minmax(360px,.9fr)_minmax(0,1.1fr)]'}`}>
           <div className="min-w-0 overflow-hidden rounded-[22px] border border-slate-300 bg-[#111827] shadow-lg shadow-slate-900/10">
             <div className="border-b border-white/10 bg-[#182434] p-3">
               <div className="mb-3 flex items-center justify-between gap-3 px-1">
@@ -324,6 +350,31 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, latestVer
                 <span className="flex items-center gap-1.5 text-xs font-bold"><span className={`h-2 w-2 rounded-full ${file.dotClass}`} />{file.learningLabel}</span>
                 <span className="mt-1 block truncate font-mono text-[10px] opacity-70">{file.label}</span>
               </button>)}</div>
+            </div>
+            <div className="border-b border-white/10 bg-[#141d2b] px-4 py-2.5">
+              <button type="button" onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen} className="flex w-full items-center justify-between gap-2 text-left text-xs font-bold text-slate-200">
+                <span className="inline-flex items-center gap-2"><BookOpen className={`h-3.5 w-3.5 ${activeFile.accentClass}`} /> Cómo se lee {activeFile.label}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition ${guideOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {guideOpen && <div className="mt-2 space-y-2.5">
+                <p className="text-[11px] leading-5 text-slate-300">{guide.idea}</p>
+                <div className="overflow-x-auto rounded-lg bg-black/30 px-3 py-2 font-mono text-[12px] leading-6">
+                  {guide.example.map((part, index) => part.name
+                    ? <span key={index} className={`rounded px-0.5 underline decoration-dotted underline-offset-4 ${activeFile.accentClass}`}>{part.text}</span>
+                    : <span key={index} className="text-slate-400">{part.text}</span>)}
+                </div>
+                <dl className="grid gap-x-3 gap-y-1 text-[11px] leading-4 sm:grid-cols-2">
+                  {guide.example.filter(part => part.name).map(part => <div key={part.name}>
+                    <dt className={`inline font-bold ${activeFile.accentClass}`}>{part.name}: </dt>
+                    <dd className="inline text-slate-300">{part.meaning}</dd>
+                  </div>)}
+                </dl>
+                <div className="rounded-lg border border-white/10 px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Para conversar en equipo</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] leading-4 text-slate-300">{guide.questions.map(question => <li key={question}>{question}</li>)}</ul>
+                  {selected !== 'js' && <p className="mt-1.5 text-[11px] text-cyan-300">Tip: con “Explorar elementos” toquen una parte de la app y el editor les muestra su código.</p>}
+                </div>
+              </div>}
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#111827] px-5 py-2.5">
               <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-200"><FileCode2 className="h-3.5 w-3.5 text-cyan-300" /> {activeFile.description}</span>
@@ -342,12 +393,14 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, latestVer
                   <button type="button" onClick={() => setViewport('mobile')} aria-pressed={viewport === 'mobile'} title="Ver cómo queda en un celular" className={`inline-flex items-center gap-1.5 border-l border-slate-200 px-3 py-2 text-xs font-semibold ${viewport === 'mobile' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Smartphone className="h-3.5 w-3.5" /> Celular</button>
                 </div>
                 <button type="button" disabled={!hasChanges} onClick={() => setApplied(draft)} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"><Eye className="h-3.5 w-3.5" /> Aplicar al preview</button>
-                {connected && <button type="button" disabled={!hasChanges || saving} onClick={save} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cloud className="h-3.5 w-3.5" />} Guardar versión</button>}
+                {connected && <button type="button" disabled={!unsaved || saving} onClick={() => setSavePanelOpen(true)} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"><Cloud className="h-3.5 w-3.5" /> {unsaved ? 'Guardar versión' : 'Versión guardada'}</button>}
               </div>
             </div>
-            <PreviewFrame project={applied} onHelpRequested={onHelpRequested} viewport={viewport} exploreMode={exploreMode} onElementPicked={handleElementPicked} codePosition={codePosition} codeFile={selected === 'css' ? 'css' : 'html'} onNavigateToCssRule={handleNavigateToCssRule} onEditCssValue={handleEditCssValue} onEditHtmlText={handleEditHtmlText} onApplyPlan={handleApplyPlan} />
+            <PreviewFrame project={applied} onHelpRequested={onHelpRequested} viewport={viewport} onViewportChange={setViewport} exploreMode={exploreMode} onElementPicked={handleElementPicked} codePosition={codePosition} codeFile={selected === 'css' ? 'css' : 'html'} onNavigateToCssRule={handleNavigateToCssRule} onEditCssValue={handleEditCssValue} onEditHtmlText={handleEditHtmlText} onApplyPlan={handleApplyPlan} />
           </div>
         </div>
+
+        {connected && <VersionHistory versions={versions} current={!unsaved} />}
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
           <span><strong className="text-slate-800">Entorno protegido:</strong> el proyecto no puede acceder a cuentas, notas ni datos del aula.</span>

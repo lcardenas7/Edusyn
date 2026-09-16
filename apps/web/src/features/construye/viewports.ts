@@ -21,7 +21,11 @@ export const VIEWPORT_PRESETS: Record<ViewportKey, ViewportPreset> = {
  * Nunca amplía (tope en 1): mostrar un proyecto más grande que su tamaño real engañaría sobre
  * cómo se ve. Sin espacio medido todavía (0), se asume 1 para no renderizar un preview
  * colapsado en el primer frame. */
-export function computeViewportScale(availableWidth: number, logicalWidth: number): number {
+export function computeViewportScale(availableWidth: number, logicalWidth: number, availableHeight?: number, logicalHeight?: number): number {
   if (!Number.isFinite(availableWidth) || availableWidth <= 0) return 1
-  return Math.min(1, availableWidth / logicalWidth)
+  const byWidth = Math.min(1, availableWidth / logicalWidth)
+  // El alto solo cuenta cuando se pide (vista enfocada): ahí el dispositivo entero debe caber
+  // en la pantalla sin desplazarse. En el panel normal el alto sigue libre.
+  if (availableHeight === undefined || logicalHeight === undefined || !Number.isFinite(availableHeight) || availableHeight <= 0) return byWidth
+  return Math.min(byWidth, availableHeight / logicalHeight)
 }
