@@ -22,6 +22,40 @@
 
 ## Historial (más reciente arriba)
 
+### Edusyn Crea: recorrido pedagógico — 2026-09-16 · ⏳ SIN DESPLEGAR
+
+> **Pendiente de autorización.** Commit local en `deploy/crea-staging`; no se ha hecho push a
+> `staging` ni a `main`. Diseño y criterios: `docs/EDUSYN_CREA_RECORRIDO_PEDAGOGICO.md`.
+
+**Qué trae.** El recorrido problema → solución → plan de la versión 1 → construir y mejorar. La
+petición para la IA aparece al final del plan, armada con las decisiones del equipo y editable.
+En el taller: "Pedir un cambio a la IA" (qué, por qué, qué conservar, cómo comprobarlo) y
+evidencia estructurada por versión (qué intentaron, qué probaron, qué aprendieron). El docente ve
+el avance por fases, el razonamiento del equipo y puede permitir que guarde sin plan. "Ver en
+grande" pasa a la barra del preview.
+
+**Sin migración.** El brief (JSONB) suma campos opcionales con los mismos nombres de antes para
+los 6 originales; la evidencia va en `detail` de `VERSION_CREATED`; la excepción docente es un
+`TEACHER_COMMENT` con `detail.kind = 'BUILD_UNLOCKED'` que solo crea el endpoint nuevo
+`POST /construye/teams/:teamId/build-unlock` (DOCENTE/COORDINADOR dueño del aula). No se tocó el
+enum de la bitácora.
+
+**Compatibilidad.** Condición solo para la PRIMERA versión (problema, qué tendrá la v1 y cómo
+comprobarla); equipos con versiones no la tienen; `evidence` es opcional para clientes viejos. Al
+desplegar, la API y la web deben salir juntas: una web vieja contra la API nueva sigue guardando
+(sin evidencia), pero un equipo sin versiones ni plan verá el rechazo del servidor.
+
+**Verificación.** `tsc` limpio (api y web); 15 pruebas del módulo `construye` (8 nuevas) y 443 web
+(11 nuevas); `vite build` correcto. Recorrido visual con API simulada en memoria (sin bases de
+datos): estudiante completa las 3 fases, la petición se desbloquea al guardar el plan, petición
+de cambio copiada, v1 guardada con evidencia; equipo sin plan ve qué falta y el botón con candado;
+docente ve fases, razonamiento de un equipo antiguo y habilita la excepción. Sin desborde
+horizontal a 420 px.
+
+**Pendiente.** Probar contra la API real en staging tras autorizar el despliegue (en especial el
+filtro JSON `detail.path` de Prisma, que las pruebas unitarias simulan). La marca del problema en
+el código ("esto es esto" sobre el código del estudiante) sigue siendo un paso aparte.
+
 ### Edusyn Crea: vista de celular, evidencias y guía de lectura — 2026-09-16
 
 Solo web, sin migración. A partir de la primera prueba del usuario en un portátil:

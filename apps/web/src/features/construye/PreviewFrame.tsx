@@ -55,6 +55,10 @@ export interface PreviewFrameProps {
   viewport?: ViewportKey
   /** Permite cambiar de pantalla desde la vista grande, donde la barra del taller queda oculta. */
   onViewportChange?: (viewport: ViewportKey) => void
+  /** Vista grande controlada desde fuera (el taller pone el botón junto a Computador/Celular).
+   * Sin esto, el propio preview muestra su botón "Ver en grande". */
+  focused?: boolean
+  onFocusedChange?: (focused: boolean) => void
   /** Sin la ficha de diagnóstico ni el encabezado: solo el iframe, para incrustar en un
    * marco propio (p. ej. la vista de celular del docente). El aislamiento no cambia. */
   compact?: boolean
@@ -249,13 +253,15 @@ const SCALE_LABEL_Y = 28
 // portátil en un tercio del panel.
 const SIDE_GUIDE_MIN_WIDTH = 900
 
-export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, viewport = 'desktop', onViewportChange, compact = false, exploreMode = false, onElementPicked, codePosition = null, codeFile = 'html', onNavigateToCssRule, onEditCssValue, onEditHtmlText, onApplyPlan }: PreviewFrameProps) {
+export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, viewport = 'desktop', onViewportChange, focused: focusedProp, onFocusedChange, compact = false, exploreMode = false, onElementPicked, codePosition = null, codeFile = 'html', onNavigateToCssRule, onEditCssValue, onEditHtmlText, onApplyPlan }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const viewportShellRef = useRef<HTMLDivElement>(null)
   const [viewportScale, setViewportScale] = useState(1)
   // Vista grande: el MISMO iframe pasa a ocupar la pantalla solo cambiando clases, sin
   // desmontarse — la app del estudiante conserva su estado (tareas agregadas, etc.).
-  const [focused, setFocused] = useState(false)
+  const [focusedInternal, setFocusedInternal] = useState(false)
+  const focused = focusedProp ?? focusedInternal
+  const setFocused = (next: boolean) => { if (onFocusedChange) onFocusedChange(next); else setFocusedInternal(next) }
   // En la vista grande: "fit" encoge el dispositivo hasta que quepa entero; "real" lo muestra
   // a su tamaño lógico (nunca más grande) y se desplaza para verlo completo.
   const [focusZoom, setFocusZoom] = useState<'fit' | 'real'>('fit')
@@ -541,9 +547,9 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
             </button>
           )}
           <button type="button" onClick={restart} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><RotateCcw className="h-3.5 w-3.5" /> Reiniciar prueba</button>
-          <button type="button" onClick={() => setFocused(v => !v)} title={focused ? 'Volver al taller (Esc)' : 'Ver la app en grande, sin el editor'} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${focused ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}>
+          {(focused || !onFocusedChange) && <button type="button" onClick={() => setFocused(!focused)} title={focused ? 'Volver al taller (Esc)' : 'Ver la app en grande, sin el editor'} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${focused ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}>
             {focused ? <><Minimize2 className="h-3.5 w-3.5" /> Volver al taller</> : <><Maximize2 className="h-3.5 w-3.5" /> Ver en grande</>}
-          </button>
+          </button>}
         </div>
       </header>
       <div className={`grid gap-4 bg-[#f8fafb] p-3 sm:p-4 ${sideGuide ? 'grid-cols-[minmax(0,1fr)_300px]' : ''} ${focused ? 'min-h-0 flex-1 overflow-auto' : ''}`}>

@@ -37,6 +37,9 @@ export class ConstruyeController {
   @Post('teams/:teamId/versions') @Roles('ESTUDIANTE')
   version(@Param('teamId') teamId: string, @Request() req: any, @Body() body: any) { return this.ctx(req).then(({ institutionId, userId }) => this.service.createVersion(teamId, institutionId, userId, body)); }
 
+  @Post('teams/:teamId/build-unlock') @Roles('DOCENTE', 'COORDINADOR')
+  unlockBuild(@Param('teamId') teamId: string, @Request() req: any, @Body() body: any) { return this.ctx(req).then(({ institutionId, userId }) => this.service.unlockBuild(teamId, institutionId, userId, body)); }
+
   @Post('teams/:teamId/journal') @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   journal(@Param('teamId') teamId: string, @Request() req: any, @Body() body: any) { return this.ctx(req).then(({ institutionId, userId }) => this.service.addJournalEntry(teamId, institutionId, userId, body)); }
 

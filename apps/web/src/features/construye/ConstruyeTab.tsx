@@ -1,6 +1,7 @@
-import { AlertTriangle, Code2, Loader2, Plus, Smartphone, Users2 } from 'lucide-react'
+import { AlertTriangle, BrainCircuit, Code2, Loader2, Lock, Plus, Smartphone, Unlock, Users2 } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { toast } from '../../lib/toast'
+import { promptDialog } from '../../components/ui/confirm'
 import { classroomApi } from '../../lib/api'
 import {
   construyeApi,
@@ -11,6 +12,7 @@ import {
 import { manifestToProject } from './manifest'
 import PreviewFrame from './PreviewFrame'
 import TeamWorkspace from './TeamWorkspace'
+import TeamReasoning, { PhaseProgress } from './TeamReasoning'
 
 /** Marco de celular puramente visual: comunica "así se ve en un teléfono", nada de esto
  * afecta el aislamiento — adentro sigue el mismo iframe sandboxed de PreviewFrame. */
@@ -256,7 +258,8 @@ function NewTeamForm({ projectId, roster, takenEnrollmentIds, onCreated, onCance
 function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onCommented: () => void }) {
   const [comment, setComment] = useState('')
   const [sending, setSending] = useState(false)
-  const [view, setView] = useState<'none' | 'app' | 'code'>('none')
+  const [view, setView] = useState<'none' | 'app' | 'code' | 'reasoning'>('none')
+  const [unlocking, setUnlocking] = useState(false)
 
   const sendComment = async () => {
     if (!comment.trim()) return
@@ -274,6 +277,25 @@ function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onComme
   }
 
   const project = team.latestVersion ? manifestToProject(team.latestVersion.manifest) : null
+  const gate = team.buildGate
+  const waitingPlan = !!gate && !gate.hasVersions && !gate.canSaveFirstVersion
+
+  // Excepción controlada: el equipo puede guardar su primera versión sin completar el plan.
+  // Queda en la bitácora con el docente como autor.
+  const unlockBuild = async () => {
+    const reason = await promptDialog('El equipo podrá guardar versiones aunque no haya escrito su plan. ¿Por qué lo habilitas? (opcional)', { title: 'Permitir guardar sin plan', confirmLabel: 'Permitir' })
+    if (reason === null) return
+    setUnlocking(true)
+    try {
+      await construyeApi.unlockBuild(team.id, { reason })
+      toast.success('Listo', 'El equipo ya puede guardar su primera versión.')
+      onCommented()
+    } catch (error) {
+      toast.error(error)
+    } finally {
+      setUnlocking(false)
+    }
+  }
 
   return <article className="rounded-2xl border border-hairline bg-surface-1 p-4">
     <header className="flex items-center justify-between gap-2">
@@ -281,8 +303,18 @@ function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onComme
       {team.needsAttention && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"><AlertTriangle className="h-3 w-3" /> Necesita apoyo</span>}
     </header>
     <p className="mt-1 text-xs text-slate-500">{team.members.map((member) => `${member.studentEnrollment.student.firstName} (${ROLE_LABEL[member.role]})`).join(', ') || 'Sin integrantes'}</p>
-    {team.brief?.problem && <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/70 px-3 py-2.5"><p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Idea del equipo</p><p className="mt-1 text-sm leading-5 text-slate-700">{team.brief.problem}</p></div>}
+    <PhaseProgress brief={team.brief} versionCount={team.latestVersion ? team.latestVersion.number : 0} />
+    {team.brief?.problem && <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/70 px-3 py-2.5"><p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">El problema, en sus palabras</p><p className="mt-1 text-sm leading-5 text-slate-700">{team.brief.problem}</p></div>}
     <p className="mt-2 text-sm text-slate-600">{team.latestVersion ? `Última versión: v${team.latestVersion.number}` : 'Sin versiones guardadas todavía.'}</p>
+    {waitingPlan && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+      <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Aún no puede guardar su primera versión: le falta completar su plan.</span>
+      <button type="button" disabled={unlocking} onClick={unlockBuild} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"><Unlock className="h-3 w-3" /> Permitir guardar sin plan</button>
+    </div>}
+    {gate?.unlockedByTeacher && !gate.hasVersions && <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500"><Unlock className="h-3.5 w-3.5" /> Habilitaste que guarde sin completar el plan.</p>}
+    <div className="mt-1 flex flex-wrap gap-3">
+      <button type="button" onClick={() => setView((current) => current === 'reasoning' ? 'none' : 'reasoning')} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:underline"><BrainCircuit className="h-3.5 w-3.5" /> {view === 'reasoning' ? 'Ocultar razonamiento' : 'Ver razonamiento'}</button>
+    </div>
+    {view === 'reasoning' && <TeamReasoning teamId={team.id} />}
     {team.latestVersion && <div className="mt-1 flex gap-3">
       <button type="button" onClick={() => setView((current) => current === 'app' ? 'none' : 'app')} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:underline"><Smartphone className="h-3.5 w-3.5" /> {view === 'app' ? 'Ocultar la app' : 'Ver la app'}</button>
       <button type="button" onClick={() => setView((current) => current === 'code' ? 'none' : 'code')} className="text-xs font-semibold text-indigo-700 hover:underline">{view === 'code' ? 'Ocultar código' : 'Ver código'}</button>

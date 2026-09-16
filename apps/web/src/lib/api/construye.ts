@@ -29,14 +29,31 @@ export interface ConstruyeJournalEntry {
 
 export type ConstruyeMemberRole = 'RESEARCH' | 'DESIGN' | 'DEVELOPMENT' | 'TESTING' | 'COORDINATION'
 
+/** Recorrido pedagógico del equipo (ver construye.service.ts). `problem` = qué ocurre y
+ * `features` = qué tendrá la versión 1; los demás campos pueden faltar en briefs antiguos. */
 export interface ConstruyeTeamBrief {
   problem: string
+  affected: string
+  whyItMatters: string
+  solution: string
   audience: string
+  screens: string
   subject: string
   grade: '8.º' | '9.º' | '10.º' | '11.º'
-  features: string
   style: string
+  features: string
+  later: string
+  successCheck: string
 }
+
+export interface ConstruyeBuildGate {
+  canSaveFirstVersion: boolean
+  unlockedByTeacher: boolean
+  hasVersions: boolean
+  missing: ('problem' | 'features' | 'successCheck')[]
+}
+
+export interface ConstruyeVersionEvidence { attempted: string; tested: string; learned: string }
 
 export interface ConstruyeTeamMember {
   id: string
@@ -45,10 +62,12 @@ export interface ConstruyeTeamMember {
 }
 
 export interface ConstruyeTeamDetail {
-  team: { id: string; name: string; projectId: string; brief: ConstruyeTeamBrief | null; briefUpdatedAt: string | null }
+  team: { id: string; name: string; projectId: string; brief: Partial<ConstruyeTeamBrief> | null; briefUpdatedAt: string | null }
   members: ConstruyeTeamMember[]
   versions: ConstruyeVersion[]
   journal: ConstruyeJournalEntry[]
+  /** Ausente en respuestas de una API anterior al recorrido. */
+  buildGate?: ConstruyeBuildGate
 }
 
 export interface ConstruyeProject {
@@ -66,9 +85,10 @@ export interface ConstruyeProject {
 export interface ConstruyeDashboardTeam {
   id: string
   name: string
-  brief: ConstruyeTeamBrief | null
+  brief: Partial<ConstruyeTeamBrief> | null
   briefUpdatedAt: string | null
   members: ConstruyeTeamMember[]
+  buildGate?: ConstruyeBuildGate
   latestVersion: ConstruyeVersion | null
   recentMilestones: ConstruyeJournalEntry[]
   needsAttention: boolean
@@ -86,8 +106,10 @@ export const construyeApi = {
   teamDetail: (teamId: string) => api.get<ConstruyeTeamDetail>(`/construye/teams/${teamId}`),
   updateBrief: (teamId: string, brief: ConstruyeTeamBrief) =>
     api.patch<{ team: ConstruyeTeamDetail['team']; journalEntry: ConstruyeJournalEntry | null }>(`/construye/teams/${teamId}/brief`, { brief }),
-  createVersion: (teamId: string, data: { manifest: ConstruyeManifest; label?: string }) =>
+  createVersion: (teamId: string, data: { manifest: ConstruyeManifest; label?: string; evidence?: ConstruyeVersionEvidence }) =>
     api.post<ConstruyeVersion>(`/construye/teams/${teamId}/versions`, data),
+  unlockBuild: (teamId: string, data: { reason?: string } = {}) =>
+    api.post<ConstruyeJournalEntry>(`/construye/teams/${teamId}/build-unlock`, data),
   addJournalEntry: (teamId: string, data: { type: string; summary: string; detail?: Record<string, unknown> }) =>
     api.post<ConstruyeJournalEntry>(`/construye/teams/${teamId}/journal`, data),
 }

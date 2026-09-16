@@ -1,4 +1,4 @@
-import { BookOpen, Check, ChevronDown, ChevronRight, Cloud, Code2, Crosshair, Eye, FileCode2, FlaskConical, Layers3, Maximize2, Minimize2, Monitor, MousePointer2, RotateCcw, Smartphone, Sparkles } from 'lucide-react'
+import { BookOpen, Check, ChevronDown, ChevronRight, Cloud, Code2, Crosshair, Eye, FileCode2, FlaskConical, Layers3, Lock, Maximize2, Minimize2, Monitor, MousePointer2, RotateCcw, Smartphone, Sparkles, Wand2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { createTextareaEditorAdapter } from './editorAdapter'
@@ -10,6 +10,9 @@ import { clampCssRuleRange, clampElementPickRange, fileTracksAppliedProject, typ
 import { type ViewportKey } from './viewports'
 import { FILE_GUIDES } from './fileGuides'
 import { SaveVersionPanel, VersionHistory, type SavedVersionSummary } from './VersionEvidence'
+import ChangeRequestPanel from './ChangeRequestPanel'
+import { GATE_MISSING_LABEL, localGate, type ChangeRequest, type VersionEvidenceInput } from './journey'
+import type { ConstruyeBuildGate, ConstruyeTeamBrief } from '../../lib/api/construye'
 
 const SAMPLE: PreviewProject = {
   html: '<main>\n  <h1>Mi app escolar</h1>\n  <p>Escribe aquí el contenido de tu página.</p>\n  <button id="saludar">Probar</button>\n  <p id="mensaje"></p>\n</main>',
@@ -30,14 +33,20 @@ export interface CodeWorkspaceProps {
   initialProject?: PreviewProject
   /** Cuando se provee, habilita "Guardar versión". Debe devolver true si guardó (para
    * reflejar el cambio en el preview) o false si lo canceló tras avisar al equipo. */
-  onSaveVersion?: (project: PreviewProject, note: string) => Promise<boolean>
+  onSaveVersion?: (project: PreviewProject, evidence: VersionEvidenceInput) => Promise<boolean>
   /** Versiones ya guardadas por el equipo, la más reciente primero. */
   versions?: SavedVersionSummary[]
+  /** Decisiones guardadas del recorrido: alimentan la petición de cambio y la condición de la
+   * primera versión. */
+  brief?: ConstruyeTeamBrief
+  /** Respuesta del servidor; aquí solo importa si el docente habilitó la excepción. */
+  buildGate?: ConstruyeBuildGate
+  onChangeRequestCopied?: (request: ChangeRequest) => void
   /** Se reenvía al preview: se dispara cuando el equipo copia el contexto de ayuda. */
   onHelpRequested?: () => void
 }
 
-export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], onHelpRequested }: CodeWorkspaceProps) {
+export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], brief, buildGate, onChangeRequestCopied, onHelpRequested }: CodeWorkspaceProps) {
   const [draft, setDraft] = useState<PreviewProject>(() => initialProject ?? SAMPLE)
   const [applied, setApplied] = useState<PreviewProject>(() => initialProject ?? SAMPLE)
   const [selected, setSelected] = useState<FileKey>('html')
@@ -47,6 +56,8 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
   // deshabilitaba "Guardar versión" y el equipo no podía guardar lo que acababa de probar.
   const [savedProject, setSavedProject] = useState<PreviewProject | null>(() => initialProject ?? null)
   const [savePanelOpen, setSavePanelOpen] = useState(false)
+  const [changePanelOpen, setChangePanelOpen] = useState(false)
+  const [previewFocused, setPreviewFocused] = useState(false)
   const [guideOpen, setGuideOpen] = useState(true)
   const [expanded, setExpanded] = useState(false)
   const [exploreMode, setExploreMode] = useState(false)
@@ -72,6 +83,8 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
   const changedSinceSave = FILES.filter(({ key }) => !savedProject || draft[key] !== savedProject[key]).map(({ label }) => label)
   const unsaved = changedSinceSave.length > 0
   const latestVersion = versions[0]
+  const gate = brief ? localGate(brief, versions.length, buildGate?.unlockedByTeacher ?? false) : null
+  const blockedBy = gate && !gate.canSaveFirstVersion ? gate.missing.map(field => GATE_MISSING_LABEL[field]) : []
   const guide = FILE_GUIDES[selected]
   const editorClass = `${editorClassBase} ${expanded ? 'min-h-[60vh]' : 'min-h-[360px]'}`
   const activeFile = FILES.find(file => file.key === selected) ?? FILES[0]
@@ -273,11 +286,11 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
     return () => { window.removeEventListener('keydown', onKeyDown); document.body.style.overflow = previousOverflow }
   }, [expanded])
 
-  const save = async (note: string) => {
+  const save = async (evidence: VersionEvidenceInput) => {
     if (!onSaveVersion) return
     setSaving(true)
     try {
-      const saved = await onSaveVersion(draft, note)
+      const saved = await onSaveVersion(draft, evidence)
       if (saved) {
         setApplied(draft)
         setSavedProject(draft)
@@ -329,11 +342,14 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
           <div><p className="font-bold">Modo explorar encendido</p><p className="mt-0.5 text-xs leading-5 text-cyan-800">Haz clic en una parte de tu página para descubrir qué código la crea. También puedes poner el cursor en HTML o CSS para verla resaltada.</p></div>
         </div>}
 
+        {changePanelOpen && <ChangeRequestPanel brief={brief} project={draft} onCopied={onChangeRequestCopied} onClose={() => setChangePanelOpen(false)} />}
+
         {savePanelOpen && connected && <SaveVersionPanel
           nextNumber={(latestVersion?.number ?? 0) + 1}
           changedFiles={changedSinceSave}
           untested={hasChanges}
           saving={saving}
+          blockedBy={blockedBy}
           onApplyFirst={() => { setApplied(draft); setSavePanelOpen(false) }}
           onConfirm={save}
           onCancel={() => setSavePanelOpen(false)}
@@ -391,12 +407,14 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
                 <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50" role="group" aria-label="Cómo ver el proyecto">
                   <button type="button" onClick={() => setViewport('desktop')} aria-pressed={viewport === 'desktop'} title="Ver cómo queda en una computadora" className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold ${viewport === 'desktop' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Monitor className="h-3.5 w-3.5" /> Computador</button>
                   <button type="button" onClick={() => setViewport('mobile')} aria-pressed={viewport === 'mobile'} title="Ver cómo queda en un celular" className={`inline-flex items-center gap-1.5 border-l border-slate-200 px-3 py-2 text-xs font-semibold ${viewport === 'mobile' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Smartphone className="h-3.5 w-3.5" /> Celular</button>
+                  <button type="button" onClick={() => setPreviewFocused(true)} title="Ver la app en grande, sin el editor" className="inline-flex items-center gap-1.5 border-l border-slate-200 px-3 py-2 text-xs font-semibold text-cyan-700 hover:bg-white"><Maximize2 className="h-3.5 w-3.5" /> Ver en grande</button>
                 </div>
+                <button type="button" onClick={() => setChangePanelOpen(v => !v)} aria-pressed={changePanelOpen} title="Preparar una petición concreta para la IA" className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"><Wand2 className="h-3.5 w-3.5" /> Pedir un cambio a la IA</button>
                 <button type="button" disabled={!hasChanges} onClick={() => setApplied(draft)} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"><Eye className="h-3.5 w-3.5" /> Aplicar al preview</button>
-                {connected && <button type="button" disabled={!unsaved || saving} onClick={() => setSavePanelOpen(true)} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"><Cloud className="h-3.5 w-3.5" /> {unsaved ? 'Guardar versión' : 'Versión guardada'}</button>}
+                {connected && <button type="button" disabled={!unsaved || saving} onClick={() => setSavePanelOpen(true)} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{blockedBy.length && unsaved ? <Lock className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />} {unsaved ? 'Guardar versión' : 'Versión guardada'}</button>}
               </div>
             </div>
-            <PreviewFrame project={applied} onHelpRequested={onHelpRequested} viewport={viewport} onViewportChange={setViewport} exploreMode={exploreMode} onElementPicked={handleElementPicked} codePosition={codePosition} codeFile={selected === 'css' ? 'css' : 'html'} onNavigateToCssRule={handleNavigateToCssRule} onEditCssValue={handleEditCssValue} onEditHtmlText={handleEditHtmlText} onApplyPlan={handleApplyPlan} />
+            <PreviewFrame project={applied} onHelpRequested={onHelpRequested} viewport={viewport} onViewportChange={setViewport} focused={previewFocused} onFocusedChange={setPreviewFocused} exploreMode={exploreMode} onElementPicked={handleElementPicked} codePosition={codePosition} codeFile={selected === 'css' ? 'css' : 'html'} onNavigateToCssRule={handleNavigateToCssRule} onEditCssValue={handleEditCssValue} onEditHtmlText={handleEditHtmlText} onApplyPlan={handleApplyPlan} />
           </div>
         </div>
 

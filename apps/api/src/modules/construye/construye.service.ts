@@ -11,14 +11,63 @@ const MAX_FILE_BYTES = 250_000;
 
 type ManifestFile = { path: string; content: string };
 
+/** Recorrido pedagógico del equipo. Los seis campos originales conservan su nombre para que
+ * los briefs ya guardados sigan siendo válidos: `problem` es "qué ocurre" (fase 1) y
+ * `features` es "qué tendrá la versión 1" (fase 3). */
 export type ConstruyeTeamBrief = {
+  // Fase 1 — el problema
   problem: string;
+  affected: string;
+  whyItMatters: string;
+  // Fase 2 — la solución que imaginamos
+  solution: string;
   audience: string;
+  screens: string;
   subject: string;
   grade: '8.º' | '9.º' | '10.º' | '11.º';
-  features: string;
   style: string;
+  // Fase 3 — plan de la versión 1
+  features: string;
+  later: string;
+  successCheck: string;
 };
+
+export type BuildGateMissing = 'problem' | 'features' | 'successCheck';
+export type BuildGate = { canSaveFirstVersion: boolean; unlockedByTeacher: boolean; hasVersions: boolean; missing: BuildGateMissing[] };
+
+const MIN_GATE_TEXT = 3;
+
+/** Condición mínima antes de la PRIMERA versión: el equipo dijo qué ocurre, qué tendrá la
+ * versión 1 y cómo sabrá que funciona. Nunca aplica a equipos que ya tienen versiones (datos
+ * anteriores al recorrido) y el docente puede levantarla. No bloquea el editor ni el preview. */
+export function buildGate(brief: unknown, versionCount: number, unlockedByTeacher: boolean): BuildGate {
+  const source = brief && typeof brief === 'object' && !Array.isArray(brief) ? brief as Record<string, unknown> : {};
+  const filled = (key: BuildGateMissing) => typeof source[key] === 'string' && (source[key] as string).trim().length >= MIN_GATE_TEXT;
+  const missing = (['problem', 'features', 'successCheck'] as BuildGateMissing[]).filter((key) => !filled(key));
+  const hasVersions = versionCount > 0;
+  return { canSaveFirstVersion: hasVersions || unlockedByTeacher || missing.length === 0, unlockedByTeacher, hasVersions, missing };
+}
+
+export type VersionEvidence = { attempted: string; tested: string; learned: string };
+
+/** Evidencia breve de una versión. Es opcional para no romper clientes anteriores, pero si
+ * llega debe traer qué intentaron y qué probaron. */
+export function validateVersionEvidence(value: unknown): VersionEvidence | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) throw new BadRequestException('La evidencia de la versión no tiene un formato válido');
+  const source = value as Record<string, unknown>;
+  const attempted = briefText(source.attempted, 'Qué intentaron', 300);
+  const tested = briefText(source.tested, 'Qué probaron', 600);
+  if (!attempted) throw new BadRequestException('Cuenten qué intentaron en esta versión');
+  if (!tested) throw new BadRequestException('Cuenten qué probaron en esta versión');
+  return { attempted, tested, learned: briefText(source.learned, 'Qué aprendieron', 600) };
+}
+
+const BUILD_UNLOCKED = 'BUILD_UNLOCKED';
+
+function isBuildUnlockEntry(entry: any): boolean {
+  return entry?.type === 'TEACHER_COMMENT' && !!entry.actorUserId && entry.detail?.kind === BUILD_UNLOCKED;
+}
 
 const BRIEF_GRADES = new Set<ConstruyeTeamBrief['grade']>(['8.º', '9.º', '10.º', '11.º']);
 
@@ -41,11 +90,17 @@ export function validateTeamBrief(value: unknown): ConstruyeTeamBrief {
   }
   return {
     problem: briefText(source.problem, 'El problema', 1500),
+    affected: briefText(source.affected, 'A quién afecta', 800),
+    whyItMatters: briefText(source.whyItMatters, 'Por qué importa', 1000),
+    solution: briefText(source.solution, 'La solución', 1500),
     audience: briefText(source.audience, 'El público', 500),
+    screens: briefText(source.screens, 'Las pantallas', 2000),
     subject: briefText(source.subject, 'La asignatura', 300),
     grade: grade as ConstruyeTeamBrief['grade'],
-    features: briefText(source.features, 'Las funciones', 2500),
     style: briefText(source.style, 'El estilo visual', 1000),
+    features: briefText(source.features, 'La versión 1', 2500),
+    later: briefText(source.later, 'Lo que queda para después', 1500),
+    successCheck: briefText(source.successCheck, 'Cómo sabrán que funciona', 1000),
   };
 }
 
@@ -176,7 +231,23 @@ export class ConstruyeService {
       (this.prisma as any).construyeVersion.findMany({ where: { teamId, institutionId }, orderBy: { number: 'desc' }, take: 20 }),
       (this.prisma as any).construyeJournalEntry.findMany({ where: { teamId, institutionId }, orderBy: { createdAt: 'desc' }, take: 100 }),
     ]);
-    return { team, members, versions, journal };
+    const unlocked = journal.some(isBuildUnlockEntry)
+      || !!(await (this.prisma as any).construyeJournalEntry.findFirst({ where: { teamId, institutionId, type: 'TEACHER_COMMENT', actorUserId: { not: null }, detail: { path: ['kind'], equals: BUILD_UNLOCKED } }, select: { id: true } }));
+    return { team, members, versions, journal, buildGate: buildGate(team.brief, versions.length, unlocked) };
+  }
+
+  /** Excepción del docente: permite guardar la primera versión sin completar el plan. Queda
+   * en la bitácora con el docente como autor; los estudiantes no pueden crear esta entrada. */
+  async unlockBuild(teamId: string, institutionId: string, userId: string, dto: any) {
+    const team = await (this.prisma as any).construyeTeam.findFirst({ where: { id: teamId, institutionId } });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.projectForTeacher(team.projectId, institutionId, userId);
+    const reason = typeof dto?.reason === 'string' ? dto.reason.trim().slice(0, 300) : '';
+    return (this.prisma as any).construyeJournalEntry.create({ data: {
+      institutionId, projectId: team.projectId, teamId, actorUserId: userId, type: 'TEACHER_COMMENT',
+      summary: reason ? `El docente permitió guardar versiones sin completar el plan: ${reason}` : 'El docente permitió guardar versiones sin completar el plan.',
+      detail: { kind: BUILD_UNLOCKED },
+    } });
   }
 
   async updateBrief(teamId: string, institutionId: string, userId: string, dto: any) {
@@ -211,10 +282,19 @@ export class ConstruyeService {
   async createVersion(teamId: string, institutionId: string, userId: string, dto: any) {
     const { team, member } = await this.membership(teamId, institutionId, userId);
     const manifest = validateStaticManifest(dto?.manifest);
+    const evidence = validateVersionEvidence(dto?.evidence);
+    const label = evidence?.attempted ?? (typeof dto?.label === 'string' ? dto.label : '');
     return (this.prisma as any).$transaction(async (tx: any) => {
       const latest = await tx.construyeVersion.findFirst({ where: { teamId, institutionId }, orderBy: { number: 'desc' }, select: { number: true } });
-      const version = await tx.construyeVersion.create({ data: { institutionId, projectId: team.projectId, teamId, number: (latest?.number || 0) + 1, label: typeof dto?.label === 'string' ? dto.label.trim().slice(0, 120) || null : null, manifest, createdByEnrollmentId: member.studentEnrollmentId } });
-      await tx.construyeJournalEntry.create({ data: { institutionId, projectId: team.projectId, teamId, actorEnrollmentId: member.studentEnrollmentId, type: 'VERSION_CREATED', summary: `Guardaron la versión ${version.number}.`, detail: { files: manifest.files.map((file) => file.path), versionId: version.id } } });
+      if (!latest) {
+        const unlock = await tx.construyeJournalEntry.findFirst({ where: { teamId, institutionId, type: 'TEACHER_COMMENT', actorUserId: { not: null }, detail: { path: ['kind'], equals: BUILD_UNLOCKED } }, select: { id: true } });
+        const gate = buildGate(team.brief, 0, !!unlock);
+        if (!gate.canSaveFirstVersion) {
+          throw new BadRequestException('Para guardar la primera versión, cuenten qué problema resuelven, qué tendrá la versión 1 y cómo sabrán que funciona.');
+        }
+      }
+      const version = await tx.construyeVersion.create({ data: { institutionId, projectId: team.projectId, teamId, number: (latest?.number || 0) + 1, label: label.trim().slice(0, 120) || null, manifest, createdByEnrollmentId: member.studentEnrollmentId } });
+      await tx.construyeJournalEntry.create({ data: { institutionId, projectId: team.projectId, teamId, actorEnrollmentId: member.studentEnrollmentId, type: 'VERSION_CREATED', summary: `Guardaron la versión ${version.number}${evidence ? `: ${evidence.attempted}` : '.'}`, detail: { files: manifest.files.map((file) => file.path), versionId: version.id, ...(evidence ? { evidence } : {}) } } });
       return version;
     });
   }
@@ -230,6 +310,7 @@ export class ConstruyeService {
   async dashboard(projectId: string, institutionId: string, userId: string) {
     await this.projectForTeacher(projectId, institutionId, userId);
     const teams = await (this.prisma as any).construyeTeam.findMany({ where: { projectId, institutionId }, include: { members: { include: { studentEnrollment: { include: { student: { select: { firstName: true, lastName: true } } } } } }, versions: { orderBy: { number: 'desc' }, take: 1 }, journal: { orderBy: { createdAt: 'desc' }, take: 5 } } });
-    return teams.map((team: any) => ({ id: team.id, name: team.name, brief: team.brief || null, briefUpdatedAt: team.briefUpdatedAt || null, members: team.members, latestVersion: team.versions[0] || null, recentMilestones: team.journal, needsAttention: !team.versions.length || team.journal.some((entry: any) => entry.type === 'HELP_REQUESTED') }));
+    const unlockedTeams = new Set((await (this.prisma as any).construyeJournalEntry.findMany({ where: { projectId, institutionId, type: 'TEACHER_COMMENT', actorUserId: { not: null }, detail: { path: ['kind'], equals: BUILD_UNLOCKED } }, select: { teamId: true } })).map((entry: any) => entry.teamId));
+    return teams.map((team: any) => ({ id: team.id, name: team.name, brief: team.brief || null, briefUpdatedAt: team.briefUpdatedAt || null, members: team.members, latestVersion: team.versions[0] || null, recentMilestones: team.journal, needsAttention: !team.versions.length || team.journal.some((entry: any) => entry.type === 'HELP_REQUESTED'), buildGate: buildGate(team.brief, team.versions.length, unlockedTeams.has(team.id)) }));
   }
 }

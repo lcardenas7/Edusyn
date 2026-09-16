@@ -1,5 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import { ConstruyeService, validateStaticManifest, validateTeamBrief } from './construye.service';
+import { buildGate, ConstruyeService, validateStaticManifest, validateTeamBrief, validateVersionEvidence } from './construye.service';
+
+const EMPTY_JOURNEY = { affected: '', whyItMatters: '', solution: '', screens: '', later: '', successCheck: '' };
 
 describe('validateStaticManifest', () => {
   it('acepta el conjunto estático mínimo', () => {
@@ -28,6 +30,7 @@ describe('validateTeamBrief', () => {
       problem: '  Reducir residuos  ', audience: 'Estudiantes', subject: 'Ciencias', grade: '9.º',
       features: 'Clasificar residuos', style: 'Claro', offsets: [1, 2], code: '<script />',
     })).toEqual({
+      ...EMPTY_JOURNEY,
       problem: 'Reducir residuos', audience: 'Estudiantes', subject: 'Ciencias', grade: '9.º',
       features: 'Clasificar residuos', style: 'Claro',
     });
@@ -35,6 +38,7 @@ describe('validateTeamBrief', () => {
 
   it('permite guardar un borrador parcial sin inventar contenido', () => {
     expect(validateTeamBrief({ problem: 'Una idea', grade: '8.º' })).toEqual({
+      ...EMPTY_JOURNEY,
       problem: 'Una idea', audience: '', subject: '', grade: '8.º', features: '', style: '',
     });
   });
@@ -74,5 +78,86 @@ describe('ConstruyeService.updateBrief', () => {
         detail: expect.objectContaining({ changedFields: expect.arrayContaining(['problem']) }),
       }),
     }));
+  });
+});
+
+describe('recorrido pedagógico', () => {
+  it('conserva los campos nuevos del recorrido y los briefs antiguos siguen siendo válidos', () => {
+    const brief = validateTeamBrief({ problem: 'Fila larga en la tienda', affected: 'Estudiantes de primaria', successCheck: 'Si pido, aparece mi turno' });
+    expect(brief).toEqual(expect.objectContaining({ problem: 'Fila larga en la tienda', affected: 'Estudiantes de primaria', successCheck: 'Si pido, aparece mi turno', solution: '' }));
+    expect(() => validateTeamBrief({ problem: 'x', audience: 'y', subject: '', grade: '10.º', features: 'z', style: '' })).not.toThrow();
+  });
+
+  it('pide solo problema, versión 1 y prueba antes de la primera versión', () => {
+    expect(buildGate(null, 0, false)).toEqual({ canSaveFirstVersion: false, unlockedByTeacher: false, hasVersions: false, missing: ['problem', 'features', 'successCheck'] });
+    expect(buildGate({ problem: 'Fila larga', features: 'Lista de pedidos', successCheck: 'Aparece el pedido' }, 0, false).canSaveFirstVersion).toBe(true);
+    expect(buildGate({ problem: 'Fila larga', features: '  ', successCheck: 'ok' }, 0, false).missing).toEqual(['features', 'successCheck']);
+  });
+
+  it('no bloquea equipos con versiones anteriores ni equipos habilitados por el docente', () => {
+    expect(buildGate(null, 2, false).canSaveFirstVersion).toBe(true);
+    expect(buildGate({}, 0, true).canSaveFirstVersion).toBe(true);
+  });
+
+  it('valida la evidencia de versión sin exigirla a clientes anteriores', () => {
+    expect(validateVersionEvidence(undefined)).toBeNull();
+    expect(validateVersionEvidence({ attempted: ' Agregar tareas ', tested: 'Escribí una y apareció' })).toEqual({ attempted: 'Agregar tareas', tested: 'Escribí una y apareció', learned: '' });
+    expect(() => validateVersionEvidence({ attempted: 'Algo' })).toThrow(BadRequestException);
+    expect(() => validateVersionEvidence({ tested: 'Algo' })).toThrow(BadRequestException);
+  });
+});
+
+describe('ConstruyeService.createVersion', () => {
+  const manifest = { files: [{ path: 'index.html', content: '<main></main>' }] };
+  function setup({ brief = null as unknown, latest = null as unknown, unlock = null as unknown } = {}) {
+    const tx = {
+      construyeVersion: { findFirst: jest.fn().mockResolvedValue(latest), create: jest.fn().mockResolvedValue({ id: 'v1', number: 1 }) },
+      construyeJournalEntry: { findFirst: jest.fn().mockResolvedValue(unlock), create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      construyeTeam: { findFirst: jest.fn().mockResolvedValue({ id: 'team-1', projectId: 'project-1', brief }) },
+      construyeTeamMember: { findFirst: jest.fn().mockResolvedValue({ studentEnrollmentId: 'enrollment-1', studentEnrollment: { id: 'enrollment-1', studentId: 'student-1' } }) },
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    };
+    return { tx, service: new ConstruyeService(prisma as any) };
+  }
+
+  it('rechaza la primera versión si el equipo no ha contado su plan', async () => {
+    const { tx, service } = setup({ brief: { problem: 'Fila larga' } });
+    await expect(service.createVersion('team-1', 'institution-1', 'user-1', { manifest })).rejects.toThrow(BadRequestException);
+    expect(tx.construyeVersion.create).not.toHaveBeenCalled();
+  });
+
+  it('acepta la primera versión con la excepción del docente y guarda la evidencia en la bitácora', async () => {
+    const { tx, service } = setup({ unlock: { id: 'unlock-1' } });
+    await service.createVersion('team-1', 'institution-1', 'user-1', { manifest, evidence: { attempted: 'Primer formulario', tested: 'Agregué una tarea' } });
+    expect(tx.construyeVersion.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ number: 1, label: 'Primer formulario' }) }));
+    expect(tx.construyeJournalEntry.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      type: 'VERSION_CREATED',
+      detail: expect.objectContaining({ evidence: { attempted: 'Primer formulario', tested: 'Agregué una tarea', learned: '' } }),
+    }) }));
+  });
+
+  it('no aplica la condición cuando el equipo ya tenía versiones', async () => {
+    const { tx, service } = setup({ latest: { number: 3 } });
+    await service.createVersion('team-1', 'institution-1', 'user-1', { manifest, label: 'Cliente anterior' });
+    expect(tx.construyeJournalEntry.findFirst).not.toHaveBeenCalled();
+    expect(tx.construyeVersion.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ number: 4, label: 'Cliente anterior' }) }));
+  });
+});
+
+describe('ConstruyeService.unlockBuild', () => {
+  it('solo el docente dueño del aula registra la excepción, con el docente como autor', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 'entry-1' });
+    const prisma = {
+      construyeTeam: { findFirst: jest.fn().mockResolvedValue({ id: 'team-1', projectId: 'project-1' }) },
+      construyeProject: { findFirst: jest.fn().mockResolvedValue({ id: 'project-1', classroomId: 'classroom-1' }) },
+      classroom: { findFirst: jest.fn().mockResolvedValue({ id: 'classroom-1', teacherAssignment: { teacherId: 'teacher-1' } }) },
+      construyeJournalEntry: { create },
+    };
+    const service = new ConstruyeService(prisma as any);
+    await service.unlockBuild('team-1', 'institution-1', 'teacher-1', { reason: 'Trabajan en papel' });
+    expect(create).toHaveBeenCalledWith({ data: expect.objectContaining({ actorUserId: 'teacher-1', type: 'TEACHER_COMMENT', detail: { kind: 'BUILD_UNLOCKED' } }) });
+    await expect(service.unlockBuild('team-1', 'institution-1', 'otro-docente', {})).rejects.toThrow();
   });
 });

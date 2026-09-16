@@ -1,32 +1,36 @@
-import { AlertTriangle, CheckCircle2, Cloud, Eye, History, Loader2, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Cloud, Eye, History, Loader2, Lock, X } from 'lucide-react'
 import { useState } from 'react'
 import { formatBogota } from '../../lib/datetime'
+import type { ConstruyeVersionEvidence } from '../../lib/api/construye'
+import { evidenceReady, type VersionEvidenceInput } from './journey'
 
 export interface SavedVersionSummary {
   number: number
   label: string | null
   createdAt: string
+  evidence?: ConstruyeVersionEvidence
 }
 
-export const VERSION_NOTE_MAX = 120
-const VERSION_NOTE_MIN = 5
+const fieldClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100'
 
-/** Paso previo a guardar: el equipo ve qué se guarda, quién lo verá, y deja escrito qué
- * lograron. Guardar sin esa frase no deja evidencia útil para el docente. */
-export function SaveVersionPanel({ nextNumber, changedFiles, untested, saving, onApplyFirst, onConfirm, onCancel }: {
+/** Guardar una versión es dejar evidencia: qué intentaron, qué probaron y qué aprendieron.
+ * Lo que cambió se calcula solo. Si es la primera versión y el equipo aún no tiene plan, se
+ * explica qué falta antes de intentar (el servidor igual lo verifica). */
+export function SaveVersionPanel({ nextNumber, changedFiles, untested, saving, blockedBy, onApplyFirst, onConfirm, onCancel }: {
   nextNumber: number
-  /** Archivos que cambiaron frente a la última versión guardada (todos si es la primera). */
   changedFiles: string[]
-  /** Hay cambios en el editor que el preview todavía no muestra. */
   untested: boolean
   saving: boolean
+  /** Lo que falta para poder guardar la primera versión; vacío si se puede guardar. */
+  blockedBy: string[]
   onApplyFirst: () => void
-  onConfirm: (note: string) => void
+  onConfirm: (evidence: VersionEvidenceInput) => void
   onCancel: () => void
 }) {
-  const [note, setNote] = useState('')
-  const trimmed = note.trim()
-  const valid = trimmed.length >= VERSION_NOTE_MIN
+  const [evidence, setEvidence] = useState<VersionEvidenceInput>({ attempted: '', tested: '', learned: '' })
+  const set = (key: keyof VersionEvidenceInput, value: string) => setEvidence(current => ({ ...current, [key]: value }))
+  const valid = evidenceReady(evidence)
+  const blocked = blockedBy.length > 0
 
   return <div className="mb-4 rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
     <div className="flex items-start justify-between gap-3">
@@ -34,14 +38,23 @@ export function SaveVersionPanel({ nextNumber, changedFiles, untested, saving, o
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><Cloud className="h-4 w-4" /></span>
         <div>
           <p className="font-bold text-slate-900">Guardar la versión v{nextNumber} como evidencia</p>
-          <p className="mt-0.5 text-xs leading-5 text-slate-500">Se guardan los tres archivos tal como están en el editor. Su docente verá esta versión en su panel, con la fecha y la descripción que escriban aquí.</p>
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">Se guardan los tres archivos tal como están en el editor. Su docente verá la versión junto con lo que cuenten aquí.</p>
         </div>
       </div>
       <button type="button" onClick={onCancel} aria-label="Cancelar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-4 w-4" /></button>
     </div>
 
+    {blocked && <div className="mt-3 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700">
+      <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
+      <div>
+        <p className="font-semibold">Antes de la primera versión, completen su recorrido:</p>
+        <ul className="mt-1 list-disc pl-4">{blockedBy.map(item => <li key={item}>{item}</li>)}</ul>
+        <p className="mt-1 text-slate-500">Pueden seguir editando y probando mientras tanto. Si su docente lo considera, puede habilitarles guardar sin completarlo.</p>
+      </div>
+    </div>}
+
     <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-      <span className="text-slate-500">Cambió desde la versión anterior:</span>
+      <span className="text-slate-500">{nextNumber === 1 ? 'Archivos de esta primera versión:' : 'Qué cambió desde la versión anterior:'}</span>
       {changedFiles.length
         ? changedFiles.map(file => <span key={file} className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[11px] text-slate-700">{file}</span>)
         : <span className="text-slate-400">nada</span>}
@@ -52,24 +65,22 @@ export function SaveVersionPanel({ nextNumber, changedFiles, untested, saving, o
       <button type="button" onClick={onApplyFirst} className="inline-flex items-center gap-1 rounded-lg bg-amber-900 px-2.5 py-1 font-semibold text-white hover:bg-amber-950"><Eye className="h-3 w-3" /> Aplicar y probar primero</button>
     </div>}
 
-    <label className="mt-3 block text-xs font-semibold text-slate-700" htmlFor="crea-version-note">¿Qué lograron o cambiaron en esta versión?</label>
-    <input
-      id="crea-version-note"
-      value={note}
-      onChange={event => setNote(event.target.value.slice(0, VERSION_NOTE_MAX))}
-      onKeyDown={event => { if (event.key === 'Enter' && valid && !saving) onConfirm(trimmed) }}
-      placeholder="Ej.: el botón Agregar tarea ya crea la tarjeta"
-      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-      autoFocus
-    />
-    <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-      <span>Antes de guardar: ¿la probaron en Computador y en Celular?</span>
-      <span>{note.length}/{VERSION_NOTE_MAX}</span>
+    <div className="mt-3 grid gap-3 md:grid-cols-3">
+      <label className="block text-xs font-semibold text-slate-700">Qué intentamos
+        <input value={evidence.attempted} maxLength={120} onChange={event => set('attempted', event.target.value)} placeholder="Ej.: que el botón agregue la tarea" className={fieldClass} autoFocus />
+      </label>
+      <label className="block text-xs font-semibold text-slate-700">Qué probamos y qué pasó
+        <input value={evidence.tested} maxLength={600} onChange={event => set('tested', event.target.value)} placeholder="Ej.: escribimos una tarea y apareció" className={fieldClass} />
+      </label>
+      <label className="block text-xs font-semibold text-slate-700">Qué aprendimos o mejoraríamos <span className="font-normal text-slate-400">(opcional)</span>
+        <input value={evidence.learned} maxLength={600} onChange={event => set('learned', event.target.value)} placeholder="Ej.: falta poder borrar una tarea" className={fieldClass} />
+      </label>
     </div>
+    <p className="mt-1 text-[11px] text-slate-400">¿La probaron en Computador y en Celular?</p>
 
     <div className="mt-3 flex justify-end gap-2">
       <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
-      <button type="button" disabled={!valid || saving} onClick={() => onConfirm(trimmed)} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+      <button type="button" disabled={!valid || saving || blocked} onClick={() => onConfirm({ attempted: evidence.attempted.trim(), tested: evidence.tested.trim(), learned: evidence.learned.trim() })} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cloud className="h-3.5 w-3.5" />} Guardar v{nextNumber}
       </button>
     </div>
@@ -81,7 +92,7 @@ export function VersionHistory({ versions, current }: { versions: SavedVersionSu
   const [showAll, setShowAll] = useState(false)
   if (!versions.length) {
     return <div className="mt-4 flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-xs text-slate-500">
-      <History className="h-4 w-4" /> Aún no han guardado evidencias. Cuando la app funcione, guarden una versión y cuenten qué lograron.
+      <History className="h-4 w-4" /> Aún no han guardado versiones. Cuando la app haga lo de su plan, guárdenla y cuenten qué intentaron y qué probaron.
     </div>
   }
   const visible = showAll ? versions : versions.slice(0, 3)
@@ -92,11 +103,17 @@ export function VersionHistory({ versions, current }: { versions: SavedVersionSu
         ? <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> El editor coincide con v{versions[0].number}</span>
         : <span className="text-[11px] font-semibold text-amber-700">Hay cambios sin guardar desde v{versions[0].number}</span>}
     </div>
-    <ol className="space-y-1.5">
-      {visible.map(version => <li key={version.number} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-        <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-bold text-emerald-800">v{version.number}</span>
-        <span className="text-slate-400">{formatBogota(version.createdAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-        <span className="text-slate-700">{version.label || <em className="text-slate-400">Sin descripción</em>}</span>
+    <ol className="space-y-2">
+      {visible.map(version => <li key={version.number} className="text-xs">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-bold text-emerald-800">v{version.number}</span>
+          <span className="text-slate-400">{formatBogota(version.createdAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="font-medium text-slate-700">{version.evidence?.attempted || version.label || <em className="font-normal text-slate-400">Sin descripción</em>}</span>
+        </div>
+        {version.evidence && <div className="ml-9 mt-0.5 space-y-0.5 text-slate-500">
+          <p><span className="font-semibold text-slate-600">Probamos:</span> {version.evidence.tested}</p>
+          {version.evidence.learned && <p><span className="font-semibold text-slate-600">Aprendimos:</span> {version.evidence.learned}</p>}
+        </div>}
       </li>)}
     </ol>
     {versions.length > 3 && <button type="button" onClick={() => setShowAll(v => !v)} className="mt-2 text-xs font-semibold text-emerald-700 hover:underline">{showAll ? 'Ver menos' : `Ver las ${versions.length}`}</button>}
