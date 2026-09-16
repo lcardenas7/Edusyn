@@ -61,3 +61,26 @@ describe('sanitizeDraft', () => {
     expect(draft.dimensions.map(weightSum)).toEqual([100, 100])
   })
 })
+
+describe('plantillas para crear a mano', () => {
+  it('reparte niveles en la escala y pesos que suman 100', async () => {
+    const { levelScores, evenWeights, blankDraft } = await import('./formativeDraft')
+    expect(levelScores(1, 5, 4)).toEqual([1, 2.3, 3.7, 5])
+    expect(levelScores(0, 100, 5)).toEqual([0, 25, 50, 75, 100])
+    expect(evenWeights(3)).toEqual([33, 33, 34])
+    const draft = blankDraft(['SELF', 'PEER'], 1, 5)
+    expect(draft.dimensions.map(d => [d.label, d.evaluatorType, d.peersPerStudent, d.criteria.length])).toEqual([['Autoevaluación', 'SELF', null, 3], ['Coevaluación', 'PEER', 2, 3]])
+    expect(draft.dimensions.every(d => weightSum(d) === 100)).toBe(true)
+  })
+
+  it('explica qué falta antes de crear', async () => {
+    const { blankDraft, draftProblems } = await import('./formativeDraft')
+    const draft = blankDraft(['SELF'])
+    expect(draftProblems(draft, '')).toEqual(expect.arrayContaining(['Escribe un título.', 'Elige un período abierto.', 'Hay criterios sin nombre en "Autoevaluación".']))
+    draft.title = 'Proyecto'
+    draft.dimensions[0].criteria.forEach((c, i) => { c.name = `Criterio ${i + 1}` })
+    expect(draftProblems(draft, 't1')).toEqual([])
+    draft.dimensions[0].criteria[0].weight = 10
+    expect(draftProblems(draft, 't1')).toEqual([expect.stringContaining('deben sumar 100%')])
+  })
+})

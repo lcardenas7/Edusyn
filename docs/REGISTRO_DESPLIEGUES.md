@@ -22,6 +22,17 @@
 
 ## Historial (más reciente arriba)
 
+### Autoevaluación: crear la rúbrica a mano, con IA externa o con la IA de Edusyn — producción · 2026-09-16
+
+Solo web, sin migración ni cambios de API. El usuario mostró en producción que solo existía
+"Nueva evaluación con IA". Este push lleva tres commits en orden: `0538a2a0` (IA externa: copiar
+petición y pegar respuesta), `7439da00` (de otra sesión: tres botones y plantilla manual mínima) y
+el de esta entrada, que reemplaza el panel por `FormativeCreatePanel` con tres botones visibles
+(**Crear manualmente**, **Con IA externa**, **Con la IA de Edusyn**) y un editor completo:
+niveles editables (nombre, puntaje, descripción), agregar/quitar criterios, niveles y dimensiones,
+repartir pesos y lista en palabras de lo que falta. Mismo contenido que staging `8a10ee37`.
+Verificado: `tsc` web, 422/422 pruebas, `vite build`; recorrido a 420 px con API simulada.
+
 ### Edusyn Crea + Autoevaluación del Aula — producción · 2026-09-16 · ✅ DESPLEGADO
 
 > **`main` en `cf56dae9`** (fast-forward desde `e7832771`), autorizado por el usuario. API

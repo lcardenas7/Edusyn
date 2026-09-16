@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, BarChart3, Check, CheckCircle2, ChevronLeft, ClipboardCheck, Clipboard, Loader2, Send, ShieldCheck, Sparkles, Upload, UserRound, Users, X } from 'lucide-react'
+import { BarChart3, CheckCircle2, ChevronLeft, ClipboardCheck, ExternalLink, Loader2, PenLine, Send, Sparkles, Upload, UserRound, Users } from 'lucide-react'
 import { classroomApi } from '../../lib/api'
 import { confirmDialog } from '../ui/confirm'
 import { toast } from '../../lib/toast'
-import { buildRubricPrompt, parseRubricDraft, sanitizeDraft, weightSum, type Draft, type DraftCriterion, type DraftDimension, type EvaluatorType } from './formativeDraft'
+import FormativeCreatePanel, { type CreateMode } from './FormativeCreatePanel'
+import type { GradebookComponent as Component, OpenTerm as Term } from './formativeDraft'
 
 /** Rúbricas, autoevaluación y coevaluación. La IA propone un borrador; el docente lo revisa,
  * lo publica, consolida y decide si envía los resultados a la planilla (con previsualización). */
 
 type Props = { classroom: { id: string }; isTeacher: boolean; isStudent: boolean; setError?: (message: string) => void }
 
-interface Component { id: string; code: string; name: string }
-interface Term { id: string; name: string; status: string }
 
 const STATUS: Record<string, { label: string; className: string }> = {
   DRAFT: { label: 'Borrador', className: 'bg-slate-100 text-slate-700' },
@@ -71,7 +70,7 @@ export default function FormativeEvaluationsTab({ classroom, isTeacher, isStuden
 // ─── Docente ─────────────────────────────────────────────────────────────────
 
 function TeacherView({ classroomId, items, reload, fail }: { classroomId: string; items: any[]; reload: () => Promise<void>; fail: (e: any, m: string) => void }) {
-  const [creating, setCreating] = useState<'manual' | 'external' | 'internal' | null>(null)
+  const [creating, setCreating] = useState<CreateMode | null>(null)
   const [components, setComponents] = useState<Component[]>([])
   const [terms, setTerms] = useState<Term[]>([])
   const [scale, setScale] = useState<{ min: number; max: number } | null>(null)
@@ -106,12 +105,16 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
   }
 
   return <div className="space-y-4">
-    {!creating && <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => setCreating('manual')} className="rounded-xl border border-teal-600 px-4 py-2.5 text-sm font-semibold text-teal-700 hover:bg-teal-50">Crear manualmente</button>
-      <button type="button" onClick={() => setCreating('external')} className="rounded-xl border border-teal-600 px-4 py-2.5 text-sm font-semibold text-teal-700 hover:bg-teal-50"><Clipboard className="mr-1 inline h-4 w-4" /> IA externa</button>
-      <button type="button" onClick={() => setCreating('internal')} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"><Sparkles className="h-4 w-4" /> IA de Edusyn</button>
+    {!creating && <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <p className="text-sm font-semibold text-slate-800">Nueva evaluación: ¿cómo quieres crear la rúbrica?</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <button type="button" onClick={() => setCreating('manual')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><PenLine className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Crear manualmente</span><span className="block text-xs text-slate-500">Escribes tus propios criterios y niveles.</span></span></button>
+        <button type="button" onClick={() => setCreating('external')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Con IA externa</span><span className="block text-xs text-slate-500">Copias una petición a ChatGPT, Gemini u otra y pegas la respuesta.</span></span></button>
+        <button type="button" onClick={() => setCreating('internal')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Con la IA de Edusyn</span><span className="block text-xs text-slate-500">Edusyn propone un borrador automático.</span></span></button>
+      </div>
+      <p className="mt-2 text-[11px] text-slate-400">En los tres casos revisas y ajustas todo antes de crear; nada se publica sin tu aprobación.</p>
     </div>}
-    {creating && <CreatePanel classroomId={classroomId} initialMode={creating} terms={terms} components={components} scale={scale} fail={fail} onCancel={() => setCreating(null)} onCreated={async () => { setCreating(null); await reload() }} />}
+    {creating && <FormativeCreatePanel mode={creating} classroomId={classroomId} terms={terms} components={components} scale={scale} fail={fail} onCancel={() => setCreating(null)} onCreated={async () => { setCreating(null); await reload() }} />}
 
     {items.length === 0 && !creating && <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500">Todavía no hay evaluaciones formativas en este curso.</div>}
 
@@ -150,190 +153,6 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
         {openId === item.id && <ResultsPanel item={item} fail={fail} onSynced={reload} />}
       </article>
     })}
-  </div>
-}
-
-function CreatePanel({ classroomId, initialMode, terms, components, scale, fail, onCancel, onCreated }: {
-  classroomId: string; terms: Term[]; components: Component[]; scale: { min: number; max: number } | null
-  initialMode: 'manual' | 'external' | 'internal'
-  fail: (e: any, m: string) => void; onCancel: () => void; onCreated: () => Promise<void>
-}) {
-  const [purpose, setPurpose] = useState('')
-  const [types, setTypes] = useState<Record<EvaluatorType, boolean>>({ SELF: true, PEER: true })
-  const [termId, setTermId] = useState('')
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [busy, setBusy] = useState(false)
-  // Dos caminos para el borrador: la IA de Edusyn (automático) o una IA externa (el docente copia
-  // la petición, la lleva a su IA y pega la respuesta). Los dos terminan en la misma revisión.
-  const [mode, setMode] = useState<'manual' | 'external' | 'internal'>(initialMode)
-  const [manualTitle, setManualTitle] = useState('')
-  const [pasted, setPasted] = useState('')
-  const [pasteError, setPasteError] = useState('')
-  const [copied, setCopied] = useState(false)
-  const selectedTypes = (['SELF', 'PEER'] as EvaluatorType[]).filter(t => types[t])
-  const prompt = useMemo(() => buildRubricPrompt({ purpose, types: selectedTypes, minScore: scale?.min, maxScore: scale?.max }), [purpose, selectedTypes.join(), scale])
-
-  const copyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(prompt)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1800)
-    } catch {
-      toast.error('No se pudo copiar. Selecciona el texto y cópialo manualmente.')
-    }
-  }
-
-  const readPasted = () => {
-    const result = parseRubricDraft(pasted)
-    if ('error' in result) { setPasteError(result.error); return }
-    setPasteError('')
-    setDraft(result.draft)
-  }
-
-  useEffect(() => { if (!termId && terms[0]) setTermId(terms[terms.length - 1].id) }, [terms, termId])
-
-  const generate = async () => {
-    const dimensions = [types.SELF && 'Autoevaluación', types.PEER && 'Coevaluación'].filter(Boolean) as string[]
-    if (!purpose.trim() || !dimensions.length) return
-    setBusy(true)
-    try {
-      const { data } = await classroomApi.generateFormativeEvaluationAI({ classroomId, purpose: purpose.trim(), dimensions, minScore: scale?.min, maxScore: scale?.max })
-      setDraft(sanitizeDraft(data))
-    } catch (e) {
-      fail(e, 'La IA no pudo generar el borrador')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const createManualDraft = () => {
-    const title = manualTitle.trim()
-    if (!title || !selectedTypes.length) return
-    const min = scale?.min ?? 1
-    const max = scale?.max ?? 5
-    const descriptions = ['Necesita acompañamiento frecuente.', 'Lo realiza algunas veces.', 'Lo realiza regularmente.', 'Lo realiza de forma constante.', 'Lo realiza con autonomía y aporta al grupo.']
-    const levels = descriptions.map((description, index) => ({ label: 'Nivel ' + (index + 1), description, score: Math.round((min + ((max - min) * index) / 4) * 100) / 100 }))
-    setDraft({
-      title,
-      description: purpose.trim(),
-      dimensions: selectedTypes.map(type => ({
-        label: type === 'SELF' ? 'Autoevaluación' : 'Coevaluación', evaluatorType: type,
-        peersPerStudent: type === 'PEER' ? 2 : null, evaluationComponentId: null,
-        criteria: [{ name: 'Participación y responsabilidad', description: '', weight: 100, levels }],
-      })),
-    })
-  }
-
-  const sums = useMemo(() => draft?.dimensions.map(weightSum) ?? [], [draft])
-  const valid = !!draft && !!termId && draft.title.trim() !== '' && sums.every(s => Math.abs(s - 100) < 0.01)
-  const setDimension = (index: number, patch: Partial<DraftDimension>) => setDraft(d => d && { ...d, dimensions: d.dimensions.map((x, i) => i === index ? { ...x, ...patch } : x) })
-  const setCriterion = (di: number, ci: number, patch: Partial<DraftCriterion>) => setDraft(d => d && { ...d, dimensions: d.dimensions.map((x, i) => i !== di ? x : { ...x, criteria: x.criteria.map((c, j) => j === ci ? { ...c, ...patch } : c) }) })
-
-  const create = async () => {
-    if (!draft || !valid) return
-    setBusy(true)
-    try {
-      await classroomApi.createFormativeEvaluationFromAIDraft({ ...draft, classroomId, academicTermId: termId })
-      toast.success('Borrador creado', 'Revísalo en la lista y publícalo cuando esté listo.')
-      await onCreated()
-    } catch (e) {
-      fail(e, 'No se pudo crear la evaluación')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return <div className="space-y-4 rounded-2xl border border-teal-200 bg-teal-50/40 p-5">
-    <div className="flex items-center justify-between">
-      <h3 className="font-bold text-slate-800">{draft ? 'Revisa el borrador antes de crearlo' : 'Nueva evaluación formativa'}</h3>
-      <button type="button" onClick={onCancel} aria-label="Cancelar" className="rounded-lg p-1 text-slate-400 hover:bg-white"><X className="h-4 w-4" /></button>
-    </div>
-
-    {!draft && <>
-      <label className="block text-sm font-semibold text-slate-700">¿Qué quieres que los estudiantes evalúen?
-        <textarea value={purpose} onChange={e => setPurpose(e.target.value)} rows={3} className={`${fieldClass} mt-1`} placeholder="Ej.: participación, responsabilidad y trabajo colaborativo durante el proyecto de ciencias." />
-      </label>
-      <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2"><input type="checkbox" checked={types.SELF} onChange={e => setTypes(t => ({ ...t, SELF: e.target.checked }))} /><UserRound className="h-4 w-4 text-teal-700" /> Autoevaluación</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={types.PEER} onChange={e => setTypes(t => ({ ...t, PEER: e.target.checked }))} /><Users className="h-4 w-4 text-teal-700" /> Coevaluación entre compañeros</label>
-      </div>
-      <div className="inline-flex overflow-hidden rounded-xl border border-teal-200 bg-white text-xs font-semibold" role="group" aria-label="Cómo crear el borrador">
-        <button type="button" aria-pressed={mode === 'manual'} onClick={() => setMode('manual')} className={`px-3 py-2 ${mode === 'manual' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Manual</button>
-        <button type="button" aria-pressed={mode === 'external'} onClick={() => setMode('external')} className={`px-3 py-2 ${mode === 'external' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Con una IA externa (copiar y pegar)</button>
-        <button type="button" aria-pressed={mode === 'internal'} onClick={() => setMode('internal')} className={`border-l border-teal-200 px-3 py-2 ${mode === 'internal' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Con la IA de Edusyn</button>
-      </div>
-      {mode === 'manual' && <div className="space-y-3 rounded-xl border border-teal-100 bg-white p-4">
-        <label className="block text-sm font-semibold text-slate-700">Nombre de la evaluación<input value={manualTitle} onChange={e => setManualTitle(e.target.value)} className={`${fieldClass} mt-1`} placeholder="Ej.: Reflexión de trabajo en equipo" /></label>
-        <button type="button" disabled={!manualTitle.trim() || !selectedTypes.length} onClick={createManualDraft} className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Crear plantilla editable</button>
-      </div>}
-      <p className="text-xs text-slate-500">La IA propone criterios y niveles{scale ? ` en la escala de tu institución (${scale.min} a ${scale.max})` : ''}. Nada se publica hasta que tú lo revises.</p>
-      {mode === 'external' && <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl bg-[#0d1822] p-3 text-white">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-teal-300">1. Copia esta petición</p>
-          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-slate-200 [overflow-wrap:anywhere]">{prompt}</pre>
-          <p className="mt-2 flex items-start gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Solo lleva lo que escribiste arriba: sin nombres ni datos de estudiantes.</p>
-          <button type="button" disabled={!purpose.trim() || !selectedTypes.length} onClick={copyPrompt} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-teal-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-teal-300 disabled:opacity-50">
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Clipboard className="h-3.5 w-3.5" />} {copied ? 'Copiada' : 'Copiar petición'}
-          </button>
-        </div>
-        <div className="flex flex-col">
-          <label className="block text-xs font-bold uppercase tracking-wider text-teal-800" htmlFor="formative-pasted">2. Pega aquí la respuesta de tu IA</label>
-          <textarea id="formative-pasted" value={pasted} onChange={e => { setPasted(e.target.value); setPasteError('') }} rows={9} className={`${fieldClass} mt-2 flex-1 font-mono text-xs`} placeholder='{"title": "...", "dimensions": [...]}' />
-          {pasteError && <p className="mt-1 flex items-start gap-1.5 text-xs text-rose-700"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {pasteError}</p>}
-          <button type="button" disabled={!pasted.trim()} onClick={readPasted} className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Revisar la respuesta</button>
-        </div>
-      </div>}
-      {mode === 'internal' && <button type="button" disabled={busy || !purpose.trim() || (!types.SELF && !types.PEER)} onClick={generate} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {busy ? 'Generando…' : 'Generar borrador'}
-      </button>}
-    </>}
-
-    {draft && <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs font-semibold text-slate-600">Título<input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} className={`${fieldClass} mt-1`} /></label>
-        <label className="block text-xs font-semibold text-slate-600">Período
-          <select value={termId} onChange={e => setTermId(e.target.value)} className={`${fieldClass} mt-1`}>
-            <option value="">Selecciona un período abierto</option>
-            {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </label>
-        <label className="block text-xs font-semibold text-slate-600 sm:col-span-2">Instrucciones para los estudiantes<textarea value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={2} className={`${fieldClass} mt-1`} /></label>
-      </div>
-      {!terms.length && <p className="flex items-center gap-1.5 text-xs text-rose-700"><AlertCircle className="h-3.5 w-3.5" /> No hay períodos abiertos: no se puede crear la evaluación.</p>}
-
-      {draft.dimensions.map((d, di) => <section key={di} className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="block min-w-[180px] flex-1 text-xs font-semibold text-slate-600">Dimensión<input value={d.label} onChange={e => setDimension(di, { label: e.target.value })} className={`${fieldClass} mt-1`} /></label>
-          <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">{TYPE_LABEL[d.evaluatorType]}</span>
-          {d.evaluatorType === 'PEER' && <label className="block text-xs font-semibold text-slate-600">Compañeros por estudiante<input type="number" min={1} max={10} value={d.peersPerStudent ?? 2} onChange={e => setDimension(di, { peersPerStudent: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={`${fieldClass} mt-1 w-24`} /></label>}
-          <label className="block text-xs font-semibold text-slate-600">Destino en la planilla
-            <select value={d.evaluationComponentId || ''} onChange={e => setDimension(di, { evaluationComponentId: e.target.value || null })} className={`${fieldClass} mt-1`}>
-              <option value="">No enviar a la planilla</option>
-              {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={() => setDraft({ ...draft, dimensions: draft.dimensions.filter((_, i) => i !== di) })} disabled={draft.dimensions.length === 1} className="text-xs font-semibold text-rose-700 hover:underline disabled:opacity-40">Quitar</button>
-        </div>
-        <div className="mt-3 space-y-3">
-          {d.criteria.map((c, ci) => <div key={ci} className="rounded-lg bg-slate-50 p-3">
-            <div className="flex flex-wrap gap-2">
-              <input value={c.name} onChange={e => setCriterion(di, ci, { name: e.target.value })} className={`${fieldClass} min-w-[160px] flex-1 font-semibold`} aria-label="Criterio" />
-              <label className="flex items-center gap-1 text-xs text-slate-600"><input type="number" min={0} max={100} value={c.weight} onChange={e => setCriterion(di, ci, { weight: Number(e.target.value) || 0 })} className={`${fieldClass} w-20`} aria-label="Peso" /> %</label>
-            </div>
-            <input value={c.description} onChange={e => setCriterion(di, ci, { description: e.target.value })} className={`${fieldClass} mt-2 text-xs`} placeholder="Qué se observa" aria-label="Descripción del criterio" />
-            <ol className="mt-2 grid gap-1 sm:grid-cols-2">
-              {c.levels.map((l, li) => <li key={li} className="rounded-md bg-white px-2 py-1.5 text-xs text-slate-600"><b className="text-slate-800">{l.score} · {l.label}</b>{l.description ? ` — ${l.description}` : ''}</li>)}
-            </ol>
-          </div>)}
-        </div>
-        <p className={`mt-2 text-xs font-semibold ${Math.abs(sums[di] - 100) < 0.01 ? 'text-emerald-700' : 'text-rose-700'}`}>Los pesos suman {sums[di]}%{Math.abs(sums[di] - 100) < 0.01 ? '' : ' — deben sumar 100%'}</p>
-      </section>)}
-
-      <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" onClick={() => setDraft(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">Volver a empezar</button>
-        <button type="button" disabled={busy || !valid} onClick={create} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Crear como borrador</button>
-      </div>
-    </div>}
   </div>
 }
 
