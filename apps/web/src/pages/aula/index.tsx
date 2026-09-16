@@ -45,6 +45,7 @@ const LessonEditor = lazy(() => import('../../components/LessonEditor'))
 // sin duplicar sus datos. Foro y editores se cargan dentro de HerramientasAula.
 const LearningRoutesTab = lazy(() => import('../../components/LearningRoutesTab'))
 const AbpTab = lazy(() => import('../../components/AbpTab'))
+const ConstruyeTab = lazy(() => import('../../features/construye/ConstruyeTab'))
 
 const VISTAS = new Set(DESTINOS.map((d) => d.id))
 
@@ -408,6 +409,12 @@ export default function AulaVirtual() {
           <div className="mx-auto max-w-5xl">
             <Suspense fallback={null}>
               <AbpTab classroomId={classroomId} isTeacher={rol === 'docente'} />
+            </Suspense>
+          </div>
+        ) : vista === 'construye' ? (
+          <div className="mx-auto max-w-6xl">
+            <Suspense fallback={null}>
+              <ConstruyeTab classroomId={classroomId} isTeacher={rol === 'docente'} />
             </Suspense>
           </div>
         ) : vista === 'estudiantes' && rol === 'docente' ? (

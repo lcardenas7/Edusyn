@@ -22,6 +22,57 @@
 
 ## Historial (más reciente arriba)
 
+### Edusyn Crea (antes "Construye"): primera subida a staging — 2026-09-16
+
+> **Estado al escribir esta fila: rama `deploy/crea-staging` lista, SIN push.** Requiere un
+> paso de infraestructura previo que no es de código (ver abajo).
+
+**Qué trae.** El módulo completo de Edusyn Crea, que nunca ha estado en staging: backend
+(`modules/construye`, 5 modelos + 3 enums), el editor del estudiante y el panel del docente
+dentro del Aula, y `apps/construye-preview` (el runner aislado donde corre el código del
+estudiante). Incluye el circuito código⇄preview de los Pasos 2 → 5.3 —seleccionar en la página
+lleva al código y al revés, explicaciones pedagógicas, edición visual de CSS y de texto, y
+"Ayúdame a modificarlo" con plan revisable— descrito en
+`docs/EDUSYN_CONSTRUYE_ESTADO_PASOS_2_A_5_3.md`.
+
+**Migraciones (2, ambas aditivas).** `20260913010000_edusyn_construye_f1` crea las tablas de
+Crea; `20260916010000_edusyn_crea_team_brief` añade dos columnas anulables a `ConstruyeTeam`.
+Ninguna toca tablas existentes.
+
+**Cómo se armó la rama, y por qué así.** `feat/aula-rediseno` (donde vive el desarrollo) está
+66 commits por delante de `staging` con trabajo ajeno —landing, refactors de rendimiento M1/M2,
+EduLab, R1— y 10 por detrás: las ramas divergieron. Además `staging` tiene modelos que esa rama
+no tiene (`EduLab*`, `ReportCardGenerationEvent`), así que copiar su `schema.prisma` los habría
+borrado y roto la API. Por eso la rama se construyó **desde `origin/staging`**, copiando solo
+los archivos propios de Crea y editando a mano los compartidos (`schema.prisma`,
+`app.module.ts`, `App.tsx`, `pages/aula/index.tsx`, `ui/destinations.tsx`, `index.css`). Una
+dependencia oculta apareció al compilar: `ConstruyeTab` importaba `lib/api/classroom`, que solo
+existe tras el refactor M1; se adaptó al barril `lib/api` que sí tiene staging, en vez de
+arrastrar el refactor.
+
+**CSP del hosting real (pendiente #3 del 2026-09-13, cerrado).** La CSP del runner solo existía
+en `vite dev`: un build servido por otro origen se quedaba sin ella en silencio. Ahora
+`vite.config.ts` la define una vez y emite `serve.json` junto al build. Verificado sirviendo el
+build real: cabeceras presentes en `/` y en `/?instance=…&parent=…`, y el runner ejecuta bajo
+ellas sin violaciones.
+
+**Verificación de esta rama.** `tsc --noEmit` limpio en `apps/api` y `apps/web`; `prisma
+validate` OK; 431 pruebas web (33 suites), 117 del runner, 7 del módulo `construye`; `vite
+build` correcto en web y runner. Auditado que la rama **no** contiene nada ajeno (sin Valeria,
+sin `db-backup`, sin documentos comerciales).
+
+**Bloqueador antes del push — infraestructura.** `apps/construye-preview` necesita su **propio
+servicio** en Railway (raíz `apps/construye-preview`, ya trae `railway.json`) con su propio
+dominio. Debe ser un origen distinto al de la web: esa separación es la barrera de seguridad
+que impide que el código del estudiante toque la sesión de Edusyn. Con el dominio en mano, hay
+que fijar `VITE_CONSTRUYE_PREVIEW_ORIGIN` en el servicio web de staging (es variable de build:
+exige redeploy). Sin ella, Crea muestra un aviso de configuración en vez del preview — degrada
+con aviso, no rompe el Aula.
+
+**Orden sugerido.** 1) Crear el servicio del preview. 2) Fijar la variable en el web. 3) Push de
+`deploy/crea-staging` a `staging`. 4) Verificar en el navegador el ciclo docente→equipo→editor→
+preview. 5) Volver a esta fila y anotar los IDs de despliegue.
+
 ### Landing pública: primer despliegue a producción + 3 fixes — 2026-09-13
 
 `main` (prod) en `be2ba5a7` — primera vez que la landing pública multipágina llega a producción

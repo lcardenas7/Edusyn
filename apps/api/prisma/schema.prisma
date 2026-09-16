@@ -406,8 +406,9 @@ model User {
   // Permisos de personal
   leaveRequests         StaffLeaveRequest[] @relation("LeaveRequester")
   leaveRequestsReviewed StaffLeaveRequest[] @relation("LeaveReviewer")
+  construyeProjectsCreated ConstruyeProject[] @relation("ConstruyeTeacher")
+  construyeJournal ConstruyeJournalEntry[] @relation("ConstruyeJournalUserActor")
 }
-
 model Role {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -630,8 +631,12 @@ model Institution {
   rlsAbpResources       AbpResource[]          @relation("RlsInstitutionABPR")
   rlsAbpAnnouncements   AbpAnnouncement[]      @relation("RlsInstitutionABPAN")
   evidenceValuations StudentEvidenceValuation[] @relation("RlsInstitutionSEV")
+  construyeProjects ConstruyeProject[] @relation("RlsInstitutionConstruyeProject")
+  construyeTeams ConstruyeTeam[] @relation("RlsInstitutionConstruyeTeam")
+  construyeTeamMembers ConstruyeTeamMember[] @relation("RlsInstitutionConstruyeMember")
+  construyeVersions ConstruyeVersion[] @relation("RlsInstitutionConstruyeVersion")
+  construyeJournal ConstruyeJournalEntry[] @relation("RlsInstitutionConstruyeJournal")
 }
-
 // Módulos habilitados por institución
 model InstitutionModule {
   id            String       @id @default(cuid())
@@ -1735,8 +1740,10 @@ model StudentEnrollment {
 
   @@unique([studentId, academicYearId])
   evidenceValuations StudentEvidenceValuation[]
+  construyeTeamMembers ConstruyeTeamMember[] @relation("ConstruyeEnrollment")
+  construyeVersions ConstruyeVersion[] @relation("ConstruyeVersionAuthor")
+  construyeJournal ConstruyeJournalEntry[] @relation("ConstruyeJournalEnrollmentActor")
 }
-
 // ═══════════════════════════════════════════════════════════════════════════
 // SNAPSHOT DE ESTRUCTURA ACADÉMICA POR MATRÍCULA
 // Copia inmutable de la configuración académica al momento de matricular
@@ -6104,8 +6111,8 @@ model Classroom {
   @@index([teacherAssignmentId])
   @@index([ownerUserId])
   @@index([isPersonal])
+  construyeProjects ConstruyeProject[] @relation("ConstruyeClassroom")
 }
-
 model ClassroomSection {
   id             String   @id @default(cuid())
   classroomId    String
@@ -6233,8 +6240,8 @@ model ClassroomActivity {
   @@index([sectionId])
   @@index([academicTermId])
   @@index([dueDate])
+  construyeProjects      ConstruyeProject[] @relation("ConstruyeActivity")
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // SISTEMA DE DEPENDENCIAS DE ACTIVIDADES (grafo dirigido acíclico de prerrequisitos)
 // Una actividad puede requerir que otras se completen antes de abrirse. El docente
@@ -7799,3 +7806,149 @@ model EduLabEvent {
   @@unique([attemptId, idempotencyKey])
   @@index([institutionId, attemptId, streamSequence], map: "EduLabEvent_tenant_attempt_idx")
 }
+
+enum ConstruyeProjectStatus {
+  DRAFT
+  ACTIVE
+  READY_FOR_REVIEW
+  SUBMITTED
+  RETURNED
+  ARCHIVED
+}
+
+
+enum ConstruyeMemberRole {
+  RESEARCH
+  DESIGN
+  DEVELOPMENT
+  TESTING
+  COORDINATION
+}
+
+
+enum ConstruyeJournalType {
+  BRIEF_UPDATED
+  SOURCE_ADDED
+  PROMPT_COPIED
+  AI_IMPORT_PROPOSED
+  AI_IMPORT_APPLIED
+  FILE_CHANGED
+  VERSION_CREATED
+  TEST_RECORDED
+  HELP_REQUESTED
+  TEACHER_COMMENT
+}
+
+
+model ConstruyeProject {
+  id                  String                 @id @default(cuid())
+  institutionId       String
+  classroomId         String
+  classroomActivityId String?
+  teacherUserId       String
+  title               String
+  instructions        String?                @db.Text
+  briefTemplate       Json?
+  status              ConstruyeProjectStatus @default(ACTIVE)
+  startDate           DateTime?
+  dueDate             DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  institution       Institution        @relation("RlsInstitutionConstruyeProject", fields: [institutionId], references: [id])
+  classroom         Classroom          @relation("ConstruyeClassroom", fields: [classroomId], references: [id], onDelete: Cascade)
+  classroomActivity ClassroomActivity? @relation("ConstruyeActivity", fields: [classroomActivityId], references: [id], onDelete: SetNull)
+  teacher           User               @relation("ConstruyeTeacher", fields: [teacherUserId], references: [id])
+  teams             ConstruyeTeam[]
+  versions          ConstruyeVersion[]
+  journal           ConstruyeJournalEntry[]
+
+  @@index([institutionId])
+  @@index([classroomId])
+  @@index([classroomActivityId])
+}
+
+
+model ConstruyeTeam {
+  id            String   @id @default(cuid())
+  institutionId String
+  projectId     String
+  name          String
+  brief         Json?
+  briefUpdatedAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution           @relation("RlsInstitutionConstruyeTeam", fields: [institutionId], references: [id])
+  project     ConstruyeProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members     ConstruyeTeamMember[]
+  versions    ConstruyeVersion[]
+  journal     ConstruyeJournalEntry[]
+
+  @@index([institutionId])
+  @@index([projectId])
+}
+
+
+model ConstruyeTeamMember {
+  id                  String               @id @default(cuid())
+  institutionId       String
+  teamId              String
+  studentEnrollmentId String
+  role                ConstruyeMemberRole
+  createdAt           DateTime             @default(now())
+
+  institution       Institution       @relation("RlsInstitutionConstruyeMember", fields: [institutionId], references: [id])
+  team              ConstruyeTeam     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation("ConstruyeEnrollment", fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, studentEnrollmentId])
+  @@index([institutionId])
+  @@index([studentEnrollmentId])
+}
+
+
+model ConstruyeVersion {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  projectId           String
+  teamId              String
+  number              Int
+  label               String?
+  manifest            Json
+  createdByEnrollmentId String?
+  createdAt           DateTime @default(now())
+
+  institution         Institution        @relation("RlsInstitutionConstruyeVersion", fields: [institutionId], references: [id])
+  project             ConstruyeProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team                ConstruyeTeam      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdByEnrollment StudentEnrollment? @relation("ConstruyeVersionAuthor", fields: [createdByEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@unique([teamId, number])
+  @@index([institutionId])
+  @@index([projectId, teamId])
+}
+
+
+model ConstruyeJournalEntry {
+  id                  String                @id @default(cuid())
+  institutionId       String
+  projectId           String
+  teamId              String
+  actorEnrollmentId   String?
+  actorUserId         String?
+  type                ConstruyeJournalType
+  summary             String                @db.Text
+  detail              Json?
+  createdAt           DateTime              @default(now())
+
+  institution       Institution        @relation("RlsInstitutionConstruyeJournal", fields: [institutionId], references: [id])
+  project           ConstruyeProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team              ConstruyeTeam      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  actorEnrollment   StudentEnrollment? @relation("ConstruyeJournalEnrollmentActor", fields: [actorEnrollmentId], references: [id], onDelete: SetNull)
+  actorUser         User?              @relation("ConstruyeJournalUserActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([projectId, teamId, createdAt])
+}
+
