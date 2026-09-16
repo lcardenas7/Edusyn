@@ -1,19 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, BarChart3, CheckCircle2, ChevronLeft, ClipboardCheck, Loader2, Send, Sparkles, Upload, UserRound, Users, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Check, CheckCircle2, ChevronLeft, ClipboardCheck, Clipboard, Loader2, Send, ShieldCheck, Sparkles, Upload, UserRound, Users, X } from 'lucide-react'
 import { classroomApi } from '../../lib/api'
 import { confirmDialog } from '../ui/confirm'
 import { toast } from '../../lib/toast'
+import { buildRubricPrompt, parseRubricDraft, sanitizeDraft, weightSum, type Draft, type DraftCriterion, type DraftDimension, type EvaluatorType } from './formativeDraft'
 
 /** Rúbricas, autoevaluación y coevaluación. La IA propone un borrador; el docente lo revisa,
  * lo publica, consolida y decide si envía los resultados a la planilla (con previsualización). */
 
 type Props = { classroom: { id: string }; isTeacher: boolean; isStudent: boolean; setError?: (message: string) => void }
 
-type EvaluatorType = 'SELF' | 'PEER'
-interface DraftLevel { label: string; description: string; score: number }
-interface DraftCriterion { name: string; description: string; weight: number; levels: DraftLevel[] }
-interface DraftDimension { label: string; evaluatorType: EvaluatorType; peersPerStudent: number | null; evaluationComponentId: string | null; criteria: DraftCriterion[] }
-interface Draft { title: string; description: string; dimensions: DraftDimension[] }
 interface Component { id: string; code: string; name: string }
 interface Term { id: string; name: string; status: string }
 
@@ -110,7 +106,7 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
   }
 
   return <div className="space-y-4">
-    {!creating && <button type="button" onClick={() => setCreating(true)} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"><Sparkles className="h-4 w-4" /> Nueva evaluación con IA</button>}
+    {!creating && <button type="button" onClick={() => setCreating(true)} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"><Sparkles className="h-4 w-4" /> Nueva evaluación</button>}
     {creating && <CreatePanel classroomId={classroomId} terms={terms} components={components} scale={scale} fail={fail} onCancel={() => setCreating(false)} onCreated={async () => { setCreating(false); await reload() }} />}
 
     {items.length === 0 && !creating && <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500">Todavía no hay evaluaciones formativas en este curso.</div>}
@@ -162,6 +158,31 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
   const [termId, setTermId] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
+  // Dos caminos para el borrador: la IA de Edusyn (automático) o una IA externa (el docente copia
+  // la petición, la lleva a su IA y pega la respuesta). Los dos terminan en la misma revisión.
+  const [mode, setMode] = useState<'external' | 'internal'>('external')
+  const [pasted, setPasted] = useState('')
+  const [pasteError, setPasteError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const selectedTypes = (['SELF', 'PEER'] as EvaluatorType[]).filter(t => types[t])
+  const prompt = useMemo(() => buildRubricPrompt({ purpose, types: selectedTypes, minScore: scale?.min, maxScore: scale?.max }), [purpose, selectedTypes.join(), scale])
+
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      toast.error('No se pudo copiar. Selecciona el texto y cópialo manualmente.')
+    }
+  }
+
+  const readPasted = () => {
+    const result = parseRubricDraft(pasted)
+    if ('error' in result) { setPasteError(result.error); return }
+    setPasteError('')
+    setDraft(result.draft)
+  }
 
   useEffect(() => { if (!termId && terms[0]) setTermId(terms[terms.length - 1].id) }, [terms, termId])
 
@@ -171,7 +192,7 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
     setBusy(true)
     try {
       const { data } = await classroomApi.generateFormativeEvaluationAI({ classroomId, purpose: purpose.trim(), dimensions, minScore: scale?.min, maxScore: scale?.max })
-      setDraft(data)
+      setDraft(sanitizeDraft(data))
     } catch (e) {
       fail(e, 'La IA no pudo generar el borrador')
     } finally {
@@ -179,7 +200,7 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
     }
   }
 
-  const sums = useMemo(() => draft?.dimensions.map(d => d.criteria.reduce((n, c) => n + (Number(c.weight) || 0), 0)) ?? [], [draft])
+  const sums = useMemo(() => draft?.dimensions.map(weightSum) ?? [], [draft])
   const valid = !!draft && !!termId && draft.title.trim() !== '' && sums.every(s => Math.abs(s - 100) < 0.01)
   const setDimension = (index: number, patch: Partial<DraftDimension>) => setDraft(d => d && { ...d, dimensions: d.dimensions.map((x, i) => i === index ? { ...x, ...patch } : x) })
   const setCriterion = (di: number, ci: number, patch: Partial<DraftCriterion>) => setDraft(d => d && { ...d, dimensions: d.dimensions.map((x, i) => i !== di ? x : { ...x, criteria: x.criteria.map((c, j) => j === ci ? { ...c, ...patch } : c) }) })
@@ -212,10 +233,30 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
         <label className="flex items-center gap-2"><input type="checkbox" checked={types.SELF} onChange={e => setTypes(t => ({ ...t, SELF: e.target.checked }))} /><UserRound className="h-4 w-4 text-teal-700" /> Autoevaluación</label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={types.PEER} onChange={e => setTypes(t => ({ ...t, PEER: e.target.checked }))} /><Users className="h-4 w-4 text-teal-700" /> Coevaluación entre compañeros</label>
       </div>
+      <div className="inline-flex overflow-hidden rounded-xl border border-teal-200 bg-white text-xs font-semibold" role="group" aria-label="Cómo crear el borrador">
+        <button type="button" aria-pressed={mode === 'external'} onClick={() => setMode('external')} className={`px-3 py-2 ${mode === 'external' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Con una IA externa (copiar y pegar)</button>
+        <button type="button" aria-pressed={mode === 'internal'} onClick={() => setMode('internal')} className={`border-l border-teal-200 px-3 py-2 ${mode === 'internal' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Con la IA de Edusyn</button>
+      </div>
       <p className="text-xs text-slate-500">La IA propone criterios y niveles{scale ? ` en la escala de tu institución (${scale.min} a ${scale.max})` : ''}. Nada se publica hasta que tú lo revises.</p>
-      <button type="button" disabled={busy || !purpose.trim() || (!types.SELF && !types.PEER)} onClick={generate} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+      {mode === 'external' && <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl bg-[#0d1822] p-3 text-white">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-teal-300">1. Copia esta petición</p>
+          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-slate-200 [overflow-wrap:anywhere]">{prompt}</pre>
+          <p className="mt-2 flex items-start gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Solo lleva lo que escribiste arriba: sin nombres ni datos de estudiantes.</p>
+          <button type="button" disabled={!purpose.trim() || !selectedTypes.length} onClick={copyPrompt} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-teal-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-teal-300 disabled:opacity-50">
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Clipboard className="h-3.5 w-3.5" />} {copied ? 'Copiada' : 'Copiar petición'}
+          </button>
+        </div>
+        <div className="flex flex-col">
+          <label className="block text-xs font-bold uppercase tracking-wider text-teal-800" htmlFor="formative-pasted">2. Pega aquí la respuesta de tu IA</label>
+          <textarea id="formative-pasted" value={pasted} onChange={e => { setPasted(e.target.value); setPasteError('') }} rows={9} className={`${fieldClass} mt-2 flex-1 font-mono text-xs`} placeholder='{"title": "...", "dimensions": [...]}' />
+          {pasteError && <p className="mt-1 flex items-start gap-1.5 text-xs text-rose-700"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {pasteError}</p>}
+          <button type="button" disabled={!pasted.trim()} onClick={readPasted} className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Revisar la respuesta</button>
+        </div>
+      </div>}
+      {mode === 'internal' && <button type="button" disabled={busy || !purpose.trim() || (!types.SELF && !types.PEER)} onClick={generate} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {busy ? 'Generando…' : 'Generar borrador'}
-      </button>
+      </button>}
     </>}
 
     {draft && <div className="space-y-4">
@@ -260,7 +301,7 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
       </section>)}
 
       <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" onClick={() => setDraft(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">Generar otro</button>
+        <button type="button" onClick={() => setDraft(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">Volver a empezar</button>
         <button type="button" disabled={busy || !valid} onClick={create} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Crear como borrador</button>
       </div>
     </div>}
