@@ -71,7 +71,7 @@ export default function FormativeEvaluationsTab({ classroom, isTeacher, isStuden
 // ─── Docente ─────────────────────────────────────────────────────────────────
 
 function TeacherView({ classroomId, items, reload, fail }: { classroomId: string; items: any[]; reload: () => Promise<void>; fail: (e: any, m: string) => void }) {
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState<'manual' | 'external' | 'internal' | null>(null)
   const [components, setComponents] = useState<Component[]>([])
   const [terms, setTerms] = useState<Term[]>([])
   const [scale, setScale] = useState<{ min: number; max: number } | null>(null)
@@ -106,8 +106,12 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
   }
 
   return <div className="space-y-4">
-    {!creating && <button type="button" onClick={() => setCreating(true)} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"><Sparkles className="h-4 w-4" /> Nueva evaluación</button>}
-    {creating && <CreatePanel classroomId={classroomId} terms={terms} components={components} scale={scale} fail={fail} onCancel={() => setCreating(false)} onCreated={async () => { setCreating(false); await reload() }} />}
+    {!creating && <div className="flex flex-wrap gap-2">
+      <button type="button" onClick={() => setCreating('manual')} className="rounded-xl border border-teal-600 px-4 py-2.5 text-sm font-semibold text-teal-700 hover:bg-teal-50">Crear manualmente</button>
+      <button type="button" onClick={() => setCreating('external')} className="rounded-xl border border-teal-600 px-4 py-2.5 text-sm font-semibold text-teal-700 hover:bg-teal-50"><Clipboard className="mr-1 inline h-4 w-4" /> IA externa</button>
+      <button type="button" onClick={() => setCreating('internal')} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"><Sparkles className="h-4 w-4" /> IA de Edusyn</button>
+    </div>}
+    {creating && <CreatePanel classroomId={classroomId} initialMode={creating} terms={terms} components={components} scale={scale} fail={fail} onCancel={() => setCreating(null)} onCreated={async () => { setCreating(null); await reload() }} />}
 
     {items.length === 0 && !creating && <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500">Todavía no hay evaluaciones formativas en este curso.</div>}
 
@@ -149,8 +153,9 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
   </div>
 }
 
-function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, onCreated }: {
+function CreatePanel({ classroomId, initialMode, terms, components, scale, fail, onCancel, onCreated }: {
   classroomId: string; terms: Term[]; components: Component[]; scale: { min: number; max: number } | null
+  initialMode: 'manual' | 'external' | 'internal'
   fail: (e: any, m: string) => void; onCancel: () => void; onCreated: () => Promise<void>
 }) {
   const [purpose, setPurpose] = useState('')
@@ -160,7 +165,8 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
   const [busy, setBusy] = useState(false)
   // Dos caminos para el borrador: la IA de Edusyn (automático) o una IA externa (el docente copia
   // la petición, la lleva a su IA y pega la respuesta). Los dos terminan en la misma revisión.
-  const [mode, setMode] = useState<'external' | 'internal'>('external')
+  const [mode, setMode] = useState<'manual' | 'external' | 'internal'>(initialMode)
+  const [manualTitle, setManualTitle] = useState('')
   const [pasted, setPasted] = useState('')
   const [pasteError, setPasteError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -200,6 +206,24 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
     }
   }
 
+  const createManualDraft = () => {
+    const title = manualTitle.trim()
+    if (!title || !selectedTypes.length) return
+    const min = scale?.min ?? 1
+    const max = scale?.max ?? 5
+    const descriptions = ['Necesita acompañamiento frecuente.', 'Lo realiza algunas veces.', 'Lo realiza regularmente.', 'Lo realiza de forma constante.', 'Lo realiza con autonomía y aporta al grupo.']
+    const levels = descriptions.map((description, index) => ({ label: 'Nivel ' + (index + 1), description, score: Math.round((min + ((max - min) * index) / 4) * 100) / 100 }))
+    setDraft({
+      title,
+      description: purpose.trim(),
+      dimensions: selectedTypes.map(type => ({
+        label: type === 'SELF' ? 'Autoevaluación' : 'Coevaluación', evaluatorType: type,
+        peersPerStudent: type === 'PEER' ? 2 : null, evaluationComponentId: null,
+        criteria: [{ name: 'Participación y responsabilidad', description: '', weight: 100, levels }],
+      })),
+    })
+  }
+
   const sums = useMemo(() => draft?.dimensions.map(weightSum) ?? [], [draft])
   const valid = !!draft && !!termId && draft.title.trim() !== '' && sums.every(s => Math.abs(s - 100) < 0.01)
   const setDimension = (index: number, patch: Partial<DraftDimension>) => setDraft(d => d && { ...d, dimensions: d.dimensions.map((x, i) => i === index ? { ...x, ...patch } : x) })
@@ -234,9 +258,14 @@ function CreatePanel({ classroomId, terms, components, scale, fail, onCancel, on
         <label className="flex items-center gap-2"><input type="checkbox" checked={types.PEER} onChange={e => setTypes(t => ({ ...t, PEER: e.target.checked }))} /><Users className="h-4 w-4 text-teal-700" /> Coevaluación entre compañeros</label>
       </div>
       <div className="inline-flex overflow-hidden rounded-xl border border-teal-200 bg-white text-xs font-semibold" role="group" aria-label="Cómo crear el borrador">
+        <button type="button" aria-pressed={mode === 'manual'} onClick={() => setMode('manual')} className={`px-3 py-2 ${mode === 'manual' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Manual</button>
         <button type="button" aria-pressed={mode === 'external'} onClick={() => setMode('external')} className={`px-3 py-2 ${mode === 'external' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Con una IA externa (copiar y pegar)</button>
         <button type="button" aria-pressed={mode === 'internal'} onClick={() => setMode('internal')} className={`border-l border-teal-200 px-3 py-2 ${mode === 'internal' ? 'bg-teal-600 text-white' : 'text-teal-800 hover:bg-teal-50'}`}>Con la IA de Edusyn</button>
       </div>
+      {mode === 'manual' && <div className="space-y-3 rounded-xl border border-teal-100 bg-white p-4">
+        <label className="block text-sm font-semibold text-slate-700">Nombre de la evaluación<input value={manualTitle} onChange={e => setManualTitle(e.target.value)} className={`${fieldClass} mt-1`} placeholder="Ej.: Reflexión de trabajo en equipo" /></label>
+        <button type="button" disabled={!manualTitle.trim() || !selectedTypes.length} onClick={createManualDraft} className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Crear plantilla editable</button>
+      </div>}
       <p className="text-xs text-slate-500">La IA propone criterios y niveles{scale ? ` en la escala de tu institución (${scale.min} a ${scale.max})` : ''}. Nada se publica hasta que tú lo revises.</p>
       {mode === 'external' && <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl bg-[#0d1822] p-3 text-white">
