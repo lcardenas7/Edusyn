@@ -22,9 +22,24 @@
 
 ## Historial (más reciente arriba)
 
-### Edusyn Crea + Autoevaluación del Aula — rama aislada para producción · ⏳ SIN DESPLEGAR
+### Edusyn Crea + Autoevaluación del Aula — producción · 2026-09-16 · ✅ DESPLEGADO
 
-> **Preparada, sin push.** Rama `deploy/crea-prod`, construida desde `origin/main` solo con el
+> ** en ** (fast-forward desde ), autorizado por el usuario. API
+> , web , preview , todos SUCCESS. Las 4 migraciones quedaron
+> aplicadas (: al día). API y web respondieron 200 durante todo el
+> despliegue. Servicio nuevo **** (rama , Railpack) con dominio
+>  (CSP, CORP y Referrer-Policy verificadas);
+>  fijada en  (respaldo previo fuera del repo). Verificado
+> desde : el preview carga, ejecuta el proyecto y recibe el envío del formulario;
+> el paquete publicado trae Crea, Autoevaluación y el origen del preview. Rutas nuevas: 401 sin
+> sesión. **Pendiente:** recorrido con cuentas reales (docente y estudiante).
+>
+> ⚠️ Operación: la URL pública del servicio  tiene una contraseña vieja. Para
+>  desde local usar las credenciales del  de  con el host
+> público  y . La base de producción ya tenía
+> , que no está en ;  lo tolera.
+
+> **Estado original (antes del push):** preparada, sin push. Rama `deploy/crea-prod`, construida desde `origin/main` solo con el
 > trabajo de Edusyn Crea y de Autoevaluación/Coevaluación del Aula (el mismo que está en staging
 > hasta `fdf63a32`). Nada más de `staging` (195 commits ajenos) viaja en ella.
 
