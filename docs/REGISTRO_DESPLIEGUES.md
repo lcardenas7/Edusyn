@@ -24,20 +24,20 @@
 
 ### Edusyn Crea + Autoevaluación del Aula — producción · 2026-09-16 · ✅ DESPLEGADO
 
-> ** en ** (fast-forward desde ), autorizado por el usuario. API
-> , web , preview , todos SUCCESS. Las 4 migraciones quedaron
-> aplicadas (: al día). API y web respondieron 200 durante todo el
-> despliegue. Servicio nuevo **** (rama , Railpack) con dominio
->  (CSP, CORP y Referrer-Policy verificadas);
->  fijada en  (respaldo previo fuera del repo). Verificado
-> desde : el preview carga, ejecuta el proyecto y recibe el envío del formulario;
+> **`main` en `cf56dae9`** (fast-forward desde `e7832771`), autorizado por el usuario. API
+> `8d2cec2e`, web `dac3ec39`, preview `6bd665a2`, todos SUCCESS. Las 4 migraciones quedaron
+> aplicadas (`prisma migrate status`: al día). API y web respondieron 200 durante todo el
+> despliegue. Servicio nuevo **`crea-preview`** (rama `main`, Railpack) con dominio
+> `https://crea-preview-production.up.railway.app` (CSP, CORP y Referrer-Policy verificadas);
+> `VITE_CONSTRUYE_PREVIEW_ORIGIN` fijada en `web` (respaldo previo fuera del repo). Verificado
+> desde `www.edusyn.co`: el preview carga, ejecuta el proyecto y recibe el envío del formulario;
 > el paquete publicado trae Crea, Autoevaluación y el origen del preview. Rutas nuevas: 401 sin
 > sesión. **Pendiente:** recorrido con cuentas reales (docente y estudiante).
 >
-> ⚠️ Operación: la URL pública del servicio  tiene una contraseña vieja. Para
->  desde local usar las credenciales del  de  con el host
-> público  y . La base de producción ya tenía
-> , que no está en ;  lo tolera.
+> ⚠️ Operación: la URL pública del servicio `Postgres` tiene una contraseña vieja. Para
+> `prisma migrate status` desde local usar las credenciales del `DATABASE_URL` de `api` con el
+> host público `centerbeam.proxy.rlwy.net` y `RAILWAY_TCP_PROXY_PORT`. La base de producción ya
+> tenía `20260829120000_quiz_numeric_categorize`, que no está en `main`; `migrate deploy` lo tolera.
 
 > **Estado original (antes del push):** preparada, sin push. Rama `deploy/crea-prod`, construida desde `origin/main` solo con el
 > trabajo de Edusyn Crea y de Autoevaluación/Coevaluación del Aula (el mismo que está en staging
