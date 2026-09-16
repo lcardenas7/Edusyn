@@ -62,6 +62,7 @@ function DetalleCargado({
   totalEstudiantes,
   onVolver,
   onAbrirHerramientas,
+  onVerProgreso,
   onAbrirActividad,
   onEditarLeccion,
 }: {
@@ -72,6 +73,7 @@ function DetalleCargado({
   onEditarLeccion: (a: { id: string; title: string; gameType?: string }) => void
   onVolver: () => void
   onAbrirHerramientas: () => void
+  onVerProgreso?: () => void
   onAbrirActividad: (id: string) => void
 }) {
   const { actividad, miEntrega, entregas, cargando, error, recargar } = useActividad(activityId, rol)
@@ -102,6 +104,7 @@ function DetalleCargado({
           onVolver={onVolver}
           onCambio={recargar}
           onAbrirHerramientas={onAbrirHerramientas}
+          onVerProgreso={onVerProgreso}
           aulaId={aulaId}
           totalEstudiantes={totalEstudiantes}
           onAbrirActividad={onAbrirActividad}
@@ -206,12 +209,14 @@ export default function AulaVirtual() {
   )
 
   const abrirHerramienta = useCallback(
-    (herramienta: Herramienta, id?: string, conValeria = false) => {
+    (herramienta: Herramienta, id?: string, conValeria = false, verProgreso = false) => {
       const q = new URLSearchParams(params)
       q.set('herramienta', herramienta)
       q.delete('actividad')
       q.delete('valeria')
+      q.delete('progreso')
       if (id) q.set('actividad', id)
+      if (verProgreso) q.set('progreso', '1')
       // La intención viaja en la URL, no en un estado suelto: así sobrevive a un refresco y el
       // enlace lleva al docente al mismo sitio si lo comparte.
       if (conValeria) q.set('valeria', '1')
@@ -224,6 +229,7 @@ export default function AulaVirtual() {
     q.delete('herramienta')
     q.delete('actividad')
     q.delete('valeria')
+    q.delete('progreso')
     setParams(q)
     recargar()
   }
@@ -303,8 +309,9 @@ export default function AulaVirtual() {
           <LiveSessionBanner
             session={session}
             role={rol}
-            // Abre la actividad exacta dentro del mismo shell.
-            onEntrar={() => abrirHerramienta('actividades', session.activityId)}
+            // Abre la actividad exacta dentro del mismo shell; al docente, directo en el progreso
+            // (puntajes) de la sesión, que es lo que promete el botón.
+            onEntrar={() => abrirHerramienta('actividades', session.activityId, false, rol === 'docente')}
           />
         ) : undefined
       }
@@ -334,7 +341,7 @@ export default function AulaVirtual() {
             <HerramientasAula key={`${classroomId}:${herramienta ?? 'foro'}:${params.get('actividad') ?? ''}`}
               classroomId={classroomId} herramienta={herramienta ?? 'foro'} activityId={params.get('actividad') ?? undefined}
               rol={rol} onCambio={recargar} onVolver={herramienta ? cerrarHerramienta : () => irA('hoy')}
-              abrirValeria={params.get('valeria') === '1'} />
+              abrirValeria={params.get('valeria') === '1'} verProgreso={params.get('progreso') === '1'} />
           </Suspense>
         ) : activityId ? (
           <DetalleCargado
@@ -344,6 +351,7 @@ export default function AulaVirtual() {
             totalEstudiantes={aula?.estudiantes ?? null}
             onVolver={() => verActividades()}
             onAbrirHerramientas={() => abrirHerramienta('actividades', activityId)}
+            onVerProgreso={rol === 'docente' && session?.activityId === activityId ? () => abrirHerramienta('actividades', activityId, false, true) : undefined}
             onAbrirActividad={abrirActividad}
             onEditarLeccion={setEditandoLeccion}
           />

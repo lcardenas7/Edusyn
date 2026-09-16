@@ -2099,8 +2099,11 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
   AUTO_GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Auto-calificado' },
 }
 
-export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError, initialActivityId, openValeria }: {
+export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError, initialActivityId, openValeria, openLiveProgress }: {
   classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void; initialActivityId?: string
+  /** Abre directamente el progreso (puntajes) de la sesión abierta de la actividad inicial. Lo usa
+   *  el aviso «Ver el progreso» del aula nueva. */
+  openLiveProgress?: boolean
   /** Abre el asistente de Valeria nada más entrar. Lo usa el aula nueva: su botón prometía a
    *  Valeria y solo dejaba al docente en la pantalla donde vive, con el asistente cerrado. */
   openValeria?: boolean
@@ -2222,6 +2225,8 @@ export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setEr
   const [liveQuizActivityId, setLiveQuizActivityId] = useState('')
   const [liveQuizActivityTitle, setLiveQuizActivityTitle] = useState('')
   const [liveQuizInitialDeliveryMode, setLiveQuizInitialDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>('SYNC')
+  // Sesión ya abierta que el docente quiere seguir (progreso y puntajes). Vacío = crear una nueva.
+  const [liveQuizResumeId, setLiveQuizResumeId] = useState('')
   const [activeLiveSession, setActiveLiveSession] = useState<any>(null)
 
   // Lesson
@@ -2470,11 +2475,12 @@ export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setEr
   }, [classroom.id, isStudent])
 
   // Check for active live session (student AND teacher for async home)
-  useEffect(() => {
+  const refreshLiveSession = useCallback(() => {
     liveSessionApi.getActive(classroom.id).then(({ data }) => {
-      if (data && data.id) setActiveLiveSession(data)
-    }).catch(() => {})
+      setActiveLiveSession(data && data.id ? data : null)
+    }).catch(() => setActiveLiveSession(null))
   }, [classroom.id])
+  useEffect(() => { refreshLiveSession() }, [refreshLiveSession])
 
   // Importar una lección desde un archivo .json exportado (misma institución: incluye
   // multimedia; entre instituciones, la multimedia subida no resuelve).
@@ -2954,6 +2960,28 @@ export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setEr
     abrioValeria.current = true
     setShowValeriaModal(true)
   }, [openValeria, isTeacher])
+
+  const sessionDeliveryMode = (s: any): 'SYNC' | 'ASYNC_HOME' => ((s?.deliveryMode || s?.config?.deliveryMode) === 'ASYNC_HOME' ? 'ASYNC_HOME' : 'SYNC')
+  // El docente vuelve a la sesión abierta (no crea otra): ahí están el progreso y los puntajes.
+  const resumeLiveSession = (session: any, title?: string) => {
+    setLiveQuizActivityId(session.activityId)
+    setLiveQuizActivityTitle(title || session.activity?.title || 'Quiz')
+    setLiveQuizInitialDeliveryMode(sessionDeliveryMode(session))
+    setLiveQuizResumeId(session.id)
+    setShowLiveQuiz(true)
+  }
+  // Iniciar un quiz desde el detalle: si ya hay una sesión abierta de esta actividad en el mismo
+  // modo, se retoma en vez de abrir una segunda.
+  const startLiveQuiz = (act: Activity, mode: 'SYNC' | 'ASYNC_HOME') => {
+    if (activeLiveSession?.activityId === act.id && sessionDeliveryMode(activeLiveSession) === mode) { resumeLiveSession(activeLiveSession, act.title); return }
+    setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setLiveQuizInitialDeliveryMode(mode); setLiveQuizResumeId(''); setShowLiveQuiz(true)
+  }
+  const openedLiveProgress = useRef(false)
+  useEffect(() => {
+    if (!openLiveProgress || !isTeacher || openedLiveProgress.current || !activeLiveSession || activeLiveSession.activityId !== initialActivityId) return
+    openedLiveProgress.current = true
+    resumeLiveSession(activeLiveSession)
+  }, [openLiveProgress, isTeacher, activeLiveSession, initialActivityId])
 
   useEffect(() => {
     if (loading || !initialActivityId || openedInitialActivity.current === initialActivityId) return
@@ -3524,6 +3552,21 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <ChevronLeft className="w-4 h-4" /> Volver a actividades
         </button>
 
+        {isTeacher && activeLiveSession?.activityId === act.id && (
+          <button
+            type="button"
+            onClick={() => resumeLiveSession(activeLiveSession, act.title)}
+            className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl text-white hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20"
+          >
+            {sessionDeliveryMode(activeLiveSession) === 'ASYNC_HOME' ? <Home className="w-8 h-8 shrink-0" /> : <Zap className="w-8 h-8 shrink-0" />}
+            <div className="flex-1 text-left">
+              <p className="font-bold text-lg">{sessionDeliveryMode(activeLiveSession) === 'ASYNC_HOME' ? 'Quiz en casa abierto' : 'Quiz en vivo abierto'}</p>
+              <p className="text-white/80 text-sm">Ver el progreso y los puntajes de tus estudiantes.</p>
+            </div>
+            <ChevronRight className="w-6 h-6 shrink-0" />
+          </button>
+        )}
+
         {/* Activity header card */}
         <div className="bg-surface-1 rounded-2xl border border-hairline p-6">
           {editingActivity ? (
@@ -3989,10 +4032,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <div className="flex flex-wrap gap-2">
                   {questions.length >= 1 && (
                     <>
-                      <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setLiveQuizInitialDeliveryMode('SYNC'); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm">
+                      <button onClick={() => startLiveQuiz(act, 'SYNC')} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm">
                         <Zap className="w-4 h-4" /> <span className="hidden sm:inline">Quiz En Vivo</span><span className="sm:hidden">En Vivo</span>
                       </button>
-                      <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setLiveQuizInitialDeliveryMode('ASYNC_HOME'); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-rose-600 hover:to-pink-600 shadow-sm">
+                      <button onClick={() => startLiveQuiz(act, 'ASYNC_HOME')} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-rose-600 hover:to-pink-600 shadow-sm">
                         <Home className="w-4 h-4" /> <span className="hidden sm:inline">Quiz En Casa</span><span className="sm:hidden">En Casa</span>
                       </button>
                     </>
@@ -5518,10 +5561,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <LiveQuiz
             classroomId={classroom.id}
             isTeacher={isTeacher}
-            onClose={() => { setShowLiveQuiz(false); setActiveLiveSession(null) }}
+            onClose={() => { setShowLiveQuiz(false); setLiveQuizResumeId(''); if (isStudent) setActiveLiveSession(null); else refreshLiveSession() }}
             activityId={isTeacher ? liveQuizActivityId : undefined}
             activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
-            sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
+            sessionId={isStudent ? activeLiveSession?.id : (liveQuizResumeId || undefined)}
             studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
             initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : (activeLiveSession?.deliveryMode || 'SYNC')}
           />
@@ -6383,12 +6426,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
       {/* Live Quiz banner (teacher - async home active) */}
       {isTeacher && activeLiveSession && ((activeLiveSession?.deliveryMode || activeLiveSession?.config?.deliveryMode) === 'ASYNC_HOME') && (
         <button
-          onClick={() => {
-            setLiveQuizActivityId(activeLiveSession.activityId)
-            setLiveQuizActivityTitle(activeLiveSession.activity?.title || 'Quiz En Casa')
-            setLiveQuizInitialDeliveryMode('ASYNC_HOME')
-            setShowLiveQuiz(true)
-          }}
+          onClick={() => resumeLiveSession(activeLiveSession, activeLiveSession.activity?.title || 'Quiz en casa')}
           className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl text-white hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20"
         >
           <Home className="w-8 h-8 shrink-0" />
@@ -6412,10 +6450,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         <LiveQuiz
           classroomId={classroom.id}
           isTeacher={isTeacher}
-          onClose={() => { setShowLiveQuiz(false); setActiveLiveSession(null) }}
+          onClose={() => { setShowLiveQuiz(false); setLiveQuizResumeId(''); if (isStudent) setActiveLiveSession(null); else refreshLiveSession() }}
           activityId={isTeacher ? liveQuizActivityId : undefined}
           activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
-          sessionId={activeLiveSession?.id}
+          sessionId={isStudent ? activeLiveSession?.id : (liveQuizResumeId || undefined)}
           studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
           initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : (activeLiveSession?.deliveryMode || 'SYNC')}
         />
