@@ -2154,6 +2154,37 @@ export class ApdAiService implements IApdAiService {
     return this.parseLessonDraftPayload(raw, params.title, params.title);
   }
 
+  /** Borrador de rúbrica para evaluación formativa. Solo propone: no publica, no asigna pares y
+   * no elige el componente de la planilla (eso lo decide el docente). */
+  async generateFormativeRubric(params: {
+    purpose: string; gradeName?: string; subjectName?: string; dimensions?: string[];
+    minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number;
+  }): Promise<any> {
+    if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
+    const min = Number.isFinite(params.minScore) ? params.minScore! : 1;
+    const max = Number.isFinite(params.maxScore) ? params.maxScore! : 5;
+    const levelCount = Math.min(Math.max(params.levels || 4, 2), 7);
+    const criterionCount = Math.min(Math.max(params.criteriaPerDimension || 4, 1), 8);
+    const dimensions = (params.dimensions?.filter(Boolean) || ['Autoevaluación', 'Coevaluación']).slice(0, 6);
+    const system = [
+      'Eres experto en evaluación formativa escolar.',
+      'Devuelve EXCLUSIVAMENTE JSON válido, sin markdown, sin texto adicional.',
+      'No diagnostiques al estudiante ni generes etiquetas psicológicas.',
+      'Los descriptores deben ser claros, observables, respetuosos y adecuados a la edad, escritos para que el estudiante los entienda.',
+      'evaluatorType solo puede ser SELF (el estudiante se evalúa a sí mismo) o PEER (un compañero lo evalúa).',
+      'No inventes componentes académicos ni IDs: deja evaluationComponentId como null.',
+      'Esquema exacto:',
+      '{"title":"...","description":"...","dimensions":[{"label":"...","evaluatorType":"SELF|PEER","evaluationComponentId":null,"peersPerStudent":null,"criteria":[{"name":"...","description":"...","weight":25,"levels":[{"label":"...","description":"...","score":1}]}]}]}',
+      `Crea exactamente ${dimensions.length} dimensiones: ${dimensions.join(', ')}.`,
+      `Cada dimensión debe tener exactamente ${criterionCount} criterios y sus pesos deben sumar 100.`,
+      `Cada criterio debe tener exactamente ${levelCount} niveles, con score creciente entre ${min} y ${max}.`,
+    ].join('\n');
+    const prompt = [`Propósito o contexto: ${params.purpose}`, params.gradeName ? `Grado: ${params.gradeName}` : '', params.subjectName ? `Asignatura: ${params.subjectName}` : ''].filter(Boolean).join('\n');
+    const raw = await this.callLlmJson<any>(system, prompt, 4000);
+    if (!raw || !Array.isArray(raw.dimensions) || !raw.dimensions.length) throw new Error('La IA no devolvió una rúbrica válida.');
+    return raw;
+  }
+
   async generateQuizQuestions(params: {
     topic: string;
     count: number;

@@ -26,7 +26,7 @@ import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
   Trash2, Pencil, Pin, PinOff, X, Upload, ExternalLink,
-  GraduationCap, Layers, ClipboardList, BookOpen, Download,
+  GraduationCap, Layers, ClipboardList, ClipboardCheck, BookOpen, Download,
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, Calendar, CheckCircle2, AlertTriangle,
@@ -36,6 +36,7 @@ import {
 import { AudioRecorder, SmartAudio } from '../components/media/SmartMedia'
 import { PrerequisitesEditor, type PrereqRule } from '../components/classroom/PrerequisitesEditor'
 import CrearConIAModal from '../components/classroom/CrearConIAModal'
+import FormativeEvaluationsTab from '../components/classroom/FormativeEvaluationsTab'
 import { extractJson } from '../lib/extractJson'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -155,13 +156,14 @@ const INTENTIONS: { key: string; label: string; emoji: string; hint: string; mec
 const MECHANIC_LABEL = (type: string): string =>
   INTENTIONS.flatMap(i => i.mechanics).find(m => m.type === type)?.label || 'Actividad'
 
-type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'abp' | 'forum' | 'students' | 'grades'
+type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'formative' | 'routes' | 'abp' | 'forum' | 'students' | 'grades'
 
 const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'home', label: 'Inicio', icon: Home },
   { key: 'announcements', label: 'Anuncios', icon: Megaphone },
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'formative', label: 'Autoevaluación', icon: ClipboardCheck },
   { key: 'routes', label: 'Rutas', icon: RouteIcon },
   { key: 'abp', label: 'Expedición ABP', icon: Rocket },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
@@ -173,6 +175,7 @@ const STUDENT_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'announcements', label: 'Anuncios', icon: Megaphone },
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'formative', label: 'Autoevaluación', icon: ClipboardCheck },
   { key: 'routes', label: 'Rutas', icon: RouteIcon },
   { key: 'abp', label: 'Expedición ABP', icon: Rocket },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
@@ -612,6 +615,7 @@ export default function Classroom() {
             {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
+            {activeTab === 'formative' && <FormativeEvaluationsTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} setError={setError} />}
             {activeTab === 'routes' && <LearningRoutesTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
             {activeTab === 'abp' && <AbpTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
             {activeTab === 'forum' && <ForumTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} setError={setError} />}

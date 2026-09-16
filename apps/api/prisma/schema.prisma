@@ -248,6 +248,10 @@ enum AcademicStructureType {
 
 model User {
   id                 String        @id @default(cuid())
+  // Evaluación formativa
+  formativeActivitiesCreated FormativeEvaluationActivity[] @relation("FormativeCreatedBy")
+  formativeActivitiesPublished FormativeEvaluationActivity[] @relation("FormativePublishedBy")
+  formativeGradeSyncsRequested FormativeGradeSync[] @relation("FormativeSyncRequestedBy")
   email              String        @unique
   username           String?       @unique
   passwordHash       String
@@ -432,6 +436,9 @@ model UserRole {
 
 model Institution {
   id           String            @id @default(cuid())
+  // Evaluación formativa
+  formativeEvaluationActivities FormativeEvaluationActivity[]
+  formativeGradeSyncs FormativeGradeSync[]
   name         String
   daneCode     String?           @unique
   nit          String?
@@ -1139,6 +1146,8 @@ model Period {
 
 model AcademicTerm {
   id                           String             @id @default(cuid())
+  // Evaluación formativa
+  formativeEvaluationActivities FormativeEvaluationActivity[]
   academicYearId               String
   type                         AcademicTermType
   name                         String
@@ -1278,6 +1287,8 @@ enum RecoveryPhaseStatus {
 
 model TeacherAssignment {
   id             String    @id @default(cuid())
+  // Evaluación formativa
+  formativeEvaluationActivities FormativeEvaluationActivity[]
   institutionId  String
   academicYearId String
   groupId        String
@@ -1375,6 +1386,9 @@ model EvaluationPlan {
 
 model EvaluationComponent {
   id                    String   @id @default(cuid())
+  // Evaluación formativa
+  formativeDimensions FormativeEvaluationDimension[] @relation("FormativeDimensionComponent")
+  formativeGradeSyncItems FormativeGradeSyncItem[]
   institutionId         String
   parentId              String?
   code                  String
@@ -1634,6 +1648,10 @@ enum GuardianRelationship {
 
 model StudentEnrollment {
   id             String @id @default(cuid())
+  // Evaluación formativa
+  formativeAsEvaluator FormativeEvaluationAssignment[] @relation("FormativeEvaluator")
+  formativeAsTarget FormativeEvaluationAssignment[] @relation("FormativeTarget")
+  formativeResults FormativeEvaluationResult[]
   institutionId  String
   studentId      String
   academicYearId String
@@ -6085,6 +6103,8 @@ enum ActivityUnlockCondition {
 
 model Classroom {
   id                  String   @id @default(cuid())
+  // Evaluación formativa
+  formativeEvaluationActivities FormativeEvaluationActivity[]
   institutionId       String
   teacherAssignmentId String   @unique
   title               String
@@ -6554,6 +6574,8 @@ enum AttitudinalRubricType {
 // Rúbrica institucional para evaluación actitudinal
 model AttitudinalRubric {
   id            String                @id @default(cuid())
+  // Evaluación formativa
+  formativeDimensions FormativeEvaluationDimension[]
   institutionId String
   name          String // "Rúbrica de Autoevaluación P1", "Coevaluación Trabajo en Equipo"
   description   String?
@@ -7953,3 +7975,191 @@ model ConstruyeJournalEntry {
   @@index([projectId, teamId, createdAt])
 }
 
+// Ciclo aislado de evaluación formativa. Sus resultados son evidencia propia;
+// la planilla solo se toca por una sincronización explícita y auditada.
+enum FormativeEvaluationStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  CLOSED
+  CONSOLIDATED
+  SYNCED
+  CHANGED_AFTER_SYNC
+}
+
+enum FormativeEvaluatorType {
+  SELF
+  PEER
+  TEACHER
+}
+
+enum FormativeCommentStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum FormativeSyncStatus {
+  PREVIEWED
+  PROCESSING
+  COMPLETED
+  PARTIAL_FAILURE
+  FAILED
+}
+
+model FormativeEvaluationActivity {
+  id                  String                    @id @default(cuid())
+  institutionId       String
+  classroomId         String
+  teacherAssignmentId String
+  academicTermId      String
+  title               String
+  description         String?                   @db.Text
+  status              FormativeEvaluationStatus @default(DRAFT)
+  opensAt             DateTime?
+  closesAt            DateTime?
+  publishedAt         DateTime?
+  closedAt            DateTime?
+  consolidatedAt      DateTime?
+  createdById         String
+  publishedById       String?
+  algorithmVersion    String?                   // ej. peer-ring-v1
+  assignmentSeed      String?                   // semilla auditable, nunca expuesta al alumno
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  institution       Institution       @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  classroom         Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  createdBy         User              @relation("FormativeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy       User?             @relation("FormativePublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  dimensions        FormativeEvaluationDimension[]
+  assignments       FormativeEvaluationAssignment[]
+  results           FormativeEvaluationResult[]
+  syncs             FormativeGradeSync[]
+
+  @@index([institutionId, academicTermId])
+  @@index([classroomId, status])
+}
+
+model FormativeEvaluationDimension {
+  id                    String                @id @default(cuid())
+  activityId            String
+  label                 String
+  evaluatorType         FormativeEvaluatorType
+  rubricId              String?
+  rubricSnapshot        Json                  // criterios/niveles/pesos/escala congelados al publicar
+  evaluationComponentId String?
+  gradebookActivityIndex Int? // reservado una sola vez al sincronizar; evita colisiones de planilla
+  peersPerStudent       Int?
+  revealEvaluator       Boolean               @default(false)
+  requireCommentReview  Boolean               @default(true)
+  allowIncomplete       Boolean               @default(false)
+  order                 Int                   @default(0)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  activity            FormativeEvaluationActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  rubric              AttitudinalRubric?          @relation(fields: [rubricId], references: [id], onDelete: SetNull)
+  evaluationComponent EvaluationComponent?        @relation("FormativeDimensionComponent", fields: [evaluationComponentId], references: [id], onDelete: SetNull)
+  assignments         FormativeEvaluationAssignment[]
+  results             FormativeEvaluationResult[]
+
+  @@index([activityId, order])
+  @@index([evaluationComponentId])
+}
+
+model FormativeEvaluationAssignment {
+  id                    String   @id @default(cuid())
+  activityId            String
+  dimensionId           String
+  evaluatorEnrollmentId String?
+  targetEnrollmentId    String
+  status                String   @default("PENDING") // PENDING | SUBMITTED | EXEMPTED
+  submittedAt           DateTime?
+  answers               Json?
+  calculatedScore       Decimal? @db.Decimal(5, 2)
+  qualitativeComments   Json?
+  commentStatus         FormativeCommentStatus @default(PENDING_REVIEW)
+  exceptionReason       String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  activity            FormativeEvaluationActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  dimension           FormativeEvaluationDimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  evaluatorEnrollment StudentEnrollment?           @relation("FormativeEvaluator", fields: [evaluatorEnrollmentId], references: [id], onDelete: Cascade)
+  targetEnrollment    StudentEnrollment            @relation("FormativeTarget", fields: [targetEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([dimensionId, evaluatorEnrollmentId, targetEnrollmentId])
+  @@index([activityId, evaluatorEnrollmentId, status])
+  @@index([activityId, targetEnrollmentId])
+}
+
+model FormativeEvaluationResult {
+  id                    String   @id @default(cuid())
+  activityId            String
+  dimensionId           String
+  studentEnrollmentId   String
+  consolidationVersion  Int      @default(1)
+  quantitativeScore     Decimal? @db.Decimal(5, 2)
+  qualitativeSummary    Json?
+  expectedResponses     Int      @default(0)
+  receivedResponses     Int      @default(0)
+  isReady               Boolean  @default(false)
+  consolidatedAt        DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  activity          FormativeEvaluationActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  dimension         FormativeEvaluationDimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment            @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  syncItems         FormativeGradeSyncItem[]
+
+  @@unique([dimensionId, studentEnrollmentId, consolidationVersion])
+  @@index([activityId, studentEnrollmentId])
+}
+
+model FormativeGradeSync {
+  id                 String              @id @default(cuid())
+  activityId         String
+  institutionId      String
+  idempotencyKey     String
+  status             FormativeSyncStatus @default(PREVIEWED)
+  previewHash        String
+  requestedById      String
+  requestedAt        DateTime            @default(now())
+  completedAt        DateTime?
+  errorSummary       String?             @db.Text
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  activity    FormativeEvaluationActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  institution Institution                 @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  requestedBy User                        @relation("FormativeSyncRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  items       FormativeGradeSyncItem[]
+
+  @@unique([institutionId, idempotencyKey])
+  @@index([activityId, status])
+}
+
+model FormativeGradeSyncItem {
+  id                  String   @id @default(cuid())
+  syncId              String
+  resultId            String
+  destinationComponentId String
+  activityIndex       Int
+  scoreSent           Decimal? @db.Decimal(5, 2)
+  status              String   @default("PENDING") // PENDING | APPLIED | CONFLICT | ERROR | SKIPPED
+  errorDetail         String?  @db.Text
+  partialGradeId      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  sync                FormativeGradeSync        @relation(fields: [syncId], references: [id], onDelete: Cascade)
+  result              FormativeEvaluationResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  destinationComponent EvaluationComponent       @relation(fields: [destinationComponentId], references: [id], onDelete: Cascade)
+
+  @@unique([syncId, resultId])
+  @@index([resultId])
+}

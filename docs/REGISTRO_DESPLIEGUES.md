@@ -22,6 +22,46 @@
 
 ## Historial (más reciente arriba)
 
+### Aula Virtual: Autoevaluación y coevaluación (trabajo de Codex, terminado) + contrato de rutas de Crea — 2026-09-16 · staging
+
+Push a `staging` autorizado por el usuario ("revísalo, termínalo y súbelo en conjunto" con Crea).
+**Lleva migración aditiva** `20260917020000_formative_evaluation` (tipos, 6 tablas, índices y llaves
+nuevas; ningún `ALTER` ni `DROP` sobre tablas existentes; verificada como la única pendiente en
+staging). Base: `docs/HANDOFF_CLAUDE_EVALUACION_FORMATIVA.md` (árbol principal, sin commit).
+
+**Qué se corrigió del trabajo original.**
+- **Migración renombrada** (era `20260916020000`, anterior a una ya aplicada en staging) y
+  **generada con `prisma migrate diff`** desde el esquema real. ⚠️ El árbol principal aún tiene la
+  carpeta vieja sin commit: no subirla, o habrá dos migraciones que crean las mismas tablas.
+- **Reglas de borrado**: aula, asignación, período y matrícula en cascada (como `PartialGrade`);
+  con `RESTRICT` fallaban el borrado físico de estudiantes y el borrado de institución del
+  superadmin. Componente de planilla: `SET NULL` en la dimensión, cascada en el registro de envío.
+- **Seguridad**: `create` copiaba el objeto del cliente (ahora lista blanca de campos); `submit`
+  sin matrícula dejaba el filtro vacío (ahora falla); un criterio repetido podía "completar" la
+  rúbrica; se respeta el plazo; comentarios recortados; carrera de idempotencia (P2002) resuelta.
+- **Dimensión "Docente"** retirada de esta versión: no había forma de responderla y nunca se
+  consolidaba. Solo autoevaluación y coevaluación (anillo `peer-ring-v1`).
+- **Sin rúbricas huérfanas**: se valida aula y período antes de crear plantillas.
+- **Controlador propio** `formative-evaluations/*` con `requireInstitutionId` en cada ruta: tocar
+  `classroom.controller.ts` invalidaba las 122 excepciones auditadas del contrato de rutas.
+- **Interfaz**: leía `data.terms` (la API devuelve `availableTerms`: nunca había período) y no
+  permitía elegir el componente de planilla (nada se sincronizaba). Ahora: borrador editable
+  (títulos, criterios, pesos con validación de 100 %, compañeros por estudiante, destino en la
+  planilla), resultados por estudiante (incompletos nunca en 0), comentarios, vista previa y envío
+  a la planilla; el estudiante responde guiado y pasa solo a la siguiente evaluación. Destino
+  "Autoevaluación" en el Aula nueva y pestaña en la clásica.
+
+**Contrato de rutas de Crea.** `institution-route-contract.spec.ts` ya fallaba desde la primera
+subida de Crea (las rutas resolvían la institución con un `.then`, que el contrato no acepta);
+Railway no corre pruebas, así que no se vio. `construye.controller.ts` usa ahora
+`requireInstitutionId` al inicio de cada ruta. Suite completa de la API en verde.
+
+**Verificación.** `tsc` (api, web), `prisma validate`, API 2161/2161 (16 nuevas de evaluación
+formativa), web 447/447, `vite build`, arranque de `AppModule` con inyección resuelta, y recorrido
+visual con API simulada (crear con validación de pesos, resultados, respuesta del estudiante).
+**Pendiente**: prueba funcional con cuentas reales de staging (lista del handoff, pasos 1–10). La
+generación con IA requiere que staging tenga configurado el proveedor (`APD_AI_*`).
+
 ### Edusyn Crea: P1 del plan pedagógico (5 etapas, sesiones, semáforo) — 2026-09-16 · staging
 
 Push a `staging` autorizado por el usuario, junto con la entrada de abajo (van en el mismo push).
