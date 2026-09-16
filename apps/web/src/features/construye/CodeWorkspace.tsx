@@ -58,6 +58,12 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
   const [savePanelOpen, setSavePanelOpen] = useState(false)
   const [changePanelOpen, setChangePanelOpen] = useState(false)
   const [previewFocused, setPreviewFocused] = useState(false)
+  // Los paneles de petición y de guardado se abren arriba del editor; en celular el botón queda
+  // mucho más abajo, así que se lleva la vista hasta el panel para que se note que apareció.
+  const panelsRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (changePanelOpen || savePanelOpen) panelsRef.current?.scrollIntoView({ block: 'start' })
+  }, [changePanelOpen, savePanelOpen])
   const [guideOpen, setGuideOpen] = useState(true)
   const [expanded, setExpanded] = useState(false)
   const [exploreMode, setExploreMode] = useState(false)
@@ -345,6 +351,7 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
           <div><p className="font-bold">Modo explorar encendido</p><p className="mt-0.5 text-xs leading-5 text-cyan-800">Haz clic en una parte de tu página para descubrir qué código la crea. También puedes poner el cursor en HTML o CSS para verla resaltada.</p></div>
         </div>}
 
+        <div ref={panelsRef} className="scroll-mt-4">
         {changePanelOpen && <ChangeRequestPanel brief={brief} project={draft} onCopied={onChangeRequestCopied} onClose={() => setChangePanelOpen(false)} />}
 
         {savePanelOpen && connected && <SaveVersionPanel
@@ -357,6 +364,7 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
           onConfirm={save}
           onCancel={() => setSavePanelOpen(false)}
         />}
+        </div>
 
         <div className={`grid gap-4 ${expanded ? 'lg:grid-cols-[minmax(360px,.85fr)_minmax(0,1.15fr)]' : 'xl:grid-cols-[minmax(360px,.9fr)_minmax(0,1.1fr)]'}`}>
           <div className="min-w-0 overflow-hidden rounded-[22px] border border-slate-300 bg-[#111827] shadow-lg shadow-slate-900/10">
