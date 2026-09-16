@@ -22,6 +22,13 @@
 
 ## Historial (más reciente arriba)
 
+### Edusyn Crea + Autoevaluación llegan a producción — 2026-09-16 (nota cruzada)
+
+Lo mismo que está en esta rama hasta `fdf63a32` se promovió a `main` en una rama aislada
+(`deploy/crea-prod`, `cf56dae9`; bitácora de `main` con el detalle). En producción hay un servicio
+nuevo `crea-preview` (`https://crea-preview-production.up.railway.app`). Staging no cambió de
+código con esta nota.
+
 ### Aula Virtual: Autoevaluación y coevaluación (trabajo de Codex, terminado) + contrato de rutas de Crea — 2026-09-16 · staging
 
 Push a `staging` autorizado por el usuario ("revísalo, termínalo y súbelo en conjunto" con Crea).
