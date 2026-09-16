@@ -342,3 +342,46 @@ body {
   animation: float 4s ease-in-out infinite;
   animation-delay: 1.5s;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Toasts (sonner) SIEMPRE por encima de todo — incluidos modales/diálogos
+   (DialogHost usa z-200, algunos overlays z-50). Sin esto, en algunas vistas
+   los mensajes de "guardado/error" podían quedar tapados ("detrás"). El toaster
+   se portamonta en body; este z-index máximo garantiza que se lean siempre.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-sonner-toaster] {
+  z-index: 2147483647 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDUSYN CREA — laboratorio visual.
+   El lenguaje visual vive aislado bajo .crea-studio/.crea-page para que el
+   editor pueda sentirse como una herramienta de creación sin teñir el LMS.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.crea-studio {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(34, 211, 238, 0.12), transparent 32rem),
+    radial-gradient(circle at 100% 100%, rgba(52, 211, 153, 0.10), transparent 28rem),
+    #edf2f5;
+}
+
+.crea-code-editor {
+  scrollbar-color: #475569 #111827;
+  tab-size: 2;
+}
+
+.crea-code-editor::selection {
+  color: #ecfeff;
+  background: rgba(8, 145, 178, 0.65);
+}
+
+.crea-page input,
+.crea-page textarea,
+.crea-page select,
+.crea-studio button {
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.crea-studio button:not(:disabled):active {
+  transform: translateY(1px);
+}

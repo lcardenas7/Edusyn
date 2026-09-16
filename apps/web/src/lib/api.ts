@@ -2184,6 +2184,18 @@ export const pedagogicalDesignApi = {
 // AULA VIRTUAL
 // ═══════════════════════════════════════════════════════════════════════════
 export const classroomApi = {
+  // Evaluación formativa: rúbricas, autoevaluación y coevaluación (separada de la planilla)
+  listFormativeEvaluations: (classroomId: string, role: 'teacher' | 'student') => api.get(`/formative-evaluations/classrooms/${classroomId}`, { params: { role } }),
+  getFormativeComponents: (classroomId: string) => api.get(`/formative-evaluations/classrooms/${classroomId}/components`),
+  generateFormativeEvaluationAI: (data: { classroomId: string; purpose: string; dimensions?: string[]; minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number }) => api.post('/formative-evaluations/generate-ai', data),
+  createFormativeEvaluationFromAIDraft: (data: any) => api.post('/formative-evaluations/from-ai-draft', data),
+  setFormativeDimensionComponent: (id: string, dimensionId: string, evaluationComponentId: string | null) => api.patch(`/formative-evaluations/${id}/dimensions/${dimensionId}/component`, { evaluationComponentId }),
+  publishFormativeEvaluation: (id: string) => api.post(`/formative-evaluations/${id}/publish`),
+  submitFormativeAssignment: (id: string, data: { answers: Array<{ criterionId: string; levelId: string }>; comments?: Array<{ prompt?: string; text: string }> }) => api.post(`/formative-evaluations/assignments/${id}/submit`, data),
+  consolidateFormativeEvaluation: (id: string) => api.post(`/formative-evaluations/${id}/consolidate`),
+  getFormativeDashboard: (id: string) => api.get(`/formative-evaluations/${id}/dashboard`),
+  previewFormativeSync: (id: string) => api.get(`/formative-evaluations/${id}/sync-preview`),
+  syncFormativeEvaluation: (id: string, data: { idempotencyKey: string; previewHash: string }) => api.post(`/formative-evaluations/${id}/sync`, data),
   // Classrooms
   list: (role?: string) => api.get('/classrooms', { params: { role } }),
   getAvailableAssignments: () => api.get('/classrooms/available-assignments'),

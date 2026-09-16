@@ -44,6 +44,7 @@ import { TallerModule } from './modules/taller/taller.module';
 import { LiveSessionModule } from './modules/live-session/live-session.module';
 import { StaffLeaveModule } from './modules/staff-leave/staff-leave.module';
 import { EdusynPlayModule } from './modules/edusyn-play/edusyn-play.module';
+import { ConstruyeModule } from './modules/construye/construye.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { TenantGuard } from './modules/auth/guards/tenant.guard';
 
@@ -96,6 +97,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
     LiveSessionModule,
     StaffLeaveModule,
     EdusynPlayModule,
+    ConstruyeModule,
   ],
   controllers: [AppController],
   providers: [

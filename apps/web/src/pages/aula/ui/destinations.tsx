@@ -9,7 +9,9 @@
 import {
   BarChart3,
   BookOpen,
+  ClipboardCheck,
   ClipboardList,
+  Code2,
   Compass,
   House,
   MessagesSquare,
@@ -18,7 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-export type Vista = 'hoy' | 'unidades' | 'actividades' | 'rutas' | 'expedicion' | 'foro' | 'notas' | 'estudiantes'
+export type Vista = 'hoy' | 'unidades' | 'actividades' | 'rutas' | 'expedicion' | 'autoevaluacion' | 'construye' | 'foro' | 'notas' | 'estudiantes'
 
 export interface Destino {
   id: Vista
@@ -38,6 +40,8 @@ export const DESTINOS: Destino[] = [
   { id: 'notas', label: 'Notas', hint: 'Cómo vamos', icon: BarChart3, principal: true },
   { id: 'rutas', label: 'Rutas', hint: 'Aprendizaje por competencias', icon: Compass },
   { id: 'expedicion', label: 'Expedición', hint: 'Proyectos por equipos', icon: Rocket },
+  { id: 'autoevaluacion', label: 'Autoevaluación', hint: 'Rúbricas, autoevaluación y coevaluación', icon: ClipboardCheck },
+  { id: 'construye', label: 'Crea', hint: 'Construye apps y comprende cómo funcionan', icon: Code2 },
   { id: 'foro', label: 'Foro', hint: 'Preguntas y conversación', icon: MessagesSquare },
   { id: 'estudiantes', label: 'Estudiantes', hint: 'Quiénes están y cómo van', icon: Users, soloDocente: true },
 ]

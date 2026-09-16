@@ -22,6 +22,33 @@
 
 ## Historial (más reciente arriba)
 
+### Edusyn Crea + Autoevaluación del Aula — rama aislada para producción · ⏳ SIN DESPLEGAR
+
+> **Preparada, sin push.** Rama `deploy/crea-prod`, construida desde `origin/main` solo con el
+> trabajo de Edusyn Crea y de Autoevaluación/Coevaluación del Aula (el mismo que está en staging
+> hasta `fdf63a32`). Nada más de `staging` (195 commits ajenos) viaja en ella.
+
+**Migraciones (4, todas aditivas):** `20260913010000_edusyn_construye_f1`,
+`20260916010000_edusyn_crea_team_brief`, `20260917010000_edusyn_crea_session_note`,
+`20260917020000_formative_evaluation`. Comprobado con `prisma migrate diff` desde el esquema de
+`main`: el resultado equivale a las migraciones y no contiene ningún `DROP`; la de evaluación
+formativa es idéntica byte a byte a la de staging.
+
+**Diferencias con la rama de staging (por la forma de `main`):** sin la maqueta `/edusim/construye`
+(Crea entra solo por el Aula); el cliente de Crea usa `lib/api.ts` (en `main` no existe
+`lib/api/client`); las funciones de evaluación formativa van en el `classroomApi` de `lib/api.ts`.
+
+**Verificación:** `tsc` api y web limpios, `prisma validate`, API 974/974, web 415/415, runner
+117/117, `vite build` de web y runner.
+
+**Pasos para desplegar (cuando el usuario lo autorice, tras revisar staging):**
+1. Railway: crear el servicio del preview de producción (igual que `crea-preview-staging`: Railpack,
+   `RAILPACK_BUILD_CMD` / `RAILPACK_START_CMD`, dominio propio) desde la rama `main`.
+2. Fijar `VITE_CONSTRUYE_PREVIEW_ORIGIN` en el servicio `web` de producción con `--skip-deploys`.
+3. `git push origin deploy/crea-prod:main` (fast-forward sobre `main`); la API aplica las 4
+   migraciones al arrancar. Verificar `prisma migrate status`, `/api/health` y el Aula.
+4. La generación con IA de rúbricas usa `APD_AI_*` (ya configurado en producción).
+
 ### Landing pública: primer despliegue a producción + 3 fixes — 2026-09-13
 
 `main` (prod) en `be2ba5a7` — primera vez que la landing pública multipágina llega a producción
