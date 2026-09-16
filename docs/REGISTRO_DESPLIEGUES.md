@@ -22,6 +22,18 @@
 
 ## Historial (más reciente arriba)
 
+### Autoevaluación: rúbrica con IA externa (copiar y pegar) — 2026-09-16 · staging
+
+Solo web, sin migración ni cambios de API. A pedido del usuario, crear la rúbrica ya no depende
+solo de la IA interna: el camino predeterminado es **"Con una IA externa"**. Edusyn arma la
+petición (lo que el docente quiere evaluar, dimensiones elegidas y la escala de la institución;
+sin nombres ni datos de estudiantes), el docente la copia a su IA y pega la respuesta. La lectura
+tolera texto y cercas alrededor del JSON (`lib/extractJson`), limpia con las mismas reglas que el
+servidor (`components/classroom/formativeDraft.ts`) y lleva a la misma revisión editable; la API
+vuelve a validar al crear. "Con la IA de Edusyn" sigue disponible. 5 pruebas nuevas; web 452/452;
+recorrido visual con API simulada (error claro con respuesta inválida, respuesta válida con texto
+alrededor → revisión con pesos al 100 %).
+
 ### Edusyn Crea + Autoevaluación llegan a producción — 2026-09-16 (nota cruzada)
 
 Lo mismo que está en esta rama hasta `fdf63a32` se promovió a `main` en una rama aislada
