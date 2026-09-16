@@ -20,7 +20,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Check, ChevronDown, Info, Search, X } from 'lucide-react'
+import { Check, ChevronDown, Info, Search, Sparkles, X } from 'lucide-react'
 import type { ActivityLike } from '../model/activityState'
 import {
   agrupacionPorDefecto,
@@ -60,6 +60,8 @@ export interface ActividadesProps {
   filtroEstadoInicial?: string | null
   onAbrirActividad: (id: string) => void
   onCrear?: () => void
+  /** Flujo guiado con una IA externa (lección, quiz o tarea). */
+  onCrearConIA?: () => void
   /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
   totalEstudiantes?: number | null
   now?: Date
@@ -73,6 +75,7 @@ export function Actividades({
   filtroEstadoInicial,
   onAbrirActividad,
   onCrear,
+  onCrearConIA,
   totalEstudiantes,
   now = new Date(),
 }: ActividadesProps) {
@@ -113,7 +116,19 @@ export function Actividades({
               : `${resultado.visible} de ${resultado.total}`}
           </p>
         </div>
-        {onCrear && role === 'docente' && (
+        {(onCrear || onCrearConIA) && role === 'docente' && (
+          <div className="flex flex-wrap gap-2">
+          {onCrearConIA && (
+            <button
+              type="button"
+              onClick={onCrearConIA}
+              title="Genera una lección, un quiz o una tarea con ChatGPT, Gemini u otra IA y tráelo a Edusyn"
+              className="inline-flex min-h-btn items-center gap-1.5 rounded-lg border border-accent/40 bg-surface-1 px-4 text-body-sm font-medium text-accent transition-colors hover:bg-accent/5 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            >
+              <Sparkles className="h-4 w-4" aria-hidden="true" /> Crear con IA externa
+            </button>
+          )}
+          {onCrear && (
           <button
             type="button"
             onClick={onCrear}
@@ -121,6 +136,8 @@ export function Actividades({
           >
             Nueva actividad
           </button>
+          )}
+          </div>
         )}
       </header>
 

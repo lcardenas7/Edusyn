@@ -4,6 +4,7 @@ import { classroomApi } from '../../lib/api'
 import { confirmDialog } from '../ui/confirm'
 import { toast } from '../../lib/toast'
 import FormativeCreatePanel, { type CreateMode } from './FormativeCreatePanel'
+import PeerAssignmentPanel, { type PeerPlan } from './PeerAssignmentPanel'
 import type { GradebookComponent as Component, OpenTerm as Term } from './formativeDraft'
 
 /** Rúbricas, autoevaluación y coevaluación. La IA propone un borrador; el docente lo revisa,
@@ -75,6 +76,7 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
   const [terms, setTerms] = useState<Term[]>([])
   const [scale, setScale] = useState<{ min: number; max: number } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [publishingId, setPublishingId] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
@@ -98,10 +100,15 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
     }
   }
 
+  // Con coevaluación, primero se revisa quién evalúa a quién; sin ella basta con confirmar.
   const publish = async (item: any) => {
-    const peer = item.dimensions?.some((d: any) => d.evaluatorType === 'PEER')
-    if (!(await confirmDialog(`Al publicar, cada estudiante verá su autoevaluación${peer ? ' y los compañeros que le tocan evaluar' : ''}. Después ya no se puede editar la rúbrica.`, { title: 'Publicar evaluación', confirmLabel: 'Publicar' }))) return
+    if (item.dimensions?.some((d: any) => d.evaluatorType === 'PEER')) { setPublishingId(item.id); return }
+    if (!(await confirmDialog('Al publicar, cada estudiante verá su autoevaluación. Después ya no se puede editar la rúbrica.', { title: 'Publicar evaluación', confirmLabel: 'Publicar' }))) return
     await run(item.id, () => classroomApi.publishFormativeEvaluation(item.id), 'No se pudo publicar', 'Evaluación publicada')
+  }
+  const publishWithPlan = async (item: any, plan: PeerPlan) => {
+    if (!(await confirmDialog('Cada estudiante verá su autoevaluación y a los compañeros que le tocan evaluar. Después ya no se puede cambiar la rúbrica ni el reparto.', { title: 'Publicar evaluación', confirmLabel: 'Publicar' }))) return
+    await run(item.id, async () => { await classroomApi.publishFormativeEvaluation(item.id, { peer: plan }); setPublishingId(null) }, 'No se pudo publicar', 'Evaluación publicada')
   }
 
   return <div className="space-y-4">
@@ -136,30 +143,32 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
           {(item.dimensions || []).map((d: any) => <li key={d.id} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="font-medium text-slate-700">{d.label}</span>
             <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-800">{TYPE_LABEL[d.evaluatorType] || d.evaluatorType}{d.evaluatorType === 'PEER' && d.peersPerStudent ? ` · ${d.peersPerStudent} por estudiante` : ''}</span>
-            {item.status !== 'SYNCED' && d.gradebookActivityIndex == null
-              ? <select value={d.evaluationComponentId || ''} disabled={busy === item.id} onChange={e => run(item.id, () => classroomApi.setFormativeDimensionComponent(item.id, d.id, e.target.value || null), 'No se pudo cambiar el destino')} className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600">
-                <option value="">No enviar a la planilla</option>
-                {components.map(c => <option key={c.id} value={c.id}>Planilla: {c.name}</option>)}
-              </select>
-              : <span className="text-xs text-slate-500">{d.evaluationComponent ? `Planilla: ${d.evaluationComponent.name}` : 'No va a la planilla'}</span>}
+            {item.status === 'SYNCED' && d.evaluationComponent && <span className="text-xs text-slate-500">En la planilla: {d.evaluationComponent.name}</span>}
           </li>)}
         </ul>
         <div className="mt-4 flex flex-wrap gap-2">
-          {item.status === 'DRAFT' && <button disabled={!!busy} onClick={() => publish(item)} className="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Publicar</button>}
+          {item.status === 'DRAFT' && publishingId !== item.id && <button disabled={!!busy} onClick={() => publish(item)} className="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Publicar</button>}
           {['PUBLISHED', 'IN_PROGRESS', 'CLOSED', 'CONSOLIDATED', 'CHANGED_AFTER_SYNC'].includes(item.status) && <button disabled={!!busy} onClick={() => run(item.id, () => classroomApi.consolidateFormativeEvaluation(item.id), 'No se pudo consolidar', 'Resultados consolidados')} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{item.status === 'CONSOLIDATED' ? 'Volver a consolidar' : 'Consolidar resultados'}</button>}
           {item.status !== 'DRAFT' && <button onClick={() => setOpenId(openId === item.id ? null : item.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><BarChart3 className="h-4 w-4" /> {openId === item.id ? 'Ocultar resultados' : 'Ver resultados'}</button>}
           {busy === item.id && <Loader2 className="h-5 w-5 animate-spin self-center text-teal-600" />}
         </div>
-        {openId === item.id && <ResultsPanel item={item} fail={fail} onSynced={reload} />}
+        {publishingId === item.id && <PeerAssignmentPanel activityId={item.id} busy={busy === item.id} fail={fail} onCancel={() => setPublishingId(null)} onPublish={plan => void publishWithPlan(item, plan)} />}
+        {openId === item.id && <ResultsPanel item={item} components={components} fail={fail} onSynced={reload} />}
       </article>
     })}
   </div>
 }
 
-function ResultsPanel({ item, fail, onSynced }: { item: any; fail: (e: any, m: string) => void; onSynced: () => Promise<void> }) {
+function ResultsPanel({ item, components, fail, onSynced }: { item: any; components: Component[]; fail: (e: any, m: string) => void; onSynced: () => Promise<void> }) {
   const [data, setData] = useState<any>(null)
   const [preview, setPreview] = useState<any>(null)
   const [busy, setBusy] = useState(false)
+  const [destinations, setDestinations] = useState<Record<string, string>>({})
+  const [choosing, setChoosing] = useState(false)
+
+  useEffect(() => {
+    if (data) setDestinations(Object.fromEntries(data.dimensions.map((d: any) => [d.id, d.evaluationComponentId || ''])))
+  }, [data])
 
   useEffect(() => {
     classroomApi.getFormativeDashboard(item.id).then(({ data }: any) => setData(data)).catch(e => fail(e, 'No se pudieron cargar los resultados'))
@@ -177,8 +186,16 @@ function ResultsPanel({ item, fail, onSynced }: { item: any; fail: (e: any, m: s
   const loadPreview = async () => {
     setBusy(true)
     try {
+      // Guarda primero el destino elegido para cada dimensión (solo si cambió).
+      for (const d of data.dimensions) {
+        const chosen = destinations[d.id] || ''
+        if (chosen !== (d.evaluationComponentId || '') && d.gradebookActivityIndex == null) {
+          await classroomApi.setFormativeDimensionComponent(item.id, d.id, chosen || null)
+        }
+      }
       const { data: p } = await classroomApi.previewFormativeSync(item.id)
       setPreview(p)
+      setChoosing(false)
     } catch (e) {
       fail(e, 'No se pudo preparar la sincronización')
     } finally {
@@ -229,10 +246,28 @@ function ResultsPanel({ item, fail, onSynced }: { item: any; fail: (e: any, m: s
       <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">{comments.map((c: string, i: number) => <li key={i}>{c}</li>)}</ul>
     </details>}
 
-    {['CONSOLIDATED', 'CHANGED_AFTER_SYNC'].includes(item.status) && !preview && <button type="button" disabled={busy} onClick={loadPreview} className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-2 text-sm font-semibold text-teal-700 hover:bg-white disabled:opacity-50"><Upload className="h-4 w-4" /> Preparar envío a la planilla</button>}
+    {['CONSOLIDATED', 'CHANGED_AFTER_SYNC'].includes(item.status) && !preview && !choosing && <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => setChoosing(true)} className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-2 text-sm font-semibold text-teal-700 hover:bg-white"><Upload className="h-4 w-4" /> Enviar a la planilla de notas</button>
+      <span className="text-xs text-slate-500">Opcional: la evaluación formativa vale por sí misma; envíala solo si quieres que cuente en la planilla.</span>
+    </div>}
+    {choosing && !preview && <div className="space-y-2 rounded-lg border border-teal-200 bg-white p-3 text-sm">
+      <p className="font-semibold text-slate-800">¿En qué parte de la planilla va cada dimensión?</p>
+      {data.dimensions.map((d: any) => <label key={d.id} className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+        <span className="min-w-[140px] font-medium">{d.label}</span>
+        <select value={destinations[d.id] ?? ''} disabled={d.gradebookActivityIndex != null} onChange={e => setDestinations(x => ({ ...x, [d.id]: e.target.value }))} className="rounded-md border border-slate-200 px-2 py-1 text-xs">
+          <option value="">No enviar esta dimensión</option>
+          {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </label>)}
+      {!components.length && <p className="text-xs text-rose-700">Tu institución no tiene componentes de evaluación configurados; no se puede enviar a la planilla.</p>}
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setChoosing(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Cancelar</button>
+        <button type="button" disabled={busy || !Object.values(destinations).some(Boolean)} onClick={loadPreview} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Ver vista previa</button>
+      </div>
+    </div>}
     {preview && <div className="rounded-lg border border-teal-200 bg-white p-3 text-sm">
       <p className="font-semibold text-slate-800">Vista previa · {preview.term}</p>
-      <p className="text-slate-600">{preview.summary.ready} listas para enviar · {preview.summary.incomplete} incompletas · {preview.summary.withoutComponent} sin destino en la planilla</p>
+      <p className="text-slate-600">{preview.summary.ready} listas para enviar · {preview.summary.incomplete} incompletas · {preview.summary.withoutComponent} que no se envían</p>
       <ul className="mt-2 max-h-48 space-y-0.5 overflow-auto text-xs text-slate-600">
         {preview.rows.map((r: any) => <li key={r.resultId}>{r.studentName} · {r.dimensionLabel}: {r.ready && r.score !== null ? r.score.toFixed(2) : 'incompleto'} → {r.componentName || 'no va a la planilla'}</li>)}
       </ul>

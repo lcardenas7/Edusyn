@@ -40,7 +40,9 @@ export function buildRubricPrompt(input: RubricPromptInput): string {
     '',
     'Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con este formato exacto:',
     '{"title":"...","description":"instrucciones breves para los estudiantes","dimensions":[{"label":"...","evaluatorType":"SELF","peersPerStudent":null,"criteria":[{"name":"...","description":"...","weight":25,"levels":[{"label":"...","description":"...","score":1}]}]}]}',
-    'Para PEER, usa "peersPerStudent": 2 (cuántos compañeros evalúa cada estudiante).',
+    'Para PEER, decide en "peersPerStudent" cuántos compañeros evalúa cada estudiante (entre 1 y 3) según lo que se evalúa:',
+    '1 si es un trabajo en parejas, 2 en grupos pequeños y 3 si quieres más de una mirada sobre cada estudiante. Para SELF usa null.',
+    'Edusyn reparte después quién evalúa a quién de forma equilibrada; el docente puede ajustarlo a mano antes de publicar.',
   ].join('\n')
 }
 

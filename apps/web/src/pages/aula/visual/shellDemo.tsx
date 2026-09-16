@@ -326,6 +326,7 @@ function Demo() {
         {vista === 'hoy' ? (
           <Hoy
             role={role}
+            onCrearConIA={role === 'docente' ? () => alert('Crear con IA externa') : undefined}
             nombre={role === 'docente' ? 'profe Luis' : 'Ana'}
             aulaTitulo={`${aula.asignatura} ${aula.grupo}`}
             periodoNombre="Período 2"
@@ -420,6 +421,7 @@ function Demo() {
         ) : vista === 'actividades' ? (
           <Actividades
             role={role}
+            onCrearConIA={role === 'docente' ? () => alert('Crear con IA externa') : undefined}
             actividades={MUESTRA}
             periodo={periodo}
             onPeriodo={setPeriodo}

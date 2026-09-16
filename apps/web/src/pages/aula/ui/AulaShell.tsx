@@ -128,7 +128,9 @@ export function AulaShell({
       className="min-h-screen bg-accent/[0.045]"
       style={{ ['--skill-accent' as string]: hexARgb(acento) }}
     >
-      <div className="mx-auto flex max-w-workspace">
+      {/* Ocupa todo el ancho: centrado a 1400 px dejaba una franja vacía a la izquierda del riel
+          en pantallas anchas. Cada vista limita su propio ancho de lectura. */}
+      <div className="flex w-full">
         {/* ─── Riel (escritorio) ─────────────────────────────────────────── */}
         <aside
           className="sticky top-0 hidden h-screen shrink-0 border-r border-accent/15 bg-accent/[0.05] transition-[width] duration-200 motion-reduce:transition-none lg:flex lg:flex-col"

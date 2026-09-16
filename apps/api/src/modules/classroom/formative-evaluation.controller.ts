@@ -50,10 +50,16 @@ export class FormativeEvaluationController {
     return this.service.updateDimensionComponent(id, dimensionId, institutionId, req.user.id, body?.evaluationComponentId ?? null);
   }
 
-  @Post(':id/publish') @Roles('DOCENTE', 'COORDINADOR')
-  async publish(@Param('id') id: string, @Request() req: any) {
+  @Get(':id/peer-preview') @Roles('DOCENTE', 'COORDINADOR')
+  async peerPreview(@Param('id') id: string, @Request() req: any, @Query('seed') seed?: string) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
-    return this.service.publish(id, institutionId, req.user.id);
+    return this.service.peerPreview(id, institutionId, req.user.id, seed);
+  }
+
+  @Post(':id/publish') @Roles('DOCENTE', 'COORDINADOR')
+  async publish(@Param('id') id: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.publish(id, institutionId, req.user.id, body);
   }
 
   @Post('assignments/:id/submit') @Roles('ESTUDIANTE')
