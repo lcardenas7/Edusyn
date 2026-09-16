@@ -22,6 +22,17 @@
 
 ## Historial (más reciente arriba)
 
+### Autoevaluación: tres formas visibles de crear la rúbrica (manual, IA externa, IA de Edusyn) — 2026-09-16 · staging
+
+Solo web, sin migración. El usuario mostró en producción que solo existía "Nueva evaluación con IA".
+Ahora la pestaña muestra de entrada tres botones: **Crear manualmente** (plantilla con niveles
+repartidos en la escala de la institución), **Con IA externa** (copiar petición y pegar respuesta)
+y **Con la IA de Edusyn**. Los tres llevan al mismo editor, que ahora permite editar niveles
+(nombre, puntaje, descripción), agregar/quitar criterios, niveles y dimensiones, y repartir pesos
+por igual; lista en palabras lo que falta antes de crear. Panel nuevo:
+`components/classroom/FormativeCreatePanel.tsx`. Web 454/454 (2 pruebas nuevas); recorrido visual
+a 420 px con API simulada (los tres caminos, creación manual completa, sin desborde).
+
 ### Autoevaluación: rúbrica con IA externa (copiar y pegar) — 2026-09-16 · staging
 
 Solo web, sin migración ni cambios de API. A pedido del usuario, crear la rúbrica ya no depende
