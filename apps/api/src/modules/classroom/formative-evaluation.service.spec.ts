@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { FormativeEvaluationService, peerRing, sanitizeDimensionInput, scoreAnswers, seededShuffle, shuffledPeerRing, validateManualPairs } from './formative-evaluation.service';
+import { buildFormativeInsights, FormativeEvaluationService, peerRing, sanitizeDimensionInput, scoreAnswers, seededShuffle, shuffledPeerRing, validateManualPairs } from './formative-evaluation.service';
 
 describe('peerRing (peer-ring-v1)', () => {
   it('nadie se evalúa a sí mismo, sin duplicados, y cada estudiante da y recibe k evaluaciones', () => {
@@ -284,5 +284,59 @@ describe('FormativeEvaluationService: editar y eliminar borradores', () => {
     await expect(svc.deleteDraft('fe', 'inst', 'u')).resolves.toEqual({ deleted: true });
     expect(tx.formativeEvaluationActivity.delete).toHaveBeenCalledWith({ where: { id: 'fe' } });
     expect(tx.attitudinalRubric.updateMany).toHaveBeenCalled();
+  });
+});
+
+describe('buildFormativeInsights (lo que ve el docente antes de la planilla)', () => {
+  const rubric = { criteria: [
+    { id: 'c1', name: 'Responsabilidad', description: 'Cumplí mi parte', weight: 50, levels: [{ id: 'a', label: 'Bajo', score: 1 }, { id: 'b', label: 'Alto', score: 5 }] },
+    { id: 'c2', name: 'Escucha', description: 'Escuché', weight: 50, levels: [{ id: 'x', label: 'Bajo', score: 1 }, { id: 'y', label: 'Alto', score: 5 }] },
+  ] };
+  const dims = [
+    { id: 'self', label: 'Autoevaluación', evaluatorType: 'SELF', rubricSnapshot: rubric },
+    { id: 'peer', label: 'Coevaluación', evaluatorType: 'PEER', rubricSnapshot: rubric },
+  ];
+  const students = [{ id: 'ana', name: 'Ana' }, { id: 'leo', name: 'Leo' }, { id: 'sol', name: 'Sol' }];
+  const row = (id: string, dimensionId: string, evaluator: string, target: string, answers: any[] | null, score: number | null, comments: any[] = []) => ({
+    id, dimensionId, evaluatorEnrollmentId: evaluator, targetEnrollmentId: target,
+    status: answers ? 'SUBMITTED' : 'PENDING', answers, calculatedScore: score, qualitativeComments: comments, commentStatus: 'PENDING_REVIEW',
+  });
+  const assignments = [
+    row('s-ana', 'self', 'ana', 'ana', [{ criterionId: 'c1', levelId: 'b' }, { criterionId: 'c2', levelId: 'y' }], 5, [{ prompt: '¿Qué puedo mejorar?', text: 'Nada' }]),
+    row('s-leo', 'self', 'leo', 'leo', null, null),
+    row('p1', 'peer', 'leo', 'ana', [{ criterionId: 'c1', levelId: 'a' }, { criterionId: 'c2', levelId: 'y' }], 3, [{ prompt: 'Mensaje', text: 'Escucha más' }]),
+    row('p2', 'peer', 'sol', 'ana', [{ criterionId: 'c1', levelId: 'a' }, { criterionId: 'c2', levelId: 'x' }], 1),
+    row('p3', 'peer', 'ana', 'leo', null, null),
+  ];
+
+  const out = buildFormativeInsights({ dimensions: dims, students, assignments, results: [] });
+  const ana = out.students.find(s => s.id === 'ana')! as any;
+
+  it('muestra avance y puntaje provisional antes de consolidar', () => {
+    expect(out.totals).toEqual({ assignments: 5, submitted: 3 });
+    expect(ana.perDimension.self).toMatchObject({ expected: 1, received: 1, provisionalScore: 5, consolidatedScore: null, consolidated: false });
+    expect(ana.perDimension.peer).toMatchObject({ expected: 2, received: 2, provisionalScore: 2 });
+    expect(ana.peerTasks).toEqual({ assigned: 1, submitted: 0 });
+    expect((out.students.find(s => s.id === 'leo') as any).perDimension.self).toMatchObject({ received: 0, provisionalScore: null });
+  });
+
+  it('compara pregunta por pregunta cómo se ve el estudiante y cómo lo ven sus compañeros', () => {
+    expect(ana.perDimension.self.byCriterion.c1).toEqual({ average: 5, responses: 1, levels: { b: 1 } });
+    expect(ana.perDimension.peer.byCriterion.c1).toEqual({ average: 1, responses: 2, levels: { a: 2 } });
+    expect(ana.perDimension.peer.byCriterion.c2).toEqual({ average: 3, responses: 2, levels: { y: 1, x: 1 } });
+  });
+
+  it('resume al grupo por pregunta y atribuye los comentarios', () => {
+    const peer = out.byDimension.find(d => d.dimensionId === 'peer')!
+    expect(peer.byCriterion.c1).toEqual({ average: 1, responses: 2, levels: { a: 2 } });
+    expect(ana.comments).toEqual([
+      expect.objectContaining({ fromSelf: true, author: 'Ana', text: 'Nada', dimensionId: 'self' }),
+      expect.objectContaining({ fromSelf: false, author: 'Leo', text: 'Escucha más', assignmentId: 'p1', status: 'PENDING_REVIEW' }),
+    ]);
+  });
+
+  it('usa la nota consolidada cuando existe', () => {
+    const consolidated = buildFormativeInsights({ dimensions: dims, students, assignments, results: [{ dimensionId: 'peer', studentEnrollmentId: 'ana', quantitativeScore: '2.00', isReady: true }] });
+    expect((consolidated.students[0] as any).perDimension.peer).toMatchObject({ consolidatedScore: 2, consolidated: true });
   });
 });

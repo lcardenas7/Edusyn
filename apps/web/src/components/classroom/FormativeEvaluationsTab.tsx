@@ -6,6 +6,7 @@ import { toast } from '../../lib/toast'
 import FormativeCreatePanel, { type CreateMode, type EditingDraft } from './FormativeCreatePanel'
 import { DimensionPreview } from './FormativeRubricPreview'
 import PeerAssignmentPanel, { type PeerPlan } from './PeerAssignmentPanel'
+import FormativeInsights, { type Insights } from './FormativeInsights'
 import { draftFromSaved, groupByAspect, type GradebookComponent as Component, type OpenTerm as Term } from './formativeDraft'
 
 /** Rúbricas, autoevaluación y coevaluación. La IA propone un borrador; el docente lo revisa,
@@ -199,6 +200,25 @@ function ResultsPanel({ item, components, fail, onSynced }: { item: any; compone
   const [busy, setBusy] = useState(false)
   const [destinations, setDestinations] = useState<Record<string, string>>({})
   const [choosing, setChoosing] = useState(false)
+  const [insights, setInsights] = useState<Insights | null>(null)
+  const [busyComment, setBusyComment] = useState<string | null>(null)
+
+  const loadInsights = useCallback(() => classroomApi.getFormativeInsights(item.id)
+    .then(({ data }: any) => setInsights(data))
+    .catch(e => fail(e, 'No se pudo cargar el análisis de respuestas')), [item.id, fail])
+  useEffect(() => { void loadInsights() }, [loadInsights, item.status, item.consolidatedAt])
+
+  const reviewComment = async (assignmentId: string, status: 'APPROVED' | 'REJECTED') => {
+    setBusyComment(assignmentId)
+    try {
+      await classroomApi.reviewFormativeComment(assignmentId, status)
+      await loadInsights()
+    } catch (e) {
+      fail(e, 'No se pudo guardar la revisión del comentario')
+    } finally {
+      setBusyComment(null)
+    }
+  }
 
   useEffect(() => {
     if (data) setDestinations(Object.fromEntries(data.dimensions.map((d: any) => [d.id, d.evaluationComponentId || ''])))
@@ -208,14 +228,7 @@ function ResultsPanel({ item, components, fail, onSynced }: { item: any; compone
     classroomApi.getFormativeDashboard(item.id).then(({ data }: any) => setData(data)).catch(e => fail(e, 'No se pudieron cargar los resultados'))
   }, [item.id, item.status, fail])
 
-  if (!data) return <p className="mt-4 flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando resultados…</p>
-
-  const total = data.assignments?.length || 0
-  const submitted = data.assignments?.filter((a: any) => a.status === 'SUBMITTED').length || 0
-  const students = new Map<string, string>()
-  for (const r of data.results || []) students.set(r.studentEnrollmentId, `${r.studentEnrollment.student.firstName} ${r.studentEnrollment.student.lastName}`)
-  const resultOf = (dimensionId: string, studentId: string) => data.results.find((r: any) => r.dimensionId === dimensionId && r.studentEnrollmentId === studentId)
-  const comments = (data.assignments || []).flatMap((a: any) => (Array.isArray(a.qualitativeComments) ? a.qualitativeComments : []).map((c: any) => c.text)).filter(Boolean)
+  if (!data || !insights) return <p className="mt-4 flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando resultados…</p>
 
   const loadPreview = async () => {
     setBusy(true)
@@ -255,30 +268,7 @@ function ResultsPanel({ item, components, fail, onSynced }: { item: any; compone
   }
 
   return <div className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-    <div className="flex flex-wrap items-center gap-3 text-sm">
-      <span className="font-semibold text-slate-800">Respuestas: {submitted} de {total}</span>
-      <div className="h-2 w-40 overflow-hidden rounded-full bg-slate-200"><div className="h-full bg-teal-500" style={{ width: `${total ? Math.round((submitted / total) * 100) : 0}%` }} /></div>
-    </div>
-
-    {students.size === 0
-      ? <p className="text-sm text-slate-500">Consolida para ver los resultados por estudiante. Los que no tengan todas sus respuestas quedan incompletos, nunca en cero.</p>
-      : <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead><tr className="text-left text-xs text-slate-500"><th className="py-1 pr-4">Estudiante</th>{data.dimensions.map((d: any) => <th key={d.id} className="py-1 pr-4">{d.label}</th>)}</tr></thead>
-          <tbody>{[...students.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([id, name]) => <tr key={id} className="border-t border-slate-200">
-            <td className="py-1.5 pr-4 text-slate-700">{name}</td>
-            {data.dimensions.map((d: any) => {
-              const r = resultOf(d.id, id)
-              return <td key={d.id} className="py-1.5 pr-4">{!r ? '—' : r.isReady ? <b className="text-slate-800">{Number(r.quantitativeScore).toFixed(2)}</b> : <span className="text-xs text-amber-700">Incompleto ({r.receivedResponses}/{r.expectedResponses})</span>}</td>
-            })}
-          </tr>)}</tbody>
-        </table>
-      </div>}
-
-    {comments.length > 0 && <details className="text-sm">
-      <summary className="cursor-pointer font-semibold text-slate-700">Comentarios de los estudiantes ({comments.length})</summary>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">{comments.map((c: string, i: number) => <li key={i}>{c}</li>)}</ul>
-    </details>}
+    <FormativeInsights insights={insights} onReviewComment={(id, st) => void reviewComment(id, st)} busyComment={busyComment} />
 
     {['CONSOLIDATED', 'CHANGED_AFTER_SYNC'].includes(item.status) && !preview && !choosing && <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={() => setChoosing(true)} className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-2 text-sm font-semibold text-teal-700 hover:bg-white"><Upload className="h-4 w-4" /> Enviar a la planilla de notas</button>
