@@ -22,6 +22,14 @@
 
 ## Historial (más reciente arriba)
 
+### Verificación posterior: panel docente formativo — producción · 2026-09-17
+
+Tras la promoción aislada `ae401c4b`, `https://api.edusyn.co/api/health` respondió `ok` y
+`https://www.edusyn.co/aula` respondió HTTP 200. El JavaScript público servido contiene la cadena
+distintiva «Cómo se ve vs. cómo lo ven» del panel nuevo. No se inició sesión ni se leyó, creó o
+modificó información académica real. La validación funcional autenticada de un docente sigue como
+comprobación operativa posterior.
+
 ### Panel docente de autoevaluación y coevaluación — producción · 2026-09-17
 
 Promovido como commit aislado `ae401c4b`, equivalente funcional del cambio de Claude en staging
