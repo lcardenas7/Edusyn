@@ -22,6 +22,12 @@
 
 ## Historial (más reciente arriba)
 
+### IA externa: leer el JSON pegado aunque traiga espacios invisibles — producción · 2026-09-17
+
+Solo web, sin migración. `main` en `1f6e4913` (rebase de `ee68c3d5` sobre `cbe5bdeb`); mismo
+contenido que staging `97c6b82f`, que el usuario verificó pegando la rúbrica de Informática.
+Verificado: `tsc` web y api, vitest 19/19.
+
 ### Autoevaluación: crear la rúbrica a mano, con IA externa o con la IA de Edusyn — producción · 2026-09-16
 
 Solo web, sin migración ni cambios de API. El usuario mostró en producción que solo existía
