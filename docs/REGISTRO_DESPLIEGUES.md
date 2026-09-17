@@ -22,6 +22,12 @@
 
 ## Historial (más reciente arriba)
 
+### Rúbrica formativa: pesos parejos con muchas preguntas — producción · 2026-09-17
+
+Solo web, sin migración. `main` en `a8bf519d` (fast-forward sobre `28aa8ca4`); mismo contenido que
+staging `5f8028ea`. Autorizado por el usuario antes de probarlo en staging. Verificado: vitest
+24/24, `tsc` web y api.
+
 ### IA externa: leer el JSON pegado aunque traiga espacios invisibles — producción · 2026-09-17
 
 Solo web, sin migración. `main` en `1f6e4913` (rebase de `ee68c3d5` sobre `cbe5bdeb`); mismo
