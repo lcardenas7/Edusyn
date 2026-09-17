@@ -22,6 +22,17 @@
 
 ## Historial (más reciente arriba)
 
+### Panel docente de autoevaluación y coevaluación — producción · 2026-09-17
+
+Promovido como commit aislado `ae401c4b`, equivalente funcional del cambio de Claude en staging
+`928e1283`; no se promovieron los 219 commits adicionales de `staging`. Sin migración ni cambios
+en Prisma. Antes de enviar a `main`: 28/28 pruebas focales de evaluación formativa, 433/433
+pruebas web, `nest build` y `tsc && vite build` correctos. El panel permite al docente revisar
+avance, resultados provisionales o consolidados, comparación entre autoevaluación y coevaluación,
+detalle por pregunta y moderación de comentarios antes de la sincronización opcional con la
+planilla. Pendiente operativo: comprobar el despliegue de Railway y el flujo autenticado docente
+en producción; esta entrada no certifica una escritura de notas.
+
 ### Rúbrica formativa: pesos parejos con muchas preguntas — producción · 2026-09-17
 
 Solo web, sin migración. `main` en `a8bf519d` (fast-forward sobre `28aa8ca4`); mismo contenido que
