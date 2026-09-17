@@ -134,11 +134,14 @@ export function levelScores(min: number, max: number, count: number): number[] {
   return Array.from({ length: count }, (_, i) => Math.round((min + ((max - min) * i) / (count - 1)) * 10) / 10)
 }
 
-/** Pesos iguales que suman exactamente 100 (el resto va al último criterio). */
+/** Pesos enteros lo más parejos posible que suman exactamente 100. El sobrante se reparte de a
+ * un punto a lo largo de la lista: con 28 preguntas quedan 16 de 4% y 12 de 3%, no 27 de 3% y
+ * una sola de 19% que pesaría seis veces más que las demás. */
 export function evenWeights(count: number): number[] {
   if (count < 1) return []
   const base = Math.floor(100 / count)
-  return Array.from({ length: count }, (_, i) => (i === count - 1 ? 100 - base * (count - 1) : base))
+  const extra = 100 - base * count
+  return Array.from({ length: count }, (_, i) => base + (Math.floor(((i + 1) * extra) / count) - Math.floor((i * extra) / count)))
 }
 
 export function blankLevels(min = 1, max = 5, count = 4): DraftLevel[] {
