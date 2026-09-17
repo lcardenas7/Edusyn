@@ -2159,12 +2159,15 @@ export class ApdAiService implements IApdAiService {
   async generateFormativeRubric(params: {
     purpose: string; gradeName?: string; subjectName?: string; dimensions?: string[];
     minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number;
+    aspects?: string[]; perAspect?: number; mirrorPeer?: boolean;
   }): Promise<any> {
     if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
     const min = Number.isFinite(params.minScore) ? params.minScore! : 1;
     const max = Number.isFinite(params.maxScore) ? params.maxScore! : 5;
     const levelCount = Math.min(Math.max(params.levels || 4, 2), 7);
-    const criterionCount = Math.min(Math.max(params.criteriaPerDimension || 4, 1), 8);
+    const aspects = (params.aspects || []).map(a => String(a).trim().slice(0, 80)).filter(Boolean).slice(0, 15);
+    const perAspect = Math.min(Math.max(params.perAspect || 2, 1), 5);
+    const criterionCount = aspects.length ? Math.min(aspects.length * perAspect, 30) : Math.min(Math.max(params.criteriaPerDimension || 10, 1), 30);
     const dimensions = (params.dimensions?.filter(Boolean) || ['Autoevaluación', 'Coevaluación']).slice(0, 6);
     const system = [
       'Eres experto en evaluación formativa escolar.',
@@ -2175,15 +2178,23 @@ export class ApdAiService implements IApdAiService {
       'Quien responde es siempre un estudiante. En SELF escribe cada criterio y nivel en primera persona sobre sí mismo ("Cumplí con mi parte a tiempo").',
       'En PEER escríbelos en tercera persona sobre el compañero evaluado ("Mi compañero cumplió con su parte a tiempo"), nunca en primera persona.',
       'Para PEER, peersPerStudent es cuántos compañeros evalúa cada estudiante: entre 1 y 3.',
+      'IMPORTANTE en PEER: quien lee es un estudiante que evalúa a OTRO compañero. Cada pregunta y nivel habla del compañero evaluado, nunca de quien responde; aunque los aspectos sean los mismos de la autoevaluación, reescríbelas sobre el compañero.',
+      params.mirrorPeer
+        ? 'Preguntas relacionadas: la dimensión PEER tiene EXACTAMENTE las mismas preguntas que la SELF, en el mismo orden, con los mismos aspectos y niveles, cada una reescrita sobre el compañero.'
+        : 'Si hay SELF y PEER, la PEER tiene sus propias preguntas pensadas para observar a un compañero.',
       'No inventes componentes académicos ni IDs: deja evaluationComponentId como null.',
       'Esquema exacto:',
       '{"title":"...","description":"...","dimensions":[{"label":"...","evaluatorType":"SELF|PEER","evaluationComponentId":null,"peersPerStudent":null,"criteria":[{"name":"...","description":"...","weight":25,"levels":[{"label":"...","description":"...","score":1}]}]}]}',
       `Crea exactamente ${dimensions.length} dimensiones: ${dimensions.join(', ')}.`,
-      `Cada dimensión debe tener exactamente ${criterionCount} criterios y sus pesos deben sumar 100.`,
-      `Cada criterio debe tener exactamente ${levelCount} niveles, con score creciente entre ${min} y ${max}.`,
+      aspects.length
+        ? `Cada dimensión es un cuestionario de exactamente ${criterionCount} preguntas (criteria): ${perAspect} por cada uno de estos aspectos, en este orden: ${aspects.join('; ')}. Usa esos nombres de aspecto tal cual.`
+        : `Cada dimensión es un cuestionario de exactamente ${criterionCount} preguntas (criteria), agrupadas en ${Math.max(2, Math.min(6, Math.round(criterionCount / 3)))} aspectos distintos (p. ej. responsabilidad, colaboración, comunicación, respeto) con varias preguntas cada uno.`,
+      "En cada pregunta, name es el aspecto (se repite igual en todas las preguntas de ese aspecto, y las preguntas de un mismo aspecto van seguidas) y description es la pregunta o afirmación concreta que lee el estudiante.",
+      "Usa el mismo weight en todas las preguntas; Edusyn lo ajusta para que sumen 100.",
+      `Cada pregunta tiene exactamente ${levelCount} niveles, con score creciente entre ${min} y ${max}. Usa las mismas etiquetas de nivel en todas las preguntas y descripciones de nivel breves (máximo 12 palabras).`,
     ].join('\n');
     const prompt = [`Propósito o contexto: ${params.purpose}`, params.gradeName ? `Grado: ${params.gradeName}` : '', params.subjectName ? `Asignatura: ${params.subjectName}` : ''].filter(Boolean).join('\n');
-    const raw = await this.callLlmJson<any>(system, prompt, 4000);
+    const raw = await this.callLlmJson<any>(system, prompt, Math.min(8000, 2000 + dimensions.length * criterionCount * levelCount * 50));
     if (!raw || !Array.isArray(raw.dimensions) || !raw.dimensions.length) throw new Error('La IA no devolvió una rúbrica válida.');
     return raw;
   }

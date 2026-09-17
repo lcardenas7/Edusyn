@@ -1896,7 +1896,7 @@ export const classroomApi = {
   // Evaluación formativa: rúbricas, autoevaluación y coevaluación (separada de la planilla)
   listFormativeEvaluations: (classroomId: string, role: 'teacher' | 'student') => api.get(`/formative-evaluations/classrooms/${classroomId}`, { params: { role } }),
   getFormativeComponents: (classroomId: string) => api.get(`/formative-evaluations/classrooms/${classroomId}/components`),
-  generateFormativeEvaluationAI: (data: { classroomId: string; purpose: string; dimensions?: string[]; minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number }) => api.post('/formative-evaluations/generate-ai', data),
+  generateFormativeEvaluationAI: (data: { classroomId: string; purpose: string; dimensions?: string[]; minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number; aspects?: string[]; perAspect?: number; mirrorPeer?: boolean }) => api.post('/formative-evaluations/generate-ai', data),
   createFormativeEvaluationFromAIDraft: (data: any) => api.post('/formative-evaluations/from-ai-draft', data),
   setFormativeDimensionComponent: (id: string, dimensionId: string, evaluationComponentId: string | null) => api.patch(`/formative-evaluations/${id}/dimensions/${dimensionId}/component`, { evaluationComponentId }),
   getFormativeEvaluation: (id: string) => api.get(`/formative-evaluations/${id}`),
