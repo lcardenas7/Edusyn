@@ -134,6 +134,11 @@
   body[data-aula-inmersiva] [data-app-main] {
     padding-left: 0;
   }
+  /* Sin el margen del Layout: el aula va de borde a borde y su riel queda fijo como el menú
+     de la plataforma (con el margen, el riel arrancaba separado y subía con el contenido). */
+  body[data-aula-inmersiva] [data-app-main] > div {
+    padding: 0;
+  }
 }
 
 :root {
