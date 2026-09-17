@@ -6,7 +6,7 @@ import { toast } from '../../lib/toast'
 import FormativeCreatePanel, { type CreateMode, type EditingDraft } from './FormativeCreatePanel'
 import { DimensionPreview } from './FormativeRubricPreview'
 import PeerAssignmentPanel, { type PeerPlan } from './PeerAssignmentPanel'
-import { draftFromSaved, type GradebookComponent as Component, type OpenTerm as Term } from './formativeDraft'
+import { draftFromSaved, groupByAspect, type GradebookComponent as Component, type OpenTerm as Term } from './formativeDraft'
 
 /** Rúbricas, autoevaluación y coevaluación. La IA propone un borrador; el docente lo revisa,
  * lo publica, consolida y decide si envía los resultados a la planilla (con previsualización). */
@@ -363,16 +363,22 @@ function StudentView({ items, reload, fail }: { items: any[]; reload: () => Prom
       </p>
       {activity.description && <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">{activity.description}</p>}
       <p className="mt-3 text-xs font-semibold text-slate-500">{answered} de {criteria.length} preguntas respondidas</p>
-      {criteria.map(c => <fieldset key={c.id} className="mt-3 rounded-xl border border-slate-200 p-4">
-        <legend className="px-1 font-semibold text-slate-800">{c.name}</legend>
-        {c.description && <p className="text-sm text-slate-500">{c.description}</p>}
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {(c.levels || []).map((l: any) => <button key={l.id} type="button" aria-pressed={answers[c.id] === l.id} onClick={() => setAnswers(a => ({ ...a, [c.id]: l.id }))} className={`rounded-lg border p-3 text-left text-sm transition ${answers[c.id] === l.id ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-100' : 'border-slate-200 hover:bg-slate-50'}`}>
-            <b className="text-slate-800">{l.label}</b>
-            {l.description && <span className="mt-0.5 block text-slate-500">{l.description}</span>}
-          </button>)}
-        </div>
-      </fieldset>)}
+      {groupByAspect(criteria).map((group, g) => <section key={g} className="mt-4">
+        <h4 className="text-sm font-bold uppercase tracking-wide text-teal-800">{group.aspect}</h4>
+        {group.items.map(({ criterion: c, index }) => {
+          const detailed = (c.levels || []).some((l: any) => l.description)
+          return <fieldset key={c.id} className={`mt-2 rounded-xl border p-4 ${answers[c.id] ? 'border-teal-200 bg-teal-50/30' : 'border-slate-200'}`}>
+            <legend className="sr-only">{c.name}</legend>
+            <p className="text-sm font-medium text-slate-800"><span className="text-slate-400">{index + 1}.</span> {c.description || c.name}</p>
+            <div className={`mt-2 ${detailed ? 'grid gap-2 sm:grid-cols-2' : 'flex flex-wrap gap-2'}`}>
+              {(c.levels || []).map((l: any) => <button key={l.id} type="button" aria-pressed={answers[c.id] === l.id} onClick={() => setAnswers(a => ({ ...a, [c.id]: l.id }))} className={`rounded-lg border text-left text-sm transition ${detailed ? 'p-3' : 'px-3 py-2'} ${answers[c.id] === l.id ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-100' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                <b className="text-slate-800">{l.label}</b>
+                {l.description && <span className="mt-0.5 block text-slate-500">{l.description}</span>}
+              </button>)}
+            </div>
+          </fieldset>
+        })}
+      </section>)}
       <label className="mt-4 block text-sm font-semibold text-slate-700">{isSelf ? '¿Qué puedo mejorar? (opcional)' : 'Un mensaje para tu compañero (opcional)'}
         <textarea value={comment} maxLength={1000} onChange={e => setComment(e.target.value)} rows={3} className={`${fieldClass} mt-1`} placeholder={isSelf ? 'Ej.: entregar a tiempo mis partes del proyecto' : 'Ej.: me ayudó mucho cuando… / podría mejorar en…'} />
       </label>

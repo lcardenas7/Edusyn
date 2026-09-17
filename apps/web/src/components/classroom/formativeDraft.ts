@@ -12,6 +12,10 @@ export interface Draft { title: string; description: string; dimensions: DraftDi
 
 export const TYPE_NAMES: Record<EvaluatorType, string> = { SELF: 'Autoevaluación', PEER: 'Coevaluación' }
 
+/** Cuántas preguntas puede pedir el docente por dimensión. */
+export const QUESTION_COUNTS = [6, 10, 15, 20] as const
+export const DEFAULT_QUESTIONS = 10
+
 export interface RubricPromptInput {
   purpose: string
   types: EvaluatorType[]
@@ -19,26 +23,49 @@ export interface RubricPromptInput {
   maxScore?: number
   levels?: number
   criteriaPerDimension?: number
+  /** Aspectos elegidos por el docente, en orden. Si hay, la IA los usa tal cual. */
+  aspects?: string[]
+  perAspect?: number
+  /** Con autoevaluación y coevaluación: la coevaluación repite las mismas preguntas, dirigidas al compañero. */
+  mirrorPeer?: boolean
 }
 
 export function buildRubricPrompt(input: RubricPromptInput): string {
   const min = Number.isFinite(input.minScore) ? input.minScore! : 1
   const max = Number.isFinite(input.maxScore) ? input.maxScore! : 5
   const levels = Math.min(Math.max(input.levels || 4, 2), 7)
-  const criteria = Math.min(Math.max(input.criteriaPerDimension || 4, 1), 8)
+  const criteria = Math.min(Math.max(input.criteriaPerDimension || DEFAULT_QUESTIONS, 1), 30)
+  const aspectCount = Math.max(2, Math.min(6, Math.round(criteria / 3)))
+  const chosen = (input.aspects || []).map(a => a.trim()).filter(Boolean)
+  const perAspect = Math.min(Math.max(input.perAspect || 2, 1), 5)
+  const hasPeer = input.types.includes('PEER')
   const dims = input.types.map(t => `${TYPE_NAMES[t]} (evaluatorType "${t}")`)
   return [
     'Actúa como experto en evaluación formativa escolar. Diseña una rúbrica para que los estudiantes reflexionen sobre su proceso.',
     '',
     `Qué queremos evaluar: ${input.purpose.trim() || '[describe qué quieres evaluar]'}`,
     `Dimensiones (exactamente ${dims.length}): ${dims.join(', ')}.`,
-    `- Cada dimensión tiene exactamente ${criteria} criterios y sus pesos (weight) suman 100.`,
-    `- Cada criterio tiene exactamente ${levels} niveles con score creciente entre ${min} y ${max}.`,
+    chosen.length
+      ? `- Cada dimensión es un cuestionario de exactamente ${chosen.length * perAspect} preguntas (criteria): ${perAspect} por cada uno de estos aspectos, en este orden: ${chosen.join('; ')}. Usa esos nombres de aspecto tal cual.`
+      : `- Cada dimensión es un cuestionario de exactamente ${criteria} preguntas (criteria), agrupadas en ${aspectCount} aspectos distintos (p. ej. responsabilidad, colaboración, comunicación, respeto) con varias preguntas cada uno.`,
+    '- En cada pregunta, "name" es el aspecto (igual en todas las preguntas de ese aspecto, y esas preguntas van seguidas) y "description" es la pregunta o afirmación concreta que lee el estudiante.',
+    '- Usa el mismo "weight" en todas las preguntas; Edusyn lo ajusta para que sumen 100.',
+    `- Cada pregunta tiene exactamente ${levels} niveles con score creciente entre ${min} y ${max}, con las mismas etiquetas en todas las preguntas y descripciones breves (máximo 12 palabras).`,
     '- Los descriptores son claros, observables, respetuosos y escritos para que un estudiante los entienda.',
     '- SELF es cuando el estudiante se evalúa a sí mismo; PEER es cuando un compañero lo evalúa.',
     '- Quien responde es siempre un estudiante. En SELF escribe criterios y niveles en primera persona ("Cumplí con mi parte a tiempo").',
     '- En PEER escríbelos en tercera persona sobre el compañero evaluado ("Mi compañero cumplió con su parte a tiempo"), nunca en primera persona.',
     '- No diagnostiques ni uses etiquetas psicológicas. No incluyas nombres ni datos personales.',
+    ...(hasPeer ? [
+      '',
+      'IMPORTANTE sobre la coevaluación (PEER): quien lee estas preguntas es un estudiante que está evaluando a OTRO compañero.',
+      'Cada pregunta y cada nivel deben hablar del compañero evaluado, nunca de quien responde. No uses "yo", "me", "mi trabajo" ni verbos en primera persona.',
+      'Correcto: "Mi compañero entregó su parte a tiempo." / "Escuchó las ideas del equipo."  Incorrecto: "Entregué mi parte a tiempo." / "Escuché las ideas del equipo."',
+      'Aunque evalúen los mismos aspectos que la autoevaluación, reescribe las preguntas de la coevaluación sobre el compañero.',
+      ...(input.types.includes('SELF') ? [input.mirrorPeer
+        ? 'Preguntas relacionadas: la coevaluación tiene EXACTAMENTE las mismas preguntas que la autoevaluación, en el mismo orden y con los mismos aspectos y niveles, pero cada una reescrita sobre el compañero (pregunta 1 de la autoevaluación = pregunta 1 de la coevaluación sobre el compañero).'
+        : 'Preguntas independientes: la coevaluación tiene sus propias preguntas, pensadas para observar a un compañero; no repitas las de la autoevaluación.'] : []),
+    ] : []),
     '',
     'Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con este formato exacto:',
     '{"title":"...","description":"instrucciones breves para los estudiantes","dimensions":[{"label":"...","evaluatorType":"SELF","peersPerStudent":null,"criteria":[{"name":"...","description":"...","weight":25,"levels":[{"label":"...","description":"...","score":1}]}]}]}',
@@ -67,6 +94,8 @@ export function sanitizeDraft(raw: any): Draft {
         .filter((l: DraftLevel) => l.label && Number.isFinite(l.score)),
     })).filter((c: DraftCriterion) => c.name && c.levels.length >= 2),
   })).filter((d: DraftDimension) => d.label && d.criteria.length)
+    // La IA suele fallar al repartir pesos entre muchas preguntas: si no suman 100, valen igual.
+    .map((d: DraftDimension) => Math.abs(weightSum(d) - 100) < 0.01 && d.criteria.every(c => Number.isInteger(c.weight)) ? d : { ...d, criteria: d.criteria.map((c, i, all) => ({ ...c, weight: evenWeights(all.length)[i] })) })
   return { title: text(raw?.title, 180) || 'Evaluación formativa', description: text(raw?.description, 1500), dimensions }
 }
 
@@ -191,4 +220,16 @@ export function draftFromSaved(saved: any): Draft {
       })),
     })),
   })
+}
+
+/** Agrupa las preguntas seguidas que comparten aspecto, para mostrarlas como un cuestionario. */
+export function groupByAspect<T extends { name: string }>(criteria: T[]): Array<{ aspect: string; items: Array<{ criterion: T; index: number }> }> {
+  const groups: Array<{ aspect: string; items: Array<{ criterion: T; index: number }> }> = []
+  criteria.forEach((criterion, index) => {
+    const aspect = criterion.name.trim()
+    const last = groups[groups.length - 1]
+    if (last && last.aspect.toLowerCase() === aspect.toLowerCase()) last.items.push({ criterion, index })
+    else groups.push({ aspect, items: [{ criterion, index }] })
+  })
+  return groups
 }

@@ -18,6 +18,7 @@ type DimensionInput = {
 
 const MAX_PEERS = 10;
 const MAX_COMMENT = 1000;
+const MAX_QUESTIONS = 40;
 
 function text(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -155,7 +156,7 @@ export class FormativeEvaluationService {
     });
   }
 
-  async generateDraft(institutionId: string, userId: string, body: { classroomId: string; purpose: string; dimensions?: string[]; minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number }) {
+  async generateDraft(institutionId: string, userId: string, body: { classroomId: string; purpose: string; dimensions?: string[]; minScore?: number; maxScore?: number; levels?: number; criteriaPerDimension?: number; aspects?: string[]; perAspect?: number; mirrorPeer?: boolean }) {
     const classroom = await this.teacherClassroom(body?.classroomId, institutionId, userId);
     const purpose = text(body?.purpose, 1500);
     if (!purpose) throw new BadRequestException('Indica el propósito de la evaluación');
@@ -164,6 +165,7 @@ export class FormativeEvaluationService {
       draft = await this.apdAi.generateFormativeRubric({
         purpose, dimensions: Array.isArray(body.dimensions) ? body.dimensions.map(d => text(d, 60)).filter(Boolean) : undefined,
         minScore: body.minScore, maxScore: body.maxScore, levels: body.levels, criteriaPerDimension: body.criteriaPerDimension,
+        aspects: Array.isArray(body.aspects) ? body.aspects.map(a => text(a, 80)).filter(Boolean) : undefined, perAspect: body.perAspect, mirrorPeer: body.mirrorPeer === true,
         gradeName: classroom.teacherAssignment.group.grade?.name, subjectName: classroom.teacherAssignment.subject?.name,
       });
     } catch (error: any) {
@@ -283,6 +285,7 @@ export class FormativeEvaluationService {
       const criteria = Array.isArray(d?.criteria) ? d.criteria : [];
       const weight = criteria.reduce((sum: number, c: any) => sum + Number(c?.weight || 0), 0);
       if (!criteria.length || Math.abs(weight - 100) > 0.01) throw new BadRequestException(`Los criterios de "${label}" deben sumar 100%`);
+      if (criteria.length > MAX_QUESTIONS) throw new BadRequestException(`"${label}" tiene más de ${MAX_QUESTIONS} preguntas`);
       for (const c of criteria) {
         const levels = Array.isArray(c?.levels) ? c.levels : [];
         if (!text(c?.name, 160) || levels.length < 2 || levels.some((l: any) => !text(l?.label, 80) || !Number.isFinite(Number(l?.score)))) {
