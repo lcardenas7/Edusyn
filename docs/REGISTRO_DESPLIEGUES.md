@@ -22,6 +22,14 @@
 
 ## Historial (más reciente arriba)
 
+### IA externa: leer el JSON pegado aunque traiga espacios invisibles — staging · 2026-09-17
+
+Solo web, sin migración. `97c6b82f` (cherry-pick de `ee68c3d5`, rama `fix/json-pegado-tolerante`).
+Una rúbrica formativa válida mostraba "No encontramos un JSON válido": al copiar del chat se
+cuelan NBSP/espacios de ancho cero. `extractJson` los normaliza, acepta comillas “ ” como último
+recurso y avisa si la respuesta viene cortada (también beneficia a los quizzes con IA externa).
+Verificado: vitest 19/19, `tsc` web. Pendiente: producción.
+
 ### Autoevaluación: tres formas visibles de crear la rúbrica (manual, IA externa, IA de Edusyn) — 2026-09-16 · staging
 
 Solo web, sin migración. El usuario mostró en producción que solo existía "Nueva evaluación con IA".
