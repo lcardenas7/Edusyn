@@ -370,6 +370,7 @@ Revisión adversarial posterior: las puntas Observer `41025531` y Classroom B1 `
 
 | Fecha | Entorno | Commit | Migración | Cambio |
 |-------|---------|--------|-----------|--------|
+| 2026-09-16 | staging | ab16d055 | **No** | **Aula / menú lateral fijo:** riel `fixed` sin el margen del Layout en escritorio. Solo web. Promovido a producción en 04f6dcfc. |
 | 2026-09-16 | staging | 6ef59cc9 + 59c4859b | **No** | **Aula / autoevaluación y coevaluación:** voz correcta en las preguntas, borradores con ver/editar/eliminar (`GET/PUT/DELETE formative-evaluations/:id`), editor simplificado y cuestionario por aspectos con catálogo y preguntas relacionadas. API 2.169, web 463, build OK. Promovido a producción en b09b44aa. |
 | 2026-09-16 | staging | 55ce2d14 | **No** | **Hotfix aula / autoevaluación:** `from-ai-draft` ya no da 500 si el nombre de la plantilla (título — dimensión) ya existe; elige "… (2)". API 2.166 pruebas OK. Promovido a producción en 4afd39d0. |
 | 2026-09-16 | staging | 885b060a | **No** | **Aula / quiz en casa:** el docente ve progreso y puntajes de la sesión abierta también desde el detalle (aula nueva). Antes el detalle abría la configuración de una sesión nueva y los puntajes solo salían desde la lista del aula antigua. "Ver el progreso" abre directo los puntajes (`?progreso=1`); iniciar el mismo modo con una sesión abierta la retoma. Solo web; tsc y 454 pruebas OK. Pendiente de prueba real antes de producción. |
