@@ -36,6 +36,8 @@ export function buildRubricPrompt(input: RubricPromptInput): string {
     `- Cada criterio tiene exactamente ${levels} niveles con score creciente entre ${min} y ${max}.`,
     '- Los descriptores son claros, observables, respetuosos y escritos para que un estudiante los entienda.',
     '- SELF es cuando el estudiante se evalúa a sí mismo; PEER es cuando un compañero lo evalúa.',
+    '- Quien responde es siempre un estudiante. En SELF escribe criterios y niveles en primera persona ("Cumplí con mi parte a tiempo").',
+    '- En PEER escríbelos en tercera persona sobre el compañero evaluado ("Mi compañero cumplió con su parte a tiempo"), nunca en primera persona.',
     '- No diagnostiques ni uses etiquetas psicológicas. No incluyas nombres ni datos personales.',
     '',
     'Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con este formato exacto:',
@@ -136,13 +138,57 @@ export function draftProblems(draft: Draft, termId: string): string[] {
   if (!draft.title.trim()) problems.push('Escribe un título.')
   if (!termId) problems.push('Elige un período abierto.')
   if (!draft.dimensions.length) problems.push('Agrega al menos una dimensión.')
+  for (const type of ['SELF', 'PEER'] as EvaluatorType[]) {
+    if (draft.dimensions.filter(d => d.evaluatorType === type).length > 1) problems.push(`Deja una sola ${TYPE_NAMES[type].toLowerCase()}: junta sus preguntas en una.`)
+  }
   draft.dimensions.forEach((d, i) => {
     const name = d.label.trim() || `Dimensión ${i + 1}`
     if (!d.label.trim()) problems.push(`La dimensión ${i + 1} necesita un nombre.`)
-    if (!d.criteria.length) problems.push(`"${name}" necesita al menos un criterio.`)
-    if (d.criteria.some(c => !c.name.trim())) problems.push(`Hay criterios sin nombre en "${name}".`)
-    if (d.criteria.some(c => c.levels.length < 2 || c.levels.some(l => !l.label.trim() || !Number.isFinite(Number(l.score))))) problems.push(`Cada criterio de "${name}" necesita al menos dos niveles con nombre y puntaje.`)
+    if (!d.criteria.length) problems.push(`"${name}" necesita al menos una pregunta.`)
+    if (d.criteria.some(c => !c.name.trim())) problems.push(`Hay preguntas sin aspecto en "${name}".`)
+    if (d.criteria.some(c => !c.description.trim())) problems.push(`Escribe la frase que lee el estudiante en cada pregunta de "${name}".`)
+    if (d.criteria.some(c => c.levels.length < 2 || c.levels.some(l => !l.label.trim() || !Number.isFinite(Number(l.score))))) problems.push(`Cada pregunta de "${name}" necesita al menos dos respuestas con nombre y puntaje.`)
     if (Math.abs(weightSum(d) - 100) > 0.01) problems.push(`Los pesos de "${name}" suman ${weightSum(d)}%; deben sumar 100%.`)
   })
   return problems
+}
+
+/** Ejemplos de cómo se escribe una pregunta según quién la responde. */
+export const PERSON_HINT: Record<EvaluatorType, { who: string; statement: string; level: string }> = {
+  SELF: { who: 'Cada estudiante responde sobre sí mismo.', statement: 'Ej.: Cumplí con mi parte del trabajo a tiempo.', level: 'Ej.: Entregué mi parte completa y a tiempo.' },
+  PEER: { who: 'Cada estudiante responde sobre sus compañeros.', statement: 'Ej.: Mi compañero cumplió con su parte del trabajo a tiempo.', level: 'Ej.: Entregó su parte completa y a tiempo.' },
+}
+
+export const hasEvenWeights = (d: DraftDimension) => {
+  const even = evenWeights(d.criteria.length)
+  return d.criteria.every((c, i) => Number(c.weight) === even[i])
+}
+
+/** Una dimensión nueva a partir de otra de distinto tipo: conserva los aspectos (títulos, pesos y
+ * puntajes) pero deja en blanco las frases, porque una autoevaluación habla en primera persona y
+ * una coevaluación habla del compañero. */
+export function starterFrom(base: DraftDimension, type: EvaluatorType, min = 1, max = 5): DraftDimension {
+  const fresh = blankDimension(type, min, max)
+  if (!base.criteria.length) return fresh
+  return {
+    ...fresh,
+    criteria: base.criteria.map(c => ({ name: c.name, description: '', weight: c.weight, levels: c.levels.map(l => ({ label: l.label, description: '', score: l.score })) })),
+  }
+}
+
+/** Convierte una evaluación guardada (con las rúbricas congeladas) en un borrador editable. */
+export function draftFromSaved(saved: any): Draft {
+  return sanitizeDraft({
+    title: saved?.title,
+    description: saved?.description ?? '',
+    dimensions: (saved?.dimensions || []).map((d: any) => ({
+      label: d.label,
+      evaluatorType: d.evaluatorType,
+      peersPerStudent: d.peersPerStudent,
+      criteria: (d.rubricSnapshot?.criteria || []).map((c: any) => ({
+        name: c.name, description: c.description ?? '', weight: Number(c.weight),
+        levels: (c.levels || []).map((l: any) => ({ label: l.label, description: l.description ?? '', score: Number(l.score) })),
+      })),
+    })),
+  })
 }

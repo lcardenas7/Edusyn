@@ -243,3 +243,46 @@ describe('FormativeEvaluationService.createFromAiDraft', () => {
     expect((create.mock.calls[0][2] as any).dimensions.map((d: any) => d.rubricId)).toEqual(['r1', 'r2', 'r3']);
   });
 });
+
+describe('FormativeEvaluationService: editar y eliminar borradores', () => {
+  const criteria = [{ name: 'Escucha', weight: 100, levels: [{ label: 'Bajo', score: 1 }, { label: 'Alto', score: 5 }] }];
+  const draftActivity = (status = 'DRAFT') => ({ id: 'fe', status, classroomId: 'room', academicTermId: 't1', title: 'Viejo', description: null, dimensions: [{ id: 'd-old', rubricId: 'r-old', label: 'Auto', evaluatorType: 'SELF', peersPerStudent: null, rubricSnapshot: {} }] });
+
+  it('solo se edita o elimina una evaluación en borrador', async () => {
+    const svc: any = service({});
+    jest.spyOn(svc, 'activityForTeacher').mockResolvedValue(draftActivity('PUBLISHED'));
+    await expect(svc.updateDraft('fe', 'inst', 'u', { title: 'X', dimensions: [{ label: 'A', evaluatorType: 'SELF', criteria }] })).rejects.toThrow('Solo se puede editar');
+    await expect(svc.deleteDraft('fe', 'inst', 'u')).rejects.toThrow('Solo se puede eliminar');
+  });
+
+  it('al editar reemplaza las dimensiones y desactiva solo las plantillas que ya nadie usa', async () => {
+    const tx: any = {
+      formativeEvaluationDimension: { deleteMany: jest.fn() },
+      formativeEvaluationActivity: { update: jest.fn() },
+      attitudinalRubric: { updateMany: jest.fn(), create: jest.fn(async () => ({ id: 'r-new' })) },
+    };
+    const prisma: any = {
+      attitudinalRubric: { findMany: jest.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'r-new', criteria: [] }]) },
+      $transaction: jest.fn((fn: any) => fn(tx)),
+    };
+    const svc: any = service(prisma);
+    jest.spyOn(svc, 'activityForTeacher').mockResolvedValue(draftActivity());
+    const canCreate = jest.spyOn(svc, 'assertCanCreate').mockResolvedValue({ term: { id: 't2' } });
+    await svc.updateDraft('fe', 'inst', 'u', { title: 'Nuevo', classroomId: 'otra', academicTermId: 't2', dimensions: [{ label: 'Coevaluación', evaluatorType: 'PEER', peersPerStudent: 3, criteria }] });
+    expect((canCreate.mock.calls[0][2] as any).classroomId).toBe('room');
+    expect(tx.formativeEvaluationDimension.deleteMany).toHaveBeenCalledWith({ where: { activityId: 'fe' } });
+    const data = tx.formativeEvaluationActivity.update.mock.calls[0][0].data;
+    expect(data).toMatchObject({ title: 'Nuevo', academicTermId: 't2' });
+    expect(data.dimensions.create).toEqual([expect.objectContaining({ label: 'Coevaluación', evaluatorType: 'PEER', peersPerStudent: 3, rubricId: 'r-new', evaluationComponentId: null })]);
+    expect(tx.attitudinalRubric.updateMany.mock.calls[0][0].where).toMatchObject({ id: { in: ['r-old'] }, institutionId: 'inst', formativeDimensions: { none: {} } });
+  });
+
+  it('eliminar un borrador borra la evaluación y retira sus plantillas', async () => {
+    const tx: any = { formativeEvaluationActivity: { delete: jest.fn() }, attitudinalRubric: { updateMany: jest.fn() } };
+    const svc: any = service({ $transaction: jest.fn((fn: any) => fn(tx)) });
+    jest.spyOn(svc, 'activityForTeacher').mockResolvedValue(draftActivity());
+    await expect(svc.deleteDraft('fe', 'inst', 'u')).resolves.toEqual({ deleted: true });
+    expect(tx.formativeEvaluationActivity.delete).toHaveBeenCalledWith({ where: { id: 'fe' } });
+    expect(tx.attitudinalRubric.updateMany).toHaveBeenCalled();
+  });
+});

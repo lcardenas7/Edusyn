@@ -197,11 +197,88 @@ export class FormativeEvaluationService {
 
   /** Materializa un borrador ya revisado por el docente: crea plantillas privadas y el ciclo en DRAFT. */
   async createFromAiDraft(institutionId: string, userId: string, body: any) {
+    const prepared = this.prepareDraft(body);
+    await this.assertCanCreate(institutionId, userId, body);
+    const rubricIds = await this.createDraftRubrics(institutionId, userId, text(body.title, 180), prepared);
+    return this.create(institutionId, userId, {
+      ...body,
+      dimensions: prepared.map(({ d, label }, index) => ({ ...d, label, rubricId: rubricIds[index] })),
+    });
+  }
+
+  /** El borrador completo (con sus preguntas) para verlo o editarlo. */
+  async getForTeacher(id: string, institutionId: string, userId: string) {
+    const activity = await this.activityForTeacher(id, institutionId, userId);
+    return {
+      id: activity.id, title: activity.title, description: activity.description, status: activity.status, academicTermId: activity.academicTermId,
+      dimensions: activity.dimensions.map(d => ({ id: d.id, label: d.label, evaluatorType: d.evaluatorType, peersPerStudent: d.peersPerStudent, rubricSnapshot: d.rubricSnapshot })),
+    };
+  }
+
+  /** Mientras siga en borrador, el docente puede cambiar título, período y preguntas. Las
+   * plantillas anteriores se desactivan (no se borran) si nadie más las usa. */
+  async updateDraft(id: string, institutionId: string, userId: string, body: any) {
+    const activity = await this.activityForTeacher(id, institutionId, userId);
+    if (activity.status !== 'DRAFT') throw new BadRequestException('Solo se puede editar una evaluación en borrador');
+    const payload = { ...body, classroomId: activity.classroomId };
+    const prepared = this.prepareDraft(payload);
+    const { term } = await this.assertCanCreate(institutionId, userId, payload);
+    const rubricIds = await this.createDraftRubrics(institutionId, userId, text(body.title, 180), prepared);
+    const dimensions = prepared.map(({ d, label }, index) => sanitizeDimensionInput({ ...d, label, rubricId: rubricIds[index], evaluationComponentId: null }));
+    const rubrics = await this.rubricsWithCriteria(institutionId, rubricIds);
+    const oldRubricIds = activity.dimensions.map(d => d.rubricId).filter((r): r is string => !!r);
+    await this.prisma.$transaction(async tx => {
+      await tx.formativeEvaluationDimension.deleteMany({ where: { activityId: id } });
+      await tx.formativeEvaluationActivity.update({ where: { id }, data: {
+        title: text(body.title, 180), description: text(body.description, 1500) || null, academicTermId: term.id,
+        dimensions: { create: this.dimensionRows(dimensions, rubrics) },
+      } });
+      await this.retireRubrics(tx, institutionId, oldRubricIds);
+    });
+    return this.getForTeacher(id, institutionId, userId);
+  }
+
+  /** Un borrador que no se publicó se puede eliminar (p. ej. uno creado por error o repetido). */
+  async deleteDraft(id: string, institutionId: string, userId: string) {
+    const activity = await this.activityForTeacher(id, institutionId, userId);
+    if (activity.status !== 'DRAFT') throw new BadRequestException('Solo se puede eliminar una evaluación en borrador');
+    const oldRubricIds = activity.dimensions.map(d => d.rubricId).filter((r): r is string => !!r);
+    await this.prisma.$transaction(async tx => {
+      await tx.formativeEvaluationActivity.delete({ where: { id } });
+      await this.retireRubrics(tx, institutionId, oldRubricIds);
+    });
+    return { deleted: true };
+  }
+
+  private async retireRubrics(tx: Prisma.TransactionClient, institutionId: string, ids: string[]) {
+    if (!ids.length) return;
+    await tx.attitudinalRubric.updateMany({
+      where: { id: { in: ids }, institutionId, formativeDimensions: { none: {} }, activities: { none: {} }, submissions: { none: {} } },
+      data: { isActive: false },
+    });
+  }
+
+  private rubricsWithCriteria(institutionId: string, ids: string[]) {
+    return this.prisma.attitudinalRubric.findMany({
+      where: { id: { in: ids }, institutionId, isActive: true },
+      include: { criteria: { include: { levels: { orderBy: { order: 'asc' } } }, orderBy: { order: 'asc' } } },
+    });
+  }
+
+  private dimensionRows(dimensions: DimensionInput[], rubrics: Array<{ id: string }>) {
+    return dimensions.map((d, order) => ({
+      label: d.label, evaluatorType: d.evaluatorType, rubricId: d.rubricId, evaluationComponentId: d.evaluationComponentId,
+      peersPerStudent: d.peersPerStudent, revealEvaluator: !!d.revealEvaluator, requireCommentReview: d.requireCommentReview !== false,
+      allowIncomplete: !!d.allowIncomplete, order,
+      rubricSnapshot: rubrics.find(r => r.id === d.rubricId) as unknown as Prisma.InputJsonValue,
+    }));
+  }
+
+  /** Valida las dimensiones de un borrador antes de escribir nada. */
+  private prepareDraft(body: any): Array<{ d: any; label: string; criteria: any[] }> {
     const draftDimensions = Array.isArray(body?.dimensions) ? body.dimensions : [];
     if (!draftDimensions.length) throw new BadRequestException('El borrador no contiene dimensiones');
-    await this.assertCanCreate(institutionId, userId, body);
-    const title = text(body.title, 180);
-    const prepared = draftDimensions.map((d: any, index: number) => {
+    return draftDimensions.map((d: any, index: number) => {
       const label = text(d?.label, 120) || `Dimensión ${index + 1}`;
       const criteria = Array.isArray(d?.criteria) ? d.criteria : [];
       const weight = criteria.reduce((sum: number, c: any) => sum + Number(c?.weight || 0), 0);
@@ -214,9 +291,12 @@ export class FormativeEvaluationService {
       }
       return { d, label, criteria };
     });
+  }
+
+  private async createDraftRubrics(institutionId: string, userId: string, title: string, prepared: Array<{ d: any; label: string; criteria: any[] }>) {
     // El nombre de la plantilla es único por institución: repetir el título de una evaluación
     // (o dos dimensiones con la misma etiqueta) no debe romper la creación con un 500.
-    const bases: string[] = prepared.map(({ label }: any) => `${title} — ${label}`.slice(0, 170));
+    const bases: string[] = prepared.map(({ label }) => `${title} — ${label}`.slice(0, 170));
     const taken = new Set((await this.prisma.attitudinalRubric.findMany({
       where: { institutionId, OR: [...new Set(bases)].map(base => ({ name: { startsWith: base } })) },
       select: { name: true },
@@ -227,7 +307,7 @@ export class FormativeEvaluationService {
       taken.add(name);
       return name;
     });
-    const rubricIds = await this.prisma.$transaction(async tx => {
+    return this.prisma.$transaction(async tx => {
       const ids: string[] = [];
       for (const [index, { d, label, criteria }] of prepared.entries()) {
         const rubric = await tx.attitudinalRubric.create({ data: {
@@ -241,10 +321,6 @@ export class FormativeEvaluationService {
         ids.push(rubric.id);
       }
       return ids;
-    });
-    return this.create(institutionId, userId, {
-      ...body,
-      dimensions: prepared.map(({ d, label }: any, index: number) => ({ ...d, label, rubricId: rubricIds[index] })),
     });
   }
 
@@ -299,21 +375,13 @@ export class FormativeEvaluationService {
       const count = await this.prisma.evaluationComponent.count({ where: { id: { in: componentIds }, institutionId } });
       if (count !== new Set(componentIds).size) throw new BadRequestException('Un componente destino no pertenece a la institución');
     }
-    const rubrics = await this.prisma.attitudinalRubric.findMany({
-      where: { id: { in: dimensions.map((d: DimensionInput) => d.rubricId) }, institutionId, isActive: true },
-      include: { criteria: { include: { levels: { orderBy: { order: 'asc' } } }, orderBy: { order: 'asc' } } },
-    });
+    const rubrics = await this.rubricsWithCriteria(institutionId, dimensions.map((d: DimensionInput) => d.rubricId));
     if (rubrics.length !== new Set(dimensions.map((d: DimensionInput) => d.rubricId)).size) throw new BadRequestException('Una rúbrica no está disponible para la institución');
     return this.prisma.formativeEvaluationActivity.create({ data: {
       institutionId, classroomId: classroom.id, teacherAssignmentId: classroom.teacherAssignmentId, academicTermId: term.id,
       title: text(body.title, 180), description: text(body.description, 1500) || null, createdById: userId,
       opensAt: body.opensAt ? new Date(body.opensAt) : null, closesAt: body.closesAt ? new Date(body.closesAt) : null,
-      dimensions: { create: dimensions.map((d: DimensionInput, order: number) => ({
-        label: d.label, evaluatorType: d.evaluatorType, rubricId: d.rubricId, evaluationComponentId: d.evaluationComponentId,
-        peersPerStudent: d.peersPerStudent, revealEvaluator: !!d.revealEvaluator, requireCommentReview: d.requireCommentReview !== false,
-        allowIncomplete: !!d.allowIncomplete, order,
-        rubricSnapshot: rubrics.find(r => r.id === d.rubricId) as unknown as Prisma.InputJsonValue,
-      })) },
+      dimensions: { create: this.dimensionRows(dimensions, rubrics) },
     }, include: { dimensions: true } });
   }
 

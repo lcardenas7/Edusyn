@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildRubricPrompt, parseRubricDraft, sanitizeDraft, weightSum } from './formativeDraft'
+import { buildRubricPrompt, draftFromSaved, draftProblems, hasEvenWeights, parseRubricDraft, sanitizeDraft, starterFrom, weightSum } from './formativeDraft'
 
 const sample = {
   title: 'Trabajo en equipo',
@@ -76,11 +76,46 @@ describe('plantillas para crear a mano', () => {
   it('explica qué falta antes de crear', async () => {
     const { blankDraft, draftProblems } = await import('./formativeDraft')
     const draft = blankDraft(['SELF'])
-    expect(draftProblems(draft, '')).toEqual(expect.arrayContaining(['Escribe un título.', 'Elige un período abierto.', 'Hay criterios sin nombre en "Autoevaluación".']))
+    expect(draftProblems(draft, '')).toEqual(expect.arrayContaining(['Escribe un título.', 'Elige un período abierto.', 'Hay preguntas sin aspecto en "Autoevaluación".']))
     draft.title = 'Proyecto'
-    draft.dimensions[0].criteria.forEach((c, i) => { c.name = `Criterio ${i + 1}` })
+    draft.dimensions[0].criteria.forEach((c, i) => { c.name = `Criterio ${i + 1}`; c.description = 'Cumplí mi parte' })
     expect(draftProblems(draft, 't1')).toEqual([])
     draft.dimensions[0].criteria[0].weight = 10
     expect(draftProblems(draft, 't1')).toEqual([expect.stringContaining('deben sumar 100%')])
+  })
+})
+
+describe('borradores guardados y plantillas', () => {
+  it('reconstruye un borrador editable desde lo guardado', () => {
+    const draft = draftFromSaved({ title: 'Proyecto', description: null, dimensions: [
+      { label: 'Coevaluación', evaluatorType: 'PEER', peersPerStudent: 3, rubricSnapshot: { criteria: [
+        { id: 'c1', name: 'Escucha', description: 'Mi compañero escucha', weight: 100, levels: [{ id: 'l1', label: 'Bajo', description: null, score: 1 }, { id: 'l2', label: 'Alto', score: 5 }] },
+      ] } },
+    ] })
+    expect(draft).toEqual({ title: 'Proyecto', description: '', dimensions: [{ label: 'Coevaluación', evaluatorType: 'PEER', peersPerStudent: 3, evaluationComponentId: null, criteria: [
+      { name: 'Escucha', description: 'Mi compañero escucha', weight: 100, levels: [{ label: 'Bajo', description: '', score: 1 }, { label: 'Alto', description: '', score: 5 }] },
+    ] }] })
+  })
+
+  it('la coevaluación nueva conserva los aspectos pero no las frases en primera persona', () => {
+    const self = sanitizeDraft(sample).dimensions[0]
+    const peer = starterFrom(self, 'PEER')
+    expect(peer.evaluatorType).toBe('PEER')
+    expect(peer.peersPerStudent).toBe(2)
+    expect(peer.criteria.map(c => [c.name, c.description, c.weight])).toEqual([['Responsabilidad', '', 50], ['Escucha', '', 50]])
+    expect(peer.criteria[0].levels.every(l => l.description === '')).toBe(true)
+    expect(hasEvenWeights(peer)).toBe(true)
+  })
+
+  it('pide una sola dimensión por tipo', () => {
+    const draft = sanitizeDraft(sample)
+    draft.dimensions.push({ ...draft.dimensions[1] })
+    expect(draftProblems(draft, 't1')).toContain('Deja una sola coevaluación: junta sus preguntas en una.')
+  })
+
+  it('la petición pide la persona correcta según quién responde', () => {
+    const prompt = buildRubricPrompt({ purpose: 'x', types: ['SELF', 'PEER'] })
+    expect(prompt).toContain('primera persona')
+    expect(prompt).toContain('Mi compañero')
   })
 })

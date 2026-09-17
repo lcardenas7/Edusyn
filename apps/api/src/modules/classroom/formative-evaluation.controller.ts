@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -54,6 +54,24 @@ export class FormativeEvaluationController {
   async peerPreview(@Param('id') id: string, @Request() req: any, @Query('seed') seed?: string) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.service.peerPreview(id, institutionId, req.user.id, seed);
+  }
+
+  @Get(':id') @Roles('DOCENTE', 'COORDINADOR')
+  async getOne(@Param('id') id: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.getForTeacher(id, institutionId, req.user.id);
+  }
+
+  @Put(':id') @Roles('DOCENTE', 'COORDINADOR')
+  async updateDraft(@Param('id') id: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.updateDraft(id, institutionId, req.user.id, body);
+  }
+
+  @Delete(':id') @Roles('DOCENTE', 'COORDINADOR')
+  async deleteDraft(@Param('id') id: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.deleteDraft(id, institutionId, req.user.id);
   }
 
   @Post(':id/publish') @Roles('DOCENTE', 'COORDINADOR')
