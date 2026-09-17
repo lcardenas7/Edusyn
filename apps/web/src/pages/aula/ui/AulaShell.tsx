@@ -132,8 +132,11 @@ export function AulaShell({
           en pantallas anchas. Cada vista limita su propio ancho de lectura. */}
       <div className="flex w-full">
         {/* ─── Riel (escritorio) ─────────────────────────────────────────── */}
+        {/* Fijo como el menú de la plataforma: no se mueve con el contenido. El hueco reserva su
+            ancho en la fila para que el contenido no quede debajo. */}
+        <div aria-hidden="true" className="hidden shrink-0 transition-[width] duration-200 motion-reduce:transition-none lg:block" style={{ width: expandido ? 232 : 68 }} />
         <aside
-          className="sticky top-0 hidden h-screen shrink-0 border-r border-accent/15 bg-accent/[0.05] transition-[width] duration-200 motion-reduce:transition-none lg:flex lg:flex-col"
+          className="fixed inset-y-0 left-0 z-30 hidden border-r border-accent/15 bg-accent/[0.05] transition-[width] duration-200 motion-reduce:transition-none lg:flex lg:flex-col"
           style={{ width: expandido ? 232 : 68 }}
           aria-label="Secciones del aula"
         >
@@ -279,7 +282,7 @@ export function AulaShell({
           {/* `pb-24` deja aire para la barra inferior de móvil */}
           {/* `pb-32` deja aire de sobra: con `pb-24` la última tarjeta quedaba pegada a la
               barra inferior y el botón de Valeria le caía encima. */}
-          <main className="px-3 pt-4 pb-32 sm:px-4 sm:pt-5 lg:pb-10">
+          <main className="px-3 pt-4 pb-32 sm:px-4 sm:pt-5 lg:px-8 lg:pt-6 lg:pb-10">
             {aviso && <div className="mx-auto mb-4 max-w-3xl">{aviso}</div>}
             {/* Todo lo de dentro pinta con el MISMO acento que el riel y el encabezado. */}
             <ProveedorAcento acento={acento}>{children}</ProveedorAcento>
