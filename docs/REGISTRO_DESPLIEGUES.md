@@ -22,6 +22,12 @@
 
 ## Historial (más reciente arriba)
 
+### Rúbrica formativa: pesos parejos con muchas preguntas — staging · 2026-09-17
+
+Solo web, sin migración. `5f8028ea` (cherry-pick de `a8bf519d`). `evenWeights` daba todo el sobrante a la
+última pregunta (28 preguntas → 27 de 3% y una de 19%); ahora lo reparte de a un punto (16 de 4%,
+12 de 3%). Solo afecta rúbricas nuevas. Verificado: vitest 24/24, `tsc` web. Pendiente: producción.
+
 ### IA externa: leer el JSON pegado aunque traiga espacios invisibles — staging · 2026-09-17
 
 Solo web, sin migración. `97c6b82f` (cherry-pick de `ee68c3d5`, rama `fix/json-pegado-tolerante`).
