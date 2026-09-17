@@ -35,6 +35,21 @@ describe('parseRubricDraft', () => {
     ])
   })
 
+  it('tolera espacios invisibles y comillas tipográficas que se cuelan al copiar del chat', () => {
+    const json = JSON.stringify(sample)
+    const withNbsp = json.replace(/,"/g, ', "').replace(/:/g, ': ')
+    const curly = json.replace(/"(\w+)":/g, '“$1”:')
+    for (const pasted of [withNbsp, '﻿' + withNbsp, curly]) {
+      const result = parseRubricDraft(pasted)
+      expect('draft' in result && result.draft.dimensions.length).toBe(2)
+    }
+  })
+
+  it('avisa cuando la respuesta de la IA viene cortada', () => {
+    const json = JSON.stringify(sample)
+    expect(parseRubricDraft(json.slice(0, json.length - 30))).toEqual({ error: expect.stringContaining('parece cortada') })
+  })
+
   it('explica el problema cuando no hay JSON o no trae criterios', () => {
     expect(parseRubricDraft('')).toEqual({ error: 'Pega la respuesta de la IA.' })
     expect('error' in parseRubricDraft('no sé hacer eso')).toBe(true)

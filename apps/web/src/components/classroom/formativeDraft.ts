@@ -1,4 +1,4 @@
-import { extractJson } from '../../lib/extractJson'
+import { extractJson, IncompleteJsonError } from '../../lib/extractJson'
 
 /** Flujo "IA externa" de la evaluación formativa: Edusyn arma la petición, el docente la lleva a
  * la IA que prefiera y pega la respuesta. Nada se envía desde Edusyn, y la respuesta pasa por la
@@ -106,7 +106,8 @@ export function parseRubricDraft(pasted: string): ParseResult {
   let raw: any
   try {
     raw = extractJson(pasted)
-  } catch {
+  } catch (e) {
+    if (e instanceof IncompleteJsonError) return { error: e.message }
     return { error: 'No encontramos un JSON válido en la respuesta. Pídele a la IA que responda solo con el JSON.' }
   }
   if (!raw || typeof raw !== 'object') return { error: 'No encontramos un JSON válido en la respuesta. Pídele a la IA que responda solo con el JSON.' }

@@ -13,8 +13,14 @@ function tryParse(s: string): any | undefined {
 }
 
 // Desde el { o [ en startIdx, devuelve la subcadena hasta su cierre emparejado.
-// Ignora llaves dentro de cadenas y respeta los escapes.
 function sliceBalanced(s: string, startIdx: number): string {
+  const end = balancedEnd(s, startIdx)
+  return end < 0 ? s.slice(startIdx) : s.slice(startIdx, end + 1) // sin cierre: devuelve el resto
+}
+
+// Índice del cierre emparejado del { o [ en startIdx, o -1 si el texto termina antes.
+// Ignora llaves dentro de cadenas y respeta los escapes.
+function balancedEnd(s: string, startIdx: number): number {
   const open = s[startIdx]
   const close = open === '{' ? '}' : ']'
   let depth = 0
@@ -29,9 +35,9 @@ function sliceBalanced(s: string, startIdx: number): string {
     }
     if (ch === '"' || ch === "'") { inStr = true; quote = ch; continue }
     if (ch === open) depth++
-    else if (ch === close) { depth--; if (depth === 0) return s.slice(startIdx, i + 1) }
+    else if (ch === close) { depth--; if (depth === 0) return i }
   }
-  return s.slice(startIdx) // sin cierre: devuelve el resto
+  return -1
 }
 
 // Convierte literales estilo Python a JSON (True→true, False→false, None→null)
@@ -62,8 +68,23 @@ function jsonifyPythonLiterals(s: string): string {
   return out
 }
 
+// Al copiar desde el chat de una IA, WhatsApp o Word se cuelan espacios "raros" (NBSP, de ancho
+// cero, BOM) que JSON.parse no acepta entre tokens. Dentro de las cadenas son inofensivos, así que
+// se cambian por un espacio normal en todo el texto.
+function normalizeSpaces(s: string): string {
+  return s.replace(/[   -   　]/g, ' ').replace(/[​-‍⁠﻿]/g, '')
+}
+
+// Último recurso: comillas tipográficas usadas como delimitadores (“clave”: “valor”).
+function straightenQuotes(s: string): string {
+  return s.replace(/[“”„‟″]/g, '"')
+}
+
+/** El texto trae el inicio de un JSON pero no su cierre (la IA cortó la respuesta). */
+export class IncompleteJsonError extends Error {}
+
 export function extractJson(raw: string): any {
-  const text = String(raw ?? '').trim()
+  const text = normalizeSpaces(String(raw ?? '')).trim()
   if (!text) throw new Error('El texto está vacío.')
 
   // Quitar cercas de código markdown (```json … ``` / ~~~).
@@ -80,10 +101,11 @@ export function extractJson(raw: string): any {
     if (parsed !== undefined) return parsed
   }
 
-  // Tomar el primer objeto/arreglo balanceado (ignora `quiz =` y código posterior).
-  const start = noFences.search(/[{[]/)
-  if (start >= 0) {
-    const block = sliceBalanced(noFences, start)
+  for (const source of [noFences, straightenQuotes(noFences)]) {
+    // Tomar el primer objeto/arreglo balanceado (ignora `quiz =` y código posterior).
+    const start = source.search(/[{[]/)
+    if (start < 0) continue
+    const block = sliceBalanced(source, start)
     const attempts = [
       block,                                              // tal cual
       block.replace(/,(\s*[}\]])/g, '$1'),                // sin comas colgantes
@@ -95,5 +117,9 @@ export function extractJson(raw: string): any {
     }
   }
 
+  const start = noFences.search(/[{[]/)
+  if (start >= 0 && balancedEnd(noFences, start) < 0) {
+    throw new IncompleteJsonError('La respuesta parece cortada: el JSON no termina. Pídele a la IA que la complete o que la genere en dos partes.')
+  }
   throw new Error('No se pudo leer un JSON válido del texto. Verifica que hayas copiado el resultado completo de la IA.')
 }
