@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BarChart3, CheckCircle2, ChevronLeft, ClipboardCheck, ExternalLink, Loader2, PenLine, Send, Sparkles, Upload, UserRound, Users } from 'lucide-react'
+import { BarChart3, CheckCircle2, ChevronLeft, ClipboardCheck, Eye, ExternalLink, Loader2, PenLine, Send, Sparkles, Trash2, Upload, UserRound, Users } from 'lucide-react'
 import { classroomApi } from '../../lib/api'
 import { confirmDialog } from '../ui/confirm'
 import { toast } from '../../lib/toast'
-import FormativeCreatePanel, { type CreateMode } from './FormativeCreatePanel'
+import FormativeCreatePanel, { type CreateMode, type EditingDraft } from './FormativeCreatePanel'
+import { DimensionPreview } from './FormativeRubricPreview'
 import PeerAssignmentPanel, { type PeerPlan } from './PeerAssignmentPanel'
-import type { GradebookComponent as Component, OpenTerm as Term } from './formativeDraft'
+import { draftFromSaved, type GradebookComponent as Component, type OpenTerm as Term } from './formativeDraft'
 
 /** Rúbricas, autoevaluación y coevaluación. La IA propone un borrador; el docente lo revisa,
  * lo publica, consolida y decide si envía los resultados a la planilla (con previsualización). */
@@ -77,6 +78,8 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
   const [scale, setScale] = useState<{ min: number; max: number } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const [publishingId, setPublishingId] = useState<string | null>(null)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<EditingDraft | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
@@ -111,11 +114,22 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
     await run(item.id, async () => { await classroomApi.publishFormativeEvaluation(item.id, { peer: plan }); setPublishingId(null) }, 'No se pudo publicar', 'Evaluación publicada')
   }
 
+  const startEdit = (item: any) => run(item.id, async () => {
+    const { data } = await classroomApi.getFormativeEvaluation(item.id)
+    setViewingId(null)
+    setPublishingId(null)
+    setEditing({ id: item.id, draft: draftFromSaved(data), termId: data.academicTermId })
+  }, 'No se pudo abrir el borrador')
+  const remove = async (item: any) => {
+    if (!(await confirmDialog(`Se eliminará «${item.title}». Todavía no lo ven los estudiantes.`, { title: 'Eliminar borrador', confirmLabel: 'Eliminar', danger: true }))) return
+    await run(item.id, () => classroomApi.deleteFormativeDraft(item.id), 'No se pudo eliminar el borrador', 'Borrador eliminado')
+  }
+
   return <div className="space-y-4">
     {!creating && <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <p className="text-sm font-semibold text-slate-800">Nueva evaluación: ¿cómo quieres crear la rúbrica?</p>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <button type="button" onClick={() => setCreating('manual')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><PenLine className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Crear manualmente</span><span className="block text-xs text-slate-500">Escribes tus propios criterios y niveles.</span></span></button>
+        <button type="button" onClick={() => setCreating('manual')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><PenLine className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Crear manualmente</span><span className="block text-xs text-slate-500">Escribes tus propias preguntas.</span></span></button>
         <button type="button" onClick={() => setCreating('external')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Con IA externa</span><span className="block text-xs text-slate-500">Copias una petición a ChatGPT, Gemini u otra y pegas la respuesta.</span></span></button>
         <button type="button" onClick={() => setCreating('internal')} className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-left hover:bg-teal-50"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Con la IA de Edusyn</span><span className="block text-xs text-slate-500">Edusyn propone un borrador automático.</span></span></button>
       </div>
@@ -146,16 +160,36 @@ function TeacherView({ classroomId, items, reload, fail }: { classroomId: string
             {item.status === 'SYNCED' && d.evaluationComponent && <span className="text-xs text-slate-500">En la planilla: {d.evaluationComponent.name}</span>}
           </li>)}
         </ul>
+        {editing?.id === item.id
+          ? <div className="mt-4"><FormativeCreatePanel mode="manual" editing={editing ?? undefined} classroomId={classroomId} terms={terms} scale={scale} fail={fail} onCancel={() => setEditing(null)} onCreated={async () => { setEditing(null); await reload() }} /></div>
+          : <>
         <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setViewingId(viewingId === item.id ? null : item.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" /> {viewingId === item.id ? 'Ocultar preguntas' : 'Ver preguntas'}</button>
+          {item.status === 'DRAFT' && <button type="button" disabled={!!busy} onClick={() => void startEdit(item)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><PenLine className="h-4 w-4" /> Editar</button>}
+          {item.status === 'DRAFT' && <button type="button" disabled={!!busy} onClick={() => void remove(item)} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"><Trash2 className="h-4 w-4" /> Eliminar</button>}
           {item.status === 'DRAFT' && publishingId !== item.id && <button disabled={!!busy} onClick={() => publish(item)} className="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Publicar</button>}
           {['PUBLISHED', 'IN_PROGRESS', 'CLOSED', 'CONSOLIDATED', 'CHANGED_AFTER_SYNC'].includes(item.status) && <button disabled={!!busy} onClick={() => run(item.id, () => classroomApi.consolidateFormativeEvaluation(item.id), 'No se pudo consolidar', 'Resultados consolidados')} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{item.status === 'CONSOLIDATED' ? 'Volver a consolidar' : 'Consolidar resultados'}</button>}
           {item.status !== 'DRAFT' && <button onClick={() => setOpenId(openId === item.id ? null : item.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><BarChart3 className="h-4 w-4" /> {openId === item.id ? 'Ocultar resultados' : 'Ver resultados'}</button>}
           {busy === item.id && <Loader2 className="h-5 w-5 animate-spin self-center text-teal-600" />}
         </div>
+        {viewingId === item.id && <SavedQuestions id={item.id} fail={fail} />}
         {publishingId === item.id && <PeerAssignmentPanel activityId={item.id} busy={busy === item.id} fail={fail} onCancel={() => setPublishingId(null)} onPublish={plan => void publishWithPlan(item, plan)} />}
         {openId === item.id && <ResultsPanel item={item} components={components} fail={fail} onSynced={reload} />}
+          </>}
       </article>
     })}
+  </div>
+}
+
+/** Las preguntas guardadas, tal como las verá el estudiante. */
+function SavedQuestions({ id, fail }: { id: string; fail: (e: any, m: string) => void }) {
+  const [data, setData] = useState<any>(null)
+  useEffect(() => {
+    classroomApi.getFormativeEvaluation(id).then(({ data }: any) => setData(data)).catch(e => fail(e, 'No se pudieron cargar las preguntas'))
+  }, [id, fail])
+  if (!data) return <p className="mt-4 flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando preguntas…</p>
+  return <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    {draftFromSaved(data).dimensions.map((d, i) => <DimensionPreview key={i} dimension={d} />)}
   </div>
 }
 
@@ -328,7 +362,7 @@ function StudentView({ items, reload, fail }: { items: any[]; reload: () => Prom
           : <><Users className="h-4 w-4 text-teal-700" /> Evalúas a <b className="text-slate-800">{assignment.targetEnrollment?.student?.firstName} {assignment.targetEnrollment?.student?.lastName}</b>. Sé justo y respetuoso.</>}
       </p>
       {activity.description && <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">{activity.description}</p>}
-      <p className="mt-3 text-xs font-semibold text-slate-500">{answered} de {criteria.length} criterios respondidos</p>
+      <p className="mt-3 text-xs font-semibold text-slate-500">{answered} de {criteria.length} preguntas respondidas</p>
       {criteria.map(c => <fieldset key={c.id} className="mt-3 rounded-xl border border-slate-200 p-4">
         <legend className="px-1 font-semibold text-slate-800">{c.name}</legend>
         {c.description && <p className="text-sm text-slate-500">{c.description}</p>}
