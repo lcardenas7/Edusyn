@@ -83,6 +83,13 @@ describe('plantillas para crear a mano', () => {
     expect(levelScores(1, 5, 4)).toEqual([1, 2.3, 3.7, 5])
     expect(levelScores(0, 100, 5)).toEqual([0, 25, 50, 75, 100])
     expect(evenWeights(3)).toEqual([33, 33, 34])
+    // Muchas preguntas: el sobrante se reparte, ninguna pesa más de un punto que otra.
+    for (const n of [7, 12, 28, 40]) {
+      const w = evenWeights(n)
+      expect(w.reduce((a, b) => a + b, 0)).toBe(100)
+      expect(Math.max(...w) - Math.min(...w)).toBeLessThanOrEqual(1)
+    }
+    expect(evenWeights(28).filter(x => x === 4)).toHaveLength(16)
     const draft = blankDraft(['SELF', 'PEER'], 1, 5)
     expect(draft.dimensions.map(d => [d.label, d.evaluatorType, d.peersPerStudent, d.criteria.length])).toEqual([['Autoevaluación', 'SELF', null, 3], ['Coevaluación', 'PEER', 2, 3]])
     expect(draft.dimensions.every(d => weightSum(d) === 100)).toBe(true)
