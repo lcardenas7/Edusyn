@@ -214,11 +214,24 @@ export class FormativeEvaluationService {
       }
       return { d, label, criteria };
     });
+    // El nombre de la plantilla es único por institución: repetir el título de una evaluación
+    // (o dos dimensiones con la misma etiqueta) no debe romper la creación con un 500.
+    const bases: string[] = prepared.map(({ label }: any) => `${title} — ${label}`.slice(0, 170));
+    const taken = new Set((await this.prisma.attitudinalRubric.findMany({
+      where: { institutionId, OR: [...new Set(bases)].map(base => ({ name: { startsWith: base } })) },
+      select: { name: true },
+    })).map(r => r.name));
+    const names = bases.map((base: string) => {
+      let name = base;
+      for (let n = 2; taken.has(name); n++) name = `${base} (${n})`;
+      taken.add(name);
+      return name;
+    });
     const rubricIds = await this.prisma.$transaction(async tx => {
       const ids: string[] = [];
-      for (const { d, label, criteria } of prepared) {
+      for (const [index, { d, label, criteria }] of prepared.entries()) {
         const rubric = await tx.attitudinalRubric.create({ data: {
-          institutionId, createdById: userId, name: `${title} — ${label}`.slice(0, 180),
+          institutionId, createdById: userId, name: names[index],
           type: d?.evaluatorType === 'PEER' ? 'PEER_ASSESSMENT' : 'SELF_ASSESSMENT', targetProcess: label,
           criteria: { create: criteria.map((c: any, order: number) => ({
             name: text(c.name, 160), description: text(c.description, 600) || null, weight: Number(c.weight), order,

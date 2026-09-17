@@ -219,3 +219,27 @@ describe('reparto de coevaluación', () => {
     expect(preview.students[0]).toEqual({ id: 'e1', name: 'e1 X' });
   });
 });
+
+describe('FormativeEvaluationService.createFromAiDraft', () => {
+  const criteria = [{ name: 'Escucha', weight: 100, levels: [{ label: 'Bajo', score: 1 }, { label: 'Alto', score: 5 }] }];
+
+  it('no choca con plantillas del mismo nombre (título repetido o etiquetas iguales)', async () => {
+    const created: string[] = [];
+    const tx = { attitudinalRubric: { create: jest.fn(async ({ data }: any) => { created.push(data.name); return { id: `r${created.length}` }; }) } };
+    const prisma: any = {
+      attitudinalRubric: { findMany: jest.fn().mockResolvedValue([{ name: 'Proyecto — Autoevaluación' }, { name: 'Proyecto — Coevaluación' }, { name: 'Proyecto — Coevaluación (2)' }]) },
+      $transaction: jest.fn((fn: any) => fn(tx)),
+    };
+    const svc: any = service(prisma);
+    jest.spyOn(svc, 'assertCanCreate').mockResolvedValue({});
+    const create = jest.spyOn(svc, 'create').mockResolvedValue({ id: 'fe' });
+    await svc.createFromAiDraft('inst', 'u', { title: 'Proyecto', dimensions: [
+      { label: 'Autoevaluación', evaluatorType: 'SELF', criteria },
+      { label: 'Coevaluación', evaluatorType: 'PEER', criteria },
+      { label: 'Coevaluación', evaluatorType: 'PEER', criteria },
+    ] });
+    expect(created).toEqual(['Proyecto — Autoevaluación (2)', 'Proyecto — Coevaluación (3)', 'Proyecto — Coevaluación (4)']);
+    expect(prisma.attitudinalRubric.findMany.mock.calls[0][0].where.institutionId).toBe('inst');
+    expect((create.mock.calls[0][2] as any).dimensions.map((d: any) => d.rubricId)).toEqual(['r1', 'r2', 'r3']);
+  });
+});
