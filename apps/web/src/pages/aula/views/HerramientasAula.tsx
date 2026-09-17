@@ -18,7 +18,7 @@ export default function HerramientasAula({ classroomId, herramienta, activityId,
   onVolver: () => void; onCambio: () => void;
   /** Llegó desde el botón «Pedirle a Valeria»: hay que abrirle el asistente, no solo la pantalla. */
   abrirValeria?: boolean;
-  /** Llegó desde «Ver el progreso»: abre el progreso y los puntajes de la sesión abierta. */
+  /** Llegó desde el aviso de la sesión: abre el progreso (docente) o el quiz (estudiante). */
   verProgreso?: boolean;
 }) {
   const { user } = useAuth()
@@ -45,7 +45,7 @@ export default function HerramientasAula({ classroomId, herramienta, activityId,
         <button type="button" onClick={onVolver} className="inline-flex min-h-btn items-center gap-2 rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary hover:bg-surface-2">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver
         </button>
-        <div><h1 className="text-xl font-semibold text-ink-primary">{titles[herramienta]}</h1>
+        <div><h1 className="text-xl font-semibold text-ink-primary">{herramienta === 'actividades' && rol !== 'docente' ? 'Actividades del aula' : titles[herramienta]}</h1>
           <p className="text-body-sm text-ink-secondary">{classroom?.title || 'Aula Virtual'}</p></div>
       </header>
       {error && classroom && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}<button type="button" className="ml-3 min-h-btn underline" onClick={() => setError('')}>Cerrar aviso</button></div>}

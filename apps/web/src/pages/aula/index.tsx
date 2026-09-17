@@ -309,9 +309,9 @@ export default function AulaVirtual() {
           <LiveSessionBanner
             session={session}
             role={rol}
-            // Abre la actividad exacta dentro del mismo shell; al docente, directo en el progreso
-            // (puntajes) de la sesión, que es lo que promete el botón.
-            onEntrar={() => abrirHerramienta('actividades', session.activityId, false, rol === 'docente')}
+            // Abre la sesión directamente: el docente ve el progreso (puntajes) y el estudiante entra
+            // a responder, que es lo que promete cada botón.
+            onEntrar={() => abrirHerramienta('actividades', session.activityId, false, true)}
           />
         ) : undefined
       }

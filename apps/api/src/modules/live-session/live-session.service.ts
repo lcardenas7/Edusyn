@@ -660,20 +660,34 @@ export class LiveSessionService implements OnModuleDestroy {
       questionOrder,
     };
 
-    const childSession = await this.prisma.liveSession.create({
-      data: {
-        classroomId: parentSession.classroomId,
-        teacherId: parentSession.teacherId,
-        activityId: parentSession.activityId,
-        mode: 'INDIVIDUAL',
-        status: 'WAITING',
-        currentQuestionIdx: -1,
-        deliveryMode: 'ASYNC_HOME',
-        parentSessionId,
-        studentEnrollmentId: enrollment.id,
-        config: childConfig,
-      },
+    // Dos entradas simultáneas (doble clic, dos pestañas) creaban dos sesiones para el mismo
+    // estudiante. El bloqueo serializa por estudiante y sesión: la segunda encuentra la primera.
+    const { childSession, created } = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${`live-home:${parentSessionId}:${enrollment.id}`}))`;
+      const found = await tx.liveSession.findFirst({
+        where: { parentSessionId, studentEnrollmentId: enrollment.id },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (found) return { childSession: found, created: false };
+      const child = await tx.liveSession.create({
+        data: {
+          classroomId: parentSession.classroomId,
+          teacherId: parentSession.teacherId,
+          activityId: parentSession.activityId,
+          mode: 'INDIVIDUAL',
+          status: 'WAITING',
+          currentQuestionIdx: -1,
+          deliveryMode: 'ASYNC_HOME',
+          parentSessionId,
+          studentEnrollmentId: enrollment.id,
+          config: childConfig,
+        },
+        select: { id: true },
+      });
+      return { childSession: child, created: true };
     });
+    if (!created) return this.getSession(childSession.id);
 
     await this.startSession(childSession.id, parentSession.teacherId);
     await this.nextQuestion(childSession.id, parentSession.teacherId);
@@ -1260,7 +1274,11 @@ export class LiveSessionService implements OnModuleDestroy {
     // Auto-generate grades depending on delivery mode
     if (session.deliveryMode === 'ASYNC_HOME' && session.parentSessionId) {
       await this.autoGradeAsyncHomeChildSession(sessionId, session.activityId, session.studentEnrollmentId || undefined);
-    } else if (session.deliveryMode !== 'ASYNC_HOME') {
+    } else if (session.deliveryMode === 'ASYNC_HOME') {
+      // El docente cerró el quiz en casa: quien no terminó ya no puede seguir y se califica con
+      // lo que alcanzó a responder. Antes sus sesiones quedaban abiertas y sin nota.
+      await this.finishAsyncHomeChildren(sessionId);
+    } else {
       // Auto-generate grades for ALL students
       await this.autoGradeFromLiveQuiz(sessionId, session.activityId);
     }
@@ -1277,6 +1295,35 @@ export class LiveSessionService implements OnModuleDestroy {
     setTimeout(() => this.cleanupStream(sessionId), 5000);
 
     return { session: updated, ranking };
+  }
+
+  /** Cierra las sesiones de los estudiantes de un quiz en casa y las califica. Si un estudiante
+   * quedó con dos sesiones (dos entradas simultáneas), se califica la que tiene más respuestas. */
+  private async finishAsyncHomeChildren(parentSessionId: string) {
+    const children = await this.prisma.liveSession.findMany({
+      where: { parentSessionId, status: { not: 'FINISHED' } },
+      select: { id: true, activityId: true, studentEnrollmentId: true, _count: { select: { answers: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const byStudent = new Map<string, typeof children>();
+    for (const child of children) {
+      if (!child.studentEnrollmentId) continue;
+      byStudent.set(child.studentEnrollmentId, [...(byStudent.get(child.studentEnrollmentId) ?? []), child]);
+    }
+    const now = new Date();
+    for (const [studentEnrollmentId, sessions] of byStudent) {
+      const best = [...sessions].sort((a, b) => b._count.answers - a._count.answers)[0];
+      await this.prisma.liveSession.updateMany({
+        where: { id: { in: sessions.map((s) => s.id) }, status: { not: 'FINISHED' } },
+        data: { status: 'FINISHED', finishedAt: now },
+      });
+      await this.autoGradeAsyncHomeChildSession(best.id, best.activityId, studentEnrollmentId);
+      for (const s of sessions) {
+        this.broadcast(s.id, { type: 'SESSION_ENDED', data: {} });
+        this.connectedStudents.delete(s.id);
+        setTimeout(() => this.cleanupStream(s.id), 5000);
+      }
+    }
   }
 
   private async autoGradeAsyncHomeChildSession(sessionId: string, activityId: string, studentEnrollmentId?: string) {
@@ -1629,7 +1676,7 @@ export class LiveSessionService implements OnModuleDestroy {
       }),
       this.prisma.liveSession.findMany({
         where: { parentSessionId },
-        select: { id: true, status: true },
+        select: { id: true, status: true, studentEnrollmentId: true, _count: { select: { answers: true } } },
       }),
       this.prisma.liveSession.findUnique({
         where: { id: parentSessionId },
@@ -1646,9 +1693,15 @@ export class LiveSessionService implements OnModuleDestroy {
       });
     }
 
-    const finishedCount = childSessions.filter((s) => s.status === 'FINISHED').length;
-    // Count students who have started (have at least one answer) — more meaningful than only FINISHED
-    const startedCount = childSessions.length;
+    // Por estudiante (no por sesión) y «terminó» = respondió todas las preguntas: al cerrar el
+    // docente, las sesiones a medias también quedan FINISHED y no deben contarse como completas.
+    const questionCount = await this.prisma.activityQuestion.count({ where: { activityId } });
+    const startedStudents = new Set(childSessions.map((s) => s.studentEnrollmentId).filter(Boolean));
+    const finishedStudents = new Set(childSessions
+      .filter((s) => s.status === 'FINISHED' && questionCount > 0 && s._count.answers >= questionCount)
+      .map((s) => s.studentEnrollmentId));
+    const finishedCount = finishedStudents.size;
+    const startedCount = startedStudents.size;
     const isSessionFinished = parentSession?.status === 'FINISHED';
 
     if (childSessions.length === 0) {

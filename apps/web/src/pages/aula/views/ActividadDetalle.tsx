@@ -39,6 +39,8 @@ const LessonPlayer = lazy(() => import('../../../components/LessonPlayer'))
 /** Tipos cuyo motor todavía vive dentro de Classroom.tsx. */
 const MOTOR_COMPARTIDO = new Set(['QUIZ', 'EXAM', 'LIVE_QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR', 'SELF_ASSESSMENT'])
 const ABRE_REPRODUCTOR = new Set(['LESSON', 'GAME'])
+/** Quizzes que el docente inicia como sesión (en vivo o en casa) desde el editor. */
+const JUEGO_EN_SESION = new Set(['LIVE_QUIZ', 'HOME_QUIZ'])
 
 export interface ActividadDetalleProps {
   actividad: ActivityLike
@@ -230,15 +232,16 @@ export function ActividadDetalle({
         {esDocente && MOTOR_COMPARTIDO.has(a.type) && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface-2 p-4">
             <p className="min-w-0 text-body-sm text-ink-secondary">
-              Las <strong className="text-ink-primary">preguntas</strong> de esta actividad se añaden
-              en el editor de actividades de esta misma aula.
+              {JUEGO_EN_SESION.has(a.type)
+                ? <>Las <strong className="text-ink-primary">preguntas</strong> y el botón para <strong className="text-ink-primary">iniciar el quiz</strong> están en el editor de actividades de esta aula.</>
+                : <>Las <strong className="text-ink-primary">preguntas</strong> de esta actividad se añaden en el editor de actividades de esta misma aula.</>}
             </p>
             <button
               type="button"
               onClick={onAbrirHerramientas}
               className="inline-flex min-h-btn shrink-0 items-center gap-1.5 rounded-lg border border-hairline bg-surface-1 px-3.5 text-body-sm font-medium text-ink-primary hover:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
             >
-              Añadir preguntas
+              {JUEGO_EN_SESION.has(a.type) ? 'Preguntas e inicio del quiz' : 'Añadir preguntas'}
             </button>
           </div>
         )}

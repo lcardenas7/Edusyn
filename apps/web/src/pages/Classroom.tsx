@@ -2978,10 +2978,12 @@ export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setEr
   }
   const openedLiveProgress = useRef(false)
   useEffect(() => {
-    if (!openLiveProgress || !isTeacher || openedLiveProgress.current || !activeLiveSession || activeLiveSession.activityId !== initialActivityId) return
+    if (!openLiveProgress || openedLiveProgress.current || !activeLiveSession || activeLiveSession.activityId !== initialActivityId) return
     openedLiveProgress.current = true
-    resumeLiveSession(activeLiveSession)
-  }, [openLiveProgress, isTeacher, activeLiveSession, initialActivityId])
+    // El docente ve el progreso; el estudiante entra directo a responder (antes: un clic de más).
+    if (isTeacher) resumeLiveSession(activeLiveSession)
+    else if (isStudent) setShowLiveQuiz(true)
+  }, [openLiveProgress, isTeacher, isStudent, activeLiveSession, initialActivityId])
 
   useEffect(() => {
     if (loading || !initialActivityId || openedInitialActivity.current === initialActivityId) return

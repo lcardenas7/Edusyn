@@ -181,7 +181,16 @@ const useAnimatedCounter = (value: number, duration = 500) => {
       }
     }
     
-    requestAnimationFrame(animate)
+    const frame = requestAnimationFrame(animate)
+    // Con la pestaña en segundo plano los cuadros no corren y el contador se quedaba en «+0 pts».
+    const settle = window.setTimeout(() => {
+      setDisplayValue(value)
+      prevValue.current = value
+    }, duration + 100)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.clearTimeout(settle)
+    }
   }, [value, duration])
 
   return displayValue
@@ -1144,6 +1153,38 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     }
   }
 
+  // Quiz en casa (docente): en la sala de espera se consulta cada tanto cuántos entraron y
+  // terminaron. Antes decía «Esperando estudiantes…» aunque ya estuvieran respondiendo.
+  const [asyncLobbyMeta, setAsyncLobbyMeta] = useState<{ startedCount: number; finishedCount: number; totalExpected: number } | null>(null)
+  useEffect(() => {
+    if (!isTeacher || phase !== 'lobby' || deliveryMode !== 'ASYNC_HOME' || !sessionId) return
+    let alive = true
+    const load = () => liveSessionApi.getAsyncRanking(sessionId)
+      .then(({ data }) => { if (alive && data?.meta) setAsyncLobbyMeta(data.meta) })
+      .catch(() => {})
+    load()
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') load() }, 15000)
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { alive = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
+  }, [isTeacher, phase, deliveryMode, sessionId])
+
+  // Quiz en casa (docente): ranking acumulado de todos los estudiantes.
+  const showAsyncHomeResults = async (nextPhase: 'ranking' | 'finished') => {
+    try {
+      const { data } = await liveSessionApi.getAsyncRanking(sessionId)
+      if (data?.ranking) {
+        setRanking(data.ranking)
+        setRankingMeta(data.meta || null)
+      } else if (Array.isArray(data)) {
+        setRanking(data)
+      }
+      setPhase(nextPhase)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cargar ranking')
+    }
+  }
+
   const handleFinish = async () => {
     try {
       await liveSessionApi.finish(sessionId)
@@ -1623,7 +1664,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           <button onClick={toggleMusic} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
             {musicOn ? <Volume2 className="w-5 h-5 text-[#4ECDC4]" /> : <VolumeX className="w-5 h-5 text-slate-400" />}
           </button>
-          <button onClick={() => { stopMusic(); onClose() }} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={() => { stopMusic(); onClose() }} aria-label="Cerrar" title="Cerrar" className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -2288,34 +2329,26 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     </p>
                     <div className="flex items-center justify-center gap-2 text-green-400 text-sm font-semibold">
                       <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      Esperando estudiantes...
+                      {asyncLobbyMeta && asyncLobbyMeta.startedCount > 0
+                        ? `${asyncLobbyMeta.startedCount} de ${asyncLobbyMeta.totalExpected} estudiantes han entrado · ${asyncLobbyMeta.finishedCount} ${asyncLobbyMeta.finishedCount === 1 ? 'terminó' : 'terminaron'}`
+                        : 'Esperando estudiantes...'}
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
-                      onClick={async () => {
-                        try {
-                          const { data } = await liveSessionApi.getAsyncRanking(sessionId)
-                          if (data?.ranking) {
-                            setRanking(data.ranking)
-                            setRankingMeta(data.meta || null)
-                          } else if (Array.isArray(data)) {
-                            setRanking(data)
-                          }
-                          setPhase('ranking')
-                        } catch (err: any) {
-                          setError(err.response?.data?.message || 'Error al cargar ranking')
-                        }
-                      }}
+                      onClick={() => void showAsyncHomeResults('ranking')}
                       className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg flex items-center gap-2 justify-center"
                     >
                       <Trophy className="w-5 h-5" /> Ver resultados parciales
                     </button>
                     <button
                       onClick={async () => {
-                        if (!(await confirmDialog('¿Finalizar el quiz? Los estudiantes que no hayan terminado no podrán continuar.', { danger: true }))) return
+                        if (!(await confirmDialog('Los estudiantes que no hayan terminado no podrán continuar y se calificarán con lo que alcanzaron a responder.', { title: '¿Finalizar el quiz en casa?', confirmLabel: 'Finalizar', danger: true }))) return
                         try {
                           await liveSessionApi.finish(sessionId)
+                          // La pantalla ignora los avisos de las sesiones de cada estudiante, así que
+                          // el cierre propio se refleja aquí: resultados finales en vez de «activo».
+                          await showAsyncHomeResults('finished')
                         } catch (err: any) {
                           toast.error('Error: ' + (err.response?.data?.message || err.message))
                         }
@@ -3297,7 +3330,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               <p className="text-white/80 text-sm font-semibold">
                 {rankingMeta.completedCount} de {rankingMeta.totalExpected} estudiantes han respondido
                 {(rankingMeta as any).finishedCount > 0 && (
-                  <span className="ml-1">({(rankingMeta as any).finishedCount} completaron todo)</span>
+                  <span className="ml-1">({(rankingMeta as any).finishedCount} {(rankingMeta as any).finishedCount === 1 ? 'completó' : 'completaron'} todo)</span>
                 )}
                 {rankingMeta.isPartial && <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">En curso</span>}
               </p>
