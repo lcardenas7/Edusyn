@@ -98,6 +98,18 @@ export class FormativeEvaluationController {
     return this.service.dashboard(id, institutionId, req.user.id);
   }
 
+  @Get(':id/insights') @Roles('DOCENTE', 'COORDINADOR')
+  async insights(@Param('id') id: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.insights(id, institutionId, req.user.id);
+  }
+
+  @Patch('assignments/:id/comment') @Roles('DOCENTE', 'COORDINADOR')
+  async reviewComment(@Param('id') id: string, @Request() req: any, @Body() body: { status?: string }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.reviewComment(id, institutionId, req.user.id, body?.status);
+  }
+
   @Get(':id/sync-preview') @Roles('DOCENTE', 'COORDINADOR')
   async syncPreview(@Param('id') id: string, @Request() req: any) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);

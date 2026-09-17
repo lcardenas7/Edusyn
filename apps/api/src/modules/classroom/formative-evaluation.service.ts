@@ -127,6 +127,96 @@ export function scoreAnswers(criteria: any[], answers: unknown): number {
   return Math.round(score * 100) / 100;
 }
 
+type InsightAssignment = {
+  id: string; dimensionId: string; evaluatorEnrollmentId: string | null; targetEnrollmentId: string; status: string;
+  answers: unknown; calculatedScore: unknown; qualitativeComments: unknown; commentStatus: string;
+};
+type CriterionStat = { average: number | null; responses: number; levels: Record<string, number> };
+
+const avg = (values: number[]) => (values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100 : null);
+
+/**
+ * Lo que el docente necesita ver ANTES de enviar nada a la planilla: quién respondió, qué contestó
+ * cada estudiante en cada pregunta, cómo se ve él frente a cómo lo ven sus compañeros y cómo le fue
+ * al grupo por pregunta. Los puntajes antes de consolidar son provisionales (solo lo enviado).
+ */
+export function buildFormativeInsights(input: {
+  dimensions: Array<{ id: string; label: string; evaluatorType: string; rubricSnapshot: any }>;
+  students: Array<{ id: string; name: string }>;
+  assignments: InsightAssignment[];
+  results: Array<{ dimensionId: string; studentEnrollmentId: string; quantitativeScore: unknown; isReady: boolean }>;
+}) {
+  const names = new Map(input.students.map(s => [s.id, s.name]));
+  const dimensions = input.dimensions.map(d => ({
+    id: d.id, label: d.label, evaluatorType: d.evaluatorType,
+    criteria: ((d.rubricSnapshot as any)?.criteria || []).map((c: any) => ({
+      id: c.id, name: c.name, description: c.description ?? null, weight: Number(c.weight),
+      levels: (c.levels || []).map((l: any) => ({ id: l.id, label: l.label, score: Number(l.score) })),
+    })),
+  }));
+  const levelScore = new Map<string, number>();
+  for (const d of dimensions) for (const c of d.criteria) for (const l of c.levels) levelScore.set(`${c.id}:${l.id}`, l.score);
+
+  const statsFor = (rows: InsightAssignment[], dimension: (typeof dimensions)[number]) => {
+    const byCriterion: Record<string, CriterionStat> = {};
+    for (const c of dimension.criteria) {
+      const levels: Record<string, number> = {};
+      const scores: number[] = [];
+      for (const row of rows) {
+        const answer = (Array.isArray(row.answers) ? row.answers : []).find((a: any) => a?.criterionId === c.id) as any;
+        const score = answer ? levelScore.get(`${c.id}:${answer.levelId}`) : undefined;
+        if (score === undefined) continue;
+        levels[answer.levelId] = (levels[answer.levelId] || 0) + 1;
+        scores.push(score);
+      }
+      byCriterion[c.id] = { average: avg(scores), responses: scores.length, levels };
+    }
+    return byCriterion;
+  };
+
+  const submitted = (a: InsightAssignment) => a.status === 'SUBMITTED';
+  const students = input.students.map(student => {
+    const perDimension: Record<string, unknown> = {};
+    for (const d of dimensions) {
+      const rows = input.assignments.filter(a => a.dimensionId === d.id && a.targetEnrollmentId === student.id && a.status !== 'EXEMPTED');
+      const done = rows.filter(submitted);
+      const result = input.results.find(r => r.dimensionId === d.id && r.studentEnrollmentId === student.id);
+      perDimension[d.id] = {
+        expected: rows.length, received: done.length,
+        provisionalScore: avg(done.map(a => Number(a.calculatedScore)).filter(Number.isFinite)),
+        consolidatedScore: result?.isReady && result.quantitativeScore != null ? Number(result.quantitativeScore) : null,
+        consolidated: !!result,
+        byCriterion: statsFor(done, d),
+      };
+    }
+    const given = input.assignments.filter(a => a.evaluatorEnrollmentId === student.id && a.targetEnrollmentId !== student.id && a.status !== 'EXEMPTED');
+    const comments = input.assignments
+      .filter(a => a.targetEnrollmentId === student.id && submitted(a))
+      .flatMap(a => (Array.isArray(a.qualitativeComments) ? a.qualitativeComments : []).map((c: any) => ({
+        assignmentId: a.id, dimensionId: a.dimensionId,
+        fromSelf: a.evaluatorEnrollmentId === student.id,
+        author: a.evaluatorEnrollmentId ? names.get(a.evaluatorEnrollmentId) ?? 'Estudiante' : 'Estudiante',
+        prompt: c?.prompt ?? null, text: c?.text ?? '', status: a.commentStatus,
+      })))
+      .filter(c => c.text);
+    return {
+      id: student.id, name: student.name, perDimension,
+      peerTasks: { assigned: given.length, submitted: given.filter(submitted).length },
+      comments,
+    };
+  });
+
+  const byDimension = dimensions.map(d => {
+    const rows = input.assignments.filter(a => a.dimensionId === d.id && submitted(a));
+    return { dimensionId: d.id, byCriterion: statsFor(rows, d) };
+  });
+  const active = input.assignments.filter(a => a.status !== 'EXEMPTED');
+  return {
+    dimensions, students, byDimension,
+    totals: { assignments: active.length, submitted: active.filter(submitted).length },
+  };
+}
+
 @Injectable()
 export class FormativeEvaluationService {
   constructor(private readonly prisma: PrismaService, private readonly partialGrades: PartialGradesService, private readonly apdAi: ApdAiService) {}
@@ -584,6 +674,45 @@ export class FormativeEvaluationService {
     await this.prisma.formativeGradeSync.update({ where: { id: sync.id }, data: { status, completedAt: new Date(), errorSummary: errors.join('\n') || null } });
     if (!errors.length) await this.prisma.formativeEvaluationActivity.update({ where: { id }, data: { status: 'SYNCED' } });
     return this.prisma.formativeGradeSync.findUnique({ where: { id: sync.id }, include: { items: true } });
+  }
+
+  /** Panel de análisis del docente: avance, respuestas por pregunta, comparación y comentarios. */
+  async insights(id: string, institutionId: string, userId: string) {
+    const activity = await this.activityForTeacher(id, institutionId, userId);
+    const [group, assignments, results] = await Promise.all([
+      this.groupStudents(activity, institutionId),
+      this.prisma.formativeEvaluationAssignment.findMany({
+        where: { activityId: id },
+        select: { id: true, dimensionId: true, evaluatorEnrollmentId: true, targetEnrollmentId: true, status: true, answers: true, calculatedScore: true, qualitativeComments: true, commentStatus: true },
+      }),
+      this.prisma.formativeEvaluationResult.findMany({
+        where: { activityId: id, consolidationVersion: 1 },
+        select: { dimensionId: true, studentEnrollmentId: true, quantitativeScore: true, isReady: true },
+      }),
+    ]);
+    // Quien fue evaluado pero ya no está activo en el grupo (retiro) también aparece.
+    const known = new Set(group.map(s => s.id));
+    const missing = [...new Set(assignments.flatMap(a => [a.targetEnrollmentId, a.evaluatorEnrollmentId]).filter((x): x is string => !!x && !known.has(x)))];
+    const extra = missing.length ? await this.prisma.studentEnrollment.findMany({
+      where: { id: { in: missing }, institutionId },
+      select: { id: true, student: { select: { firstName: true, lastName: true } } },
+    }) : [];
+    const students = [...group, ...extra].map(s => ({ id: s.id, name: `${s.student.firstName} ${s.student.lastName}`.trim() }));
+    return {
+      id: activity.id, title: activity.title, status: activity.status,
+      ...buildFormativeInsights({ dimensions: activity.dimensions, students, assignments, results }),
+    };
+  }
+
+  /** El docente decide si un comentario entre pares se puede mostrar (queda registrado quién lo escribió). */
+  async reviewComment(assignmentId: string, institutionId: string, userId: string, status: unknown) {
+    if (status !== 'APPROVED' && status !== 'REJECTED') throw new BadRequestException('Decisión no válida');
+    const assignment = await this.prisma.formativeEvaluationAssignment.findFirst({
+      where: { id: assignmentId, activity: { institutionId, teacherAssignment: { teacherId: userId } } },
+      select: { id: true },
+    });
+    if (!assignment) throw new ForbiddenException('Comentario no encontrado o sin permisos');
+    return this.prisma.formativeEvaluationAssignment.update({ where: { id: assignmentId }, data: { commentStatus: status }, select: { id: true, commentStatus: true } });
   }
 
   async dashboard(id: string, institutionId: string, userId: string) {
