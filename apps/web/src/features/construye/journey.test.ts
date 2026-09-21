@@ -64,6 +64,15 @@ describe('prompt inicial', () => {
     expect(initialPrompt(complete)).not.toContain('8.º')
   })
 
+  it('pide una página web o una app de celular según lo que eligió el docente', () => {
+    expect(initialPrompt(complete)).toContain('una página web')
+    const app = initialPrompt(complete, 'APP')
+    expect(app).toContain('una aplicación para celular')
+    expect(app).toContain('menú inferior')
+    expect(app).toContain('localStorage')
+    expect(app).toContain('index.html, styles.css y app.js')
+  })
+
   it('omite las decisiones opcionales vacías en vez de dejar un marcador', () => {
     const prompt = initialPrompt({ ...complete, whyItMatters: '', screens: '', later: '' })
     expect(prompt).not.toContain('Por qué importa')

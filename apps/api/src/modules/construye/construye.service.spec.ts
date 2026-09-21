@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { buildGate, ConstruyeService, teamSignal, validateSessionNote, validateStaticManifest, validateTeamBrief, validateVersionEvidence } from './construye.service';
+import { buildGate, ConstruyeService, projectKind, teamSignal, validateSessionNote, validateStaticManifest, validateTeamBrief, validateVersionEvidence } from './construye.service';
 
 const EMPTY_JOURNEY = { affected: '', whyItMatters: '', solution: '', screens: '', later: '', successCheck: '', sharePitch: '', reflection: '' };
 
@@ -246,5 +246,50 @@ describe('teamSignal', () => {
 
   it('marca en verde a un equipo activo sin alertas', () => {
     expect(teamSignal([{ type: 'BRIEF_UPDATED', createdAt: at('2026-09-20T10:00:00Z') }], now)).toEqual({ level: 'green', reason: 'Avanza' });
+  });
+});
+
+describe('ConstruyeService · tipo de proyecto y borrador del código', () => {
+  const manifest = { files: [{ path: 'index.html', content: '<h1>Hola</h1>' }] };
+  const member = { studentEnrollmentId: 'enrollment-1', studentEnrollment: { id: 'enrollment-1', studentId: 'student-1' } };
+  const base = () => ({
+    construyeTeam: { findFirst: jest.fn().mockResolvedValue({ id: 'team-1', projectId: 'project-1' }), updateMany: jest.fn() },
+    construyeTeamMember: { findFirst: jest.fn().mockResolvedValue(member) },
+    studentEnrollment: { findFirst: jest.fn().mockResolvedValue({ student: { firstName: 'Ana' } }) },
+  });
+
+  it('solo acepta página web o aplicación', () => {
+    expect(projectKind('APP')).toBe('APP');
+    expect(projectKind('WEB')).toBe('WEB');
+    expect(projectKind('JUEGO')).toBe('WEB');
+    expect(projectKind(undefined)).toBe('WEB');
+  });
+
+  it('guarda el borrador si nadie guardó otro desde la revisión que se tenía', async () => {
+    const prisma: any = base();
+    prisma.construyeTeam.updateMany.mockResolvedValue({ count: 1 });
+    const out = await new ConstruyeService(prisma).saveCodeDraft('team-1', 'institution-1', 'user-1', { manifest, baseRevision: 3 });
+    expect(out.revision).toBe(4);
+    expect(prisma.construyeTeam.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'team-1', institutionId: 'institution-1', codeDraftRevision: 3 },
+      data: expect.objectContaining({ codeDraft: manifest, codeDraftRevision: { increment: 1 }, codeDraftEnrollmentId: 'enrollment-1' }),
+    }));
+  });
+
+  it('si otro integrante guardó antes, no pisa su trabajo y devuelve el borrador actual', async () => {
+    const prisma: any = base();
+    prisma.construyeTeam.updateMany.mockResolvedValue({ count: 0 });
+    prisma.construyeTeam.findFirst
+      .mockResolvedValueOnce({ id: 'team-1', projectId: 'project-1' })
+      .mockResolvedValueOnce({ codeDraft: manifest, codeDraftRevision: 5, codeDraftUpdatedAt: new Date(), codeDraftEnrollmentId: 'enrollment-2' });
+    const err: any = await new ConstruyeService(prisma).saveCodeDraft('team-1', 'institution-1', 'user-1', { manifest, baseRevision: 3 }).catch(e => e);
+    expect(err.getStatus()).toBe(409);
+    expect(err.getResponse()).toMatchObject({ draft: { revision: 5, by: 'Ana', manifest } });
+  });
+
+  it('rechaza borradores con archivos no permitidos', async () => {
+    const prisma: any = base();
+    await expect(new ConstruyeService(prisma).saveCodeDraft('team-1', 'institution-1', 'user-1', { manifest: { files: [{ path: 'evil.php', content: 'x' }] }, baseRevision: 0 })).rejects.toThrow(BadRequestException);
+    expect(prisma.construyeTeam.updateMany).not.toHaveBeenCalled();
   });
 });

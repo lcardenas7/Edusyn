@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { manifestToProject, oversizedFiles, projectToManifest } from './manifest'
+import { APP_STARTER, downloadFileName, manifestToProject, oversizedFiles, projectToManifest, projectToStandaloneHtml } from './manifest'
 import type { PreviewProject } from './protocol'
 
 const project: PreviewProject = { html: '<main>ok</main>', css: 'main{color:teal}', js: 'console.log(1)' }
@@ -33,5 +33,36 @@ describe('oversizedFiles', () => {
     const huge = 'x'.repeat(300_000)
     expect(oversizedFiles({ ...project, js: huge })).toEqual(['app.js'])
     expect(oversizedFiles({ html: huge, css: huge, js: huge })).toEqual(['index.html', 'styles.css', 'app.js'])
+  })
+})
+
+
+describe('descarga del proyecto como un solo archivo', () => {
+  it('mete los tres archivos en un html que se abre solo', () => {
+    const html = projectToStandaloneHtml({ html: '<h1>Hola</h1>', css: 'h1{color:red}', js: 'console.log(1)' }, 'Mi app')
+    expect(html).toMatch(/^<!doctype html>/)
+    expect(html).toContain('<meta name="viewport"')
+    expect(html).toContain('<title>Mi app</title>')
+    expect(html).toContain('h1{color:red}')
+    expect(html).toContain('<h1>Hola</h1>')
+    expect(html).toContain('console.log(1)')
+  })
+
+  it('no deja que el código cierre antes de tiempo su etiqueta ni que el título inyecte marcado', () => {
+    const html = projectToStandaloneHtml({ html: '', css: 'a{} </style><b>', js: 'const s = "</script>"' }, '<b>x</b>')
+    expect(html).toContain('<\/style><b>')
+    expect(html).toContain('"<\/script>"')
+    expect(html).toContain('<title>&lt;b&gt;x&lt;/b&gt;</title>')
+  })
+
+  it('nombra el archivo a partir del título', () => {
+    expect(downloadFileName('App de Reciclaje ♻ 2026')).toBe('app-de-reciclaje-2026.html')
+    expect(downloadFileName('Canción')).toBe('cancion.html')
+    expect(downloadFileName('  ')).toBe('mi-proyecto.html')
+  })
+
+  it('la plantilla de app trae pantallas con menú inferior y un dato que se recuerda', () => {
+    expect(APP_STARTER.html).toContain('class="menu"')
+    expect(APP_STARTER.js).toContain('localStorage')
   })
 })

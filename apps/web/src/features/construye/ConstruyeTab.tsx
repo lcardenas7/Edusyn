@@ -1,4 +1,4 @@
-import { AlertTriangle, BrainCircuit, Code2, Loader2, Lock, Plus, Smartphone, Unlock, Users2 } from 'lucide-react'
+import { AlertTriangle, BrainCircuit, Code2, Globe, Loader2, Lock, Plus, Smartphone, Unlock, Users2 } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { toast } from '../../lib/toast'
 import { promptDialog } from '../../components/ui/confirm'
@@ -8,6 +8,7 @@ import {
   type ConstruyeDashboardTeam,
   type ConstruyeMemberRole,
   type ConstruyeProject,
+  type ConstruyeProjectKind,
 } from '../../lib/api/construye'
 import { manifestToProject } from './manifest'
 import PreviewFrame from './PreviewFrame'
@@ -43,9 +44,30 @@ function Empty({ msg }: { msg: string }) {
   return <div className="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">{msg}</div>
 }
 
+const KIND_OPTIONS: { kind: ConstruyeProjectKind; label: string; hint: string; Icon: typeof Globe }[] = [
+  { kind: 'WEB', label: 'Página web', hint: 'Se ve en el computador: secciones, información, formularios.', Icon: Globe },
+  { kind: 'APP', label: 'Aplicación para celular', hint: 'Pantallas con menú inferior y botones grandes; se prueba en vista de celular.', Icon: Smartphone },
+]
+
+/** El docente decide qué construyen los equipos; define la plantilla y la vista del estudiante. */
+function KindPicker({ value, onChange, disabled }: { value: ConstruyeProjectKind; onChange: (kind: ConstruyeProjectKind) => void; disabled?: boolean }) {
+  return <div role="radiogroup" aria-label="Qué van a construir" className="grid gap-2 sm:grid-cols-2">
+    {KIND_OPTIONS.map(({ kind, label, hint, Icon }) => {
+      const active = value === kind
+      return <button key={kind} type="button" role="radio" aria-checked={active} disabled={disabled} onClick={() => onChange(kind)}
+        className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:opacity-60 ${active ? 'border-indigo-500 bg-white ring-2 ring-indigo-200' : 'border-slate-200 bg-white/70 hover:border-indigo-300'}`}>
+        <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
+        <span><span className="block text-sm font-semibold text-slate-800">{label}</span><span className="block text-xs leading-4 text-slate-500">{hint}</span></span>
+      </button>
+    })}
+  </div>
+}
+
+const kindOf = (project?: ConstruyeProject) => project?.kind === 'APP' ? 'APP' : 'WEB'
+
 function ProjectPicker({ projects, value, onChange }: { projects: ConstruyeProject[]; value: string; onChange: (id: string) => void }) {
   return <select value={value} onChange={(event) => onChange(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-    {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+    {projects.map((project) => <option key={project.id} value={project.id}>{project.title} · {kindOf(project) === 'APP' ? 'aplicación' : 'página web'}</option>)}
   </select>
 }
 
@@ -98,6 +120,20 @@ function TeacherView({ classroomId, projects, reload }: { classroomId: string; p
   }, [classroomId])
 
   const selectedProject = projects.find((project) => project.id === projectId)
+  const [changingKind, setChangingKind] = useState(false)
+  const changeKind = async (kind: ConstruyeProjectKind) => {
+    if (!selectedProject || kindOf(selectedProject) === kind) return
+    setChangingKind(true)
+    try {
+      await construyeApi.updateProject(selectedProject.id, { kind })
+      toast.success('Tipo de proyecto actualizado', 'El código que ya tengan los equipos no cambia.')
+      reload()
+    } catch (error) {
+      toast.error(error)
+    } finally {
+      setChangingKind(false)
+    }
+  }
   const linkedActivity = selectedProject?.classroomActivityId
     ? activities.find((activity) => activity.id === selectedProject.classroomActivityId)
     : undefined
@@ -112,6 +148,10 @@ function TeacherView({ classroomId, projects, reload }: { classroomId: string; p
       ? <Empty msg="Todavía no has creado un proyecto de Edusyn Crea en esta aula." />
       : <>
         {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+        {selectedProject && <details className="rounded-xl border border-hairline bg-surface-1 px-3 py-2">
+          <summary className="cursor-pointer text-xs font-semibold text-slate-600">Qué construyen: <span className="text-indigo-700">{kindOf(selectedProject) === 'APP' ? 'Aplicación para celular' : 'Página web'}</span> <span className="font-normal text-slate-400">(cambiar)</span></summary>
+          <div className="mt-2"><KindPicker value={kindOf(selectedProject)} onChange={changeKind} disabled={changingKind} /></div>
+        </details>}
         {linkedActivity && <p className="text-xs text-slate-500">Vinculado a la actividad del aula: <span className="font-semibold text-slate-700">{linkedActivity.title}</span></p>}
         {projectId && <ProjectDashboard key={projectId} classroomId={classroomId} projectId={projectId} />}
       </>}
@@ -123,6 +163,7 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
   const [instructions, setInstructions] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [classroomActivityId, setClassroomActivityId] = useState('')
+  const [kind, setKind] = useState<ConstruyeProjectKind>('WEB')
   const [saving, setSaving] = useState(false)
 
   const submit = async () => {
@@ -130,7 +171,7 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
     setSaving(true)
     try {
       const { data } = await construyeApi.createProject({
-        classroomId, title: title.trim(), instructions: instructions.trim() || undefined,
+        classroomId, title: title.trim(), kind, instructions: instructions.trim() || undefined,
         dueDate: dueDate || undefined, classroomActivityId: classroomActivityId || undefined,
       })
       toast.success('Proyecto creado')
@@ -143,6 +184,8 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
   }
 
   return <div className="space-y-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
+    <p className="text-xs font-semibold text-slate-700">¿Qué van a construir?</p>
+    <KindPicker value={kind} onChange={setKind} />
     <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Título del proyecto (ej.: App para separar residuos)" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
     <textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} placeholder="Instrucciones para los equipos (opcional)" className="min-h-20 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
     <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />

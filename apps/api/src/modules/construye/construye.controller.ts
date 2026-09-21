@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -17,6 +17,12 @@ export class ConstruyeController {
   async createProject(@Request() req: any, @Body() body: any) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.service.createProject(institutionId, req.user.id, body);
+  }
+
+  @Patch('projects/:projectId') @Roles('DOCENTE', 'COORDINADOR')
+  async updateProject(@Param('projectId') projectId: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.updateProject(projectId, institutionId, req.user.id, body);
   }
 
   @Get('classrooms/:classroomId/projects') @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
@@ -48,6 +54,12 @@ export class ConstruyeController {
   async updateBrief(@Param('teamId') teamId: string, @Request() req: any, @Body() body: any) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.service.updateBrief(teamId, institutionId, req.user.id, body);
+  }
+
+  @Put('teams/:teamId/code-draft') @Roles('ESTUDIANTE')
+  async codeDraft(@Param('teamId') teamId: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.service.saveCodeDraft(teamId, institutionId, req.user.id, body);
   }
 
   @Post('teams/:teamId/versions') @Roles('ESTUDIANTE')

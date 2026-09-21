@@ -8,7 +8,8 @@ import CodeWorkspace from './CodeWorkspace'
 import DocumentStep, { ShareStep } from './DocumentStep'
 import PromptStep from './PromptStep'
 import { documentationProgress, evidenceByVersion, initialStudioMode, nextDocumentPhase, normalizeBrief, type ChangeRequest, type StudioMode, type VersionEvidenceInput } from './journey'
-import { manifestToProject, oversizedFiles, projectToManifest } from './manifest'
+import { APP_STARTER, manifestToProject, oversizedFiles, projectToManifest } from './manifest'
+import type { CodeDraftSync } from './useCodeAutosave'
 import type { PreviewProject } from './protocol'
 import type { SavedVersionSummary } from './VersionEvidence'
 import { useAutosave, type AutosaveStatus } from './useAutosave'
@@ -145,7 +146,36 @@ function CreaStudio({ projectId, team, setTeam }: {
   )
 
   const latest = team.versions[0]
-  const initialProject = useMemo(() => (latest ? manifestToProject(latest.manifest) : undefined), [latest?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const kind = team.project?.kind === 'APP' ? 'APP' : 'WEB'
+  // El taller abre lo más reciente del equipo: el borrador guardado solo si es posterior a la
+  // última versión (si no, la versión). Se calcula una vez: el taller lo lee solo al montarse.
+  const [opening] = useState(() => {
+    const versionProject = latest ? manifestToProject(latest.manifest) : undefined
+    const draft = team.team.codeDraft
+    const draftAt = team.team.codeDraftUpdatedAt
+    const draftIsNewer = !!draft && !!draftAt && (!latest || new Date(draftAt).getTime() > new Date(latest.createdAt).getTime())
+    const draftProject = draftIsNewer ? manifestToProject(draft) : undefined
+    const differs = !!draftProject && (!versionProject || draftProject.html !== versionProject.html || draftProject.css !== versionProject.css || draftProject.js !== versionProject.js)
+    return {
+      project: differs ? draftProject : versionProject,
+      versionProject,
+      recoveredAt: differs ? draftAt : null,
+    }
+  })
+  const draftSync = useMemo<CodeDraftSync>(() => ({
+    revision: team.team.codeDraftRevision ?? 0,
+    save: async (project, baseRevision) => {
+      try {
+        const { data } = await construyeApi.saveCodeDraft(team.team.id, { manifest: projectToManifest(project), baseRevision })
+        return { ok: true, revision: data.revision, updatedAt: data.updatedAt }
+      } catch (error) {
+        const response = (error as { response?: { status?: number; data?: { draft?: { manifest?: unknown; revision?: number; updatedAt?: string | null; by?: string | null } } } })?.response
+        const theirs = response?.status === 409 ? response.data?.draft : undefined
+        if (!theirs || !theirs.manifest) throw error
+        return { ok: false, conflict: { project: manifestToProject(theirs.manifest as Parameters<typeof manifestToProject>[0]), revision: theirs.revision ?? 0, updatedAt: theirs.updatedAt ?? null, by: theirs.by ?? null } }
+      }
+    },
+  }), []) // eslint-disable-line react-hooks/exhaustive-deps
   const progress = documentationProgress(brief)
   const hasGoalToday = team.journal.some(entry => entry.type === 'SESSION_NOTE' && (entry.detail as ConstruyeSessionNote | undefined)?.kind === 'GOAL' && isoToBogotaDateInput(entry.createdAt) === todayBogotaInput())
 
@@ -187,13 +217,20 @@ function CreaStudio({ projectId, team, setTeam }: {
       {mode === 'document' && <DocumentStep brief={brief} onChange={setField} initialPhase={nextDocumentPhase(brief)} onContinue={() => { void autosave.flush(); setMode('prompt') }} />}
       {mode === 'prompt' && <PromptStep
         brief={brief}
+        kind={kind}
         onBack={() => setMode('document')}
         onGoCode={() => setMode('code')}
         onSkip={() => { writeFlag(skipKey(projectId)); setMode('code') }}
         onCopied={() => logJournal('PROMPT_COPIED', 'El equipo copió su petición inicial para la IA externa.', { kind: 'INITIAL' })}
       />}
       {codeMounted && <div className={mode === 'code' ? '' : 'hidden'}><CodeWorkspace
-        initialProject={initialProject}
+        initialProject={opening.project}
+        lastVersionProject={opening.versionProject}
+        recoveredDraftAt={opening.recoveredAt}
+        starter={kind === 'APP' ? APP_STARTER : undefined}
+        defaultViewport={kind === 'APP' ? 'mobile' : 'desktop'}
+        draftSync={draftSync}
+        projectTitle={team.project?.title || team.team.name}
         onSaveVersion={saveVersion}
         versions={versions}
         brief={brief}
