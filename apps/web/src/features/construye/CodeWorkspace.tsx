@@ -1,4 +1,4 @@
-import { BookOpen, Check, ChevronDown, ChevronRight, Cloud, Code2, Crosshair, Eye, FileCode2, FlaskConical, Layers3, Lock, Maximize2, Minimize2, Monitor, MousePointer2, RotateCcw, Smartphone, Sparkles, Wand2 } from 'lucide-react'
+import { BookOpen, Cloud, Code2, Crosshair, Expand, Eye, History, Lock, Maximize2, Minimize2, Monitor, MousePointer2, Play, RotateCcw, Smartphone, Wand2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { createTextareaEditorAdapter } from './editorAdapter'
@@ -26,7 +26,7 @@ const FILES: { key: FileKey; label: string; learningLabel: string; description: 
   { key: 'css', label: 'styles.css', learningLabel: 'Diseño', description: 'Colores, tamaños y espacios', activeClass: 'border-sky-300 bg-sky-50 text-sky-950', dotClass: 'bg-sky-500', accentClass: 'text-sky-300' },
   { key: 'js', label: 'app.js', learningLabel: 'Acciones', description: 'Lo que ocurre al interactuar', activeClass: 'border-violet-300 bg-violet-50 text-violet-950', dotClass: 'bg-violet-500', accentClass: 'text-violet-300' },
 ]
-const editorClassBase = 'crea-code-editor w-full resize-y bg-[#111827] px-5 py-5 font-mono text-[13px] leading-6 text-slate-100 outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400'
+const editorClassBase = 'crea-code-editor w-full bg-[#111827] px-5 py-4 font-mono text-[13px] leading-6 text-slate-100 outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400'
 
 export interface CodeWorkspaceProps {
   /** Código de partida (p. ej. la última versión guardada). Se lee solo al montar. */
@@ -58,13 +58,9 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
   const [savePanelOpen, setSavePanelOpen] = useState(false)
   const [changePanelOpen, setChangePanelOpen] = useState(false)
   const [previewFocused, setPreviewFocused] = useState(false)
-  // Los paneles de petición y de guardado se abren arriba del editor; en celular el botón queda
-  // mucho más abajo, así que se lleva la vista hasta el panel para que se note que apareció.
-  const panelsRef = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (changePanelOpen || savePanelOpen) panelsRef.current?.scrollIntoView({ block: 'start' })
-  }, [changePanelOpen, savePanelOpen])
-  const [guideOpen, setGuideOpen] = useState(true)
+  const [guideOpen, setGuideOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [mobilePane, setMobilePane] = useState<'preview' | 'code'>('code')
   const [expanded, setExpanded] = useState(false)
   const [exploreMode, setExploreMode] = useState(false)
   const [viewport, setViewport] = useState<ViewportKey>('desktop')
@@ -92,7 +88,6 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
   const gate = brief ? localGate(brief, versions.length, buildGate?.unlockedByTeacher ?? false) : null
   const blockedBy = gate && !gate.canSaveFirstVersion ? gate.missing.map(field => GATE_MISSING_LABEL[field]) : []
   const guide = FILE_GUIDES[selected]
-  const editorClass = `${editorClassBase} ${expanded ? 'min-h-[60vh]' : 'min-h-[360px]'}`
   const activeFile = FILES.find(file => file.key === selected) ?? FILES[0]
 
   // "Explorar" (Preview → Código): las posiciones que reporta el runner corresponden al
@@ -292,6 +287,14 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
     return () => { window.removeEventListener('keydown', onKeyDown); document.body.style.overflow = previousOverflow }
   }, [expanded])
 
+  // Lo que no está guardado como versión solo vive en esta pantalla: se avisa antes de cerrarla.
+  useEffect(() => {
+    if (!connected || !unsaved) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [connected, unsaved])
+
   const save = async (evidence: VersionEvidenceInput) => {
     if (!onSaveVersion) return
     setSaving(true)
@@ -309,133 +312,121 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
     }
   }
 
-  return <section className={expanded
-    ? 'crea-studio fixed inset-0 z-50 overflow-auto p-3 sm:p-6'
-    : 'crea-studio mt-6 overflow-hidden rounded-[28px] border border-slate-200 shadow-xl shadow-slate-900/10'}>
-    <div className={expanded ? 'mx-auto max-w-[1680px] overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-2xl' : ''}>
-      <header className="border-b border-white/10 bg-[#12202f] px-4 py-4 text-white sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 to-emerald-300 text-slate-950 shadow-lg shadow-cyan-950/30"><FlaskConical className="h-5 w-5" /></span>
-            <div>
-              <div className="flex items-center gap-2"><p className="text-[11px] font-bold uppercase tracking-[.2em] text-cyan-200">Edusyn Crea</p><span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-300">Laboratorio visual</span></div>
-              <h2 className="mt-0.5 text-lg font-bold tracking-tight">Construyan, comprendan y prueben</h2>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {!connected && <button type="button" onClick={() => setDraft(SAMPLE)} className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10"><RotateCcw className="h-3.5 w-3.5" /> Cargar ejemplo</button>}
-            <button type="button" onClick={() => setExploreMode(v => !v)} title="Conecta cada parte visible con el código que la crea" aria-pressed={exploreMode} className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition ${exploreMode ? 'border-cyan-300 bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-950/30' : 'border-white/15 bg-white/5 text-white hover:bg-white/10'}`}>
-              <Crosshair className="h-3.5 w-3.5" /> {exploreMode ? 'Exploración activa' : 'Explorar elementos'}
-            </button>
-            <button type="button" onClick={() => setExpanded(v => !v)} title={expanded ? 'Salir de pantalla completa (Esc)' : 'Expandir para trabajar en pantalla completa'} className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10">
-              {expanded ? <><Minimize2 className="h-3.5 w-3.5" /> Salir</> : <><Maximize2 className="h-3.5 w-3.5" /> Ampliar taller</>}
-            </button>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ciclo de cada versión</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-slate-200"><Wand2 className="h-3.5 w-3.5 text-violet-300" /> Pedir</span>
-          <ChevronRight className="hidden h-3.5 w-3.5 text-slate-500 sm:block" />
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-slate-200"><Layers3 className="h-3.5 w-3.5 text-orange-300" /> Explicar antes de pegar</span>
-          <ChevronRight className="hidden h-3.5 w-3.5 text-slate-500 sm:block" />
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${hasChanges ? 'bg-amber-300 text-amber-950' : 'bg-white/10 text-slate-200'}`}><Eye className="h-3.5 w-3.5" /> Probar</span>
-          <ChevronRight className="hidden h-3.5 w-3.5 text-slate-500 sm:block" />
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${connected && !unsaved ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-slate-200'}`}><Cloud className="h-3.5 w-3.5" /> Guardar versión</span>
-          <span className="ml-auto text-[11px] text-slate-400">{latestVersion ? `Última evidencia: v${latestVersion.number}${unsaved ? ' · hay cambios sin guardar' : ''}` : 'Aún no hay una versión guardada'}</span>
-        </div>
-      </header>
+  // Un solo panel lateral a la vez (pedir cambio, guardar versión o historial), como cajón
+  // sobre el taller: antes empujaban el editor hacia abajo y el estudiante perdía el contexto.
+  const drawer: 'change' | 'save' | 'history' | null = savePanelOpen && connected ? 'save' : changePanelOpen ? 'change' : historyOpen ? 'history' : null
+  const closeDrawer = () => { setSavePanelOpen(false); setChangePanelOpen(false); setHistoryOpen(false) }
 
-      <div className="bg-[#f4f7f9] p-3 sm:p-5">
-        {exploreMode && <div className="mb-4 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950 shadow-sm">
-          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-200"><MousePointer2 className="h-4 w-4" /></span>
-          <div><p className="font-bold">Modo explorar encendido</p><p className="mt-0.5 text-xs leading-5 text-cyan-800">Haz clic en una parte de tu página para descubrir qué código la crea. También puedes poner el cursor en HTML o CSS para verla resaltada.</p></div>
+  return <section className={`crea-studio flex flex-col overflow-hidden bg-white ${expanded ? 'fixed inset-0 z-50' : 'h-[calc(100dvh-10rem)] min-h-[620px]'}`}>
+    {/* Celular: una sola columna con alternancia explícita; el estado se conserva al cambiar. */}
+    <div className="flex border-b border-slate-200 lg:hidden" role="tablist" aria-label="Qué ver">
+      {([['preview', 'Vista previa', Eye], ['code', 'Código', Code2]] as const).map(([key, label, Icon]) =>
+        <button key={key} type="button" role="tab" aria-selected={mobilePane === key} onClick={() => setMobilePane(key)}
+          className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2.5 text-sm font-semibold ${mobilePane === key ? 'border-cyan-600 text-cyan-800' : 'border-transparent text-slate-500'}`}>
+          <Icon className="h-4 w-4" /> {label}{key === 'code' && hasChanges && <span className="h-2 w-2 rounded-full bg-amber-500" aria-label="con cambios sin ver" />}
+        </button>)}
+    </div>
+
+    <div className="flex min-h-0 flex-1">
+      {/* Izquierda: la creación, con sus controles debajo (como el simulador de un editor por bloques). */}
+      <aside className={`${mobilePane === 'preview' ? 'flex' : 'hidden'} min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-slate-50 lg:flex lg:w-[440px] xl:w-[500px]`}>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <PreviewFrame studio project={applied} onHelpRequested={onHelpRequested} viewport={viewport} onViewportChange={setViewport} focused={previewFocused} onFocusedChange={setPreviewFocused} exploreMode={exploreMode} onElementPicked={handleElementPicked} codePosition={codePosition} codeFile={selected === 'css' ? 'css' : 'html'} onNavigateToCssRule={handleNavigateToCssRule} onEditCssValue={handleEditCssValue} onEditHtmlText={handleEditHtmlText} onApplyPlan={handleApplyPlan} />
+        </div>
+        <div className="flex items-center justify-center gap-1 border-t border-slate-200 bg-white px-2 py-2" role="toolbar" aria-label="Controles de la vista previa">
+          <ToolButton label="Ver como computador" pressed={viewport === 'desktop'} onClick={() => setViewport('desktop')}><Monitor className="h-4 w-4" /></ToolButton>
+          <ToolButton label="Ver como celular" pressed={viewport === 'mobile'} onClick={() => setViewport('mobile')}><Smartphone className="h-4 w-4" /></ToolButton>
+          <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden="true" />
+          <ToolButton label={exploreMode ? 'Apagar Explorar' : 'Explorar: toca una parte y te muestra su código'} pressed={exploreMode} onClick={() => setExploreMode(v => !v)}><Crosshair className="h-4 w-4" /></ToolButton>
+          <ToolButton label="Ver la app en grande" onClick={() => setPreviewFocused(true)}><Maximize2 className="h-4 w-4" /></ToolButton>
+          <ToolButton label={expanded ? 'Salir de pantalla completa (Esc)' : 'Taller en pantalla completa'} pressed={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}</ToolButton>
+        </div>
+      </aside>
+
+      {/* Derecha: el código, con una pestaña por archivo. */}
+      <div className={`${mobilePane === 'code' ? 'flex' : 'hidden'} min-h-0 min-w-0 flex-1 flex-col bg-[#111827] lg:flex`}>
+        <div className="flex items-stretch gap-1 border-b border-white/10 bg-[#182434] px-2 pt-2" role="tablist" aria-label="Archivos del proyecto">
+          {FILES.map(file => {
+            const dirty = draft[file.key] !== applied[file.key]
+            return <button key={file.key} type="button" role="tab" aria-selected={selected === file.key} onClick={() => setSelected(file.key)} title={file.description}
+              className={`flex min-w-0 items-center gap-2 rounded-t-lg px-3 py-2 text-left text-xs transition ${selected === file.key ? 'bg-[#111827] text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>
+              <span className={`h-2 w-2 shrink-0 rounded-full ${file.dotClass}`} />
+              <span className="font-semibold">{file.learningLabel}</span>
+              <span className="hidden font-mono text-[10px] opacity-60 sm:inline">{file.label}</span>
+              {dirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="con cambios sin ver" />}
+            </button>
+          })}
+          <button type="button" onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen} className={`ml-auto mb-1 inline-flex items-center gap-1.5 self-center rounded-md px-2 py-1 text-xs font-semibold ${guideOpen ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'}`}>
+            <BookOpen className={`h-3.5 w-3.5 ${activeFile.accentClass}`} /> <span className="hidden sm:inline">Cómo se lee</span>
+          </button>
+        </div>
+        {guideOpen && <div className="max-h-[40%] shrink-0 space-y-2.5 overflow-auto border-b border-white/10 bg-[#141d2b] px-4 py-3">
+          <p className="text-[11px] leading-5 text-slate-300">{guide.idea}</p>
+          <div className="overflow-x-auto rounded-lg bg-black/30 px-3 py-2 font-mono text-[12px] leading-6">
+            {guide.example.map((part, index) => part.name
+              ? <span key={index} className={`rounded px-0.5 underline decoration-dotted underline-offset-4 ${activeFile.accentClass}`}>{part.text}</span>
+              : <span key={index} className="text-slate-400">{part.text}</span>)}
+          </div>
+          <dl className="grid gap-x-3 gap-y-1 text-[11px] leading-4 sm:grid-cols-2">
+            {guide.example.filter(part => part.name).map(part => <div key={part.name}>
+              <dt className={`inline font-bold ${activeFile.accentClass}`}>{part.name}: </dt>
+              <dd className="inline text-slate-300">{part.meaning}</dd>
+            </div>)}
+          </dl>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Para conversar en equipo</p>
+          <ul className="list-disc space-y-0.5 pl-4 text-[11px] leading-4 text-slate-300">{guide.questions.map(question => <li key={question}>{question}</li>)}</ul>
         </div>}
-
-        <div ref={panelsRef} className="scroll-mt-4">
-        {changePanelOpen && <ChangeRequestPanel brief={brief} project={draft} onCopied={onChangeRequestCopied} onClose={() => setChangePanelOpen(false)} />}
-
-        {savePanelOpen && connected && <SaveVersionPanel
-          nextNumber={(latestVersion?.number ?? 0) + 1}
-          changedFiles={changedSinceSave}
-          untested={hasChanges}
-          saving={saving}
-          blockedBy={blockedBy}
-          onApplyFirst={() => { setApplied(draft); setSavePanelOpen(false) }}
-          onConfirm={save}
-          onCancel={() => setSavePanelOpen(false)}
-        />}
-        </div>
-
-        <div className={`grid gap-4 ${expanded ? 'lg:grid-cols-[minmax(360px,.85fr)_minmax(0,1.15fr)]' : 'xl:grid-cols-[minmax(360px,.9fr)_minmax(0,1.1fr)]'}`}>
-          <div className="min-w-0 overflow-hidden rounded-[22px] border border-slate-300 bg-[#111827] shadow-lg shadow-slate-900/10">
-            <div className="border-b border-white/10 bg-[#182434] p-3">
-              <div className="mb-3 flex items-center justify-between gap-3 px-1">
-                <div><p className="text-xs font-bold text-white">Mapa del proyecto</p><p className="mt-0.5 text-[11px] text-slate-400">Tres archivos, tres funciones diferentes</p></div>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${hasChanges ? 'bg-amber-300 text-amber-950' : 'bg-emerald-300 text-emerald-950'}`}>{hasChanges ? `${changed.length} con cambios` : 'Sin cambios'}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Archivos del proyecto">{FILES.map((file) => <button key={file.key} role="tab" aria-selected={selected === file.key} onClick={() => setSelected(file.key)} className={`min-w-0 rounded-xl border p-2.5 text-left transition ${selected === file.key ? file.activeClass : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'}`}>
-                <span className="flex items-center gap-1.5 text-xs font-bold"><span className={`h-2 w-2 rounded-full ${file.dotClass}`} />{file.learningLabel}</span>
-                <span className="mt-1 block truncate font-mono text-[10px] opacity-70">{file.label}</span>
-              </button>)}</div>
-            </div>
-            <div className="border-b border-white/10 bg-[#141d2b] px-4 py-2.5">
-              <button type="button" onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen} className="flex w-full items-center justify-between gap-2 text-left text-xs font-bold text-slate-200">
-                <span className="inline-flex items-center gap-2"><BookOpen className={`h-3.5 w-3.5 ${activeFile.accentClass}`} /> Cómo se lee {activeFile.label}</span>
-                <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition ${guideOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {guideOpen && <div className="mt-2 space-y-2.5">
-                <p className="text-[11px] leading-5 text-slate-300">{guide.idea}</p>
-                <div className="overflow-x-auto rounded-lg bg-black/30 px-3 py-2 font-mono text-[12px] leading-6">
-                  {guide.example.map((part, index) => part.name
-                    ? <span key={index} className={`rounded px-0.5 underline decoration-dotted underline-offset-4 ${activeFile.accentClass}`}>{part.text}</span>
-                    : <span key={index} className="text-slate-400">{part.text}</span>)}
-                </div>
-                <dl className="grid gap-x-3 gap-y-1 text-[11px] leading-4 sm:grid-cols-2">
-                  {guide.example.filter(part => part.name).map(part => <div key={part.name}>
-                    <dt className={`inline font-bold ${activeFile.accentClass}`}>{part.name}: </dt>
-                    <dd className="inline text-slate-300">{part.meaning}</dd>
-                  </div>)}
-                </dl>
-                <div className="rounded-lg border border-white/10 px-3 py-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Para conversar en equipo</p>
-                  <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] leading-4 text-slate-300">{guide.questions.map(question => <li key={question}>{question}</li>)}</ul>
-                  {selected !== 'js' && <p className="mt-1.5 text-[11px] text-cyan-300">Tip: con “Explorar elementos” toquen una parte de la app y el editor les muestra su código.</p>}
-                </div>
-              </div>}
-            </div>
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#111827] px-5 py-2.5">
-              <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-200"><FileCode2 className="h-3.5 w-3.5 text-cyan-300" /> {activeFile.description}</span>
-              <span className="font-mono text-[10px] text-slate-500">{activeFile.label}</span>
-            </div>
-            <textarea ref={textareaRef} aria-label={`Editor de ${activeFile.label}`} value={draft[selected]} onChange={event => update(event.target.value)} onMouseUp={() => reportCursorPosition(true)} onKeyUp={reportCursorPositionDebounced} spellCheck={false} className={editorClass} />
-            <div className="flex items-center gap-2 border-t border-white/10 bg-[#182434] px-4 py-2.5 text-[11px] text-slate-400"><Sparkles className="h-3.5 w-3.5 text-amber-300" /> Este es el código real de su proyecto. Cada cambio queda visible y revisable.</div>
-          </div>
-
-          <div className="min-w-0">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-4">
-              <div className={`flex items-center gap-2 text-sm font-semibold ${hasChanges ? 'text-amber-800' : 'text-emerald-700'}`}>{hasChanges ? <><Code2 className="h-4 w-4" /> El preview aún muestra la versión anterior</> : <><Check className="h-4 w-4" /> Código y preview están sincronizados</>}</div>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50" role="group" aria-label="Cómo ver el proyecto">
-                  <button type="button" onClick={() => setViewport('desktop')} aria-pressed={viewport === 'desktop'} title="Ver cómo queda en una computadora" className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold ${viewport === 'desktop' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Monitor className="h-3.5 w-3.5" /> Computador</button>
-                  <button type="button" onClick={() => setViewport('mobile')} aria-pressed={viewport === 'mobile'} title="Ver cómo queda en un celular" className={`inline-flex items-center gap-1.5 border-l border-slate-200 px-3 py-2 text-xs font-semibold ${viewport === 'mobile' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:bg-white'}`}><Smartphone className="h-3.5 w-3.5" /> Celular</button>
-                  <button type="button" onClick={() => setPreviewFocused(true)} title="Ver la app en grande, sin el editor" className="inline-flex items-center gap-1.5 border-l border-slate-200 px-3 py-2 text-xs font-semibold text-cyan-700 hover:bg-white"><Maximize2 className="h-3.5 w-3.5" /> Ver la app en grande</button>
-                </div>
-                <button type="button" onClick={() => setChangePanelOpen(v => !v)} aria-pressed={changePanelOpen} title="Preparar una petición concreta para la IA" className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"><Wand2 className="h-3.5 w-3.5" /> Pedir un cambio a la IA</button>
-                <button type="button" disabled={!hasChanges} onClick={() => setApplied(draft)} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"><Eye className="h-3.5 w-3.5" /> Aplicar al preview</button>
-                {connected && <button type="button" disabled={!unsaved || saving} onClick={() => setSavePanelOpen(true)} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{blockedBy.length && unsaved ? <Lock className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />} {unsaved ? 'Guardar versión' : 'Versión guardada'}</button>}
-              </div>
-            </div>
-            <PreviewFrame project={applied} onHelpRequested={onHelpRequested} viewport={viewport} onViewportChange={setViewport} focused={previewFocused} onFocusedChange={setPreviewFocused} exploreMode={exploreMode} onElementPicked={handleElementPicked} codePosition={codePosition} codeFile={selected === 'css' ? 'css' : 'html'} onNavigateToCssRule={handleNavigateToCssRule} onEditCssValue={handleEditCssValue} onEditHtmlText={handleEditHtmlText} onApplyPlan={handleApplyPlan} />
-          </div>
-        </div>
-
-        {connected && <VersionHistory versions={versions} current={!unsaved} />}
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-          <span><strong className="text-slate-800">Entorno protegido:</strong> el proyecto no puede acceder a cuentas, notas ni datos del aula.</span>
-          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-500"><Code2 className="h-3.5 w-3.5" /> HTML · CSS · JavaScript</span>
-        </div>
+        {exploreMode && <p className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-cyan-950/60 px-4 py-1.5 text-[11px] text-cyan-100"><MousePointer2 className="h-3.5 w-3.5 text-cyan-300" /> Explorar: toca una parte de tu app o pon el cursor en el código para ver cómo se relacionan.</p>}
+        <textarea ref={textareaRef} aria-label={`Editor de ${activeFile.label}`} value={draft[selected]} onChange={event => update(event.target.value)} onMouseUp={() => reportCursorPosition(true)} onKeyUp={reportCursorPositionDebounced} spellCheck={false} className={`${editorClassBase} min-h-0 flex-1 resize-none`} />
       </div>
     </div>
+
+    {/* Barra inferior: una acción principal (ver los cambios) y las de guardar a la derecha. */}
+    <footer className="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-white px-3 py-2.5">
+      <button type="button" disabled={!hasChanges} onClick={() => { setApplied(draft); setMobilePane('preview') }} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+        <Play className="h-4 w-4" /> Ver mis cambios
+      </button>
+      <span className={`min-w-0 text-xs ${hasChanges ? 'font-semibold text-amber-700' : 'text-slate-500'}`}>
+        {hasChanges ? `Cambios sin ver en ${changed.join(', ')}` : 'La vista previa muestra tu código'}
+        {connected && <span className="text-slate-400"> · {latestVersion ? `v${latestVersion.number} guardada${unsaved ? ', hay cambios sin guardar' : ''}` : 'aún sin versiones guardadas'}</span>}
+      </span>
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {!connected && <button type="button" onClick={() => setDraft(SAMPLE)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><RotateCcw className="h-3.5 w-3.5" /> Cargar ejemplo</button>}
+        <button type="button" onClick={() => { closeDrawer(); setChangePanelOpen(true) }} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"><Wand2 className="h-3.5 w-3.5" /> Pedir un cambio a la IA</button>
+        {connected && <button type="button" onClick={() => { closeDrawer(); setHistoryOpen(true) }} title="Versiones guardadas" aria-label="Versiones guardadas" className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><History className="h-4 w-4" /></button>}
+        {connected && <button type="button" disabled={!unsaved || saving} onClick={() => { closeDrawer(); setSavePanelOpen(true) }} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{blockedBy.length && unsaved ? <Lock className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />} {unsaved ? 'Guardar versión' : 'Versión guardada'}</button>}
+      </div>
+    </footer>
+
+    {drawer && <div className="fixed inset-0 z-[55] flex justify-end bg-slate-900/30" onClick={closeDrawer}>
+      <div role="dialog" aria-modal="true" aria-label={drawer === 'save' ? 'Guardar versión' : drawer === 'change' ? 'Pedir un cambio a la IA' : 'Versiones guardadas'} onClick={event => event.stopPropagation()} className="flex h-full w-full max-w-[560px] flex-col bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <p className="font-bold text-slate-800">{drawer === 'save' ? 'Guardar versión' : drawer === 'change' ? 'Pedir un cambio a la IA' : 'Versiones guardadas'}</p>
+          <button type="button" onClick={closeDrawer} aria-label="Cerrar" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto p-4">
+          {drawer === 'change' && <ChangeRequestPanel brief={brief} project={draft} onCopied={onChangeRequestCopied} onClose={closeDrawer} />}
+          {drawer === 'save' && <SaveVersionPanel
+            nextNumber={(latestVersion?.number ?? 0) + 1}
+            changedFiles={changedSinceSave}
+            untested={hasChanges}
+            saving={saving}
+            blockedBy={blockedBy}
+            onApplyFirst={() => { setApplied(draft); setSavePanelOpen(false); setMobilePane('preview') }}
+            onConfirm={save}
+            onCancel={closeDrawer}
+          />}
+          {drawer === 'history' && <VersionHistory versions={versions} current={!unsaved} />}
+        </div>
+      </div>
+    </div>}
   </section>
+}
+
+/** Botón de icono de la barra de la vista previa: siempre con nombre accesible y tooltip. */
+function ToolButton({ label, pressed, onClick, children }: { label: string; pressed?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} title={label} aria-label={label} aria-pressed={pressed}
+    className={`grid h-9 w-9 place-items-center rounded-md transition ${pressed ? 'bg-cyan-100 text-cyan-800' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}>
+    {children}
+  </button>
 }

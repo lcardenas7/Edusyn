@@ -128,3 +128,19 @@ describe('notas de sesión', () => {
     expect(todaySessionNotes(journal, '2026-09-16', iso => iso.slice(0, 10))).toHaveLength(1)
   })
 })
+
+describe('estudio de Crea: dónde abrir y cuánto falta', () => {
+  it('abre donde el equipo va', async () => {
+    const { initialStudioMode, documentationProgress, nextDocumentPhase, normalizeBrief } = await import('./journey')
+    const empty = normalizeBrief(null)
+    const planned = normalizeBrief({ problem: 'Olvidamos tareas', affected: 'El curso', solution: 'Una agenda', audience: 'Estudiantes', features: 'Agregar tareas', successCheck: 'Si agrego, aparece' })
+    expect(initialStudioMode(empty, 0, false)).toBe('document')
+    expect(initialStudioMode(planned, 0, false)).toBe('prompt')
+    expect(initialStudioMode(planned, 0, true)).toBe('code')
+    expect(initialStudioMode(empty, 2, false)).toBe('code')
+    expect(documentationProgress(empty)).toEqual({ done: 0, total: 3 })
+    expect(documentationProgress(planned)).toEqual({ done: 3, total: 3 })
+    expect(nextDocumentPhase(normalizeBrief({ problem: 'Olvidamos tareas', affected: 'El curso' }))).toBe('solution')
+    expect(nextDocumentPhase(planned)).toBe('plan')
+  })
+})

@@ -120,6 +120,9 @@ function briefText(value: unknown, field: string, max: number): string {
   return value.trim().slice(0, max);
 }
 
+/** Ventana en que varias ediciones seguidas del plan cuentan como una sola entrada de bitácora. */
+const BRIEF_STREAK_MS = 20 * 60 * 1000;
+
 /** El brief es una estructura pedagógica cerrada. Seleccionar campo por campo impide que el
  * cliente persista offsets, código, identificadores u otros datos fuera de este contrato. */
 export function validateTeamBrief(value: unknown): ConstruyeTeamBrief {
@@ -297,8 +300,17 @@ export class ConstruyeService {
 
   async updateBrief(teamId: string, institutionId: string, userId: string, dto: any) {
     const { team, member } = await this.membership(teamId, institutionId, userId);
-    const brief = validateTeamBrief(dto?.brief);
+    const incoming = validateTeamBrief(dto?.brief);
     const previous = team.brief && typeof team.brief === 'object' ? validateTeamBrief(team.brief) : null;
+    // Guardado automático entre compañeros: si el cliente dice qué campos tocó, solo esos se
+    // escriben y el resto queda como está en el servidor. Así dos integrantes que editan campos
+    // distintos no se borran entre sí (antes el plan completo se reemplazaba).
+    const touched = Array.isArray(dto?.fields)
+      ? (dto.fields as unknown[]).filter((f): f is keyof ConstruyeTeamBrief => typeof f === 'string' && f in incoming)
+      : null;
+    const brief: ConstruyeTeamBrief = touched && previous
+      ? { ...previous, ...Object.fromEntries(touched.map((f) => [f, incoming[f]])) }
+      : incoming;
     const changedFields = (Object.keys(brief) as (keyof ConstruyeTeamBrief)[])
       .filter((field) => !previous || previous[field] !== brief[field]);
 
@@ -309,6 +321,23 @@ export class ConstruyeService {
         where: { id: teamId },
         data: { brief, briefUpdatedAt: new Date() },
       });
+      // Una racha de edición del mismo estudiante es UNA entrada de bitácora: el guardado
+      // automático no debe llenar la bitácora ni sacar de la vista las evidencias de versión.
+      const last = await tx.construyeJournalEntry.findFirst({
+        where: { teamId, institutionId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, type: true, actorEnrollmentId: true, createdAt: true, detail: true },
+      });
+      const sameStreak = last?.type === 'BRIEF_UPDATED' && last.actorEnrollmentId === member.studentEnrollmentId
+        && Date.now() - new Date(last.createdAt).getTime() < BRIEF_STREAK_MS;
+      if (sameStreak) {
+        const earlier = Array.isArray((last.detail as any)?.changedFields) ? (last.detail as any).changedFields as string[] : [];
+        const journalEntry = await tx.construyeJournalEntry.update({
+          where: { id: last.id },
+          data: { detail: { brief, changedFields: [...new Set([...earlier, ...changedFields])] }, createdAt: new Date() },
+        });
+        return { team: updatedTeam, journalEntry };
+      }
       const journalEntry = await tx.construyeJournalEntry.create({
         data: {
           institutionId,
