@@ -370,7 +370,6 @@ solo `apps/web`.
 
 ### Continuidad de Inclusión — 2026-09-11
 
-| 2026-09-17 | staging | 928e1283 | **No** | **Aula / panel de resultados formativos:** avance, notas provisionales/consolidadas/incompletas, autoevaluación vs. coevaluación por pregunta, promedio del grupo por aspecto y pregunta («para reforzar» bajo el 60 %), comentarios con autor y moderación. API `GET formative-evaluations/:id/insights` y `PATCH formative-evaluations/assignments/:id/comment`. Probado de punta a punta en local (25 estudiantes, 3 respondiendo). API 2.175, web 465. Codex lo promovió aislado a producción como ae401c4b (código idéntico, verificado). |
 Por indicación del usuario, se pospone continuar Inclusión y se retoma el orden del encargo de blindaje: academic/templates, learning-route, attendance, preventive-cuts, observer y finalmente classroom. No declarar APD terminado.
 
 Publicado hasta 95b2e3e5: contexto de trabajo, perfiles/planes, actividades y avances. Quedan participantes, adjuntos, firmas, materias, categorías, agregaciones, relaciones históricas inconsistentes, sincronización desde diagnóstico, API compartida pedagogical-support y validación PostgreSQL sintética. Las reglas por asignación docente siguen inventariadas en el Bloque 4. Detalle y evidencia: docs/AUDITORIA_AISLAMIENTO_INCLUSION.md. Al retomarlo, leer esa auditoría y esta bitácora antes de modificar.
@@ -385,6 +384,7 @@ Revisión adversarial posterior: las puntas Observer `41025531` y Classroom B1 `
 
 | Fecha | Entorno | Commit | Migración | Cambio |
 |-------|---------|--------|-----------|--------|
+| 2026-09-17 | staging | 928e1283 | **No** | **Aula / panel de resultados formativos:** avance, notas provisionales/consolidadas/incompletas, autoevaluación vs. coevaluación por pregunta, promedio del grupo por aspecto y pregunta («para reforzar» bajo el 60 %), comentarios con autor y moderación. API `GET formative-evaluations/:id/insights` y `PATCH formative-evaluations/assignments/:id/comment`. Probado de punta a punta en local (25 estudiantes, 3 respondiendo). API 2.175, web 465. Codex lo promovió aislado a producción como ae401c4b (código idéntico, verificado). |
 | 2026-09-17 | staging | a9e01f2d | **No** | **Aula / quiz en casa (prueba de punta a punta):** cierre del docente cierra y califica a quien no terminó, entrada sin sesiones duplicadas, conteo de terminados por estudiante, resultados finales al cerrar, diálogo «Finalizar», contador en la sala de espera, «+0 pts», entrada directa del estudiante. API 2.171, web 463. Promovido a producción junto con 885b060a en e8f5bede + 8dd0e764. |
 | 2026-09-16 | staging | ab16d055 | **No** | **Aula / menú lateral fijo:** riel `fixed` sin el margen del Layout en escritorio. Solo web. Promovido a producción en 04f6dcfc. |
 | 2026-09-16 | staging | 6ef59cc9 + 59c4859b | **No** | **Aula / autoevaluación y coevaluación:** voz correcta en las preguntas, borradores con ver/editar/eliminar (`GET/PUT/DELETE formative-evaluations/:id`), editor simplificado y cuestionario por aspectos con catálogo y preguntas relacionadas. API 2.169, web 463, build OK. Promovido a producción en b09b44aa. |
