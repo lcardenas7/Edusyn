@@ -54,6 +54,29 @@ export function firstOpenPhase(brief: ConstruyeTeamBrief, versionCount: number):
   return 'build'
 }
 
+/** Los cuatro momentos del estudio de Crea: documentar la idea, preparar la petición para la
+ * IA (se puede omitir), construir en el taller de código y presentar lo hecho. */
+export type StudioMode = 'document' | 'prompt' | 'code' | 'share'
+export const DOCUMENT_PHASES = ['problem', 'solution', 'plan'] as const
+
+/** Etapas de documentación listas (problema, solución, plan). */
+export function documentationProgress(brief: ConstruyeTeamBrief): { done: number; total: number } {
+  return { done: DOCUMENT_PHASES.filter(phase => phaseState(phase, brief) === 'done').length, total: DOCUMENT_PHASES.length }
+}
+
+/** La etapa de documentación por la que conviene seguir: la primera que no está lista. */
+export function nextDocumentPhase(brief: ConstruyeTeamBrief): BriefPhaseKey {
+  return DOCUMENT_PHASES.find(phase => phaseState(phase, brief) !== 'done') ?? 'plan'
+}
+
+/** Dónde abrir el estudio: quien ya tiene código vuelve al taller; quien terminó de documentar
+ * pasa a la petición (o al código si la omitió); si no, sigue documentando. */
+export function initialStudioMode(brief: ConstruyeTeamBrief, versionCount: number, promptSkipped: boolean): StudioMode {
+  if (versionCount > 0) return 'code'
+  if (promptReady(brief)) return promptSkipped ? 'code' : 'prompt'
+  return 'document'
+}
+
 /** El prompt inicial aparece cuando existe un plan de versión 1 (qué tendrá y cómo probarla). */
 export function promptReady(brief: ConstruyeTeamBrief): boolean {
   return phaseState('plan', brief) === 'done' && filled(brief.problem)

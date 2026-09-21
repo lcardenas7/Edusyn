@@ -113,8 +113,9 @@ export const construyeApi = {
   dashboard: (projectId: string) => api.get<ConstruyeDashboardTeam[]>(`/construye/projects/${projectId}/dashboard`),
   myTeam: (projectId: string) => api.get<ConstruyeTeamDetail>(`/construye/projects/${projectId}/my-team`),
   teamDetail: (teamId: string) => api.get<ConstruyeTeamDetail>(`/construye/teams/${teamId}`),
-  updateBrief: (teamId: string, brief: ConstruyeTeamBrief) =>
-    api.patch<{ team: ConstruyeTeamDetail['team']; journalEntry: ConstruyeJournalEntry | null }>(`/construye/teams/${teamId}/brief`, { brief }),
+  /** Con `fields`, el servidor escribe solo esos campos y conserva el resto (guardado automático entre compañeros). */
+  updateBrief: (teamId: string, brief: ConstruyeTeamBrief, fields?: (keyof ConstruyeTeamBrief)[]) =>
+    api.patch<{ team: ConstruyeTeamDetail['team']; journalEntry: ConstruyeJournalEntry | null }>(`/construye/teams/${teamId}/brief`, fields ? { brief, fields } : { brief }),
   createVersion: (teamId: string, data: { manifest: ConstruyeManifest; label?: string; evidence?: ConstruyeVersionEvidence }) =>
     api.post<ConstruyeVersion>(`/construye/teams/${teamId}/versions`, data),
   unlockBuild: (teamId: string, data: { reason?: string } = {}) =>

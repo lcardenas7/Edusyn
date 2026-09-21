@@ -54,7 +54,7 @@ describe('ConstruyeService.updateBrief', () => {
     const journalEntry = { id: 'journal-1', type: 'BRIEF_UPDATED' };
     const tx = {
       construyeTeam: { update: jest.fn().mockResolvedValue(updatedTeam) },
-      construyeJournalEntry: { create: jest.fn().mockResolvedValue(journalEntry) },
+      construyeJournalEntry: { create: jest.fn().mockResolvedValue(journalEntry), findFirst: jest.fn().mockResolvedValue(null) },
     };
     const prisma = {
       construyeTeam: { findFirst: jest.fn().mockResolvedValue({ id: 'team-1', projectId: 'project-1', brief: null }) },
@@ -78,6 +78,49 @@ describe('ConstruyeService.updateBrief', () => {
         detail: expect.objectContaining({ changedFields: expect.arrayContaining(['problem']) }),
       }),
     }));
+  });
+});
+
+describe('ConstruyeService.updateBrief · guardado automático', () => {
+  const member = { studentEnrollmentId: 'enrollment-1', studentEnrollment: { id: 'enrollment-1', studentId: 'student-1' } };
+  const setup = (brief: any, last: any) => {
+    const tx = {
+      construyeTeam: { update: jest.fn(async ({ data }: any) => ({ id: 'team-1', projectId: 'project-1', brief: data.brief })) },
+      construyeJournalEntry: { create: jest.fn(async ({ data }: any) => ({ id: 'nuevo', ...data })), update: jest.fn(async ({ where, data }: any) => ({ id: where.id, ...data })), findFirst: jest.fn().mockResolvedValue(last) },
+    };
+    const prisma = {
+      construyeTeam: { findFirst: jest.fn().mockResolvedValue({ id: 'team-1', projectId: 'project-1', brief }) },
+      construyeTeamMember: { findFirst: jest.fn().mockResolvedValue(member) },
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    };
+    return { tx, service: new ConstruyeService(prisma as any) };
+  };
+
+  it('con la lista de campos tocados, no borra lo que otro compañero escribió en otros campos', async () => {
+    const { tx, service } = setup({ problem: 'Fila larga', solution: 'Pedidos por web (de Ana)' }, null);
+    await service.updateBrief('team-1', 'institution-1', 'user-1', { brief: { problem: 'Fila muy larga', solution: '' }, fields: ['problem'] });
+    expect(tx.construyeTeam.update.mock.calls[0][0].data.brief).toEqual(expect.objectContaining({ problem: 'Fila muy larga', solution: 'Pedidos por web (de Ana)' }));
+  });
+
+  it('una racha de edición del mismo estudiante actualiza la misma entrada de bitácora', async () => {
+    const last = { id: 'j-1', type: 'BRIEF_UPDATED', actorEnrollmentId: 'enrollment-1', createdAt: new Date(Date.now() - 60_000), detail: { changedFields: ['problem'] } };
+    const { tx, service } = setup({ problem: 'Fila larga' }, last);
+    const out: any = await service.updateBrief('team-1', 'institution-1', 'user-1', { brief: { problem: 'Fila larga', affected: 'Primaria' }, fields: ['affected'] });
+    expect(tx.construyeJournalEntry.create).not.toHaveBeenCalled();
+    expect(tx.construyeJournalEntry.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'j-1' }, data: expect.objectContaining({ detail: expect.objectContaining({ changedFields: ['problem', 'affected'] }) }) }));
+    expect(out.journalEntry.id).toBe('j-1');
+  });
+
+  it('otro estudiante, otro tipo de entrada o una pausa larga abren una entrada nueva', async () => {
+    for (const last of [
+      { id: 'j', type: 'BRIEF_UPDATED', actorEnrollmentId: 'otra', createdAt: new Date(), detail: {} },
+      { id: 'j', type: 'VERSION_CREATED', actorEnrollmentId: 'enrollment-1', createdAt: new Date(), detail: {} },
+      { id: 'j', type: 'BRIEF_UPDATED', actorEnrollmentId: 'enrollment-1', createdAt: new Date(Date.now() - 3_600_000), detail: {} },
+    ]) {
+      const { tx, service } = setup({ problem: 'Fila larga' }, last);
+      await service.updateBrief('team-1', 'institution-1', 'user-1', { brief: { problem: 'Fila larguísima' }, fields: ['problem'] });
+      expect(tx.construyeJournalEntry.create).toHaveBeenCalledTimes(1);
+    }
   });
 });
 
