@@ -2,19 +2,21 @@ import { ArrowLeft, ArrowRight, Check, Clipboard, ClipboardPaste, Code2, Message
 import { useEffect, useMemo, useState } from 'react'
 import type { ConstruyeTeamBrief } from '../../lib/api/construye'
 import { toast } from '../../lib/toast'
-import { initialPrompt, promptReady } from './journey'
+import { initialPrompt, promptReady, type ProjectKind } from './journey'
 import { missingForPrompt } from './DocumentStep'
 
 /** Petición guiada para una IA externa, armada con lo que el equipo documentó. Es opcional:
  * se puede omitir y empezar a construir con el ejemplo o escribiendo el código a mano. */
-export default function PromptStep({ brief, onBack, onGoCode, onSkip, onCopied }: {
+export default function PromptStep({ brief, kind = 'WEB', onBack, onGoCode, onSkip, onCopied }: {
   brief: ConstruyeTeamBrief
+  /** Página web o app de celular: cambia lo que se le pide a la IA. */
+  kind?: ProjectKind
   onBack: () => void
   onGoCode: () => void
   onSkip: () => void
   onCopied?: () => void
 }) {
-  const generated = useMemo(() => initialPrompt(brief), [brief])
+  const generated = useMemo(() => initialPrompt(brief, kind), [brief, kind])
   const [text, setText] = useState(generated)
   const [edited, setEdited] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -35,7 +37,7 @@ export default function PromptStep({ brief, onBack, onGoCode, onSkip, onCopied }
   return <section className="min-h-full bg-slate-50 px-4 py-5 sm:px-8 sm:py-7">
     <div className="mx-auto max-w-5xl">
       <p className="text-[11px] font-bold uppercase tracking-[.16em] text-cyan-700">Paso opcional</p>
-      <h2 className="mt-1 text-2xl font-bold text-slate-900">Pedirle a una IA la primera versión</h2>
+      <h2 className="mt-1 text-2xl font-bold text-slate-900">Pedirle a una IA la primera versión {kind === 'APP' ? 'de su app' : 'de su página'}</h2>
       <p className="mt-1 max-w-3xl text-sm text-slate-600">La petición ya trae su plan. La IA propone el código; ustedes lo revisan, lo prueban y deciden qué dejar. Si prefieren construir sin IA, pueden omitir este paso.</p>
 
       {!ready && <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">

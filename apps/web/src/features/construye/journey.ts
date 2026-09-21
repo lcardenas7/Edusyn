@@ -101,9 +101,25 @@ const orPlaceholder = (value: string, placeholder: string) => value.trim() || pl
 // inventarla. Las obligatorias sí llevan marcador, para que se note lo que falta.
 const optionalLine = (label: string, value: string) => (value.trim() ? [`- ${label}: ${value.trim()}`] : [])
 
-export function initialPrompt(brief: ConstruyeTeamBrief): string {
+/** Qué construye el equipo (lo decide el docente): cambia el tipo de producto y el formato que
+ * se le pide a la IA. */
+export type ProjectKind = 'WEB' | 'APP'
+
+const KIND_REQUEST: Record<ProjectKind, { what: string; format: string }> = {
+  WEB: {
+    what: 'una página web',
+    format: 'Debe verse bien en computador y también en celular: letra base de 16px, títulos moderados y nada de anchos fijos grandes.',
+  },
+  APP: {
+    what: 'una aplicación para celular (una app web que luego se podrá instalar en el teléfono)',
+    format: 'Diséñala como app de celular (360 a 420 píxeles de ancho): una barra superior con el nombre, pantallas que se cambian con un menú inferior fijo y botones grandes fáciles de tocar; letra base de 16px. Si la app debe recordar datos (listas, puntajes, preferencias), guárdalos en localStorage.',
+  },
+}
+
+export function initialPrompt(brief: ConstruyeTeamBrief, kind: ProjectKind = 'WEB'): string {
+  const request = KIND_REQUEST[kind]
   return [
-    'Actúa como una guía de programación para estudiantes de colegio. Queremos construir, paso a paso, una primera versión pequeña de una página web.',
+    `Actúa como una guía de programación para estudiantes de colegio. Queremos construir, paso a paso, una primera versión pequeña de ${request.what}.`,
     '',
     'El problema',
     `- Qué ocurre: ${orPlaceholder(brief.problem, '[qué ocurre]')}`,
@@ -122,7 +138,7 @@ export function initialPrompt(brief: ConstruyeTeamBrief): string {
     ...optionalLine('Queda para después (no lo hagas todavía)', brief.later),
     `- Así comprobaremos que funciona: ${orPlaceholder(brief.successCheck, '[cómo lo comprobaremos]')}`,
     '',
-    'Entrega únicamente tres archivos completos y separados: index.html, styles.css y app.js. No uses React, npm, paquetes, enlaces externos, llamadas a internet, cuentas, anuncios, APIs, iframes ni datos personales. La app se verá sobre todo en un celular (360 a 420 píxeles de ancho): letra base de 16px, títulos moderados y nada de anchos fijos grandes. Para íconos, usa SVG pequeños dentro de index.html.',
+    `Entrega únicamente tres archivos completos y separados: index.html, styles.css y app.js. No uses React, npm, paquetes, enlaces externos, llamadas a internet, cuentas, anuncios, APIs, iframes ni datos personales. ${request.format} Para íconos, usa SVG pequeños dentro de index.html.`,
     '',
     'Después del código, explícanos con palabras sencillas qué hace cada archivo y qué parte del código cumple cada punto del plan, para que podamos entenderlo y explicarlo. Si falta una decisión importante, pregúntanos antes (máximo tres preguntas).',
   ].join('\n')

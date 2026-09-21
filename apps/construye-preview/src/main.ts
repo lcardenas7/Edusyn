@@ -88,6 +88,29 @@ function onViewportResize() {
   })
 }
 
+/** El sandbox no concede un origen propio, así que `localStorage` lanza SecurityError y las apps
+ * que guardan datos (listas, puntajes, preferencias) se rompían. Se reemplaza por una memoria
+ * con la misma API que vive mientras dure esta ejecución de la vista previa: la app funciona
+ * igual, y el archivo descargado o instalado usa el almacenamiento real del navegador. */
+function createMemoryStorage(): Storage {
+  const data = new Map<string, string>()
+  const storage = {
+    get length() { return data.size },
+    key: (index: number) => Array.from(data.keys())[index] ?? null,
+    getItem: (key: string) => (data.has(String(key)) ? data.get(String(key))! : null),
+    setItem: (key: string, value: unknown) => { data.set(String(key), String(value)) },
+    removeItem: (key: string) => { data.delete(String(key)) },
+    clear: () => { data.clear() },
+  }
+  return storage as Storage
+}
+
+function installMemoryStorage() {
+  for (const name of ['localStorage', 'sessionStorage'] as const) {
+    try { Object.defineProperty(window, name, { configurable: true, enumerable: true, value: createMemoryStorage() }) } catch { /* sin memoria: la app verá el error de siempre */ }
+  }
+}
+
 function render(project: Project) {
   const instrumented = instrumentHtml(project.html)
   ranges = instrumented.ranges
@@ -109,6 +132,7 @@ function render(project: Project) {
   const documentHtml = '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' +
     escapeRawTextClose(project.css, 'style') + '</style></head><body>' + bridge + instrumented.html + '<script>' + escapeRawTextClose(project.js, 'script') + '</script></body></html>'
   document.open()
+  installMemoryStorage()
   document.write(documentHtml)
   document.close()
 

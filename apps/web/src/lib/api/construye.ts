@@ -68,8 +68,22 @@ export interface ConstruyeTeamMember {
   studentEnrollment: { id: string; student: { firstName: string; lastName: string } }
 }
 
+/** Página web o aplicación para el celular: lo elige el docente al crear el proyecto. */
+export type ConstruyeProjectKind = 'WEB' | 'APP'
+
+/** Borrador del código guardado automáticamente (no es una versión). */
+export interface ConstruyeCodeDraft { manifest: ConstruyeManifest | null; revision: number; updatedAt: string | null; by: string | null }
+
 export interface ConstruyeTeamDetail {
-  team: { id: string; name: string; projectId: string; brief: Partial<ConstruyeTeamBrief> | null; briefUpdatedAt: string | null }
+  team: {
+    id: string; name: string; projectId: string; brief: Partial<ConstruyeTeamBrief> | null; briefUpdatedAt: string | null
+    /** Ausentes en una API anterior al guardado automático del código. */
+    codeDraft?: ConstruyeManifest | null
+    codeDraftRevision?: number
+    codeDraftUpdatedAt?: string | null
+  }
+  /** Ausente en una API anterior al selector web/aplicación. */
+  project?: { id: string; title: string; kind: ConstruyeProjectKind } | null
   members: ConstruyeTeamMember[]
   versions: ConstruyeVersion[]
   journal: ConstruyeJournalEntry[]
@@ -82,6 +96,8 @@ export interface ConstruyeProject {
   classroomId: string
   classroomActivityId: string | null
   title: string
+  /** Ausente en una API anterior: se trata como página web. */
+  kind?: ConstruyeProjectKind
   instructions: string | null
   status: string
   startDate: string | null
@@ -106,8 +122,10 @@ export interface ConstruyeDashboardTeam {
 export const construyeApi = {
   listClassroomProjects: (classroomId: string) =>
     api.get<ConstruyeProject[]>(`/construye/classrooms/${classroomId}/projects`),
-  createProject: (data: { classroomId: string; title: string; instructions?: string; dueDate?: string; classroomActivityId?: string }) =>
+  createProject: (data: { classroomId: string; title: string; kind?: ConstruyeProjectKind; instructions?: string; dueDate?: string; classroomActivityId?: string }) =>
     api.post<ConstruyeProject>(`/construye/projects`, data),
+  updateProject: (projectId: string, data: { kind?: ConstruyeProjectKind; title?: string }) =>
+    api.patch<ConstruyeProject>(`/construye/projects/${projectId}`, data),
   createTeam: (projectId: string, data: { name: string; members: { studentEnrollmentId: string; role?: ConstruyeMemberRole }[] }) =>
     api.post<{ id: string; name: string; projectId: string }>(`/construye/projects/${projectId}/teams`, data),
   dashboard: (projectId: string) => api.get<ConstruyeDashboardTeam[]>(`/construye/projects/${projectId}/dashboard`),
@@ -116,6 +134,9 @@ export const construyeApi = {
   /** Con `fields`, el servidor escribe solo esos campos y conserva el resto (guardado automático entre compañeros). */
   updateBrief: (teamId: string, brief: ConstruyeTeamBrief, fields?: (keyof ConstruyeTeamBrief)[]) =>
     api.patch<{ team: ConstruyeTeamDetail['team']; journalEntry: ConstruyeJournalEntry | null }>(`/construye/teams/${teamId}/brief`, fields ? { brief, fields } : { brief }),
+  /** Guardado automático del código. Si otro integrante guardó antes, responde 409 con su borrador. */
+  saveCodeDraft: (teamId: string, data: { manifest: ConstruyeManifest; baseRevision: number }) =>
+    api.put<{ revision: number; updatedAt: string }>(`/construye/teams/${teamId}/code-draft`, data),
   createVersion: (teamId: string, data: { manifest: ConstruyeManifest; label?: string; evidence?: ConstruyeVersionEvidence }) =>
     api.post<ConstruyeVersion>(`/construye/teams/${teamId}/versions`, data),
   unlockBuild: (teamId: string, data: { reason?: string } = {}) =>

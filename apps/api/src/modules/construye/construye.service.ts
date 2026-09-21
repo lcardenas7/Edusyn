@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const ALLOWED_MEMBER_ROLES = new Set(['RESEARCH', 'DESIGN', 'DEVELOPMENT', 'TESTING', 'COORDINATION']);
@@ -179,6 +179,10 @@ export function validateStaticManifest(manifest: unknown): { files: ManifestFile
   return { files };
 }
 
+export type ConstruyeProjectKind = 'WEB' | 'APP';
+/** Página web o aplicación: lo elige el docente; cualquier otro valor es página web. */
+export const projectKind = (value: unknown): ConstruyeProjectKind => (value === 'APP' ? 'APP' : 'WEB');
+
 @Injectable()
 export class ConstruyeService {
   constructor(private readonly prisma: PrismaService) {}
@@ -232,10 +236,21 @@ export class ConstruyeService {
     }
     return (this.prisma as any).construyeProject.create({ data: {
       institutionId, teacherUserId: userId, classroomId: dto.classroomId, classroomActivityId: dto.classroomActivityId || null,
-      title, instructions: typeof dto.instructions === 'string' ? dto.instructions.trim().slice(0, 8000) || null : null,
+      title, kind: projectKind(dto.kind), instructions: typeof dto.instructions === 'string' ? dto.instructions.trim().slice(0, 8000) || null : null,
       briefTemplate: dto.briefTemplate && typeof dto.briefTemplate === 'object' ? dto.briefTemplate : undefined,
       startDate: dto.startDate ? new Date(dto.startDate) : null, dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
     }});
+  }
+
+  /** El docente cambia el tipo del proyecto (página web ↔ aplicación). No toca el código de los
+   * equipos: solo cambia la plantilla de partida y la vista inicial. */
+  async updateProject(projectId: string, institutionId: string, userId: string, dto: any) {
+    await this.projectForTeacher(projectId, institutionId, userId);
+    const data: Record<string, unknown> = {};
+    if (dto?.kind !== undefined) data.kind = projectKind(dto.kind);
+    if (dto?.title !== undefined) data.title = asShortText(dto.title, 'El título');
+    if (!Object.keys(data).length) throw new BadRequestException('No hay cambios para guardar');
+    return (this.prisma as any).construyeProject.update({ where: { id: projectId }, data });
   }
 
   async listClassroomProjects(classroomId: string, institutionId: string, userId: string, isTeacher: boolean) {
@@ -274,14 +289,15 @@ export class ConstruyeService {
 
   async teamDetail(teamId: string, institutionId: string, userId: string) {
     const { team } = await this.teamForUser(teamId, institutionId, userId);
-    const [members, versions, journal] = await Promise.all([
+    const [project, members, versions, journal] = await Promise.all([
+      (this.prisma as any).construyeProject.findFirst({ where: { id: team.projectId, institutionId }, select: { id: true, title: true, kind: true } }),
       (this.prisma as any).construyeTeamMember.findMany({ where: { teamId, institutionId }, include: { studentEnrollment: { include: { student: { select: { firstName: true, lastName: true } } } } } }),
       (this.prisma as any).construyeVersion.findMany({ where: { teamId, institutionId }, orderBy: { number: 'desc' }, take: 20 }),
       (this.prisma as any).construyeJournalEntry.findMany({ where: { teamId, institutionId }, orderBy: { createdAt: 'desc' }, take: 100 }),
     ]);
     const unlocked = journal.some(isBuildUnlockEntry)
       || !!(await (this.prisma as any).construyeJournalEntry.findFirst({ where: { teamId, institutionId, type: 'TEACHER_COMMENT', actorUserId: { not: null }, detail: { path: ['kind'], equals: BUILD_UNLOCKED } }, select: { id: true } }));
-    return { team, members, versions, journal, buildGate: buildGate(team.brief, versions.length, unlocked) };
+    return { team, project, members, versions, journal, buildGate: buildGate(team.brief, versions.length, unlocked) };
   }
 
   /** Excepción del docente: permite guardar la primera versión sin completar el plan. Queda
@@ -350,6 +366,33 @@ export class ConstruyeService {
         },
       });
       return { team: updatedTeam, journalEntry };
+    });
+  }
+
+  /** Guardado automático del código del equipo. Es un borrador recuperable, no una versión: no
+   * pasa por la condición de la primera versión ni deja entrada en la bitácora. Solo se escribe
+   * si nadie guardó otro borrador desde la revisión que el cliente tenía; si no, se devuelve el
+   * borrador actual para que el equipo decida (nunca se pisa en silencio). */
+  async saveCodeDraft(teamId: string, institutionId: string, userId: string, dto: any) {
+    const { member } = await this.membership(teamId, institutionId, userId);
+    const manifest = validateStaticManifest(dto?.manifest);
+    const baseRevision = Number.isInteger(dto?.baseRevision) ? dto.baseRevision : -1;
+    const updatedAt = new Date();
+    const { count } = await (this.prisma as any).construyeTeam.updateMany({
+      where: { id: teamId, institutionId, codeDraftRevision: baseRevision },
+      data: { codeDraft: manifest, codeDraftRevision: { increment: 1 }, codeDraftUpdatedAt: updatedAt, codeDraftEnrollmentId: member.studentEnrollmentId },
+    });
+    if (count === 1) return { revision: baseRevision + 1, updatedAt };
+    const current = await (this.prisma as any).construyeTeam.findFirst({
+      where: { id: teamId, institutionId },
+      select: { codeDraft: true, codeDraftRevision: true, codeDraftUpdatedAt: true, codeDraftEnrollmentId: true },
+    });
+    const author = current?.codeDraftEnrollmentId
+      ? await this.prisma.studentEnrollment.findFirst({ where: { id: current.codeDraftEnrollmentId, institutionId }, select: { student: { select: { firstName: true } } } })
+      : null;
+    throw new ConflictException({
+      message: 'Otro integrante guardó cambios en el código mientras trabajabas.',
+      draft: { manifest: current?.codeDraft ?? null, revision: current?.codeDraftRevision ?? 0, updatedAt: current?.codeDraftUpdatedAt ?? null, by: author?.student.firstName ?? null },
     });
   }
 

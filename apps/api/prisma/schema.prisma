@@ -7646,6 +7646,12 @@ model ReportCardTemplateSelection {
 }
 
 // ─── Edusyn Crea ───
+enum ConstruyeProjectKind {
+  WEB
+  APP
+}
+
+
 enum ConstruyeProjectStatus {
   DRAFT
   ACTIVE
@@ -7689,6 +7695,8 @@ model ConstruyeProject {
   title               String
   instructions        String?                @db.Text
   briefTemplate       Json?
+  /// Página web o aplicación para celular: decide la plantilla y la vista inicial del estudiante.
+  kind                ConstruyeProjectKind   @default(WEB)
   status              ConstruyeProjectStatus @default(ACTIVE)
   startDate           DateTime?
   dueDate             DateTime?
@@ -7716,6 +7724,12 @@ model ConstruyeTeam {
   name          String
   brief         Json?
   briefUpdatedAt DateTime?
+  /// Borrador del código (trabajo en curso recuperable, no evidencia). La revisión evita que un
+  /// compañero pise el trabajo de otro sin enterarse.
+  codeDraft             Json?
+  codeDraftRevision     Int       @default(0)
+  codeDraftUpdatedAt    DateTime?
+  codeDraftEnrollmentId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
