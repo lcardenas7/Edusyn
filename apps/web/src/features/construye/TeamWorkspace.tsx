@@ -7,6 +7,7 @@ import SessionCard from './SessionCard'
 import CodeWorkspace from './CodeWorkspace'
 import DocumentStep, { ShareStep } from './DocumentStep'
 import PromptStep from './PromptStep'
+import PublishPanel from './PublishPanel'
 import { documentationProgress, evidenceByVersion, initialStudioMode, nextDocumentPhase, normalizeBrief, type ChangeRequest, type StudioMode, type VersionEvidenceInput } from './journey'
 import { APP_STARTER, manifestToProject, oversizedFiles, projectToManifest } from './manifest'
 import type { CodeDraftSync } from './useCodeAutosave'
@@ -60,7 +61,7 @@ const MODES: { key: StudioMode; label: string; icon: typeof NotebookPen }[] = [
   { key: 'document', label: 'Documentar', icon: NotebookPen },
   { key: 'prompt', label: 'Prompt', icon: Sparkles },
   { key: 'code', label: 'Código', icon: Code2 },
-  { key: 'share', label: 'Presentar', icon: Megaphone },
+  { key: 'share', label: 'Publicar', icon: Megaphone },
 ]
 
 /** Estudio de Crea, con la limpieza de un editor por bloques: una barra arriba con los cuatro
@@ -238,7 +239,10 @@ function CreaStudio({ projectId, team, setTeam }: {
         onChangeRequestCopied={onChangeRequestCopied}
         onHelpRequested={() => logJournal('HELP_REQUESTED', 'El equipo copió el contexto de ayuda para su IA externa.')}
       /></div>}
-      {mode === 'share' && <ShareStep brief={brief} onChange={setField} />}
+      {mode === 'share' && <div className="bg-slate-50">
+        <div className="mx-auto max-w-5xl px-4 pt-5 sm:px-8 sm:pt-7"><PublishPanel teamId={team.team.id} latestVersion={latest ? { id: latest.id, number: latest.number } : null} defaultTitle={team.project?.title || team.team.name} /></div>
+        <ShareStep brief={brief} onChange={setField} />
+      </div>}
     </div>
   </div>
 }

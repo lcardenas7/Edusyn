@@ -4648,5 +4648,17 @@
     "kind": "pending-audit",
     "reason": "Deuda previa en timetabling: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
     "fingerprint": "c4edbf06583cb73c480a0ddd5c2aff7e5a128ba27de25fc6cec5c5b9dbd68fdc"
+  },
+  {
+    "key": "modules/construye/construye-public.controller.ts#ConstruyePublicController.app @Get(':token')",
+    "kind": "non-institutional",
+    "reason": "Apps publicadas de Edusyn Crea (sin sesión): solo lee la copia aprobada por un token secreto de 24 caracteres y registra uso anónimo; no toca tablas por institución (ConstruyePublication/AppDevice/AppDay sin RLS por diseño). Ver docs/DISENO_CREA_PUBLICAR_Y_DATOS.md.",
+    "fingerprint": "4709eaa55eabaef4fe2d536a088fa24afab8591ecf61abf64bf0ed4418da5456"
+  },
+  {
+    "key": "modules/construye/construye-public.controller.ts#ConstruyePublicController.event @Post(':token/events')",
+    "kind": "non-institutional",
+    "reason": "Apps publicadas de Edusyn Crea (sin sesión): solo lee la copia aprobada por un token secreto de 24 caracteres y registra uso anónimo; no toca tablas por institución (ConstruyePublication/AppDevice/AppDay sin RLS por diseño). Ver docs/DISENO_CREA_PUBLICAR_Y_DATOS.md.",
+    "fingerprint": "cf04799122c9d0a9b71ec0d83e006777ceaac64987acefecdb22cfb1f6936a87"
   }
 ]

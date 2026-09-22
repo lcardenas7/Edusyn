@@ -5,13 +5,52 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { ConstruyeService } from './construye.service';
+import { ConstruyePublicationService } from './construye-publication.service';
 
 // Cada ruta resuelve la institución del actor al inicio (contrato institution-route-contract):
 // el servicio nunca recibe una institución que venga del cliente.
 @Controller('construye')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ConstruyeController {
-  constructor(private readonly service: ConstruyeService, private readonly prisma: PrismaService) {}
+  constructor(private readonly service: ConstruyeService, private readonly prisma: PrismaService, private readonly publications: ConstruyePublicationService) {}
+
+  // ─── Publicar la app (enlace/QR/instalable, con aprobación del docente) ───────────────────
+
+  @Get('teams/:teamId/publication') @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async teamPublication(@Param('teamId') teamId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.teamPublication(teamId, institutionId, req.user.id);
+  }
+
+  @Post('teams/:teamId/publication') @Roles('ESTUDIANTE')
+  async requestPublication(@Param('teamId') teamId: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.request(teamId, institutionId, req.user.id, body);
+  }
+
+  @Get('projects/:projectId/publications') @Roles('DOCENTE', 'COORDINADOR')
+  async projectPublications(@Param('projectId') projectId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.projectPublications(projectId, institutionId, req.user.id);
+  }
+
+  @Post('publications/:publicationId/approve') @Roles('DOCENTE', 'COORDINADOR')
+  async approvePublication(@Param('publicationId') publicationId: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.approve(publicationId, institutionId, req.user.id, body);
+  }
+
+  @Post('publications/:publicationId/reject') @Roles('DOCENTE', 'COORDINADOR')
+  async rejectPublication(@Param('publicationId') publicationId: string, @Request() req: any, @Body() body: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.reject(publicationId, institutionId, req.user.id, body);
+  }
+
+  @Post('publications/:publicationId/unpublish') @Roles('DOCENTE', 'COORDINADOR')
+  async unpublish(@Param('publicationId') publicationId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.unpublish(publicationId, institutionId, req.user.id);
+  }
 
   @Post('projects') @Roles('DOCENTE', 'COORDINADOR')
   async createProject(@Request() req: any, @Body() body: any) {

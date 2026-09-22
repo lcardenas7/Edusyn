@@ -7853,6 +7853,13 @@ enum ConstruyeMemberRole {
 }
 
 
+enum ConstruyePublicationStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  UNPUBLISHED
+}
+
 enum ConstruyeJournalType {
   BRIEF_UPDATED
   SOURCE_ADDED
@@ -7865,6 +7872,7 @@ enum ConstruyeJournalType {
   HELP_REQUESTED
   TEACHER_COMMENT
   SESSION_NOTE
+  PUBLICATION
 }
 
 
@@ -7920,9 +7928,83 @@ model ConstruyeTeam {
   members     ConstruyeTeamMember[]
   versions    ConstruyeVersion[]
   journal     ConstruyeJournalEntry[]
+  publication ConstruyePublication?
 
   @@index([institutionId])
   @@index([projectId])
+}
+
+
+/// App publicada de un equipo (enlace/QR/instalable). SIN RLS a propósito: el enlace público no
+/// tiene sesión ni institución, así que la app aprobada se COPIA aquí (`manifest`) y el público
+/// solo lee esta fila por su token. Las consultas del taller filtran por `institutionId` a mano.
+model ConstruyePublication {
+  id                      String                     @id @default(cuid())
+  institutionId           String
+  projectId               String
+  teamId                  String                     @unique
+  /// Secreto largo e imposible de adivinar: es la dirección pública de la app.
+  token                   String                     @unique
+  status                  ConstruyePublicationStatus @default(PENDING)
+  title                   String
+  kind                    ConstruyeProjectKind       @default(WEB)
+  /// Código publicado (copia de la versión aprobada). Null hasta la primera aprobación.
+  manifest                Json?
+  versionNumber           Int?
+  /// Versión que el equipo pidió publicar y espera aprobación del docente.
+  pendingVersionId        String?
+  pendingVersionNumber    Int?
+  pendingManifest         Json?
+  requestedAt             DateTime?
+  requestedByEnrollmentId String?
+  reviewedAt              DateTime?
+  reviewedByUserId        String?
+  reviewNote              String?
+  publishedAt             DateTime?
+  expiresAt               DateTime?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  team    ConstruyeTeam        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  devices ConstruyeAppDevice[]
+
+  @@index([institutionId])
+  @@index([projectId])
+}
+
+
+/// Dispositivo anónimo que abrió una app publicada (identificador aleatorio del navegador; no
+/// hay nombre, IP ni datos del teléfono). `isTeam` separa el uso del propio equipo.
+model ConstruyeAppDevice {
+  id            String    @id @default(cuid())
+  publicationId String
+  deviceId      String
+  source        String?
+  isTeam        Boolean   @default(false)
+  firstSeenAt   DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  installedAt   DateTime?
+
+  publication ConstruyePublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  days        ConstruyeAppDay[]
+
+  @@unique([publicationId, deviceId])
+  @@index([publicationId, firstSeenAt])
+}
+
+
+/// Uso por dispositivo y día (Colombia): aperturas y segundos con la app visible.
+model ConstruyeAppDay {
+  id         String   @id @default(cuid())
+  deviceId   String
+  day        DateTime @db.Date
+  opens      Int      @default(0)
+  seconds    Int      @default(0)
+  standalone Boolean  @default(false)
+
+  device ConstruyeAppDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, day])
 }
 
 

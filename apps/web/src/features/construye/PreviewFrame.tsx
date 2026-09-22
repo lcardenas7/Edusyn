@@ -62,6 +62,11 @@ export interface PreviewFrameProps {
   /** Sin la ficha de diagnóstico ni el encabezado: solo el iframe, para incrustar en un
    * marco propio (p. ej. la vista de celular del docente). El aislamiento no cambia. */
   compact?: boolean
+  /** Revisión a pantalla completa (docente): solo la app, escalada en proporción, con
+   * Celular/Computador, Reiniciar y Cerrar. En un celular ocupa la pantalla como instalada. */
+  review?: boolean
+  reviewTitle?: string
+  onClose?: () => void
   /** Dentro del taller tipo editor por bloques: encabezado mínimo y sin marco propio; los
    * controles de pantalla viven en la barra del taller. */
   studio?: boolean
@@ -256,7 +261,7 @@ const SCALE_LABEL_Y = 28
 // portátil en un tercio del panel.
 const SIDE_GUIDE_MIN_WIDTH = 900
 
-export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, viewport = 'desktop', onViewportChange, focused: focusedProp, onFocusedChange, compact = false, studio = false, exploreMode = false, onElementPicked, codePosition = null, codeFile = 'html', onNavigateToCssRule, onEditCssValue, onEditHtmlText, onApplyPlan }: PreviewFrameProps) {
+export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, viewport = 'desktop', onViewportChange, focused: focusedProp, onFocusedChange, compact = false, review = false, reviewTitle, onClose, studio = false, exploreMode = false, onElementPicked, codePosition = null, codeFile = 'html', onNavigateToCssRule, onEditCssValue, onEditHtmlText, onApplyPlan }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const viewportShellRef = useRef<HTMLDivElement>(null)
   const [viewportScale, setViewportScale] = useState(1)
@@ -270,6 +275,16 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
   const [focusZoom, setFocusZoom] = useState<'fit' | 'real'>('fit')
   const rootRef = useRef<HTMLElement>(null)
   const [sideGuide, setSideGuide] = useState(false)
+  // En un celular la revisión muestra la app a su ancho real, sin marco ni escala.
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches)
+  useEffect(() => {
+    if (!review || !window.matchMedia) return
+    const query = window.matchMedia('(max-width: 639px)')
+    const update = () => setNarrow(query.matches)
+    update()
+    query.addEventListener?.('change', update)
+    return () => query.removeEventListener?.('change', update)
+  }, [review])
   const preset = VIEWPORT_PRESETS[viewport]
   const [instanceId, setInstanceId] = useState(newInstanceId)
   const [ready, setReady] = useState(false)
@@ -402,7 +417,7 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
       const frameX = viewport === 'mobile' ? DEVICE_FRAME_X : 0
       const frameY = viewport === 'mobile' ? DEVICE_FRAME_Y : BROWSER_BAR_Y
       const width = shell.clientWidth - padX - frameX
-      const fitHeight = focused && focusZoom === 'fit'
+      const fitHeight = (focused && focusZoom === 'fit') || review
       const height = fitHeight ? shell.clientHeight - padY - frameY - SCALE_LABEL_Y : undefined
       setViewportScale(computeViewportScale(width, preset.width, height, fitHeight ? preset.height : undefined))
     }
@@ -410,7 +425,7 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
     const observer = new ResizeObserver(update)
     observer.observe(shell)
     return () => observer.disconnect()
-  }, [preset.width, preset.height, viewport, focused, focusZoom])
+  }, [preset.width, preset.height, viewport, focused, focusZoom, review, narrow])
 
   useEffect(() => {
     const root = rootRef.current
@@ -421,6 +436,15 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
     observer.observe(root)
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    if (!review) return
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose?.() }
+    window.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKeyDown); document.body.style.overflow = previousOverflow }
+  }, [review, onClose])
 
   useEffect(() => {
     if (!focused) return
@@ -516,6 +540,34 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
     return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
       Configura <code className="font-mono">VITE_CONSTRUYE_PREVIEW_ORIGIN</code> con el origen aislado del preview antes de habilitar Edusyn Crea.
     </div>
+  }
+
+  if (review) {
+    const phoneFrame = viewport === 'mobile' && !narrow
+    return (
+      <div role="dialog" aria-modal="true" aria-label={reviewTitle ? `Revisar: ${reviewTitle}` : 'Revisar la app'} className="fixed inset-0 z-[60] flex flex-col bg-slate-900">
+        <header className="flex items-center gap-2 px-3 py-2 text-white">
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold">{reviewTitle || 'App del equipo'}</p>
+          {!narrow && onViewportChange && <div className="inline-flex overflow-hidden rounded-lg bg-white/10" role="group" aria-label="Cómo verla">
+            <button type="button" onClick={() => onViewportChange('mobile')} aria-pressed={viewport === 'mobile'} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold ${viewport === 'mobile' ? 'bg-white text-slate-900' : 'text-slate-200 hover:bg-white/10'}`}><Smartphone className="h-3.5 w-3.5" /> Celular</button>
+            <button type="button" onClick={() => onViewportChange('desktop')} aria-pressed={viewport === 'desktop'} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold ${viewport === 'desktop' ? 'bg-white text-slate-900' : 'text-slate-200 hover:bg-white/10'}`}><Monitor className="h-3.5 w-3.5" /> Computador</button>
+          </div>}
+          <button type="button" onClick={restart} title="Reiniciar la app" aria-label="Reiniciar la app" className="rounded-lg p-2 text-slate-200 hover:bg-white/10"><RotateCcw className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-900 hover:bg-slate-100">Cerrar</button>
+        </header>
+        <div ref={viewportShellRef} className={`relative min-h-0 flex-1 ${narrow ? '' : 'flex items-center justify-center overflow-hidden p-4'}`}>
+          {narrow
+            ? <iframe ref={iframeRef} title="Preview aislado de Edusyn Crea" src={src} sandbox={PREVIEW_SANDBOX} className="h-full w-full border-0 bg-white" />
+            : <div className={phoneFrame ? 'relative rounded-[40px] bg-black px-3 py-7 ring-1 ring-slate-700' : 'overflow-hidden rounded-xl'}>
+              <div className={`overflow-hidden bg-white ${phoneFrame ? 'rounded-[18px]' : ''}`} style={{ width: preset.width * viewportScale, height: preset.height * viewportScale }}>
+                <iframe ref={iframeRef} title="Preview aislado de Edusyn Crea" src={src} sandbox={PREVIEW_SANDBOX} className="border-0" style={{ width: preset.width, height: preset.height, transform: `scale(${viewportScale})`, transformOrigin: 'top left' }} />
+              </div>
+            </div>}
+          {!ready && <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-white" /></div>}
+          {ready && event && <div className="absolute inset-x-3 bottom-3 rounded-lg bg-amber-900/95 px-3 py-2 text-center text-xs font-medium text-white">{describePreviewProblem(event)}</div>}
+        </div>
+      </div>
+    )
   }
 
   if (compact) {
