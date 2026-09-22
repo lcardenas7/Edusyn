@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TEMAS, contrasteConBlanco, hexARgb, resolverAcento, temaPorId } from './tema'
+import { TEMAS, colorDeEncabezado, contrasteConBlanco, hexARgb, resolverAcento, temaPorId } from './tema'
 
 describe('el tema que elige el estudiante', () => {
   it('su tema gana sobre el color que puso el docente', () => {
@@ -41,5 +41,24 @@ describe('hexARgb', () => {
 
   it('entiende la forma corta', () => {
     expect(hexARgb('#0AF')).toBe('0 170 255')
+  })
+})
+
+describe('colorDeEncabezado · el color de la barra de estado del teléfono', () => {
+  it('es un color sólido: la barra del sistema no entiende transparencias', () => {
+    expect(colorDeEncabezado('#2E6BE6')).toMatch(/^#[0-9a-f]{6}$/)
+  })
+
+  it('es el acento apenas insinuado, no el acento a pleno', () => {
+    // Aclara mucho porque el encabezado del aula es un lavado del acento sobre blanco.
+    expect(colorDeEncabezado('#2E6BE6')).toBe('#e8eefc')
+  })
+
+  it('el blanco se queda en blanco', () => {
+    expect(colorDeEncabezado('#FFFFFF')).toBe('#ffffff')
+  })
+
+  it('cada aula tiñe la barra con SU color, no todas igual', () => {
+    expect(colorDeEncabezado('#B84A7D')).not.toBe(colorDeEncabezado('#2E6BE6'))
   })
 })

@@ -5,8 +5,9 @@
  *  - P1-7  No había orientación persistente: ni migas de pan, ni período visible para el
  *          docente, ni forma de saber dónde estás. Ahora el contexto va fijo arriba.
  *  - F1    La barra de pestañas era `sticky top-0`, pero el header móvil de `Layout` es
- *          `fixed` de 56 px: al hacer scroll la barra se metía DEBAJO del header y desaparecía.
- *          Aquí el encabezado es `top-14 lg:top-0`, que es exactamente el alto de ese header.
+ *          `fixed`: al hacer scroll la barra se metía DEBAJO del header y desaparecía. Correrla
+ *          hacia abajo tapaba el problema a medias —el header medía 65 px, no 56—. Ahora, dentro
+ *          del aula, ese header no está: el encabezado del aula es el único y va en `top-0`.
  *  - F4    Ocho pestañas con scroll horizontal y la barra oculta: en móvil no había forma de
  *          saber que había más destinos a la derecha. Ahora hay barra inferior fija.
  *  - C2    El período no tenía opción "Todos", así que parte del aula era invisible.
@@ -19,7 +20,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
-import { hexARgb, resolverAcento } from '../model/tema'
+import { colorDeEncabezado, hexARgb, resolverAcento } from '../model/tema'
 import { DialogoTema, IconoTema } from './SelectorTema'
 import { BotonPeriodo, DialogoPeriodo } from './SelectorPeriodo'
 import { ProveedorAcento } from './AulaTema'
@@ -115,6 +116,27 @@ export function AulaShell({
   const acento = resolverAcento(tema, colorAula)
   const hueDelAula = { ink: acento, wash: `${acento}1A`, deep: acento }
 
+  /*
+   * La barra de estado del teléfono toma el color del aula mientras estás dentro, y lo devuelve
+   * al salir. Sin esto, sobre el encabezado teñido queda la franja del sistema en otro color y
+   * se nota que esto es una página abierta en un navegador, no una aplicación.
+   */
+  useEffect(() => {
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const propia = !meta
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.name = 'theme-color'
+      document.head.appendChild(meta)
+    }
+    const anterior = meta.content
+    meta.content = colorDeEncabezado(acento)
+    return () => {
+      if (propia) meta?.remove()
+      else if (meta) meta.content = anterior
+    }
+  }, [acento])
+
   const irA = (v: Vista) => {
     onNavegar(v)
     setMasAbierto(false)
@@ -125,7 +147,7 @@ export function AulaShell({
     // decorar nada más. Se hace redefiniendo el token en este contenedor, no con CSS global,
     // para que no se filtre al resto de la aplicación.
     <div
-      className="min-h-screen bg-accent/[0.045]"
+      className="min-h-[100dvh] bg-accent/[0.045]"
       style={{ ['--skill-accent' as string]: hexARgb(acento) }}
     >
       {/* Ocupa todo el ancho: centrado a 1400 px dejaba una franja vacía a la izquierda del riel
@@ -237,10 +259,15 @@ export function AulaShell({
         {/* ─── Contenido ─────────────────────────────────────────────────── */}
         <div className="min-w-0 flex-1">
           {/*
-            `top-14 lg:top-0` es el arreglo del hallazgo F1: en móvil, `Layout` tiene un header
-            fijo de 56 px, así que un `top-0` metería esta barra debajo de él.
+            `top-0` también en móvil: dentro del aula el header de la plataforma se esconde
+            (regla `data-aula-inmersiva` en index.css), así que este encabezado es el de arriba
+            del todo. El relleno superior es la muesca del teléfono, que en el resto de la
+            aplicación cubre el header y aquí cubre esta barra.
           */}
-          <header className="sticky top-14 z-20 border-b border-accent/15 bg-accent/[0.07] backdrop-blur lg:top-0">
+          <header
+            className="sticky top-0 z-20 border-b border-accent/15 bg-accent/[0.07] backdrop-blur"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
             {/* Una sola fila, también en móvil. Envolviendo, el selector de período se llevaba
                 una línea entera del encabezado fijo y le comía altura útil a la pantalla. */}
             <div className="flex flex-nowrap items-center gap-x-1.5 px-3 py-2 sm:gap-x-2 sm:px-4">
@@ -293,7 +320,7 @@ export function AulaShell({
       {/* ─── Barra inferior (móvil) ────────────────────────────────────────── */}
       <nav
         aria-label="Secciones del aula"
-        className="fixed right-0 bottom-0 left-0 z-30 border-t border-accent/15 bg-surface-1/95 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed right-0 bottom-0 left-0 z-30 border-t border-accent/15 bg-surface-1/95 backdrop-blur pb-[env(safe-area-inset-bottom)] select-none lg:hidden"
       >
         <div className="flex">
           {principales.map((d) => {
@@ -306,7 +333,7 @@ export function AulaShell({
                 type="button"
                 onClick={() => irA(d.id)}
                 aria-current={activo ? 'page' : undefined}
-                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-[color,transform] active:scale-95 motion-reduce:active:scale-100 ${
                   activo ? 'text-accent' : 'text-ink-muted'
                 }`}
                 style={{ minHeight: 56 }}
@@ -325,7 +352,7 @@ export function AulaShell({
             type="button"
             onClick={() => setMasAbierto(true)}
             aria-expanded={masAbierto}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-[color,transform] active:scale-95 motion-reduce:active:scale-100 ${
               secundarios.some((d) => d.id === vista) ? 'text-accent' : 'text-ink-muted'
             }`}
             style={{ minHeight: 56 }}
