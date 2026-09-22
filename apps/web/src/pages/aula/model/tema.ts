@@ -61,6 +61,22 @@ export function hexARgb(hex: string): string {
   return `${r} ${g} ${b}`
 }
 
+/**
+ * El color sólido que se ve arriba del todo dentro del aula: el acento ya aplanado sobre el
+ * blanco del encabezado (fondo del aula al 4,5 % y barra al 7 %).
+ *
+ * Hace falta porque la barra de estado del teléfono no entiende transparencias: `theme-color`
+ * pide un color y ya. Sin esto, encima del encabezado teñido queda una franja blanca del
+ * sistema y el aula se sigue viendo como una página dentro de un navegador.
+ */
+export function colorDeEncabezado(hex: string): string {
+  const alfa = 0.045 + 0.07 * (1 - 0.045)
+  const dosDigitos = (n: number) => Math.round(n).toString(16).padStart(2, '0')
+  return `#${canal(hex)
+    .map((c) => dosDigitos(c * alfa + 255 * (1 - alfa)))
+    .join('')}`
+}
+
 function canal(hex: string): [number, number, number] {
   const v = hex.replace('#', '')
   const largo = v.length === 3 ? v.split('').map((c) => c + c).join('') : v

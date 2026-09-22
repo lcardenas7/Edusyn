@@ -124,8 +124,12 @@
    portátil, y ninguna de las dos manda. Mientras estás dentro, el menú del aula
    es el único, y para salir hay un destino explícito ("Salir del aula").
 
-   Solo en escritorio: en móvil el menú global es un cajón que no estorba, y es
-   la única forma de volver al resto de la aplicación.
+   En móvil pasa lo mismo, y peor: el header de la plataforma y el encabezado del
+   aula se apilaban, el aula quedaba dentro del margen de página (16 px por lado)
+   y su encabezado se metía debajo del header al hacer scroll. Dentro del aula
+   manda el aula: un solo encabezado, a sangre, y la barra inferior abajo. La
+   salida no depende del menú global: el encabezado lleva "Mis aulas" y la hoja
+   "Más" lleva "Salir del aula".
    ═══════════════════════════════════════════════════════════════════════════ */
 @media (min-width: 1024px) {
   body[data-aula-inmersiva] [data-app-sidebar] {
@@ -134,11 +138,34 @@
   body[data-aula-inmersiva] [data-app-main] {
     padding-left: 0;
   }
-  /* Sin el margen del Layout: el aula va de borde a borde y su riel queda fijo como el menú
-     de la plataforma (con el margen, el riel arrancaba separado y subía con el contenido). */
-  body[data-aula-inmersiva] [data-app-main] > div {
-    padding: 0;
+}
+
+@media (max-width: 1023px) {
+  body[data-aula-inmersiva] [data-app-header] {
+    display: none;
   }
+  /* Ese relleno reservaba el alto del header, que aquí ya no está. */
+  body[data-aula-inmersiva] [data-app-main] {
+    padding-top: 0;
+  }
+}
+
+/* Sin el margen del Layout: el aula va de borde a borde y su riel queda fijo como el menú
+   de la plataforma (con el margen, el riel arrancaba separado y subía con el contenido). */
+body[data-aula-inmersiva] [data-app-content] {
+  padding: 0;
+}
+
+/* Gestos de aplicación, no de página web: sin rebote elástico al final del scroll
+   (en Chrome de Android, además, sin "tirar para recargar" dentro del aula), sin
+   el destello gris al tocar y sin el retardo del doble toque para hacer zoom. */
+body[data-aula-inmersiva] {
+  overscroll-behavior-y: contain;
+}
+body[data-aula-inmersiva] button,
+body[data-aula-inmersiva] a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 :root {
