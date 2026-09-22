@@ -198,14 +198,16 @@ export class ConstruyeService {
     return classroom;
   }
 
-  private async projectForTeacher(projectId: string, institutionId: string, userId: string) {
+  // Públicos para ConstruyePublicationService (mismo módulo): la pertenencia y la propiedad del
+  // aula se comprueban en un solo sitio.
+  async projectForTeacher(projectId: string, institutionId: string, userId: string) {
     const project = await (this.prisma as any).construyeProject.findFirst({ where: { id: projectId, institutionId } });
     if (!project) throw new NotFoundException('Proyecto de Construye no encontrado');
     await this.assertClassroomOwner(project.classroomId, institutionId, userId);
     return project;
   }
 
-  private async membership(teamId: string, institutionId: string, userId: string) {
+  async membership(teamId: string, institutionId: string, userId: string) {
     const team = await (this.prisma as any).construyeTeam.findFirst({ where: { id: teamId, institutionId } });
     if (!team) throw new NotFoundException('Equipo no encontrado');
     const member = await (this.prisma as any).construyeTeamMember.findFirst({
@@ -216,7 +218,7 @@ export class ConstruyeService {
     return { team, member };
   }
 
-  private async teamForUser(teamId: string, institutionId: string, userId: string) {
+  async teamForUser(teamId: string, institutionId: string, userId: string) {
     try { return await this.membership(teamId, institutionId, userId); }
     catch (error) {
       if (!(error instanceof ForbiddenException)) throw error;

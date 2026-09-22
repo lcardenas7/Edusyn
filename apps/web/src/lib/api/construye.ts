@@ -144,3 +144,57 @@ export const construyeApi = {
   addJournalEntry: (teamId: string, data: { type: string; summary: string; detail?: Record<string, unknown> }) =>
     api.post<ConstruyeJournalEntry>(`/construye/teams/${teamId}/journal`, data),
 }
+
+// ─── Publicar la app (enlace/QR/instalable) y su uso ─────────────────────────────────────────
+
+export type ConstruyePublicationStatus = 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'UNPUBLISHED'
+
+/** Uso anónimo de la app publicada, sin contar los dispositivos del equipo (ver app-usage.ts). */
+export interface ConstruyeAppUsage {
+  devices: number
+  teamDevices: number
+  installs: number
+  activeToday: number
+  activeWeek: number
+  opens: number
+  minutes: number
+  returnedNextDay: { eligible: number; returned: number }
+  returnedWeek: { eligible: number; returned: number }
+  sources: { qr: number; link: number; team: number; direct: number }
+  daily: { day: string; active: number; newDevices: number }[]
+  suspicious: boolean
+  lastUseAt: string | null
+}
+
+export interface ConstruyePublication {
+  id: string
+  teamId: string
+  status: ConstruyePublicationStatus
+  /** En línea ahora mismo (publicada y sin vencer). */
+  live: boolean
+  title: string
+  kind: ConstruyeProjectKind
+  /** Enlace público; null si el servicio de apps no está configurado. */
+  url: string | null
+  versionNumber: number | null
+  pendingVersionNumber: number | null
+  requestedAt: string | null
+  reviewedAt: string | null
+  reviewNote: string | null
+  publishedAt: string | null
+  expiresAt: string | null
+  stats: ConstruyeAppUsage | null
+}
+
+export const construyePublicationApi = {
+  forTeam: (teamId: string) =>
+    api.get<{ publication: ConstruyePublication | null; appsConfigured: boolean }>(`/construye/teams/${teamId}/publication`),
+  request: (teamId: string, data: { title?: string; versionId?: string } = {}) =>
+    api.post<ConstruyePublication>(`/construye/teams/${teamId}/publication`, data),
+  forProject: (projectId: string) => api.get<ConstruyePublication[]>(`/construye/projects/${projectId}/publications`),
+  approve: (publicationId: string, data: { expiresAt?: string | null } = {}) =>
+    api.post<ConstruyePublication>(`/construye/publications/${publicationId}/approve`, data),
+  reject: (publicationId: string, data: { note?: string } = {}) =>
+    api.post<ConstruyePublication>(`/construye/publications/${publicationId}/reject`, data),
+  unpublish: (publicationId: string) => api.post<ConstruyePublication>(`/construye/publications/${publicationId}/unpublish`, {}),
+}

@@ -1,0 +1,12 @@
+{
+  "name": "crea-apps",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Servicio público de las apps publicadas de Edusyn Crea (/a/<token>/).",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/main.mjs",
+    "test": "node --test test/server.test.mjs"
+  }
+}

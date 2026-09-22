@@ -1,10 +1,12 @@
 import { AlertTriangle, BrainCircuit, Code2, Globe, Loader2, Lock, Plus, Smartphone, Unlock, Users2 } from 'lucide-react'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { promptDialog } from '../../components/ui/confirm'
 import { classroomApi } from '../../lib/api'
 import {
   construyeApi,
+  construyePublicationApi,
+  type ConstruyePublication,
   type ConstruyeDashboardTeam,
   type ConstruyeMemberRole,
   type ConstruyeProject,
@@ -12,21 +14,10 @@ import {
 } from '../../lib/api/construye'
 import { manifestToProject } from './manifest'
 import PreviewFrame from './PreviewFrame'
+import type { ViewportKey } from './viewports'
 import TeamWorkspace from './TeamWorkspace'
 import TeamReasoning, { PhaseProgress } from './TeamReasoning'
-
-/** Marco de celular puramente visual: comunica "así se ve en un teléfono", nada de esto
- * afecta el aislamiento — adentro sigue el mismo iframe sandboxed de PreviewFrame. */
-function PhoneMockup({ children }: { children: ReactNode }) {
-  return (
-    <div className="mx-auto w-[220px] rounded-[32px] border-[6px] border-slate-900 bg-slate-900 shadow-xl">
-      <div className="relative h-[440px] w-full overflow-hidden rounded-[26px] bg-white">
-        <div className="absolute left-1/2 top-2 z-10 h-4 w-20 -translate-x-1/2 rounded-full bg-slate-900" />
-        {children}
-      </div>
-    </div>
-  )
-}
+import TeacherPublication from './TeacherPublication'
 
 const ROLE_LABEL: Record<ConstruyeMemberRole, string> = {
   RESEARCH: 'Investigación',
@@ -153,7 +144,7 @@ function TeacherView({ classroomId, projects, reload }: { classroomId: string; p
           <div className="mt-2"><KindPicker value={kindOf(selectedProject)} onChange={changeKind} disabled={changingKind} /></div>
         </details>}
         {linkedActivity && <p className="text-xs text-slate-500">Vinculado a la actividad del aula: <span className="font-semibold text-slate-700">{linkedActivity.title}</span></p>}
-        {projectId && <ProjectDashboard key={projectId} classroomId={classroomId} projectId={projectId} />}
+        {projectId && <ProjectDashboard key={projectId} classroomId={classroomId} projectId={projectId} kind={kindOf(selectedProject)} />}
       </>}
   </div>
 }
@@ -206,14 +197,19 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
 
 interface RosterStudent { enrollmentId: string; name: string }
 
-function ProjectDashboard({ classroomId, projectId }: { classroomId: string; projectId: string }) {
+function ProjectDashboard({ classroomId, projectId, kind }: { classroomId: string; projectId: string; kind: ConstruyeProjectKind }) {
   const [teams, setTeams] = useState<ConstruyeDashboardTeam[] | null>(null)
   const [roster, setRoster] = useState<RosterStudent[]>([])
   const [creatingTeam, setCreatingTeam] = useState(false)
+  const [publications, setPublications] = useState<Record<string, ConstruyePublication>>({})
 
   const load = useCallback(() => {
     construyeApi.dashboard(projectId).then(({ data }) => setTeams(data || [])).catch(() => setTeams([]))
+    construyePublicationApi.forProject(projectId)
+      .then(({ data }) => setPublications(Object.fromEntries((data || []).map(publication => [publication.teamId, publication]))))
+      .catch(() => setPublications({}))
   }, [projectId])
+  const pendingApprovals = Object.values(publications).filter(publication => publication.pendingVersionNumber !== null).length
   useEffect(() => { load() }, [load])
   useEffect(() => {
     classroomApi.getStudents(classroomId)
@@ -229,13 +225,14 @@ function ProjectDashboard({ classroomId, projectId }: { classroomId: string; pro
   const takenEnrollmentIds = teams.flatMap((team) => team.members.map((member) => member.studentEnrollment.id))
 
   return <div className="space-y-4">
-    <div className="flex justify-end">
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {pendingApprovals > 0 && <p className="mr-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">{pendingApprovals === 1 ? '1 equipo pide' : `${pendingApprovals} equipos piden`} publicar su app: revísalo en su tarjeta.</p>}
       <button type="button" onClick={() => setCreatingTeam(true)} className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"><Plus className="h-3.5 w-3.5" /> Nuevo equipo</button>
     </div>
     {creatingTeam && <NewTeamForm projectId={projectId} roster={roster} takenEnrollmentIds={takenEnrollmentIds} onCreated={() => { setCreatingTeam(false); load() }} onCancel={() => setCreatingTeam(false)} />}
     {!teams.length
       ? <Empty msg="Todavía no hay equipos en este proyecto." />
-      : <div className="grid gap-3 sm:grid-cols-2">{teams.map((team) => <TeamCard key={team.id} team={team} onCommented={load} />)}</div>}
+      : <div className="grid gap-3 sm:grid-cols-2">{teams.map((team) => <TeamCard key={team.id} team={team} kind={kind} onCommented={load} publication={publications[team.id]} onPublicationChanged={(publication) => setPublications(current => ({ ...current, [publication.teamId]: publication }))} />)}</div>}
   </div>
 }
 
@@ -302,11 +299,12 @@ function NewTeamForm({ projectId, roster, takenEnrollmentIds, onCreated, onCance
 const SIGNAL_STYLE = { green: 'bg-emerald-100 text-emerald-800', yellow: 'bg-amber-100 text-amber-800', red: 'bg-rose-100 text-rose-800' } as const
 const SIGNAL_DOT = { green: 'bg-emerald-500', yellow: 'bg-amber-500', red: 'bg-rose-500' } as const
 
-function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onCommented: () => void }) {
+function TeamCard({ team, kind, onCommented, publication, onPublicationChanged }: { team: ConstruyeDashboardTeam; kind: ConstruyeProjectKind; onCommented: () => void; publication?: ConstruyePublication; onPublicationChanged: (publication: ConstruyePublication) => void }) {
   const [comment, setComment] = useState('')
   const [sending, setSending] = useState(false)
   const [view, setView] = useState<'none' | 'app' | 'code' | 'reasoning'>('none')
   const [unlocking, setUnlocking] = useState(false)
+  const [reviewViewport, setReviewViewport] = useState<ViewportKey>(kind === 'APP' ? 'mobile' : 'desktop')
 
   const sendComment = async () => {
     if (!comment.trim()) return
@@ -365,16 +363,14 @@ function TeamCard({ team, onCommented }: { team: ConstruyeDashboardTeam; onComme
     </div>
     {view === 'reasoning' && <TeamReasoning teamId={team.id} />}
     {team.latestVersion && <div className="mt-1 flex gap-3">
-      <button type="button" onClick={() => setView((current) => current === 'app' ? 'none' : 'app')} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:underline"><Smartphone className="h-3.5 w-3.5" /> {view === 'app' ? 'Ocultar la app' : 'Ver la app'}</button>
+      <button type="button" onClick={() => setView((current) => current === 'app' ? 'none' : 'app')} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:underline"><Smartphone className="h-3.5 w-3.5" /> Ver la app</button>
       <button type="button" onClick={() => setView((current) => current === 'code' ? 'none' : 'code')} className="text-xs font-semibold text-indigo-700 hover:underline">{view === 'code' ? 'Ocultar código' : 'Ver código'}</button>
     </div>}
-    {view === 'app' && project && <div className="my-3 rounded-2xl bg-slate-100 p-4">
-      <PhoneMockup><PreviewFrame project={project} compact /></PhoneMockup>
-      <p className="mt-2 text-center text-[11px] text-slate-500">Así la vería un estudiante en su teléfono. Ejecutándose en el origen aislado, sin sesión ni datos de Edusyn.</p>
-    </div>}
+    {view === 'app' && project && <PreviewFrame review project={project} reviewTitle={`${team.name} · versión ${team.latestVersion?.number ?? ''}`} viewport={reviewViewport} onViewportChange={setReviewViewport} onClose={() => setView('none')} />}
     {view === 'code' && project && <div className="mt-2 space-y-2">
       {(['html', 'css', 'js'] as const).map((key) => <pre key={key} className="max-h-40 overflow-auto rounded-lg bg-slate-950 p-2 text-[11px] leading-4 text-slate-100"><code>{project[key] || '(vacío)'}</code></pre>)}
     </div>}
+    {publication && <TeacherPublication publication={publication} onChanged={onPublicationChanged} />}
     {team.recentMilestones.length > 0 && <ul className="mt-3 space-y-1 border-t border-hairline pt-2 text-xs text-slate-500">
       {team.recentMilestones.slice(0, 3).map((entry) => <li key={entry.id}>• {entry.summary}</li>)}
     </ul>}
