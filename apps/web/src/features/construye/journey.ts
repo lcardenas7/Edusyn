@@ -71,8 +71,11 @@ export function nextDocumentPhase(brief: ConstruyeTeamBrief): BriefPhaseKey {
 
 /** Dónde abrir el estudio: quien ya tiene código vuelve al taller; quien terminó de documentar
  * pasa a la petición (o al código si la omitió); si no, sigue documentando. */
-export function initialStudioMode(brief: ConstruyeTeamBrief, versionCount: number, promptSkipped: boolean): StudioMode {
+/** Con qué momento abre el taller. Si el docente apagó la IA, el paso del prompt no existe:
+ * se pasa directo del plan al código. */
+export function initialStudioMode(brief: ConstruyeTeamBrief, versionCount: number, promptSkipped: boolean, aiEnabled = true): StudioMode {
   if (versionCount > 0) return 'code'
+  if (!aiEnabled) return promptReady(brief) ? 'code' : 'document'
   if (promptReady(brief)) return promptSkipped ? 'code' : 'prompt'
   return 'document'
 }
