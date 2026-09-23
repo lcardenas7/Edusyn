@@ -14,6 +14,24 @@ import { ActivityNotificationsService } from './activity-notifications.service';
 const AULA = 'aula-1';
 const ACTIVIDAD = 'act-1';
 
+function matches(row: any, where: any): boolean {
+  return Object.entries(where).every(([key, value]: [string, any]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (Array.isArray(value.in)) return value.in.includes(row?.[key]);
+      return row?.[key] != null && matches(row[key], value);
+    }
+    return row?.[key] === value;
+  });
+}
+
+function matricula(userId: string | null, institutionId = 'inst-A') {
+  return {
+    id: `enr-${userId ?? 'null'}`, institutionId, groupId: 'grupo-1', academicYearId: 'anio-1', status: 'ACTIVE',
+    student: { institutionId, userId }, academicYear: { institutionId },
+    group: { campus: { institutionId }, grade: { institutionId } },
+  };
+}
+
 function actividad(extra: Record<string, unknown> = {}) {
   return {
     id: ACTIVIDAD,
@@ -28,11 +46,17 @@ function actividad(extra: Record<string, unknown> = {}) {
     assignedStudents: [],
     classroom: {
       institutionId: 'inst-A',
+      isPersonal: false,
+      teacherAssignmentId: 'ta-A',
       teacherAssignment: {
+        id: 'ta-A',
+        institutionId: 'inst-A',
         teacherId: 'docente-1',
         groupId: 'grupo-1',
         academicYearId: 'anio-1',
-        subject: { name: 'Matemáticas' },
+        academicYear: { institutionId: 'inst-A' },
+        group: { campus: { institutionId: 'inst-A' }, grade: { institutionId: 'inst-A' } },
+        subject: { name: 'Matemáticas', area: { institutionId: 'inst-A' } },
       },
     },
     ...extra,
@@ -41,7 +65,7 @@ function actividad(extra: Record<string, unknown> = {}) {
 
 function hacerServicio(opciones: {
   actividad?: Record<string, unknown> | null;
-  matriculas?: Array<{ student: { userId: string | null } }>;
+  matriculas?: Array<ReturnType<typeof matricula>>;
   yaTieneDestinatarios?: number;
   falla?: unknown;
 } = {}) {
@@ -55,9 +79,8 @@ function hacerServicio(opciones: {
       ),
     },
     studentEnrollment: {
-      findMany: jest.fn().mockResolvedValue(
-        opciones.matriculas ?? [{ student: { userId: 'user-A' } }, { student: { userId: 'user-B' } }],
-      ),
+      findMany: jest.fn(async ({ where }: any) =>
+        (opciones.matriculas ?? [matricula('user-A'), matricula('user-B')]).filter((row) => matches(row, where))),
     },
     message: {
       createMany: jest.fn(async ({ data }: any) => {
@@ -200,7 +223,7 @@ describe('Avisos de actividad publicada', () => {
     });
 
     it('un aula donde ningún estudiante tiene usuario todavía', async () => {
-      const { servicio, raw } = hacerServicio({ matriculas: [{ student: { userId: null } }] });
+      const { servicio, raw } = hacerServicio({ matriculas: [matricula(null)] });
       await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(0);
       expect(raw.message.createMany).not.toHaveBeenCalled();
     });
@@ -223,7 +246,7 @@ describe('Avisos de actividad publicada', () => {
         isRestrictedToAssigned: true,
         assignedStudents: [{ studentEnrollmentId: 'matricula-3' }],
       }),
-      matriculas: [{ student: { userId: 'user-C' } }],
+      matriculas: [{ ...matricula('user-C'), id: 'matricula-3' }],
     });
 
     await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(1);
@@ -234,7 +257,7 @@ describe('Avisos de actividad publicada', () => {
 
   it('no repite a un estudiante matriculado dos veces', async () => {
     const { servicio, destinatarios } = hacerServicio({
-      matriculas: [{ student: { userId: 'user-A' } }, { student: { userId: 'user-A' } }],
+      matriculas: [matricula('user-A'), { ...matricula('user-A'), id: 'enr-2' }],
     });
 
     await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(1);
@@ -244,5 +267,30 @@ describe('Avisos de actividad publicada', () => {
   it('avisa de varias de una vez, para las programadas', async () => {
     const { servicio } = hacerServicio();
     await expect(servicio.avisarVarias([ACTIVIDAD, 'act-2'])).resolves.toBe(4);
+  });
+
+  it('descarta una matrícula que dice A pero cuyo estudiante pertenece a B', async () => {
+    const cross = matricula('user-B', 'inst-A');
+    cross.student.institutionId = 'inst-B';
+    const { servicio, destinatarios } = hacerServicio({ matriculas: [matricula('user-A'), cross] });
+    await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(1);
+    expect(destinatarios.map((r) => r.recipientId)).toEqual(['user-A']);
+  });
+
+  it('descarta una matrícula con sede de otro colegio aunque los ids de grupo y año coincidan', async () => {
+    const cross = matricula('user-B');
+    cross.group.campus.institutionId = 'inst-B';
+    const { servicio, destinatarios } = hacerServicio({ matriculas: [matricula('user-A'), cross] });
+    await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(1);
+    expect(destinatarios.map((r) => r.recipientId)).toEqual(['user-A']);
+  });
+
+  it('no anuncia una actividad cuya asignación docente cuelga de otra institución', async () => {
+    const bad = actividad();
+    bad.classroom.teacherAssignment.institutionId = 'inst-B';
+    const { servicio, raw } = hacerServicio({ actividad: bad });
+    await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(0);
+    expect(raw.studentEnrollment.findMany).not.toHaveBeenCalled();
+    expect(raw.message.createMany).not.toHaveBeenCalled();
   });
 });

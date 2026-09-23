@@ -359,6 +359,8 @@ function Demo() {
           <ActividadDetalle
             actividad={MUESTRA[0]}
             rol={role}
+            alumnos={null}
+            errorAlumnos={null}
             miEntrega={
               role === 'estudiante'
                 ? {

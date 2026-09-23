@@ -59,7 +59,6 @@ function DetalleCargado({
   activityId,
   aulaId,
   rol,
-  totalEstudiantes,
   onVolver,
   onAbrirHerramientas,
   onVerProgreso,
@@ -69,14 +68,13 @@ function DetalleCargado({
   activityId: string
   aulaId: string
   rol: Rol
-  totalEstudiantes?: number | null
   onEditarLeccion: (a: { id: string; title: string; gameType?: string }) => void
   onVolver: () => void
   onAbrirHerramientas: () => void
   onVerProgreso?: () => void
   onAbrirActividad: (id: string) => void
 }) {
-  const { actividad, miEntrega, entregas, cargando, error, recargar } = useActividad(activityId, rol)
+  const { actividad, miEntrega, entregas, alumnos, errorAlumnos, cargando, error, recargar } = useActividad(activityId, rol)
 
   return (
     <AulaState
@@ -101,12 +99,13 @@ function DetalleCargado({
           rol={rol}
           miEntrega={miEntrega}
           entregas={entregas}
+          alumnos={alumnos}
+          errorAlumnos={errorAlumnos}
           onVolver={onVolver}
           onCambio={recargar}
           onAbrirHerramientas={onAbrirHerramientas}
           onVerProgreso={onVerProgreso}
           aulaId={aulaId}
-          totalEstudiantes={totalEstudiantes}
           onAbrirActividad={onAbrirActividad}
           onEditarLeccion={() =>
             onEditarLeccion({
@@ -366,7 +365,6 @@ export default function AulaVirtual() {
             activityId={activityId}
             aulaId={classroomId}
             rol={rol}
-            totalEstudiantes={aula?.estudiantes ?? null}
             onVolver={() => verActividades()}
             onAbrirHerramientas={() => abrirHerramienta('actividades', activityId)}
             onVerProgreso={rol === 'docente' && session?.activityId === activityId ? () => abrirHerramienta('actividades', activityId, false, true) : undefined}
@@ -384,6 +382,7 @@ export default function AulaVirtual() {
             anuncios={aula?.anuncios ?? []}
             onAbrirActividad={abrirActividad}
             onVerActividades={verActividades}
+            onVerTodasActividades={() => navigate(`/aula/${classroomId}/actividades?periodo=${PERIOD_ALL}`)}
             totalEstudiantes={aula?.estudiantes ?? null}
             // Creación por intención y herramientas completas dentro de la misma aula.
             onCrear={rol === 'docente' ? tipo => tipo === 'MATERIAL' ? abrirHerramienta('materiales') : abrirCreacion(tipo) : undefined}

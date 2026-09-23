@@ -15,17 +15,18 @@ import { RotateCcw, Save, X } from 'lucide-react'
 import { classroomApi } from '../../../lib/api'
 import { toast } from '../../../lib/toast'
 import type { ActivityLike } from '../model/activityState'
-import type { EntregaLike } from '../data/useActividad'
+import type { AlumnoActividad, EntregaLike } from '../data/useActividad'
 import { agoCopy } from '../model/countdown'
 import { submissionStateMeta, TONE_CLASSES } from '../model/labels'
 import { EmptyState } from './EmptyState'
 import { textoLegible } from '../model/texto'
 import { SmartAudio } from '../../../components/media/SmartMedia'
+import { nombrePorApellido, resumenParticipacion } from '../model/participacion'
 
 const nombreDe = (e: EntregaLike): string => {
   const s = e.studentEnrollment?.student
   if (!s) return 'Estudiante'
-  return [s.firstName, s.lastName, s.secondLastName].filter(Boolean).join(' ')
+  return nombrePorApellido(s)
 }
 
 const ESPERANDO = new Set(['SUBMITTED', 'LATE'])
@@ -33,45 +34,26 @@ const ESPERANDO = new Set(['SUBMITTED', 'LATE'])
 export function ListaEntregas({
   actividad,
   entregas,
-  totalEstudiantes,
+  alumnos,
+  errorAlumnos,
   onCambio,
   now = new Date(),
 }: {
   actividad: ActivityLike
   entregas: EntregaLike[]
-  /** Cuántos estudiantes hay en el grupo, para saber cuántos faltan. */
-  totalEstudiantes?: number | null
+  alumnos: AlumnoActividad[] | null
+  errorAlumnos: string | null
   onCambio: () => void
   now?: Date
 }) {
   const [abierta, setAbierta] = useState<string | null>(null)
-
-  if (entregas.length === 0) {
-    return (
-      <EmptyState
-        scene="sin-actividades"
-        title="Todavía no hay entregas"
-        detail={
-          totalEstudiantes
-            ? `Ninguno de tus ${totalEstudiantes} estudiantes ha entregado todavía.`
-            : 'Cuando tus estudiantes entreguen, las verás aquí para calificarlas.'
-        }
-        compact
-      />
-    )
-  }
-
-  // Primero las que esperan nota: es el trabajo que el docente vino a hacer.
-  const ordenadas = [...entregas].sort((a, b) => {
-    const pa = ESPERANDO.has(a.status) ? 0 : 1
-    const pb = ESPERANDO.has(b.status) ? 0 : 1
-    if (pa !== pb) return pa - pb
-    return nombreDe(a).localeCompare(nombreDe(b), 'es')
-  })
-
-  const porCalificar = ordenadas.filter((e) => ESPERANDO.has(e.status)).length
-  // Lo que el docente pregunta primero y hasta ahora no se respondía: quién falta.
-  const faltan = totalEstudiantes != null ? Math.max(0, totalEstudiantes - entregas.length) : null
+  const [filtro, setFiltro] = useState<'entregaron' | 'todos' | 'sin-entregar'>('entregaron')
+  const participacion = resumenParticipacion(alumnos, entregas)
+  const porCalificar = participacion.entregaron.filter((e) => ESPERANDO.has(e.status)).length
+  // Una recarga fallida no debe dejar una vista vacía que parezca "todos entregaron".
+  const filtroVisible = alumnos === null ? 'entregaron' : filtro
+  const visibles = filtroVisible === 'sin-entregar' ? [] : participacion.entregaron
+  const pendientes = filtroVisible === 'entregaron' ? [] : participacion.sinEntregar ?? []
 
   return (
     <section aria-labelledby="entregas">
@@ -79,7 +61,9 @@ export function ListaEntregas({
         <h2 id="entregas" className="text-body-base font-semibold text-ink-primary">
           Entregas{' '}
           <span className="text-ink-muted">
-            {totalEstudiantes != null ? `(${entregas.length} de ${totalEstudiantes})` : `(${entregas.length})`}
+            {participacion.total != null
+              ? `(${participacion.estudiantesQueEntregaron} de ${participacion.total} estudiantes)`
+              : `(${participacion.entregaron.length})`}
           </span>
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -88,16 +72,37 @@ export function ListaEntregas({
               {porCalificar} {porCalificar === 1 ? 'espera nota' : 'esperan nota'}
             </span>
           )}
-          {faltan != null && faltan > 0 && (
+          {participacion.sinEntregar != null && participacion.sinEntregar.length > 0 && (
             <span className="rounded-full border border-hairline bg-surface-2 px-2.5 py-1 text-badge font-medium text-ink-secondary">
-              {faltan} sin entregar
+              {participacion.sinEntregar.length} sin entregar
             </span>
           )}
         </div>
       </div>
 
+      {errorAlumnos && (
+        <p role="alert" className="mb-3 text-body-sm text-warning-700">
+          No se pudo comprobar quién falta por entregar: {errorAlumnos}.{' '}
+          <button type="button" onClick={onCambio} className="font-semibold underline">Reintentar</button>
+        </p>
+      )}
+
+      <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Filtrar estudiantes por entrega">
+        {([
+          ['entregaron', 'Entregaron'], ['todos', 'Todos'], ['sin-entregar', 'Sin entregar'],
+        ] as const).map(([value, label]) => (
+          <button key={value} type="button" aria-pressed={filtroVisible === value}
+            disabled={value !== 'entregaron' && alumnos === null}
+            onClick={() => setFiltro(value)}
+            className={`min-h-btn rounded-lg border px-3 text-body-sm font-medium focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${filtroVisible === value ? 'border-accent bg-accent/10 text-accent' : 'border-hairline text-ink-secondary'}`}
+          >
+            {label}{value === 'sin-entregar' && participacion.sinEntregar ? ` (${participacion.sinEntregar.length})` : ''}
+          </button>
+        ))}
+      </div>
+
       <ul className="space-y-2">
-        {ordenadas.map((e) => (
+        {visibles.map((e) => (
           <li key={e.id}>
             <FilaEntrega
               entrega={e}
@@ -112,7 +117,17 @@ export function ListaEntregas({
             />
           </li>
         ))}
+        {pendientes.map((alumno) => (
+          <li key={alumno.enrollmentId} className="flex items-center justify-between gap-3 rounded-card border border-hairline bg-surface-1 p-3.5">
+            <span className="min-w-0 text-body-sm font-medium text-ink-primary">{nombrePorApellido(alumno)}</span>
+            <span className="shrink-0 text-badge text-ink-muted">Sin entregar</span>
+          </li>
+        ))}
       </ul>
+      {visibles.length === 0 && pendientes.length === 0 && (
+        <EmptyState scene="sin-actividades" title={filtroVisible === 'sin-entregar' ? 'Todos entregaron' : 'Todavía no hay entregas'}
+          detail={filtroVisible === 'sin-entregar' ? 'No quedan estudiantes sin entrega registrada.' : 'Cuando tus estudiantes entreguen, las verás aquí para calificarlas.'} compact />
+      )}
     </section>
   )
 }

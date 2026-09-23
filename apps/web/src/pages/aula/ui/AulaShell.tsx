@@ -20,7 +20,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
-import { colorDeEncabezado, hexARgb, resolverAcento } from '../model/tema'
+import { acentoLegible, colorDeEncabezado, hexARgb, resolverAcento } from '../model/tema'
 import { DialogoTema, IconoTema } from './SelectorTema'
 import { BotonPeriodo, DialogoPeriodo } from './SelectorPeriodo'
 import { ProveedorAcento } from './AulaTema'
@@ -124,8 +124,10 @@ export function AulaShell({
   const secundarios = destinos.filter((d) => !d.principal)
   const identidad = subjectIdentity(aula.asignatura)
   const colorAula = aula.color?.trim() || identidad.hue.ink
-  // Lo que de verdad se pinta: el tema del estudiante si eligió uno, si no el del aula.
-  const acento = resolverAcento(tema, colorAula)
+  // Lo que de verdad se pinta: el tema del estudiante si eligió uno, si no el del aula. Se
+  // oscurece lo justo si hiciera falta: este color va debajo de texto blanco en botones y
+  // chips —también en las herramientas embebidas— y el docente puede haber elegido un amarillo.
+  const acento = acentoLegible(resolverAcento(tema, colorAula))
   const hueDelAula = { ink: acento, wash: `${acento}1A`, deep: acento }
 
   /*
