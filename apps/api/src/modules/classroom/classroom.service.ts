@@ -796,6 +796,31 @@ export class ClassroomService {
       });
       const pendingMap = new Map(pendingGroups.map((g) => [g.activityId, g._count._all]));
 
+      // La tarjeta dice "X de N estudiantes entregaron": varios intentos de la
+      // misma matrícula cuentan una sola vez. Una entrega de otra matrícula/año
+      // tampoco puede inflar el numerador del grupo activo.
+      const participantGroups = await this.prisma.activitySubmission.groupBy({
+        by: ['activityId', 'studentEnrollmentId'],
+        where: {
+          activityId: { in: activities.map((a) => a.id) },
+          status: { not: 'DRAFT' },
+          studentEnrollment: {
+            institutionId: actor.institutionId,
+            academicYearId: scope.teacherAssignment.academicYearId,
+            groupId: scope.teacherAssignment.groupId,
+            status: 'ACTIVE',
+            student: { institutionId: actor.institutionId },
+            academicYear: { institutionId: actor.institutionId },
+            group: { campus: { institutionId: actor.institutionId }, grade: { institutionId: actor.institutionId } },
+          },
+        },
+        _count: { _all: true },
+      });
+      const participantCount = new Map<string, number>();
+      for (const group of participantGroups) {
+        participantCount.set(group.activityId, (participantCount.get(group.activityId) ?? 0) + 1);
+      }
+
       // Prerrequisitos configurados por actividad (Fase 4), para que el docente los edite.
       const prereqMap = await this.getDependencyMapForClassroom(classroomId);
 
@@ -803,6 +828,7 @@ export class ClassroomService {
         ...a,
         section: (a.sectionId ? secciones.get(a.sectionId) : undefined) ?? null,
         gradingPending: pendingMap.get(a.id) || 0,
+        participantCount: participantCount.get(a.id) ?? 0,
         prerequisites: prereqMap.get(a.id) || [],
       }));
     }

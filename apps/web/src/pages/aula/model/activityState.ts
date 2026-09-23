@@ -37,6 +37,8 @@ export interface ActivityLike {
   section?: { id: string; title: string; academicTermId?: string | null } | null
   /** Entregas SUBMITTED/LATE pendientes de nota (solo llega en el payload docente). */
   gradingPending?: number
+  /** Matrículas activas distintas que entregaron; no intentos individuales. */
+  participantCount?: number
   _count?: { submissions?: number } | null
   /** En el payload del estudiante viene su propia entrega (una sola). */
   submissions?: {
@@ -187,7 +189,7 @@ export interface TeacherView {
  */
 export function deriveTeacherState(a: ActivityLike, now: Date = new Date()): TeacherView {
   const porCalificar = a.gradingPending ?? 0
-  const entregas = a._count?.submissions ?? 0
+  const entregas = a.participantCount ?? a._count?.submissions ?? 0
   const programada = time(a.scheduledPublishAt)
   const base = { porCalificar, entregas, seProgramaPara: a.scheduledPublishAt ?? null }
 

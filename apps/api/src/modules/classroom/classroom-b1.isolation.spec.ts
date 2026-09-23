@@ -325,6 +325,15 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
     ]);
   });
 
+  it('cuenta estudiantes actuales distintos, no intentos ni matrículas de otro año', async () => {
+    const primera = data.rows.activitySubmission.find((s) => s.id === 'sub-A1');
+    data.rows.activitySubmission.push({ ...primera, id: 'sub-A1-2', attemptNumber: 2, status: 'GRADED' });
+    const lista = await service().listActivities(docenteA(), 'class-A');
+    const actividad = lista.find((a: any) => a.id === 'act-A-pub');
+    expect(actividad._count.submissions).toBeGreaterThan(actividad.participantCount);
+    expect(actividad.participantCount).toBe(2); // A1 y A2; A1-2 y A1 del año viejo no suman
+  });
+
   it('create crea el aula con la institución del actor y la quita de disponibles', async () => {
     const creada = await service().create(docenteA(), { teacherAssignmentId: 'ta-disponible-A' });
     expect(creada.institutionId).toBe(A);

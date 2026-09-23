@@ -126,6 +126,10 @@ describe('estado del estudiante', () => {
 })
 
 describe('estado del docente', () => {
+  it('muestra personas que entregaron y no suma intentos repetidos', () => {
+    const d = deriveTeacherState(act({ participantCount: 37, _count: { submissions: 40 }, isPublished: true }), AHORA)
+    expect(d.entregas).toBe(37)
+  })
   it('sin publicar y con fecha programada futura → programada', () => {
     const d = deriveTeacherState(
       act({ isPublished: false, scheduledPublishAt: '2026-05-22T13:00:00.000Z' }),
