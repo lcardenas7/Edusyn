@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   CallHandler,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
@@ -33,6 +34,7 @@ import { REQUIRE_TENANT_CONTEXT_KEY } from '../../modules/auth/decorators/requir
  */
 @Injectable()
 export class TenantContextInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(TenantContextInterceptor.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly reflector: Reflector,
@@ -78,6 +80,7 @@ export class TenantContextInterceptor implements NestInterceptor {
     return new Observable((subscriber) => {
       let responseValue: any;
       let hasValue = false;
+      const afterCommit: Array<() => void> = [];
 
       rawPrisma
         .$transaction(
@@ -101,7 +104,7 @@ export class TenantContextInterceptor implements NestInterceptor {
             // Run the entire request handler within the tenant context
             // AsyncLocalStorage propagates through all async operations
             return new Promise<void>((resolve, reject) => {
-              tenantContext.run({ tx, institutionId, userId }, () => {
+              tenantContext.run({ tx, institutionId, userId, afterCommit }, () => {
                 next.handle().subscribe({
                   next: (val) => {
                     responseValue = val;
@@ -119,6 +122,11 @@ export class TenantContextInterceptor implements NestInterceptor {
           },
         )
         .then(() => {
+          // The database commit has finished. Never run these on rollback and
+          // never turn a committed request into a 500 if an optional action fails.
+          for (const action of afterCommit) {
+            try { action(); } catch (error) { this.logger.error('Acción posterior al commit falló', error as Error); }
+          }
           // Transaction committed → emit buffered response to client
           if (hasValue) {
             subscriber.next(responseValue);

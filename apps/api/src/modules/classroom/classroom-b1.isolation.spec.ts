@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { A, B, actorDe, conteo, fixture, noWrites } from '../../../test/fixtures/classroom-b1.fixture';
+import { tenantContext } from '../../prisma/tenant-context';
 
 /**
  * Laboratorio de servicio de Classroom Bloque 1 (17 rutas).
@@ -382,15 +383,28 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
   it('publish inmediato y programado conservan su semántica de campos', async () => {
     const programada = await service().publishActivity(docenteA(), 'act-A-draft', { scheduledPublishAt: '2026-12-01' });
     expect(programada.isPublished).toBe(false);
+    expect(data.avisos.programar).not.toHaveBeenCalled();
     expect(new Date(programada.scheduledPublishAt).toISOString()).toBe('2026-12-01T05:00:00.000Z');
     const inmediata = await service().publishActivity(docenteA(), 'act-A-draft');
     expect(inmediata.isPublished).toBe(true);
     expect(inmediata.isVisible).toBe(true);
     expect(inmediata.scheduledPublishAt).toBeNull();
     expect(inmediata.publishedAt).toBeInstanceOf(Date);
+    expect(data.avisos.programar).toHaveBeenCalledWith('act-A-draft');
     const despublicada = await service().unpublishActivity(docenteA(), 'act-A-draft');
     expect(despublicada.isPublished).toBe(false);
     expect(despublicada.scheduledPublishAt).toBeNull();
+  });
+
+  it('difiere el aviso inmediato hasta el commit de la petición', async () => {
+    const afterCommit: Array<() => void> = [];
+    await tenantContext.run({ tx: {}, institutionId: A, afterCommit }, async () => {
+      await service().publishActivity(docenteA(), 'act-A-draft');
+      expect(data.avisos.programar).not.toHaveBeenCalled();
+    });
+    expect(afterCommit).toHaveLength(1);
+    afterCommit[0]();
+    expect(data.avisos.programar).toHaveBeenCalledWith('act-A-draft');
   });
 
   it('setActivityDependencies reemplaza el conjunto y normaliza la condición', async () => {

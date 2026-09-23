@@ -13,6 +13,8 @@ export interface TenantStore {
   institutionId: string;
   /** Authenticated user id. Undefined only for legacy/system tenant requests. */
   userId?: string;
+  /** Best-effort actions started only after the request transaction commits. */
+  afterCommit?: Array<() => void>;
 }
 
 export const tenantContext = new AsyncLocalStorage<TenantStore>();

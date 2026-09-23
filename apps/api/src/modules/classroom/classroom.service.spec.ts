@@ -29,7 +29,7 @@ describe('ClassroomService activity duplication', () => {
         create: jest.fn().mockResolvedValue({ id: 'lesson-target' }),
       },
     };
-    return { prisma, service: new ClassroomService(prisma as any, {} as any, {} as any, {} as any, {} as any) };
+    return { prisma, service: new ClassroomService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any) };
   }
 
   it('copies contexts, relinks questions and copies lesson slides without progress', async () => {

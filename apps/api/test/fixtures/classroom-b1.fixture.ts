@@ -740,7 +740,8 @@ export function fixture() {
   const completion = new CompletionService(prisma);
   const gating = new ActivityGatingService(prisma, completion);
   const access = new ClassroomTenantAccessService(prisma);
-  const service = new ClassroomService(prisma, {} as any, {} as any, gating, access);
+  const avisos = { programar: jest.fn() };
+  const service = new ClassroomService(prisma, {} as any, {} as any, gating, access, avisos as any);
 
   return {
     rows,
@@ -748,6 +749,7 @@ export function fixture() {
     prisma,
     tx,
     service,
+    avisos,
     access,
     gating,
     completion,

@@ -15,6 +15,7 @@ import {
   UpdateClassroomDto,
 } from './dto/classroom-b1.dto';
 import { ActivityNotificationsService } from './activity-notifications.service';
+import { tenantContext } from '../../prisma/tenant-context';
 import { periodoVigente } from '../../common/utils/periodo-vigente.util';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
@@ -1067,7 +1068,11 @@ export class ClassroomService {
       if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
       return tx.classroomActivity.findUnique({ where: { id: activityId } });
     });
-    if (!dto?.scheduledPublishAt) this.avisos.programar(activityId);
+    if (!dto?.scheduledPublishAt) {
+      const afterCommit = tenantContext.getStore()?.afterCommit;
+      if (afterCommit) afterCommit.push(() => this.avisos.programar(activityId));
+      else this.avisos.programar(activityId);
+    }
     return publicada;
   }
 
