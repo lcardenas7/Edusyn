@@ -146,9 +146,9 @@ export function AudioRecorder({ onRecorded, disabled }: { onRecorded: (file: Fil
       {state === 'recorded' && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Music className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="text-sm text-slate-600">Grabación ({mmss(seconds)})</span>
-            <button type="button" onClick={discard} className="ml-auto text-slate-400 hover:text-rose-500 flex items-center gap-1 text-xs" title="Borrar y volver a grabar">
+            <Music className="w-4 h-4 text-ink-muted shrink-0" />
+            <span className="text-sm text-ink-secondary">Grabación ({mmss(seconds)})</span>
+            <button type="button" onClick={discard} className="ml-auto text-ink-muted hover:text-rose-500 flex items-center gap-1 text-xs" title="Borrar y volver a grabar">
               <Trash2 className="w-4 h-4" /> Borrar
             </button>
           </div>
@@ -184,31 +184,31 @@ export function MediaInput({ kind, value, onChange, label }: { kind: MediaKind; 
 
   return (
     <div>
-      <label className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1"><Icon className="w-3 h-3" /> {label || LABEL[kind]}</label>
+      <label className="text-xs font-medium text-ink-muted mb-1 flex items-center gap-1"><Icon className="w-3 h-3" /> {label || LABEL[kind]}</label>
       <div
         onDragOver={e => { e.preventDefault(); setDrag(true) }}
         onDragLeave={() => setDrag(false)}
         onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f) }}
-        className={`rounded-xl border-2 border-dashed p-2 transition-colors ${drag ? 'border-violet-400 bg-violet-50' : 'border-slate-200'}`}
+        className={`rounded-xl border-2 border-dashed p-2 transition-colors ${drag ? 'border-violet-400 bg-violet-50' : 'border-hairline'}`}
       >
         <div className="flex gap-2">
           <input
             value={value}
             onChange={e => onChange(e.target.value)}
             placeholder={kind === 'video' ? 'Pega una URL (YouTube…) o sube un archivo' : 'Pega una URL o sube un archivo'}
-            className="flex-1 min-w-0 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+            className="flex-1 min-w-0 border border-hairline rounded-lg px-3 py-2 text-sm"
           />
           <input ref={fileRef} type="file" accept={ACCEPT[kind]} className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = '' }} />
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0">
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-surface-2 hover:bg-surface-3 text-ink-primary rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Subir
           </button>
-          {value && <button type="button" onClick={() => onChange('')} className="text-slate-300 hover:text-rose-500 shrink-0" title="Quitar"><X className="w-4 h-4" /></button>}
+          {value && <button type="button" onClick={() => onChange('')} className="text-ink-muted hover:text-rose-500 shrink-0" title="Quitar"><X className="w-4 h-4" /></button>}
         </div>
         {value && preview && (
           <div className="mt-2">
             {kind === 'image' && <img src={preview} alt="" className="max-h-32 rounded-lg" />}
             {kind === 'video' && !isDirect(value) && <video src={preview} controls className="max-h-32 rounded-lg" />}
-            {kind === 'video' && isDirect(value) && <p className="text-xs text-slate-400 truncate">🔗 {value}</p>}
+            {kind === 'video' && isDirect(value) && <p className="text-xs text-ink-muted truncate">🔗 {value}</p>}
             {kind === 'audio' && <audio src={preview} controls className="w-full" />}
           </div>
         )}

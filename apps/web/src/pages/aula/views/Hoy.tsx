@@ -33,6 +33,7 @@ export interface HoyProps {
   onAbrirActividad: (activityId: string) => void
   /** Lleva a Actividades con un filtro ya puesto (p. ej. "por-calificar"). */
   onVerActividades: (filtroEstado?: string) => void
+  onVerTodasActividades?: () => void
   onCrear?: (tipo: 'TASK' | 'QUIZ' | 'LESSON' | 'MATERIAL') => void
   onValeria?: () => void
   /** Flujo guiado con una IA externa (lección, quiz o tarea), sin pasar por el editor clásico. */
@@ -56,6 +57,7 @@ function HoyEstudiante({
   anuncios,
   onAbrirActividad,
   onVerActividades,
+  onVerTodasActividades,
   now = new Date(),
 }: HoyProps) {
   const t = buildStudentToday(actividades, now)
@@ -76,12 +78,20 @@ function HoyEstudiante({
       ) : (
         <section className="flex flex-col items-center rounded-modal border border-hairline bg-surface-1 px-6 py-8 text-center">
           <Stamp kind="al-dia" size={104} />
-          <p className="mt-3 text-h3 font-bold text-ink-primary">Estás al día</p>
+          <p className="mt-3 text-h3 font-bold text-ink-primary">Sin pendientes por ahora</p>
           <p className="mt-1 max-w-sm text-body-sm text-ink-secondary">
-            {t.progreso.total > 0
-              ? 'No te queda nada pendiente en este período. Cuando tu profe publique algo nuevo, aparecerá aquí.'
-              : 'Todavía no hay actividades publicadas en esta aula.'}
+            {t.preparadas > 0
+              ? `${t.preparadas === 1 ? 'Hay una actividad publicada' : `Hay ${t.preparadas} actividades publicadas`} que todavía no ${t.preparadas === 1 ? 'abre' : 'abren'}. Revisa cuándo comienza el siguiente período.`
+              : t.progreso.total > 0
+                ? 'Terminaste lo disponible. Las actividades nuevas aparecerán aquí cuando se abran.'
+                : 'Todavía no hay actividades abiertas para ti en esta aula.'}
           </p>
+          {t.preparadas > 0 && onVerTodasActividades && (
+            <button type="button" onClick={onVerTodasActividades}
+              className="mt-4 min-h-btn rounded-lg border border-accent px-4 text-body-sm font-semibold text-accent focus-visible:ring-2 focus-visible:ring-accent">
+              Ver todos los períodos
+            </button>
+          )}
         </section>
       )}
 

@@ -35,6 +35,8 @@ export interface StudentToday {
   meToca: DecoratedActivity[]
   /** Con fecha, pero todavía sin prisa. */
   proximas: DecoratedActivity[]
+  /** Publicadas pero todavía sin abrir; no son deberes pendientes hoy. */
+  preparadas: number
   /** Avance del período: cuántas cerró de las que ya puede hacer. */
   progreso: { hechas: number; total: number; pct: number }
   ultimasNotas: NotaReciente[]
@@ -65,6 +67,7 @@ export function buildStudentToday(
   const siguiente = accionables[0] ?? pendientes[0] ?? null
   const meToca = accionables.filter((d) => d !== siguiente)
   const proximas = pendientes.filter((d) => d !== siguiente)
+  const preparadas = items.filter((d) => d.student?.state === 'no-abierta').length
 
   // El avance se mide solo sobre lo que el estudiante YA PUEDE hacer: contar en el
   // denominador lo bloqueado o lo que aún no abre castiga por algo que no depende de él.
@@ -90,6 +93,7 @@ export function buildStudentToday(
     siguiente,
     meToca,
     proximas,
+    preparadas,
     progreso: { hechas, total, pct: total === 0 ? 0 : Math.round((hechas / total) * 100) },
     ultimasNotas,
   }

@@ -87,6 +87,13 @@ describe('tablero del estudiante', () => {
     expect(buildStudentToday([], AHORA).progreso).toEqual({ hechas: 0, total: 0, pct: 0 })
   })
 
+  it('distingue una actividad del siguiente período que aún no abre de un aula vacía', () => {
+    const t = buildStudentToday([act({ id: 'p4', academicTermId: 'p4', openDate: '2026-06-01T13:00:00.000Z' })], AHORA)
+    expect(t.siguiente).toBeNull()
+    expect(t.preparadas).toBe(1)
+    expect(t.progreso.total).toBe(0)
+  })
+
   it('las últimas notas salen de datos reales, no de un texto fijo', () => {
     // Hoy la tarjeta "Mis Calificaciones" del Home muestra una frase inventada (P1-6).
     const t = buildStudentToday(

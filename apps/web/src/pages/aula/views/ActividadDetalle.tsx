@@ -24,7 +24,7 @@ import type { ActivityLike } from '../model/activityState'
 import { deriveStudentState, deriveTeacherState } from '../model/activityState'
 import { activityTypeLabel, activityTypeMeta } from '../model/labels'
 import { bogotaLongDate, bogotaTime, dueCopy, milestonesOf, opensCopy } from '../model/countdown'
-import type { EntregaLike } from '../data/useActividad'
+import type { AlumnoActividad, EntregaLike } from '../data/useActividad'
 import type { Rol } from '../data/useAula'
 import { ActivityGlyph } from '../visual/ActivityGlyph'
 import { StudentStateChip, TeacherStateChip } from '../ui/StateChip'
@@ -47,6 +47,8 @@ export interface ActividadDetalleProps {
   rol: Rol
   miEntrega: EntregaLike | null
   entregas: EntregaLike[]
+  alumnos: AlumnoActividad[] | null
+  errorAlumnos: string | null
   onVolver: () => void
   onCambio: () => void
   onAbrirHerramientas: () => void
@@ -54,8 +56,6 @@ export interface ActividadDetalleProps {
   onVerProgreso?: () => void
   /** Aula en la que estamos: la necesita el asistente de copia. */
   aulaId?: string
-  /** Estudiantes del grupo, para poder decir cuántos faltan por entregar. */
-  totalEstudiantes?: number | null
   /** Abre otra actividad (se usa al terminar de copiar). */
   onAbrirActividad?: (id: string) => void
   /** Editar el contenido de una lección o un juego, sin salir del aula. */
@@ -68,12 +68,13 @@ export function ActividadDetalle({
   rol,
   miEntrega,
   entregas,
+  alumnos,
+  errorAlumnos,
   onVolver,
   onCambio,
   onAbrirHerramientas,
   onVerProgreso,
   aulaId,
-  totalEstudiantes,
   onAbrirActividad,
   onEditarLeccion,
   now = new Date(),
@@ -282,7 +283,8 @@ export function ActividadDetalle({
           <ListaEntregas
             actividad={a}
             entregas={entregas}
-            totalEstudiantes={totalEstudiantes}
+            alumnos={alumnos}
+            errorAlumnos={errorAlumnos}
             onCambio={onCambio}
             now={now}
           />

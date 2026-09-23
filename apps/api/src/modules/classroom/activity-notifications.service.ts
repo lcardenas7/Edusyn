@@ -116,12 +116,21 @@ export class ActivityNotificationsService {
         classroom: {
           select: {
             institutionId: true,
+            isPersonal: true,
+            teacherAssignmentId: true,
             teacherAssignment: {
               select: {
+                id: true,
+                institutionId: true,
                 teacherId: true,
                 groupId: true,
                 academicYearId: true,
-                subject: { select: { name: true } },
+                academicYear: { select: { institutionId: true } },
+                group: { select: {
+                  campus: { select: { institutionId: true } },
+                  grade: { select: { institutionId: true } },
+                } },
+                subject: { select: { name: true, area: { select: { institutionId: true } } } },
               },
             },
           },
@@ -133,7 +142,18 @@ export class ActivityNotificationsService {
     // el estudiante no puede abrirlas desde la pestaña Actividades.
     if (!actividad?.isPublished || !actividad.isVisible || actividad.isRouteScoped) return 0;
 
-    const asignacion = actividad.classroom.teacherAssignment;
+    const colegio = actividad.classroom;
+    const asignacion = colegio?.teacherAssignment;
+    const institutionId = colegio?.institutionId;
+    // $raw no aplica el contexto del actor: la cadena completa debe acreditarse aquí antes de
+    // buscar usuarios o crear un Message. Un id de grupo/año no prueba por sí solo el colegio.
+    if (!institutionId || colegio.isPersonal || !asignacion ||
+      colegio.teacherAssignmentId !== asignacion.id ||
+      asignacion.institutionId !== institutionId ||
+      asignacion.academicYear.institutionId !== institutionId ||
+      asignacion.group.campus.institutionId !== institutionId ||
+      asignacion.group.grade.institutionId !== institutionId ||
+      asignacion.subject.area.institutionId !== institutionId) return 0;
     const soloAsignados = actividad.isRestrictedToAssigned
       ? actividad.assignedStudents.map((a) => a.studentEnrollmentId)
       : null;
@@ -142,9 +162,13 @@ export class ActivityNotificationsService {
 
     const matriculas = await this.db.studentEnrollment.findMany({
       where: {
+        institutionId,
         groupId: asignacion.groupId,
         academicYearId: asignacion.academicYearId,
         status: 'ACTIVE',
+        student: { institutionId },
+        academicYear: { institutionId },
+        group: { campus: { institutionId }, grade: { institutionId } },
         ...(soloAsignados ? { id: { in: soloAsignados } } : {}),
       },
       select: { student: { select: { userId: true } } },
@@ -163,7 +187,7 @@ export class ActivityNotificationsService {
     // despublicó y la volvió a publicar— esto no hace nada y, sobre todo, no lanza.
     await this.db.message.createMany({
       data: [{
-        institutionId: actividad.classroom.institutionId,
+        institutionId,
         authorId: asignacion.teacherId,
         type: 'NOTIFICATION',
         subject: `${asignatura}: ${actividad.title}`,
