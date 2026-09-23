@@ -1,10 +1,10 @@
 # Estado del blindaje de aplicación
 
-Fecha: 2026-09-12. Attendance integrado sobre origin/staging 009fb852 y revisado en 70726854 + ddb1f058; este estado forma parte del lote de publicación a staging.
+Fecha de actualización: 2026-09-23. Classroom B1 se integró en staging hasta 17/98 rutas, en `e9d06320`. Las otras 81 rutas siguen pendientes; esto no cierra Classroom ni el blindaje global.
 
-Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route, Cortes preventivos y Attendance están publicados. Staff Leave y Teacher Schedule quedan cerrados en aplicación en el siguiente lote: 11 rutas y 106 pruebas nuevas. Observer continúa delegado a Claude. Por decisión del usuario, Claude ejecutará después el laboratorio PostgreSQL sintético y Kimi toma Classroom Bloque 1, exactamente 17/98 rutas; Classroom continúa 0/98 hasta integrar esa entrega. Inclusión permanece pospuesta. Ver `COORDINACION_BLINDAJE_AGENTES.md`. No constituye cierre global del aislamiento.
+Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route, Cortes preventivos y Attendance están publicados. Staff Leave y Teacher Schedule quedaron cerrados en aplicación en un lote anterior. Classroom B1 ya está integrado en staging con pruebas de servicio y HTTP A/B; quedan 81 rutas de Classroom y sus permisos finos. Inclusión permanece pospuesta. Ver `AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md`. No constituye cierre global del aislamiento.
 
-## Medición reproducible
+## Medición reproducible (corte anterior al lote B1; recalcular para el total actual)
 
 1113 declaraciones de ruta (incluye SSE y dos rutas de app), 338 con llamada directa, incondicional y esperada a requireInstitutionId, 712 pendientes de calibración y 63 excepciones no institucionales.
 
@@ -25,7 +25,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 | attendance | 17 | 17 | 0 | 0 | Cerrado en aplicación: institución del actor, relaciones completas, transacciones y auditoría con `tx`, 68 pruebas de servicio + 56 HTTP. RLS y siete permisos finos del Bloque 4 pendientes. Ver AUDITORIA_AISLAMIENTO_ATTENDANCE.md |
 | auth | 7 | 0 | 4 | 3 | Pendiente de auditoría A/B por módulo |
 | capabilities | 5 | 3 | 2 | 0 | Pendiente de auditoría A/B por módulo |
-| classroom | 98 | 0 | 98 | 0 | Pendiente: inventario técnico y partición 17→36→52→87→93→98 definidos; ninguna ruta acreditada todavía. Ver PLAN_BLINDAJE_CLASSROOM.md |
+| classroom | 98 | 17 | 81 | 0 | Parcial: B1 17/98 integrado en staging con actor institucional, cadena relacional y pruebas A/B. Quedan 81 rutas; cron, storage, permisos finos y PostgreSQL/RLS no se acreditan por B1. Ver AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md |
 | communications | 17 | 7 | 10 | 0 | Pendiente de auditoría A/B por módulo |
 | dashboard | 19 | 13 | 6 | 0 | Pendiente de auditoría A/B por módulo |
 | documents | 9 | 3 | 6 | 0 | Pendiente de auditoría A/B por módulo |
@@ -68,7 +68,7 @@ Una fila por directorio de apps/api/src/modules. academic y evaluation contienen
 
 ## Riesgos y siguiente trabajo
 
-Prioridad indicada por el usuario: posponer Inclusión y seguir el blindaje por riesgo. Learning Route, Plantillas, Cortes preventivos y Attendance ya fueron integrados. Las entregas Observer y Classroom B1 recibidas requieren correcciones de revisión adversarial antes de integrarlas; ver `COORDINACION_BLINDAJE_AGENTES.md`. Taller ya tiene HTTP A/B, pero conserva cadenas históricas y atomicidad pendientes. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas pendientes; Attendance ya cerró su dependencia. No modificar la frontera EduLab.
+Prioridad indicada por el usuario: posponer Inclusión y seguir el blindaje por riesgo. Learning Route, Plantillas, Cortes preventivos y Attendance ya fueron integrados. Classroom B1 pasó revisión adversarial y se integró en staging; Classroom sigue parcial. Taller ya tiene HTTP A/B, pero conserva cadenas históricas y atomicidad pendientes. Matrículas conserva contención/rollback con PostgreSQL sintético y dependencias HTTP de notas pendientes; Attendance ya cerró su dependencia. No modificar la frontera EduLab.
 
 Pendiente: filtros reales en servicios, FKs cruzadas, carreras y escrituras; laboratorio HTTP local con instituciones sintéticas y sesiones por rol; autorización por asignación docente y acudientes (docs/PROPUESTA_ROL_ACUDIENTE.md). El Bloque 4 es inventario, no implementación.
 
