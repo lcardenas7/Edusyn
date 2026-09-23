@@ -64,6 +64,24 @@ describe('prompt inicial', () => {
     expect(initialPrompt(complete)).not.toContain('8.º')
   })
 
+  it('le dice a la IA dónde va a correr: sin internet, datos en el teléfono y sin cuentas', () => {
+    const prompt = initialPrompt(complete, 'APP')
+    expect(prompt).toContain('Debe funcionar SIN internet')
+    expect(prompt).toContain('localStorage')
+    expect(prompt).toContain('código QR')
+    expect(prompt).toContain('No hay cuentas ni contraseñas')
+    expect(prompt).toContain('No pidas ni guardes datos personales')
+  })
+
+  it('pide un acabado concreto para que no se vea improvisada', () => {
+    const prompt = initialPrompt(complete)
+    expect(prompt).toContain('Cómo debe verse')
+    expect(prompt).toContain('44px')
+    expect(prompt).toContain('mensaje amable')
+    expect(prompt).toContain('contraste')
+    expect(prompt).toContain('system-ui')
+  })
+
   it('pide una página web o una app de celular según lo que eligió el docente', () => {
     expect(initialPrompt(complete)).toContain('una página web')
     const app = initialPrompt(complete, 'APP')
@@ -151,5 +169,29 @@ describe('estudio de Crea: dónde abrir y cuánto falta', () => {
     expect(documentationProgress(planned)).toEqual({ done: 3, total: 3 })
     expect(nextDocumentPhase(normalizeBrief({ problem: 'Olvidamos tareas', affected: 'El curso' }))).toBe('solution')
     expect(nextDocumentPhase(planned)).toBe('plan')
+  })
+})
+
+describe('petición de cambio a la IA', () => {
+  const brief = normalizeBrief({ problem: 'Olvidamos las tareas', solution: 'Una agenda del curso' })
+  const request = { change: 'Agregar un botón para borrar una tarea', reason: 'Se llena de tareas viejas', keep: 'La lista y los colores', check: 'Si toco borrar, la tarea desaparece' }
+
+  it('dice si es página web o app y conserva las reglas del taller y del acabado', () => {
+    const web = changePrompt(request, brief, null)
+    expect(web).toContain('una página web')
+    expect(web).toContain('debe funcionar sin internet')
+    expect(web).toContain('Cómo debe verse')
+
+    const app = changePrompt(request, brief, null, 'APP')
+    expect(app).toContain('una aplicación para celular')
+    expect(app).toContain('Agregar un botón para borrar una tarea')
+    expect(app).toContain('Si toco borrar, la tarea desaparece')
+  })
+
+  it('adjunta el código solo cuando se lo pasan', () => {
+    const conCodigo = changePrompt(request, brief, { html: '<h1>Hola</h1>', css: 'h1{}', js: 'console.log(1)' }, 'APP')
+    expect(conCodigo).toContain('--- index.html ---')
+    expect(conCodigo).toContain('<h1>Hola</h1>')
+    expect(changePrompt(request, brief, null)).not.toContain('--- index.html ---')
   })
 })

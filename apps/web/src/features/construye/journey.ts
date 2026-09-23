@@ -108,13 +108,38 @@ export type ProjectKind = 'WEB' | 'APP'
 const KIND_REQUEST: Record<ProjectKind, { what: string; format: string }> = {
   WEB: {
     what: 'una página web',
-    format: 'Debe verse bien en computador y también en celular: letra base de 16px, títulos moderados y nada de anchos fijos grandes.',
+    format: 'Debe verse bien en computador y en celular: contenido centrado con ancho máximo de unos 900px y nada de anchos fijos grandes.',
   },
   APP: {
-    what: 'una aplicación para celular (una app web que luego se podrá instalar en el teléfono)',
-    format: 'Diséñala como app de celular (360 a 420 píxeles de ancho): una barra superior con el nombre, pantallas que se cambian con un menú inferior fijo y botones grandes fáciles de tocar; letra base de 16px. Si la app debe recordar datos (listas, puntajes, preferencias), guárdalos en localStorage.',
+    what: 'una aplicación para celular (una app web que se instala en el teléfono desde un enlace)',
+    format: 'Diséñala como app de celular (360 a 420 píxeles de ancho): barra superior fija con el nombre, pantallas que se cambian con un menú inferior fijo (deja aire abajo con padding-bottom: env(safe-area-inset-bottom)) y botones grandes.',
   },
 }
+
+/** Dónde va a correr lo que devuelva la IA. Evita que proponga cosas que el taller bloquea
+ * (internet, librerías, cuentas) y le dice lo que sí puede usar. */
+const PLATFORM_RULES = [
+  'Dónde va a correr (importante)',
+  '- Se ejecuta dentro de Edusyn y después se publica en un enlace con código QR: cualquiera la abre en su celular y la agrega a la pantalla de inicio.',
+  '- Debe funcionar SIN internet: no uses librerías, fuentes, imágenes, íconos ni llamadas externas de ningún tipo. Para íconos, dibuja SVG pequeños dentro de index.html.',
+  '- Para recordar datos (listas, puntajes, preferencias) usa localStorage, leyendo dentro de try/catch.',
+  '- No hay cuentas ni contraseñas. Si la app necesita saber quién la usa, pide un apodo y guárdalo.',
+  '- No pidas ni guardes datos personales (nombres completos, documentos, teléfonos, direcciones).',
+]
+
+/** El acabado: la diferencia entre "funciona" y "se ve bien". Son reglas concretas y
+ * verificables, no gustos, para que una IA las cumpla sin inventar. */
+const FINISH_RULES = [
+  'Cómo debe verse (cúmplelo, no lo describas)',
+  '- Un solo color de acento y un fondo neutro claro, con texto oscuro de buen contraste.',
+  '- Espacios múltiplos de 8px, esquinas redondeadas (10 a 16px) y sombras muy suaves.',
+  '- Tipografía del sistema (system-ui), 16px de base y títulos de 18 a 24px.',
+  '- Todo lo que se toca mide al menos 44px de alto y muestra que fue pulsado.',
+  '- Nada se sale de la pantalla: ancho 100%, box-sizing: border-box y sin anchos fijos grandes.',
+  '- Cuando todavía no hay datos, muestra un mensaje amable que invite a empezar, no una pantalla vacía.',
+  '- Cada acción deja una señal visible: algo aparece, cambia de color o confirma.',
+  '- Campos con <label> o aria-label, y foco visible al navegar con el teclado.',
+]
 
 export function initialPrompt(brief: ConstruyeTeamBrief, kind: ProjectKind = 'WEB'): string {
   const request = KIND_REQUEST[kind]
@@ -138,7 +163,13 @@ export function initialPrompt(brief: ConstruyeTeamBrief, kind: ProjectKind = 'WE
     ...optionalLine('Queda para después (no lo hagas todavía)', brief.later),
     `- Así comprobaremos que funciona: ${orPlaceholder(brief.successCheck, '[cómo lo comprobaremos]')}`,
     '',
-    `Entrega únicamente tres archivos completos y separados: index.html, styles.css y app.js. No uses React, npm, paquetes, enlaces externos, llamadas a internet, cuentas, anuncios, APIs, iframes ni datos personales. ${request.format} Para íconos, usa SVG pequeños dentro de index.html.`,
+    ...PLATFORM_RULES,
+    '',
+    ...FINISH_RULES,
+    '',
+    `Entrega únicamente tres archivos completos y separados: index.html, styles.css y app.js (sin React, npm, paquetes ni iframes). En index.html escribe solo el contenido que va dentro del <body>: Edusyn pone el resto. ${request.format}`,
+    '',
+    'Escribe el código como lo escribiría un estudiante que después lo va a explicar: nombres en español, funciones cortas y un comentario breve donde haya algo que entender.',
     '',
     'Después del código, explícanos con palabras sencillas qué hace cada archivo y qué parte del código cumple cada punto del plan, para que podamos entenderlo y explicarlo. Si falta una decisión importante, pregúntanos antes (máximo tres preguntas).',
   ].join('\n')
@@ -157,10 +188,10 @@ export function changeRequestReady(request: ChangeRequest): boolean {
   return filled(request.change) && filled(request.check)
 }
 
-export function changePrompt(request: ChangeRequest, brief: ConstruyeTeamBrief, project: PreviewProject | null): string {
+export function changePrompt(request: ChangeRequest, brief: ConstruyeTeamBrief, project: PreviewProject | null, kind: ProjectKind = 'WEB'): string {
   const context = brief.solution.trim() || brief.problem.trim()
   const lines = [
-    'Actúa como una guía de programación para estudiantes. Tenemos una página web hecha con tres archivos (index.html, styles.css y app.js) y queremos mejorarla con un cambio concreto.',
+    `Actúa como una guía de programación para estudiantes. Tenemos ${KIND_REQUEST[kind].what} hecha con tres archivos (index.html, styles.css y app.js) y queremos mejorarla con un cambio concreto.`,
     '',
     ...(context ? [`De qué trata nuestra app: ${context}`, ''] : []),
     `Qué queremos cambiar o agregar: ${request.change.trim()}`,
@@ -168,7 +199,11 @@ export function changePrompt(request: ChangeRequest, brief: ConstruyeTeamBrief, 
     `Qué debe seguir igual: ${orPlaceholder(request.keep, 'todo lo que ya funciona')}`,
     `Así sabremos que salió bien: ${request.check.trim()}`,
     '',
-    'Haz solo ese cambio. Devuelve completos únicamente los archivos que cambien y explica en palabras sencillas qué modificaste y dónde, para que podamos entenderlo. Sin librerías, enlaces externos, llamadas a internet ni datos personales.',
+    'Haz solo ese cambio. Devuelve completos únicamente los archivos que cambien y explica en palabras sencillas qué modificaste y dónde, para que podamos entenderlo.',
+    '',
+    'Respeta cómo funciona el taller: sin librerías, fuentes, imágenes ni llamadas externas (debe funcionar sin internet), los datos se guardan en localStorage, y nada de cuentas ni datos personales.',
+    '',
+    ...FINISH_RULES,
   ]
   if (project) {
     lines.push('', 'Nuestro código actual:', '', '--- index.html ---', project.html, '', '--- styles.css ---', project.css, '', '--- app.js ---', project.js)

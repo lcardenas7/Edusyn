@@ -1,7 +1,7 @@
 import { Check, Clipboard, ShieldCheck, Wand2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { ConstruyeTeamBrief } from '../../lib/api/construye'
-import { changePrompt, changeRequestReady, EMPTY_CHANGE_REQUEST, EMPTY_BRIEF, type ChangeRequest } from './journey'
+import { changePrompt, changeRequestReady, EMPTY_CHANGE_REQUEST, EMPTY_BRIEF, type ChangeRequest, type ProjectKind } from './journey'
 import type { PreviewProject } from './protocol'
 
 const fieldClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100'
@@ -15,8 +15,10 @@ const FIELDS: { key: keyof ChangeRequest; label: string; placeholder: string; op
 
 /** Ayuda a formular una petición concreta a la IA externa en vez de "hazme…". Nada se envía
  * desde Edusyn: el equipo lee la petición y decide si la copia. */
-export default function ChangeRequestPanel({ brief, project, onCopied, onClose }: {
+export default function ChangeRequestPanel({ brief, project, kind = 'WEB', onCopied, onClose }: {
   brief?: ConstruyeTeamBrief
+  /** Página web o app de celular: la petición lo dice y conserva el formato. */
+  kind?: ProjectKind
   project: PreviewProject
   onCopied?: (request: ChangeRequest) => void
   onClose: () => void
@@ -25,7 +27,7 @@ export default function ChangeRequestPanel({ brief, project, onCopied, onClose }
   const [includeCode, setIncludeCode] = useState(true)
   const [copied, setCopied] = useState(false)
   const ready = changeRequestReady(request)
-  const prompt = useMemo(() => changePrompt(request, brief ?? EMPTY_BRIEF, includeCode ? project : null), [request, brief, includeCode, project])
+  const prompt = useMemo(() => changePrompt(request, brief ?? EMPTY_BRIEF, includeCode ? project : null, kind), [request, brief, includeCode, project, kind])
 
   const copy = async () => {
     try {
