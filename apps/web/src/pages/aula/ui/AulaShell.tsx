@@ -18,13 +18,14 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
 import { colorDeEncabezado, hexARgb, resolverAcento } from '../model/tema'
 import { DialogoTema, IconoTema } from './SelectorTema'
 import { BotonPeriodo, DialogoPeriodo } from './SelectorPeriodo'
 import { ProveedorAcento } from './AulaTema'
 import { destinosDe, vistaLabel, type Vista } from './destinations'
+import { Hoja } from './Hoja'
 import { BotonAvisos, HojaAvisos } from './Avisos'
 import { useAvisos } from '../data/useAvisos'
 import type { Aviso } from '../model/avisos'
@@ -388,27 +389,12 @@ export function AulaShell({
         </div>
       </nav>
 
-      {/* Hoja de destinos secundarios */}
+      {/* Hoja de destinos secundarios.
+          Usa `Hoja` como el resto de diálogos del aula: así cierra con Escape, deja quieto el
+          fondo y su botón de cerrar es del tamaño de un dedo. Antes traía su propio marcado y
+          se le olvidaban las tres cosas. */}
       {masAbierto && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Más secciones">
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={() => setMasAbierto(false)}
-            className="absolute inset-0 bg-ink-primary/40"
-          />
-          <div className="absolute right-0 bottom-0 left-0 rounded-t-modal border-t border-hairline bg-surface-1 pb-[env(safe-area-inset-bottom)]">
-            <div className="flex items-center justify-between px-4 py-3">
-              <p className="text-body-base font-semibold text-ink-primary">Más secciones</p>
-              <button
-                type="button"
-                onClick={() => setMasAbierto(false)}
-                aria-label="Cerrar"
-                className="rounded-lg p-2 text-ink-muted hover:bg-surface-2"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
+        <Hoja titulo="Más secciones" onCerrar={() => setMasAbierto(false)}>
             <div className="px-2 pb-3">
               {secundarios.map((d) => {
                 const Icon = d.icon
@@ -469,8 +455,7 @@ export function AulaShell({
                 </button>
               )}
             </div>
-          </div>
-        </div>
+        </Hoja>
       )}
 
       {avisosAbiertos && (

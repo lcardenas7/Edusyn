@@ -39,18 +39,25 @@ export default function HerramientasAula({ classroomId, herramienta, activityId,
   }, [classroomId, revision])
   const onReload = useCallback(() => { setRevision(r => r + 1); onCambio() }, [onCambio])
   const props = { classroom, isTeacher: rol === 'docente', isStudent: rol === 'estudiante', onReload, setError }
+  /*
+   * En móvil, esta cabecera repetía lo que ya está arriba: el encabezado del aula dice de qué
+   * aula se trata y la barra inferior dice dónde estás. Con el título y el marco puestos, abrir
+   * una actividad mostraba TRES cabeceras y dos "volver" seguidos, y se notaba el salto entre el
+   * aula nueva y las herramientas de siempre. Aquí queda solo el "Volver", en una fila; el
+   * título y el marco vuelven a partir de `sm`, donde hay sitio y no hay barra inferior.
+   */
   return (
-    <section className="mx-auto max-w-5xl space-y-5">
-      <header className="flex flex-wrap items-center gap-4 border-b border-hairline pb-5">
-        <button type="button" onClick={onVolver} className="inline-flex min-h-btn items-center gap-2 rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary hover:bg-surface-2">
+    <section className="mx-auto max-w-5xl space-y-3 sm:space-y-5">
+      <header className="flex flex-wrap items-center gap-4 sm:border-b sm:border-hairline sm:pb-5">
+        <button type="button" onClick={onVolver} className="-ml-1 inline-flex min-h-btn items-center gap-2 rounded-lg px-2 text-body-sm font-medium text-ink-secondary hover:bg-surface-2 hover:text-ink-primary sm:ml-0 sm:border sm:border-hairline sm:bg-surface-1 sm:px-4 sm:font-normal sm:text-ink-primary">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver
         </button>
-        <div><h1 className="text-xl font-semibold text-ink-primary">{herramienta === 'actividades' && rol !== 'docente' ? 'Actividades del aula' : titles[herramienta]}</h1>
+        <div className="hidden sm:block"><h1 className="text-xl font-semibold text-ink-primary">{herramienta === 'actividades' && rol !== 'docente' ? 'Actividades del aula' : titles[herramienta]}</h1>
           <p className="text-body-sm text-ink-secondary">{classroom?.title || 'Aula Virtual'}</p></div>
       </header>
       {error && classroom && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}<button type="button" className="ml-3 min-h-btn underline" onClick={() => setError('')}>Cerrar aviso</button></div>}
       <AulaState loading={loading} error={!classroom ? error : null} onRetry={() => setRevision(r => r + 1)} isEmpty={!classroom} empty={null}>
-        {classroom && <div className="rounded-card border border-hairline bg-surface-1 p-4 sm:p-6 [&_button]:min-h-11">
+        {classroom && <div className="bg-surface-1 [&_button]:min-h-11 sm:rounded-card sm:border sm:border-hairline sm:p-6">
           {herramienta === 'actividades' ? <ActivitiesTab {...props} initialActivityId={activityId} openValeria={abrirValeria} openLiveProgress={verProgreso} />
             : herramienta === 'materiales' ? <ContentTab {...props} />
             : herramienta === 'anuncios' ? <AnnouncementsTab {...props} />

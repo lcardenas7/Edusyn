@@ -276,7 +276,7 @@ export function Actividades({
                 type="button"
                 onClick={() => setEstado(c.id)}
                 aria-pressed={activo}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none ${
+                className={`inline-flex min-h-btn items-center gap-1.5 rounded-full border px-3 py-1.5 text-body-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:min-h-0 ${
                   activo
                     ? 'border-accent bg-accent text-white'
                     : 'border-hairline bg-surface-1 text-ink-secondary hover:border-accent/40 hover:text-ink-primary'
@@ -292,7 +292,7 @@ export function Actividades({
             type="button"
             onClick={() => setVerLeyenda((v) => !v)}
             aria-expanded={verLeyenda}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-body-sm text-ink-muted hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            className="ml-auto inline-flex min-h-btn items-center gap-1 rounded-lg px-2 py-1.5 text-body-sm text-ink-muted hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:min-h-0"
           >
             <Info className="h-3.5 w-3.5" aria-hidden="true" />
             ¿Qué significan?

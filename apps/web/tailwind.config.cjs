@@ -30,6 +30,11 @@ module.exports = {
         'row': '3rem',        // 48px
         'card': '3.5rem',     // 56px
       },
+      // Un botón de solo icono necesita los 44 px también de ancho: con `min-h-btn` a secas
+      // quedaba alto y estrecho, y en el móvil se falla igual.
+      minWidth: {
+        'btn': '2.75rem',     // 44px
+      },
       borderRadius: {
         'card': '0.75rem',  // 12px
         'modal': '1rem',     // 16px
