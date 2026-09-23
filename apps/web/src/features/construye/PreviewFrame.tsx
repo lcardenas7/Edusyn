@@ -43,7 +43,8 @@ function createRepairPrompt(event: PreviewEvent | null): string {
   return [
     'Estoy construyendo una app escolar estática con HTML, CSS y JavaScript.',
     'Error detectado: ' + (event?.message || 'No se recibió un error concreto.'),
-    'Corrige solamente el archivo JavaScript necesario. No uses librerías, red, APIs, cuentas, secretos ni URLs externas. Devuelve únicamente el archivo completo.',
+    'La app corre aislada y sin internet: no hay librerías, red, APIs, cuentas ni URLs externas, y los datos se guardan en localStorage.',
+    'Corrige solamente el archivo necesario, sin cambiar el diseño ni agregar funciones nuevas. Devuelve ese archivo completo y explica en una frase qué estaba fallando.',
   ].join('\n')
 }
 

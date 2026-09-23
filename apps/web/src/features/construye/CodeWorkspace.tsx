@@ -12,7 +12,7 @@ import { type ViewportKey } from './viewports'
 import { FILE_GUIDES } from './fileGuides'
 import { SaveVersionPanel, VersionHistory, type SavedVersionSummary } from './VersionEvidence'
 import ChangeRequestPanel from './ChangeRequestPanel'
-import { GATE_MISSING_LABEL, localGate, type ChangeRequest, type VersionEvidenceInput } from './journey'
+import { GATE_MISSING_LABEL, localGate, type ChangeRequest, type ProjectKind, type VersionEvidenceInput } from './journey'
 import type { ConstruyeBuildGate, ConstruyeTeamBrief } from '../../lib/api/construye'
 import { formatBogota } from '../../lib/datetime'
 import { downloadFileName, projectToStandaloneHtml } from './manifest'
@@ -59,9 +59,11 @@ export interface CodeWorkspaceProps {
   recoveredDraftAt?: string | null
   /** Título para el archivo descargado. */
   projectTitle?: string
+  /** Página web o app: se le pasa a la petición de cambio para la IA. */
+  kind?: ProjectKind
 }
 
-export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], brief, buildGate, onChangeRequestCopied, onHelpRequested, lastVersionProject, starter = SAMPLE, defaultViewport = 'desktop', draftSync, recoveredDraftAt, projectTitle = '' }: CodeWorkspaceProps) {
+export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], brief, buildGate, onChangeRequestCopied, onHelpRequested, lastVersionProject, starter = SAMPLE, defaultViewport = 'desktop', draftSync, recoveredDraftAt, projectTitle = '', kind = 'WEB' }: CodeWorkspaceProps) {
   const [draft, setDraft] = useState<PreviewProject>(() => initialProject ?? starter)
   const [applied, setApplied] = useState<PreviewProject>(() => initialProject ?? starter)
   const autosave = useCodeAutosave(draft, draftSync)
@@ -477,7 +479,7 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
           <button type="button" onClick={closeDrawer} aria-label="Cerrar" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          {drawer === 'change' && <ChangeRequestPanel brief={brief} project={draft} onCopied={onChangeRequestCopied} onClose={closeDrawer} />}
+          {drawer === 'change' && <ChangeRequestPanel brief={brief} project={draft} kind={kind} onCopied={onChangeRequestCopied} onClose={closeDrawer} />}
           {drawer === 'save' && <SaveVersionPanel
             nextNumber={(latestVersion?.number ?? 0) + 1}
             changedFiles={changedSinceSave}

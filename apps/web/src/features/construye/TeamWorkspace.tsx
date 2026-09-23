@@ -232,6 +232,7 @@ function CreaStudio({ projectId, team, setTeam }: {
         defaultViewport={kind === 'APP' ? 'mobile' : 'desktop'}
         draftSync={draftSync}
         projectTitle={team.project?.title || team.team.name}
+        kind={kind}
         onSaveVersion={saveVersion}
         versions={versions}
         brief={brief}
