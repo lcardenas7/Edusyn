@@ -3550,9 +3550,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
     const meta = act.metadata as any
     return (
       <div className="space-y-5">
-        <button onClick={() => { setSelectedActivity(null); setMySubmission(null) }} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
-          <ChevronLeft className="w-4 h-4" /> Volver a actividades
-        </button>
+        {/* Cuando el aula nueva abre ESTA actividad, ella ya pone su propio "Volver" arriba y
+            este sobra: salían dos seguidos, y el de dentro además dejaba al estudiante en la
+            lista de la herramienta, no donde estaba. Si navega a otra actividad, vuelve. */}
+        {act.id !== initialActivityId && (
+          <button onClick={() => { setSelectedActivity(null); setMySubmission(null) }} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
+            <ChevronLeft className="w-4 h-4" /> Volver a actividades
+          </button>
+        )}
 
         {isTeacher && activeLiveSession?.activityId === act.id && (
           <button

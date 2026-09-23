@@ -168,6 +168,29 @@ body[data-aula-inmersiva] a {
   touch-action: manipulation;
 }
 
+/* Campos de 16 px en móvil.
+
+   Por debajo de 16 px, Safari de iOS AMPLÍA la pantalla al enfocar un campo y la deja
+   desplazada: escribir en el buscador del aula te dejaba con el aula ampliada y torcida. Es lo
+   que más delata que esto es una página y no una aplicación. El tamaño solo cambia en móvil;
+   en escritorio siguen mandando las clases del diseño. */
+@media (max-width: 1023px) {
+  body[data-aula-inmersiva] input,
+  body[data-aula-inmersiva] select,
+  body[data-aula-inmersiva] textarea {
+    font-size: 16px;
+  }
+}
+
+/* Con una hoja abierta, lo de detrás no se mueve.
+
+   El fondo seguía desplazándose al arrastrar sobre la hoja: se veía el contenido correr por
+   debajo del diálogo. En una aplicación, lo de detrás se queda quieto. Lo enciende y lo apaga
+   `Hoja`, que es por donde pasan todos los diálogos del aula. */
+body[data-aula-hoja-abierta] {
+  overflow: hidden;
+}
+
 :root {
   --primary: #2563eb;
   --primary-foreground: #ffffff;

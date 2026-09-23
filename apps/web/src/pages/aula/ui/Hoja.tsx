@@ -25,7 +25,31 @@ export function Hoja({
       if (e.key === 'Escape') onCerrar()
     }
     window.addEventListener('keydown', alTeclear)
-    return () => window.removeEventListener('keydown', alTeclear)
+    /*
+     * Mientras la hoja está abierta, lo de detrás se queda QUIETO. Sin esto, arrastrar sobre la
+     * hoja desplazaba la página de atrás y se veía el contenido corriendo bajo el diálogo: el
+     * gesto más delator de que esto es una página web.
+     *
+     * No basta con `overflow: hidden`: el scroll lo lleva el elemento raíz, y en Safari de iOS
+     * ni aun así se detiene el arrastre. Lo que sí funciona es sacar el cuerpo del flujo y
+     * subirlo lo que estuviera desplazado, guardando la posición para devolverla al cerrar —si
+     * no, la página vuelve arriba del todo y el estudiante pierde dónde estaba.
+     */
+    const desplazamiento = window.scrollY
+    const { body } = document
+    const previos = { position: body.style.position, top: body.style.top, width: body.style.width }
+    body.setAttribute('data-aula-hoja-abierta', '')
+    body.style.position = 'fixed'
+    body.style.top = `-${desplazamiento}px`
+    body.style.width = '100%'
+    return () => {
+      window.removeEventListener('keydown', alTeclear)
+      body.removeAttribute('data-aula-hoja-abierta')
+      body.style.position = previos.position
+      body.style.top = previos.top
+      body.style.width = previos.width
+      window.scrollTo(0, desplazamiento)
+    }
   }, [onCerrar])
 
   return (
@@ -47,7 +71,7 @@ export function Hoja({
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className="-mt-1 shrink-0 rounded-lg p-2 text-ink-muted hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            className="-mt-1 flex min-h-btn min-w-btn shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
