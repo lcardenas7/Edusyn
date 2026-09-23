@@ -118,6 +118,65 @@ describe('ConstruyePublicationService', () => {
     expect(out.live).toBe(true);
   });
 
+  it('sin fecha explícita vence 30 días después del año lectivo de la misma institución', async () => {
+    const prisma: any = prismaWith({
+      classroom: { findFirst: jest.fn().mockResolvedValue({ teacherAssignment: { academicYear: { institutionId: 'inst-1', endDate: new Date('2099-12-15T00:00:00Z') } } }) },
+    });
+    prisma.construyePublication.findFirst.mockResolvedValue({ id: 'pub-1', projectId: 'project-1', teamId: 'team-1', token: TOKEN, status: 'PENDING', manifest: null, pendingManifest: { files: [1] }, pendingVersionNumber: 3, expiresAt: null });
+    const teacher = construye();
+    teacher.projectForTeacher.mockResolvedValue({ id: 'project-1', classroomId: 'class-1' });
+    await new ConstruyePublicationService(prisma, teacher as any).approve('pub-1', 'inst-1', 'teacher-1', {});
+    expect(prisma.classroom.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'class-1', institutionId: 'inst-1' } }));
+    expect(prisma.construyePublication.update.mock.calls[0][0].data.expiresAt.toISOString()).toBe('2100-01-15T04:59:59.000Z');
+  });
+
+  it('exige fecha explícita cuando el año no tiene cierre o pertenece a otro colegio', async () => {
+    const prisma: any = prismaWith({ classroom: { findFirst: jest.fn().mockResolvedValue({ teacherAssignment: { academicYear: { institutionId: 'inst-2', endDate: new Date('2099-12-15') } } }) } });
+    prisma.construyePublication.findFirst.mockResolvedValue({ id: 'pub-1', projectId: 'project-1', status: 'PENDING', pendingManifest: { files: [1] }, expiresAt: null });
+    const teacher = construye();
+    teacher.projectForTeacher.mockResolvedValue({ id: 'project-1', classroomId: 'class-1' });
+    await expect(new ConstruyePublicationService(prisma, teacher as any).approve('pub-1', 'inst-1', 'teacher-1', {})).rejects.toThrow(BadRequestException);
+    expect(prisma.construyePublication.update).not.toHaveBeenCalled();
+  });
+
+  it('elimina una publicación retirada con su telemetría y conserva un resumen en bitácora', async () => {
+    const publication = { id: 'pub-1', projectId: 'project-1', teamId: 'team-1', title: 'Estudia Fácil', status: 'UNPUBLISHED', manifest: { files: [] }, expiresAt: null, versionNumber: 3 };
+    const prisma: any = prismaWith();
+    prisma.construyePublication.findFirst.mockResolvedValue(publication);
+    prisma.construyePublication.deleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    prisma.$transaction = jest.fn(async (run: any) => run(prisma));
+    const service = new ConstruyePublicationService(prisma, construye() as any);
+    await expect(service.deletePublication('pub-1', 'inst-1', 'teacher-1', 'Estudia Fácil')).resolves.toEqual({ deleted: true });
+    expect(prisma.construyeJournalEntry.create.mock.calls[0][0].data).toMatchObject({
+      institutionId: 'inst-1', teamId: 'team-1', detail: { kind: 'DELETED', versionNumber: 3, usage: { devices: 0 } },
+    });
+    expect(prisma.construyePublication.deleteMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'pub-1', institutionId: 'inst-1' }) }));
+  });
+
+  it('no elimina una app en línea ni una solicitud sin confirmar su nombre', async () => {
+    const prisma: any = prismaWith();
+    prisma.construyePublication.findFirst.mockResolvedValue({ id: 'pub-1', projectId: 'project-1', teamId: 'team-1', title: 'Estudia Fácil', status: 'PUBLISHED', manifest: { files: [] }, expiresAt: null });
+    prisma.$transaction = jest.fn(async (run: any) => run(prisma));
+    const service = new ConstruyePublicationService(prisma, construye() as any);
+    await expect(service.deletePublication('pub-1', 'inst-1', 'teacher-1', 'Otro nombre')).rejects.toThrow(BadRequestException);
+    await expect(service.deletePublication('pub-1', 'inst-1', 'teacher-1', 'Estudia Fácil')).rejects.toThrow('Retira la app');
+    expect(prisma.construyeJournalEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('una publicación de otro colegio ni siquiera inicia la transacción de eliminación', async () => {
+    const rows = [
+      { id: 'pub-a', institutionId: 'inst-1', projectId: 'project-a', title: 'A', status: 'UNPUBLISHED' },
+      { id: 'pub-b', institutionId: 'inst-2', projectId: 'project-b', title: 'B', status: 'UNPUBLISHED' },
+    ];
+    const prisma: any = prismaWith();
+    prisma.construyePublication.findFirst.mockImplementation(async ({ where }: any) => rows.find(row => row.id === where.id && row.institutionId === where.institutionId) ?? null);
+    prisma.$transaction = jest.fn();
+    const service = new ConstruyePublicationService(prisma, construye() as any);
+    await expect(service.deletePublication('pub-b', 'inst-1', 'teacher-a', 'B')).rejects.toThrow(NotFoundException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.construyeJournalEntry.create).not.toHaveBeenCalled();
+  });
+
   it('rechazar no toca lo que ya estaba publicado', async () => {
     const prisma: any = prismaWith();
     prisma.construyePublication.findFirst.mockResolvedValue({ id: 'pub-1', projectId: 'project-1', teamId: 'team-1', token: TOKEN, status: 'PUBLISHED', manifest: { files: [] }, pendingManifest: { files: [2] } });

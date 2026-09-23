@@ -6,7 +6,9 @@ import { appManifest, appPage, APP_CSP, serviceWorker, TOKEN_RE, unavailablePage
 import { colorFor, iconPng, initialOf } from './icon.mjs'
 
 const MAX_EVENT_BYTES = 2048
-const CACHE_MS = 20_000
+// La aprobación se verifica casi en cada visita: retirar una app no debe dejarla disponible
+// durante veinte segundos en el servidor público.
+const CACHE_MS = 2_000
 // Una app que todavía no existe (o acaba de retirarse) se recuerda muy poco: si no, el equipo
 // aprueba y el enlace sigue diciendo "no disponible" durante veinte segundos.
 const MISSING_CACHE_MS = 3_000
@@ -28,8 +30,9 @@ export function createServer({ apiUrl, fetchImpl = fetch, now = () => Date.now()
         throw new Error(`API ${response.status}`)
       }
     } catch (error) {
-      // La API no respondió: se sirve lo último conocido antes que romper la app.
-      if (hit) return hit.app
+      // Una copia anterior podría haber sido retirada mientras la API estaba caída.
+      // Nunca se sirve sin poder comprobar su estado vigente.
+      cache.delete(token)
       throw error
     }
     cache.set(token, { at: now(), app })

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConstruyeService, projectKind } from './construye.service';
@@ -23,7 +23,7 @@ function appTitle(value: unknown, fallback: string): string {
   return (text || fallback).slice(0, 60);
 }
 
-/** Fecha de vencimiento opcional ("2026-12-15" o ISO). Debe ser futura. */
+/** Fecha de vencimiento ("2026-12-15" o ISO). Debe ser futura. */
 function expiryDate(value: unknown): Date | null {
   if (value === undefined || value === null || value === '') return null;
   const text = String(value);
@@ -84,6 +84,26 @@ export class ConstruyePublicationService {
     return publication;
   }
 
+  /** Por defecto, el cierre del año del aula más 30 días para evaluación y presentación. */
+  private async defaultExpiry(projectId: string, institutionId: string, userId: string, now: Date): Promise<Date> {
+    const project = await this.construye.projectForTeacher(projectId, institutionId, userId);
+    const classroom = await this.db.classroom.findFirst({
+      where: { id: project.classroomId, institutionId },
+      select: { teacherAssignment: { select: { academicYear: { select: { institutionId: true, endDate: true } } } } },
+    });
+    const year = classroom?.teacherAssignment?.academicYear;
+    if (!year || year.institutionId !== institutionId || !year.endDate) {
+      throw new BadRequestException('Indica hasta cuándo estará disponible la app: el año lectivo no tiene fecha de cierre');
+    }
+    const endDay = new Date(year.endDate).toISOString().slice(0, 10);
+    const expiry = new Date(`${endDay}T23:59:59.000-05:00`);
+    expiry.setUTCDate(expiry.getUTCDate() + 30);
+    if (expiry.getTime() <= now.getTime()) {
+      throw new BadRequestException('Indica una fecha futura para esta app: terminó su margen tras el año lectivo');
+    }
+    return expiry;
+  }
+
   private journal(publication: any, institutionId: string, actor: { enrollmentId?: string | null; userId?: string | null }, summary: string, detail: Record<string, unknown>) {
     return this.db.construyeJournalEntry.create({
       data: {
@@ -137,10 +157,12 @@ export class ConstruyePublicationService {
   /** El docente aprueba lo pendiente (o vuelve a poner en línea lo ya aprobado). */
   async approve(publicationId: string, institutionId: string, userId: string, dto: any) {
     const publication = await this.forTeacher(publicationId, institutionId, userId);
-    const expiresAt = dto?.expiresAt !== undefined ? expiryDate(dto.expiresAt) : publication.expiresAt;
+    const now = new Date();
+    const expiresAt = dto?.expiresAt
+      ? expiryDate(dto.expiresAt)
+      : await this.defaultExpiry(publication.projectId, institutionId, userId, now);
     const hasPending = !!publication.pendingManifest;
     if (!hasPending && !publication.manifest) throw new BadRequestException('No hay una versión para publicar');
-    const now = new Date();
     const updated = await this.db.construyePublication.update({
       where: { id: publication.id },
       data: {
@@ -181,6 +203,37 @@ export class ConstruyePublicationService {
     const updated = await this.db.construyePublication.update({ where: { id: publication.id }, data: { status: 'UNPUBLISHED', reviewedAt: new Date(), reviewedByUserId: userId } });
     await this.journal(updated, institutionId, { userId }, 'El docente retiró la app del enlace público.', { kind: 'UNPUBLISHED' });
     return this.view(updated, await this.stats(updated.id));
+  }
+
+  /** Elimina solo la publicación y su telemetría; conserva proyecto, versiones y evidencia agregada. */
+  async deletePublication(publicationId: string, institutionId: string, userId: string, title: unknown) {
+    const authorized = await this.forTeacher(publicationId, institutionId, userId);
+    if (typeof title !== 'string' || title.trim() !== authorized.title) {
+      throw new BadRequestException('Escribe el nombre exacto de la app para eliminarla');
+    }
+    return this.db.$transaction(async (tx: any) => {
+      const publication = await tx.construyePublication.findFirst({ where: { id: publicationId, institutionId } });
+      if (!publication) throw new NotFoundException('Publicación no encontrada');
+      if (publication.title !== authorized.title) throw new ConflictException('El nombre cambió; vuelve a intentarlo');
+      if (isLive(publication)) throw new BadRequestException('Retira la app antes de eliminarla');
+      const [devices, days] = await Promise.all([
+        tx.construyeAppDevice.findMany({ where: { publicationId }, select: { id: true, isTeam: true, source: true, firstSeenAt: true, lastSeenAt: true, installedAt: true } }),
+        tx.construyeAppDay.findMany({ where: { device: { publicationId } }, select: { deviceId: true, day: true, opens: true, seconds: true, standalone: true } }),
+      ]);
+      const usage = computeUsageStats(devices, days);
+      await tx.construyeJournalEntry.create({ data: {
+        institutionId, projectId: publication.projectId, teamId: publication.teamId, actorUserId: userId,
+        type: 'PUBLICATION', summary: `El docente eliminó la publicación de ${publication.title}.`,
+        detail: { kind: 'DELETED', versionNumber: publication.versionNumber, publishedAt: publication.publishedAt, expiresAt: publication.expiresAt, usage },
+      } });
+      const deleted = await tx.construyePublication.deleteMany({
+        where: { id: publicationId, institutionId,
+          OR: [{ status: { not: 'PUBLISHED' } }, { expiresAt: { lte: new Date() } }],
+        },
+      });
+      if (deleted.count !== 1) throw new ConflictException('La publicación cambió de estado; vuelve a intentarlo');
+      return { deleted: true };
+    });
   }
 
   /** Publicaciones del proyecto con su uso, para el panel del docente. */

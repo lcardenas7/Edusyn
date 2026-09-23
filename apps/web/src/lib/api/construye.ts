@@ -199,4 +199,6 @@ export const construyePublicationApi = {
   reject: (publicationId: string, data: { note?: string } = {}) =>
     api.post<ConstruyePublication>(`/construye/publications/${publicationId}/reject`, data),
   unpublish: (publicationId: string) => api.post<ConstruyePublication>(`/construye/publications/${publicationId}/unpublish`, {}),
+  deletePublication: (publicationId: string, title: string) =>
+    api.delete<{ deleted: true }>(`/construye/publications/${publicationId}`, { data: { title } }),
 }

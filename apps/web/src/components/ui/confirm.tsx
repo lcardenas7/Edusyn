@@ -53,10 +53,10 @@ export function alertDialog(message: string, opts: { title?: string } = {}): Pro
 }
 
 /** Cancelar devuelve null; confirmar una respuesta vacía devuelve ''. */
-export async function promptDialog(message: string, opts: { title?: string; confirmLabel?: string } = {}): Promise<string | null> {
+export async function promptDialog(message: string, opts: { title?: string; confirmLabel?: string; danger?: boolean } = {}): Promise<string | null> {
   const input = { value: '' }
   const accepted = await open({ kind: 'prompt', message, title: opts.title, input,
-    confirmLabel: opts.confirmLabel ?? 'Guardar', cancelLabel: 'Cancelar', danger: false })
+    confirmLabel: opts.confirmLabel ?? 'Guardar', cancelLabel: 'Cancelar', danger: opts.danger ?? false })
   return accepted ? input.value : null
 }
 
