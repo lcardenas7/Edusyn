@@ -15,6 +15,7 @@ import {
   UpdateClassroomDto,
 } from './dto/classroom-b1.dto';
 import { ActivityNotificationsService } from './activity-notifications.service';
+import { periodoVigente } from '../../common/utils/periodo-vigente.util';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
 import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
@@ -370,10 +371,8 @@ export class ClassroomService {
 
     if (!classroom) throw new NotFoundException('Aula no encontrada');
 
-    // Período académico actual del año del aula (para mostrarlo a docente y estudiante
-    // sin exponer el endpoint de términos, restringido a personal). Se prioriza el
-    // período cuyo rango de fechas contiene hoy; si no, el primer período ABIERTO.
-    // Los períodos deben pertenecer al año DE LA INSTITUCIÓN (revisión Astra).
+    // Período del año del aula, limitado a la institución del actor. La elección
+    // por fecha local de Colombia y los huecos entre períodos viven en periodoVigente.
     const periods = await this.prisma.academicTerm.findMany({
       where: {
         academicYearId: classroom.teacherAssignment.academicYearId,
@@ -383,12 +382,7 @@ export class ClassroomService {
       orderBy: { order: 'asc' },
       select: { id: true, name: true, order: true, startDate: true, endDate: true, status: true },
     });
-    const now = new Date();
-    const currentPeriod =
-      periods.find(p => p.startDate && p.endDate && now >= p.startDate && now <= p.endDate) ||
-      periods.find(p => p.status === 'OPEN') ||
-      periods[periods.length - 1] ||
-      null;
+    const currentPeriod = periodoVigente(periods);
 
     // studentEnrollmentId ya se resolvió ANTES de la lectura rica (lo exige el
     // filtro de destinatarios anidado); aquí solo se reutiliza para la respuesta.
