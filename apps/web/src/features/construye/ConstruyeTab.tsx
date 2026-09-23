@@ -391,7 +391,7 @@ function TeamCard({ team, kind, onCommented, publication, onPublicationChanged }
     {view === 'code' && project && <div className="mt-2 space-y-2">
       {(['html', 'css', 'js'] as const).map((key) => <pre key={key} className="max-h-40 overflow-auto rounded-lg bg-slate-950 p-2 text-[11px] leading-4 text-slate-100"><code>{project[key] || '(vacío)'}</code></pre>)}
     </div>}
-    {publication && <TeacherPublication publication={publication} onChanged={onPublicationChanged} />}
+    {publication && <TeacherPublication publication={publication} onChanged={onPublicationChanged} onDeleted={onCommented} />}
     {team.recentMilestones.length > 0 && <ul className="mt-3 space-y-1 border-t border-hairline pt-2 text-xs text-slate-500">
       {team.recentMilestones.slice(0, 3).map((entry) => <li key={entry.id}>• {entry.summary}</li>)}
     </ul>}
