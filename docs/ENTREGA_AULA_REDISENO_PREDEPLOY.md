@@ -1,6 +1,6 @@
 # Aula virtual: estado de la entrega y puertas de despliegue
 
-Fecha: 2026-09-23. Rama local `fix/aula-movil-app-claude`, basada en `origin/staging` anterior a `5c1287cf`. No se ha empujado ni desplegado esta rama.
+Fecha: 2026-09-23. Esta nota describe la entrega original de `fix/aula-movil-app-claude`. La integración posterior está registrada en `REGISTRO_DESPLIEGUES.md`: Aula y Classroom B1 se publicaron en `staging` en `e9d06320`; Classroom sigue parcial (17/98 rutas).
 
 ## Alcance de esta entrega
 
@@ -24,4 +24,4 @@ La ruta actual `GET /classrooms/:id/students-for-assignment`, usada para «Todos
 4. Compilar API y web, ejecutar suites completas y recorrer con una sesión de docente y estudiante: publicación/aviso, cambio de período, actividad restringida, los tres filtros de entregas, devolución/calificación, y CREA en móvil.
 5. Subir primero a `staging`, verificar el despliegue y la migración en Railway y repetir el recorrido con datos de prueba controlados. Solo entonces preparar un avance selectivo a `main`: ambas ramas difieren en muchos commits, por lo que no procede fusionar `staging` entero. Registrar ambos despliegues en `REGISTRO_DESPLIEGUES.md`.
 
-Estado: **no apto aún para producción**. Esta nota describe las dependencias; no certifica una prueba en staging.
+Estado de esta nota original: **no apto aún para producción**. La integración resolvió los puntos 1–3 y pasó las suites automatizadas; todavía falta recorrer los flujos de docente y estudiante con aulas y proyectos de prueba controlados antes de certificar producción.
