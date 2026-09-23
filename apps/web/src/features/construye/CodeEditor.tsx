@@ -51,6 +51,8 @@ export default function CodeEditor({ file, language, value, onChange, onSelectio
     doc,
     extensions: [
       lineNumbers(), highlightActiveLineGutter(), foldGutter(), history(), drawSelection(), indentOnInput(),
+      // Sin esto, en un celular hay que desplazarse en horizontal para leer cada línea.
+      EditorView.lineWrapping,
       bracketMatching(), closeBrackets(), autocompletion(), highlightActiveLine(), highlightSelectionMatches(),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }), oneDark, FRAME, LANGUAGE[lang](),
       EditorState.tabSize.of(2),
