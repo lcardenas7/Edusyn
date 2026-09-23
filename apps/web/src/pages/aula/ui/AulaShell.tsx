@@ -25,6 +25,9 @@ import { DialogoTema, IconoTema } from './SelectorTema'
 import { BotonPeriodo, DialogoPeriodo } from './SelectorPeriodo'
 import { ProveedorAcento } from './AulaTema'
 import { destinosDe, vistaLabel, type Vista } from './destinations'
+import { BotonAvisos, HojaAvisos } from './Avisos'
+import { useAvisos } from '../data/useAvisos'
+import type { Aviso } from '../model/avisos'
 import { useRail } from './useRail'
 import { useTemaEstudiante } from './useTemaEstudiante'
 
@@ -63,6 +66,11 @@ export interface AulaShellProps {
    * menú global se esconde: sin esta puerta, el docente quedaría encerrado.
    */
   onSalirDelModulo?: () => void
+  /**
+   * Llevar a una ruta de la aplicación. Lo usan los avisos: el de una actividad nueva abre esa
+   * actividad, que puede estar en OTRA aula distinta de esta.
+   */
+  onIrA?: (ruta: string) => void
   children: ReactNode
 }
 
@@ -78,12 +86,15 @@ export function AulaShell({
   badges = {},
   aviso,
   onSalirDelModulo,
+  onIrA,
   children,
 }: AulaShellProps) {
   const { expandido, alternar } = useRail()
   const [masAbierto, setMasAbierto] = useState(false)
   const [temaAbierto, setTemaAbierto] = useState(false)
   const [periodoAbierto, setPeriodoAbierto] = useState(false)
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false)
+  const { avisos, sinLeer, cargando: cargandoAvisos, marcarLeido } = useAvisos()
   // Solo el estudiante repinta su vista: el color del aula es la identidad que el docente eligió
   // para su curso, y él sí debe verla como la dejó.
   const esEstudiante = role === 'estudiante'
@@ -140,6 +151,18 @@ export function AulaShell({
   const irA = (v: Vista) => {
     onNavegar(v)
     setMasAbierto(false)
+  }
+
+  /*
+   * Tocar un aviso lo da por leído y lleva a donde apunta. Ese "lleva" es el punto: antes el
+   * aviso solo decía que había algo nuevo y tocaba entrar al aula a buscarlo.
+   */
+  const abrirAviso = (a: Aviso) => {
+    marcarLeido(a.messageId)
+    if (!a.enlace) return
+    setAvisosAbiertos(false)
+    if (onIrA) onIrA(a.enlace)
+    else window.location.assign(a.enlace)
   }
 
   return (
@@ -300,6 +323,8 @@ export function AulaShell({
                 </p>
               </nav>
 
+              <BotonAvisos sinLeer={sinLeer} onAbrir={() => setAvisosAbiertos(true)} />
+
               {periodos.length > 0 && (
                 <BotonPeriodo valor={periodo} periodos={periodos} onAbrir={() => setPeriodoAbierto(true)} />
               )}
@@ -446,6 +471,15 @@ export function AulaShell({
             </div>
           </div>
         </div>
+      )}
+
+      {avisosAbiertos && (
+        <HojaAvisos
+          avisos={avisos}
+          cargando={cargandoAvisos}
+          onAbrirAviso={abrirAviso}
+          onCerrar={() => setAvisosAbiertos(false)}
+        />
       )}
 
       {periodoAbierto && (

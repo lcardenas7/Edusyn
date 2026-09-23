@@ -14,6 +14,7 @@ import {
   UpdateActivityDto,
   UpdateClassroomDto,
 } from './dto/classroom-b1.dto';
+import { ActivityNotificationsService } from './activity-notifications.service';
 import { validateNewDependency, DependencyEdge } from './gating/activity-graph.util';
 import { findLevelForGrade } from '../../common/utils/academic-level.util';
 import { fillBlankMatches, textMatches } from '../../common/utils/answer-matching.util';
@@ -45,6 +46,7 @@ export class ClassroomService {
     private readonly evidence: CompetencyEvidenceService,
     private readonly gating: ActivityGatingService,
     private readonly access: ClassroomTenantAccessService,
+    private readonly avisos: ActivityNotificationsService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1054,7 +1056,7 @@ export class ClassroomService {
   }
 
   async publishActivity(actor: ClassroomActor, activityId: string, dto?: PublishActivityDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const publicada = await this.prisma.$transaction(async (tx) => {
       const activity = await this.access.activityInScope(actor, activityId, tx);
       this.access.assertCanManageClassroom(actor, activity.classroom);
 
@@ -1071,6 +1073,8 @@ export class ClassroomService {
       if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
       return tx.classroomActivity.findUnique({ where: { id: activityId } });
     });
+    if (!dto?.scheduledPublishAt) this.avisos.programar(activityId);
+    return publicada;
   }
 
   async unpublishActivity(actor: ClassroomActor, activityId: string) {
@@ -1093,11 +1097,15 @@ export class ClassroomService {
    */
   async processScheduledPublications(): Promise<number> {
     const now = new Date();
+    const where = { isPublished: false, scheduledPublishAt: { lte: now } } as const;
+
+    // Se leen los ids ANTES de publicarlas: después de `updateMany` ya no hay forma de saber
+    // cuáles fueron, y sin eso no se puede avisar a sus estudiantes.
+    const pendientes = await this.prisma.classroomActivity.findMany({ where, select: { id: true } });
+    if (pendientes.length === 0) return 0;
+
     const result = await this.prisma.classroomActivity.updateMany({
-      where: {
-        isPublished: false,
-        scheduledPublishAt: { lte: now },
-      },
+      where,
       data: {
         isPublished: true,
         isVisible: true,
@@ -1105,6 +1113,9 @@ export class ClassroomService {
         publishedAt: now,
       },
     });
+
+    await this.avisos.avisarVarias(pendientes.map((a) => a.id));
+
     return result.count;
   }
 
