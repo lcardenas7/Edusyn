@@ -16,6 +16,6 @@ Base local: `origin/staging` = `5c1287cf` al comenzar. Esta entrega no cambia el
 - `crea-apps`: 11 pruebas verdes, incluidas retirada y caída de API.
 - `git diff --check` limpio.
 
-## Antes de subir a staging
+## Despliegue a staging
 
-`git fetch origin staging` confirmó `origin/staging = 5c1287cf` tras la verificación. Preparar un commit aislado, comprobar en staging con docente y estudiante: fecha implícita/expresa, retiro, reactivación, eliminación, bitácora y enlace antiguo en línea. No borrar datos de prueba ajenos ni tocar producción para este recorrido.
+`git fetch origin staging` confirmó `origin/staging = 5c1287cf` tras la verificación. El commit aislado `f14f6e4d` se empujó a `staging`. API, web y `crea-apps` responden en sus endpoints públicos de salud; eso no acredita aún que Railway haya servido el nuevo hash. Queda el recorrido autenticado con docente y estudiante: fecha implícita/expresa, retiro, reactivación, eliminación, bitácora y enlace antiguo en línea. No borrar datos de prueba ajenos ni tocar producción para este recorrido.
