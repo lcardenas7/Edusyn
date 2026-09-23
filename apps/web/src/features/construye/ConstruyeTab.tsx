@@ -1,4 +1,4 @@
-import { AlertTriangle, BrainCircuit, Code2, Globe, Loader2, Lock, Plus, Smartphone, Unlock, Users2 } from 'lucide-react'
+import { AlertTriangle, BrainCircuit, Code2, Globe, Loader2, Sparkles, Lock, Plus, Smartphone, Unlock, Users2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { promptDialog } from '../../components/ui/confirm'
@@ -53,6 +53,18 @@ function KindPicker({ value, onChange, disabled }: { value: ConstruyeProjectKind
     })}
   </div>
 }
+
+function AiSwitch({ value, onChange, disabled }: { value: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
+  return <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+    <input type="checkbox" checked={value} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="mt-0.5 h-4 w-4" />
+    <span>
+      <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"><Sparkles className="h-3.5 w-3.5 text-violet-600" /> Permitir que usen una IA externa</span>
+      <span className="block text-xs leading-4 text-slate-500">Con esto ven el paso de la petición guiada y pueden pedirle cambios a la IA. Si lo apagas, el equipo pasa del plan directo al código y escribe todo a mano.</span>
+    </span>
+  </label>
+}
+
+const aiOf = (project?: ConstruyeProject) => project?.aiPromptEnabled !== false
 
 const kindOf = (project?: ConstruyeProject) => project?.kind === 'APP' ? 'APP' : 'WEB'
 
@@ -112,18 +124,22 @@ function TeacherView({ classroomId, projects, reload }: { classroomId: string; p
 
   const selectedProject = projects.find((project) => project.id === projectId)
   const [changingKind, setChangingKind] = useState(false)
-  const changeKind = async (kind: ConstruyeProjectKind) => {
-    if (!selectedProject || kindOf(selectedProject) === kind) return
+  const changeProject = async (data: { kind?: ConstruyeProjectKind; aiPromptEnabled?: boolean }, mensaje: string, detalle?: string) => {
+    if (!selectedProject) return
     setChangingKind(true)
     try {
-      await construyeApi.updateProject(selectedProject.id, { kind })
-      toast.success('Tipo de proyecto actualizado', 'El código que ya tengan los equipos no cambia.')
+      await construyeApi.updateProject(selectedProject.id, data)
+      toast.success(mensaje, detalle)
       reload()
     } catch (error) {
       toast.error(error)
     } finally {
       setChangingKind(false)
     }
+  }
+  const changeKind = (kind: ConstruyeProjectKind) => {
+    if (kindOf(selectedProject) === kind) return
+    void changeProject({ kind }, 'Tipo de proyecto actualizado', 'El código que ya tengan los equipos no cambia.')
   }
   const linkedActivity = selectedProject?.classroomActivityId
     ? activities.find((activity) => activity.id === selectedProject.classroomActivityId)
@@ -141,7 +157,10 @@ function TeacherView({ classroomId, projects, reload }: { classroomId: string; p
         {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
         {selectedProject && <details className="rounded-xl border border-hairline bg-surface-1 px-3 py-2">
           <summary className="cursor-pointer text-xs font-semibold text-slate-600">Qué construyen: <span className="text-indigo-700">{kindOf(selectedProject) === 'APP' ? 'Aplicación para celular' : 'Página web'}</span> <span className="font-normal text-slate-400">(cambiar)</span></summary>
-          <div className="mt-2"><KindPicker value={kindOf(selectedProject)} onChange={changeKind} disabled={changingKind} /></div>
+          <div className="mt-2 space-y-2">
+            <KindPicker value={kindOf(selectedProject)} onChange={changeKind} disabled={changingKind} />
+            <AiSwitch value={aiOf(selectedProject)} disabled={changingKind} onChange={(permitida) => changeProject({ aiPromptEnabled: permitida }, permitida ? 'Los equipos ya pueden usar la IA' : 'Los equipos trabajarán sin IA')} />
+          </div>
         </details>}
         {linkedActivity && <p className="text-xs text-slate-500">Vinculado a la actividad del aula: <span className="font-semibold text-slate-700">{linkedActivity.title}</span></p>}
         {projectId && <ProjectDashboard key={projectId} classroomId={classroomId} projectId={projectId} kind={kindOf(selectedProject)} />}
@@ -155,6 +174,7 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
   const [dueDate, setDueDate] = useState('')
   const [classroomActivityId, setClassroomActivityId] = useState('')
   const [kind, setKind] = useState<ConstruyeProjectKind>('WEB')
+  const [aiPromptEnabled, setAiPromptEnabled] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const submit = async () => {
@@ -162,7 +182,7 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
     setSaving(true)
     try {
       const { data } = await construyeApi.createProject({
-        classroomId, title: title.trim(), kind, instructions: instructions.trim() || undefined,
+        classroomId, title: title.trim(), kind, aiPromptEnabled, instructions: instructions.trim() || undefined,
         dueDate: dueDate || undefined, classroomActivityId: classroomActivityId || undefined,
       })
       toast.success('Proyecto creado')
@@ -177,6 +197,7 @@ function NewProjectForm({ classroomId, activities, onCreated, onCancel }: { clas
   return <div className="space-y-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
     <p className="text-xs font-semibold text-slate-700">¿Qué van a construir?</p>
     <KindPicker value={kind} onChange={setKind} />
+    <AiSwitch value={aiPromptEnabled} onChange={setAiPromptEnabled} />
     <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Título del proyecto (ej.: App para separar residuos)" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
     <textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} placeholder="Instrucciones para los equipos (opcional)" className="min-h-20 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
     <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />

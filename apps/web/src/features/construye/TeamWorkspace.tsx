@@ -75,7 +75,7 @@ function CreaStudio({ projectId, team, setTeam }: {
   setTeam: React.Dispatch<React.SetStateAction<ConstruyeTeamDetail | null>>
 }) {
   const startingBrief = useMemo(() => normalizeBrief(team.team.brief), []) // eslint-disable-line react-hooks/exhaustive-deps
-  const [mode, setMode] = useState<StudioMode>(() => initialStudioMode(startingBrief, team.versions.length, readFlag(skipKey(projectId))))
+  const [mode, setMode] = useState<StudioMode>(() => initialStudioMode(startingBrief, team.versions.length, readFlag(skipKey(projectId)), team.project?.aiPromptEnabled !== false))
   const [sessionOpen, setSessionOpen] = useState(false)
   // El taller se monta la primera vez que se abre y luego solo se oculta: cambiar de pestaña no
   // debe borrar el código que aún no se guardó como versión.
@@ -148,6 +148,8 @@ function CreaStudio({ projectId, team, setTeam }: {
 
   const latest = team.versions[0]
   const kind = team.project?.kind === 'APP' ? 'APP' : 'WEB'
+  // El docente decide si este curso trabaja con IA. Sin permiso, el taller no la ofrece.
+  const aiEnabled = team.project?.aiPromptEnabled !== false
   // El taller abre lo más reciente del equipo: el borrador guardado solo si es posterior a la
   // última versión (si no, la versión). Se calcula una vez: el taller lo lee solo al montarse.
   const [opening] = useState(() => {
@@ -189,7 +191,7 @@ function CreaStudio({ projectId, team, setTeam }: {
       </div>
       <nav aria-label="Momentos del proyecto" className="order-3 w-full sm:order-none sm:mx-auto sm:w-auto">
         <div className="flex rounded-full bg-white/10 p-1">
-          {MODES.map(item => {
+          {MODES.filter(item => aiEnabled || item.key !== 'prompt').map(item => {
             const Icon = item.icon
             const current = mode === item.key
             return <button key={item.key} type="button" onClick={() => setMode(item.key)} aria-current={current ? 'page' : undefined}
@@ -215,8 +217,8 @@ function CreaStudio({ projectId, team, setTeam }: {
     </div>}
 
     <div className={mode === 'code' ? '' : 'min-h-[560px]'}>
-      {mode === 'document' && <DocumentStep brief={brief} onChange={setField} initialPhase={nextDocumentPhase(brief)} onContinue={() => { void autosave.flush(); setMode('prompt') }} />}
-      {mode === 'prompt' && <PromptStep
+      {mode === 'document' && <DocumentStep brief={brief} onChange={setField} initialPhase={nextDocumentPhase(brief)} onContinue={() => { void autosave.flush(); setMode(aiEnabled ? 'prompt' : 'code') }} />}
+      {aiEnabled && mode === 'prompt' && <PromptStep
         brief={brief}
         kind={kind}
         onBack={() => setMode('document')}
@@ -233,6 +235,7 @@ function CreaStudio({ projectId, team, setTeam }: {
         draftSync={draftSync}
         projectTitle={team.project?.title || team.team.name}
         kind={kind}
+        aiEnabled={aiEnabled}
         onSaveVersion={saveVersion}
         versions={versions}
         brief={brief}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildPhaseState, changePrompt, changeRequestReady, evidenceReady, EMPTY_CHANGE_REQUEST, firstOpenPhase,
-  EMPTY_EVIDENCE, initialPrompt, localGate, normalizeBrief, phaseState, promptReady, todaySessionNotes,
+  EMPTY_EVIDENCE, initialPrompt, initialStudioMode, localGate, normalizeBrief, phaseState, promptReady, todaySessionNotes,
 } from './journey'
 
 const complete = normalizeBrief({
@@ -193,5 +193,23 @@ describe('petición de cambio a la IA', () => {
     expect(conCodigo).toContain('--- index.html ---')
     expect(conCodigo).toContain('<h1>Hola</h1>')
     expect(changePrompt(request, brief, null)).not.toContain('--- index.html ---')
+  })
+})
+
+describe('cuando el docente no permite usar IA', () => {
+  const plan = normalizeBrief({ problem: 'Olvidamos las tareas', affected: '9.º', solution: 'Una agenda', audience: 'El curso', features: 'Agregar y ver tareas', successCheck: 'Si agrego una, aparece en la lista' })
+
+  it('el taller abre en el código en vez de en la petición a la IA', () => {
+    expect(initialStudioMode(plan, 0, false, true)).toBe('prompt')
+    expect(initialStudioMode(plan, 0, false, false)).toBe('code')
+  })
+
+  it('si aún falta documentar, sigue documentando', () => {
+    const aMedias = normalizeBrief({ problem: 'Algo pasa' })
+    expect(initialStudioMode(aMedias, 0, false, false)).toBe('document')
+  })
+
+  it('quien ya tiene versiones vuelve al taller igual', () => {
+    expect(initialStudioMode(plan, 2, false, false)).toBe('code')
   })
 })

@@ -238,7 +238,7 @@ export class ConstruyeService {
     }
     return (this.prisma as any).construyeProject.create({ data: {
       institutionId, teacherUserId: userId, classroomId: dto.classroomId, classroomActivityId: dto.classroomActivityId || null,
-      title, kind: projectKind(dto.kind), instructions: typeof dto.instructions === 'string' ? dto.instructions.trim().slice(0, 8000) || null : null,
+      title, kind: projectKind(dto.kind), aiPromptEnabled: dto?.aiPromptEnabled !== false, instructions: typeof dto.instructions === 'string' ? dto.instructions.trim().slice(0, 8000) || null : null,
       briefTemplate: dto.briefTemplate && typeof dto.briefTemplate === 'object' ? dto.briefTemplate : undefined,
       startDate: dto.startDate ? new Date(dto.startDate) : null, dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
     }});
@@ -250,6 +250,7 @@ export class ConstruyeService {
     await this.projectForTeacher(projectId, institutionId, userId);
     const data: Record<string, unknown> = {};
     if (dto?.kind !== undefined) data.kind = projectKind(dto.kind);
+    if (dto?.aiPromptEnabled !== undefined) data.aiPromptEnabled = dto.aiPromptEnabled === true;
     if (dto?.title !== undefined) data.title = asShortText(dto.title, 'El título');
     if (!Object.keys(data).length) throw new BadRequestException('No hay cambios para guardar');
     return (this.prisma as any).construyeProject.update({ where: { id: projectId }, data });
@@ -292,7 +293,7 @@ export class ConstruyeService {
   async teamDetail(teamId: string, institutionId: string, userId: string) {
     const { team } = await this.teamForUser(teamId, institutionId, userId);
     const [project, members, versions, journal] = await Promise.all([
-      (this.prisma as any).construyeProject.findFirst({ where: { id: team.projectId, institutionId }, select: { id: true, title: true, kind: true } }),
+      (this.prisma as any).construyeProject.findFirst({ where: { id: team.projectId, institutionId }, select: { id: true, title: true, kind: true, aiPromptEnabled: true } }),
       (this.prisma as any).construyeTeamMember.findMany({ where: { teamId, institutionId }, include: { studentEnrollment: { include: { student: { select: { firstName: true, lastName: true } } } } } }),
       (this.prisma as any).construyeVersion.findMany({ where: { teamId, institutionId }, orderBy: { number: 'desc' }, take: 20 }),
       (this.prisma as any).construyeJournalEntry.findMany({ where: { teamId, institutionId }, orderBy: { createdAt: 'desc' }, take: 100 }),

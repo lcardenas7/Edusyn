@@ -293,3 +293,32 @@ describe('ConstruyeService · tipo de proyecto y borrador del código', () => {
     expect(prisma.construyeTeam.updateMany).not.toHaveBeenCalled();
   });
 });
+
+describe('permiso del docente para usar la IA', () => {
+  const base = () => ({
+    classroom: { findFirst: jest.fn().mockResolvedValue({ id: 'aula-1', teacherAssignment: { teacherId: 'user-1' } }) },
+    construyeProject: {
+      create: jest.fn(async ({ data }: any) => ({ id: 'project-1', ...data })),
+      findFirst: jest.fn().mockResolvedValue({ id: 'project-1', classroomId: 'aula-1' }),
+      update: jest.fn(async ({ data }: any) => ({ id: 'project-1', ...data })),
+    },
+  });
+
+  it('un proyecto nuevo permite la IA salvo que el docente la apague', async () => {
+    const prisma: any = base();
+    const service = new ConstruyeService(prisma);
+    await service.createProject('inst-1', 'user-1', { classroomId: 'aula-1', title: 'Apps' });
+    expect(prisma.construyeProject.create.mock.calls[0][0].data.aiPromptEnabled).toBe(true);
+    await service.createProject('inst-1', 'user-1', { classroomId: 'aula-1', title: 'Apps sin IA', aiPromptEnabled: false });
+    expect(prisma.construyeProject.create.mock.calls[1][0].data.aiPromptEnabled).toBe(false);
+  });
+
+  it('el docente puede apagarlo o encenderlo después, sin tocar lo demás', async () => {
+    const prisma: any = base();
+    const service = new ConstruyeService(prisma);
+    await service.updateProject('project-1', 'inst-1', 'user-1', { aiPromptEnabled: false });
+    expect(prisma.construyeProject.update.mock.calls[0][0].data).toEqual({ aiPromptEnabled: false });
+    await service.updateProject('project-1', 'inst-1', 'user-1', { aiPromptEnabled: true });
+    expect(prisma.construyeProject.update.mock.calls[1][0].data).toEqual({ aiPromptEnabled: true });
+  });
+});

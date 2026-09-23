@@ -84,7 +84,7 @@ export interface ConstruyeTeamDetail {
     codeDraftUpdatedAt?: string | null
   }
   /** Ausente en una API anterior al selector web/aplicación. */
-  project?: { id: string; title: string; kind: ConstruyeProjectKind } | null
+  project?: { id: string; title: string; kind: ConstruyeProjectKind; aiPromptEnabled?: boolean } | null
   members: ConstruyeTeamMember[]
   versions: ConstruyeVersion[]
   journal: ConstruyeJournalEntry[]
@@ -99,6 +99,8 @@ export interface ConstruyeProject {
   title: string
   /** Ausente en una API anterior: se trata como página web. */
   kind?: ConstruyeProjectKind
+  /** El docente decide si el curso puede usar la IA. Ausente = permitida. */
+  aiPromptEnabled?: boolean
   instructions: string | null
   status: string
   startDate: string | null
@@ -123,9 +125,9 @@ export interface ConstruyeDashboardTeam {
 export const construyeApi = {
   listClassroomProjects: (classroomId: string) =>
     api.get<ConstruyeProject[]>(`/construye/classrooms/${classroomId}/projects`),
-  createProject: (data: { classroomId: string; title: string; kind?: ConstruyeProjectKind; instructions?: string; dueDate?: string; classroomActivityId?: string }) =>
+  createProject: (data: { classroomId: string; title: string; kind?: ConstruyeProjectKind; aiPromptEnabled?: boolean; instructions?: string; dueDate?: string; classroomActivityId?: string }) =>
     api.post<ConstruyeProject>(`/construye/projects`, data),
-  updateProject: (projectId: string, data: { kind?: ConstruyeProjectKind; title?: string }) =>
+  updateProject: (projectId: string, data: { kind?: ConstruyeProjectKind; title?: string; aiPromptEnabled?: boolean }) =>
     api.patch<ConstruyeProject>(`/construye/projects/${projectId}`, data),
   createTeam: (projectId: string, data: { name: string; members: { studentEnrollmentId: string; role?: ConstruyeMemberRole }[] }) =>
     api.post<{ id: string; name: string; projectId: string }>(`/construye/projects/${projectId}/teams`, data),

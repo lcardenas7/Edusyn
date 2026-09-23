@@ -7887,6 +7887,8 @@ model ConstruyeProject {
   briefTemplate       Json?
   /// Página web o aplicación para celular: decide la plantilla y la vista inicial del estudiante.
   kind                ConstruyeProjectKind   @default(WEB)
+  /// El docente decide si este curso puede usar el paso de la IA (petición guiada y pedir cambios).
+  aiPromptEnabled     Boolean                @default(true)
   status              ConstruyeProjectStatus @default(ACTIVE)
   startDate           DateTime?
   dueDate             DateTime?
