@@ -82,6 +82,21 @@ describe('prompt inicial', () => {
     expect(prompt).toContain('system-ui')
   })
 
+  it('exige código ejecutable y no impone reglas de juego a una app de pedidos', () => {
+    const prompt = initialPrompt(complete)
+    expect(prompt).toContain('nada de TODO, pseudocódigo, funciones vacías ni botones sin acción')
+    expect(prompt).toContain('recorre mentalmente el criterio de prueba del equipo')
+    expect(prompt).not.toContain('Si esto es un juego')
+  })
+
+  it('pide controles, gráficos y una partida completa cuando el equipo propone juegos', () => {
+    const prompt = initialPrompt({ ...complete, solution: 'Crear juegos de carreras', features: 'Jugar una carrera y ganar puntos' }, 'APP')
+    expect(prompt).toContain('controles de teclado y táctiles')
+    expect(prompt).toContain('Canvas, CSS o SVG')
+    expect(prompt).toContain('partida completa en celular')
+    expect(prompt).toContain('Si hay movimiento')
+  })
+
   it('pide una página web o una app de celular según lo que eligió el docente', () => {
     expect(initialPrompt(complete)).toContain('una página web')
     const app = initialPrompt(complete, 'APP')
@@ -122,6 +137,12 @@ describe('petición de cambio', () => {
     expect(withCode).toContain('Qué debe seguir igual: El formulario')
     expect(withCode).toContain('--- app.js ---\nconsole.log(1)')
     expect(changePrompt(request, complete, null)).not.toContain('Nuestro código actual')
+  })
+
+  it('conserva el contrato de versión jugable al pedir cambios en un juego', () => {
+    const prompt = changePrompt({ change: 'Agregar reinicio al juego', reason: '', keep: 'La puntuación', check: 'Se puede iniciar otra partida' }, complete, null)
+    expect(prompt).toContain('nada de TODO, pseudocódigo, funciones vacías ni botones sin acción')
+    expect(prompt).toContain('condición de ganar o perder')
   })
 })
 
