@@ -203,9 +203,21 @@ export default function AulaVirtual() {
   const abrirActividad = useCallback(
     (id: string) => {
       if (!classroomId) return
-      navigate(`/aula/${classroomId}/actividades/${id}`)
+      /*
+       * La actividad se lleva puesto el período y el filtro. Sin esto, abrir una actividad
+       * borraba el `?periodo=` de la URL y, al volver, la lista se recalculaba sola: estabas en
+       * el tercer período y volvías al primero. Volver tiene que devolverte la lista tal como
+       * la dejaste.
+       */
+      const q = new URLSearchParams()
+      const elegido = params.get('periodo')
+      if (elegido) q.set('periodo', elegido)
+      const estado = params.get('estado')
+      if (estado) q.set('estado', estado)
+      const s = q.toString()
+      navigate(`/aula/${classroomId}/actividades/${id}${s ? `?${s}` : ''}`)
     },
-    [classroomId, navigate],
+    [classroomId, navigate, params],
   )
 
   const abrirHerramienta = useCallback(
@@ -241,12 +253,16 @@ export default function AulaVirtual() {
     (estado?: string) => {
       if (!classroomId) return
       const q = new URLSearchParams()
-      if (periodo !== PERIOD_ALL) q.set('periodo', periodo)
-      if (estado) q.set('estado', estado)
+      // Lo que el usuario eligió, tal cual, incluido "todos": si se borrara, la lista volvería
+      // sola al período vigente y parecería que el selector no funciona.
+      const elegido = params.get('periodo')
+      if (elegido) q.set('periodo', elegido)
+      const filtro = estado ?? params.get('estado')
+      if (filtro) q.set('estado', filtro)
       const s = q.toString()
       navigate(`/aula/${classroomId}/actividades${s ? `?${s}` : ''}`)
     },
-    [classroomId, navigate, periodo],
+    [classroomId, navigate, params],
   )
 
   if (!classroomId) {
