@@ -363,7 +363,7 @@ function TeamCard({ team, kind, onCommented, publication, onPublicationChanged }
     }
   }
 
-  return <article className="rounded-2xl border border-hairline bg-surface-1 p-4">
+  return <article className="min-w-0 rounded-2xl border border-hairline bg-surface-1 p-4">
     <header className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2"><Users2 className="h-4 w-4 text-indigo-600" /><h3 className="font-semibold text-slate-800">{team.name}</h3></div>
       {team.signal

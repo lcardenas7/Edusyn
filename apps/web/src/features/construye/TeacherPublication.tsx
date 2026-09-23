@@ -39,7 +39,7 @@ export default function TeacherPublication({ publication, onChanged }: { publica
     await run(() => construyePublicationApi.unpublish(publication.id), 'App retirada')
   }
 
-  return <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
+  return <div className="mt-3 min-w-0 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"><Rocket className="h-4 w-4 text-indigo-600" /> {publication.title}</p>
       <StatusChip publication={publication} />
