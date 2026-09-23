@@ -12,7 +12,7 @@ describe('Classroom copy completeness', () => {
       classroomActivity:{create:jest.fn().mockImplementation(async ({data})=>({id:'copy-'+data.title,...data}))},
       forumPost:{findMany:jest.fn().mockResolvedValue([])},
     };
-    const service = new ClassroomService(prisma as any,{} as any,{} as any,{} as any,{} as any);
+    const service = new ClassroomService(prisma as any,{} as any,{} as any,{} as any,{} as any,{} as any);
     jest.spyOn(service as any,'cloneActivityContent').mockResolvedValue({});
     return {service,prisma};
   }

@@ -11,6 +11,8 @@ export interface TenantStore {
   tx: any;
   /** The resolved institutionId for this request */
   institutionId: string;
+  /** Best-effort actions started only after the request transaction commits. */
+  afterCommit?: Array<() => void>;
 }
 
 export const tenantContext = new AsyncLocalStorage<TenantStore>();
