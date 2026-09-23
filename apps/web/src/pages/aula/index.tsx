@@ -300,6 +300,8 @@ export default function AulaVirtual() {
       // `/` es la página pública de marketing, no el inicio de la aplicación: salir por ahí
       // parecía que te desconectaba. El inicio del docente es `/dashboard`.
       onSalirDelModulo={() => navigate('/dashboard')}
+      // Los avisos llevan a la actividad concreta, que puede estar en otra aula.
+      onIrA={(ruta) => navigate(ruta)}
       periodos={aula?.periodos ?? []}
       periodo={periodo}
       onPeriodo={cambiarPeriodo}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from '../lib/toast'
 import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck, Paperclip, Download, AlertTriangle, Reply, CornerDownRight } from 'lucide-react'
 import { communicationsApi, groupsApi } from '../lib/api'
@@ -60,6 +61,7 @@ export default function Communications() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedCommunication, setSelectedCommunication] = useState<Communication | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Communication | null>(null)
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('inbox')
   const [inboxMessages, setInboxMessages] = useState<any[]>([])
   const [loadingInbox, setLoadingInbox] = useState(false)
@@ -652,6 +654,13 @@ export default function Communications() {
                     className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50/50' : ''}`}
                     onClick={() => {
                       if (!isRead) handleMarkAsRead(msg.id)
+                      // Un aviso con destino —hoy, el de una actividad nueva— lleva DIRECTO ahí:
+                      // abrir un modal para que el estudiante lea "hay una actividad nueva" y
+                      // luego la busque a mano es justo lo que se quería evitar.
+                      if (msg.link) {
+                        navigate(msg.link)
+                        return
+                      }
                       const commData: any = {
                         id: msg.id,
                         type: msgType,
@@ -690,6 +699,9 @@ export default function Communications() {
                         <p className={`text-sm line-clamp-1 mb-2 ${!isRead ? 'text-slate-700' : 'text-slate-500'}`}>
                           {msg.content || ''}
                         </p>
+                        {msg.link && (
+                          <p className="text-sm font-medium text-blue-600 mb-2">Abrir →</p>
+                        )}
                         <div className="flex items-center gap-4 text-xs text-slate-400">
                           <span>De: {msg.author ? `${msg.author.firstName} ${msg.author.lastName}` : 'Sistema'}</span>
                           <span className="flex items-center gap-1">
