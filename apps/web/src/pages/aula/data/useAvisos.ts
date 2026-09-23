@@ -8,8 +8,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-// Del módulo, no de la fachada: `lib/api/index.ts` arrastra el grafo entero (bloque R1).
-import { communicationsApi } from '../../../lib/api/communications'
+// En main, la API de comunicaciones todavía se exporta desde la fachada compartida.
+import { communicationsApi } from '../../../lib/api'
 import { normalizarAvisos, sinLeer, type Aviso } from '../model/avisos'
 
 const CADA_MINUTO = 60000

@@ -4170,7 +4170,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-ink-primary mb-1">Tipo</label>
-                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], tolerance: '', categories: [] })} className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
+                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
                       <option value="MULTIPLE_CHOICE">Opción múltiple</option>
                       <option value="MULTIPLE_SELECT">Selección múltiple</option>
                       <option value="TRUE_FALSE">Verdadero/Falso</option>
@@ -4464,63 +4464,6 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   </div>
                 )}
 
-                {/* NUMERIC */}
-                {qForm.type === 'NUMERIC' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-ink-primary mb-1">Respuesta correcta (número)</label>
-                      <input type="number" step="any" value={qForm.correctAnswer} onChange={e => setQForm({ ...qForm, correctAnswer: e.target.value })} placeholder="Ej. 42" className="w-full border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink-primary mb-1">Tolerancia (±)</label>
-                      <input type="number" step="any" min="0" value={qForm.tolerance} onChange={e => setQForm({ ...qForm, tolerance: e.target.value })} placeholder="0 = exacto; ej. 0.5" className="w-full border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
-                      <p className="text-xs text-ink-muted mt-1">Se acepta si la respuesta está dentro de ± este margen.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* CATEGORIZE */}
-                {qForm.type === 'CATEGORIZE' && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-ink-primary">Categorías (grupos)</label>
-                      <p className="text-xs text-ink-muted">Define los grupos donde el estudiante clasificará cada elemento.</p>
-                      {(qForm.categories.length ? qForm.categories : ['']).map((cat, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
-                          <input value={cat} onChange={e => { const cats = [...(qForm.categories.length ? qForm.categories : [''])]; cats[i] = e.target.value; setQForm({ ...qForm, categories: cats }) }} placeholder={`Categoría ${i + 1}`} className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 outline-none" />
-                          {(qForm.categories.length ? qForm.categories : ['']).length > 1 && (
-                            <button onClick={() => { const cats = qForm.categories.filter((_, j) => j !== i); setQForm({ ...qForm, categories: cats.length ? cats : [''] }) }} className="p-1.5 rounded-lg hover:bg-red-50"><X className="w-4 h-4 text-red-400" /></button>
-                          )}
-                        </div>
-                      ))}
-                      {(qForm.categories.length ? qForm.categories : ['']).length < 6 && (
-                        <button onClick={() => setQForm({ ...qForm, categories: [...(qForm.categories.length ? qForm.categories : ['']), ''] })} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Agregar categoría</button>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-ink-primary">Elementos y su categoría correcta</label>
-                      <p className="text-xs text-ink-muted">El estudiante verá los elementos y elegirá a qué grupo pertenece cada uno.</p>
-                      {qForm.matchPairs.map((pair, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <input value={pair.left} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], left: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder={`Elemento ${i + 1}`} className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 outline-none" />
-                          <span className="text-ink-muted">→</span>
-                          <select value={pair.right} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], right: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} className="flex-1 border border-hairline rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-surface-1">
-                            <option value="">Categoría…</option>
-                            {qForm.categories.map(c => c.trim()).filter(Boolean).map((c, j) => <option key={j} value={c}>{c}</option>)}
-                          </select>
-                          {qForm.matchPairs.length > 1 && (
-                            <button onClick={() => { const pairs = qForm.matchPairs.filter((_, j) => j !== i); setQForm({ ...qForm, matchPairs: pairs }) }} className="p-1.5 rounded-lg hover:bg-red-50"><X className="w-4 h-4 text-red-400" /></button>
-                          )}
-                        </div>
-                      ))}
-                      {qForm.matchPairs.length < 12 && (
-                        <button onClick={() => setQForm({ ...qForm, matchPairs: [...qForm.matchPairs, { left: '', right: '' }] })} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Agregar elemento</button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 <div>
                   <label className="block text-sm font-medium text-ink-primary mb-1">Explicación (opcional)</label>
                   <input value={qForm.explanation} onChange={e => setQForm({ ...qForm, explanation: e.target.value })} placeholder="Se muestra al estudiante después de enviar..." className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
@@ -4528,7 +4471,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
                 <div className="flex justify-end gap-3">
                   <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? (qForm.blanks.length === 0 || qForm.blanks.some(b => !b.trim())) : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : qForm.type === 'CATEGORIZE' ? (qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 || qForm.categories.map(c => c.trim()).filter(Boolean).length < 2) : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? (qForm.blanks.length === 0 || qForm.blanks.some(b => !b.trim())) : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                     {savingQuestion && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingQuestion ? 'Guardar cambios' : 'Agregar'}
                   </button>
@@ -4553,7 +4496,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       <div className="flex-1 min-w-0">
                         <p className="text-sm sm:text-base font-medium text-ink-primary">{q.text}</p>
                         <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-ink-muted flex-wrap">
-                          <span className="px-1.5 sm:px-2 py-0.5 bg-surface-2 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : q.type === 'NUMERIC' ? 'Numérica' : q.type === 'CATEGORIZE' ? 'Categorizar' : 'Respuesta corta'}</span>
+                          <span className="px-1.5 sm:px-2 py-0.5 bg-surface-2 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
                           {q.subjectArea && <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-ink-muted'}`}>{q.subjectArea}</span>}
                           {q.context && <span className="px-1.5 sm:px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] sm:text-xs border border-amber-200">{q.context.title || 'Contexto'}</span>}
@@ -4809,7 +4752,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     const matches = quizMatchAnswers[q.id] || {}
                     return (
                       <div className="space-y-4">
-                        <p className="text-sm text-ink-muted">{isCat ? 'Elige a qué categoría pertenece cada elemento' : 'Selecciona el elemento que corresponde a cada ítem'}</p>
+                        <p className="text-sm text-ink-muted">Selecciona el elemento que corresponde a cada ítem</p>
                         {leftItems.length === 0 ? (
                           <p className="text-sm text-red-500">Error: No hay elementos para emparejar</p>
                         ) : leftItems.map((left, i) => (
