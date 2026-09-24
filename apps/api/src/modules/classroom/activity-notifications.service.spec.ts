@@ -88,7 +88,7 @@ function hacerServicio(opciones: {
         creados.push(...data);
         return { count: data.length };
       }),
-      findUnique: jest.fn().mockResolvedValue({ id: 'msg-1' }),
+      findUnique: jest.fn().mockResolvedValue({ id: 'msg-1', origin: 'actividad-publicada' }),
     },
     messageRecipient: {
       count: jest.fn().mockResolvedValue(opciones.yaTieneDestinatarios ?? 0),
@@ -96,6 +96,7 @@ function hacerServicio(opciones: {
         destinatarios.push(...data);
         return { count: data.length };
       }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 2 }),
     },
   };
 
@@ -115,6 +116,28 @@ function hacerServicio(opciones: {
 }
 
 describe('Avisos de actividad publicada', () => {
+  it('retira destinatarios al despublicar, pero conserva el mensaje para republicar', async () => {
+    const { servicio, raw } = hacerServicio({ actividad: actividad({ isPublished: false }) });
+    await expect(servicio.retirarAviso(ACTIVIDAD)).resolves.toBe(2);
+    expect(raw.messageRecipient.deleteMany).toHaveBeenCalledWith({ where: { messageId: 'msg-1' } });
+    expect(raw.message.createMany).not.toHaveBeenCalled();
+  });
+
+  it('no retira avisos si la actividad ya fue republicada', async () => {
+    const { servicio, raw } = hacerServicio();
+    await expect(servicio.retirarAviso(ACTIVIDAD)).resolves.toBe(0);
+    expect(raw.messageRecipient.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('una republicación después de retirar destinatarios vuelve a avisar', async () => {
+    const { servicio, raw, destinatarios } = hacerServicio();
+    raw.classroomActivity.findUnique
+      .mockResolvedValueOnce(actividad({ isPublished: false }))
+      .mockResolvedValueOnce(actividad());
+    await expect(servicio.retirarAviso(ACTIVIDAD)).resolves.toBe(2);
+    await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(2);
+    expect(destinatarios).toHaveLength(2);
+  });
   it('avisa a cada estudiante del aula', async () => {
     const { servicio, destinatarios } = hacerServicio();
 
@@ -228,7 +251,7 @@ describe('Avisos de actividad publicada', () => {
       expect(raw.message.createMany).not.toHaveBeenCalled();
     });
 
-    it('una actividad ya avisada: despublicar y republicar no vuelve a sonar', async () => {
+    it('una actividad ya avisada y aún publicada no duplica destinatarios', async () => {
       const { servicio, destinatarios } = hacerServicio({ yaTieneDestinatarios: 25 });
       await expect(servicio.avisarActividadPublicada(ACTIVIDAD)).resolves.toBe(0);
       expect(destinatarios).toEqual([]);

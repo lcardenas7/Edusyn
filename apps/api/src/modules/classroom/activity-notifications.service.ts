@@ -49,6 +49,31 @@ export class ActivityNotificationsService {
     });
   }
 
+  /** Retira de la bandeja un aviso cuyo enlace ya no es visible al estudiante. */
+  programarRetirada(activityId: string): void {
+    setImmediate(() => { void this.retirarAviso(activityId); });
+  }
+
+  async retirarAviso(activityId: string): Promise<number> {
+    try {
+      // Una republicación rápida gana: nunca retirar el aviso de una actividad visible.
+      const actividad = await this.db.classroomActivity.findUnique({
+        where: { id: activityId }, select: { isPublished: true },
+      });
+      if (actividad?.isPublished) return 0;
+      const mensaje = await this.db.message.findUnique({
+        where: { sourceKey: ActivityNotificationsService.claveDe(activityId) },
+        select: { id: true, origin: true },
+      });
+      if (!mensaje || mensaje.origin !== 'actividad-publicada') return 0;
+      const retirados = await this.db.messageRecipient.deleteMany({ where: { messageId: mensaje.id } });
+      return retirados.count;
+    } catch (error) {
+      this.logger.error(`No se pudo retirar el aviso de la actividad ${activityId}`, error as Error);
+      return 0;
+    }
+  }
+
   /**
    * Lo que ve el estudiante como tipo de actividad, ya concordado: "Tarea nueva" pero "Quiz
    * nuevo". Con una sola etiqueta y un "nueva" pegado detrás salía "Quiz nueva".
@@ -183,8 +208,9 @@ export class ActivityNotificationsService {
     const entrega = this.fechaLegible(actividad.dueDate);
     const sourceKey = ActivityNotificationsService.claveDe(actividad.id);
 
-    // `skipDuplicates` en vez de `create`: si ya se avisó de esta actividad —el docente la
-    // despublicó y la volvió a publicar— esto no hace nada y, sobre todo, no lanza.
+    // `skipDuplicates` en vez de `create`: repetir la publicación sin retirar el
+    // aviso no duplica mensajes. Si se despublicó, los destinatarios se retiraron
+    // y una republicación puede volver a avisar usando el mismo mensaje base.
     await this.db.message.createMany({
       data: [{
         institutionId,

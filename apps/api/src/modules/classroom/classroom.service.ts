@@ -1103,7 +1103,7 @@ export class ClassroomService {
   }
 
   async unpublishActivity(actor: ClassroomActor, activityId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const despublicada = await this.prisma.$transaction(async (tx) => {
       const activity = await this.access.activityInScope(actor, activityId, tx);
       this.access.assertCanManageClassroom(actor, activity.classroom);
 
@@ -1114,6 +1114,10 @@ export class ClassroomService {
       if (result.count === 0) throw new NotFoundException('Actividad no encontrada');
       return tx.classroomActivity.findUnique({ where: { id: activityId } });
     });
+    const afterCommit = tenantContext.getStore()?.afterCommit;
+    if (afterCommit) afterCommit.push(() => this.avisos.programarRetirada(activityId));
+    else this.avisos.programarRetirada(activityId);
+    return despublicada;
   }
 
   /**
