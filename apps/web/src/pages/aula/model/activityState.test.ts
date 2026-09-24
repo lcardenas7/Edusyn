@@ -9,6 +9,7 @@ import {
   normalize,
   periodIdOf,
   sameBogotaDay,
+  withStudentSubmission,
   type ActivityLike,
 } from './activityState'
 
@@ -52,6 +53,19 @@ describe('día de pared en Colombia', () => {
 })
 
 describe('estado del estudiante', () => {
+  it('el detalle usa la entrega propia aunque getActivity no la incluya', () => {
+    const activity = act()
+    expect(deriveStudentState(activity, AHORA).state).toBe('pendiente')
+    const detail = withStudentSubmission(activity, { status: 'SUBMITTED', submittedAt: '2026-05-20T14:00:00.000Z' })
+    expect(deriveStudentState(detail, AHORA).state).toBe('entregada')
+    expect(deriveStudentState(detail, AHORA).entregadaEn).toBe('2026-05-20T14:00:00.000Z')
+  })
+
+  it('un 404 de mi entrega no conserva una entrega obsoleta del payload', () => {
+    const detail = withStudentSubmission(act({ submissions: [{ status: 'SUBMITTED' }] }), null)
+    expect(deriveStudentState(detail, AHORA).state).toBe('pendiente')
+  })
+
   it('una entrega devuelta gana sobre cualquier otra cosa: exige actuar', () => {
     const d = deriveStudentState(
       act({ submissions: [{ status: 'RETURNED', score: 3 }], dueDate: '2026-05-10T23:59:00.000Z' }),
