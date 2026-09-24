@@ -61,9 +61,11 @@ export interface CodeWorkspaceProps {
   projectTitle?: string
   /** Página web o app: se le pasa a la petición de cambio para la IA. */
   kind?: ProjectKind
+  /** El docente puede apagar la IA del curso: entonces el taller no la ofrece. */
+  aiEnabled?: boolean
 }
 
-export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], brief, buildGate, onChangeRequestCopied, onHelpRequested, lastVersionProject, starter = SAMPLE, defaultViewport = 'desktop', draftSync, recoveredDraftAt, projectTitle = '', kind = 'WEB' }: CodeWorkspaceProps) {
+export default function CodeWorkspace({ initialProject, onSaveVersion, versions = [], brief, buildGate, onChangeRequestCopied, onHelpRequested, lastVersionProject, starter = SAMPLE, defaultViewport = 'desktop', draftSync, recoveredDraftAt, projectTitle = '', kind = 'WEB', aiEnabled = true }: CodeWorkspaceProps) {
   const [draft, setDraft] = useState<PreviewProject>(() => initialProject ?? starter)
   const [applied, setApplied] = useState<PreviewProject>(() => initialProject ?? starter)
   const autosave = useCodeAutosave(draft, draftSync)
@@ -458,7 +460,7 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
       <button type="button" disabled={!hasChanges} onClick={() => { setApplied(draft); setMobilePane('preview') }} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
         <Play className="h-4 w-4" /> Ver mis cambios
       </button>
-      <span className={`min-w-0 text-xs ${hasChanges ? 'font-semibold text-amber-700' : 'text-slate-500'}`}>
+      <span className={`hidden min-w-0 text-xs sm:inline ${hasChanges ? 'font-semibold text-amber-700' : 'text-slate-500'}`}>
         {hasChanges ? `Cambios sin ver en ${changed.join(', ')}` : 'La vista previa muestra tu código'}
         {connected && <span className="text-slate-400"> · {latestVersion ? `v${latestVersion.number} guardada${unsaved ? ', hay cambios sin guardar' : ''}` : 'aún sin versiones guardadas'}</span>}
       </span>
@@ -466,9 +468,9 @@ export default function CodeWorkspace({ initialProject, onSaveVersion, versions 
         {draftSync && <CodeSaveStatus status={autosave.status} savedAt={autosave.savedAt} onRetry={() => { void autosave.flush() }} />}
         <button type="button" onClick={download} title="Descargar el proyecto como un solo archivo .html" aria-label="Descargar el proyecto" className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><Download className="h-4 w-4" /></button>
         {!connected && <button type="button" onClick={() => setDraft(starter)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><RotateCcw className="h-3.5 w-3.5" /> Cargar ejemplo</button>}
-        <button type="button" onClick={() => { closeDrawer(); setChangePanelOpen(true) }} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"><Wand2 className="h-3.5 w-3.5" /> Pedir un cambio a la IA</button>
+        {aiEnabled && <button type="button" onClick={() => { closeDrawer(); setChangePanelOpen(true) }} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"><Wand2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Pedir un cambio a la IA</span></button>}
         {connected && <button type="button" onClick={() => { closeDrawer(); setHistoryOpen(true) }} title="Versiones guardadas" aria-label="Versiones guardadas" className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><History className="h-4 w-4" /></button>}
-        {connected && <button type="button" disabled={!unsaved || saving} onClick={() => { closeDrawer(); setSavePanelOpen(true) }} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{blockedBy.length && unsaved ? <Lock className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />} {unsaved ? 'Guardar versión' : 'Versión guardada'}</button>}
+        {connected && <button type="button" disabled={!unsaved || saving} onClick={() => { closeDrawer(); setSavePanelOpen(true) }} title={unsaved ? 'Guardar lo que hay en el editor como evidencia' : 'No hay cambios desde la última versión guardada'} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{blockedBy.length && unsaved ? <Lock className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />} <span className="hidden sm:inline">{unsaved ? 'Guardar versión' : 'Versión guardada'}</span><span className="sm:hidden">{unsaved ? 'Guardar' : 'Guardada'}</span></button>}
       </div>
     </footer>
 

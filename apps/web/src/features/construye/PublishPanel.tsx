@@ -90,13 +90,13 @@ export default function PublishPanel({ teamId, latestVersion, defaultTitle }: {
     </div>}
 
     {publication?.live && publication.url && <div className="mt-5 grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="text-center">
+      <div className="min-w-0 text-center">
         <div className="inline-block rounded-xl border border-slate-200 bg-white p-3"><QRCode value={linkFor(publication.url, 'qr')} size={180} /></div>
         <p className="mt-1 text-xs text-slate-500">Escanéenlo con la cámara del celular</p>
       </div>
-      <div className="space-y-3 text-sm">
+      <div className="min-w-0 space-y-3 text-sm">
         <div className="flex flex-wrap items-center gap-2">
-          <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">{linkFor(publication.url, 'link')}</code>
+          <code className="w-full min-w-0 flex-1 truncate rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700 sm:w-auto">{linkFor(publication.url, 'link')}</code>
           <button type="button" onClick={() => copy(linkFor(publication.url!, 'link'))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Copy className="h-3.5 w-3.5" /> Copiar enlace</button>
           <a href={linkFor(publication.url, 'team')} target="_blank" rel="noreferrer" title="Se abre marcada como del equipo: sus visitas no suman al conteo" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Abrir (como equipo)</a>
         </div>

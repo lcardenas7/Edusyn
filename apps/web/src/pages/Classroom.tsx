@@ -188,12 +188,12 @@ const STUDENT_TABS: { key: TabKey; label: string; icon: any }[] = [
 
 const getMaterialIcon = (type: string, size = 'w-4 h-4') => {
   switch (type) {
-    case 'DOCUMENT': return <FileText className={`${size} text-blue-500`} />
+    case 'DOCUMENT': return <FileText className={`${size} text-accent`} />
     case 'VIDEO_YOUTUBE': case 'VIDEO_UPLOAD': return <Video className={`${size} text-red-500`} />
     case 'LINK': return <Link2 className={`${size} text-green-500`} />
     case 'TEXT': return <Type className={`${size} text-purple-500`} />
     case 'IMAGE': return <ImageIcon className={`${size} text-pink-500`} />
-    default: return <FileText className={`${size} text-slate-400`} />
+    default: return <FileText className={`${size} text-ink-muted`} />
   }
 }
 
@@ -353,10 +353,10 @@ export default function Classroom() {
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-2xl font-bold text-ink-primary">
               {isStudent ? 'Mis Clases' : 'Aula Virtual'}
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               {isStudent ? 'Accede a tus clases y materiales' : 'Gestiona tus aulas virtuales por asignatura'}
             </p>
           </div>
@@ -366,7 +366,7 @@ export default function Classroom() {
                 preferencia de interfaz. */}
             <button
               onClick={() => navigate('/aula')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:border-blue-300 hover:text-blue-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-hairline text-sm font-medium text-ink-secondary hover:border-accent/50 hover:text-accent transition-colors"
               title="Esta es el aula anterior. Puedes volver a la nueva cuando quieras."
             >
               <Sparkles className="w-4 h-4" />
@@ -375,7 +375,7 @@ export default function Classroom() {
             {isTeacher && (
               <button
                 onClick={() => { setShowCreate(true); loadAvailableAssignments() }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
               >
                 <Plus className="w-4 h-4" />
                 Crear Aula
@@ -402,15 +402,15 @@ export default function Classroom() {
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-accent" />
           </div>
         ) : classrooms.length === 0 ? (
           <div className="text-center py-20">
-            <GraduationCap className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-600">
+            <GraduationCap className="w-16 h-16 mx-auto text-ink-muted mb-4" />
+            <h3 className="text-lg font-semibold text-ink-secondary">
               {isStudent ? 'No tienes clases asignadas aún' : 'No has creado aulas virtuales'}
             </h3>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               {isStudent ? 'Tus docentes crearán las aulas de tus asignaturas' : 'Crea tu primera aula para comenzar a publicar contenido'}
             </p>
           </div>
@@ -438,10 +438,10 @@ export default function Classroom() {
             <div className="space-y-6">
               {sortedGrades.map(gradeName => (
                 <div key={gradeName}>
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-ink-muted uppercase tracking-wide mb-3 flex items-center gap-2">
                     <GraduationCap className="w-4 h-4" />
                     {gradeName}
-                    <span className="text-xs font-normal text-slate-400">({groupedByGrade[gradeName].length})</span>
+                    <span className="text-xs font-normal text-ink-muted">({groupedByGrade[gradeName].length})</span>
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {groupedByGrade[gradeName].map(c => (
@@ -452,18 +452,18 @@ export default function Classroom() {
                       >
                         <div className="h-2" style={{ backgroundColor: c.color || '#3B82F6' }} />
                         <div className="p-4">
-                          <h3 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                          <h3 className="font-semibold text-ink-primary group-hover:text-accent transition-colors">
                             {c.title}
                           </h3>
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-ink-muted mt-1">
                             {c.teacherAssignment.group.name} · {c.teacherAssignment.subject.name}
                           </p>
                           {isStudent && c.teacherAssignment.teacher && (
-                            <p className="text-xs text-slate-400 mt-0.5">
+                            <p className="text-xs text-ink-muted mt-0.5">
                               Prof. {c.teacherAssignment.teacher.firstName} {c.teacherAssignment.teacher.lastName}
                             </p>
                           )}
-                          <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
+                          <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">
                             <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" />{c._count.sections}</span>
                             <span className="flex items-center gap-1"><Megaphone className="w-3.5 h-3.5" />{c._count.announcements}</span>
                             {c.studentCount !== undefined && (
@@ -484,16 +484,16 @@ export default function Classroom() {
         {showCreate && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-surface-1 rounded-2xl w-full max-w-md p-6">
-              <h2 className="text-lg font-bold text-slate-800 mb-4">Crear Aula Virtual</h2>
+              <h2 className="text-lg font-bold text-ink-primary mb-4">Crear Aula Virtual</h2>
               {availableAssignments.length === 0 ? (
-                <p className="text-sm text-slate-500 py-4">No tienes asignaciones disponibles para crear aulas. Todas tus asignaturas ya tienen aula o no tienes carga académica activa.</p>
+                <p className="text-sm text-ink-muted py-4">No tienes asignaciones disponibles para crear aulas. Todas tus asignaturas ya tienen aula o no tienes carga académica activa.</p>
               ) : (
                 <>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Asignatura y grupo</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Asignatura y grupo</label>
                   <select
                     value={createForm.teacherAssignmentId}
                     onChange={e => setCreateForm({ ...createForm, teacherAssignmentId: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3"
+                    className="w-full border border-hairline rounded-lg px-3 py-2 text-sm mb-3"
                   >
                     <option value="">Seleccionar...</option>
                     {availableAssignments.map((a: any) => (
@@ -502,13 +502,13 @@ export default function Classroom() {
                       </option>
                     ))}
                   </select>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Color</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Color</label>
                   <div className="flex gap-2 mb-4">
                     {COLORS.map(color => (
                       <button
                         key={color}
                         onClick={() => setCreateForm({ ...createForm, color })}
-                        className={`w-7 h-7 rounded-full border-2 transition-all ${createForm.color === color ? 'border-slate-800 scale-110' : 'border-transparent'}`}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${createForm.color === color ? 'border-ink-primary scale-110' : 'border-transparent'}`}
                         style={{ backgroundColor: color }}
                       />
                     ))}
@@ -516,9 +516,9 @@ export default function Classroom() {
                 </>
               )}
               <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
                 {availableAssignments.length > 0 && (
-                  <button onClick={handleCreate} disabled={!createForm.teacherAssignmentId} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Crear Aula</button>
+                  <button onClick={handleCreate} disabled={!createForm.teacherAssignmentId} className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">Crear Aula</button>
                 )}
               </div>
             </div>
@@ -536,7 +536,7 @@ export default function Classroom() {
   const tabs = isTeacher ? TEACHER_TABS : STUDENT_TABS
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50">
+    <div className="min-h-[calc(100vh-64px)] bg-surface-2">
       {/* ── COLOR HEADER BAR ── */}
       <div className="relative" style={{ backgroundColor: activeClassroom.color || '#3B82F6' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
@@ -586,11 +586,11 @@ export default function Classroom() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                   activeTab === tab.key
-                    ? 'border-blue-600 text-blue-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-ink-muted hover:text-ink-primary hover:border-ink-muted'
                 }`}
               >
-                <tab.icon className={`w-5 h-5 ${activeTab === tab.key ? 'text-blue-600' : 'text-slate-400'}`} />
+                <tab.icon className={`w-5 h-5 ${activeTab === tab.key ? 'text-accent' : 'text-ink-muted'}`} />
                 {tab.label}
               </button>
             ))}
@@ -608,7 +608,7 @@ export default function Classroom() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
         ) : (
           <>
             {activeTab === 'home' && <HomeTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} onReload={reloadClassroom} setError={setError} setActiveTab={setActiveTab} />}
@@ -630,17 +630,17 @@ export default function Classroom() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-1 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">Copiar aula a otros grupos</h3>
-              <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="p-1.5 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <h3 className="text-lg font-bold text-ink-primary">Copiar aula a otros grupos</h3>
+              <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="p-1.5 hover:bg-surface-2 rounded-lg">
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-muted">
               Selecciona las asignaciones donde deseas copiar el contenido de esta aula (secciones, materiales, actividades y preguntas de quiz).
             </p>
             
             {copyTargets.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-ink-muted">
                 <Copy className="w-10 h-10 mx-auto mb-2 opacity-40" />
                 <p>No hay otras asignaciones disponibles para copiar</p>
               </div>
@@ -649,7 +649,7 @@ export default function Classroom() {
                 {copyTargets.map((a: any) => {
                   const isSelected = selectedCopyTargets.includes(a.id)
                   return (
-                    <label key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-hairline hover:border-slate-300'}`}>
+                    <label key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-accent bg-accent/5' : 'border-hairline hover:border-ink-muted'}`}>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -660,11 +660,11 @@ export default function Classroom() {
                             setSelectedCopyTargets(prev => [...prev, a.id])
                           }
                         }}
-                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="w-5 h-5 rounded border-hairline text-accent focus:ring-accent"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800">{a.subject?.name}</p>
-                        <p className="text-sm text-slate-500">{a.group?.grade?.name} {a.group?.name}</p>
+                        <p className="font-medium text-ink-primary">{a.subject?.name}</p>
+                        <p className="text-sm text-ink-muted">{a.group?.grade?.name} {a.group?.name}</p>
                       </div>
                     </label>
                   )
@@ -673,13 +673,13 @@ export default function Classroom() {
             )}
 
             <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">
+              <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl">
                 Cancelar
               </button>
               <button
                 onClick={handleCopyClassroom}
                 disabled={selectedCopyTargets.length === 0 || copying}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2"
               >
                 {copying && <Loader2 className="w-4 h-4 animate-spin" />}
                 Copiar a {selectedCopyTargets.length} grupo{selectedCopyTargets.length !== 1 ? 's' : ''}
@@ -693,9 +693,9 @@ export default function Classroom() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-1 rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-800">Cambiar color del aula</h3>
-              <button onClick={() => setShowColorModal(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <h3 className="text-lg font-bold text-ink-primary">Cambiar color del aula</h3>
+              <button onClick={() => setShowColorModal(false)} className="p-1.5 hover:bg-surface-2 rounded-lg">
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
             <div className="flex gap-2 mb-4">
@@ -703,14 +703,14 @@ export default function Classroom() {
                 <button
                   key={color}
                   onClick={() => setColorDraft(color)}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${colorDraft === color ? 'border-slate-800 scale-110' : 'border-transparent'}`}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${colorDraft === color ? 'border-ink-primary scale-110' : 'border-transparent'}`}
                   style={{ backgroundColor: color }}
                 />
               ))}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowColorModal(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-              <button onClick={handleSaveColor} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+              <button onClick={() => setShowColorModal(false)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
+              <button onClick={handleSaveColor} className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90">Guardar</button>
             </div>
           </div>
         </div>
@@ -759,8 +759,8 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         {/* Welcome */}
         <div className="bg-surface-1 rounded-2xl border border-hairline p-6 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Bienvenido, {firstName}</h2>
-            <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
+            <h2 className="text-2xl font-bold text-ink-primary">Bienvenido, {firstName}</h2>
+            <p className="text-base text-ink-muted mt-1">Curso: {classroom.title}</p>
           </div>
           {currentPeriod && (
             <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-violet-50 text-violet-700 text-sm font-bold border border-violet-100 shrink-0">
@@ -787,18 +787,18 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
             </div>
             <div className="p-5">
               {allActivities.length === 0 ? (
-                <p className="text-base text-slate-500">No hay actividades publicadas aún</p>
+                <p className="text-base text-ink-muted">No hay actividades publicadas aún</p>
               ) : (
                 <div className="space-y-2.5">
                   {previewActs.slice(0, 4).map((a: any) => (
                     <div key={a.id} className="flex items-center gap-2.5">
                       <ClipboardList className="w-5 h-5 text-orange-500 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-ink-primary truncate flex items-center gap-1.5">
                           {a.title}
                           {isNew(a) && <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">Nuevo</span>}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <div className="flex items-center gap-2 text-xs text-ink-muted">
                           <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded font-medium">{TYPE_LABELS[a.type] || a.type}</span>
                           {a.dueDate && <span className={new Date(a.dueDate) < new Date() ? 'text-red-500 font-medium' : ''}>
                             {formatShortDate(a.dueDate)}
@@ -808,27 +808,27 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
                       </div>
                     </div>
                   ))}
-                  {allActivities.length > 4 && <p className="text-xs text-slate-400">+{allActivities.length - 4} más</p>}
+                  {allActivities.length > 4 && <p className="text-xs text-ink-muted">+{allActivities.length - 4} más</p>}
                 </div>
               )}
             </div>
           </div>
 
           {/* Anuncios recientes */}
-          <div className="bg-surface-1 rounded-2xl border-2 border-blue-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('announcements')}>
-            <div className="bg-gradient-to-r from-blue-500 to-blue-400 px-5 py-3 flex items-center gap-2.5">
+          <div className="bg-surface-1 rounded-2xl border-2 border-accent/30 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('announcements')}>
+            <div className="bg-gradient-to-r from-accent to-accent/60 px-5 py-3 flex items-center gap-2.5">
               <Megaphone className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Anuncios Recientes</h3>
             </div>
             <div className="p-5">
               {[...pinnedAnnouncements, ...recentAnnouncements].slice(0, 3).length === 0 ? (
-                <p className="text-base text-slate-500">Sin anuncios recientes</p>
+                <p className="text-base text-ink-muted">Sin anuncios recientes</p>
               ) : (
                 <div className="space-y-2.5">
                   {[...pinnedAnnouncements, ...recentAnnouncements].slice(0, 3).map(a => (
                     <div key={a.id} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
-                      <p className="text-base text-slate-700">{a.title}</p>
+                      <CheckCircle2 className="w-5 h-5 text-accent mt-0.5 shrink-0" />
+                      <p className="text-base text-ink-primary">{a.title}</p>
                     </div>
                   ))}
                 </div>
@@ -843,7 +843,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
               <h3 className="text-lg font-bold text-white">Mis Calificaciones</h3>
             </div>
             <div className="p-5">
-              <p className="text-base text-slate-600">Tus calificaciones aparecerán aquí</p>
+              <p className="text-base text-ink-secondary">Tus calificaciones aparecerán aquí</p>
             </div>
           </div>
 
@@ -855,13 +855,13 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
             </div>
             <div className="p-5">
               {sections.length === 0 ? (
-                <p className="text-base text-slate-500">Aún no hay contenidos publicados</p>
+                <p className="text-base text-ink-muted">Aún no hay contenidos publicados</p>
               ) : (
                 <div className="space-y-2">
                   {sections.filter(s => s.isVisible).slice(0, 3).map(s => (
                     <div key={s.id} className="flex items-center gap-2">
                       <FolderOpen className="w-5 h-5 text-purple-500 shrink-0" />
-                      <p className="text-base text-slate-700">{s.title}</p>
+                      <p className="text-base text-ink-primary">{s.title}</p>
                     </div>
                   ))}
                 </div>
@@ -880,39 +880,39 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-xl bg-accent/5 flex items-center justify-center">
+              <Layers className="w-5 h-5 text-accent" />
             </div>
-            <span className="text-2xl font-bold text-slate-800">{sections.length}</span>
+            <span className="text-2xl font-bold text-ink-primary">{sections.length}</span>
           </div>
-          <p className="text-sm text-slate-500">Secciones</p>
+          <p className="text-sm text-ink-muted">Secciones</p>
         </div>
         <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-green-600" />
             </div>
-            <span className="text-2xl font-bold text-slate-800">{totalMaterials}</span>
+            <span className="text-2xl font-bold text-ink-primary">{totalMaterials}</span>
           </div>
-          <p className="text-sm text-slate-500">Recursos</p>
+          <p className="text-sm text-ink-muted">Recursos</p>
         </div>
         <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
               <Megaphone className="w-5 h-5 text-amber-600" />
             </div>
-            <span className="text-2xl font-bold text-slate-800">{announcements.length}</span>
+            <span className="text-2xl font-bold text-ink-primary">{announcements.length}</span>
           </div>
-          <p className="text-sm text-slate-500">Anuncios</p>
+          <p className="text-sm text-ink-muted">Anuncios</p>
         </div>
         <div className="bg-surface-1 rounded-2xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
               <ClipboardList className="w-5 h-5 text-purple-600" />
             </div>
-            <span className="text-2xl font-bold text-slate-800">{classroom._count?.activities || 0}</span>
+            <span className="text-2xl font-bold text-ink-primary">{classroom._count?.activities || 0}</span>
           </div>
-          <p className="text-sm text-slate-500">Actividades</p>
+          <p className="text-sm text-ink-muted">Actividades</p>
         </div>
       </div>
 
@@ -921,22 +921,22 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         {/* Recent announcements */}
         <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
           <div className="px-5 py-4 border-b border-hairline flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-ink-primary flex items-center gap-2">
               <Megaphone className="w-5 h-5 text-amber-500" /> Anuncios recientes
             </h3>
           </div>
           <div className="p-5">
             {announcements.length === 0 ? (
-              <p className="text-base text-slate-400 text-center py-6">No hay anuncios aún</p>
+              <p className="text-base text-ink-muted text-center py-6">No hay anuncios aún</p>
             ) : (
               <div className="space-y-3">
                 {announcements.slice(0, 4).map(a => (
-                  <div key={a.id} className="flex items-start gap-3 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
+                  <div key={a.id} className="flex items-start gap-3 pb-3 border-b border-hairline last:border-0 last:pb-0">
                     {a.isPinned && <Pin className="w-4 h-4 text-yellow-500 mt-1 shrink-0" />}
-                    {!a.isPinned && <Megaphone className="w-4 h-4 text-slate-300 mt-1 shrink-0" />}
+                    {!a.isPinned && <Megaphone className="w-4 h-4 text-ink-muted mt-1 shrink-0" />}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-700">{a.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}</p>
+                      <p className="text-sm font-medium text-ink-primary">{a.title}</p>
+                      <p className="text-xs text-ink-muted mt-0.5">{new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}</p>
                     </div>
                   </div>
                 ))}
@@ -948,12 +948,12 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         {/* Activity feed placeholder */}
         <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
           <div className="px-5 py-4 border-b border-hairline">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-500" /> Actividad reciente
+            <h3 className="text-lg font-bold text-ink-primary flex items-center gap-2">
+              <Clock className="w-5 h-5 text-accent" /> Actividad reciente
             </h3>
           </div>
           <div className="p-5">
-            <div className="text-center py-6 text-slate-400">
+            <div className="text-center py-6 text-ink-muted">
               <Clock className="w-10 h-10 mx-auto mb-2 opacity-40" />
               <p className="text-base">Las entregas y actividad de los estudiantes aparecerán aquí</p>
               <p className="text-sm mt-1">Próximamente en Fase 2</p>
@@ -1060,41 +1060,41 @@ export function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800">Anuncios</h2>
+        <h2 className="text-xl font-bold text-ink-primary">Anuncios</h2>
         {isTeacher && (
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 transition-colors" style={{ minHeight: '44px' }}>
             <Plus className="w-5 h-5" /> Nuevo Anuncio
           </button>
         )}
       </div>
 
       {showForm && (
-        <div className="bg-surface-1 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
+        <div className="bg-surface-1 border-2 border-accent/30 rounded-2xl p-6 space-y-4">
           <input
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
             placeholder="Título del anuncio"
-            className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-accent focus:border-accent outline-none"
             autoFocus
           />
-          <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+          <Suspense fallback={<div className="h-32 bg-surface-2 rounded-xl animate-pulse" />}>
             <RichTextEditor value={form.content} onChange={v => setForm({ ...form, content: v })} placeholder="Escribe tu anuncio aquí..." />
           </Suspense>
           <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
           {attachmentFile && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
-              <Paperclip className="w-5 h-5 text-slate-400" />
-              <span className="text-base text-slate-700 flex-1 truncate">{attachmentFile.name}</span>
-              <button onClick={() => setAttachmentFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4 text-slate-400" /></button>
+            <div className="flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-xl border border-hairline">
+              <Paperclip className="w-5 h-5 text-ink-muted" />
+              <span className="text-base text-ink-primary flex-1 truncate">{attachmentFile.name}</span>
+              <button onClick={() => setAttachmentFile(null)} className="p-1 rounded-lg hover:bg-surface-3"><X className="w-4 h-4 text-ink-muted" /></button>
             </div>
           )}
           <div className="flex items-center justify-between pt-1">
-            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink-muted hover:text-accent hover:bg-accent/10 rounded-xl border border-hairline hover:border-accent/50 transition-colors" style={{ minHeight: '44px' }}>
               <Paperclip className="w-5 h-5" /> Adjuntar archivo
             </button>
             <div className="flex gap-3">
-              <button onClick={() => { setShowForm(false); setAttachmentFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-              <button onClick={handleSubmit} disabled={!form.title.trim() || isRichTextEmpty(form.content) || uploading} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+              <button onClick={() => { setShowForm(false); setAttachmentFile(null) }} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={handleSubmit} disabled={!form.title.trim() || isRichTextEmpty(form.content) || uploading} className="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                 {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {uploading ? 'Publicando...' : 'Publicar'}
               </button>
@@ -1105,9 +1105,9 @@ export function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
 
       {announcements.length === 0 && !showForm ? (
         <div className="text-center py-20 bg-surface-1 rounded-2xl border border-hairline">
-          <Megaphone className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-          <p className="text-lg font-medium text-slate-500">No hay anuncios aún</p>
-          {isTeacher && <p className="text-base mt-1 text-slate-400">Publica un anuncio para comunicarte con tus estudiantes</p>}
+          <Megaphone className="w-16 h-16 mx-auto mb-4 text-ink-muted" />
+          <p className="text-lg font-medium text-ink-muted">No hay anuncios aún</p>
+          {isTeacher && <p className="text-base mt-1 text-ink-muted">Publica un anuncio para comunicarte con tus estudiantes</p>}
         </div>
       ) : (
         <div className="space-y-4">
@@ -1117,33 +1117,33 @@ export function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5">
                     {a.isPinned && <Pin className="w-5 h-5 text-yellow-500 shrink-0" />}
-                    <h3 className="text-lg font-bold text-slate-800">{a.title}</h3>
+                    <h3 className="text-lg font-bold text-ink-primary">{a.title}</h3>
                   </div>
-                  <RichContent html={a.content} className="mt-3 text-base text-slate-600" />
+                  <RichContent html={a.content} className="mt-3 text-base text-ink-secondary" />
                   {a.attachmentUrl && (
                     isImageFile(a.attachmentName, a.attachmentUrl) ? (
                       <div className="mt-4">
                         <ImagePreview url={a.attachmentUrl} name={a.attachmentName} onExpand={() => openImagePreview(a.attachmentUrl!)} />
                       </div>
                     ) : (
-                      <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-hairline transition-colors group w-full sm:w-auto">
-                        <File className="w-5 h-5 text-blue-500" />
-                        <span className="text-base text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
-                        <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
+                      <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-surface-2 hover:bg-surface-2 rounded-xl border border-hairline transition-colors group w-full sm:w-auto">
+                        <File className="w-5 h-5 text-accent" />
+                        <span className="text-base text-ink-primary group-hover:text-accent truncate">{a.attachmentName || 'Archivo adjunto'}</span>
+                        <Download className="w-4 h-4 text-ink-muted ml-auto shrink-0" />
                       </button>
                     )
                   )}
-                  <p className="text-sm text-slate-400 mt-4">
+                  <p className="text-sm text-ink-muted mt-4">
                     {a.author.firstName} {a.author.lastName} · {formatBogota(a.createdAt, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 {isTeacher && (
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => openCopyModal(a.id, a.title)} className="p-2 rounded-xl hover:bg-blue-50" title="Copiar a otro curso">
-                      <Copy className="w-5 h-5 text-blue-400" />
+                    <button onClick={() => openCopyModal(a.id, a.title)} className="p-2 rounded-xl hover:bg-accent/10" title="Copiar a otro curso">
+                      <Copy className="w-5 h-5 text-accent" />
                     </button>
-                    <button onClick={() => handleTogglePin(a.id, a.isPinned)} className="p-2 rounded-xl hover:bg-slate-100" title={a.isPinned ? 'Desfijar' : 'Fijar'}>
-                      {a.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
+                    <button onClick={() => handleTogglePin(a.id, a.isPinned)} className="p-2 rounded-xl hover:bg-surface-2" title={a.isPinned ? 'Desfijar' : 'Fijar'}>
+                      {a.isPinned ? <PinOff className="w-5 h-5 text-ink-muted" /> : <Pin className="w-5 h-5 text-ink-muted" />}
                     </button>
                     <button onClick={() => handleDelete(a.id)} className="p-2 rounded-xl hover:bg-red-50">
                       <Trash2 className="w-5 h-5 text-red-400" />
@@ -1160,24 +1160,24 @@ export function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
       {copyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-1 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-slate-800 mb-1">Copiar anuncio</h3>
-            <p className="text-sm text-slate-500 mb-4 truncate">"{copyModal.title}"</p>
+            <h3 className="text-lg font-bold text-ink-primary mb-1">Copiar anuncio</h3>
+            <p className="text-sm text-ink-muted mb-4 truncate">"{copyModal.title}"</p>
             {loadingClassrooms ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
             ) : availableClassrooms.length === 0 ? (
-              <p className="text-center text-slate-500 py-8">No tienes otras aulas disponibles</p>
+              <p className="text-center text-ink-muted py-8">No tienes otras aulas disponibles</p>
             ) : (
               <div className="space-y-2">
                 {availableClassrooms.map(c => (
-                  <button key={c.id} onClick={() => handleCopyToClassroom(c.id)} disabled={copying} className="w-full text-left px-4 py-3 rounded-xl border border-hairline hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50">
-                    <p className="font-medium text-slate-800">{c.title}</p>
-                    <p className="text-xs text-slate-400">{c.teacherAssignment?.group?.grade?.name} {c.teacherAssignment?.group?.name}</p>
+                  <button key={c.id} onClick={() => handleCopyToClassroom(c.id)} disabled={copying} className="w-full text-left px-4 py-3 rounded-xl border border-hairline hover:bg-accent/10 hover:border-accent/50 transition-colors disabled:opacity-50">
+                    <p className="font-medium text-ink-primary">{c.title}</p>
+                    <p className="text-xs text-ink-muted">{c.teacherAssignment?.group?.grade?.name} {c.teacherAssignment?.group?.name}</p>
                   </button>
                 ))}
               </div>
             )}
             <div className="flex justify-end mt-4">
-              <button onClick={() => setCopyModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+              <button onClick={() => setCopyModal(null)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
             </div>
           </div>
         </div>
@@ -1203,7 +1203,7 @@ function ImagePreview({ url, name, onExpand }: { url: string; name?: string; onE
   useEffect(() => {
     storageApi.resolveUrl(url).then(({ data }) => setResolvedUrl(data.url)).catch(() => setResolvedUrl(url))
   }, [url])
-  if (!resolvedUrl) return <div className="w-full h-48 bg-slate-100 rounded-xl animate-pulse" />
+  if (!resolvedUrl) return <div className="w-full h-48 bg-surface-2 rounded-xl animate-pulse" />
   return (
     <div className="relative group">
       <img src={resolvedUrl} alt={name || 'Imagen'} className="max-w-full max-h-64 rounded-xl border border-hairline cursor-pointer" onClick={onExpand} />
@@ -1450,9 +1450,9 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
     <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-800">Contenido del aula</h3>
+        <h3 className="text-lg font-bold text-ink-primary">Contenido del aula</h3>
         {isTeacher && (
-          <button onClick={() => setShowAddSection(true)} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+          <button onClick={() => setShowAddSection(true)} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 font-medium">
             <Plus className="w-4 h-4" /> Nueva Sección
           </button>
         )}
@@ -1460,23 +1460,23 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* New section form */}
       {showAddSection && (
-        <div className="bg-surface-1 border border-blue-200 rounded-xl p-4 flex gap-2 flex-wrap">
+        <div className="bg-surface-1 border border-accent/30 rounded-xl p-4 flex gap-2 flex-wrap">
           <input
             value={newSectionTitle}
             onChange={e => setNewSectionTitle(e.target.value)}
             placeholder="Nombre de la sección (ej: Semana 1, Unidad: Fracciones)"
-            className="flex-1 min-w-[200px] border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="flex-1 min-w-[200px] border border-hairline rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent outline-none"
             autoFocus
             onKeyDown={e => e.key === 'Enter' && handleAddSection()}
           />
           {terms.length > 0 && (
-            <select value={newSectionTermId} onChange={e => setNewSectionTermId(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2.5 text-sm" title="Período (opcional)">
+            <select value={newSectionTermId} onChange={e => setNewSectionTermId(e.target.value)} className="border border-hairline rounded-lg px-3 py-2.5 text-sm" title="Período (opcional)">
               <option value="">Sin período</option>
               {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           )}
           <button onClick={() => setShowAddSection(false)} className="px-3 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
-          <button onClick={handleAddSection} disabled={!newSectionTitle.trim()} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Crear</button>
+          <button onClick={handleAddSection} disabled={!newSectionTitle.trim()} className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">Crear</button>
         </div>
       )}
 
@@ -1496,12 +1496,12 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
       {/* Sections */}
       {sections.length === 0 && !showAddSection ? (
         <div className="text-center py-16 bg-surface-1 rounded-xl border border-hairline">
-          <FolderOpen className="w-14 h-14 mx-auto mb-3 text-slate-300" />
+          <FolderOpen className="w-14 h-14 mx-auto mb-3 text-ink-muted" />
           <p className="text-sm font-medium text-ink-secondary">No hay secciones de contenido aún</p>
           {isTeacher && (
             <>
               <p className="text-xs mt-1 text-ink-muted">Organiza tu material por temas, unidades o semanas</p>
-              <button onClick={() => setShowAddSection(true)} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">
+              <button onClick={() => setShowAddSection(true)} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-semibold hover:bg-accent/90">
                 <Plus className="w-4 h-4" /> Crear la primera sección
               </button>
             </>
@@ -1512,24 +1512,24 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
           .filter(s => isTeacher || s.isVisible)
           .filter(s => periodFilter === 'ALL' || (periodFilter === 'NONE' ? !s.academicTermId : s.academicTermId === periodFilter))
           .map(section => (
-          <div key={section.id} className={`bg-surface-1 rounded-xl border ${section.isVisible ? 'border-hairline' : 'border-dashed border-slate-300 opacity-70'}`}>
+          <div key={section.id} className={`bg-surface-1 rounded-xl border ${section.isVisible ? 'border-hairline' : 'border-dashed border-hairline opacity-70'}`}>
             {/* Section header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-hairline bg-slate-50/50 rounded-t-xl">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-hairline bg-surface-2/50 rounded-t-xl">
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                <FolderOpen className="w-5 h-5 text-blue-500 shrink-0" />
+                <FolderOpen className="w-5 h-5 text-accent shrink-0" />
                 {editingSection === section.id ? (
                   <input
                     value={editingSectionTitle}
                     onChange={e => setEditingSectionTitle(e.target.value)}
                     onBlur={() => handleUpdateSectionTitle(section.id)}
                     onKeyDown={e => e.key === 'Enter' && handleUpdateSectionTitle(section.id)}
-                    className="flex-1 border border-blue-300 rounded px-2 py-1 text-sm"
+                    className="flex-1 border border-accent/40 rounded px-2 py-1 text-sm"
                     autoFocus
                   />
                 ) : (
-                  <h4 className="font-semibold text-slate-800 text-sm">{section.title}</h4>
+                  <h4 className="font-semibold text-ink-primary text-sm">{section.title}</h4>
                 )}
-                {!section.isVisible && <span className="text-xs bg-slate-200 text-slate-500 px-2 py-0.5 rounded shrink-0">Oculta</span>}
+                {!section.isVisible && <span className="text-xs bg-surface-3 text-ink-muted px-2 py-0.5 rounded shrink-0">Oculta</span>}
                 {terms.length > 0 && isTeacher ? (
                   <select
                     value={section.academicTermId || ''}
@@ -1541,16 +1541,16 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
                     {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 ) : section.academicTerm ? (
-                  <span className="text-[11px] font-medium bg-blue-50 text-blue-600 rounded-md px-2 py-0.5 shrink-0">{section.academicTerm.name}</span>
+                  <span className="text-[11px] font-medium bg-accent/5 text-accent rounded-md px-2 py-0.5 shrink-0">{section.academicTerm.name}</span>
                 ) : null}
               </div>
               {isTeacher && (
                 <div className="flex items-center gap-0.5 ml-2 shrink-0">
-                  <button onClick={() => { setEditingSection(section.id); setEditingSectionTitle(section.title) }} className="p-1.5 rounded-lg hover:bg-slate-100" title="Renombrar">
-                    <Pencil className="w-4 h-4 text-slate-400" />
+                  <button onClick={() => { setEditingSection(section.id); setEditingSectionTitle(section.title) }} className="p-1.5 rounded-lg hover:bg-surface-2" title="Renombrar">
+                    <Pencil className="w-4 h-4 text-ink-muted" />
                   </button>
-                  <button onClick={() => handleToggleVis(section.id, section.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100" title={section.isVisible ? 'Ocultar' : 'Mostrar'}>
-                    {section.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                  <button onClick={() => handleToggleVis(section.id, section.isVisible)} className="p-1.5 rounded-lg hover:bg-surface-2" title={section.isVisible ? 'Ocultar' : 'Mostrar'}>
+                    {section.isVisible ? <EyeOff className="w-4 h-4 text-ink-muted" /> : <Eye className="w-4 h-4 text-ink-muted" />}
                   </button>
                   <button onClick={() => openCopySectionModal(section.id, section.title)} className="p-1.5 rounded-lg hover:bg-violet-50" title="Copiar a otra aula">
                     <Copy className="w-4 h-4 text-violet-400" />
@@ -1569,18 +1569,18 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
               ))}
 
               {section.materials.filter(m => isTeacher || m.isVisible).length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-4">Esta sección aún no tiene recursos</p>
+                <p className="text-sm text-ink-muted text-center py-4">Esta sección aún no tiene recursos</p>
               )}
 
               {/* Add resource buttons (teacher only) */}
               {isTeacher && (
                 <div className="pt-3 border-t border-hairline mt-3">
-                  <p className="text-xs text-slate-400 mb-2.5 font-medium">Agregar recurso:</p>
+                  <p className="text-xs text-ink-muted mb-2.5 font-medium">Agregar recurso:</p>
                   <div className="flex flex-wrap gap-2">
                     {[
                       { type: 'TEXT', label: 'Texto', icon: Type, color: 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100' },
                       { type: 'VIDEO_YOUTUBE', label: 'Video YouTube', icon: Youtube, color: 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' },
-                      { type: 'DOCUMENT', label: 'Documento', icon: FileUp, color: 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' },
+                      { type: 'DOCUMENT', label: 'Documento', icon: FileUp, color: 'bg-accent/5 text-accent border-accent/30 hover:bg-accent/15' },
                       { type: 'IMAGE', label: 'Imagen', icon: Image, color: 'bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100' },
                       { type: 'LINK', label: 'Enlace', icon: Link2, color: 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' },
                     ].map(btn => (
@@ -1608,7 +1608,7 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
             <div className="p-5 border-b border-hairline flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {getMaterialIcon(materialModal.type, 'w-5 h-5')}
-                <h3 className="font-bold text-slate-800">
+                <h3 className="font-bold text-ink-primary">
                   {materialModal.type === 'TEXT' && 'Agregar texto'}
                   {materialModal.type === 'VIDEO_YOUTUBE' && 'Agregar video de YouTube'}
                   {materialModal.type === 'DOCUMENT' && 'Subir documento'}
@@ -1616,18 +1616,18 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
                   {materialModal.type === 'LINK' && 'Agregar enlace'}
                 </h3>
               </div>
-              <button onClick={() => setMaterialModal(null)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+              <button onClick={() => setMaterialModal(null)} className="p-1.5 rounded-lg hover:bg-surface-2"><X className="w-4 h-4" /></button>
             </div>
 
             <div className="p-5 space-y-4">
               {/* Title (all types) */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Título del recurso</label>
+                <label className="block text-sm font-medium text-ink-primary mb-1">Título del recurso</label>
                 <input
                   value={materialTitle}
                   onChange={e => setMaterialTitle(e.target.value)}
                   placeholder="Ej: Guía de ejercicios, Video explicativo..."
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="w-full border border-hairline rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none"
                   autoFocus
                 />
               </div>
@@ -1635,8 +1635,8 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
               {/* TEXT type - rich text editor */}
               {materialModal.type === 'TEXT' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Contenido</label>
-                  <Suspense fallback={<div className="h-40 bg-slate-50 rounded-xl animate-pulse" />}>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Contenido</label>
+                  <Suspense fallback={<div className="h-40 bg-surface-2 rounded-xl animate-pulse" />}>
                     <RichTextEditor value={materialContent} onChange={setMaterialContent} placeholder="Escribe el contenido aquí..." />
                   </Suspense>
                 </div>
@@ -1645,14 +1645,14 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
               {/* VIDEO_YOUTUBE type */}
               {materialModal.type === 'VIDEO_YOUTUBE' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">URL del video</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">URL del video</label>
                   <div className="relative">
                     <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
                     <input
                       value={materialContent}
                       onChange={e => setMaterialContent(e.target.value)}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none"
                     />
                   </div>
                   {materialContent && extractYoutubeId(materialContent) && (
@@ -1669,7 +1669,7 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
               {/* DOCUMENT type */}
               {materialModal.type === 'DOCUMENT' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Archivo (máx. 10MB)</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Archivo (máx. 10MB)</label>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1679,15 +1679,15 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex flex-col items-center gap-2 px-4 py-6 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition-colors"
+                    className="w-full flex flex-col items-center gap-2 px-4 py-6 border-2 border-dashed border-hairline rounded-xl hover:border-accent/50 hover:bg-accent/10/30 transition-colors"
                   >
-                    <FileUp className="w-8 h-8 text-slate-400" />
+                    <FileUp className="w-8 h-8 text-ink-muted" />
                     {materialFile ? (
-                      <span className="text-sm text-blue-600 font-medium">{materialFile.name}</span>
+                      <span className="text-sm text-accent font-medium">{materialFile.name}</span>
                     ) : (
                       <>
-                        <span className="text-sm text-slate-500">Haz clic para seleccionar un archivo</span>
-                        <span className="text-xs text-slate-400">PDF, Word, Excel, PowerPoint, TXT, CSV</span>
+                        <span className="text-sm text-ink-muted">Haz clic para seleccionar un archivo</span>
+                        <span className="text-xs text-ink-muted">PDF, Word, Excel, PowerPoint, TXT, CSV</span>
                       </>
                     )}
                   </button>
@@ -1697,7 +1697,7 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
               {/* IMAGE type */}
               {materialModal.type === 'IMAGE' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Imagen (máx. 10MB)</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Imagen (máx. 10MB)</label>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1707,15 +1707,15 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex flex-col items-center gap-2 px-4 py-6 border-2 border-dashed border-slate-300 rounded-xl hover:border-pink-400 hover:bg-pink-50/30 transition-colors"
+                    className="w-full flex flex-col items-center gap-2 px-4 py-6 border-2 border-dashed border-hairline rounded-xl hover:border-pink-400 hover:bg-pink-50/30 transition-colors"
                   >
-                    <Image className="w-8 h-8 text-slate-400" />
+                    <Image className="w-8 h-8 text-ink-muted" />
                     {materialFile ? (
                       <span className="text-sm text-pink-600 font-medium">{materialFile.name}</span>
                     ) : (
                       <>
-                        <span className="text-sm text-slate-500">Haz clic para seleccionar una imagen</span>
-                        <span className="text-xs text-slate-400">JPG, PNG, GIF, WebP</span>
+                        <span className="text-sm text-ink-muted">Haz clic para seleccionar una imagen</span>
+                        <span className="text-xs text-ink-muted">JPG, PNG, GIF, WebP</span>
                       </>
                     )}
                   </button>
@@ -1730,14 +1730,14 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
               {/* LINK type */}
               {materialModal.type === 'LINK' && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">URL del enlace</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">URL del enlace</label>
                   <div className="relative">
                     <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
                     <input
                       value={materialContent}
                       onChange={e => setMaterialContent(e.target.value)}
                       placeholder="https://ejemplo.com/recurso"
-                      className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none"
                     />
                   </div>
                 </div>
@@ -1745,11 +1745,11 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
             </div>
 
             <div className="p-5 border-t border-hairline flex justify-end gap-2">
-              <button onClick={() => setMaterialModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+              <button onClick={() => setMaterialModal(null)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
               <button
                 onClick={handleSaveMaterial}
                 disabled={!materialTitle.trim() || uploading || ((materialModal.type === 'DOCUMENT' || materialModal.type === 'IMAGE') && !materialFile)}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2"
               >
                 {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {uploading ? 'Subiendo...' : 'Agregar recurso'}
@@ -1764,16 +1764,16 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-1 rounded-2xl w-full max-w-md">
             <div className="p-5 border-b border-hairline flex items-center justify-between">
-              <h3 className="font-bold text-slate-800">Duplicar recurso a otra sección</h3>
-              <button onClick={() => setDuplicateMaterialModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <h3 className="font-bold text-ink-primary">Duplicar recurso a otra sección</h3>
+              <button onClick={() => setDuplicateMaterialModal(null)} className="p-1 hover:bg-surface-2 rounded-lg">
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
             <div className="p-5">
-              <p className="text-sm text-slate-600 mb-4">
-                Duplicando: <span className="font-medium text-slate-800">{duplicateMaterialModal.materialTitle}</span>
+              <p className="text-sm text-ink-secondary mb-4">
+                Duplicando: <span className="font-medium text-ink-primary">{duplicateMaterialModal.materialTitle}</span>
               </p>
-              <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+              <p className="text-xs text-ink-muted mb-3">Selecciona la sección destino:</p>
               <SectionPicker
                 sections={sections}
                 busy={duplicatingMaterial}
@@ -1790,14 +1790,14 @@ export function ContentTab({ classroom, isTeacher, onReload, setError }: {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-1 rounded-2xl w-full max-w-lg">
             <div className="p-5 border-b border-hairline flex items-center justify-between">
-              <h3 className="font-bold text-slate-800">Copiar sección a otra aula</h3>
-              <button onClick={() => setCopySectionModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <h3 className="font-bold text-ink-primary">Copiar sección a otra aula</h3>
+              <button onClick={() => setCopySectionModal(null)} className="p-1 hover:bg-surface-2 rounded-lg">
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
             <div className="p-5">
-              <p className="text-sm text-slate-600 mb-4">
-                Copiando: <span className="font-medium text-slate-800">{copySectionModal.sectionTitle}</span>
+              <p className="text-sm text-ink-secondary mb-4">
+                Copiando: <span className="font-medium text-ink-primary">{copySectionModal.sectionTitle}</span>
               </p>
               <ClassroomPicker
                 classrooms={availableClassrooms}
@@ -1866,18 +1866,18 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
   const typeColors: Record<string, string> = {
     TEXT: 'border-l-purple-400',
     VIDEO_YOUTUBE: 'border-l-red-400',
-    DOCUMENT: 'border-l-blue-400',
+    DOCUMENT: 'border-l-accent',
     IMAGE: 'border-l-pink-400',
     LINK: 'border-l-green-400',
   }
 
   return (
-    <div className={`rounded-xl border border-hairline border-l-4 ${typeColors[material.type] || 'border-l-slate-300'} ${material.isVisible ? 'bg-surface-1' : 'bg-slate-50/50 opacity-60'} group transition-all hover:shadow-sm`}>
+    <div className={`rounded-xl border border-hairline border-l-4 ${typeColors[material.type] || 'border-l-hairline'} ${material.isVisible ? 'bg-surface-1' : 'bg-surface-2/50 opacity-60'} group transition-all hover:shadow-sm`}>
       <div className="p-4">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
               {getMaterialIcon(material.type, 'w-5 h-5')}
             </div>
             <div className="flex-1 min-w-0">
@@ -1896,20 +1896,20 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
                         setEditingTitle(false)
                       }
                     }}
-                    className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-2 py-1 text-sm border border-accent/40 rounded focus:outline-none focus:ring-2 focus:ring-accent"
                     autoFocus
                   />
                   <button onClick={() => { if (titleValue.trim()) { onUpdateTitle(material.id, titleValue.trim()); setEditingTitle(false) } }} className="p-1 text-green-600 hover:bg-green-50 rounded">
                     <Check className="w-4 h-4" />
                   </button>
-                  <button onClick={() => { setTitleValue(material.title); setEditingTitle(false) }} className="p-1 text-slate-400 hover:bg-slate-100 rounded">
+                  <button onClick={() => { setTitleValue(material.title); setEditingTitle(false) }} className="p-1 text-ink-muted hover:bg-surface-2 rounded">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <h5 className="text-sm font-semibold text-slate-800">{material.title}</h5>
+                <h5 className="text-sm font-semibold text-ink-primary">{material.title}</h5>
               )}
-              <span className="text-[11px] text-slate-400">{getMaterialLabel(material.type)}</span>
+              <span className="text-[11px] text-ink-muted">{getMaterialLabel(material.type)}</span>
             </div>
           </div>
           {isTeacher && !editingTitle && (
@@ -1917,11 +1917,11 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
               <button onClick={() => setEditingTitle(true)} className="p-1.5 rounded-lg hover:bg-amber-50" title="Editar nombre">
                 <Pencil className="w-4 h-4 text-amber-500" />
               </button>
-              <button onClick={() => onDuplicate(material.id, material.title)} className="p-1.5 rounded-lg hover:bg-blue-50" title="Duplicar a otra sección">
-                <Copy className="w-4 h-4 text-blue-400" />
+              <button onClick={() => onDuplicate(material.id, material.title)} className="p-1.5 rounded-lg hover:bg-accent/10" title="Duplicar a otra sección">
+                <Copy className="w-4 h-4 text-accent" />
               </button>
-              <button onClick={() => onToggleVis(material.id, material.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100">
-                {material.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+              <button onClick={() => onToggleVis(material.id, material.isVisible)} className="p-1.5 rounded-lg hover:bg-surface-2">
+                {material.isVisible ? <EyeOff className="w-4 h-4 text-ink-muted" /> : <Eye className="w-4 h-4 text-ink-muted" />}
               </button>
               <button onClick={() => onDelete(material.id, material.title)} className="p-1.5 rounded-lg hover:bg-red-50">
                 <Trash2 className="w-4 h-4 text-red-400" />
@@ -1933,7 +1933,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
         {/* Content area */}
         {material.type === 'TEXT' && material.content && (
           <div className="mt-3 px-1">
-            <RichContent html={material.content} className="text-sm text-slate-600" />
+            <RichContent html={material.content} className="text-sm text-ink-secondary" />
           </div>
         )}
 
@@ -1958,11 +1958,11 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
             {imageUrl ? (
               <img src={imageUrl} alt={material.title} className="max-h-72 rounded-lg border border-hairline object-contain" />
             ) : (
-              <div className="h-32 bg-slate-100 rounded-lg flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+              <div className="h-32 bg-surface-2 rounded-lg flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-ink-muted" />
               </div>
             )}
-            <button onClick={() => onDownload(material)} className="flex items-center gap-2 mt-2 px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button onClick={() => onDownload(material)} className="flex items-center gap-2 mt-2 px-3 py-2 text-xs text-accent hover:bg-accent/10 rounded-lg transition-colors">
               <Download className="w-3.5 h-3.5" /> Descargar imagen
             </button>
           </div>
@@ -1974,14 +1974,14 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
               <button 
                 onClick={handlePreview} 
                 disabled={loadingDoc}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors text-sm text-blue-700 font-medium disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-accent/5 hover:bg-accent/15 rounded-lg border border-accent/30 transition-colors text-sm text-accent font-medium disabled:opacity-50"
               >
                 {loadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
                 Visualizar
               </button>
               <button 
                 onClick={() => onDownload(material)} 
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-hairline transition-colors text-sm text-slate-600"
+                className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-surface-2 rounded-lg border border-hairline transition-colors text-sm text-ink-secondary"
               >
                 <Download className="w-4 h-4" />
                 Descargar
@@ -1996,17 +1996,17 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowPreview(false)}>
           <div className="bg-surface-1 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-hairline flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-slate-800 truncate">{material.title}</h3>
+              <h3 className="font-bold text-ink-primary truncate">{material.title}</h3>
               <div className="flex items-center gap-2">
-                <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+                <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-3 py-1.5 text-sm text-accent hover:bg-accent/10 rounded-lg">
                   <Download className="w-4 h-4" /> Descargar
                 </button>
-                <button onClick={() => setShowPreview(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
-                  <X className="w-5 h-5 text-slate-400" />
+                <button onClick={() => setShowPreview(false)} className="p-1.5 hover:bg-surface-2 rounded-lg">
+                  <X className="w-5 h-5 text-ink-muted" />
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-hidden bg-slate-100">
+            <div className="flex-1 overflow-hidden bg-surface-2">
               {getDocType(docUrl) === 'pdf' ? (
                 <iframe src={docUrl} className="w-full h-full" title={material.title} />
               ) : getDocType(docUrl) === 'image' ? (
@@ -2021,9 +2021,9 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
-                  <FileText className="w-16 h-16 text-slate-300" />
-                  <p className="text-slate-500 text-center">Este tipo de archivo no se puede previsualizar.<br/>Usa el botón de descargar.</p>
-                  <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <FileText className="w-16 h-16 text-ink-muted" />
+                  <p className="text-ink-muted text-center">Este tipo de archivo no se puede previsualizar.<br/>Usa el botón de descargar.</p>
+                  <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90">
                     <Download className="w-4 h-4" /> Descargar archivo
                   </button>
                 </div>
@@ -2045,27 +2045,27 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
 // scrollea horizontal sin cortar el texto (whitespace-nowrap).
 function SegTrack({ children, variant = 'default' }: { children: ReactNode; variant?: 'default' | 'primary' }) {
   if (variant === 'primary') {
-    return <div className="flex bg-slate-200/60 rounded-2xl p-1.5 gap-1.5 overflow-x-auto ring-1 ring-slate-900/5 shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
+    return <div className="flex bg-surface-3/60 rounded-2xl p-1.5 gap-1.5 overflow-x-auto ring-1 ring-ink-primary/5 shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
   }
-  return <div className="flex bg-slate-100/80 rounded-2xl p-1.5 gap-1.5 overflow-x-auto ring-1 ring-slate-900/5 shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
+  return <div className="flex bg-surface-2/80 rounded-2xl p-1.5 gap-1.5 overflow-x-auto ring-1 ring-ink-primary/5 shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
 }
 function SegItem({ label, count, active, onClick, dot, full, variant = 'default' }: { label: string; count?: number; active: boolean; onClick: () => void; dot?: string; full?: boolean; variant?: 'default' | 'primary' }) {
   if (variant === 'primary') {
     return (
       <button onClick={onClick} aria-pressed={active}
-        className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${active ? 'bg-white text-blue-800 shadow-md ring-1 ring-black/5 scale-[1.02]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300/50'}`}>
+        className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${active ? 'bg-white text-accent shadow-md ring-1 ring-black/5 scale-[1.02]' : 'text-ink-secondary hover:text-ink-primary hover:bg-surface-3/50'}`}>
         {dot && <span className={`w-2 h-2 rounded-full shrink-0 shadow-sm ${dot}`} />}
         <span>{label}</span>
-        {count !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full font-bold tabular-nums shrink-0 transition-colors ${active ? 'bg-blue-100 text-blue-800' : 'bg-slate-300 text-slate-600'}`}>{count}</span>}
+        {count !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full font-bold tabular-nums shrink-0 transition-colors ${active ? 'bg-accent/10 text-accent' : 'bg-surface-3 text-ink-secondary'}`}>{count}</span>}
       </button>
     )
   }
   return (
     <button onClick={onClick} aria-pressed={active}
-      className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${active ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/60'}`}>
+      className={`${full ? 'flex-none sm:flex-1 sm:min-w-0' : 'shrink-0'} flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${active ? 'bg-white text-accent shadow-sm ring-1 ring-black/5' : 'text-ink-muted hover:text-ink-primary hover:bg-surface-3/60'}`}>
       {dot && <span className={`w-2 h-2 rounded-full shrink-0 shadow-sm ${dot}`} />}
       <span>{label}</span>
-      {count !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full font-bold tabular-nums shrink-0 transition-colors ${active ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>{count}</span>}
+      {count !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full font-bold tabular-nums shrink-0 transition-colors ${active ? 'bg-accent/10 text-accent' : 'bg-surface-3 text-ink-muted'}`}>{count}</span>}
     </button>
   )
 }
@@ -2091,8 +2091,8 @@ interface Submission {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  DRAFT: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Borrador' },
-  SUBMITTED: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Entregado' },
+  DRAFT: { bg: 'bg-surface-2', text: 'text-ink-secondary', label: 'Borrador' },
+  SUBMITTED: { bg: 'bg-accent/10', text: 'text-accent', label: 'Entregado' },
   GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Calificado' },
   RETURNED: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Devuelto' },
   LATE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Tardío' },
@@ -2878,8 +2878,8 @@ export function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setEr
 
   const ICFES_AREAS = ['Lectura Crítica', 'Matemáticas', 'Ciencias Naturales', 'Sociales y Ciudadanas', 'Inglés']
   const AREA_COLORS: Record<string, string> = {
-    'Lectura Crítica': 'bg-blue-500', 'Matemáticas': 'bg-red-500', 'Ciencias Naturales': 'bg-green-500',
-    'Sociales y Ciudadanas': 'bg-amber-500', 'Inglés': 'bg-purple-500', 'General': 'bg-slate-500',
+    'Lectura Crítica': 'bg-accent', 'Matemáticas': 'bg-red-500', 'Ciencias Naturales': 'bg-green-500',
+    'Sociales y Ciudadanas': 'bg-amber-500', 'Inglés': 'bg-purple-500', 'General': 'bg-ink-muted',
   }
 
   // ICFES results state
@@ -3513,7 +3513,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
   const datetimeLocalToIso = (value?: string) => bogotaInputToIso(value)
   const toLocalDatetimeStr = (d: Date) => isoToBogotaInput(d)
 
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
 
   // ── ACTIVITY DETAIL VIEW ──
   if (selectedActivity) {
@@ -3521,9 +3521,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
     const meta = act.metadata as any
     return (
       <div className="space-y-5">
-        <button onClick={() => { setSelectedActivity(null); setMySubmission(null) }} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
-          <ChevronLeft className="w-4 h-4" /> Volver a actividades
-        </button>
+        {/* Cuando el aula nueva abre ESTA actividad, ella ya pone su propio "Volver" arriba y
+            este sobra: salían dos seguidos, y el de dentro además dejaba al estudiante en la
+            lista de la herramienta, no donde estaba. Si navega a otra actividad, vuelve. */}
+        {act.id !== initialActivityId && (
+          <button onClick={() => { setSelectedActivity(null); setMySubmission(null) }} className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-accent">
+            <ChevronLeft className="w-4 h-4" /> Volver a actividades
+          </button>
+        )}
 
         {isTeacher && activeLiveSession?.activityId === act.id && (
           <button
@@ -3545,37 +3550,37 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           {editingActivity ? (
             /* ── INLINE EDIT FORM ── */
             <div className="space-y-4">
-              <h3 className="font-bold text-slate-800 text-lg">Editar actividad</h3>
+              <h3 className="font-bold text-ink-primary text-lg">Editar actividad</h3>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Título</label>
-                <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                <label className="block text-sm font-medium text-ink-primary mb-1">Título</label>
+                <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 border border-hairline rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-accent" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-                <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+                <label className="block text-sm font-medium text-ink-primary mb-1">Descripción</label>
+                <Suspense fallback={<div className="h-32 bg-surface-2 rounded-xl animate-pulse" />}>
                   <RichTextEditor value={editForm.description} onChange={v => setEditForm(f => ({ ...f, description: v }))} placeholder="Descripción e instrucciones..." />
                 </Suspense>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nota máxima</label>
-                  <input type="number" step="0.1" min="0" value={editForm.maxScore} onChange={e => setEditForm(f => ({ ...f, maxScore: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Nota máxima</label>
+                  <input type="number" step="0.1" min="0" value={editForm.maxScore} onChange={e => setEditForm(f => ({ ...f, maxScore: e.target.value }))} className="w-full px-3 py-2 border border-hairline rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha límite</label>
-                  <input type="datetime-local" value={editForm.dueDate} onChange={e => setEditForm(f => ({ ...f, dueDate: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Fecha límite</label>
+                  <input type="datetime-local" value={editForm.dueDate} onChange={e => setEditForm(f => ({ ...f, dueDate: e.target.value }))} className="w-full px-3 py-2 border border-hairline rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={editForm.allowLateSubmit} onChange={e => setEditForm(f => ({ ...f, allowLateSubmit: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
+              <label className="flex items-center gap-2 text-sm text-ink-primary">
+                <input type="checkbox" checked={editForm.allowLateSubmit} onChange={e => setEditForm(f => ({ ...f, allowLateSubmit: e.target.checked }))} className="w-4 h-4 rounded text-accent" />
                 Permitir entrega tardía
               </label>
               <PrerequisitesEditor selfId={selectedActivity.id} activities={activities as any} value={editPrereqs} onChange={setEditPrereqs} />
               <div className="flex gap-3 pt-2">
-                <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2">
                   {savingEdit && <Loader2 className="w-4 h-4 animate-spin" />} Guardar cambios
                 </button>
-                <button onClick={() => setEditingActivity(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
+                <button onClick={() => setEditingActivity(false)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">
                   Cancelar
                 </button>
               </div>
@@ -3586,26 +3591,26 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      {isGame(act.type) ? <Puzzle className="w-5 h-5 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-5 h-5 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-accent/5'}`}>
+                      {isGame(act.type) ? <Puzzle className="w-5 h-5 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-5 h-5 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-accent" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-ink-primary break-words">{act.title}</h2>
                         {isLessonOrGame(act.type) && <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${gameLabelOf(act) ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>{gameLabelOf(act) || 'Lección Interactiva'}</span>}
                         {isSelfAssessment(act.type) && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium whitespace-nowrap">Autoevaluación</span>}
                         {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
                         {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{getQuizTypeLabel(act.type)}</span>}
                       </div>
-                      <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
+                      <p className="text-sm text-ink-muted">{act.section?.title || 'Sin sección'}</p>
                     </div>
                   </div>
-                  {act.description && <RichContent html={act.description} className="mt-3 text-sm sm:text-base text-slate-600" />}
+                  {act.description && <RichContent html={act.description} className="mt-3 text-sm sm:text-base text-ink-secondary" />}
                   {meta?.attachmentUrl && (
-                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-hairline transition-colors group w-full sm:w-auto">
-                      <File className="w-5 h-5 text-blue-500 shrink-0" />
-                      <span className="text-sm sm:text-base text-slate-700 group-hover:text-blue-600 truncate">{meta.attachmentName || 'Archivo adjunto'}</span>
-                      <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
+                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-surface-2 hover:bg-surface-2 rounded-xl border border-hairline transition-colors group w-full sm:w-auto">
+                      <File className="w-5 h-5 text-accent shrink-0" />
+                      <span className="text-sm sm:text-base text-ink-primary group-hover:text-accent truncate">{meta.attachmentName || 'Archivo adjunto'}</span>
+                      <Download className="w-4 h-4 text-ink-muted ml-auto shrink-0" />
                     </button>
                   )}
                 </div>
@@ -3615,7 +3620,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       {act.isPublished ? 'Despublicar' : 'Publicar'}
                     </button>
                     {!act.isPublished && (
-                      <button onClick={() => { setShowScheduleModal(act.id); setScheduleDate(act.scheduledPublishAt ? toLocalDatetimeStr(new Date(act.scheduledPublishAt)) : '') }} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.scheduledPublishAt ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`} title="Programar publicación">
+                      <button onClick={() => { setShowScheduleModal(act.id); setScheduleDate(act.scheduledPublishAt ? toLocalDatetimeStr(new Date(act.scheduledPublishAt)) : '') }} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.scheduledPublishAt ? 'bg-accent/10 text-accent hover:bg-accent/20' : 'bg-surface-2 text-ink-muted hover:bg-surface-2'}`} title="Programar publicación">
                         <Clock className="w-4 h-4 inline mr-1" />{act.scheduledPublishAt ? formatBogota(act.scheduledPublishAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Programar'}
                       </button>
                     )}
@@ -3625,8 +3630,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     <button onClick={() => openAssignStudentsModal(act.id, act.title)} className="p-2 sm:p-2.5 rounded-xl hover:bg-violet-50" title="Asignar estudiantes">
                       <Users className="w-4 h-4 sm:w-5 sm:h-5 text-violet-400" />
                     </button>
-                    <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2 sm:p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
-                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                    <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2 sm:p-2.5 rounded-xl hover:bg-accent/10" title="Duplicar actividad">
+                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                     </button>
                     <button onClick={() => handleDelete(act.id)} className="p-2 sm:p-2.5 rounded-xl hover:bg-red-50">
                       <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
@@ -3638,15 +3643,15 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               {/* Meta info */}
               <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-hairline">
                 <div className="flex items-center gap-2 text-sm">
-                  <BarChart3 className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-600">Nota máx: <strong>{act.maxScore ? Number(act.maxScore) : '—'}</strong></span>
+                  <BarChart3 className="w-4 h-4 text-ink-muted" />
+                  <span className="text-ink-secondary">Nota máx: <strong>{act.maxScore ? Number(act.maxScore) : '—'}</strong></span>
                 </div>
-                <div className={`flex items-center gap-2 text-sm ${isDuePast(act.dueDate) ? 'text-red-600' : 'text-slate-600'}`}>
+                <div className={`flex items-center gap-2 text-sm ${isDuePast(act.dueDate) ? 'text-red-600' : 'text-ink-secondary'}`}>
                   <Clock className="w-4 h-4" />
                   <span>Fecha límite: <strong>{formatDate(act.dueDate)}</strong></span>
                 </div>
                 {act.allowLateSubmit && <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full">Permite entrega tardía</span>}
-                <span className={`text-xs px-2.5 py-1 rounded-full ${act.isPublished ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                <span className={`text-xs px-2.5 py-1 rounded-full ${act.isPublished ? 'bg-green-50 text-green-600' : 'bg-surface-2 text-ink-muted'}`}>
                   {act.isPublished ? 'Publicada' : 'Borrador'}
                 </span>
               </div>
@@ -3659,15 +3664,15 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 flex items-center gap-1">
                         <BarChart3 className="w-3 h-3" /> Vinculada: {act.gradebookComponent} #{act.gradebookIndex}
                       </span>
-                      <button onClick={openSyncPreview} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-1">
+                      <button onClick={openSyncPreview} className="text-xs px-3 py-1.5 bg-accent text-white rounded-lg hover:bg-accent/90 font-medium flex items-center gap-1">
                         <RefreshCw className="w-3 h-3" /> Sincronizar con planilla
                       </button>
-                      <button onClick={() => openGradebookLink(act)} className="text-xs px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+                      <button onClick={() => openGradebookLink(act)} className="text-xs px-2.5 py-1.5 text-ink-muted hover:text-ink-primary hover:bg-surface-2 rounded-lg">
                         Cambiar destino
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => openGradebookLink(act)} className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg font-medium flex items-center gap-1">
+                    <button onClick={() => openGradebookLink(act)} className="text-xs px-3 py-1.5 bg-surface-2 text-ink-secondary hover:bg-surface-3 rounded-lg font-medium flex items-center gap-1">
                       <BarChart3 className="w-3 h-3" /> Vincular a planilla
                     </button>
                   )}
@@ -3681,7 +3686,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         {isTeacher && !isSelfAssessment(act.type) && (
           <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
             <div className="px-6 py-4 border-b border-hairline flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">Entregas ({submissions.length})</h3>
+              <h3 className="text-lg font-bold text-ink-primary">Entregas ({submissions.length})</h3>
               {submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length > 0 && (
                 <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">
                   {submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length} pendientes
@@ -3689,47 +3694,47 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               )}
             </div>
             {submissionsLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
             ) : submissions.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-ink-muted">
                 <Upload className="w-10 h-10 mx-auto mb-2 opacity-40" />
                 <p className="text-base">Aún no hay entregas</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-hairline">
                 {submissions.map(sub => {
                   const st = sub.studentEnrollment?.student
                   const name = st ? `${st.lastName}${st.secondLastName ? ' ' + st.secondLastName : ''}, ${st.firstName}` : 'Estudiante'
                   const initials = st ? `${st.firstName?.[0] || ''}${st.lastName?.[0] || ''}` : '?'
                   const statusInfo = STATUS_COLORS[sub.status] || STATUS_COLORS.DRAFT
                   return (
-                    <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 hover:bg-slate-50 cursor-pointer group" onClick={() => openReviewPanel(sub)}>
+                    <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 hover:bg-surface-2 cursor-pointer group" onClick={() => openReviewPanel(sub)}>
                       {st?.photo ? (
                         <img src={st.photo} alt={name} className="w-10 h-10 rounded-full object-cover border border-hairline" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{initials}</div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/10 to-accent/20 flex items-center justify-center text-sm font-bold text-accent">{initials}</div>
                       )}
                       <div className="flex-1 min-w-0 flex items-center gap-3">
                         <div className="flex-1">
-                          <p className="text-sm sm:text-base font-medium text-slate-800">{name}</p>
+                          <p className="text-sm sm:text-base font-medium text-ink-primary">{name}</p>
                           <div className="flex items-center gap-2">
-                            <p className="text-xs sm:text-sm text-slate-400">{formatDate(sub.submittedAt)}</p>
-                            {sub.fileUrl && <Paperclip className="w-3 h-3 text-slate-400" />}
-                            {sub.content && sub.content.match(/https?:\/\/[^\s]+/) && <Link2 className="w-3 h-3 text-slate-400" />}
+                            <p className="text-xs sm:text-sm text-ink-muted">{formatDate(sub.submittedAt)}</p>
+                            {sub.fileUrl && <Paperclip className="w-3 h-3 text-ink-muted" />}
+                            {sub.content && sub.content.match(/https?:\/\/[^\s]+/) && <Link2 className="w-3 h-3 text-ink-muted" />}
                           </div>
                         </div>
                         <span className={`text-xs px-2 sm:px-2.5 py-1 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
                         {sub.score !== undefined && sub.score !== null && (
-                          <span className="text-sm sm:text-base font-bold text-slate-800">{Number(sub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                          <span className="text-sm sm:text-base font-bold text-ink-primary">{Number(sub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1 ml-auto sm:ml-0" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => openReviewPanel(sub)} className="px-2 sm:px-3 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-100 flex items-center gap-1" style={{ minHeight: '40px' }}>
+                        <button onClick={() => openReviewPanel(sub)} className="px-2 sm:px-3 py-2 bg-accent/5 text-accent rounded-xl text-xs sm:text-sm font-medium hover:bg-accent/15 flex items-center gap-1" style={{ minHeight: '40px' }}>
                           <Eye className="w-4 h-4" /> Revisar
                         </button>
                         {sub.fileUrl && (
-                          <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-slate-100" title="Descargar archivo">
-                            <Download className="w-4 h-4 text-slate-500" />
+                          <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-surface-2" title="Descargar archivo">
+                            <Download className="w-4 h-4 text-ink-muted" />
                           </button>
                         )}
                         <button onClick={() => handleReturn(sub)} className="p-2 rounded-xl hover:bg-orange-50" title="Devolver">
@@ -3765,21 +3770,21 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               {/* Header */}
               <div className="bg-surface-1 border-b border-hairline px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setReviewingSubmission(null)} className="p-2 rounded-xl hover:bg-slate-100">
-                    <X className="w-5 h-5 text-slate-500" />
+                  <button onClick={() => setReviewingSubmission(null)} className="p-2 rounded-xl hover:bg-surface-2">
+                    <X className="w-5 h-5 text-ink-muted" />
                   </button>
                   {revSt?.photo ? (
                     <img src={revSt.photo} alt={revName} className="w-9 h-9 rounded-full object-cover border border-hairline" />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{revInitials}</div>
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent/10 to-accent/20 flex items-center justify-center text-sm font-bold text-accent">{revInitials}</div>
                   )}
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">{revName}</p>
+                    <p className="text-sm font-semibold text-ink-primary">{revName}</p>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${revStatusInfo.bg} ${revStatusInfo.text}`}>{revStatusInfo.label}</span>
-                      <span className="text-xs text-slate-400">{formatDate(reviewingSubmission.submittedAt)}</span>
+                      <span className="text-xs text-ink-muted">{formatDate(reviewingSubmission.submittedAt)}</span>
                       {reviewingSubmission.score !== undefined && reviewingSubmission.score !== null && (
-                        <span className="text-xs font-bold text-slate-700">{Number(reviewingSubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                        <span className="text-xs font-bold text-ink-primary">{Number(reviewingSubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
                       )}
                     </div>
                   </div>
@@ -3790,12 +3795,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       {pendingCount} pendientes
                     </span>
                   )}
-                  <span className="text-xs text-slate-400">{revIdx + 1} / {submissions.length}</span>
-                  <button onClick={() => navigateReview(-1)} disabled={!hasPrev} className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Anterior">
-                    <ChevronLeft className="w-5 h-5 text-slate-600" />
+                  <span className="text-xs text-ink-muted">{revIdx + 1} / {submissions.length}</span>
+                  <button onClick={() => navigateReview(-1)} disabled={!hasPrev} className="p-2 rounded-xl hover:bg-surface-2 disabled:opacity-30 disabled:cursor-not-allowed" title="Anterior">
+                    <ChevronLeft className="w-5 h-5 text-ink-secondary" />
                   </button>
-                  <button onClick={() => navigateReview(1)} disabled={!hasNext} className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Siguiente">
-                    <ChevronRight className="w-5 h-5 text-slate-600" />
+                  <button onClick={() => navigateReview(1)} disabled={!hasNext} className="p-2 rounded-xl hover:bg-surface-2 disabled:opacity-30 disabled:cursor-not-allowed" title="Siguiente">
+                    <ChevronRight className="w-5 h-5 text-ink-secondary" />
                   </button>
                 </div>
               </div>
@@ -3803,30 +3808,30 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               {/* Body: Split view */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                 {/* Left: File preview / Content */}
-                <div className="flex-1 bg-slate-100 overflow-auto min-h-0">
+                <div className="flex-1 bg-surface-2 overflow-auto min-h-0">
                   {reviewFileLoading ? (
                     <div className="flex items-center justify-center h-full">
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                      <Loader2 className="w-8 h-8 animate-spin text-accent" />
                     </div>
                   ) : reviewFileUrl ? (
                     <div className="h-full flex flex-col">
                       {/* File preview toolbar */}
                       <div className="bg-surface-1 border-b border-hairline px-4 py-2 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
-                          <File className="w-4 h-4 text-slate-400" />
-                          <span className="text-xs text-slate-600 font-medium truncate max-w-[200px]">
+                          <File className="w-4 h-4 text-ink-muted" />
+                          <span className="text-xs text-ink-secondary font-medium truncate max-w-[200px]">
                             {reviewingSubmission.fileUrl?.split('/').pop() || 'Archivo adjunto'}
                           </span>
                           {fileType === 'image' && <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full">Imagen</span>}
                           {fileType === 'pdf' && <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full">PDF</span>}
-                          {fileType === 'office' && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">Documento</span>}
+                          {fileType === 'office' && <span className="text-xs px-2 py-0.5 bg-accent/5 text-accent rounded-full">Documento</span>}
                           {fileType === 'audio' && <span className="text-xs px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full">Audio</span>}
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-1">
+                          <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-3 py-1.5 text-xs bg-surface-2 text-ink-secondary rounded-lg hover:bg-surface-3 flex items-center gap-1">
                             <ExternalLink className="w-3 h-3" /> Abrir
                           </button>
-                          <a href={reviewFileUrl} download className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-1">
+                          <a href={reviewFileUrl} download className="px-3 py-1.5 text-xs bg-surface-2 text-ink-secondary rounded-lg hover:bg-surface-3 flex items-center gap-1">
                             <Download className="w-3 h-3" /> Descargar
                           </a>
                         </div>
@@ -3834,7 +3839,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       {/* File preview area */}
                       <div className="flex-1 overflow-auto">
                         {fileType === 'image' && (
-                          <div className="flex items-center justify-center h-full p-4 bg-slate-900/5">
+                          <div className="flex items-center justify-center h-full p-4 bg-ink-primary/5">
                             <img src={reviewFileUrl} alt="Entrega" className="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
                           </div>
                         )}
@@ -3853,19 +3858,19 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                             <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center">
                               <Music className="w-8 h-8 text-rose-500" />
                             </div>
-                            <p className="text-sm text-slate-500">Grabación de audio del estudiante</p>
+                            <p className="text-sm text-ink-muted">Grabación de audio del estudiante</p>
                             <audio src={reviewFileUrl} controls autoPlay={false} className="w-full max-w-md" />
                           </div>
                         )}
                         {fileType === 'unknown' && (
-                          <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+                          <div className="flex flex-col items-center justify-center h-full gap-4 text-ink-muted">
                             <File className="w-16 h-16 opacity-40" />
                             <p className="text-sm">No se puede previsualizar este tipo de archivo</p>
                             <div className="flex gap-2">
-                              <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
+                              <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-4 py-2 bg-accent text-white rounded-xl text-sm font-medium hover:bg-accent/90 flex items-center gap-2">
                                 <ExternalLink className="w-4 h-4" /> Abrir en nueva pestaña
                               </button>
-                              <a href={reviewFileUrl} download className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-300 flex items-center gap-2">
+                              <a href={reviewFileUrl} download className="px-4 py-2 bg-surface-3 text-ink-primary rounded-xl text-sm font-medium hover:bg-surface-3 flex items-center gap-2">
                                 <Download className="w-4 h-4" /> Descargar
                               </a>
                             </div>
@@ -3875,13 +3880,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     </div>
                   ) : reviewingSubmission.content ? (
                     <div className="p-6 max-w-3xl mx-auto">
-                      <h4 className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-ink-muted mb-3 flex items-center gap-2">
                         <FileText className="w-4 h-4" /> Contenido de la entrega
                       </h4>
-                      <div className="bg-surface-1 rounded-2xl p-6 shadow-sm border border-hairline text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      <div className="bg-surface-1 rounded-2xl p-6 shadow-sm border border-hairline text-sm text-ink-primary whitespace-pre-wrap leading-relaxed">
                         {reviewingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
                           part.match(/^https?:\/\//) ? (
-                            <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all inline-flex items-center gap-1">
+                            <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline break-all inline-flex items-center gap-1">
                               {part} <ExternalLink className="w-3 h-3 inline" />
                             </a>
                           ) : part
@@ -3889,7 +3894,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                    <div className="flex flex-col items-center justify-center h-full text-ink-muted">
                       <FileText className="w-16 h-16 opacity-30 mb-3" />
                       <p className="text-sm">Sin archivo ni contenido adjunto</p>
                     </div>
@@ -3902,11 +3907,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {/* Student content (if both file + text exist) */}
                     {reviewingSubmission.content && reviewFileUrl && (
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Texto del estudiante</label>
-                        <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-32 overflow-y-auto whitespace-pre-wrap border border-hairline">
+                        <label className="block text-xs font-semibold text-ink-muted mb-2 uppercase tracking-wide">Texto del estudiante</label>
+                        <div className="bg-surface-2 rounded-xl p-4 text-sm text-ink-secondary max-h-32 overflow-y-auto whitespace-pre-wrap border border-hairline">
                           {reviewingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
                             part.match(/^https?:\/\//) ? (
-                              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{part}</a>
+                              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline break-all">{part}</a>
                             ) : part
                           )}
                         </div>
@@ -3916,10 +3921,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {/* External links */}
                     {reviewingSubmission.content && reviewingSubmission.content.match(/https?:\/\/[^\s]+/) && (
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Enlaces</label>
+                        <label className="block text-xs font-semibold text-ink-muted mb-2 uppercase tracking-wide">Enlaces</label>
                         <div className="space-y-1">
                           {(reviewingSubmission.content.match(/https?:\/\/[^\s]+/g) || []).map((link, i) => (
-                            <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-sm text-blue-700 hover:bg-blue-100 truncate">
+                            <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-accent/5 rounded-lg text-sm text-accent hover:bg-accent/15 truncate">
                               <ExternalLink className="w-4 h-4 shrink-0" />
                               <span className="truncate">{link}</span>
                             </a>
@@ -3930,24 +3935,24 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
                     {/* Grade input */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
+                      <label className="block text-xs font-semibold text-ink-muted mb-2 uppercase tracking-wide">
                         Calificación (máx {act.maxScore ? Number(act.maxScore) : '5.0'})
                       </label>
                       <input
                         type="number" step="0.1" min="0" max={act.maxScore ? Number(act.maxScore) : 5}
                         value={gradeScore} onChange={e => setGradeScore(e.target.value)}
-                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-lg font-bold text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full border border-hairline rounded-xl px-4 py-3 text-lg font-bold text-center focus:ring-2 focus:ring-accent outline-none"
                         placeholder="0.0"
                       />
                     </div>
 
                     {/* Feedback */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Retroalimentación</label>
+                      <label className="block text-xs font-semibold text-ink-muted mb-2 uppercase tracking-wide">Retroalimentación</label>
                       <textarea
                         value={gradeFeedback} onChange={e => setGradeFeedback(e.target.value)}
                         rows={4}
-                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full border border-hairline rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-accent outline-none"
                         placeholder="Comentarios para el estudiante..."
                       />
                     </div>
@@ -3962,7 +3967,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   </div>
 
                   {/* Action buttons */}
-                  <div className="p-5 border-t border-hairline space-y-3 bg-slate-50 shrink-0">
+                  <div className="p-5 border-t border-hairline space-y-3 bg-surface-2 shrink-0">
                     <button
                       onClick={handleReviewGrade}
                       disabled={!gradeScore || grading}
@@ -3980,13 +3985,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       </button>
                       <button
                         onClick={() => setReviewingSubmission(null)}
-                        className="flex-1 px-4 py-2.5 bg-surface-1 text-slate-600 border border-hairline rounded-xl text-sm font-medium hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                        className="flex-1 px-4 py-2.5 bg-surface-1 text-ink-secondary border border-hairline rounded-xl text-sm font-medium hover:bg-surface-2 flex items-center justify-center gap-1.5"
                       >
                         Cerrar
                       </button>
                     </div>
                     {/* Keyboard shortcuts hint */}
-                    <p className="text-center text-xs text-slate-400">
+                    <p className="text-center text-xs text-ink-muted">
                       Usa ← → para navegar entre entregas
                     </p>
                   </div>
@@ -4001,7 +4006,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-hairline">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
+                <h3 className="text-lg font-bold text-ink-primary">Preguntas ({questions.length})</h3>
                 <div className="flex flex-wrap gap-2">
                   {questions.length >= 1 && (
                     <>
@@ -4031,8 +4036,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !importingQ && setShowImportQuestions(false)}>
                 <div className="bg-surface-1 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-hairline sticky top-0 bg-surface-1">
-                    <h4 className="text-base font-bold text-slate-800 flex items-center gap-2"><FileUp className="w-5 h-5 text-indigo-600" /> Importar preguntas con IA</h4>
-                    <button onClick={() => !importingQ && setShowImportQuestions(false)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+                    <h4 className="text-base font-bold text-ink-primary flex items-center gap-2"><FileUp className="w-5 h-5 text-indigo-600" /> Importar preguntas con IA</h4>
+                    <button onClick={() => !importingQ && setShowImportQuestions(false)} className="p-1.5 rounded-lg hover:bg-surface-2"><X className="w-5 h-5 text-ink-muted" /></button>
                   </div>
                   <div className="p-5 sm:p-6 space-y-4">
                     {/* Paso 1: copiar el prompt */}
@@ -4046,7 +4051,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {/* Paso 2: pegar/subir el JSON */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-semibold text-slate-700">2. Pega aquí el JSON (o sube el archivo)</label>
+                        <label className="text-sm font-semibold text-ink-primary">2. Pega aquí el JSON (o sube el archivo)</label>
                         <button onClick={() => importQFileRef.current?.click()} className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
                           <Upload className="w-3.5 h-3.5" /> Subir .json
                         </button>
@@ -4057,13 +4062,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                         onChange={e => setImportQText(e.target.value)}
                         placeholder={'{\n  "questions": [\n    { "type": "MULTIPLE_CHOICE", "text": "...", "options": ["A","B"], "correct": "A" }\n  ]\n}'}
                         rows={10}
-                        className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                        className="w-full border border-hairline rounded-xl px-3 py-2.5 text-xs sm:text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
                       />
-                      <p className="text-xs text-slate-500 mt-1.5">Las preguntas se agregan al final de las que ya tiene este quiz. No se borra nada.</p>
+                      <p className="text-xs text-ink-muted mt-1.5">Las preguntas se agregan al final de las que ya tiene este quiz. No se borra nada.</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-end gap-2 px-5 sm:px-6 py-4 border-t border-hairline sticky bottom-0 bg-surface-1">
-                    <button onClick={() => setShowImportQuestions(false)} disabled={importingQ} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50" style={{ minHeight: '44px' }}>Cancelar</button>
+                    <button onClick={() => setShowImportQuestions(false)} disabled={importingQ} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl disabled:opacity-50" style={{ minHeight: '44px' }}>Cancelar</button>
                     <button onClick={handleImportQuestions} disabled={importingQ || !importQText.trim()} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50" style={{ minHeight: '44px' }}>
                       {importingQ ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando…</> : <><FileUp className="w-4 h-4" /> Importar preguntas</>}
                     </button>
@@ -4075,31 +4080,31 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             {/* Context form (create/edit) */}
             {showContextForm && (
               <div className="p-4 sm:p-6 border-b border-hairline bg-amber-50/40 space-y-3">
-                <h4 className="text-base font-bold text-slate-800">{editingContextId ? 'Editar contexto' : 'Nuevo contexto de lectura'}</h4>
-                <p className="text-xs text-slate-500">Un contexto es un texto o imagen compartido por varias preguntas (ej: lectura comprensiva, enunciado, gráfico).</p>
+                <h4 className="text-base font-bold text-ink-primary">{editingContextId ? 'Editar contexto' : 'Nuevo contexto de lectura'}</h4>
+                <p className="text-xs text-ink-muted">Un contexto es un texto o imagen compartido por varias preguntas (ej: lectura comprensiva, enunciado, gráfico).</p>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Título (opcional)</label>
-                  <input value={ctxForm.title} onChange={e => setCtxForm({ ...ctxForm, title: e.target.value })} placeholder="Ej: Texto 1, Gráfico de barras..." className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Título (opcional)</label>
+                  <input value={ctxForm.title} onChange={e => setCtxForm({ ...ctxForm, title: e.target.value })} placeholder="Ej: Texto 1, Gráfico de barras..." className="w-full border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Texto del contexto</label>
-                  <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Texto del contexto</label>
+                  <Suspense fallback={<div className="h-32 bg-surface-2 rounded-xl animate-pulse" />}>
                     <RichTextEditor value={ctxForm.text} onChange={v => setCtxForm({ ...ctxForm, text: v })} placeholder="Pega aquí el texto de lectura, enunciado, caso de estudio..." />
                   </Suspense>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen (opcional)</label>
-                  <input value={ctxForm.imageUrl} onChange={e => setCtxForm({ ...ctxForm, imageUrl: e.target.value })} placeholder="https://..." className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">URL de imagen (opcional)</label>
+                  <input value={ctxForm.imageUrl} onChange={e => setCtxForm({ ...ctxForm, imageUrl: e.target.value })} placeholder="https://..." className="w-full border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Visibilidad del contexto</label>
-                  <select value={ctxForm.viewPolicy} onChange={e => setCtxForm({ ...ctxForm, viewPolicy: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base">
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Visibilidad del contexto</label>
+                  <select value={ctxForm.viewPolicy} onChange={e => setCtxForm({ ...ctxForm, viewPolicy: e.target.value })} className="w-full border border-hairline rounded-xl px-4 py-2.5 text-base">
                     <option value="ALWAYS">Siempre visible (el estudiante puede verlo durante todas las preguntas)</option>
                     <option value="ONCE">Solo una vez (el estudiante lo ve antes de las preguntas, luego se oculta)</option>
                   </select>
                 </div>
                 <div className="flex justify-end gap-3">
-                  <button onClick={resetCtxForm} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                  <button onClick={resetCtxForm} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl">Cancelar</button>
                   <button onClick={handleSaveContext} disabled={(isRichTextEmpty(ctxForm.text) && !ctxForm.imageUrl.trim()) || savingContext} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
                     {savingContext && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingContextId ? 'Guardar cambios' : 'Crear contexto'}
@@ -4131,7 +4136,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                             <p className="text-[10px] text-amber-600 font-semibold mb-1">PREGUNTAS VINCULADAS ({linkedQuestions.length})</p>
                             <div className="flex flex-wrap gap-1">
                               {linkedQuestions.map((q, i) => (
-                                <span key={q.id} className="px-2 py-0.5 bg-surface-1 border border-amber-200 rounded text-xs text-slate-600">
+                                <span key={q.id} className="px-2 py-0.5 bg-surface-1 border border-amber-200 rounded text-xs text-ink-secondary">
                                   P{questions.findIndex(qq => qq.id === q.id) + 1}: {q.text.slice(0, 30)}{q.text.length > 30 ? '...' : ''}
                                 </span>
                               ))}
@@ -4153,7 +4158,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             {showAddQuestion && (
               <div ref={questionFormRef} className="p-4 sm:p-6 border-b border-hairline bg-purple-50/30 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
+                  <h4 className="text-base font-bold text-ink-primary">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
                   <button
                     type="button"
                     onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions(qForm.text.trim() ? `Ayúdame a mejorar esta pregunta de Classroom y sugiere si debe llevar imagen SVG o contexto visual: ${qForm.text}` : undefined))}
@@ -4164,8 +4169,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
+                    <label className="block text-sm font-medium text-ink-primary mb-1">Tipo</label>
+                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
                       <option value="MULTIPLE_CHOICE">Opción múltiple</option>
                       <option value="MULTIPLE_SELECT">Selección múltiple</option>
                       <option value="TRUE_FALSE">Verdadero/Falso</option>
@@ -4176,11 +4181,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Puntos</label>
-                    <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base" />
+                    <label className="block text-sm font-medium text-ink-primary mb-1">Puntos</label>
+                    <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-ink-primary mb-1">
                       <Clock className="w-3.5 h-3.5 inline mr-1" />
                       Tiempo (seg)
                     </label>
@@ -4192,13 +4197,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       value={qForm.timeLimitSeconds} 
                       onChange={e => setQForm({ ...qForm, timeLimitSeconds: e.target.value })} 
                       placeholder="Global"
-                      className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base" 
+                      className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base"
                     />
                   </div>
                   {isIcfes(act.type) && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Área ICFES</label>
-                      <select value={qForm.subjectArea} onChange={e => setQForm({ ...qForm, subjectArea: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                      <label className="block text-sm font-medium text-ink-primary mb-1">Área ICFES</label>
+                      <select value={qForm.subjectArea} onChange={e => setQForm({ ...qForm, subjectArea: e.target.value })} className="w-full border border-hairline rounded-xl px-4 py-3 text-base">
                         <option value="">Seleccionar área...</option>
                         {ICFES_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
@@ -4206,8 +4211,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   )}
                   {contexts.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Contexto (opcional)</label>
-                      <select value={qForm.contextId} onChange={e => setQForm({ ...qForm, contextId: e.target.value })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
+                      <label className="block text-sm font-medium text-ink-primary mb-1">Contexto (opcional)</label>
+                      <select value={qForm.contextId} onChange={e => setQForm({ ...qForm, contextId: e.target.value })} className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
                         <option value="">Sin contexto</option>
                         {contexts.map(ctx => <option key={ctx.id} value={ctx.id}>{ctx.title || (ctx.text?.slice(0, 50) + '...')}</option>)}
                       </select>
@@ -4215,19 +4220,19 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta</label>
-                  <textarea value={qForm.text} onChange={e => setQForm({ ...qForm, text: e.target.value })} rows={2} placeholder="Escribe la pregunta..." className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Pregunta</label>
+                  <textarea value={qForm.text} onChange={e => setQForm({ ...qForm, text: e.target.value })} rows={2} placeholder="Escribe la pregunta..." className="w-full border border-hairline rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
                 </div>
 
                 {/* Image upload for question */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Imagen (opcional)</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Imagen (opcional)</label>
                   <div className="flex items-center gap-3">
                     <input 
                       value={qForm.imageUrl} 
                       onChange={e => setQForm(prev => ({ ...prev, imageUrl: e.target.value }))} 
                       placeholder="URL de imagen o sube una..." 
-                      className="flex-1 border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                      className="flex-1 border border-hairline rounded-xl px-3 sm:px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                     />
                     <button
                       type="button"
@@ -4285,11 +4290,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 {/* Options for MULTIPLE_CHOICE */}
                 {qForm.type === 'MULTIPLE_CHOICE' && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">Opciones</label>
+                    <label className="block text-sm font-medium text-ink-primary">Opciones</label>
                     {qForm.options.map((opt, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <input type="radio" name="correctOpt" checked={qForm.correctAnswer === opt && opt !== ''} onChange={() => setQForm({ ...qForm, correctAnswer: opt })} className="accent-purple-600" />
-                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-slate-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-hairline rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                         {qForm.options.length > 2 && (
                           <button onClick={() => { const opts = qForm.options.filter((_, j) => j !== i); setQForm({ ...qForm, options: opts, correctAnswer: qForm.correctAnswer === opt ? '' : qForm.correctAnswer }) }} className="p-1.5 rounded-lg hover:bg-red-50">
                             <X className="w-4 h-4 text-red-400" />
@@ -4300,14 +4305,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {qForm.options.length < 6 && (
                       <button onClick={() => setQForm({ ...qForm, options: [...qForm.options, ''] })} className="text-sm text-purple-600 hover:text-purple-700 font-medium">+ Agregar opción</button>
                     )}
-                    <p className="text-xs text-slate-400">Selecciona el radio de la respuesta correcta</p>
+                    <p className="text-xs text-ink-muted">Selecciona el radio de la respuesta correcta</p>
                   </div>
                 )}
 
                 {/* Options for MULTIPLE_SELECT */}
                 {qForm.type === 'MULTIPLE_SELECT' && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">Opciones (marca las correctas)</label>
+                    <label className="block text-sm font-medium text-ink-primary">Opciones (marca las correctas)</label>
                     {qForm.options.map((opt, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <input 
@@ -4327,7 +4332,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                           const opts = [...qForm.options]; opts[i] = e.target.value
                           const newCorrect = qForm.correctAnswers.map(a => a === oldOpt ? e.target.value : a)
                           setQForm({ ...qForm, options: opts, correctAnswers: newCorrect }) 
-                        }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                         {qForm.options.length > 2 && (
                           <button onClick={() => { 
                             const opts = qForm.options.filter((_, j) => j !== i)
@@ -4342,14 +4347,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {qForm.options.length < 6 && (
                       <button onClick={() => setQForm({ ...qForm, options: [...qForm.options, ''] })} className="text-sm text-purple-600 hover:text-purple-700 font-medium">+ Agregar opción</button>
                     )}
-                    <p className="text-xs text-slate-400">Marca con checkbox todas las respuestas correctas</p>
+                    <p className="text-xs text-ink-muted">Marca con checkbox todas las respuestas correctas</p>
                   </div>
                 )}
 
                 {/* TRUE_FALSE correct answer */}
                 {qForm.type === 'TRUE_FALSE' && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Respuesta correcta</label>
+                    <label className="block text-sm font-medium text-ink-primary mb-2">Respuesta correcta</label>
                     <div className="flex gap-4">
                       {['Verdadero', 'Falso'].map(v => (
                         <label key={v} className="flex items-center gap-2 cursor-pointer">
@@ -4364,8 +4369,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 {/* SHORT_ANSWER correct answer */}
                 {qForm.type === 'SHORT_ANSWER' && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Respuesta correcta</label>
-                    <input value={qForm.correctAnswer} onChange={e => setQForm({ ...qForm, correctAnswer: e.target.value })} placeholder="Respuesta esperada..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                    <label className="block text-sm font-medium text-ink-primary mb-1">Respuesta correcta</label>
+                    <input value={qForm.correctAnswer} onChange={e => setQForm({ ...qForm, correctAnswer: e.target.value })} placeholder="Respuesta esperada..." className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                   </div>
                 )}
 
@@ -4373,8 +4378,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 {qForm.type === 'FILL_BLANK' && (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Texto con espacios</label>
-                      <p className="text-xs text-slate-400 mb-2">Usa ___ (3 guiones bajos) donde quieras un espacio en blanco</p>
+                      <label className="block text-sm font-medium text-ink-primary mb-1">Texto con espacios</label>
+                      <p className="text-xs text-ink-muted mb-2">Usa ___ (3 guiones bajos) donde quieras un espacio en blanco</p>
                       <textarea 
                         value={qForm.text} 
                         onChange={e => {
@@ -4387,13 +4392,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                         }} 
                         rows={3} 
                         placeholder="Ej: La capital de Colombia es ___ y tiene ___ millones de habitantes." 
-                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" 
+                        className="w-full border border-hairline rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none"
                       />
                     </div>
                     {qForm.blanks.length > 0 && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-slate-700">Respuestas correctas (en orden)</label>
-                        <p className="text-xs text-slate-400">No distingue mayúsculas ni tildes. ¿Varias válidas? Sepáralas con <code className="text-purple-600">|</code> (ej. <code className="text-purple-600">Bogotá|Bogota D.C.</code>). Completa todos los huecos.</p>
+                        <label className="block text-sm font-medium text-ink-primary">Respuestas correctas (en orden)</label>
+                        <p className="text-xs text-ink-muted">No distingue mayúsculas ni tildes. ¿Varias válidas? Sepáralas con <code className="text-purple-600">|</code> (ej. <code className="text-purple-600">Bogotá|Bogota D.C.</code>). Completa todos los huecos.</p>
                         {qForm.blanks.map((blank, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
@@ -4405,7 +4410,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                                 setQForm({ ...qForm, blanks: newBlanks })
                               }} 
                               placeholder={`Respuesta para espacio ${i + 1}`} 
-                              className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" 
+                              className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none"
                             />
                           </div>
                         ))}
@@ -4417,12 +4422,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 {/* ORDERING */}
                 {qForm.type === 'ORDERING' && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">Elementos en orden correcto</label>
-                    <p className="text-xs text-slate-400">Ingresa los elementos en el orden correcto. El estudiante los verá desordenados.</p>
+                    <label className="block text-sm font-medium text-ink-primary">Elementos en orden correcto</label>
+                    <p className="text-xs text-ink-muted">Ingresa los elementos en el orden correcto. El estudiante los verá desordenados.</p>
                     {qForm.options.map((opt, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <span className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
-                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Elemento ${i + 1}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Elemento ${i + 1}`} className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                         {qForm.options.length > 2 && (
                           <button onClick={() => { const opts = qForm.options.filter((_, j) => j !== i); setQForm({ ...qForm, options: opts }) }} className="p-1.5 rounded-lg hover:bg-red-50">
                             <X className="w-4 h-4 text-red-400" />
@@ -4439,13 +4444,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 {/* MATCHING */}
                 {qForm.type === 'MATCHING' && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">Pares de elementos</label>
-                    <p className="text-xs text-slate-400">Columna izquierda se empareja con columna derecha</p>
+                    <label className="block text-sm font-medium text-ink-primary">Pares de elementos</label>
+                    <p className="text-xs text-ink-muted">Columna izquierda se empareja con columna derecha</p>
                     {qForm.matchPairs.map((pair, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <input value={pair.left} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], left: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder="Elemento izquierdo" className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
-                        <span className="text-slate-400">↔</span>
-                        <input value={pair.right} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], right: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder="Elemento derecho" className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        <input value={pair.left} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], left: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder="Elemento izquierdo" className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        <span className="text-ink-muted">↔</span>
+                        <input value={pair.right} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], right: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder="Elemento derecho" className="flex-1 border border-hairline rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                         {qForm.matchPairs.length > 1 && (
                           <button onClick={() => { const pairs = qForm.matchPairs.filter((_, j) => j !== i); setQForm({ ...qForm, matchPairs: pairs }) }} className="p-1.5 rounded-lg hover:bg-red-50">
                             <X className="w-4 h-4 text-red-400" />
@@ -4460,12 +4465,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Explicación (opcional)</label>
-                  <input value={qForm.explanation} onChange={e => setQForm({ ...qForm, explanation: e.target.value })} placeholder="Se muestra al estudiante después de enviar..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Explicación (opcional)</label>
+                  <input value={qForm.explanation} onChange={e => setQForm({ ...qForm, explanation: e.target.value })} placeholder="Se muestra al estudiante después de enviar..." className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                 </div>
 
                 <div className="flex justify-end gap-3">
-                  <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+                  <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
                   <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? (qForm.blanks.length === 0 || qForm.blanks.some(b => !b.trim())) : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                     {savingQuestion && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingQuestion ? 'Guardar cambios' : 'Agregar'}
@@ -4478,22 +4483,22 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             {questionsLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div>
             ) : questions.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-ink-muted">
                 <HelpCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
                 <p className="text-base">Agrega preguntas para este {getQuizTypeLabel(act.type).toLowerCase()}</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-hairline">
                 {questions.map((q, i) => (
-                  <div key={q.id} className="px-3 sm:px-6 py-3 sm:py-4 hover:bg-slate-50">
+                  <div key={q.id} className="px-3 sm:px-6 py-3 sm:py-4 hover:bg-surface-2">
                     <div className="flex items-start gap-2 sm:gap-3">
                       <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs sm:text-sm font-bold shrink-0">{i + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm sm:text-base font-medium text-slate-800">{q.text}</p>
-                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-slate-400 flex-wrap">
-                          <span className="px-1.5 sm:px-2 py-0.5 bg-slate-100 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
+                        <p className="text-sm sm:text-base font-medium text-ink-primary">{q.text}</p>
+                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-ink-muted flex-wrap">
+                          <span className="px-1.5 sm:px-2 py-0.5 bg-surface-2 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
-                          {q.subjectArea && <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
+                          {q.subjectArea && <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-ink-muted'}`}>{q.subjectArea}</span>}
                           {q.context && <span className="px-1.5 sm:px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] sm:text-xs border border-amber-200">{q.context.title || 'Contexto'}</span>}
                           {q.correctAnswer && <span className="text-green-600 text-xs">✓ {q.correctAnswer.length > 20 ? q.correctAnswer.slice(0, 20) + '...' : q.correctAnswer}</span>}
                         </div>
@@ -4504,7 +4509,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                                 ? (() => { try { return JSON.parse(q.correctAnswer || '[]').includes(opt) } catch { return false } })()
                                 : opt === q.correctAnswer
                               return (
-                                <span key={j} className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-surface-1 border-hairline text-slate-600'}`}>
+                                <span key={j} className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-surface-1 border-hairline text-ink-secondary'}`}>
                                   {String.fromCharCode(65 + j)}. {opt.length > 15 ? opt.slice(0, 15) + '...' : opt}
                                 </span>
                               )
@@ -4513,7 +4518,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                         )}
                       </div>
                       <div className="flex gap-0.5 sm:gap-1 shrink-0">
-                        <button onClick={() => startEditQuestion(q)} className="p-1.5 sm:p-2 rounded-xl hover:bg-slate-100"><Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" /></button>
+                        <button onClick={() => startEditQuestion(q)} className="p-1.5 sm:p-2 rounded-xl hover:bg-surface-2"><Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ink-muted" /></button>
                         <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 sm:p-2 rounded-xl hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" /></button>
                       </div>
                     </div>
@@ -4528,7 +4533,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         {isTeacher && isIcfes(act.type) && icfesClassResults.length > 0 && (
           <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
             <div className="px-6 py-4 border-b border-hairline">
-              <h3 className="text-lg font-bold text-slate-800">Resultados del Simulacro ({icfesClassResults.length} estudiantes)</h3>
+              <h3 className="text-lg font-bold text-ink-primary">Resultados del Simulacro ({icfesClassResults.length} estudiantes)</h3>
             </div>
 
             {/* Summary averages per area */}
@@ -4552,8 +4557,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {areaAvgs.map(a => (
                       <div key={a.name} className="bg-surface-1 rounded-xl border border-hairline p-3 text-center">
-                        <span className={`inline-block w-2.5 h-2.5 rounded-full mb-1 ${AREA_COLORS[a.name] || 'bg-slate-500'}`} />
-                        <p className="text-xs text-slate-500 truncate">{a.name}</p>
+                        <span className={`inline-block w-2.5 h-2.5 rounded-full mb-1 ${AREA_COLORS[a.name] || 'bg-ink-muted'}`} />
+                        <p className="text-xs text-ink-muted truncate">{a.name}</p>
                         <p className={`text-lg font-bold ${a.avg >= 70 ? 'text-green-600' : a.avg >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{a.avg}%</p>
                       </div>
                     ))}
@@ -4566,30 +4571,30 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-hairline bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">#</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Estudiante</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Puntaje</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Correctas</th>
+                  <tr className="border-b border-hairline bg-surface-2">
+                    <th className="text-left px-4 py-3 font-medium text-ink-secondary">#</th>
+                    <th className="text-left px-4 py-3 font-medium text-ink-secondary">Estudiante</th>
+                    <th className="text-center px-4 py-3 font-medium text-ink-secondary">Puntaje</th>
+                    <th className="text-center px-4 py-3 font-medium text-ink-secondary">Correctas</th>
                     {ICFES_AREAS.map(a => (
-                      <th key={a} className="text-center px-3 py-3 font-medium text-slate-600 whitespace-nowrap">{a.split(' ')[0]}</th>
+                      <th key={a} className="text-center px-3 py-3 font-medium text-ink-secondary whitespace-nowrap">{a.split(' ')[0]}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-hairline">
                   {icfesClassResults.map((r: any, i: number) => (
-                    <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-slate-400 font-medium">{i + 1}</td>
-                      <td className="px-4 py-3 font-medium text-slate-800">{r.student.lastName} {r.student.firstName}</td>
+                    <tr key={r.id} className="hover:bg-surface-2">
+                      <td className="px-4 py-3 text-ink-muted font-medium">{i + 1}</td>
+                      <td className="px-4 py-3 font-medium text-ink-primary">{r.student.lastName} {r.student.firstName}</td>
                       <td className="px-4 py-3 text-center font-bold text-emerald-700">{r.icfesGlobalScore}</td>
-                      <td className="px-4 py-3 text-center text-slate-600">{r.totalCorrect}/{r.totalQuestions}</td>
+                      <td className="px-4 py-3 text-center text-ink-secondary">{r.totalCorrect}/{r.totalQuestions}</td>
                       {ICFES_AREAS.map(areaName => {
                         const area = r.areas?.find((a: any) => a.name === areaName)
                         return (
                           <td key={areaName} className="px-3 py-3 text-center">
                             {area ? (
                               <span className={`text-sm font-medium ${area.percentage >= 70 ? 'text-green-600' : area.percentage >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{area.percentage}%</span>
-                            ) : <span className="text-slate-300">—</span>}
+                            ) : <span className="text-ink-muted">—</span>}
                           </td>
                         )
                       })}
@@ -4605,11 +4610,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         {isStudent && isStandardQuizType(act.type) && quizMode === 'taking' && (
           <div className="bg-surface-1 rounded-2xl border-2 border-purple-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h3 className="text-base sm:text-lg font-bold text-slate-800">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
+              <h3 className="text-base sm:text-lg font-bold text-ink-primary">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
               <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
                 <div className="flex gap-1 flex-wrap sm:flex-nowrap">
                   {quizQuestions.map((_, i) => (
-                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : (quizAnswers[quizQuestions[i]?.id] || (quizMultiAnswers[quizQuestions[i]?.id]?.length > 0) || quizBlankAnswers[quizQuestions[i]?.id]?.some(b => b?.trim()) || quizOrderAnswers[quizQuestions[i]?.id]?.length > 0 || Object.keys(quizMatchAnswers[quizQuestions[i]?.id] || {}).length > 0) ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
+                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : (quizAnswers[quizQuestions[i]?.id] || (quizMultiAnswers[quizQuestions[i]?.id]?.length > 0) || quizBlankAnswers[quizQuestions[i]?.id]?.some(b => b?.trim()) || quizOrderAnswers[quizQuestions[i]?.id]?.length > 0 || Object.keys(quizMatchAnswers[quizQuestions[i]?.id] || {}).length > 0) ? 'bg-green-100 text-green-700' : 'bg-surface-2 text-ink-muted'}`}>{i + 1}</button>
                   ))}
                 </div>
               </div>
@@ -4636,16 +4641,16 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     </button>
                   )}
                   {onceAlreadyViewed && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-hairline rounded-xl text-sm text-slate-400">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-surface-2 border border-hairline rounded-xl text-sm text-ink-muted">
                       <FileText className="w-4 h-4" />
                       <span>{qCtx.title || 'Contexto de lectura'} — ya fue mostrado</span>
                     </div>
                   )}
-                  <p className="text-base sm:text-lg text-slate-800 font-medium">{q.text}</p>
+                  <p className="text-base sm:text-lg text-ink-primary font-medium">{q.text}</p>
                   {q.type === 'MULTIPLE_CHOICE' && q.options && (
                     <div className="space-y-2">
                       {(q.options as string[]).map((opt: string, i: number) => (
-                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-hairline hover:border-purple-300 text-slate-700'}`}>
+                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-hairline hover:border-purple-300 text-ink-primary'}`}>
                           <span className="font-bold mr-3">{String.fromCharCode(65 + i)}.</span>{opt}
                         </button>
                       ))}
@@ -4654,7 +4659,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   {q.type === 'TRUE_FALSE' && (
                     <div className="flex gap-2 sm:gap-4">
                       {['Verdadero', 'Falso'].map(v => (
-                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-hairline hover:border-purple-300 text-slate-700'}`}>
+                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-hairline hover:border-purple-300 text-ink-primary'}`}>
                           {v}
                         </button>
                       ))}
@@ -4662,12 +4667,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   )}
                   {q.type === 'MULTIPLE_SELECT' && q.options && (
                     <div className="space-y-2">
-                      <p className="text-sm text-slate-500 mb-2">Selecciona todas las respuestas correctas</p>
+                      <p className="text-sm text-ink-muted mb-2">Selecciona todas las respuestas correctas</p>
                       {(q.options as string[]).map((opt: string, i: number) => {
                         const selected = (quizMultiAnswers[q.id] || []).includes(opt)
                         return (
-                          <button key={i} onClick={() => handleQuizMultiAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all flex items-center gap-3 ${selected ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-hairline hover:border-purple-300 text-slate-700'}`}>
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selected ? 'border-purple-500 bg-purple-500' : 'border-slate-300'}`}>
+                          <button key={i} onClick={() => handleQuizMultiAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all flex items-center gap-3 ${selected ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-hairline hover:border-purple-300 text-ink-primary'}`}>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selected ? 'border-purple-500 bg-purple-500' : 'border-hairline'}`}>
                               {selected && <CheckCircle2 className="w-4 h-4 text-white" />}
                             </div>
                             <span><span className="font-bold mr-2">{String.fromCharCode(65 + i)}.</span>{opt}</span>
@@ -4685,7 +4690,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     const answers = quizBlankAnswers[q.id] || []
                     return (
                       <div className="space-y-4">
-                        <div className="text-base text-slate-700 leading-relaxed">
+                        <div className="text-base text-ink-primary leading-relaxed">
                           {parts.map((part: string, i: number) => (
                             <span key={i}>
                               {part}
@@ -4708,11 +4713,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     const items = quizOrderAnswers[q.id] || []
                     return (
                       <div className="space-y-2">
-                        <p className="text-sm text-slate-500 mb-3">Arrastra o usa las flechas para ordenar los elementos</p>
+                        <p className="text-sm text-ink-muted mb-3">Arrastra o usa las flechas para ordenar los elementos</p>
                         {items.map((item: string, i: number) => (
                           <div key={i} className="flex items-center gap-2 p-3 bg-amber-50 border-2 border-amber-200 rounded-xl">
                             <span className="w-7 h-7 rounded-lg bg-amber-200 text-amber-800 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
-                            <span className="flex-1 text-base text-slate-700">{item}</span>
+                            <span className="flex-1 text-base text-ink-primary">{item}</span>
                             <div className="flex flex-col gap-0.5">
                               <button 
                                 onClick={() => i > 0 && handleQuizOrderMove(q.id, i, i - 1)} 
@@ -4747,13 +4752,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     const matches = quizMatchAnswers[q.id] || {}
                     return (
                       <div className="space-y-4">
-                        <p className="text-sm text-slate-500">Selecciona el elemento que corresponde a cada ítem</p>
+                        <p className="text-sm text-ink-muted">Selecciona el elemento que corresponde a cada ítem</p>
                         {leftItems.length === 0 ? (
                           <p className="text-sm text-red-500">Error: No hay elementos para emparejar</p>
                         ) : leftItems.map((left, i) => (
-                          <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-slate-50 rounded-xl border border-hairline">
-                            <div className="flex-1 p-2.5 sm:p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-sm sm:text-base text-slate-700 font-medium">{left}</div>
-                            <span className="text-slate-400 text-center hidden sm:block">→</span>
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-surface-2 rounded-xl border border-hairline">
+                            <div className="flex-1 p-2.5 sm:p-3 bg-accent/5 border-2 border-accent/30 rounded-xl text-sm sm:text-base text-ink-primary font-medium">{left}</div>
+                            <span className="text-ink-muted text-center hidden sm:block">→</span>
                             <select 
                               value={matches[left] || ''} 
                               onChange={e => handleQuizMatchAnswer(q.id, left, e.target.value)}
@@ -4776,12 +4781,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 sm:pt-2 border-t border-hairline">
               <div className="flex items-center justify-between w-full sm:w-auto gap-2">
-                <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-3 sm:px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
+                <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-3 sm:px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
                   ← Anterior
                 </button>
-                <span className="text-xs sm:text-sm text-slate-400 sm:hidden">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length}/{quizQuestions.length}</span>
+                <span className="text-xs sm:text-sm text-ink-muted sm:hidden">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length}/{quizQuestions.length}</span>
               </div>
-              <span className="hidden sm:block text-sm text-slate-400">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length} de {quizQuestions.length} respondidas</span>
+              <span className="hidden sm:block text-sm text-ink-muted">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length} de {quizQuestions.length} respondidas</span>
               {quizCurrentIdx < quizQuestions.length - 1 ? (
                 <button onClick={() => setQuizCurrentIdx(quizCurrentIdx + 1)} className="px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 rounded-xl font-medium" style={{ minHeight: '44px' }}>
                   Siguiente →
@@ -4801,12 +4806,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="space-y-4">
             <div className="bg-surface-1 rounded-2xl border-2 border-green-200 p-6 text-center space-y-3">
               <Award className="w-14 h-14 mx-auto text-green-500" />
-              <h3 className="text-2xl font-bold text-slate-800">Resultado</h3>
-              <p className="text-4xl font-bold text-green-700">{quizResult.score !== null ? Number(quizResult.score) : '—'}<span className="text-xl text-slate-400">/{act.maxScore ? Number(act.maxScore) : '?'}</span></p>
+              <h3 className="text-2xl font-bold text-ink-primary">Resultado</h3>
+              <p className="text-4xl font-bold text-green-700">{quizResult.score !== null ? Number(quizResult.score) : '—'}<span className="text-xl text-ink-muted">/{act.maxScore ? Number(act.maxScore) : '?'}</span></p>
               {quizResult.timeSpentSeconds && (
-                <p className="text-sm text-slate-400">Tiempo: {Math.floor(quizResult.timeSpentSeconds / 60)}m {quizResult.timeSpentSeconds % 60}s</p>
+                <p className="text-sm text-ink-muted">Tiempo: {Math.floor(quizResult.timeSpentSeconds / 60)}m {quizResult.timeSpentSeconds % 60}s</p>
               )}
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-ink-muted">
                 {(() => {
                   // Live Quiz submissions have no QuestionAnswer records — parse from content
                   const isLiveQuiz = quizResult.content?.startsWith('Live Quiz')
@@ -4829,21 +4834,21 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {a.isCorrect ? <CircleCheck className="w-4 h-4" /> : <CircleX className="w-4 h-4" />}
                   </span>
                   <div className="flex-1">
-                    <p className="text-base font-medium text-slate-800">{a.question?.text}</p>
-                    <p className="text-sm mt-1"><span className="text-slate-400">Tu respuesta:</span> <span className={a.isCorrect ? 'text-green-700 font-medium' : 'text-red-600'}>{fmtStudentAnswer(a)}</span></p>
+                    <p className="text-base font-medium text-ink-primary">{a.question?.text}</p>
+                    <p className="text-sm mt-1"><span className="text-ink-muted">Tu respuesta:</span> <span className={a.isCorrect ? 'text-green-700 font-medium' : 'text-red-600'}>{fmtStudentAnswer(a)}</span></p>
                     {!a.isCorrect && fmtCorrectAnswer(a.question) && (
-                      <p className="text-sm mt-0.5"><span className="text-slate-400">Correcta:</span> <span className="text-green-700 font-medium">{fmtCorrectAnswer(a.question)}</span></p>
+                      <p className="text-sm mt-0.5"><span className="text-ink-muted">Correcta:</span> <span className="text-green-700 font-medium">{fmtCorrectAnswer(a.question)}</span></p>
                     )}
                     {a.question?.explanation && (
-                      <p className="text-sm mt-2 text-blue-600 italic">{a.question.explanation}</p>
+                      <p className="text-sm mt-2 text-accent italic">{a.question.explanation}</p>
                     )}
                   </div>
-                  <span className="text-sm font-bold text-slate-500">{a.pointsEarned ? Number(a.pointsEarned) : 0}/{a.question?.points ? Number(a.question.points) : '?'}</span>
+                  <span className="text-sm font-bold text-ink-muted">{a.pointsEarned ? Number(a.pointsEarned) : 0}/{a.question?.points ? Number(a.question.points) : '?'}</span>
                 </div>
               </div>
             ))}
 
-            <button onClick={() => { setQuizMode('idle'); setQuizResult(null) }} className="text-sm text-slate-500 hover:text-blue-600">← Volver</button>
+            <button onClick={() => { setQuizMode('idle'); setQuizResult(null) }} className="text-sm text-ink-muted hover:text-accent">← Volver</button>
           </div>
         )}
 
@@ -4864,22 +4869,22 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             {/* Area breakdown */}
             <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
               <div className="px-6 py-4 border-b border-hairline">
-                <h3 className="text-lg font-bold text-slate-800">Resultados por Área</h3>
+                <h3 className="text-lg font-bold text-ink-primary">Resultados por Área</h3>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-hairline">
                 {icfesResult.areas?.map((area: any) => (
                   <div key={area.name} className="px-6 py-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <span className={`w-3 h-3 rounded-full ${AREA_COLORS[area.name] || 'bg-slate-500'}`} />
-                        <span className="text-base font-medium text-slate-800">{area.name}</span>
+                        <span className={`w-3 h-3 rounded-full ${AREA_COLORS[area.name] || 'bg-ink-muted'}`} />
+                        <span className="text-base font-medium text-ink-primary">{area.name}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-slate-500">{area.correct}/{area.total}</span>
+                        <span className="text-sm text-ink-muted">{area.correct}/{area.total}</span>
                         <span className={`text-base font-bold ${area.percentage >= 70 ? 'text-green-600' : area.percentage >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{area.percentage}%</span>
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5">
+                    <div className="w-full bg-surface-2 rounded-full h-2.5">
                       <div className={`h-2.5 rounded-full transition-all ${area.percentage >= 70 ? 'bg-green-500' : area.percentage >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${area.percentage}%` }} />
                     </div>
                   </div>
@@ -4887,14 +4892,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               </div>
             </div>
 
-            <button onClick={() => { setQuizMode('idle'); setIcfesResult(null) }} className="text-sm text-slate-500 hover:text-blue-600">← Volver</button>
+            <button onClick={() => { setQuizMode('idle'); setIcfesResult(null) }} className="text-sm text-ink-muted hover:text-accent">← Volver</button>
           </div>
         )}
 
         {/* STUDENT: Quiz idle state (start or view result) */}
         {isStudent && isStandardQuizType(act.type) && quizMode === 'idle' && (
           <div className={`bg-surface-1 rounded-2xl border p-6 space-y-4 ${isIcfes(act.type) ? 'border-emerald-200' : 'border-hairline'}`}>
-            <h3 className="text-lg font-bold text-slate-800">{isIcfes(act.type) ? 'Simulacro ICFES' : getQuizTypeLabel(act.type)}</h3>
+            <h3 className="text-lg font-bold text-ink-primary">{isIcfes(act.type) ? 'Simulacro ICFES' : getQuizTypeLabel(act.type)}</h3>
             {mySubmission && (mySubmission.status === 'AUTO_GRADED' || mySubmission.status === 'GRADED') ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -4912,11 +4917,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             ) : (
               <div className="space-y-3">
                 {isIcfes(act.type) ? (
-                  <p className="text-base text-slate-600">
+                  <p className="text-base text-ink-secondary">
                     Presentarás un simulacro tipo Saber 11 con preguntas organizadas por áreas: Lectura Crítica, Matemáticas, Ciencias Naturales, Sociales y Ciudadanas, e Inglés.
                   </p>
                 ) : (
-                  <p className="text-base text-slate-600">
+                  <p className="text-base text-ink-secondary">
                     {act.type === 'QUIZ' ? 'Presentarás un quiz' : 'Presentarás un examen'} con preguntas de selección y/o respuesta corta.
                     {act.maxScore && <span> La nota máxima es <strong>{Number(act.maxScore)}</strong>.</span>}
                   </p>
@@ -4938,8 +4943,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <Zap className="w-5 h-5 text-rose-600" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-lg font-bold text-slate-800">{getQuizTypeLabel(act.type)}</h3>
-                <p className="text-sm text-slate-500">
+                <h3 className="text-lg font-bold text-ink-primary">{getQuizTypeLabel(act.type)}</h3>
+                <p className="text-sm text-ink-muted">
                   {act.type === 'HOME_QUIZ'
                     ? 'Este quiz se resuelve a tu ritmo cuando el docente lo publique.'
                     : 'Este quiz se juega en una sesión compartida en vivo.'}
@@ -4986,8 +4991,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <BookOpen className="w-5 h-5 text-violet-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
-                <p className="text-sm text-slate-500">{gameLabelOf(act) ? 'Edita el contenido de esta actividad interactiva' : 'Configura los slides, actividades y checkpoints de esta lección'}</p>
+                <h3 className="text-lg font-bold text-ink-primary">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
+                <p className="text-sm text-ink-muted">{gameLabelOf(act) ? 'Edita el contenido de esta actividad interactiva' : 'Configura los slides, actividades y checkpoints de esta lección'}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -4999,13 +5004,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               </button>
               <button
                 onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 text-ink-primary rounded-xl font-medium hover:bg-surface-3 transition-colors"
               >
                 <Eye className="w-4 h-4" /> {'Vista previa'}
               </button>
               <button
                 onClick={() => openResetLessonModal(act.id, act.title)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 text-ink-primary rounded-xl font-medium hover:bg-surface-3 transition-colors"
                 title="Permitir que un estudiante vuelva a hacer la lección"
               >
                 <RotateCcw className="w-4 h-4" /> Reiniciar para un estudiante
@@ -5020,8 +5025,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto">
               <BookOpen className="w-8 h-8 text-violet-600" />
             </div>
-            <h3 className="text-xl font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
+            <h3 className="text-xl font-bold text-ink-primary">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
+            <p className="text-sm text-ink-muted max-w-md mx-auto">
               {gameLabelOf(act)
                 ? 'Resuelve esta actividad. Tu progreso se guarda automáticamente.'
                 : 'Avanza por los contenidos y actividades a tu ritmo. Tu progreso se guarda automáticamente.'}
@@ -5038,7 +5043,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         {/* STUDENT: My submission / submit form (TASK only) */}
         {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && !isLessonOrGame(act.type) && (
           <div className="bg-surface-1 rounded-2xl border border-hairline p-6 space-y-4">
-            <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
+            <h3 className="text-lg font-bold text-ink-primary">Tu entrega</h3>
             {mySubmission && !editingSubmission ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -5048,7 +5053,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   {mySubmission.score !== undefined && mySubmission.score !== null && (
                     <span className="text-lg font-bold text-green-700">{Number(mySubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
                   )}
-                  <span className="text-sm text-slate-400">Entregado: {formatDate(mySubmission.submittedAt)}</span>
+                  <span className="text-sm text-ink-muted">Entregado: {formatDate(mySubmission.submittedAt)}</span>
                   {/* Botón editar: solo si no está calificada y la fecha límite no ha pasado */}
                   {mySubmission.status !== 'GRADED' && act.dueDate && new Date(act.dueDate) > new Date() && (
                     <button
@@ -5064,7 +5069,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     </button>
                   )}
                 </div>
-                {mySubmission.content && <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 whitespace-pre-wrap">{mySubmission.content}</div>}
+                {mySubmission.content && <div className="bg-surface-2 rounded-xl p-4 text-sm text-ink-secondary whitespace-pre-wrap">{mySubmission.content}</div>}
                 {mySubmission.fileUrl && (
                   isAudioFileName(mySubmission.fileUrl) ? (
                     <div className="flex items-center gap-3 px-4 py-3 bg-rose-50 rounded-xl border border-rose-200">
@@ -5072,7 +5077,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       <SmartAudio src={mySubmission.fileUrl} className="w-full" />
                     </div>
                   ) : (
-                    <button onClick={() => openFile(mySubmission.fileUrl)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-sm text-blue-700">
+                    <button onClick={() => openFile(mySubmission.fileUrl)} className="flex items-center gap-2 px-4 py-2.5 bg-accent/5 hover:bg-accent/15 rounded-xl border border-accent/30 text-sm text-accent">
                       <Download className="w-4 h-4" /> Ver archivo entregado
                     </button>
                   )
@@ -5089,16 +5094,16 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               </div>
             ) : (
               <div className="space-y-4">
-                <textarea value={submitContent} onChange={e => setSubmitContent(e.target.value)} rows={4} placeholder="Escribe tu respuesta aquí (opcional)..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+                <textarea value={submitContent} onChange={e => setSubmitContent(e.target.value)} rows={4} placeholder="Escribe tu respuesta aquí (opcional)..." className="w-full border border-hairline rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-accent outline-none" />
                 
                 {/* Enlace externo */}
                 <div className="relative">
-                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-muted" />
                   <input 
                     value={submitLink} 
                     onChange={e => setSubmitLink(e.target.value)} 
                     placeholder="Pega un enlace externo (Google Docs, Canva, etc.)" 
-                    className="w-full border border-slate-300 rounded-xl pl-11 pr-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full border border-hairline rounded-xl pl-11 pr-4 py-3 text-base focus:ring-2 focus:ring-accent outline-none"
                   />
                 </div>
                 {submitLink && (
@@ -5111,10 +5116,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
                 <input ref={submitFileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0] || null; setSubmitFile(f); setRecordedName(null) }} />
                 {submitFile && submitFile.name !== recordedName ? (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
-                    <Paperclip className="w-5 h-5 text-slate-400" />
-                    <span className="text-base text-slate-700 flex-1 truncate">{submitFile.name}</span>
-                    <button onClick={() => setSubmitFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-xl border border-hairline">
+                    <Paperclip className="w-5 h-5 text-ink-muted" />
+                    <span className="text-base text-ink-primary flex-1 truncate">{submitFile.name}</span>
+                    <button onClick={() => setSubmitFile(null)} className="p-1 rounded-lg hover:bg-surface-3"><X className="w-4 h-4" /></button>
                   </div>
                 ) : null}
 
@@ -5127,20 +5132,20 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 )}
 
                 <div className="flex items-center justify-between gap-3">
-                  <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+                  <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink-muted hover:text-accent hover:bg-accent/10 rounded-xl border border-hairline hover:border-accent/50 transition-colors" style={{ minHeight: '44px' }}>
                     <Upload className="w-5 h-5" /> Subir archivo
                   </button>
                   <div className="flex items-center gap-2">
                     {editingSubmission && (
                       <button 
                         onClick={() => { setEditingSubmission(false); setSubmitContent(''); setSubmitFile(null); setRecordedName(null); setSubmitLink('') }}
-                        className="px-4 py-2.5 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-100 border border-hairline" 
+                        className="px-4 py-2.5 text-ink-secondary rounded-xl text-sm font-medium hover:bg-surface-2 border border-hairline"
                         style={{ minHeight: '44px' }}
                       >
                         Cancelar
                       </button>
                     )}
-                    <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile && !submitLink.trim()) || submitting} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                    <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile && !submitLink.trim()) || submitting} className="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                       {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                       {submitting ? (editingSubmission ? 'Guardando...' : 'Entregando...') : (editingSubmission ? 'Guardar cambios' : 'Entregar actividad')}
                     </button>
@@ -5156,32 +5161,32 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
               <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
-                <h3 className="font-bold text-slate-800">Duplicar actividad</h3>
-                <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
-                  <X className="w-5 h-5 text-slate-400" />
+                <h3 className="font-bold text-ink-primary">Duplicar actividad</h3>
+                <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-surface-2 rounded-lg">
+                  <X className="w-5 h-5 text-ink-muted" />
                 </button>
               </div>
               <div className="p-5 overflow-y-auto flex-1">
-                <p className="text-sm text-slate-600 mb-4">
-                  Duplicando: <span className="font-medium text-slate-800">{duplicateActivityModal.activityTitle}</span>
+                <p className="text-sm text-ink-secondary mb-4">
+                  Duplicando: <span className="font-medium text-ink-primary">{duplicateActivityModal.activityTitle}</span>
                 </p>
                 <div className="flex gap-2 mb-4">
                   <button
                     onClick={() => { setDuplicateTargetType('same'); setSelectedTargetClassroom(null) }}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'same' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'same' ? 'bg-accent/10 text-accent' : 'bg-surface-2 text-ink-secondary hover:bg-surface-3'}`}
                   >
                     Esta aula
                   </button>
                   <button
                     onClick={() => setDuplicateTargetType('other')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'other' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'other' ? 'bg-violet-100 text-violet-700' : 'bg-surface-2 text-ink-secondary hover:bg-surface-3'}`}
                   >
                     Otra aula
                   </button>
                 </div>
                 {duplicateTargetType === 'same' ? (
                   <>
-                    <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                    <p className="text-xs text-ink-muted mb-3">Selecciona la sección destino:</p>
                     <SectionPicker
                       sections={sections}
                       busy={duplicatingActivity}
@@ -5192,12 +5197,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   <>
                     {!selectedTargetClassroom ? (
                       <>
-                        <p className="text-xs text-slate-500 mb-3">Selecciona el aula destino:</p>
+                        <p className="text-xs text-ink-muted mb-3">Selecciona el aula destino:</p>
                         <ClassroomPicker
                           classrooms={availableClassroomsForDup}
                           loading={loadingClassroomsForDup}
                           onPick={c => handleSelectTargetClassroom(c)}
-                          trailing={() => <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />}
+                          trailing={() => <ChevronRight className="w-4 h-4 text-ink-muted shrink-0 mt-1" />}
                         />
                       </>
                     ) : (
@@ -5210,11 +5215,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                             {selectedTargetClassroom.title?.charAt(0) || 'A'}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-800">{selectedTargetClassroom.title}</p>
-                            <p className="text-xs text-slate-500">{selectedTargetClassroom.groupName} • {selectedTargetClassroom.subjectName}</p>
+                            <p className="font-medium text-ink-primary">{selectedTargetClassroom.title}</p>
+                            <p className="text-xs text-ink-muted">{selectedTargetClassroom.groupName} • {selectedTargetClassroom.subjectName}</p>
                           </div>
                         </div>
-                        <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                        <p className="text-xs text-ink-muted mb-3">Selecciona la sección destino:</p>
                         <SectionPicker
                           sections={targetClassroomSections}
                           loading={loadingTargetSections}
@@ -5237,10 +5242,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               <div className="px-6 py-4 border-b border-hairline flex items-center justify-between shrink-0 bg-amber-50">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-amber-600" />
-                  <h3 className="font-bold text-slate-800">{contextModalData.title || 'Contexto de lectura'}</h3>
+                  <h3 className="font-bold text-ink-primary">{contextModalData.title || 'Contexto de lectura'}</h3>
                 </div>
                 <button onClick={() => setContextModalData(null)} className="p-1 hover:bg-amber-100 rounded-lg">
-                  <X className="w-5 h-5 text-slate-400" />
+                  <X className="w-5 h-5 text-ink-muted" />
                 </button>
               </div>
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
@@ -5248,7 +5253,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   <img src={contextModalData.imageUrl} alt="Contexto" className="max-w-full rounded-xl border border-hairline" />
                 )}
                 {contextModalData.text && (
-                  <RichContent html={contextModalData.text} className="text-base text-slate-700" />
+                  <RichContent html={contextModalData.text} className="text-base text-ink-primary" />
                 )}
               </div>
               <div className="px-6 py-3 border-t border-hairline flex justify-end shrink-0">
@@ -5263,14 +5268,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowScheduleModal(null)}>
             <div className="bg-surface-1 rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
               <div className="p-5 border-b border-hairline flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500" /> Programar publicación</h3>
-                <button onClick={() => setShowScheduleModal(null)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+                <h3 className="text-lg font-bold text-ink-primary flex items-center gap-2"><Clock className="w-5 h-5 text-accent" /> Programar publicación</h3>
+                <button onClick={() => setShowScheduleModal(null)} className="p-1 hover:bg-surface-2 rounded-lg"><X className="w-5 h-5 text-ink-muted" /></button>
               </div>
               <div className="p-5 space-y-4">
-                <p className="text-sm text-slate-500">La actividad se publicará automáticamente en la fecha y hora seleccionada.</p>
+                <p className="text-sm text-ink-muted">La actividad se publicará automáticamente en la fecha y hora seleccionada.</p>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha y hora</label>
-                  <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Fecha y hora</label>
+                  <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-accent outline-none" />
                 </div>
                 <div className="flex justify-end gap-3">
                   {activities.find(a => a.id === showScheduleModal)?.scheduledPublishAt && (
@@ -5278,8 +5283,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                       Cancelar programación
                     </button>
                   )}
-                  <button onClick={() => setShowScheduleModal(null)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cerrar</button>
-                  <button onClick={() => { if (scheduleDate) handleSchedulePublish(showScheduleModal, scheduleDate) }} disabled={!scheduleDate} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  <button onClick={() => setShowScheduleModal(null)} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl">Cerrar</button>
+                  <button onClick={() => { if (scheduleDate) handleSchedulePublish(showScheduleModal, scheduleDate) }} disabled={!scheduleDate} className="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50">
                     Programar
                   </button>
                 </div>
@@ -5293,8 +5298,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowGradebookLink(false)}>
             <div className="bg-surface-1 rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
               <div className="p-5 border-b border-hairline flex items-center justify-between">
-                <h3 className="font-bold text-slate-800">Vincular a planilla de notas</h3>
-                <button onClick={() => setShowGradebookLink(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+                <h3 className="font-bold text-ink-primary">Vincular a planilla de notas</h3>
+                <button onClick={() => setShowGradebookLink(false)} className="p-1 hover:bg-surface-2 rounded-lg"><X className="w-5 h-5 text-ink-muted" /></button>
               </div>
               <div className="p-5 space-y-4">
                 {!gradebookConfig?.academicTermId && (
@@ -5306,11 +5311,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                   <>
                     {/* Period selector — shows all terms; CLOSED are disabled */}
                     <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Período destino</label>
+                      <label className="block text-xs font-semibold text-ink-secondary uppercase tracking-wide">Período destino</label>
                       <select
                         value={selectedTermId || ''}
                         onChange={e => setSelectedTermId(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full px-3 py-2 border border-hairline rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       >
                         {(gradebookConfig.availableTerms || []).map((t: any) => (
                           <option key={t.id} value={t.id} disabled={t.status !== 'OPEN'}>
@@ -5318,18 +5323,18 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                           </option>
                         ))}
                       </select>
-                      <p className="text-xs text-slate-500">Solo los períodos <strong>Activos</strong> son sincronizables. Los cerrados aparecen para referencia.</p>
+                      <p className="text-xs text-ink-muted">Solo los períodos <strong>Activos</strong> son sincronizables. Los cerrados aparecen para referencia.</p>
                     </div>
-                    <div className="text-xs text-slate-500">Escala: {gradebookConfig.scale.min} – {gradebookConfig.scale.max}</div>
+                    <div className="text-xs text-ink-muted">Escala: {gradebookConfig.scale.min} – {gradebookConfig.scale.max}</div>
                     <label className="flex items-center gap-3">
-                      <input type="checkbox" checked={gradebookLinkForm.syncToGradebook} onChange={e => setGradebookLinkForm(f => ({ ...f, syncToGradebook: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
-                      <span className="text-sm font-medium text-slate-700">Sincronizar con planilla</span>
+                      <input type="checkbox" checked={gradebookLinkForm.syncToGradebook} onChange={e => setGradebookLinkForm(f => ({ ...f, syncToGradebook: e.target.checked }))} className="w-4 h-4 rounded text-accent" />
+                      <span className="text-sm font-medium text-ink-primary">Sincronizar con planilla</span>
                     </label>
                     {gradebookLinkForm.syncToGradebook && (
                       <>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Componente destino</label>
-                          <select value={gradebookLinkForm.gradebookComponent} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookComponent: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                          <label className="block text-sm font-medium text-ink-primary mb-1">Componente destino</label>
+                          <select value={gradebookLinkForm.gradebookComponent} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookComponent: e.target.value }))} className="w-full px-3 py-2 border border-hairline rounded-lg text-sm">
                             <option value="">Seleccionar...</option>
                             {(gradebookConfig.processes || []).map((p: any) => (
                               <option key={p.code} value={p.code}>{p.name} ({p.weight}%)</option>
@@ -5337,9 +5342,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Índice de actividad</label>
-                          <input type="number" min={1} max={20} value={gradebookLinkForm.gradebookIndex} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookIndex: parseInt(e.target.value) || 1 }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                          <p className="text-xs text-slate-400 mt-1">Columna en la planilla (1, 2, 3...)</p>
+                          <label className="block text-sm font-medium text-ink-primary mb-1">Índice de actividad</label>
+                          <input type="number" min={1} max={20} value={gradebookLinkForm.gradebookIndex} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookIndex: parseInt(e.target.value) || 1 }))} className="w-full px-3 py-2 border border-hairline rounded-lg text-sm" />
+                          <p className="text-xs text-ink-muted mt-1">Columna en la planilla (1, 2, 3...)</p>
                           {(() => {
                             const slotsForTerm = (selectedTermId && gradebookConfig.existingSlotsByTerm?.[selectedTermId]) || gradebookConfig.existingSlots || []
                             const conflict = slotsForTerm.find((s: any) => s.componentType === gradebookLinkForm.gradebookComponent && s.activityIndex === gradebookLinkForm.gradebookIndex)
@@ -5354,8 +5359,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 )}
               </div>
               <div className="p-5 border-t border-hairline flex justify-end gap-3">
-                <button onClick={() => setShowGradebookLink(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                <button onClick={handleSaveGradebookLink} disabled={savingLink || !gradebookConfig?.academicTermId || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <button onClick={() => setShowGradebookLink(false)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
+                <button onClick={handleSaveGradebookLink} disabled={savingLink || !gradebookConfig?.academicTermId || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2">
                   {savingLink && <Loader2 className="w-4 h-4 animate-spin" />} Guardar
                 </button>
               </div>
@@ -5369,14 +5374,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             <div className="bg-surface-1 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
               <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0 gap-4">
                 <div>
-                  <h3 className="font-bold text-slate-800">Preview de sincronización</h3>
+                  <h3 className="font-bold text-ink-primary">Preview de sincronización</h3>
                   {gradebookConfig?.availableTerms?.length > 1 && (
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-slate-500">Período:</span>
+                      <span className="text-xs text-ink-muted">Período:</span>
                       <select
                         value={selectedTermId || ''}
                         onChange={async e => { setSelectedTermId(e.target.value); setSyncPreview(null); setSyncPreviewLoading(true); try { const { data } = await classroomApi.previewGradebookSync(selectedActivity!.id, e.target.value); setSyncPreview(data) } catch (err: any) { setError(err.response?.data?.message || 'Error') } finally { setSyncPreviewLoading(false) } }}
-                        className="text-xs px-2 py-1 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        className="text-xs px-2 py-1 border border-hairline rounded-lg focus:outline-none focus:ring-1 focus:ring-accent"
                       >
                         {(gradebookConfig.availableTerms || []).map((t: any) => (
                           <option key={t.id} value={t.id} disabled={t.status !== 'OPEN'}>
@@ -5387,49 +5392,49 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     </div>
                   )}
                 </div>
-                <button onClick={() => setShowSyncPreview(false)} className="p-1 hover:bg-slate-100 rounded-lg shrink-0"><X className="w-5 h-5 text-slate-400" /></button>
+                <button onClick={() => setShowSyncPreview(false)} className="p-1 hover:bg-surface-2 rounded-lg shrink-0"><X className="w-5 h-5 text-ink-muted" /></button>
               </div>
               <div className="p-5 overflow-y-auto flex-1">
                 {syncPreviewLoading ? (
-                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
                 ) : syncPreview ? (
                   <div className="space-y-4">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+                    <div className="p-3 bg-accent/5 border border-accent/30 rounded-xl text-sm text-accent">
                       <strong>{syncPreview.activityTitle}</strong> → {syncPreview.destination.component} #{syncPreview.destination.index} · {syncPreview.destination.termName}
                     </div>
 
                     {/* Summary */}
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       <div className="p-2 bg-green-50 rounded-lg text-center"><p className="text-lg font-bold text-green-700">{syncPreview.summary.toCreate}</p><p className="text-[10px] text-green-600">Nuevas</p></div>
-                      <div className="p-2 bg-blue-50 rounded-lg text-center"><p className="text-lg font-bold text-blue-700">{syncPreview.summary.toUpdate}</p><p className="text-[10px] text-blue-600">Actualizar</p></div>
+                      <div className="p-2 bg-accent/5 rounded-lg text-center"><p className="text-lg font-bold text-accent">{syncPreview.summary.toUpdate}</p><p className="text-[10px] text-accent">Actualizar</p></div>
                       <div className="p-2 bg-amber-50 rounded-lg text-center"><p className="text-lg font-bold text-amber-700">{syncPreview.summary.conflicts}</p><p className="text-[10px] text-amber-600">Conflictos</p></div>
-                      <div className="p-2 bg-slate-50 rounded-lg text-center"><p className="text-lg font-bold text-slate-600">{syncPreview.summary.alreadySynced}</p><p className="text-[10px] text-slate-500">Sin cambio</p></div>
+                      <div className="p-2 bg-surface-2 rounded-lg text-center"><p className="text-lg font-bold text-ink-secondary">{syncPreview.summary.alreadySynced}</p><p className="text-[10px] text-ink-muted">Sin cambio</p></div>
                       <div className="p-2 bg-red-50 rounded-lg text-center"><p className="text-lg font-bold text-red-600">{syncPreview.summary.noSubmission}</p><p className="text-[10px] text-red-500">Sin entrega</p></div>
                     </div>
 
                     {/* Table */}
                     <div className="border border-hairline rounded-xl overflow-hidden">
                       <table className="w-full text-sm">
-                        <thead className="bg-slate-50">
+                        <thead className="bg-surface-2">
                           <tr>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Estudiante</th>
-                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">Nota aula</th>
-                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">Normalizada</th>
-                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">En planilla</th>
-                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">Acción</th>
+                            <th className="text-left px-3 py-2 text-xs font-medium text-ink-muted">Estudiante</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-ink-muted">Nota aula</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-ink-muted">Normalizada</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-ink-muted">En planilla</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-ink-muted">Acción</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-hairline">
                           {syncPreview.rows.map((row: any) => (
-                            <tr key={row.studentEnrollmentId} className="hover:bg-slate-50">
-                              <td className="px-3 py-2 text-slate-700">{row.studentName}</td>
+                            <tr key={row.studentEnrollmentId} className="hover:bg-surface-2">
+                              <td className="px-3 py-2 text-ink-primary">{row.studentName}</td>
                               <td className="text-center px-2 py-2">{row.activityScore != null ? row.activityScore : '—'}</td>
                               <td className="text-center px-2 py-2 font-medium">{row.normalizedScore != null ? row.normalizedScore : '—'}</td>
                               <td className="text-center px-2 py-2">{row.existingGrade != null ? row.existingGrade : '—'}</td>
                               <td className="text-center px-2 py-2">
                                 {row.action === 'create' && <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Crear</span>}
-                                {row.action === 'update' && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Actualizar</span>}
-                                {row.action === 'skip' && <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">Sin cambio</span>}
+                                {row.action === 'update' && <span className="text-xs px-2 py-0.5 bg-accent/10 text-accent rounded-full">Actualizar</span>}
+                                {row.action === 'skip' && <span className="text-xs px-2 py-0.5 bg-surface-2 text-ink-muted rounded-full">Sin cambio</span>}
                                 {row.action === 'conflict' && <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">⚠️ Conflicto</span>}
                                 {row.action === 'no_submission' && <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full">Sin entrega</span>}
                               </td>
@@ -5443,21 +5448,21 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     {syncPreview.summary.conflicts > 0 && (
                       <label className="flex items-center gap-2 text-sm">
                         <input type="checkbox" checked={syncIncludeConflicts} onChange={e => setSyncIncludeConflicts(e.target.checked)} className="w-4 h-4 rounded text-amber-600" />
-                        <span className="text-slate-600">Sobrescribir notas editadas en planilla ({syncPreview.summary.conflicts} conflictos)</span>
+                        <span className="text-ink-secondary">Sobrescribir notas editadas en planilla ({syncPreview.summary.conflicts} conflictos)</span>
                       </label>
                     )}
                     {syncPreview.summary.noSubmission > 0 && (
                       <label className="flex items-center gap-2 text-sm">
                         <input type="checkbox" checked={syncIncludeNoSubmission} onChange={e => setSyncIncludeNoSubmission(e.target.checked)} className="w-4 h-4 rounded text-red-600" />
-                        <span className="text-slate-600">Incluir nota mínima para estudiantes sin entrega ({syncPreview.summary.noSubmission})</span>
+                        <span className="text-ink-secondary">Incluir nota mínima para estudiantes sin entrega ({syncPreview.summary.noSubmission})</span>
                       </label>
                     )}
                   </div>
                 ) : null}
               </div>
               <div className="p-5 border-t border-hairline flex justify-end gap-3 shrink-0">
-                <button onClick={() => setShowSyncPreview(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                <button onClick={handleSync} disabled={syncing || !syncPreview || (syncPreview?.summary.toCreate === 0 && syncPreview?.summary.toUpdate === 0 && !syncIncludeConflicts && !syncIncludeNoSubmission)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <button onClick={() => setShowSyncPreview(false)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
+                <button onClick={handleSync} disabled={syncing || !syncPreview || (syncPreview?.summary.toCreate === 0 && syncPreview?.summary.toUpdate === 0 && !syncIncludeConflicts && !syncIncludeNoSubmission)} className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2">
                   {syncing && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar sincronización
                 </button>
               </div>
@@ -5484,14 +5489,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
               <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
-                <h3 className="font-bold text-slate-800">Asignar estudiantes</h3>
-                <button onClick={() => setAssignStudentsModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
-                  <X className="w-5 h-5 text-slate-400" />
+                <h3 className="font-bold text-ink-primary">Asignar estudiantes</h3>
+                <button onClick={() => setAssignStudentsModal(null)} className="p-1 hover:bg-surface-2 rounded-lg">
+                  <X className="w-5 h-5 text-ink-muted" />
                 </button>
               </div>
               <div className="p-5 overflow-y-auto flex-1">
-                <p className="text-sm text-slate-600 mb-4">
-                  Actividad: <span className="font-medium text-slate-800">{assignStudentsModal.activityTitle}</span>
+                <p className="text-sm text-ink-secondary mb-4">
+                  Actividad: <span className="font-medium text-ink-primary">{assignStudentsModal.activityTitle}</span>
                 </p>
 
                 {/* Restriction toggle — se activa solo al elegir un subconjunto del curso */}
@@ -5520,16 +5525,16 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
                   </div>
                 ) : classroomStudents.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-8">No hay estudiantes en este aula</p>
+                  <p className="text-sm text-ink-muted text-center py-8">No hay estudiantes en este aula</p>
                 ) : (
                   <>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs text-slate-500">{selectedStudentIds.length} de {classroomStudents.length} seleccionados</p>
+                      <p className="text-xs text-ink-muted">{selectedStudentIds.length} de {classroomStudents.length} seleccionados</p>
                       <div className="flex gap-2">
-                        <button onClick={() => changeSelection(classroomStudents.map(s => s.enrollmentId))} className="text-xs text-blue-600 hover:underline">
+                        <button onClick={() => changeSelection(classroomStudents.map(s => s.enrollmentId))} className="text-xs text-accent hover:underline">
                           Seleccionar todos
                         </button>
-                        <button onClick={() => changeSelection([])} className="text-xs text-slate-500 hover:underline">
+                        <button onClick={() => changeSelection([])} className="text-xs text-ink-muted hover:underline">
                           Ninguno
                         </button>
                       </div>
@@ -5539,19 +5544,19 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                         <button
                           key={s.enrollmentId}
                           onClick={() => toggleStudentSelection(s.enrollmentId)}
-                          className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-colors text-left ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-300 bg-violet-50' : 'border-hairline hover:border-slate-300'}`}
+                          className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-colors text-left ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-300 bg-violet-50' : 'border-hairline hover:border-ink-muted'}`}
                         >
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-500 bg-violet-500' : 'border-slate-300'}`}>
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-500 bg-violet-500' : 'border-hairline'}`}>
                             {selectedStudentIds.includes(s.enrollmentId) && <Check className="w-3 h-3 text-white" />}
                           </div>
                           {s.photo ? (
                             <img src={s.photo} alt="" className="w-8 h-8 rounded-full object-cover" />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                            <div className="w-8 h-8 rounded-full bg-surface-3 flex items-center justify-center text-xs font-bold text-ink-secondary">
                               {s.firstName?.[0]}{s.lastName?.[0]}
                             </div>
                           )}
-                          <span className="text-sm text-slate-700">{s.lastName}{s.secondLastName ? ` ${s.secondLastName}` : ''}, {s.firstName}</span>
+                          <span className="text-sm text-ink-primary">{s.lastName}{s.secondLastName ? ` ${s.secondLastName}` : ''}, {s.firstName}</span>
                         </button>
                       ))}
                     </div>
@@ -5559,7 +5564,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 )}
               </div>
               <div className="p-4 border-t border-hairline flex justify-end gap-3 shrink-0">
-                <button onClick={() => setAssignStudentsModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
+                <button onClick={() => setAssignStudentsModal(null)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-lg">
                   Cancelar
                 </button>
                 <button
@@ -5577,23 +5582,23 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
         {/* Reiniciar lección para un estudiante */}
         {resetLessonModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40" onClick={() => setResetLessonModal(null)}>
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-ink-primary/40" onClick={() => setResetLessonModal(null)}>
             <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="px-5 py-3 border-b border-hairline flex items-center justify-between shrink-0">
                 <div>
-                  <h3 className="font-bold text-slate-800">Reiniciar lección</h3>
-                  <p className="text-xs text-slate-500 truncate max-w-[300px]">{resetLessonModal.activityTitle}</p>
+                  <h3 className="font-bold text-ink-primary">Reiniciar lección</h3>
+                  <p className="text-xs text-ink-muted truncate max-w-[300px]">{resetLessonModal.activityTitle}</p>
                 </div>
-                <button onClick={() => setResetLessonModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setResetLessonModal(null)} className="text-ink-muted hover:text-ink-primary"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-5 py-3 border-b border-hairline shrink-0">
-                <p className="text-sm text-slate-600">Elige al estudiante que podrá <b>volver a hacer</b> la lección. Se borra su intento (progreso, nota y XP de esta lección).</p>
+                <p className="text-sm text-ink-secondary">Elige al estudiante que podrá <b>volver a hacer</b> la lección. Se borra su intento (progreso, nota y XP de esta lección).</p>
               </div>
               <div className="p-3 overflow-y-auto">
                 {loadingStudents ? (
                   <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-violet-500" /></div>
                 ) : classroomStudents.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-8">No hay estudiantes.</p>
+                  <p className="text-sm text-ink-muted text-center py-8">No hay estudiantes.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {classroomStudents.map((s: any) => {
@@ -5609,10 +5614,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                           {s.photo ? (
                             <img src={s.photo} alt="" className="w-8 h-8 rounded-full object-cover" />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">{s.firstName?.[0]}{s.lastName?.[0]}</div>
+                            <div className="w-8 h-8 rounded-full bg-surface-3 flex items-center justify-center text-xs font-bold text-ink-secondary">{s.firstName?.[0]}{s.lastName?.[0]}</div>
                           )}
-                          <span className="flex-1 text-sm text-slate-700">{name}</span>
-                          {busy ? <Loader2 className="w-4 h-4 animate-spin text-violet-500" /> : <RotateCcw className="w-4 h-4 text-slate-400" />}
+                          <span className="flex-1 text-sm text-ink-primary">{name}</span>
+                          {busy ? <Loader2 className="w-4 h-4 animate-spin text-violet-500" /> : <RotateCcw className="w-4 h-4 text-ink-muted" />}
                         </button>
                       )
                     })}
@@ -5741,10 +5746,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
       return { bg: 'bg-orange-100', text: 'text-orange-700', label: '🔁 Para revisar' }
     }
     if (sub?.status === 'SUBMITTED' || sub?.status === 'LATE') {
-      return { bg: 'bg-blue-100', text: 'text-blue-700', label: '📤 Entregada' }
+      return { bg: 'bg-accent/10', text: 'text-accent', label: '📤 Entregada' }
     }
     if (sub?.status === 'DRAFT') {
-      return { bg: 'bg-slate-100', text: 'text-slate-600', label: '✏️ En borrador' }
+      return { bg: 'bg-surface-2', text: 'text-ink-secondary', label: '✏️ En borrador' }
     }
     if (dueDate && now > dueDate) {
       return { bg: 'bg-red-100', text: 'text-red-700', label: '⚠️ Vencida' }
@@ -5775,7 +5780,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
   // Tarjeta de actividad (reutilizable: lista plana del docente y misiones del alumno).
   const renderActivityCard = (act: Activity) => {
     const isNew = isNewActivity(act)
-    const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
+    const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-surface-2', text: 'text-ink-muted', label: 'Borrador' }
     const duePast = isDuePast(act.dueDate)
     const studentStatus = isStudent ? getStudentTaskStatus(act) : null
     const studentSub = isStudent ? act.submissions?.[0] : null
@@ -5784,19 +5789,19 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
     const locked = isStudent && !!(act as any).locked
     const requirements: { prerequisiteId: string; title: string; condition: string; minScore: number | null; satisfied: boolean }[] = (act as any).requirements || []
     return (
-      <button key={act.id} onClick={() => { if (locked) return; openActivity(act) }} disabled={locked} style={{ borderLeftColor: locked ? '#cbd5e1' : workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all group ${locked ? 'opacity-60 cursor-not-allowed border-hairline' : `hover:shadow-sm ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}`}>
+      <button key={act.id} onClick={() => { if (locked) return; openActivity(act) }} disabled={locked} style={{ borderLeftColor: locked ? '#cbd5e1' : workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-surface-1 rounded-2xl border-2 p-5 transition-all group ${locked ? 'opacity-60 cursor-not-allowed border-hairline' : `hover:shadow-sm ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-hairline hover:border-accent/50'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}`}>
         <div className="flex items-start gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-            {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-accent/5'}`}>
+            {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-accent" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h3 className={`text-base font-bold ${locked ? 'text-slate-500' : 'text-slate-800 group-hover:text-blue-700'}`}>{act.title}</h3>
-              {locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-slate-200 text-slate-600 inline-flex items-center gap-1"><Lock className="w-3 h-3" /> Bloqueada</span>}
+              <h3 className={`text-base font-bold ${locked ? 'text-ink-muted' : 'text-ink-primary group-hover:text-accent'}`}>{act.title}</h3>
+              {locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-surface-3 text-ink-secondary inline-flex items-center gap-1"><Lock className="w-3 h-3" /> Bloqueada</span>}
               {isNew && !locked && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
               {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
               {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
-              {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
+              {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-accent/5 text-accent">Tarea</span>}
               {act.type === 'TASK' && (act as any).metadata?.audioResponse && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-rose-50 text-rose-700 inline-flex items-center gap-1"><Mic className="w-3 h-3" /> Audio</span>}
               {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
               {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
@@ -5809,20 +5814,20 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
               )}
             </div>
-            <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
+            <p className="text-sm text-ink-muted mt-1">{act.section?.title || 'Sin sección'}</p>
             <div className="flex items-center gap-x-4 gap-y-1 mt-2 text-sm flex-wrap">
               {isTeacher && (
-                <span className="flex items-center gap-1 text-slate-400">
+                <span className="flex items-center gap-1 text-ink-muted">
                   <Calendar className="w-4 h-4" /> {act.isPublished ? `Publicada ${formatDate(act.publishedAt || act.createdAt)}` : `Creada ${formatDate(act.createdAt)}`}
                 </span>
               )}
               {act.dueDate && (
-                <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
+                <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-ink-muted'}`}>
                   <Clock className="w-4 h-4" /> Vence {formatDate(act.dueDate)}
                 </span>
               )}
-              {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
-              {isTeacher && act._count && <span className="text-slate-400">{act._count.submissions} entrega(s)</span>}
+              {act.maxScore && <span className="text-ink-muted">Nota máx: {Number(act.maxScore)}</span>}
+              {isTeacher && act._count && <span className="text-ink-muted">{act._count.submissions} entrega(s)</span>}
               {studentSub?.score !== undefined && studentSub.score !== null && (
                 <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
               )}
@@ -5830,16 +5835,16 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
             {/* Faltantes para desbloquear (Fase 6): lista completa con ✔/⏳ */}
             {locked && requirements.length > 0 && (
-              <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                <p className="text-xs font-semibold text-slate-500 mb-1.5">Requiere completar primero:</p>
+              <div className="mt-3 rounded-xl bg-surface-2 border border-hairline px-3 py-2">
+                <p className="text-xs font-semibold text-ink-muted mb-1.5">Requiere completar primero:</p>
                 <ul className="space-y-1">
                   {requirements.map(r => (
                     <li key={r.prerequisiteId} className="flex items-center gap-2 text-sm">
                       {r.satisfied
                         ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                         : <Clock className="w-4 h-4 text-amber-500 shrink-0" />}
-                      <span className={r.satisfied ? 'text-slate-500 line-through' : 'text-slate-700'}>{r.title}</span>
-                      <span className="text-[11px] text-slate-400">· {reqConditionLabel(r.condition, r.minScore)}</span>
+                      <span className={r.satisfied ? 'text-ink-muted line-through' : 'text-ink-primary'}>{r.title}</span>
+                      <span className="text-[11px] text-ink-muted">· {reqConditionLabel(r.condition, r.minScore)}</span>
                     </li>
                   ))}
                 </ul>
@@ -5847,8 +5852,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             )}
           </div>
           {locked
-            ? <Lock className="w-5 h-5 text-slate-300 shrink-0 mt-1" />
-            : <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />}
+            ? <Lock className="w-5 h-5 text-ink-muted shrink-0 mt-1" />
+            : <ChevronRight className="w-5 h-5 text-ink-muted group-hover:text-accent shrink-0 mt-1" />}
         </div>
       </button>
     )
@@ -5873,11 +5878,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
+        <h2 className="text-xl font-bold text-ink-primary">Actividades</h2>
         {isTeacher && (
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <input ref={importFileRef} type="file" accept=".json,application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImportLesson(f); e.currentTarget.value = '' }} />
-            <button onClick={() => importFileRef.current?.click()} disabled={importing} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50" style={{ minHeight: '44px' }} title="Importar una lección desde archivo">
+            <button onClick={() => importFileRef.current?.click()} disabled={importing} className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 text-ink-secondary rounded-xl text-sm font-semibold hover:bg-surface-3 transition-colors disabled:opacity-50" style={{ minHeight: '44px' }} title="Importar una lección desde archivo">
               {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />} Importar
             </button>
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
@@ -5886,7 +5891,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             <button onClick={() => setShowCrearIA(true)} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors" style={{ minHeight: '44px' }} title="Genera contenido con una IA externa (ChatGPT, Gemini…) y tráelo a Edusyn">
               <Sparkles className="w-5 h-5" /> Crear con IA
             </button>
-            <button onClick={() => { setShowCreate(true); setIntention(null); setCreatePrereqs([]); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => { setShowCreate(true); setIntention(null); setCreatePrereqs([]); setForm(f => ({ ...f, type: '', academicTermId: (periodFilter !== 'ALL' && periodFilter !== 'NONE') ? periodFilter : '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
@@ -5934,8 +5939,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         const widgets = ([
           { key: 'GRADING', label: 'Por calificar', dot: 'bg-orange-500' },
           { key: 'DUE_TODAY', label: 'Vence hoy', dot: 'bg-amber-500' },
-          { key: 'NO_SUBMISSIONS', label: 'Sin entregas', dot: 'bg-slate-400' },
-          { key: 'DRAFT', label: 'Borradores', dot: 'bg-slate-400' },
+          { key: 'NO_SUBMISSIONS', label: 'Sin entregas', dot: 'bg-ink-muted' },
+          { key: 'DRAFT', label: 'Borradores', dot: 'bg-ink-muted' },
         ] as { key: string; label: string; dot: string }[]).filter(w => workCount(w.key) > 0 || workFilter === w.key)
         return (
           <SegTrack>
@@ -5966,9 +5971,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               const isOn = workFilter === c.key
               return (
                 <button key={c.key} onClick={() => setWorkFilter(c.key)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${isOn ? 'border-slate-800 bg-slate-800 text-white' : 'border-hairline text-slate-500 hover:border-slate-400'}`}>
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${isOn ? 'border-ink-primary bg-ink-primary text-white' : 'border-hairline text-ink-muted hover:border-ink-muted'}`}>
                   {c.label}
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isOn ? 'bg-surface-1/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{c.count}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isOn ? 'bg-surface-1/20 text-white' : 'bg-surface-2 text-ink-muted'}`}>{c.count}</span>
                 </button>
               )
             })}
@@ -5980,13 +5985,13 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="bg-surface-1 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <h3 className="font-bold text-ink-primary flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-violet-600" /> Valeria
                 </h3>
-                <p className="text-sm text-slate-500">Ayuda general de Edusyn, Classroom, quizzes, exámenes, aprendizajes e instructivos</p>
+                <p className="text-sm text-ink-muted">Ayuda general de Edusyn, Classroom, quizzes, exámenes, aprendizajes e instructivos</p>
               </div>
-              <button onClick={() => setShowValeriaModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <button onClick={() => setShowValeriaModal(false)} className="p-1 hover:bg-surface-2 rounded-lg">
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
 
@@ -5995,7 +6000,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <button onClick={() => setValeriaQuestion('Explícame el flujo recomendado para crear un quiz o examen en Classroom: borrador, preguntas, revisión, publicación y uso de imágenes.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100">
                   Flujo de quiz/examen
                 </button>
-                <button onClick={() => setValeriaQuestion('Genera un instructivo corto y claro para un docente que va a usar Edusyn y Classroom por primera vez.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100">
+                <button onClick={() => setValeriaQuestion('Genera un instructivo corto y claro para un docente que va a usar Edusyn y Classroom por primera vez.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-accent/5 text-accent hover:bg-accent/15">
                   Instructivo
                 </button>
                 <button onClick={() => setValeriaQuestion('Dame sugerencias de logros o indicadores para la asignatura y el grado actual, con lenguaje pedagógico claro.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
@@ -6008,20 +6013,20 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta para Valeria</label>
+                  <label className="block text-sm font-medium text-ink-primary mb-1">Pregunta para Valeria</label>
                   <textarea
                     value={valeriaQuestion}
                     onChange={e => setValeriaQuestion(e.target.value)}
                     rows={7}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-violet-500 outline-none"
+                    className="w-full border border-hairline rounded-xl px-4 py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-violet-500 outline-none"
                     placeholder="Escribe tu duda, por ejemplo: cómo crear un quiz en casa, cómo explicar un flujo o cómo redactar logros..."
                   />
                   <div className="flex flex-wrap items-center gap-3 mt-3">
-                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer">
                       <input type="checkbox" checked={valeriaIncludeVisuals} onChange={e => setValeriaIncludeVisuals(e.target.checked)} className="rounded accent-violet-600" />
                       Incluir sugerencia visual
                     </label>
-                    <select value={valeriaVisualPlacement} onChange={e => setValeriaVisualPlacement(e.target.value as any)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                    <select value={valeriaVisualPlacement} onChange={e => setValeriaVisualPlacement(e.target.value as any)} className="border border-hairline rounded-lg px-3 py-2 text-sm">
                       <option value="QUESTION_IMAGE">Imagen de pregunta</option>
                       <option value="CONTEXT_IMAGE">Imagen de contexto</option>
                       <option value="INLINE">Dentro del contenido</option>
@@ -6038,7 +6043,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                     </button>
                     <button
                       onClick={() => setShowValeriaModal(false)}
-                      className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200"
+                      className="px-4 py-2.5 bg-surface-2 text-ink-primary rounded-xl text-sm font-semibold hover:bg-surface-3"
                     >
                       Cerrar
                     </button>
@@ -6047,23 +6052,23 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 </div>
 
                 <div className="space-y-3">
-                  <div className="p-4 rounded-2xl border border-hairline bg-slate-50 min-h-[220px]">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Respuesta</p>
+                  <div className="p-4 rounded-2xl border border-hairline bg-surface-2 min-h-[220px]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-2">Respuesta</p>
                     {valeriaResponse ? (
                       <div className="space-y-3">
-                        <p className="text-sm text-slate-700 whitespace-pre-line">{valeriaResponse.answer}</p>
+                        <p className="text-sm text-ink-primary whitespace-pre-line">{valeriaResponse.answer}</p>
                         {Array.isArray(valeriaResponse.keyPoints) && valeriaResponse.keyPoints.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Puntos clave</p>
-                            <ul className="space-y-1 text-sm text-slate-600 list-disc pl-5">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1">Puntos clave</p>
+                            <ul className="space-y-1 text-sm text-ink-secondary list-disc pl-5">
                               {valeriaResponse.keyPoints.map((kp: string, i: number) => <li key={i}>{kp}</li>)}
                             </ul>
                           </div>
                         )}
                         {Array.isArray(valeriaResponse.nextSteps) && valeriaResponse.nextSteps.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Siguientes pasos</p>
-                            <ul className="space-y-1 text-sm text-slate-600 list-disc pl-5">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1">Siguientes pasos</p>
+                            <ul className="space-y-1 text-sm text-ink-secondary list-disc pl-5">
                               {valeriaResponse.nextSteps.map((step: string, i: number) => <li key={i}>{step}</li>)}
                             </ul>
                           </div>
@@ -6073,7 +6078,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                             <div className="flex items-center justify-between gap-3 flex-wrap">
                               <div>
                                 <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Borrador de actividad</p>
-                                <p className="text-sm font-semibold text-slate-800">{valeriaResponse.activityDraft.title}</p>
+                                <p className="text-sm font-semibold text-ink-primary">{valeriaResponse.activityDraft.title}</p>
                               </div>
                               <button
                                 onClick={() => applyValeriaActivityDraft(valeriaResponse.activityDraft)}
@@ -6082,24 +6087,24 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                                 Crear con este borrador
                               </button>
                             </div>
-                            <p className="text-xs text-slate-600 whitespace-pre-line">{valeriaResponse.activityDraft.description}</p>
+                            <p className="text-xs text-ink-secondary whitespace-pre-line">{valeriaResponse.activityDraft.description}</p>
                             {Array.isArray(valeriaResponse.activityDraft.questions) && valeriaResponse.activityDraft.questions.length > 0 && (
-                              <div className="space-y-1 text-xs text-slate-600">
-                                <p className="font-semibold text-slate-700">
+                              <div className="space-y-1 text-xs text-ink-secondary">
+                                <p className="font-semibold text-ink-primary">
                                   {valeriaResponse.activityDraft.questions.length} pregunta{valeriaResponse.activityDraft.questions.length === 1 ? '' : 's'} sugeridas
                                 </p>
                                 {valeriaResponse.activityDraft.questions.slice(0, 3).map((question: any, index: number) => (
                                   <p key={`${question.text}-${index}`} className="line-clamp-2">• {question.text}</p>
                                 ))}
                                 {valeriaResponse.activityDraft.questions.length > 3 && (
-                                  <p className="text-[11px] text-slate-400">y {valeriaResponse.activityDraft.questions.length - 3} pregunta{valeriaResponse.activityDraft.questions.length - 3 === 1 ? '' : 's'} más</p>
+                                  <p className="text-[11px] text-ink-muted">y {valeriaResponse.activityDraft.questions.length - 3} pregunta{valeriaResponse.activityDraft.questions.length - 3 === 1 ? '' : 's'} más</p>
                                 )}
                               </div>
                             )}
                           </div>
                         )}
                         <div className="flex flex-wrap gap-2 pt-1">
-                          <button onClick={copyValeriaAnswer} className="px-3 py-2 text-xs rounded-lg bg-surface-1 border border-hairline text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                          <button onClick={copyValeriaAnswer} className="px-3 py-2 text-xs rounded-lg bg-surface-1 border border-hairline text-ink-primary hover:bg-surface-2 flex items-center gap-2">
                             <Copy className="w-3.5 h-3.5" /> Copiar
                           </button>
                           {valeriaResponse.visualSuggestion?.kind === 'SVG' && valeriaResponse.visualSuggestion?.svg && (
@@ -6110,7 +6115,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500">La respuesta aparecerá aquí cuando consultes a Valeria.</p>
+                      <p className="text-sm text-ink-muted">La respuesta aparecerá aquí cuando consultes a Valeria.</p>
                     )}
                   </div>
 
@@ -6135,37 +6140,37 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
       {/* Create form */}
       {showCreate && (
-        <div className={`bg-surface-1 border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
-          <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
+        <div className={`bg-surface-1 border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-accent/30'}`}>
+          <h3 className="text-lg font-bold text-ink-primary">Nueva Actividad</h3>
 
           {/* Creación por INTENCIÓN — paso 1 (intención) / paso 2 (mecánica), o cabecera si ya se eligió */}
           {!form.type ? (
             !intention ? (
               <div>
-                <p className="text-sm font-medium text-slate-600 mb-2.5">¿Qué deseas construir?</p>
+                <p className="text-sm font-medium text-ink-secondary mb-2.5">¿Qué deseas construir?</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {INTENTIONS.map(it => (
                     <button key={it.key} onClick={() => { setIntention(it.key); if (it.mechanics.length === 1) setForm(f => ({ ...f, type: it.mechanics[0].type })) }}
-                      className="flex flex-col items-start gap-0.5 p-4 rounded-2xl border-2 border-hairline hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left">
+                      className="flex flex-col items-start gap-0.5 p-4 rounded-2xl border-2 border-hairline hover:border-accent/50 hover:bg-accent/10/40 transition-all text-left">
                       <span className="text-2xl mb-0.5">{it.emoji}</span>
-                      <span className="font-bold text-slate-800">{it.label}</span>
-                      <span className="text-xs text-slate-400">{it.hint}</span>
+                      <span className="font-bold text-ink-primary">{it.label}</span>
+                      <span className="text-xs text-ink-muted">{it.hint}</span>
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
               <div>
-                <button onClick={() => { setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2.5">
+                <button onClick={() => { setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink-primary mb-2.5">
                   <ChevronLeft className="w-4 h-4" /> Cambiar intención
                 </button>
-                <p className="text-sm font-medium text-slate-600 mb-2.5">
+                <p className="text-sm font-medium text-ink-secondary mb-2.5">
                   {INTENTIONS.find(i => i.key === intention)?.emoji} {INTENTIONS.find(i => i.key === intention)?.label} — elige una mecánica
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   {INTENTIONS.find(i => i.key === intention)?.mechanics.map(m => (
                     <button key={m.type} onClick={() => setForm({ ...form, type: m.type })}
-                      className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === m.type ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-hairline text-slate-500 hover:border-blue-300'}`} style={{ minHeight: '44px' }}>
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === m.type ? 'border-accent bg-accent/5 text-accent' : 'border-hairline text-ink-muted hover:border-accent/50'}`} style={{ minHeight: '44px' }}>
                       {m.label}
                     </button>
                   ))}
@@ -6174,8 +6179,8 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             )
           ) : (
             <div className="flex items-center justify-between gap-2 pb-1">
-              <p className="text-sm font-semibold text-slate-700">{MECHANIC_LABEL(form.type)}</p>
-              <button onClick={() => { setForm(f => ({ ...f, type: '' })); setIntention(null) }} className="text-sm text-slate-500 hover:text-blue-600">Cambiar</button>
+              <p className="text-sm font-semibold text-ink-primary">{MECHANIC_LABEL(form.type)}</p>
+              <button onClick={() => { setForm(f => ({ ...f, type: '' })); setIntention(null) }} className="text-sm text-ink-muted hover:text-accent">Cambiar</button>
             </div>
           )}
 
@@ -6189,14 +6194,14 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             />
           ) : (
           <>
-          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizEditorType(form.type) ? 'Título del quiz' : 'Título de la tarea'} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
-          <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizEditorType(form.type) ? 'Título del quiz' : 'Título de la tarea'} className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-accent outline-none" autoFocus />
+          <Suspense fallback={<div className="h-32 bg-surface-2 rounded-xl animate-pulse" />}>
             <RichTextEditor value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={isQuizEditorType(form.type) ? 'Instrucciones, reglas y modo de juego...' : 'Instrucciones y descripción...'} />
           </Suspense>
           {activityTerms.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Período</label>
-              <select value={form.academicTermId} onChange={e => setForm({ ...form, academicTermId: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+              <label className="block text-sm font-medium text-ink-primary mb-1">Período</label>
+              <select value={form.academicTermId} onChange={e => setForm({ ...form, academicTermId: e.target.value })} className="w-full border border-hairline rounded-xl px-4 py-3 text-base">
                 <option value="">Sin período</option>
                 {activityTerms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
@@ -6205,29 +6210,29 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-slate-700">Sección <span className="text-slate-400 font-normal">(opcional)</span></label>
-                <button type="button" onClick={quickCreateSection} className="text-xs font-semibold text-blue-600 hover:text-blue-700">+ Nueva</button>
+                <label className="block text-sm font-medium text-ink-primary">Sección <span className="text-ink-muted font-normal">(opcional)</span></label>
+                <button type="button" onClick={quickCreateSection} className="text-xs font-semibold text-accent hover:text-accent">+ Nueva</button>
               </div>
               <select
                 value={form.sectionId}
                 onChange={e => { if (e.target.value === '__new__') { quickCreateSection(); return } setForm({ ...form, sectionId: e.target.value }) }}
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base"
+                className="w-full border border-hairline rounded-xl px-4 py-3 text-base"
               >
                 <option value="">Sin sección</option>
                 {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                 <option value="__new__">➕ Crear sección nueva…</option>
               </select>
               {sections.length === 0 && (
-                <p className="text-xs text-slate-500 mt-1">Crea una sección sin salir de aquí; no perderás lo que llevas.</p>
+                <p className="text-xs text-ink-muted mt-1">Crea una sección sin salir de aquí; no perderás lo que llevas.</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nota máxima</label>
-              <input type="number" step="0.1" min="0" value={form.maxScore} onChange={e => setForm({ ...form, maxScore: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+              <label className="block text-sm font-medium text-ink-primary mb-1">Nota máxima</label>
+              <input type="number" step="0.1" min="0" value={form.maxScore} onChange={e => setForm({ ...form, maxScore: e.target.value })} className="w-full border border-hairline rounded-xl px-4 py-3 text-base" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha límite</label>
-              <input type="datetime-local" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+              <label className="block text-sm font-medium text-ink-primary mb-1">Fecha límite</label>
+              <input type="datetime-local" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full border border-hairline rounded-xl px-4 py-3 text-base" />
             </div>
           </div>
 
@@ -6235,19 +6240,19 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           {isQuizEditorType(form.type) && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Intentos máximos</label>
-                <input type="number" min="1" max="10" value={form.maxAttempts} onChange={e => setForm({ ...form, maxAttempts: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+                <label className="block text-sm font-medium text-ink-primary mb-1">Intentos máximos</label>
+                <input type="number" min="1" max="10" value={form.maxAttempts} onChange={e => setForm({ ...form, maxAttempts: e.target.value })} className="w-full border border-hairline rounded-xl px-4 py-3 text-base" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tiempo límite (min)</label>
-                <input type="number" min="1" value={form.timeLimitMinutes} onChange={e => setForm({ ...form, timeLimitMinutes: e.target.value })} placeholder="Sin límite" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+                <label className="block text-sm font-medium text-ink-primary mb-1">Tiempo límite (min)</label>
+                <input type="number" min="1" value={form.timeLimitMinutes} onChange={e => setForm({ ...form, timeLimitMinutes: e.target.value })} placeholder="Sin límite" className="w-full border border-hairline rounded-xl px-4 py-3 text-base" />
               </div>
               <div className="flex flex-col gap-2 justify-center">
-                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer">
                   <input type="checkbox" checked={form.shuffleQuestions} onChange={e => setForm({ ...form, shuffleQuestions: e.target.checked })} className="rounded accent-purple-600" />
                   Mezclar preguntas
                 </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer">
                   <input type="checkbox" checked={form.showResults} onChange={e => setForm({ ...form, showResults: e.target.checked })} className="rounded accent-purple-600" />
                   Mostrar resultados
                 </label>
@@ -6256,7 +6261,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           )}
 
           {!isQuizEditorType(form.type) && (
-            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer">
               <input type="checkbox" checked={form.allowLateSubmit} onChange={e => setForm({ ...form, allowLateSubmit: e.target.checked })} className="rounded" />
               Permitir entregas tardías
             </label>
@@ -6264,9 +6269,9 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           {form.type === 'TASK' && (
             <label className="flex items-start gap-2.5 p-3 rounded-xl border border-rose-200 bg-rose-50/60 cursor-pointer">
               <input type="checkbox" checked={form.audioResponse} onChange={e => setForm({ ...form, audioResponse: e.target.checked })} className="rounded accent-rose-600 mt-0.5" />
-              <span className="text-sm text-slate-700">
+              <span className="text-sm text-ink-primary">
                 <span className="font-semibold text-rose-700 flex items-center gap-1.5"><Mic className="w-4 h-4" /> Respuesta en audio</span>
-                <span className="text-slate-500">El estudiante graba (o sube) un audio como entrega. Verá una tarea marcada como “Audio”.</span>
+                <span className="text-ink-muted">El estudiante graba (o sube) un audio como entrega. Verá una tarea marcada como “Audio”.</span>
               </span>
             </label>
           )}
@@ -6274,10 +6279,10 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
             <>
               <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachFile(e.target.files?.[0] || null)} />
               {attachFile && (
-                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-hairline">
-                  <Paperclip className="w-5 h-5 text-slate-400" />
-                  <span className="text-base text-slate-700 flex-1 truncate">{attachFile.name}</span>
-                  <button onClick={() => setAttachFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
+                <div className="flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-xl border border-hairline">
+                  <Paperclip className="w-5 h-5 text-ink-muted" />
+                  <span className="text-base text-ink-primary flex-1 truncate">{attachFile.name}</span>
+                  <button onClick={() => setAttachFile(null)} className="p-1 rounded-lg hover:bg-surface-3"><X className="w-4 h-4" /></button>
                 </div>
               )}
             </>
@@ -6287,15 +6292,15 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
           )}
           <div className="flex items-center justify-between pt-2">
             {!isQuizEditorType(form.type) ? (
-              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-hairline hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink-muted hover:text-accent hover:bg-accent/10 rounded-xl border border-hairline hover:border-accent/50 transition-colors" style={{ minHeight: '44px' }}>
                 <Paperclip className="w-5 h-5" /> Adjuntar archivo
               </button>
             ) : (
               <p className="text-sm text-purple-500">Las preguntas se agregan después de crear el quiz</p>
             )}
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]); setCreatePrereqs([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-              <button onClick={handleCreate} disabled={!form.title.trim() || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
+              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]); setCreatePrereqs([]) }} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={handleCreate} disabled={!form.title.trim() || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-accent hover:bg-accent/90'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type.startsWith('BLOCK_') ? (INTERACTIVE_BLOCK_LABELS[form.type.slice(6)] || 'Actividad') : 'Actividad'}`}
               </button>
@@ -6398,21 +6403,21 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
       {/* Activities list */}
       {activities.length === 0 && !showCreate ? (
         <div className="text-center py-20 bg-surface-1 rounded-2xl border border-hairline">
-          <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-          <p className="text-lg font-medium text-slate-500">{isTeacher ? 'No has creado actividades aún' : 'No hay actividades publicadas'}</p>
-          {isTeacher && <p className="text-base mt-1 text-slate-400">Crea tu primera tarea para que los estudiantes puedan entregar</p>}
+          <ClipboardList className="w-16 h-16 mx-auto text-ink-muted mb-4" />
+          <p className="text-lg font-medium text-ink-muted">{isTeacher ? 'No has creado actividades aún' : 'No hay actividades publicadas'}</p>
+          {isTeacher && <p className="text-base mt-1 text-ink-muted">Crea tu primera tarea para que los estudiantes puedan entregar</p>}
         </div>
       ) : filteredActivities.length === 0 ? (
         <div className="text-center py-12 bg-surface-1 rounded-2xl border border-hairline">
-          <ClipboardList className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-          <p className="text-base font-medium text-slate-500">{workFilter !== 'ALL' || activityTypeFilter !== 'ALL' ? 'Nada en este filtro' : 'Sin actividades'}</p>
-          <button onClick={() => { setActivityTypeFilter('ALL'); setWorkFilter('ALL') }} className="mt-2 text-sm text-blue-600 hover:underline">Ver todas</button>
+          <ClipboardList className="w-12 h-12 mx-auto text-ink-muted mb-3" />
+          <p className="text-base font-medium text-ink-muted">{workFilter !== 'ALL' || activityTypeFilter !== 'ALL' ? 'Nada en este filtro' : 'Sin actividades'}</p>
+          <button onClick={() => { setActivityTypeFilter('ALL'); setWorkFilter('ALL') }} className="mt-2 text-sm text-accent hover:underline">Ver todas</button>
         </div>
       ) : (
         <div className="space-y-3">
           {/* Student summary bar */}
           {studentStats && (
-            <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-hairline">
+            <div className="flex flex-wrap gap-2 p-3 bg-surface-2 rounded-xl border border-hairline">
               {newActivityCount > 0 && (
                 <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
                   🆕 {newActivityCount} nueva{newActivityCount !== 1 ? 's' : ''}
@@ -6443,22 +6448,22 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
               <div key={g.key} className="space-y-3">
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-base">{g.emoji}</span>
-                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{g.label}</h3>
-                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold tabular-nums">{g.list.length}</span>
-                  <span className="text-xs text-slate-400 hidden sm:inline">· {g.hint}</span>
+                  <h3 className="text-sm font-bold text-ink-primary uppercase tracking-wide">{g.label}</h3>
+                  <span className="text-xs px-2 py-0.5 bg-surface-2 text-ink-muted rounded-full font-semibold tabular-nums">{g.list.length}</span>
+                  <span className="text-xs text-ink-muted hidden sm:inline">· {g.hint}</span>
                 </div>
                 {g.list.map(renderActivityCard)}
               </div>
             ))
           ) : teacherSectionGroups ? (
             teacherSectionGroups.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-10">No hay actividades en este período todavía. Crea una con “+ Nueva Actividad”.</p>
+              <p className="text-sm text-ink-muted text-center py-10">No hay actividades en este período todavía. Crea una con “+ Nueva Actividad”.</p>
             ) : teacherSectionGroups.map(g => (
               <div key={g.key} className="space-y-3">
                 <div className="flex items-center gap-2 pt-1">
-                  <FolderOpen className="w-4 h-4 text-slate-400 shrink-0" />
-                  <h3 className="text-sm font-bold text-slate-700">{g.title}</h3>
-                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold tabular-nums">{g.list.length}</span>
+                  <FolderOpen className="w-4 h-4 text-ink-muted shrink-0" />
+                  <h3 className="text-sm font-bold text-ink-primary">{g.title}</h3>
+                  <span className="text-xs px-2 py-0.5 bg-surface-2 text-ink-muted rounded-full font-semibold tabular-nums">{g.list.length}</span>
                 </div>
                 {g.list.map(renderActivityCard)}
               </div>
@@ -6474,27 +6479,27 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-1 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
             <div className="p-5 border-b border-hairline flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-slate-800">Duplicar actividad</h3>
-              <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <h3 className="font-bold text-ink-primary">Duplicar actividad</h3>
+              <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-surface-2 rounded-lg">
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
             <div className="p-5 overflow-y-auto flex-1">
-              <p className="text-sm text-slate-600 mb-4">
-                Duplicando: <span className="font-medium text-slate-800">{duplicateActivityModal.activityTitle}</span>
+              <p className="text-sm text-ink-secondary mb-4">
+                Duplicando: <span className="font-medium text-ink-primary">{duplicateActivityModal.activityTitle}</span>
               </p>
 
               {/* Tabs: Same classroom / Other classroom */}
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => { setDuplicateTargetType('same'); setSelectedTargetClassroom(null) }}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'same' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'same' ? 'bg-accent/10 text-accent' : 'bg-surface-2 text-ink-secondary hover:bg-surface-3'}`}
                 >
                   Esta aula
                 </button>
                 <button
                   onClick={() => setDuplicateTargetType('other')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'other' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'other' ? 'bg-violet-100 text-violet-700' : 'bg-surface-2 text-ink-secondary hover:bg-surface-3'}`}
                 >
                   Otra aula
                 </button>
@@ -6502,7 +6507,7 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
 
               {duplicateTargetType === 'same' ? (
                 <>
-                  <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                  <p className="text-xs text-ink-muted mb-3">Selecciona la sección destino:</p>
                   <SectionPicker
                     sections={sections}
                     busy={duplicatingActivity}
@@ -6514,12 +6519,12 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                 <>
                   {!selectedTargetClassroom ? (
                     <>
-                      <p className="text-xs text-slate-500 mb-3">Selecciona el aula destino:</p>
+                      <p className="text-xs text-ink-muted mb-3">Selecciona el aula destino:</p>
                       <ClassroomPicker
                         classrooms={availableClassroomsForDup}
                         loading={loadingClassroomsForDup}
                         onPick={c => handleSelectTargetClassroom(c)}
-                        trailing={() => <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />}
+                        trailing={() => <ChevronRight className="w-4 h-4 text-ink-muted shrink-0 mt-1" />}
                       />
                     </>
                   ) : (
@@ -6532,11 +6537,11 @@ TEMA / INSTRUCCIONES: [ESCRIBE AQUÍ el tema, el grado, la cantidad y el tipo de
                           {selectedTargetClassroom.title?.charAt(0) || 'A'}
                         </div>
                         <div>
-                          <p className="font-medium text-slate-800">{selectedTargetClassroom.title}</p>
-                          <p className="text-xs text-slate-500">{selectedTargetClassroom.groupName} • {selectedTargetClassroom.subjectName}</p>
+                          <p className="font-medium text-ink-primary">{selectedTargetClassroom.title}</p>
+                          <p className="text-xs text-ink-muted">{selectedTargetClassroom.groupName} • {selectedTargetClassroom.subjectName}</p>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                      <p className="text-xs text-ink-muted mb-3">Selecciona la sección destino:</p>
                       <SectionPicker
                         sections={targetClassroomSections}
                         loading={loadingTargetSections}
@@ -6667,32 +6672,32 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   const formatDate = (d: string) => formatBogota(d, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   const currentUserId = user?.id
 
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
 
   // ── THREAD DETAIL VIEW ──
   if (selectedPost) {
     const post = selectedPost
     return (
       <div className="space-y-5">
-        <button onClick={() => { setSelectedPost(null); setReplyToId(null); setReplyContent('') }} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
+        <button onClick={() => { setSelectedPost(null); setReplyToId(null); setReplyContent('') }} className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-accent">
           <ChevronLeft className="w-4 h-4" /> Volver al foro
         </button>
 
         {threadLoading ? (
-          <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+          <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
         ) : (
           <>
             {/* Main post */}
             <div className={`bg-surface-1 rounded-2xl border-2 p-6 overflow-hidden ${post.isPinned ? 'border-yellow-300' : 'border-hairline'}`}>
               {editingPostId === post.id ? (
                 <div className="space-y-3">
-                  <input value={editPostForm.title} onChange={e => setEditPostForm(f => ({ ...f, title: e.target.value }))} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base font-semibold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Título del tema" />
-                  <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+                  <input value={editPostForm.title} onChange={e => setEditPostForm(f => ({ ...f, title: e.target.value }))} className="w-full border border-hairline rounded-xl px-4 py-2.5 text-base font-semibold focus:ring-2 focus:ring-accent outline-none" placeholder="Título del tema" />
+                  <Suspense fallback={<div className="h-32 bg-surface-2 rounded-xl animate-pulse" />}>
                     <RichTextEditor value={editPostForm.content} onChange={v => setEditPostForm(f => ({ ...f, content: v }))} placeholder="Contenido..." />
                   </Suspense>
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => setEditingPostId(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-                    <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">Guardar</button>
+                    <button onClick={() => setEditingPostId(null)} className="px-4 py-2 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl">Cancelar</button>
+                    <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-5 py-2 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50">Guardar</button>
                   </div>
                 </div>
               ) : (
@@ -6700,17 +6705,17 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 mb-2">
                       {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
-                      <h2 className="text-xl font-bold text-slate-800">{post.title || 'Sin título'}</h2>
+                      <h2 className="text-xl font-bold text-ink-primary">{post.title || 'Sin título'}</h2>
                     </div>
-                    <RichContent html={post.content} className="text-base text-slate-600 break-words overflow-hidden" />
-                    <p className="text-sm text-slate-400 mt-4">
+                    <RichContent html={post.content} className="text-base text-ink-secondary break-words overflow-hidden" />
+                    <p className="text-sm text-ink-muted mt-4">
                       {post.author.firstName} {post.author.lastName} · {formatDate(post.createdAt)}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {isTeacher && (
-                      <button onClick={() => handlePin(post.id)} className="p-2 rounded-xl hover:bg-slate-100" title={post.isPinned ? 'Desfijar' : 'Fijar'}>
-                        {post.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
+                      <button onClick={() => handlePin(post.id)} className="p-2 rounded-xl hover:bg-surface-2" title={post.isPinned ? 'Desfijar' : 'Fijar'}>
+                        {post.isPinned ? <PinOff className="w-5 h-5 text-ink-muted" /> : <Pin className="w-5 h-5 text-ink-muted" />}
                       </button>
                     )}
                     {(isTeacher || post.authorId === currentUserId) && (
@@ -6730,28 +6735,28 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
 
             {/* Replies */}
             <div className="space-y-3">
-              <h3 className="text-base font-bold text-slate-700">{post.replies?.length || 0} Respuesta(s)</h3>
+              <h3 className="text-base font-bold text-ink-primary">{post.replies?.length || 0} Respuesta(s)</h3>
               {post.replies?.map(reply => (
                 <div key={reply.id} className="bg-surface-1 rounded-2xl border border-hairline p-5 ml-4 overflow-hidden">
                   {editingPostId === reply.id ? (
                     <div className="space-y-3">
-                      <Suspense fallback={<div className="h-24 bg-slate-50 rounded-xl animate-pulse" />}>
+                      <Suspense fallback={<div className="h-24 bg-surface-2 rounded-xl animate-pulse" />}>
                         <RichTextEditor value={editPostForm.content} onChange={v => setEditPostForm(f => ({ ...f, content: v }))} placeholder="Contenido..." minimal />
                       </Suspense>
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => setEditingPostId(null)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                        <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50">Guardar</button>
+                        <button onClick={() => setEditingPostId(null)} className="px-3 py-1.5 text-xs text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
+                        <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-4 py-1.5 bg-accent text-white rounded-lg text-xs font-semibold hover:bg-accent/90 disabled:opacity-50">Guardar</button>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <RichContent html={reply.content} className="text-base text-slate-700 break-words overflow-hidden" />
+                      <RichContent html={reply.content} className="text-base text-ink-primary break-words overflow-hidden" />
                       <div className="flex items-center justify-between mt-3">
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-ink-muted">
                           {reply.author.firstName} {reply.author.lastName} · {formatDate(reply.createdAt)}
                         </p>
                         <div className="flex gap-1">
-                          <button onClick={() => setReplyToId(reply.id)} className="text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50">Responder</button>
+                          <button onClick={() => setReplyToId(reply.id)} className="text-xs text-accent hover:text-accent px-2 py-1 rounded hover:bg-accent/10">Responder</button>
                           {(isTeacher || reply.authorId === currentUserId) && (
                             <button onClick={() => startEditPost(reply)} className="p-1 rounded hover:bg-amber-50" title="Editar"><Pencil className="w-4 h-4 text-amber-400" /></button>
                           )}
@@ -6769,19 +6774,19 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                         <div key={nested.id} className="py-2">
                           {editingPostId === nested.id ? (
                             <div className="space-y-2">
-                              <Suspense fallback={<div className="h-20 bg-slate-50 rounded-xl animate-pulse" />}>
+                              <Suspense fallback={<div className="h-20 bg-surface-2 rounded-xl animate-pulse" />}>
                                 <RichTextEditor value={editPostForm.content} onChange={v => setEditPostForm(f => ({ ...f, content: v }))} placeholder="Contenido..." minimal />
                               </Suspense>
                               <div className="flex justify-end gap-2">
-                                <button onClick={() => setEditingPostId(null)} className="px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                                <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50">Guardar</button>
+                                <button onClick={() => setEditingPostId(null)} className="px-3 py-1 text-xs text-ink-secondary hover:bg-surface-2 rounded-lg">Cancelar</button>
+                                <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-3 py-1 bg-accent text-white rounded-lg text-xs font-semibold hover:bg-accent/90 disabled:opacity-50">Guardar</button>
                               </div>
                             </div>
                           ) : (
                             <>
-                              <RichContent html={nested.content} className="text-sm text-slate-700 break-words overflow-hidden" />
+                              <RichContent html={nested.content} className="text-sm text-ink-primary break-words overflow-hidden" />
                               <div className="flex items-center justify-between mt-1">
-                                <p className="text-xs text-slate-400">{nested.author.firstName} {nested.author.lastName} · {formatDate(nested.createdAt)}</p>
+                                <p className="text-xs text-ink-muted">{nested.author.firstName} {nested.author.lastName} · {formatDate(nested.createdAt)}</p>
                                 <div className="flex gap-1">
                                   {(isTeacher || nested.authorId === currentUserId) && (
                                     <button onClick={() => startEditPost(nested)} className="p-0.5 rounded hover:bg-amber-50" title="Editar"><Pencil className="w-3.5 h-3.5 text-amber-400" /></button>
@@ -6804,16 +6809,16 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
             {/* Reply form */}
             <div className="bg-surface-1 rounded-2xl border border-hairline p-5 space-y-3">
               {replyToId && (
-                <div className="flex items-center gap-2 text-sm text-blue-600">
+                <div className="flex items-center gap-2 text-sm text-accent">
                   <span>Respondiendo a un comentario</span>
-                  <button onClick={() => setReplyToId(null)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setReplyToId(null)} className="text-ink-muted hover:text-ink-primary"><X className="w-4 h-4" /></button>
                 </div>
               )}
-              <Suspense fallback={<div className="h-24 bg-slate-50 rounded-xl animate-pulse" />}>
+              <Suspense fallback={<div className="h-24 bg-surface-2 rounded-xl animate-pulse" />}>
                 <RichTextEditor value={replyContent} onChange={setReplyContent} placeholder="Escribe tu respuesta..." minimal />
               </Suspense>
               <div className="flex justify-end">
-                <button onClick={handleReply} disabled={isRichTextEmpty(replyContent) || replying} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                <button onClick={handleReply} disabled={isRichTextEmpty(replyContent) || replying} className="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                   {replying && <Loader2 className="w-4 h-4 animate-spin" />}
                   {replying ? 'Enviando...' : 'Responder'}
                 </button>
@@ -6829,23 +6834,23 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800">Foro de Discusión</h2>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+        <h2 className="text-xl font-bold text-ink-primary">Foro de Discusión</h2>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 transition-colors" style={{ minHeight: '44px' }}>
           <Plus className="w-5 h-5" /> Nuevo Tema
         </button>
       </div>
 
       {/* Create form */}
       {showCreate && (
-        <div className="bg-surface-1 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-bold text-slate-800">Nuevo Tema de Discusión</h3>
-          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título del tema" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
-          <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+        <div className="bg-surface-1 border-2 border-accent/30 rounded-2xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-ink-primary">Nuevo Tema de Discusión</h3>
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título del tema" className="w-full border border-hairline rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-accent outline-none" autoFocus />
+          <Suspense fallback={<div className="h-32 bg-surface-2 rounded-xl animate-pulse" />}>
             <RichTextEditor value={form.content} onChange={v => setForm({ ...form, content: v })} placeholder="Describe el tema de discusión..." />
           </Suspense>
           <div className="flex justify-end gap-3">
-            <button onClick={() => setShowCreate(false)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-            <button onClick={handleCreate} disabled={!form.title.trim() || isRichTextEmpty(form.content) || creating} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+            <button onClick={() => setShowCreate(false)} className="px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-2 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+            <button onClick={handleCreate} disabled={!form.title.trim() || isRichTextEmpty(form.content) || creating} className="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
               {creating && <Loader2 className="w-4 h-4 animate-spin" />}
               {creating ? 'Publicando...' : 'Publicar Tema'}
             </button>
@@ -6856,27 +6861,27 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
       {/* Posts list */}
       {posts.length === 0 && !showCreate ? (
         <div className="text-center py-20 bg-surface-1 rounded-2xl border border-hairline">
-          <MessageSquare className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-          <p className="text-lg font-medium text-slate-500">No hay temas de discusión</p>
-          <p className="text-base mt-1 text-slate-400">Crea el primer tema para iniciar la conversación</p>
+          <MessageSquare className="w-16 h-16 mx-auto text-ink-muted mb-4" />
+          <p className="text-lg font-medium text-ink-muted">No hay temas de discusión</p>
+          <p className="text-base mt-1 text-ink-muted">Crea el primer tema para iniciar la conversación</p>
         </div>
       ) : (
         <div className="space-y-3">
           {posts.map(post => (
-            <button key={post.id} onClick={() => openThread(post)} className="w-full text-left bg-surface-1 rounded-2xl border-2 border-hairline hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
+            <button key={post.id} onClick={() => openThread(post)} className="w-full text-left bg-surface-1 rounded-2xl border-2 border-hairline hover:border-accent/50 p-5 transition-all hover:shadow-sm group">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/10 to-accent/20 flex items-center justify-center text-sm font-bold text-accent shrink-0">
                   {post.author.firstName?.[0] || ''}{post.author.lastName?.[0] || ''}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
-                    <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{post.title || 'Sin título'}</h3>
+                    <h3 className="text-base font-bold text-ink-primary group-hover:text-accent">{post.title || 'Sin título'}</h3>
                   </div>
                   {/* Vista previa en texto plano: `content` es el HTML del editor, y pintado como
                       texto salían las etiquetas y los `&nbsp;` en la lista del foro. */}
-                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">{textoPlanoDeHtml(post.content)}</p>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+                  <p className="text-sm text-ink-muted mt-1 line-clamp-2">{textoPlanoDeHtml(post.content)}</p>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-ink-muted">
                     <span>{post.author.firstName} {post.author.lastName}</span>
                     <span>{formatDate(post.createdAt)}</span>
                     <span className="flex items-center gap-1">
@@ -6884,7 +6889,7 @@ export function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+                <ChevronRight className="w-5 h-5 text-ink-muted group-hover:text-accent shrink-0 mt-1" />
               </div>
             </button>
           ))}
@@ -6919,8 +6924,8 @@ function GradesTab({ classroomId }: { classroomId: string }) {
 
   const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', LIVE_QUIZ: 'Live Quiz', HOME_QUIZ: 'Quiz en Casa', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
   const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-    DRAFT: { label: 'Borrador', color: 'bg-slate-100 text-slate-600' },
-    SUBMITTED: { label: 'Entregado', color: 'bg-blue-100 text-blue-700' },
+    DRAFT: { label: 'Borrador', color: 'bg-surface-2 text-ink-secondary' },
+    SUBMITTED: { label: 'Entregado', color: 'bg-accent/10 text-accent' },
     GRADED: { label: 'Calificado', color: 'bg-green-100 text-green-700' },
     RETURNED: { label: 'Devuelto', color: 'bg-amber-100 text-amber-700' },
     LATE: { label: 'Tardío', color: 'bg-red-100 text-red-700' },
@@ -6930,7 +6935,7 @@ function GradesTab({ classroomId }: { classroomId: string }) {
   const formatDate = (d?: string) => d ? formatBogota(d, { day: 'numeric', month: 'short' }) : '—'
 
   if (loading) {
-    return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+    return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
   }
 
   const totalActivities = submissions.length + pending.length
@@ -6941,86 +6946,86 @@ function GradesTab({ classroomId }: { classroomId: string }) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-800">Mis Calificaciones</h2>
+      <h2 className="text-xl font-bold text-ink-primary">Mis Calificaciones</h2>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-surface-1 rounded-xl border border-hairline p-4">
-          <p className="text-2xl font-bold text-slate-800">{totalActivities}</p>
-          <p className="text-sm text-slate-500">Actividades</p>
+          <p className="text-2xl font-bold text-ink-primary">{totalActivities}</p>
+          <p className="text-sm text-ink-muted">Actividades</p>
         </div>
         <div className="bg-surface-1 rounded-xl border border-hairline p-4">
           <p className="text-2xl font-bold text-green-600">{gradedCount}</p>
-          <p className="text-sm text-slate-500">Calificadas</p>
+          <p className="text-sm text-ink-muted">Calificadas</p>
         </div>
         <div className="bg-surface-1 rounded-xl border border-hairline p-4">
           <p className="text-2xl font-bold text-amber-600">{pending.length}</p>
-          <p className="text-sm text-slate-500">Pendientes</p>
+          <p className="text-sm text-ink-muted">Pendientes</p>
         </div>
         <div className="bg-surface-1 rounded-xl border border-hairline p-4">
-          <p className="text-2xl font-bold text-blue-600">{avgPercent != null ? `${avgPercent}%` : '—'}</p>
-          <p className="text-sm text-slate-500">Promedio</p>
+          <p className="text-2xl font-bold text-accent">{avgPercent != null ? `${avgPercent}%` : '—'}</p>
+          <p className="text-sm text-ink-muted">Promedio</p>
         </div>
       </div>
 
       {totalActivities === 0 ? (
         <div className="bg-surface-1 rounded-2xl border border-hairline p-8 text-center">
-          <BarChart3 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-          <p className="text-lg font-medium text-slate-500">No hay actividades publicadas aún</p>
+          <BarChart3 className="w-16 h-16 mx-auto text-ink-muted mb-4" />
+          <p className="text-lg font-medium text-ink-muted">No hay actividades publicadas aún</p>
         </div>
       ) : (
         <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-hairline bg-slate-50">
-                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Actividad</th>
-                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Tipo</th>
-                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Fecha límite</th>
-                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Estado</th>
-                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Nota</th>
+              <tr className="border-b border-hairline bg-surface-2">
+                <th className="text-left px-6 py-3 text-sm font-semibold text-ink-secondary">Actividad</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-ink-secondary">Tipo</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-ink-secondary">Fecha límite</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-ink-secondary">Estado</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-ink-secondary">Nota</th>
               </tr>
             </thead>
             <tbody>
               {submissions.map(sub => {
-                const st = STATUS_LABELS[sub.status] || { label: sub.status, color: 'bg-slate-100 text-slate-600' }
+                const st = STATUS_LABELS[sub.status] || { label: sub.status, color: 'bg-surface-2 text-ink-secondary' }
                 const isGraded = sub.status === 'GRADED' || sub.status === 'AUTO_GRADED'
                 return (
-                  <tr key={sub.id} className="border-b border-slate-50 hover:bg-slate-25">
+                  <tr key={sub.id} className="border-b border-hairline hover:bg-surface-2">
                     <td className="px-6 py-3">
-                      <p className="text-sm font-medium text-slate-800">{sub.activity?.title}</p>
-                      {sub.activity?.section?.title && <p className="text-xs text-slate-400">{sub.activity.section.title}</p>}
+                      <p className="text-sm font-medium text-ink-primary">{sub.activity?.title}</p>
+                      {sub.activity?.section?.title && <p className="text-xs text-ink-muted">{sub.activity.section.title}</p>}
                     </td>
                     <td className="px-6 py-3">
-                      <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">{TYPE_LABELS[sub.activity?.type] || sub.activity?.type}</span>
+                      <span className="text-xs px-2 py-1 bg-surface-2 text-ink-secondary rounded">{TYPE_LABELS[sub.activity?.type] || sub.activity?.type}</span>
                     </td>
-                    <td className="px-6 py-3 text-sm text-slate-500">{formatDate(sub.activity?.dueDate)}</td>
+                    <td className="px-6 py-3 text-sm text-ink-muted">{formatDate(sub.activity?.dueDate)}</td>
                     <td className="px-6 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${st.color}`}>{st.label}</span>
                     </td>
                     <td className="px-6 py-3">
                       {isGraded ? (
-                        <span className="text-sm font-bold text-slate-800">{Number(sub.score).toFixed(1)} / {Number(sub.activity?.maxScore || 5).toFixed(1)}</span>
+                        <span className="text-sm font-bold text-ink-primary">{Number(sub.score).toFixed(1)} / {Number(sub.activity?.maxScore || 5).toFixed(1)}</span>
                       ) : (
-                        <span className="text-sm text-slate-400">—</span>
+                        <span className="text-sm text-ink-muted">—</span>
                       )}
                     </td>
                   </tr>
                 )
               })}
               {pending.map(act => (
-                <tr key={act.id} className="border-b border-slate-50 bg-amber-25">
+                <tr key={act.id} className="border-b border-hairline bg-amber-25">
                   <td className="px-6 py-3">
-                    <p className="text-sm font-medium text-slate-800">{act.title}</p>
-                    {act.section?.title && <p className="text-xs text-slate-400">{act.section.title}</p>}
+                    <p className="text-sm font-medium text-ink-primary">{act.title}</p>
+                    {act.section?.title && <p className="text-xs text-ink-muted">{act.section.title}</p>}
                   </td>
                   <td className="px-6 py-3">
-                    <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">{TYPE_LABELS[act.type] || act.type}</span>
+                    <span className="text-xs px-2 py-1 bg-surface-2 text-ink-secondary rounded">{TYPE_LABELS[act.type] || act.type}</span>
                   </td>
-                  <td className="px-6 py-3 text-sm text-slate-500">{formatDate(act.dueDate)}</td>
+                  <td className="px-6 py-3 text-sm text-ink-muted">{formatDate(act.dueDate)}</td>
                   <td className="px-6 py-3">
                     <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-100 text-amber-700">Pendiente</span>
                   </td>
-                  <td className="px-6 py-3 text-sm text-slate-400">—</td>
+                  <td className="px-6 py-3 text-sm text-ink-muted">—</td>
                 </tr>
               ))}
             </tbody>
@@ -7051,7 +7056,7 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
     load()
   }, [classroomId])
 
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
 
   const getStudentName = (s: any) => {
     const student = s.student || {}
@@ -7075,30 +7080,30 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2.5">
+        <h2 className="text-xl font-bold text-ink-primary flex items-center gap-2.5">
           Estudiantes del grupo
-          <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">{students.length}</span>
+          <span className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-full font-semibold">{students.length}</span>
         </h2>
         {students.length > 5 && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-muted" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar estudiante..."
-              className="pl-10 pr-4 py-2.5 text-base border border-hairline rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-64"
+              className="pl-10 pr-4 py-2.5 text-base border border-hairline rounded-xl focus:ring-2 focus:ring-accent outline-none w-64"
             />
           </div>
         )}
       </div>
 
       <div className="bg-surface-1 rounded-2xl border border-hairline overflow-hidden">
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-hairline">
           {filtered.length === 0 && students.length > 0 && (
-            <div className="text-center py-12 text-slate-400 text-base">No se encontraron estudiantes</div>
+            <div className="text-center py-12 text-ink-muted text-base">No se encontraron estudiantes</div>
           )}
           {filtered.length === 0 && students.length === 0 && (
-            <div className="text-center py-16 text-slate-400 text-base">No hay estudiantes matriculados en este grupo</div>
+            <div className="text-center py-16 text-ink-muted text-base">No hay estudiantes matriculados en este grupo</div>
           )}
           {filtered.map((s: any, i: number) => {
             const { firstName, lastName, secondLastName, email, photo } = getStudentName(s)
@@ -7109,18 +7114,18 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
             const initials = `${firstName[0] || ''}${lastName[0] || ''}`
 
             return (
-              <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
-                <span className="text-sm text-slate-400 w-8 text-right font-mono">{i + 1}</span>
+              <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-surface-2 transition-colors">
+                <span className="text-sm text-ink-muted w-8 text-right font-mono">{i + 1}</span>
                 {photo ? (
                   <img src={photo} alt={displayName} className="w-10 h-10 rounded-full object-cover border border-hairline shrink-0" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/10 to-accent/20 flex items-center justify-center text-sm font-bold text-accent shrink-0">
                     {initials || '?'}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-slate-800">{displayName}</p>
-                  {email && <p className="text-sm text-slate-400 truncate">{email}</p>}
+                  <p className="text-base font-medium text-ink-primary">{displayName}</p>
+                  {email && <p className="text-sm text-ink-muted truncate">{email}</p>}
                 </div>
                 <span className="text-sm bg-green-50 text-green-600 px-3 py-1 rounded-full shrink-0 font-medium">Activo</span>
               </div>

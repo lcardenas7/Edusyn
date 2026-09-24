@@ -5,8 +5,9 @@
  *  - P1-7  No había orientación persistente: ni migas de pan, ni período visible para el
  *          docente, ni forma de saber dónde estás. Ahora el contexto va fijo arriba.
  *  - F1    La barra de pestañas era `sticky top-0`, pero el header móvil de `Layout` es
- *          `fixed` de 56 px: al hacer scroll la barra se metía DEBAJO del header y desaparecía.
- *          Aquí el encabezado es `top-14 lg:top-0`, que es exactamente el alto de ese header.
+ *          `fixed`: al hacer scroll la barra se metía DEBAJO del header y desaparecía. Correrla
+ *          hacia abajo tapaba el problema a medias —el header medía 65 px, no 56—. Ahora, dentro
+ *          del aula, ese header no está: el encabezado del aula es el único y va en `top-0`.
  *  - F4    Ocho pestañas con scroll horizontal y la barra oculta: en móvil no había forma de
  *          saber que había más destinos a la derecha. Ahora hay barra inferior fija.
  *  - C2    El período no tenía opción "Todos", así que parte del aula era invisible.
@@ -17,13 +18,17 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { ChevronLeft, Ellipsis, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { SubjectMark, subjectIdentity } from '../visual/SubjectMark'
-import { hexARgb, resolverAcento } from '../model/tema'
+import { acentoLegible, colorDeEncabezado, hexARgb, resolverAcento } from '../model/tema'
 import { DialogoTema, IconoTema } from './SelectorTema'
 import { BotonPeriodo, DialogoPeriodo } from './SelectorPeriodo'
 import { ProveedorAcento } from './AulaTema'
 import { destinosDe, vistaLabel, type Vista } from './destinations'
+import { Hoja } from './Hoja'
+import { BotonAvisos, HojaAvisos } from './Avisos'
+import { useAvisos } from '../data/useAvisos'
+import type { Aviso } from '../model/avisos'
 import { useRail } from './useRail'
 import { useTemaEstudiante } from './useTemaEstudiante'
 
@@ -62,6 +67,11 @@ export interface AulaShellProps {
    * menú global se esconde: sin esta puerta, el docente quedaría encerrado.
    */
   onSalirDelModulo?: () => void
+  /**
+   * Llevar a una ruta de la aplicación. Lo usan los avisos: el de una actividad nueva abre esa
+   * actividad, que puede estar en OTRA aula distinta de esta.
+   */
+  onIrA?: (ruta: string) => void
   children: ReactNode
 }
 
@@ -77,12 +87,15 @@ export function AulaShell({
   badges = {},
   aviso,
   onSalirDelModulo,
+  onIrA,
   children,
 }: AulaShellProps) {
   const { expandido, alternar } = useRail()
   const [masAbierto, setMasAbierto] = useState(false)
   const [temaAbierto, setTemaAbierto] = useState(false)
   const [periodoAbierto, setPeriodoAbierto] = useState(false)
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false)
+  const { avisos, sinLeer, cargando: cargandoAvisos, marcarLeido } = useAvisos()
   // Solo el estudiante repinta su vista: el color del aula es la identidad que el docente eligió
   // para su curso, y él sí debe verla como la dejó.
   const esEstudiante = role === 'estudiante'
@@ -111,13 +124,48 @@ export function AulaShell({
   const secundarios = destinos.filter((d) => !d.principal)
   const identidad = subjectIdentity(aula.asignatura)
   const colorAula = aula.color?.trim() || identidad.hue.ink
-  // Lo que de verdad se pinta: el tema del estudiante si eligió uno, si no el del aula.
-  const acento = resolverAcento(tema, colorAula)
+  // Lo que de verdad se pinta: el tema del estudiante si eligió uno, si no el del aula. Se
+  // oscurece lo justo si hiciera falta: este color va debajo de texto blanco en botones y
+  // chips —también en las herramientas embebidas— y el docente puede haber elegido un amarillo.
+  const acento = acentoLegible(resolverAcento(tema, colorAula))
   const hueDelAula = { ink: acento, wash: `${acento}1A`, deep: acento }
+
+  /*
+   * La barra de estado del teléfono toma el color del aula mientras estás dentro, y lo devuelve
+   * al salir. Sin esto, sobre el encabezado teñido queda la franja del sistema en otro color y
+   * se nota que esto es una página abierta en un navegador, no una aplicación.
+   */
+  useEffect(() => {
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const propia = !meta
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.name = 'theme-color'
+      document.head.appendChild(meta)
+    }
+    const anterior = meta.content
+    meta.content = colorDeEncabezado(acento)
+    return () => {
+      if (propia) meta?.remove()
+      else if (meta) meta.content = anterior
+    }
+  }, [acento])
 
   const irA = (v: Vista) => {
     onNavegar(v)
     setMasAbierto(false)
+  }
+
+  /*
+   * Tocar un aviso lo da por leído y lleva a donde apunta. Ese "lleva" es el punto: antes el
+   * aviso solo decía que había algo nuevo y tocaba entrar al aula a buscarlo.
+   */
+  const abrirAviso = (a: Aviso) => {
+    marcarLeido(a.messageId)
+    if (!a.enlace) return
+    setAvisosAbiertos(false)
+    if (onIrA) onIrA(a.enlace)
+    else window.location.assign(a.enlace)
   }
 
   return (
@@ -125,7 +173,7 @@ export function AulaShell({
     // decorar nada más. Se hace redefiniendo el token en este contenedor, no con CSS global,
     // para que no se filtre al resto de la aplicación.
     <div
-      className="min-h-screen bg-accent/[0.045]"
+      className="min-h-[100dvh] bg-accent/[0.045]"
       style={{ ['--skill-accent' as string]: hexARgb(acento) }}
     >
       {/* Ocupa todo el ancho: centrado a 1400 px dejaba una franja vacía a la izquierda del riel
@@ -237,10 +285,15 @@ export function AulaShell({
         {/* ─── Contenido ─────────────────────────────────────────────────── */}
         <div className="min-w-0 flex-1">
           {/*
-            `top-14 lg:top-0` es el arreglo del hallazgo F1: en móvil, `Layout` tiene un header
-            fijo de 56 px, así que un `top-0` metería esta barra debajo de él.
+            `top-0` también en móvil: dentro del aula el header de la plataforma se esconde
+            (regla `data-aula-inmersiva` en index.css), así que este encabezado es el de arriba
+            del todo. El relleno superior es la muesca del teléfono, que en el resto de la
+            aplicación cubre el header y aquí cubre esta barra.
           */}
-          <header className="sticky top-14 z-20 border-b border-accent/15 bg-accent/[0.07] backdrop-blur lg:top-0">
+          <header
+            className="sticky top-0 z-20 border-b border-accent/15 bg-accent/[0.07] backdrop-blur"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
             {/* Una sola fila, también en móvil. Envolviendo, el selector de período se llevaba
                 una línea entera del encabezado fijo y le comía altura útil a la pantalla. */}
             <div className="flex flex-nowrap items-center gap-x-1.5 px-3 py-2 sm:gap-x-2 sm:px-4">
@@ -273,6 +326,8 @@ export function AulaShell({
                 </p>
               </nav>
 
+              <BotonAvisos sinLeer={sinLeer} onAbrir={() => setAvisosAbiertos(true)} />
+
               {periodos.length > 0 && (
                 <BotonPeriodo valor={periodo} periodos={periodos} onAbrir={() => setPeriodoAbierto(true)} />
               )}
@@ -293,7 +348,7 @@ export function AulaShell({
       {/* ─── Barra inferior (móvil) ────────────────────────────────────────── */}
       <nav
         aria-label="Secciones del aula"
-        className="fixed right-0 bottom-0 left-0 z-30 border-t border-accent/15 bg-surface-1/95 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed right-0 bottom-0 left-0 z-30 border-t border-accent/15 bg-surface-1/95 backdrop-blur pb-[env(safe-area-inset-bottom)] select-none lg:hidden"
       >
         <div className="flex">
           {principales.map((d) => {
@@ -306,7 +361,7 @@ export function AulaShell({
                 type="button"
                 onClick={() => irA(d.id)}
                 aria-current={activo ? 'page' : undefined}
-                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-[color,transform] active:scale-95 motion-reduce:active:scale-100 ${
                   activo ? 'text-accent' : 'text-ink-muted'
                 }`}
                 style={{ minHeight: 56 }}
@@ -325,7 +380,7 @@ export function AulaShell({
             type="button"
             onClick={() => setMasAbierto(true)}
             aria-expanded={masAbierto}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-[color,transform] active:scale-95 motion-reduce:active:scale-100 ${
               secundarios.some((d) => d.id === vista) ? 'text-accent' : 'text-ink-muted'
             }`}
             style={{ minHeight: 56 }}
@@ -336,27 +391,12 @@ export function AulaShell({
         </div>
       </nav>
 
-      {/* Hoja de destinos secundarios */}
+      {/* Hoja de destinos secundarios.
+          Usa `Hoja` como el resto de diálogos del aula: así cierra con Escape, deja quieto el
+          fondo y su botón de cerrar es del tamaño de un dedo. Antes traía su propio marcado y
+          se le olvidaban las tres cosas. */}
       {masAbierto && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Más secciones">
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={() => setMasAbierto(false)}
-            className="absolute inset-0 bg-ink-primary/40"
-          />
-          <div className="absolute right-0 bottom-0 left-0 rounded-t-modal border-t border-hairline bg-surface-1 pb-[env(safe-area-inset-bottom)]">
-            <div className="flex items-center justify-between px-4 py-3">
-              <p className="text-body-base font-semibold text-ink-primary">Más secciones</p>
-              <button
-                type="button"
-                onClick={() => setMasAbierto(false)}
-                aria-label="Cerrar"
-                className="rounded-lg p-2 text-ink-muted hover:bg-surface-2"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
+        <Hoja titulo="Más secciones" onCerrar={() => setMasAbierto(false)}>
             <div className="px-2 pb-3">
               {secundarios.map((d) => {
                 const Icon = d.icon
@@ -417,8 +457,16 @@ export function AulaShell({
                 </button>
               )}
             </div>
-          </div>
-        </div>
+        </Hoja>
+      )}
+
+      {avisosAbiertos && (
+        <HojaAvisos
+          avisos={avisos}
+          cargando={cargandoAvisos}
+          onAbrirAviso={abrirAviso}
+          onCerrar={() => setAvisosAbiertos(false)}
+        />
       )}
 
       {periodoAbierto && (

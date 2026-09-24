@@ -30,61 +30,10 @@ export class ClassroomController {
   // CLASSROOMS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  @Get()
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
-  async list(@Request() req: any, @Query('role') role?: string) {
-    const { userId, institutionId } = await this.resolveCtx(req);
-    if (role === 'student') {
-      return this.service.listForStudent(userId, institutionId);
-    }
-    return this.service.listForTeacher(userId, institutionId);
-  }
-
-  @Get('available-assignments')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async getAvailableAssignments(@Request() req: any) {
-    const { userId, institutionId } = await this.resolveCtx(req);
-    return this.service.getAvailableAssignments(userId, institutionId);
-  }
-
-  @Post()
-  @Roles('DOCENTE', 'COORDINADOR')
-  async create(@Request() req: any, @Body() body: {
-    teacherAssignmentId: string;
-    title?: string;
-    description?: string;
-    color?: string;
-  }) {
-    const { userId, institutionId } = await this.resolveCtx(req);
-    return this.service.create(userId, institutionId, body);
-  }
-
-  @Get(':id')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
-  async getById(@Param('id') id: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getById(id, userId);
-  }
-
-  @Put(':id')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async update(@Param('id') id: string, @Request() req: any, @Body() body: {
-    title?: string;
-    description?: string;
-    color?: string;
-    coverImage?: string;
-    isActive?: boolean;
-  }) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.update(id, userId, body);
-  }
-
-  @Get(':id/students')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async getStudents(@Param('id') id: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getStudents(id, userId);
-  }
+  // Las 6 rutas de aulas (GET /, GET /available-assignments, POST /,
+  // GET /:id, PUT /:id, GET /:id/students) se movieron blindadas a
+  // classroom-b1.controller.ts (Bloque 1). Imports y decoradores de esta clase
+  // quedan intactos para preservar las huellas de las rutas pendientes.
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTIONS
@@ -205,116 +154,10 @@ export class ClassroomController {
   // ACTIVITIES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  @Post(':id/activities')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async createActivity(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
-    sectionId?: string | null;
-    academicTermId?: string | null;
-    type: string;
-    title: string;
-    description?: string;
-    maxScore?: number;
-    dueDate?: string | null;
-    openDate?: string | null;
-    allowLateSubmit?: boolean;
-    attachmentUrl?: string;
-    attachmentName?: string;
-    rubricId?: string;
-    gameType?: string;
-    audioResponse?: boolean;
-  }) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.createActivity(classroomId, userId, body);
-  }
-
-  @Get(':id/activities')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
-  async listActivities(@Param('id') classroomId: string, @Request() req: any, @Query('role') role?: string) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.listActivities(classroomId, userId, role === 'student' ? 'student' : 'teacher');
-  }
-
-  @Get('activities/:activityId')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
-  async getActivity(@Param('activityId') activityId: string, @Request() req: any, @Query('role') role?: string) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getActivity(activityId, userId, role === 'student' ? 'student' : 'teacher');
-  }
-
-  @Put('activities/:activityId')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async updateActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
-    title?: string;
-    description?: string;
-    maxScore?: number;
-    dueDate?: string | null;
-    openDate?: string | null;
-    allowLateSubmit?: boolean;
-    isVisible?: boolean;
-    attachmentUrl?: string;
-    attachmentName?: string;
-  }) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.updateActivity(activityId, userId, body);
-  }
-
-  // Dependencias/prerrequisitos (Fase 4): reemplaza el conjunto de prerrequisitos de la
-  // actividad. Valida misma aula + sin ciclo/duplicado/auto-dependencia.
-  @Put('activities/:activityId/dependencies')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async setActivityDependencies(
-    @Param('activityId') activityId: string,
-    @Request() req: any,
-    @Body() body: { prerequisites?: { prerequisiteId: string; condition?: string; minScore?: number | null }[] },
-  ) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.setActivityDependencies(activityId, userId, body.prerequisites || []);
-  }
-
-  @Put('activities/:activityId/publish')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async publishActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body?: { scheduledPublishAt?: string }) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.publishActivity(activityId, userId, body);
-  }
-
-  @Put('activities/:activityId/unpublish')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async unpublishActivity(@Param('activityId') activityId: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.unpublishActivity(activityId, userId);
-  }
-
-  @Put('activities/:activityId/assign-students')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async assignStudentsToActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
-    studentEnrollmentIds: string[];
-    isRestrictedToAssigned: boolean;
-  }) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.assignStudentsToActivity(activityId, userId, body);
-  }
-
-  @Get('activities/:activityId/assignments')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async getActivityAssignments(@Param('activityId') activityId: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getActivityAssignments(activityId, userId);
-  }
-
-  @Get(':id/students-for-assignment')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async getClassroomStudentsForAssignment(@Param('id') classroomId: string, @Request() req: any) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.getClassroomStudentsForAssignment(classroomId, userId);
-  }
-
-  @Delete('activities/:activityId')
-  @Roles('DOCENTE', 'COORDINADOR')
-  async deleteActivity(@Param('activityId') activityId: string, @Request() req: any, @Query('force') force?: string) {
-    const { userId } = await this.resolveCtx(req);
-    return this.service.deleteActivity(activityId, userId, force === 'true');
-  }
+  // Las 11 rutas de actividades y destinatarios (POST/GET :id/activities,
+  // GET/PUT/DELETE activities/:activityId, publish, unpublish, dependencies,
+  // assign-students, assignments, :id/students-for-assignment) se movieron
+  // blindadas a classroom-b1.controller.ts (Bloque 1).
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SUBMISSIONS

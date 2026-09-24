@@ -2507,6 +2507,16 @@ model Message {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  /// A dónde lleva el aviso dentro de la aplicación, p. ej. "/aula/<aula>/actividades/<id>".
+  /// Sin esto, el estudiante recibe "hay una actividad nueva" y tiene que ir a buscarla.
+  link String?
+  /// Qué lo generó, cuando no lo escribió una persona: "actividad-publicada", por ahora.
+  /// Permite distinguir en la bandeja un aviso automático de una circular del colegio.
+  origin String?
+  /// Identidad del hecho que lo provocó, p. ej. "actividad:<id>:publicada". Es único: si la
+  /// misma actividad se despublica y se vuelve a publicar, no se avisa dos veces.
+  sourceKey String? @unique
+
   institution Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   author      User                @relation(fields: [authorId], references: [id], onDelete: Restrict)
   parent      Message?            @relation("MessageThread", fields: [parentId], references: [id], onDelete: SetNull)
@@ -7705,6 +7715,8 @@ model ConstruyeProject {
   briefTemplate       Json?
   /// Página web o aplicación para celular: decide la plantilla y la vista inicial del estudiante.
   kind                ConstruyeProjectKind   @default(WEB)
+  /// El docente decide si este curso puede usar el paso de la IA (petición guiada y pedir cambios).
+  aiPromptEnabled     Boolean                @default(true)
   status              ConstruyeProjectStatus @default(ACTIVE)
   startDate           DateTime?
   dueDate             DateTime?

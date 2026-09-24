@@ -9,17 +9,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { classroomApi } from '../../../lib/api'
 import { parseApiError } from '../../../lib/toast'
-import type { ActivityLike } from '../model/activityState'
+import { withStudentSubmission, type ActivityLike } from '../model/activityState'
 import type { Rol } from './useAula'
+import { alumnosDeActividad } from '../model/participacion'
 
 /** Una entrega, tal como la devuelve el backend. */
 export interface EntregaLike {
   id: string
   activityId: string
+  studentEnrollmentId?: string
   status: string
   content?: string | null
   fileUrl?: string | null
-  score?: number | null
+  score?: number | string | null
   feedback?: string | null
   submittedAt?: string | null
   gradedAt?: string | null
@@ -30,12 +32,24 @@ export interface EntregaLike {
   }
 }
 
+export interface AlumnoActividad {
+  enrollmentId: string
+  studentId: string
+  firstName: string
+  lastName: string
+  secondLastName?: string | null
+  photo?: string | null
+}
+
 export interface EstadoActividad {
   actividad: ActivityLike | null
   /** Estudiante: su propia entrega. */
   miEntrega: EntregaLike | null
   /** Docente: todas las entregas del grupo. */
   entregas: EntregaLike[]
+  /** Matrículas activas con derecho a esta actividad; null si no se pudo comprobar. */
+  alumnos: AlumnoActividad[] | null
+  errorAlumnos: string | null
   cargando: boolean
   error: string | null
   recargar: () => void
@@ -45,6 +59,8 @@ export function useActividad(activityId: string | null, rol: Rol): EstadoActivid
   const [actividad, setActividad] = useState<ActivityLike | null>(null)
   const [miEntrega, setMiEntrega] = useState<EntregaLike | null>(null)
   const [entregas, setEntregas] = useState<EntregaLike[]>([])
+  const [alumnos, setAlumnos] = useState<AlumnoActividad[] | null>(null)
+  const [errorAlumnos, setErrorAlumnos] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [intento, setIntento] = useState(0)
@@ -56,6 +72,8 @@ export function useActividad(activityId: string | null, rol: Rol): EstadoActivid
       setActividad(null)
       setMiEntrega(null)
       setEntregas([])
+      setAlumnos(null)
+      setErrorAlumnos(null)
       setCargando(false)
       return
     }
@@ -63,6 +81,8 @@ export function useActividad(activityId: string | null, rol: Rol): EstadoActivid
     let vivo = true
     setCargando(true)
     setError(null)
+    setAlumnos(null)
+    setErrorAlumnos(null)
 
     const esEstudiante = rol === 'estudiante'
 
@@ -77,15 +97,29 @@ export function useActividad(activityId: string | null, rol: Rol): EstadoActivid
           })
         : classroomApi.listSubmissions(activityId),
     ])
-      .then(([resAct, resSubs]) => {
+      .then(async ([resAct, resSubs]) => {
         if (!vivo) return
-        setActividad(resAct.data as ActivityLike)
+        const activity = resAct.data as ActivityLike & { classroomId?: string; isRestrictedToAssigned?: boolean }
         if (esEstudiante) {
-          setMiEntrega((resSubs.data as EntregaLike) ?? null)
+          const submission = (resSubs.data as EntregaLike) ?? null
+          setActividad(withStudentSubmission(activity, submission))
+          setMiEntrega(submission)
           setEntregas([])
         } else {
+          setActividad(activity)
           setMiEntrega(null)
           setEntregas(Array.isArray(resSubs.data) ? resSubs.data : [])
+          try {
+            if (!activity.classroomId) throw new Error('La actividad no indica a qué aula pertenece')
+            const [roster, assignments] = await Promise.all([
+              classroomApi.getStudentsForAssignment(activity.classroomId),
+              activity.isRestrictedToAssigned ? classroomApi.getActivityAssignments(activityId) : Promise.resolve(null),
+            ])
+            if (!vivo) return
+            setAlumnos(alumnosDeActividad(roster.data, assignments?.data, activity.isRestrictedToAssigned === true))
+          } catch (e) {
+            if (vivo) setErrorAlumnos(parseApiError(e))
+          }
         }
       })
       .catch((e) => {
@@ -100,5 +134,5 @@ export function useActividad(activityId: string | null, rol: Rol): EstadoActivid
     }
   }, [activityId, rol, intento])
 
-  return { actividad, miEntrega, entregas, cargando, error, recargar }
+  return { actividad, miEntrega, entregas, alumnos, errorAlumnos, cargando, error, recargar }
 }

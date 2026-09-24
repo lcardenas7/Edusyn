@@ -496,7 +496,11 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-slate-50">
       <ConnectionStatusBar />
       {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      {/* `h-14` fija el alto en 56 px, que es lo que asumen `pt-14` aquí abajo y el encabezado
+          del aula. Con `py-3` el alto real era 65 px y todo lo que se anclaba a 56 quedaba 9 px
+          por debajo del header: el encabezado del aula se metía debajo al hacer scroll.
+          `data-app-header` permite que un módulo inmersivo lo esconda desde CSS. */}
+      <header data-app-header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <GraduationCap className="w-5 h-5 text-white" />
@@ -803,7 +807,9 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <main data-app-main className="lg:pl-64 pt-14 lg:pt-0">
-        <div className="p-4 lg:p-8">
+        {/* `data-app-content` marca el relleno de página: un módulo a sangre —hoy el aula— lo
+            anula desde CSS en vez de pelearse con él metiendo márgenes negativos. */}
+        <div data-app-content className="p-4 lg:p-8">
           {children}
         </div>
       </main>

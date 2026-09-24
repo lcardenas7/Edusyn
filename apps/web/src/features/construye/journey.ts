@@ -71,8 +71,11 @@ export function nextDocumentPhase(brief: ConstruyeTeamBrief): BriefPhaseKey {
 
 /** Dónde abrir el estudio: quien ya tiene código vuelve al taller; quien terminó de documentar
  * pasa a la petición (o al código si la omitió); si no, sigue documentando. */
-export function initialStudioMode(brief: ConstruyeTeamBrief, versionCount: number, promptSkipped: boolean): StudioMode {
+/** Con qué momento abre el taller. Si el docente apagó la IA, el paso del prompt no existe:
+ * se pasa directo del plan al código. */
+export function initialStudioMode(brief: ConstruyeTeamBrief, versionCount: number, promptSkipped: boolean, aiEnabled = true): StudioMode {
   if (versionCount > 0) return 'code'
+  if (!aiEnabled) return promptReady(brief) ? 'code' : 'document'
   if (promptReady(brief)) return promptSkipped ? 'code' : 'prompt'
   return 'document'
 }
@@ -121,7 +124,7 @@ const KIND_REQUEST: Record<ProjectKind, { what: string; format: string }> = {
 const PLATFORM_RULES = [
   'Dónde va a correr (importante)',
   '- Se ejecuta dentro de Edusyn y después se publica en un enlace con código QR: cualquiera la abre en su celular y la agrega a la pantalla de inicio.',
-  '- Debe funcionar SIN internet: no uses librerías, fuentes, imágenes, íconos ni llamadas externas de ningún tipo. Para íconos, dibuja SVG pequeños dentro de index.html.',
+  '- Debe funcionar SIN internet: no uses librerías, fuentes, recursos ni llamadas externas. Puedes dibujar gráficos con CSS, SVG dentro de index.html o Canvas desde app.js; no dependas de archivos que no entregues.',
   '- Para recordar datos (listas, puntajes, preferencias) usa localStorage, leyendo dentro de try/catch.',
   '- No hay cuentas ni contraseñas. Si la app necesita saber quién la usa, pide un apodo y guárdalo.',
   '- No pidas ni guardes datos personales (nombres completos, documentos, teléfonos, direcciones).',
@@ -140,6 +143,24 @@ const FINISH_RULES = [
   '- Cada acción deja una señal visible: algo aparece, cambia de color o confirma.',
   '- Campos con <label> o aria-label, y foco visible al navegar con el teclado.',
 ]
+
+const COMPLETE_RULES = [
+  'Qué significa entregar una versión que funciona',
+  '- Entrega código ejecutable completo: nada de TODO, pseudocódigo, funciones vacías ni botones sin acción.',
+  '- Conecta cada control visible con un resultado comprobable; incluye estados iniciales, errores y una forma de volver a empezar cuando corresponda.',
+  '- Antes de responder, recorre mentalmente el criterio de prueba del equipo paso por paso y corrige referencias a elementos, variables o archivos que no existan.',
+  '- Si el plan no cabe en una versión pequeña, implementa de principio a fin la función principal y explica qué quedó para la siguiente versión; no dejes pantallas a medio hacer.',
+]
+
+const GAME_RULES = [
+  'Si esto es un juego, debe poder jugarse de verdad',
+  '- Incluye inicio, controles de teclado y táctiles, objetivo, puntuación o progreso, condición de ganar o perder y botón para reiniciar.',
+  '- Dibuja personaje, escenario y objetos con Canvas, CSS o SVG incluido en los tres archivos; no dejes espacios para imágenes externas.',
+  '- Si hay movimiento, usa requestAnimationFrame, controla colisiones y evita que la partida siga después del final.',
+  '- Comprueba al menos una partida completa en celular y otra con teclado, incluyendo reinicio y límite de pantalla.',
+]
+
+const asksForGame = (text: string) => /\b(juegos?|jugar|videojuegos?|games?)\b/i.test(text)
 
 export function initialPrompt(brief: ConstruyeTeamBrief, kind: ProjectKind = 'WEB'): string {
   const request = KIND_REQUEST[kind]
@@ -166,6 +187,9 @@ export function initialPrompt(brief: ConstruyeTeamBrief, kind: ProjectKind = 'WE
     ...PLATFORM_RULES,
     '',
     ...FINISH_RULES,
+    '',
+    ...COMPLETE_RULES,
+    ...(asksForGame(`${brief.solution} ${brief.features} ${brief.screens}`) ? ['', ...GAME_RULES] : []),
     '',
     `Entrega únicamente tres archivos completos y separados: index.html, styles.css y app.js (sin React, npm, paquetes ni iframes). En index.html escribe solo el contenido que va dentro del <body>: Edusyn pone el resto. ${request.format}`,
     '',
@@ -204,6 +228,9 @@ export function changePrompt(request: ChangeRequest, brief: ConstruyeTeamBrief, 
     'Respeta cómo funciona el taller: sin librerías, fuentes, imágenes ni llamadas externas (debe funcionar sin internet), los datos se guardan en localStorage, y nada de cuentas ni datos personales.',
     '',
     ...FINISH_RULES,
+    '',
+    ...COMPLETE_RULES,
+    ...(asksForGame(`${brief.solution} ${brief.features} ${request.change}`) ? ['', ...GAME_RULES] : []),
   ]
   if (project) {
     lines.push('', 'Nuestro código actual:', '', '--- index.html ---', project.html, '', '--- styles.css ---', project.css, '', '--- app.js ---', project.js)

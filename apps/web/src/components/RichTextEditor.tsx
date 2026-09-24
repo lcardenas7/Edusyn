@@ -66,7 +66,7 @@ export function RichContent({ html, className = '' }: { html: string; className?
   if (!html || isRichTextEmpty(html)) return null
   return (
     <div
-      className={`rich-content prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-blockquote:my-2 prose-blockquote:border-l-blue-400 prose-a:text-blue-600 ${className}`}
+      className={`rich-content prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-blockquote:my-2 prose-blockquote:border-l-accent prose-a:text-accent ${className}`}
       dangerouslySetInnerHTML={{ __html: htmlSeguro(html) }}
     />
   )

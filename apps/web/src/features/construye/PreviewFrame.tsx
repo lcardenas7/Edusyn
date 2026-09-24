@@ -279,13 +279,13 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
   // En un celular la revisión muestra la app a su ancho real, sin marco ni escala.
   const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches)
   useEffect(() => {
-    if (!review || !window.matchMedia) return
+    if (!(review || studio) || !window.matchMedia) return
     const query = window.matchMedia('(max-width: 639px)')
     const update = () => setNarrow(query.matches)
     update()
     query.addEventListener?.('change', update)
     return () => query.removeEventListener?.('change', update)
-  }, [review])
+  }, [review, studio])
   const preset = VIEWPORT_PRESETS[viewport]
   const [instanceId, setInstanceId] = useState(newInstanceId)
   const [ready, setReady] = useState(false)
@@ -619,7 +619,7 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
             el documento, su JavaScript y la instrumentación de Explorar sobreviven al cambio.
             El contenedor exterior lleva el tamaño YA escalado porque transform no reserva
             espacio en el layout. */}
-        <div ref={viewportShellRef} className={`min-w-0 rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_1px_1px,#cbd5e1_1px,transparent_0)] bg-[length:18px_18px] p-3 sm:p-5 ${focused ? `${sideGuide ? 'h-full' : 'h-[calc(100dvh-7rem)]'} overflow-auto` : ''}`}>
+        <div ref={viewportShellRef} className={`min-w-0 rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_1px_1px,#cbd5e1_1px,transparent_0)] bg-[length:18px_18px] ${studio && narrow ? 'p-0' : 'p-3 sm:p-5'} ${focused ? `${sideGuide ? 'h-full' : 'h-[calc(100dvh-7rem)]'} overflow-auto` : ''}`}>
           <div className="mx-auto" style={{ width: preset.width * viewportScale + (viewport === 'mobile' ? DEVICE_FRAME_X : 0) }}>
             {viewport === 'desktop' && (
               <div className="flex items-center gap-1.5 rounded-t-xl border border-b-0 border-slate-200 bg-slate-100 px-3 py-2">
@@ -631,8 +631,8 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
             )}
             {/* Marco de celular: el contenedor existe SIEMPRE (solo cambian sus clases) para
                 que pasar de Computador a Celular no desmonte el iframe. */}
-            <div className={viewport === 'mobile' ? 'relative rounded-[40px] bg-slate-900 px-3 py-7 shadow-2xl shadow-slate-900/30 ring-1 ring-slate-700' : ''}>
-              {viewport === 'mobile' && <span aria-hidden="true" className="absolute left-1/2 top-3 h-1.5 w-16 -translate-x-1/2 rounded-full bg-slate-700" />}
+            <div className={viewport === 'mobile' && !(studio && narrow) ? 'relative rounded-[40px] bg-slate-900 px-3 py-7 shadow-2xl shadow-slate-900/30 ring-1 ring-slate-700' : ''}>
+              {viewport === 'mobile' && !(studio && narrow) && <span aria-hidden="true" className="absolute left-1/2 top-3 h-1.5 w-16 -translate-x-1/2 rounded-full bg-slate-700" />}
             <div
               className={`overflow-hidden bg-white ${viewport === 'desktop' ? 'rounded-b-xl border border-slate-200' : 'rounded-[18px]'}`}
               style={{ width: preset.width * viewportScale, height: preset.height * viewportScale }}
@@ -646,9 +646,9 @@ export default function PreviewFrame({ project = DEMO_PROJECT, onHelpRequested, 
                 style={{ width: preset.width, height: preset.height, transform: `scale(${viewportScale})`, transformOrigin: 'top left' }}
               />
             </div>
-              {viewport === 'mobile' && <span aria-hidden="true" className="absolute bottom-2.5 left-1/2 h-1 w-24 -translate-x-1/2 rounded-full bg-slate-600" />}
+              {viewport === 'mobile' && !(studio && narrow) && <span aria-hidden="true" className="absolute bottom-2.5 left-1/2 h-1 w-24 -translate-x-1/2 rounded-full bg-slate-600" />}
             </div>
-            <p className="mt-2 text-center text-[11px] text-slate-400">
+            <p className={`mt-2 text-center text-[11px] text-slate-400 ${studio && narrow ? 'hidden' : ''}`}>
               {preset.label} · {preset.width} px{viewportScale < 1 && <span> · vista al {Math.round(viewportScale * 100)}%</span>}
             </p>
           </div>

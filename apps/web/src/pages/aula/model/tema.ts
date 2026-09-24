@@ -61,6 +61,47 @@ export function hexARgb(hex: string): string {
   return `${r} ${g} ${b}`
 }
 
+/**
+ * Un acento sobre el que SIEMPRE se pueda leer texto blanco.
+ *
+ * El docente elige el color de su aula a mano, y ese color tiñe botones, chips y avisos —también
+ * los de las herramientas embebidas, que antes eran azules fijos—. Con un amarillo o un celeste
+ * claro, «Guardar» quedaba en blanco sobre casi blanco: ilegible. Aquí el color se oscurece lo
+ * justo hasta que el texto blanco encima cumple el 4,5:1 de la norma; si ya cumplía, vuelve tal
+ * cual. El tono se mantiene: solo baja el brillo.
+ */
+export function acentoLegible(hex: string): string {
+  let [r, g, b] = canal(hex)
+  // Doce pasos del 8 % bastan para llevar cualquier color a contraste suficiente sin llegar a
+  // negro; el tope existe para no depender de que el bucle termine solo.
+  for (let paso = 0; paso < 12 && contrasteConBlanco(rgbAHex(r, g, b)) < 4.5; paso += 1) {
+    r = Math.round(r * 0.92)
+    g = Math.round(g * 0.92)
+    b = Math.round(b * 0.92)
+  }
+  return rgbAHex(r, g, b)
+}
+
+function rgbAHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map((c) => Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * El color sólido que se ve arriba del todo dentro del aula: el acento ya aplanado sobre el
+ * blanco del encabezado (fondo del aula al 4,5 % y barra al 7 %).
+ *
+ * Hace falta porque la barra de estado del teléfono no entiende transparencias: `theme-color`
+ * pide un color y ya. Sin esto, encima del encabezado teñido queda una franja blanca del
+ * sistema y el aula se sigue viendo como una página dentro de un navegador.
+ */
+export function colorDeEncabezado(hex: string): string {
+  const alfa = 0.045 + 0.07 * (1 - 0.045)
+  const dosDigitos = (n: number) => Math.round(n).toString(16).padStart(2, '0')
+  return `#${canal(hex)
+    .map((c) => dosDigitos(c * alfa + 255 * (1 - alfa)))
+    .join('')}`
+}
+
 function canal(hex: string): [number, number, number] {
   const v = hex.replace('#', '')
   const largo = v.length === 3 ? v.split('').map((c) => c + c).join('') : v

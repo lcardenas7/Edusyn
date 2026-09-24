@@ -65,7 +65,7 @@ test('sirve la app aprobada con su CSP, manifiesto, ícono y SDK antes del códi
   })
 })
 
-test('la app se pide una vez y se reutiliza unos segundos; si la API cae, se sirve lo último conocido', async () => {
+test('la caché es breve; si la API cae no se sirve una copia posiblemente retirada', async () => {
   let clock = 0
   const api = fakeApi()
   await withServer({ fetchImpl: api.fetchImpl, now: () => clock }, async base => {
@@ -79,8 +79,24 @@ test('la app se pide una vez y se reutiliza unos segundos; si la API cae, se sir
   await withServer({ fetchImpl, now: () => clock }, async base => {
     assert.equal((await fetch(`${base}/a/${TOKEN}/`)).status, 200)
     down = true
-    clock += 60_000
+    clock += 2_001
+    assert.equal((await fetch(`${base}/a/${TOKEN}/`)).status, 502)
+    down = false
     assert.equal((await fetch(`${base}/a/${TOKEN}/`)).status, 200)
+  })
+})
+
+test('retirar una app se refleja tras dos segundos como máximo en el servicio público', async () => {
+  let clock = 0
+  let published = true
+  const fetchImpl = async () => published
+    ? new Response(JSON.stringify(APP), { status: 200 })
+    : new Response('{}', { status: 404 })
+  await withServer({ fetchImpl, now: () => clock }, async base => {
+    assert.equal((await fetch(`${base}/a/${TOKEN}/`)).status, 200)
+    published = false
+    clock += 2_001
+    assert.equal((await fetch(`${base}/a/${TOKEN}/`)).status, 404)
   })
 })
 

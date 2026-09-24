@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -50,6 +50,12 @@ export class ConstruyeController {
   async unpublish(@Param('publicationId') publicationId: string, @Request() req: any) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.publications.unpublish(publicationId, institutionId, req.user.id);
+  }
+
+  @Delete('publications/:publicationId') @Roles('DOCENTE', 'COORDINADOR')
+  async deletePublication(@Param('publicationId') publicationId: string, @Request() req: any, @Body() body: { title?: string }) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req);
+    return this.publications.deletePublication(publicationId, institutionId, req.user.id, body?.title);
   }
 
   @Post('projects') @Roles('DOCENTE', 'COORDINADOR')

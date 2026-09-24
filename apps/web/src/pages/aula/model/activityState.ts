@@ -37,6 +37,8 @@ export interface ActivityLike {
   section?: { id: string; title: string; academicTermId?: string | null } | null
   /** Entregas SUBMITTED/LATE pendientes de nota (solo llega en el payload docente). */
   gradingPending?: number
+  /** Matrículas activas distintas que entregaron; no intentos individuales. */
+  participantCount?: number
   _count?: { submissions?: number } | null
   /** En el payload del estudiante viene su propia entrega (una sola). */
   submissions?: {
@@ -61,6 +63,15 @@ export interface ActivityLike {
   /** Candado por prerrequisitos. El backend es autoritativo; la UI solo pinta. */
   locked?: boolean
   metadata?: { gameType?: string; maxAttempts?: number; audioResponse?: boolean } | null
+}
+
+/** El detalle consulta la entrega propia aparte de la actividad. Esta respuesta es la
+ * autoridad para el estado del estudiante: el payload de getActivity puede no incluirla. */
+export function withStudentSubmission(
+  activity: ActivityLike,
+  submission: NonNullable<ActivityLike['submissions']>[number] | null,
+): ActivityLike {
+  return { ...activity, submissions: submission ? [submission] : [] }
 }
 
 // ─── Tiempo, anclado a Colombia ──────────────────────────────────────────────
@@ -187,7 +198,7 @@ export interface TeacherView {
  */
 export function deriveTeacherState(a: ActivityLike, now: Date = new Date()): TeacherView {
   const porCalificar = a.gradingPending ?? 0
-  const entregas = a._count?.submissions ?? 0
+  const entregas = a.participantCount ?? a._count?.submissions ?? 0
   const programada = time(a.scheduledPublishAt)
   const base = { porCalificar, entregas, seProgramaPara: a.scheduledPublishAt ?? null }
 
