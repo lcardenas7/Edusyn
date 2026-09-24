@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { classroomApi } from '../../../lib/api'
 import { parseApiError } from '../../../lib/toast'
-import type { ActivityLike } from '../model/activityState'
+import { withStudentSubmission, type ActivityLike } from '../model/activityState'
 import type { Rol } from './useAula'
 import { alumnosDeActividad } from '../model/participacion'
 
@@ -21,7 +21,7 @@ export interface EntregaLike {
   status: string
   content?: string | null
   fileUrl?: string | null
-  score?: number | null
+  score?: number | string | null
   feedback?: string | null
   submittedAt?: string | null
   gradedAt?: string | null
@@ -100,11 +100,13 @@ export function useActividad(activityId: string | null, rol: Rol): EstadoActivid
       .then(async ([resAct, resSubs]) => {
         if (!vivo) return
         const activity = resAct.data as ActivityLike & { classroomId?: string; isRestrictedToAssigned?: boolean }
-        setActividad(activity)
         if (esEstudiante) {
-          setMiEntrega((resSubs.data as EntregaLike) ?? null)
+          const submission = (resSubs.data as EntregaLike) ?? null
+          setActividad(withStudentSubmission(activity, submission))
+          setMiEntrega(submission)
           setEntregas([])
         } else {
+          setActividad(activity)
           setMiEntrega(null)
           setEntregas(Array.isArray(resSubs.data) ? resSubs.data : [])
           try {

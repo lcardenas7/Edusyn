@@ -65,6 +65,15 @@ export interface ActivityLike {
   metadata?: { gameType?: string; maxAttempts?: number; audioResponse?: boolean } | null
 }
 
+/** El detalle consulta la entrega propia aparte de la actividad. Esta respuesta es la
+ * autoridad para el estado del estudiante: el payload de getActivity puede no incluirla. */
+export function withStudentSubmission(
+  activity: ActivityLike,
+  submission: NonNullable<ActivityLike['submissions']>[number] | null,
+): ActivityLike {
+  return { ...activity, submissions: submission ? [submission] : [] }
+}
+
 // ─── Tiempo, anclado a Colombia ──────────────────────────────────────────────
 
 /** "YYYY-MM-DD" del día de pared en Bogotá. Devuelve null si la fecha no es válida. */
