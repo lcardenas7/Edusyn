@@ -403,6 +403,7 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
     const despublicada = await service().unpublishActivity(docenteA(), 'act-A-draft');
     expect(despublicada.isPublished).toBe(false);
     expect(despublicada.scheduledPublishAt).toBeNull();
+    expect(data.avisos.programarRetirada).toHaveBeenCalledWith('act-A-draft');
   });
 
   it('difiere el aviso inmediato hasta el commit de la petición', async () => {
@@ -414,6 +415,17 @@ describe('Classroom Bloque 1 · aislamiento de servicio', () => {
     expect(afterCommit).toHaveLength(1);
     afterCommit[0]();
     expect(data.avisos.programar).toHaveBeenCalledWith('act-A-draft');
+  });
+
+  it('difiere también la retirada del aviso hasta confirmar la despublicación', async () => {
+    const afterCommit: Array<() => void> = [];
+    await tenantContext.run({ tx: {}, institutionId: A, afterCommit }, async () => {
+      await service().unpublishActivity(docenteA(), 'act-A-pub');
+      expect(data.avisos.programarRetirada).not.toHaveBeenCalled();
+    });
+    expect(afterCommit).toHaveLength(1);
+    afterCommit[0]();
+    expect(data.avisos.programarRetirada).toHaveBeenCalledWith('act-A-pub');
   });
 
   it('setActivityDependencies reemplaza el conjunto y normaliza la condición', async () => {
