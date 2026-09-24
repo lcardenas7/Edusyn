@@ -22,6 +22,12 @@
 
 ## Historial (más reciente arriba)
 
+### Aula rediseñada y CREA — producción · 2026-09-24
+
+[PR #49](https://github.com/lcardenas7/Edusyn/pull/49) fusionado en `main` como `aeef893e`, desde la base `08a4627a`. Promoción selectiva de Aula móvil, avisos de actividades, períodos, filtros y estado de entregas, mejoras de CREA y Classroom B1 **17/98 rutas**; Classroom y Edusyn no se declaran blindados por completo. Dos migraciones aditivas: columnas opcionales de aviso en `Message` y `ConstruyeProject.aiPromptEnabled` con valor por defecto `true`. Antes de fusionar: PostgreSQL 17 local con 98 migraciones, API 67 suites/1250 pruebas, web 35 archivos/500 pruebas, CREA Preview 119 pruebas, tipos y builds verdes. Staging verificó la publicación y retirada de un aviso en 8C, el contador 37/37, el preview CREA sin alerta falsa y el detalle de una entrega existente como «Entregada»; no se creó una entrega artificial.
+
+Railway informó **SUCCESS** para `api`, `web`, `crea-preview` y `crea-apps` en `aeef893e`. La API pública respondió `200` y `{"status":"ok"}` en `/api/health`; `/aula` respondió `200`; CREA Preview y CREA Apps respondieron `200`, con la CSP restrictiva del preview presente. La verificación autenticada de producción queda como seguimiento operativo. El bundle principal web de la base `main` sigue en 5,9 MB antes de gzip; medir rendimiento móvil antes de considerarlo resuelto.
+
 ### Verificación posterior: panel docente formativo — producción · 2026-09-17
 
 Tras la promoción aislada `ae401c4b`, `https://api.edusyn.co/api/health` respondió `ok` y
