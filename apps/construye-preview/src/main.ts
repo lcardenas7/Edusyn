@@ -1,6 +1,7 @@
 import { escapeRawTextClose, isTrustedHighlightCodePositionMessage, isTrustedLoadProjectMessage, isTrustedSetExploreModeMessage, type Project } from './bridge'
 import { createExploreController, type ExploreRange } from './explore'
 import { instrumentHtml } from './instrument'
+import { removeInlinedAssetReferences } from './virtualAssets'
 import { evaluateCssPosition, findCssRulesForElement, MAX_RELATED_CSS_RULES, parseCssRules, type CssRuleRange } from './styles'
 
 const protocol = 1
@@ -130,7 +131,7 @@ function render(project: Project) {
     JSON.stringify(instanceId) + ',type:"runtime-error",message:e.reason instanceof Error?e.reason.message:"La app no pudo completar una acción."},' +
     JSON.stringify(parentOrigin) + ')})</script>'
   const documentHtml = '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' +
-    escapeRawTextClose(project.css, 'style') + '</style></head><body>' + bridge + instrumented.html + '<script>' + escapeRawTextClose(project.js, 'script') + '</script></body></html>'
+    escapeRawTextClose(project.css, 'style') + '</style></head><body>' + bridge + removeInlinedAssetReferences(instrumented.html) + '<script>' + escapeRawTextClose(project.js, 'script') + '</script></body></html>'
   document.open()
   installMemoryStorage()
   document.write(documentHtml)
