@@ -77,6 +77,7 @@ const SpaceDetailPage = lazy(() => import('./pages/WorkspaceV2/SpaceDetail'))
 const Classroom = lazy(() => import('./pages/Classroom'))
 const AulaVirtual = lazy(() => import('./pages/aula'))
 const BloquesPreview = lazy(() => import('./pages/aula/BloquesPreview'))
+const Arena = lazy(() => import('./pages/aula/Arena'))
 const Scale = lazy(() => import('./pages/academic/config/Scale'))
 const Periods = lazy(() => import('./pages/academic/config/Periods'))
 const Levels = lazy(() => import('./pages/academic/config/Levels'))
@@ -470,6 +471,7 @@ function App() {
                   <Route path="/aula" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId/bloques" element={<BloquesPreview />} />
+                  <Route path="/aula/:classroomId/duelos" element={<Arena />} />
                   <Route path="/aula/:classroomId/:vista" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId/actividades/:activityId" element={<AulaVirtual />} />
                   <Route path="/capabilities-config" element={<CapabilitiesConfig />} />

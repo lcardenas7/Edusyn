@@ -1706,6 +1706,9 @@ model StudentEnrollment {
   academicActs           AcademicAct[]
   performanceManualEdits PerformanceManualEdit[]
   studentAchievements    StudentAchievement[]
+  duelsInvited           ClassroomDuel[] @relation("DuelInviter")
+  duelsReceived          ClassroomDuel[] @relation("DuelInvitee")
+  duelAnswers            ClassroomDuelAnswer[]
   convivenciaEntries     ConvivenciaEntry[]
 
   // Observador del estudiante (sub-módulos)
@@ -6132,6 +6135,7 @@ model Classroom {
   sections          ClassroomSection[]
   announcements     ClassroomAnnouncement[]
   activities        ClassroomActivity[]
+  duels             ClassroomDuel[]
   forumPosts        ForumPost[]             @relation("ClassroomForumPosts")
   liveSessions      LiveSession[]
   learningRoutes    LearningRoute[]
@@ -6142,6 +6146,59 @@ model Classroom {
   @@index([ownerUserId])
   @@index([isPersonal])
   construyeProjects ConstruyeProject[] @relation("ConstruyeClassroom")
+}
+
+enum ClassroomDuelStatus {
+  INVITED
+  ACTIVE
+  COMPLETED
+  DECLINED
+  EXPIRED
+}
+
+// Arena: las siete preguntas se congelan al crear el reto para que ambos
+// participantes resuelvan exactamente el mismo conjunto, aunque el docente edite
+// la actividad de origen después.
+model ClassroomDuel {
+  id                   String @id @default(cuid())
+  institutionId        String
+  classroomId          String
+  inviterEnrollmentId  String
+  inviteeEnrollmentId  String
+  pairKey              String
+  status               ClassroomDuelStatus @default(INVITED)
+  questions            Json?
+  createdAt            DateTime @default(now())
+  expiresAt            DateTime
+  acceptedAt           DateTime?
+  completedAt          DateTime?
+  updatedAt            DateTime @updatedAt
+
+  classroom            Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  inviter              StudentEnrollment @relation("DuelInviter", fields: [inviterEnrollmentId], references: [id], onDelete: Restrict)
+  invitee              StudentEnrollment @relation("DuelInvitee", fields: [inviteeEnrollmentId], references: [id], onDelete: Restrict)
+  answers              ClassroomDuelAnswer[]
+
+  @@index([institutionId, classroomId, status])
+  @@index([institutionId, inviterEnrollmentId, createdAt])
+  @@index([institutionId, inviteeEnrollmentId, createdAt])
+}
+
+model ClassroomDuelAnswer {
+  id                   String @id @default(cuid())
+  institutionId        String
+  duelId               String
+  enrollmentId         String
+  ordinal              Int
+  answer               String @db.Text
+  isCorrect            Boolean
+  createdAt            DateTime @default(now())
+
+  duel                 ClassroomDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  enrollment           StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+
+  @@unique([duelId, enrollmentId, ordinal])
+  @@index([institutionId, enrollmentId])
 }
 model ClassroomSection {
   id             String   @id @default(cuid())
