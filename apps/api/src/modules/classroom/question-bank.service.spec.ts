@@ -9,12 +9,15 @@ function setup() {
     group: { findFirst: jest.fn().mockResolvedValue({ grade: { id: 'grade-5', name: 'Quinto' } }) },
     questionBankCollection: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue({ id: 'collection-1', createdById: 'teacher-1' }), create: jest.fn(), update: jest.fn() },
     questionBankItem: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+    classroomActivity: { findMany: jest.fn().mockResolvedValue([]) },
+    $transaction: jest.fn(),
   };
   const access = {
     classroomInScope: jest.fn().mockResolvedValue({ teacherAssignment: { groupId: 'group-1', teacherId: 'teacher-1' } }),
+    activityInScope: jest.fn().mockResolvedValue({ id: 'activity-1', classroomId: 'classroom-1', isPublished: false, type: 'QUIZ' }),
     assertCanManageClassroom: jest.fn(),
   };
-  return { service: new QuestionBankService(prisma as any, access as any), prisma };
+  return { service: new QuestionBankService(prisma as any, access as any), prisma, access };
 }
 
 describe('QuestionBankService', () => {
@@ -43,5 +46,26 @@ describe('QuestionBankService', () => {
     prisma.questionBankCollection.findFirst.mockResolvedValue({ id: 'collection-1', createdById: 'teacher-2' });
     await expect(service.createQuestion(actor, 'classroom-1', 'collection-1', question)).rejects.toThrow('Solo el autor');
     expect(prisma.questionBankItem.create).not.toHaveBeenCalled();
+  });
+
+  it('copies a grade questionnaire into a draft classroom quiz', async () => {
+    const { service, prisma, access } = setup();
+    prisma.questionBankCollection.findFirst.mockResolvedValue({ id: 'collection-1', subjectArea: 'Matemáticas', questions: [question] });
+    const tx = {
+      classroomActivity: { findUnique: jest.fn().mockResolvedValue({ isPublished: false }) },
+      activityQuestion: { findFirst: jest.fn().mockResolvedValue({ sortOrder: 2 }), create: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await expect(service.copyToActivity(actor, 'classroom-1', 'collection-1', 'activity-1')).resolves.toEqual({ copied: 1, activityId: 'activity-1' });
+    expect(access.activityInScope).toHaveBeenCalledWith(actor, 'activity-1');
+    expect(tx.activityQuestion.create).toHaveBeenCalledWith({ data: expect.objectContaining({ activityId: 'activity-1', subjectArea: 'Matemáticas', sortOrder: 3, text: question.text }) });
+  });
+
+  it('refuses to copy into a published quiz', async () => {
+    const { service, prisma, access } = setup();
+    prisma.questionBankCollection.findFirst.mockResolvedValue({ id: 'collection-1', subjectArea: 'Matemáticas', questions: [question] });
+    access.activityInScope.mockResolvedValue({ id: 'activity-1', classroomId: 'classroom-1', isPublished: true, type: 'QUIZ' });
+    await expect(service.copyToActivity(actor, 'classroom-1', 'collection-1', 'activity-1')).rejects.toThrow('borrador');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

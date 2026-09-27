@@ -58,14 +58,17 @@ export class QuestionBankService {
 
   async list(actor: ClassroomActor, classroomId: string) {
     const grade = await this.gradeContext(actor, classroomId);
-    const collections = await this.prisma.questionBankCollection.findMany({
+    const [collections, targetActivities] = await Promise.all([this.prisma.questionBankCollection.findMany({
       where: { institutionId: actor.institutionId, gradeId: grade.id, isActive: true },
       select: { id: true, title: true, subjectArea: true, category: true, isPublished: true, createdById: true, updatedAt: true, questions: {
         where: { isActive: true }, select: { id: true, type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' },
       } },
       orderBy: { updatedAt: 'desc' },
-    });
-    return { grade, collections: collections.map(({ createdById, ...collection }) => ({ ...collection, canEdit: createdById === actor.userId })) };
+    }), this.prisma.classroomActivity.findMany({
+      where: { classroomId, isPublished: false, type: { in: ['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'] } },
+      select: { id: true, title: true, type: true }, orderBy: { updatedAt: 'desc' },
+    })]);
+    return { grade, collections: collections.map(({ createdById, ...collection }) => ({ ...collection, canEdit: createdById === actor.userId })), targetActivities };
   }
 
   async createCollection(actor: ClassroomActor, classroomId: string, input: BankCollectionInput) {
@@ -94,5 +97,30 @@ export class QuestionBankService {
     const question = this.validQuestion(input);
     await this.prisma.questionBankItem.update({ where: { id: itemId }, data: { ...question, options: question.options as Prisma.InputJsonValue } });
     return this.list(actor, classroomId);
+  }
+
+  async copyToActivity(actor: ClassroomActor, classroomId: string, collectionId: string, activityId: string) {
+    const grade = await this.gradeContext(actor, classroomId);
+    const collection = await this.prisma.questionBankCollection.findFirst({
+      where: { id: collectionId, institutionId: actor.institutionId, gradeId: grade.id, isActive: true, OR: [{ isPublished: true }, { createdById: actor.userId }] },
+      select: { id: true, subjectArea: true, questions: { where: { isActive: true }, select: { type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' } } },
+    });
+    if (!collection) throw new NotFoundException('Cuestionario no encontrado');
+    if (collection.questions.length < 1 || collection.questions.length > 100) throw new BadRequestException('El cuestionario debe tener entre 1 y 100 preguntas');
+    const activity = await this.access.activityInScope(actor, activityId);
+    if (activity.classroomId !== classroomId || activity.isPublished || !['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'].includes(activity.type)) throw new BadRequestException('Elige un quiz en borrador de esta aula');
+    await this.prisma.$transaction(async (tx) => {
+      const current = await tx.classroomActivity.findUnique({ where: { id: activityId }, select: { isPublished: true } });
+      if (!current || current.isPublished) throw new BadRequestException('El quiz ya fue publicado');
+      const last = await tx.activityQuestion.findFirst({ where: { activityId }, select: { sortOrder: true }, orderBy: { sortOrder: 'desc' } });
+      let order = (last?.sortOrder ?? -1) + 1;
+      for (const question of collection.questions) {
+        await tx.activityQuestion.create({ data: {
+          activityId, type: question.type, text: question.text, options: question.options as Prisma.InputJsonValue,
+          correctAnswer: question.correctAnswer, explanation: question.explanation, subjectArea: collection.subjectArea, sortOrder: order++,
+        } });
+      }
+    });
+    return { copied: collection.questions.length, activityId };
   }
 }

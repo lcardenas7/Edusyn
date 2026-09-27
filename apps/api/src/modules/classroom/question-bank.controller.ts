@@ -49,4 +49,10 @@ export class QuestionBankController {
   updateQuestion(@Param('classroomId') classroomId: string, @Param('collectionId') collectionId: string, @Param('itemId') itemId: string, @Body() body: BankQuestionInput, @Request() req: any) {
     return this.actor(req).then((actor) => this.service.updateQuestion(actor, classroomId, collectionId, itemId, body));
   }
+
+  @Post('classrooms/:classroomId/collections/:collectionId/copy-to/:activityId')
+  @Roles('DOCENTE')
+  copyToActivity(@Param('classroomId') classroomId: string, @Param('collectionId') collectionId: string, @Param('activityId') activityId: string, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.copyToActivity(actor, classroomId, collectionId, activityId));
+  }
 }
