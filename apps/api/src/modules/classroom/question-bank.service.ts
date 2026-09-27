@@ -59,7 +59,7 @@ export class QuestionBankService {
   async list(actor: ClassroomActor, classroomId: string) {
     const grade = await this.gradeContext(actor, classroomId);
     const [collections, targetActivities] = await Promise.all([this.prisma.questionBankCollection.findMany({
-      where: { institutionId: actor.institutionId, gradeId: grade.id, isActive: true },
+      where: { institutionId: actor.institutionId, gradeId: grade.id, isActive: true, OR: [{ isPublished: true }, { createdById: actor.userId }] },
       select: { id: true, title: true, subjectArea: true, category: true, isPublished: true, createdById: true, updatedAt: true, questions: {
         where: { isActive: true }, select: { id: true, type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' },
       } },

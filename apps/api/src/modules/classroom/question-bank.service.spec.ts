@@ -25,7 +25,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     await service.list(actor, 'classroom-1');
     expect(prisma.questionBankCollection.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { institutionId: 'school-1', gradeId: 'grade-5', isActive: true },
+      where: { institutionId: 'school-1', gradeId: 'grade-5', isActive: true, OR: [{ isPublished: true }, { createdById: 'teacher-1' }] },
     }));
   });
 
