@@ -755,6 +755,7 @@ model Grade {
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
   reportCardTemplateSelections ReportCardTemplateSelection[]
   catalogAchievements  Achievement[]         @relation("GradeCatalogAchievements")
+  questionBankCollections QuestionBankCollection[]
   finalComponentScopes FinalComponentScope[]
 
   @@unique([institutionId, stage, name])
@@ -1709,6 +1710,7 @@ model StudentEnrollment {
   duelsInvited           ClassroomDuel[] @relation("DuelInviter")
   duelsReceived          ClassroomDuel[] @relation("DuelInvitee")
   duelAnswers            ClassroomDuelAnswer[]
+  duelPowerUses          ClassroomDuelPowerUse[]
   convivenciaEntries     ConvivenciaEntry[]
 
   // Observador del estudiante (sub-módulos)
@@ -6166,6 +6168,8 @@ model ClassroomDuel {
   inviterEnrollmentId  String
   inviteeEnrollmentId  String
   pairKey              String
+  category             String @default("Mixta")
+  selectionMode        String @default("CHOSEN")
   status               ClassroomDuelStatus @default(INVITED)
   questions            Json?
   createdAt            DateTime @default(now())
@@ -6178,6 +6182,7 @@ model ClassroomDuel {
   inviter              StudentEnrollment @relation("DuelInviter", fields: [inviterEnrollmentId], references: [id], onDelete: Restrict)
   invitee              StudentEnrollment @relation("DuelInvitee", fields: [inviteeEnrollmentId], references: [id], onDelete: Restrict)
   answers              ClassroomDuelAnswer[]
+  powerUses             ClassroomDuelPowerUse[]
 
   @@index([institutionId, classroomId, status])
   @@index([institutionId, inviterEnrollmentId, createdAt])
@@ -6199,6 +6204,63 @@ model ClassroomDuelAnswer {
 
   @@unique([duelId, enrollmentId, ordinal])
   @@index([institutionId, enrollmentId])
+}
+
+// El descarte 50/50 se registra por participante y partida. Las opciones
+// restantes se guardan para que una recarga muestre exactamente la misma ayuda.
+model ClassroomDuelPowerUse {
+  id            String @id @default(cuid())
+  institutionId String
+  duelId        String
+  enrollmentId  String
+  ordinal       Int
+  options       Json
+  createdAt     DateTime @default(now())
+
+  duel          ClassroomDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+
+  @@unique([duelId, enrollmentId])
+  @@index([institutionId, enrollmentId])
+}
+
+// Cuestionarios reutilizables por grado, independientes de una actividad.
+model QuestionBankCollection {
+  id            String @id @default(cuid())
+  institutionId String
+  gradeId       String
+  createdById   String
+  title         String
+  category      String
+  subjectArea   String
+  isPublished   Boolean @default(false)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  grade         Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  questions     QuestionBankItem[]
+
+  @@index([institutionId, gradeId, isPublished])
+  @@index([institutionId, createdById])
+}
+
+model QuestionBankItem {
+  id            String @id @default(cuid())
+  institutionId String
+  collectionId  String
+  type          QuestionType
+  text          String @db.Text
+  options       Json
+  correctAnswer String @db.Text
+  explanation   String? @db.Text
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  collection    QuestionBankCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId, collectionId])
 }
 model ClassroomSection {
   id             String   @id @default(cuid())

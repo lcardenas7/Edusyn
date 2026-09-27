@@ -425,6 +425,7 @@ export default function AulaVirtual() {
             onCrearConIA={rol === 'docente' ? () => setCreandoConIA(true) : undefined}
             onAbrirBloques={() => navigate(`/aula/${classroomId}/bloques`)}
             onAbrirDuelos={() => navigate(`/aula/${classroomId}/duelos`)}
+            onAbrirBanco={rol === 'docente' ? () => navigate(`/aula/${classroomId}/banco-preguntas`) : undefined}
           />
         ) : vista === 'notas' ? (
           <Notas

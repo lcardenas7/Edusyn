@@ -18,12 +18,14 @@ import { FormativeEvaluationService } from './formative-evaluation.service';
 import { FormativeEvaluationController } from './formative-evaluation.controller';
 import { DuelController } from './duel.controller';
 import { DuelService } from './duel.service';
+import { QuestionBankController } from './question-bank.controller';
+import { QuestionBankService } from './question-bank.service';
 
 @Module({
   imports: [PrismaModule, ApdModule, GamificationModule, LearningRouteModule, EvaluationModule],
   // Las rutas literales restantes del controlador original preceden a @Get(':id') de B1.
-  controllers: [ClassroomController, ClassroomB1Controller, FormativeEvaluationController, DuelController],
-  providers: [ClassroomService, ClassroomCronService, ActivityNotificationsService, AttitudinalService, FormativeEvaluationService, LessonService, CompletionService, ActivityGatingService, ClassroomTenantAccessService, DuelService],
+  controllers: [ClassroomController, ClassroomB1Controller, FormativeEvaluationController, DuelController, QuestionBankController],
+  providers: [ClassroomService, ClassroomCronService, ActivityNotificationsService, AttitudinalService, FormativeEvaluationService, LessonService, CompletionService, ActivityGatingService, ClassroomTenantAccessService, DuelService, QuestionBankService],
   exports: [ClassroomService, AttitudinalService, LessonService, ActivityGatingService],
 })
 export class ClassroomModule {}

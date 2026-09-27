@@ -65,6 +65,7 @@ export interface ActividadesProps {
   /** Entrada visible a la maqueta de bloques en staging. */
   onAbrirBloques?: () => void
   onAbrirDuelos?: () => void
+  onAbrirBanco?: () => void
   /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
   totalEstudiantes?: number | null
   now?: Date
@@ -81,6 +82,7 @@ export function Actividades({
   onCrearConIA,
   onAbrirBloques,
   onAbrirDuelos,
+  onAbrirBanco,
   totalEstudiantes,
   now = new Date(),
 }: ActividadesProps) {
@@ -149,8 +151,16 @@ export function Actividades({
       {onAbrirDuelos && (
         <section className="mt-5 flex flex-wrap items-center gap-4 rounded-2xl border border-violet-300/30 bg-gradient-to-r from-[#232444] via-[#32305d] to-[#174d52] p-5 text-white shadow-lg" aria-labelledby="duelos-title">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-amber-300/15 text-3xl" aria-hidden="true">⚔️</span>
-          <div className="min-w-0 flex-1"><span className="text-[11px] font-black uppercase tracking-[.18em] text-amber-200">Actividad · Edusyn Arena</span><h2 id="duelos-title" className="mt-1 text-xl font-bold">Duelos entre compañeros</h2><p className="mt-1 text-sm text-slate-200">{role === 'docente' ? 'Habilita preguntas de tus cuestionarios para abrir el juego.' : 'Reta a alguien de tu grupo y responde siete preguntas compartidas.'}</p></div>
+          <div className="min-w-0 flex-1"><span className="text-[11px] font-black uppercase tracking-[.18em] text-amber-200">Actividad · Edusyn Arena</span><h2 id="duelos-title" className="mt-1 text-xl font-bold">Duelos entre compañeros</h2><p className="mt-1 text-sm text-slate-200">{role === 'docente' ? 'Usa el banco por grado o habilita cuestionarios del aula.' : 'Elige categoría o gira la ruleta y compite con alguien de tu grupo.'}</p></div>
           <button type="button" onClick={onAbrirDuelos} className="min-h-12 w-full rounded-xl bg-amber-300 px-5 font-bold text-[#25243f] hover:bg-amber-200 sm:w-auto">{role === 'docente' ? 'Preparar Arena' : 'Entrar a Arena'} →</button>
+        </section>
+      )}
+
+      {onAbrirBanco && (
+        <section className="mt-3 flex flex-wrap items-center gap-4 rounded-2xl border border-teal-200 bg-[#e7f3eb] p-5 text-[#214d42]" aria-labelledby="banco-title">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#d0e8dc] text-2xl" aria-hidden="true">📚</span>
+          <div className="min-w-0 flex-1"><span className="text-[11px] font-black uppercase tracking-[.18em] text-[#3a7863]">Herramienta docente · independiente de Arena</span><h2 id="banco-title" className="mt-1 text-lg font-bold">Banco de cuestionarios del grado</h2><p className="mt-1 text-sm">Crea cuestionarios propios con preguntas por materia y categoría para reutilizarlos en distintas experiencias.</p></div>
+          <button type="button" onClick={onAbrirBanco} className="min-h-12 w-full rounded-xl bg-[#285e4d] px-5 font-bold text-white sm:w-auto">Abrir banco →</button>
         </section>
       )}
 
