@@ -28,8 +28,10 @@ Solo web, sin migración. `88759c8d` añade la maqueta funcional en
 `/prototipos/bloques-laberinto.html`: Blockly real con bloques conectables,
 simulación del bosque de Lía y seguimiento de cada instrucción en móvil.
 La entrada visible en Aula → Actividades y la ruta corta `/bloques-laberinto.html`
-se añadieron en el siguiente push de staging. Validado con 9 pruebas del
-intérprete y build de `apps/web`; publicación HTTP en verificación.
+se añadieron en el siguiente push de staging. El servidor `serve -s` redirigía
+los archivos `.html` a rutas sin extensión y devolvía la SPA; se desactivó
+`cleanUrls` para que la maqueta se sirva directamente. Validado con 9 pruebas
+del intérprete y build de `apps/web`.
 
 ### Rúbrica formativa: pesos parejos con muchas preguntas — staging · 2026-09-17
 
