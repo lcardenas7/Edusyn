@@ -22,6 +22,14 @@
 
 ## Historial (más reciente arriba)
 
+### Reutilización de cuestionarios en actividades — staging · 2026-09-27
+
+`d37244c1`. Web + API, sin migración. El banco docente ofrece los quizzes en
+borrador del aula y permite copiarles las preguntas de un cuestionario del mismo
+grado; el docente puede revisarlas antes de publicar. Verificado: build de API y
+web, 6 pruebas del servicio de banco, `git diff --check` y Railway SUCCESS para
+`edusyn-api-staging` y `edusyn-web-staging`.
+
 ### Banco de cuestionarios por grado y Arena con categorías — staging · 2026-09-27
 
 `697829bf`. Web + API + migración `20260927020000_arena_categories_power`.
