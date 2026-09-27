@@ -22,6 +22,18 @@
 
 ## Historial (más reciente arriba)
 
+### Banco de cuestionarios por grado y Arena con categorías — staging · 2026-09-27
+
+`697829bf`. Web + API + migración `20260927020000_arena_categories_power`.
+Los docentes crean cuestionarios propios en una biblioteca independiente de Arena,
+con materia, categoría y preguntas; los publicados alimentan los duelos del mismo
+grado. Arena permite elegir categoría o asignarla con ruleta del servidor, mantiene
+varias partidas con compañeros distintos y ofrece un descarte 50/50 persistente
+por jugador y duelo. Los cuestionarios publicados del aula siguen siendo fuente
+opcional. Verificado: build de API y web, Prisma válido, 9 pruebas y Railway
+SUCCESS para `edusyn-api-staging` y `edusyn-web-staging` (migración aplicada).
+Pendiente: prueba manual con cuentas docentes y dos estudiantes autenticados.
+
 ### Arena: duelos reales en Aula → Actividades — staging · 2026-09-27
 
 `db014db0`. Web + API + migración `20260927010000_classroom_duels`. El docente
