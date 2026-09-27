@@ -22,6 +22,16 @@
 
 ## Historial (más reciente arriba)
 
+### Arena: duelos reales en Aula → Actividades — staging · 2026-09-27
+
+`db014db0`. Web + API + migración `20260927010000_classroom_duels`. El docente
+habilita cuestionarios publicados; estudiantes con matrícula activa del mismo grupo
+pueden invitarse, responder las mismas 7 preguntas y ver el resultado privado al
+terminar ambos. Los duelos y las respuestas persisten; no afectan calificaciones.
+Verificado: build de API y web, esquema Prisma válido, 3 pruebas de privacidad y
+Railway SUCCESS en `edusyn-api-staging` y `edusyn-web-staging` (migración aplicada
+al arrancar la API). Pendiente: prueba manual con dos cuentas de estudiantes.
+
 ### Laberinto de bloques para revisión móvil — staging · 2026-09-27
 
 Solo web, sin migración. `88759c8d` añade la maqueta funcional en
