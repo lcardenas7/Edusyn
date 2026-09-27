@@ -22,6 +22,12 @@
 
 ## Historial (más reciente arriba)
 
+### Privacidad de borradores del banco — staging · 2026-09-27
+
+`01a3c98c`. API, sin migración. Cada docente ve sus cuestionarios en borrador;
+los publicados se comparten con otros docentes del mismo grado. Verificado:
+build de API, 6 pruebas del banco y Railway SUCCESS para API y web de staging.
+
 ### Reutilización de cuestionarios en actividades — staging · 2026-09-27
 
 `d37244c1`. Web + API, sin migración. El banco docente ofrece los quizzes en
