@@ -33,8 +33,8 @@ export class DuelController {
 
   @Post('classrooms/:classroomId')
   @Roles('ESTUDIANTE')
-  invite(@Param('classroomId') classroomId: string, @Body() body: { opponentEnrollmentId: string }, @Request() req: any) {
-    return this.actor(req).then((actor) => this.service.invite(actor, classroomId, body?.opponentEnrollmentId));
+  invite(@Param('classroomId') classroomId: string, @Body() body: { opponentEnrollmentId: string; category?: string; selectionMode?: string }, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.invite(actor, classroomId, body?.opponentEnrollmentId, { category: body?.category, selectionMode: body?.selectionMode }));
   }
 
   @Get(':duelId')
@@ -59,5 +59,11 @@ export class DuelController {
   @Roles('ESTUDIANTE')
   answer(@Param('duelId') duelId: string, @Body() body: { ordinal: number; answer: string }, @Request() req: any) {
     return this.actor(req).then((actor) => this.service.answer(actor, duelId, body?.ordinal, body?.answer));
+  }
+
+  @Post(':duelId/power')
+  @Roles('ESTUDIANTE')
+  usePower(@Param('duelId') duelId: string, @Body() body: { ordinal: number }, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.usePower(actor, duelId, body?.ordinal));
   }
 }
