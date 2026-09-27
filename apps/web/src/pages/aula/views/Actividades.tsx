@@ -62,6 +62,8 @@ export interface ActividadesProps {
   onCrear?: () => void
   /** Flujo guiado con una IA externa (lección, quiz o tarea). */
   onCrearConIA?: () => void
+  /** Entrada visible a la maqueta de bloques en staging. */
+  onAbrirBloques?: () => void
   /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
   totalEstudiantes?: number | null
   now?: Date
@@ -76,6 +78,7 @@ export function Actividades({
   onAbrirActividad,
   onCrear,
   onCrearConIA,
+  onAbrirBloques,
   totalEstudiantes,
   now = new Date(),
 }: ActividadesProps) {
@@ -140,6 +143,26 @@ export function Actividades({
           </div>
         )}
       </header>
+
+      {onAbrirBloques && (
+        <section className="mt-5 overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-[#e8f1e2] via-[#f7f5e9] to-[#e9ecdb] p-4 shadow-sm sm:p-5" aria-labelledby="bloques-preview-title">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#285e4d] text-2xl shadow-sm" aria-hidden="true">🧭</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#416b50]">Vista previa interactiva</span>
+              <h2 id="bloques-preview-title" className="text-lg font-bold leading-tight text-[#233b34]">Bloques · El bosque de Lía</h2>
+              <p className="mt-1 text-sm text-[#4e6659]">Conecta instrucciones y observa el recorrido junto al bloque que se ejecuta.</p>
+            </div>
+            <button type="button" onClick={onAbrirBloques} className="hidden min-h-btn shrink-0 items-center rounded-xl bg-[#285e4d] px-4 text-sm font-semibold text-white hover:bg-[#1e493b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#285e4d] sm:inline-flex">
+              Abrir maqueta →
+            </button>
+          </div>
+          <button type="button" onClick={onAbrirBloques} className="mt-4 min-h-btn w-full rounded-xl bg-[#285e4d] px-4 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#285e4d] sm:hidden">
+            Abrir maqueta →
+          </button>
+          <p className="mt-2 text-xs text-[#617467]">Práctica de revisión: todavía no guarda avances ni genera calificación.</p>
+        </section>
+      )}
 
       {/* Orientación del estudiante: cuánto le falta y cuánto lleva, antes de cualquier
           filtro. Es lo primero que quiere saber al abrir esta pantalla, y hasta ahora tenía

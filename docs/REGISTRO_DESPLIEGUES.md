@@ -22,6 +22,15 @@
 
 ## Historial (más reciente arriba)
 
+### Laberinto de bloques para revisión móvil — staging · 2026-09-27
+
+Solo web, sin migración. `88759c8d` añade la maqueta funcional en
+`/prototipos/bloques-laberinto.html`: Blockly real con bloques conectables,
+simulación del bosque de Lía y seguimiento de cada instrucción en móvil.
+La entrada visible en Aula → Actividades y la ruta corta `/bloques-laberinto.html`
+se añadieron en el siguiente push de staging. Validado con 9 pruebas del
+intérprete y build de `apps/web`; publicación HTTP en verificación.
+
 ### Rúbrica formativa: pesos parejos con muchas preguntas — staging · 2026-09-17
 
 Solo web, sin migración. `5f8028ea` (cherry-pick de `a8bf519d`). `evenWeights` daba todo el sobrante a la
