@@ -22,6 +22,15 @@
 
 ## Historial (más reciente arriba)
 
+### Matemáticas y lógica · 6.º para Duelos — staging · 2026-09-28
+
+`5fd46782`. API + documentación, sin migración. Se agregó el banco institucional
+opcional de 150 preguntas, auditado con 120/30 por tipo, dificultad 50/70/30,
+30 respuestas correctas por letra y conceptos únicos. Build de API y 16 pruebas de
+`question-bank.service.spec.ts` aprobados. Verificado en staging en la biblioteca
+docente del aula de 8.º: **Matemáticas y lógica · 6.º** aparece con 150 preguntas y
+la acción **Usar este banco**; no se importó al aula.
+
 ### Lengua y literatura · 6.º para Duelos — staging · 2026-09-28
 
 `ce0650ff`. API + documentación, sin migración. Se añadió el banco opcional de
