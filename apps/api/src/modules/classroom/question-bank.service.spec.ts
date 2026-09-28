@@ -8,7 +8,7 @@ function setup() {
   const prisma = {
     group: { findFirst: jest.fn().mockResolvedValue({ grade: { id: 'grade-5', name: 'Quinto' } }) },
     questionBankCollection: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue({ id: 'collection-1', createdById: 'teacher-1' }), create: jest.fn(), update: jest.fn() },
-    questionBankItem: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+    questionBankItem: { findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn() },
     classroomActivity: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
@@ -21,6 +21,38 @@ function setup() {
 }
 
 describe('QuestionBankService', () => {
+  it('offers only official banks matching the classroom grade', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
+    const catalogs = await service.officialCatalog(actor, 'classroom-1');
+    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1']);
+    expect(catalogs.every((item) => item.questionCount === 150 && !item.imported)).toBe(true);
+  });
+
+  it('imports an official bank into the institution grade and publishes it for Arena', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'official-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-historia-grade-6-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      institutionId: 'school-1', gradeId: 'grade-6', createdById: 'teacher-1', isPublished: true,
+      officialCatalogId: 'edusyn-historia-grade-6-v1', title: 'Historia · 6.º',
+    }) });
+    expect(tx.questionBankItem.createMany).toHaveBeenCalledWith({ data: expect.arrayContaining([expect.objectContaining({ collectionId: 'official-copy' })]) });
+    expect(tx.questionBankItem.createMany.mock.calls[0][0].data).toHaveLength(150);
+  });
+
+  it('does not expose official grade-six banks to other grades', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-7', name: 'Séptimo' } });
+    await expect(service.importOfficial(actor, 'classroom-1', 'edusyn-arte-cultura-grade-6-v1')).rejects.toThrow('no disponible para este grado');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
   it('scopes questionnaires to the institution and grade', async () => {
     const { service, prisma } = setup();
     await service.list(actor, 'classroom-1');
