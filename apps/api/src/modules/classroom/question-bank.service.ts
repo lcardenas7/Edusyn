@@ -106,20 +106,18 @@ export class QuestionBankService {
       select: { id: true, subjectArea: true, questions: { where: { isActive: true }, select: { type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' } } },
     });
     if (!collection) throw new NotFoundException('Cuestionario no encontrado');
-    if (collection.questions.length < 1 || collection.questions.length > 100) throw new BadRequestException('El cuestionario debe tener entre 1 y 100 preguntas');
+    if (collection.questions.length < 1 || collection.questions.length > 200) throw new BadRequestException('El cuestionario debe tener entre 1 y 200 preguntas');
     const activity = await this.access.activityInScope(actor, activityId);
     if (activity.classroomId !== classroomId || activity.isPublished || !['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'].includes(activity.type)) throw new BadRequestException('Elige un quiz en borrador de esta aula');
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.classroomActivity.findUnique({ where: { id: activityId }, select: { isPublished: true } });
       if (!current || current.isPublished) throw new BadRequestException('El quiz ya fue publicado');
       const last = await tx.activityQuestion.findFirst({ where: { activityId }, select: { sortOrder: true }, orderBy: { sortOrder: 'desc' } });
-      let order = (last?.sortOrder ?? -1) + 1;
-      for (const question of collection.questions) {
-        await tx.activityQuestion.create({ data: {
+      const firstOrder = (last?.sortOrder ?? -1) + 1;
+      await tx.activityQuestion.createMany({ data: collection.questions.map((question, index) => ({
           activityId, type: question.type, text: question.text, options: question.options as Prisma.InputJsonValue,
-          correctAnswer: question.correctAnswer, explanation: question.explanation, subjectArea: collection.subjectArea, sortOrder: order++,
-        } });
-      }
+          correctAnswer: question.correctAnswer, explanation: question.explanation, subjectArea: collection.subjectArea, sortOrder: firstOrder + index,
+        })) });
     });
     return { copied: collection.questions.length, activityId };
   }

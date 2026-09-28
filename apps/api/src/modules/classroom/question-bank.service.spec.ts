@@ -53,12 +53,26 @@ describe('QuestionBankService', () => {
     prisma.questionBankCollection.findFirst.mockResolvedValue({ id: 'collection-1', subjectArea: 'Matemáticas', questions: [question] });
     const tx = {
       classroomActivity: { findUnique: jest.fn().mockResolvedValue({ isPublished: false }) },
-      activityQuestion: { findFirst: jest.fn().mockResolvedValue({ sortOrder: 2 }), create: jest.fn() },
+      activityQuestion: { findFirst: jest.fn().mockResolvedValue({ sortOrder: 2 }), createMany: jest.fn() },
     };
     prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
     await expect(service.copyToActivity(actor, 'classroom-1', 'collection-1', 'activity-1')).resolves.toEqual({ copied: 1, activityId: 'activity-1' });
     expect(access.activityInScope).toHaveBeenCalledWith(actor, 'activity-1');
-    expect(tx.activityQuestion.create).toHaveBeenCalledWith({ data: expect.objectContaining({ activityId: 'activity-1', subjectArea: 'Matemáticas', sortOrder: 3, text: question.text }) });
+    expect(tx.activityQuestion.createMany).toHaveBeenCalledWith({ data: [expect.objectContaining({ activityId: 'activity-1', subjectArea: 'Matemáticas', sortOrder: 3, text: question.text })] });
+  });
+
+  it('accepts a 150-question collection for a draft quiz', async () => {
+    const { service, prisma } = setup();
+    prisma.questionBankCollection.findFirst.mockResolvedValue({ id: 'collection-1', subjectArea: 'Matemáticas', questions: Array(150).fill(question) });
+    const tx = {
+      classroomActivity: { findUnique: jest.fn().mockResolvedValue({ isPublished: false }) },
+      activityQuestion: { findFirst: jest.fn().mockResolvedValue(null), createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await expect(service.copyToActivity(actor, 'classroom-1', 'collection-1', 'activity-1')).resolves.toEqual({ copied: 150, activityId: 'activity-1' });
+    const data = tx.activityQuestion.createMany.mock.calls[0][0].data;
+    expect(data).toHaveLength(150);
+    expect(data[149].sortOrder).toBe(149);
   });
 
   it('refuses to copy into a published quiz', async () => {
