@@ -22,6 +22,13 @@
 
 ## Historial (más reciente arriba)
 
+### Cuestionarios de 150 preguntas — staging · 2026-09-28
+
+`d866a577`. API, sin migración. La copia de un cuestionario del banco a un quiz
+en borrador admite hasta 200 preguntas y usa inserción por lote; así funciona
+con las futuras categorías de 150 preguntas. Verificado: build de API, 7 pruebas
+del servicio de banco y Railway SUCCESS para API y web de staging.
+
 ### Privacidad de borradores del banco — staging · 2026-09-27
 
 `01a3c98c`. API, sin migración. Cada docente ve sus cuestionarios en borrador;
