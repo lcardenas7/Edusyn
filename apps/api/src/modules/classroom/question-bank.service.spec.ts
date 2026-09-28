@@ -25,7 +25,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1']);
+    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1']);
     expect(catalogs.every((item) => item.questionCount === 150 && !item.imported)).toBe(true);
   });
 
@@ -38,10 +38,10 @@ describe('QuestionBankService', () => {
       questionBankItem: { createMany: jest.fn() },
     };
     prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
-    await service.importOfficial(actor, 'classroom-1', 'edusyn-historia-grade-6-v1');
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-deportes-grade-6-v1');
     expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
       institutionId: 'school-1', gradeId: 'grade-6', createdById: 'teacher-1', isPublished: true,
-      officialCatalogId: 'edusyn-historia-grade-6-v1', title: 'Historia · 6.º',
+      officialCatalogId: 'edusyn-deportes-grade-6-v1', title: 'Deportes · 6.º',
     }) });
     expect(tx.questionBankItem.createMany).toHaveBeenCalledWith({ data: expect.arrayContaining([expect.objectContaining({ collectionId: 'official-copy' })]) });
     expect(tx.questionBankItem.createMany.mock.calls[0][0].data).toHaveLength(150);
