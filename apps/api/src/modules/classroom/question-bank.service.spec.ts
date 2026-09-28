@@ -25,7 +25,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1', 'edusyn-ciencia-naturaleza-grade-6-v1']);
+    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1', 'edusyn-ciencia-naturaleza-grade-6-v1', 'edusyn-geografia-grade-6-v1']);
     expect(catalogs.every((item) => item.questionCount === 150 && !item.imported)).toBe(true);
   });
 
@@ -33,7 +33,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.grade)).toEqual([6, 6, 6, 6]);
+    expect(catalogs.map((item) => item.grade)).toEqual([6, 6, 6, 6, 6]);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
   });
 
@@ -89,6 +89,26 @@ describe('QuestionBankService', () => {
     expect(imported).toHaveLength(150);
     expect(imported[0].text).toContain('unidad básica');
     expect(imported[149].text).toContain('linterna');
+  });
+
+  it('imports the official geography bank with its audited 150 questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'geography-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-geografia-grade-6-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-geografia-grade-6-v1', title: 'Geografía · 6.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('latitud');
+    expect(imported[125].text).toContain('bahía');
+    expect(imported[149].text).toContain('imágenes satelitales');
   });
 
   it('does not expose banks more than two grades below the classroom', async () => {

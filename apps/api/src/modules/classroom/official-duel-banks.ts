@@ -10998,5 +10998,2836 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
         "stability": "STABLE"
       }
     ]
+  },
+  {
+    "catalogId": "edusyn-geografia-grade-6-v1",
+    "title": "Geografía · 6.º",
+    "grade": 6,
+    "subjectArea": "Duelos",
+    "category": "Geografía",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://marine.weather.gov/glossary.php?word=isohyet",
+      "https://md.water.usgs.gov/preview/faq/groundwater.html",
+      "https://www.usgs.gov/news/science-snippet/earthword-alluvial-fan",
+      "https://www.usgs.gov/faqs/what-a-topographic-map",
+      "https://www.usgs.gov/faqs/how-are-different-map-projections-used",
+      "https://www.eia.gov/energyexplained/hydropower/",
+      "https://tsunami.coast.noaa.gov/",
+      "https://vlab.noaa.gov/web/oclo/gamma",
+      "https://pubs.usgs.gov/pp/0437a/report.pdf"
+    ],
+    "questions": [
+      {
+        "id": "GEO6-001",
+        "number": 1,
+        "topic": "Coordenadas geográficas",
+        "concept": "latitud_posicion_norte_sur_ecuador",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indican principalmente las líneas de latitud?",
+        "options": [
+          "La distancia al norte o al sur del ecuador",
+          "La distancia al este o al oeste de Greenwich",
+          "La altura sobre el nivel del mar",
+          "La profundidad de los océanos"
+        ],
+        "correctAnswer": "La distancia al norte o al sur del ecuador",
+        "explanation": "La latitud indica la posición angular al norte o al sur del ecuador.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-002",
+        "number": 2,
+        "topic": "Coordenadas geográficas",
+        "concept": "longitud_referencia_meridiano_greenwich",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Desde qué meridiano se mide la longitud geográfica?",
+        "options": [
+          "El ecuador",
+          "Greenwich",
+          "El trópico de Cáncer",
+          "El círculo polar ártico"
+        ],
+        "correctAnswer": "Greenwich",
+        "explanation": "La longitud se mide hacia el este o el oeste desde el meridiano de Greenwich.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-003",
+        "number": 3,
+        "topic": "Mapas",
+        "concept": "leyenda_explica_simbolos_mapa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué información suele mostrar la leyenda de un mapa?",
+        "options": [
+          "La fecha de nacimiento de quien lo dibujó",
+          "El tamaño real de cada objeto",
+          "El significado de sus símbolos y colores",
+          "La temperatura de cada lugar"
+        ],
+        "correctAnswer": "El significado de sus símbolos y colores",
+        "explanation": "La leyenda explica qué representan los signos, colores y símbolos usados en el mapa.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-004",
+        "number": 4,
+        "topic": "Mapas físicos",
+        "concept": "colores_verdes_altitud_baja_mapa_fisico",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En muchos mapas físicos, ¿qué suelen indicar los tonos de verde en zonas terrestres?",
+        "options": [
+          "Profundidad del océano",
+          "Límites departamentales",
+          "Intensidad del viento",
+          "Tierras de menor altitud"
+        ],
+        "correctAnswer": "Tierras de menor altitud",
+        "explanation": "Los colores hipsométricos suelen representar alturas; los verdes frecuentemente señalan zonas bajas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-005",
+        "number": 5,
+        "topic": "Continentes y océanos",
+        "concept": "oceano_pacifico_mayor_extension",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es el océano de mayor extensión?",
+        "options": [
+          "Pacífico",
+          "Atlántico",
+          "Índico",
+          "Ártico"
+        ],
+        "correctAnswer": "Pacífico",
+        "explanation": "El océano Pacífico es el más extenso del planeta.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-006",
+        "number": 6,
+        "topic": "Tierra y movimiento",
+        "concept": "rotacion_terrestre_dia_noche",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La rotación de la Tierra produce la alternancia entre el día y la noche.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Al girar sobre su eje, distintas partes de la Tierra quedan iluminadas por el Sol y luego pasan a la oscuridad.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-007",
+        "number": 7,
+        "topic": "Escala cartográfica",
+        "concept": "escala_mapa_conversion_distancia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa, 1 cm representa 10 km. ¿Qué distancia real representan 3 cm?",
+        "options": [
+          "13 km",
+          "30 km",
+          "300 km",
+          "3 km"
+        ],
+        "correctAnswer": "30 km",
+        "explanation": "Si cada centímetro representa 10 km, tres centímetros representan 30 km.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-008",
+        "number": 8,
+        "topic": "Colombia",
+        "concept": "costas_colombia_caribe_y_pacifico",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Colombia tiene costas tanto en el mar Caribe como en el océano Pacífico.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "El territorio colombiano tiene costa en ambos cuerpos de agua.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-009",
+        "number": 9,
+        "topic": "Coordenadas geográficas",
+        "concept": "paralelos_reducen_circunferencia_hacia_polos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre con las líneas de latitud a medida que se acercan a los polos?",
+        "options": [
+          "Se convierten en meridianos",
+          "Se alejan del ecuador y se cruzan",
+          "Se mantienen paralelas y sus círculos se hacen menores",
+          "Desaparecen en los trópicos"
+        ],
+        "correctAnswer": "Se mantienen paralelas y sus círculos se hacen menores",
+        "explanation": "Los paralelos no se cruzan; su circunferencia disminuye al acercarse a los polos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-010",
+        "number": 10,
+        "topic": "Relieve",
+        "concept": "curvas_nivel_juntas_pendiente_empinada",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indican las curvas de nivel muy juntas en un mapa topográfico?",
+        "options": [
+          "Una zona plana",
+          "Un río ancho",
+          "Una costa baja",
+          "Una pendiente pronunciada"
+        ],
+        "correctAnswer": "Una pendiente pronunciada",
+        "explanation": "Cuando las curvas de nivel están cerca unas de otras, la altura cambia en poca distancia horizontal.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-011",
+        "number": 11,
+        "topic": "Población",
+        "concept": "densidad_poblacion_habitantes_superficie",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una región tiene 2.000 habitantes por cada km². ¿Qué describe esa medida?",
+        "options": [
+          "Densidad de población",
+          "Tasa de natalidad",
+          "Altitud media",
+          "Extensión del territorio"
+        ],
+        "correctAnswer": "Densidad de población",
+        "explanation": "La densidad de población relaciona cuántas personas viven en una unidad de superficie.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-012",
+        "number": 12,
+        "topic": "Ríos y relieve",
+        "concept": "delta_deposito_sedimentos_desembocadura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el depósito de sedimentos que puede formarse donde un río desemboca en un cuerpo de agua?",
+        "options": [
+          "Acantilado",
+          "Delta",
+          "Meseta",
+          "Istmo"
+        ],
+        "correctAnswer": "Delta",
+        "explanation": "Al disminuir la velocidad en su desembocadura, un río puede depositar sedimentos y formar un delta.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-013",
+        "number": 13,
+        "topic": "Formas del relieve",
+        "concept": "peninsula_tierra_rodeada_parcialmente_agua",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma de terreno está rodeada de agua por tres lados y unida al continente por uno?",
+        "options": [
+          "Isla",
+          "Golfo",
+          "Península",
+          "Archipiélago"
+        ],
+        "correctAnswer": "Península",
+        "explanation": "Una península es una porción de tierra rodeada parcialmente por agua y conectada al continente.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-014",
+        "number": 14,
+        "topic": "Colombia",
+        "concept": "llanuras_orinoquia_oriente_colombia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál región natural colombiana se caracteriza por extensas llanuras al este de los Andes?",
+        "options": [
+          "Insular",
+          "Pacífica",
+          "Andina",
+          "Orinoquía"
+        ],
+        "correctAnswer": "Orinoquía",
+        "explanation": "La Orinoquía comprende amplias llanuras orientales que drenan hacia la cuenca del Orinoco.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-015",
+        "number": 15,
+        "topic": "Clima",
+        "concept": "clima_patrones_largo_plazo_vs_tiempo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué diferencia describe mejor el clima y el tiempo atmosférico?",
+        "options": [
+          "Clima: patrones largos; tiempo: condiciones actuales",
+          "Clima: solo montañas; tiempo: solo costas",
+          "Clima: diario; tiempo: de varias décadas",
+          "Clima y tiempo: la misma medición"
+        ],
+        "correctAnswer": "Clima: patrones largos; tiempo: condiciones actuales",
+        "explanation": "El tiempo se refiere a condiciones de corto plazo; el clima resume patrones observados durante periodos largos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-016",
+        "number": 16,
+        "topic": "Orientación",
+        "concept": "orientacion_este_frente_oeste_espalda",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al amanecer, una persona mira hacia el lugar por donde sale el Sol. ¿Qué punto cardinal tiene a su espalda?",
+        "options": [
+          "Sur",
+          "Oeste",
+          "Norte",
+          "Este"
+        ],
+        "correctAnswer": "Oeste",
+        "explanation": "El Sol sale aproximadamente por el este; al mirar hacia allí, el oeste queda detrás.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-017",
+        "number": 17,
+        "topic": "Mapas",
+        "concept": "meridianos_convergen_en_polos",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las líneas de longitud se encuentran en los polos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Los meridianos convergen en los polos y se separan hacia el ecuador.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-018",
+        "number": 18,
+        "topic": "Colombia",
+        "concept": "rio_magdalena_desemboca_caribe",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Hacia qué océano fluye principalmente el río Magdalena?",
+        "options": [
+          "Pacífico",
+          "Índico",
+          "Atlántico, por el mar Caribe",
+          "Ártico"
+        ],
+        "correctAnswer": "Atlántico, por el mar Caribe",
+        "explanation": "El Magdalena desemboca en el mar Caribe, parte del océano Atlántico.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-019",
+        "number": 19,
+        "topic": "Geografía humana",
+        "concept": "gps_ubicacion_con_senales_satelitales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un teléfono calcula su ubicación a partir de señales de satélites. ¿Qué sistema utiliza?",
+        "options": [
+          "Brújula",
+          "Barómetro",
+          "Sistema de información geográfica",
+          "GPS"
+        ],
+        "correctAnswer": "GPS",
+        "explanation": "El GPS usa señales de satélites para estimar la ubicación mediante coordenadas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-020",
+        "number": 20,
+        "topic": "Colombia",
+        "concept": "rio_amazonas_recorrido_sur_colombia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El río Amazonas atraviesa el sur de Colombia y continúa hacia Brasil.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "El río Amazonas recorre parte del extremo sur colombiano antes de seguir por Brasil.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-021",
+        "number": 21,
+        "topic": "Relieve",
+        "concept": "elegir_terreno_elevado_fuera_planicie_inundable",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa topográfico, una familia quiere construir lejos de zonas bajas propensas a inundarse. ¿Qué lugar sería más prudente elegir?",
+        "options": [
+          "Parte baja de la ribera",
+          "Cauce seco de quebrada",
+          "Depresión sin salida de agua",
+          "Terraza alta lejos del cauce"
+        ],
+        "correctAnswer": "Terraza alta lejos del cauce",
+        "explanation": "Un sitio elevado y alejado del cauce suele reducir la exposición a inundaciones; también se deben revisar riesgos locales.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-022",
+        "number": 22,
+        "topic": "Coordenadas geográficas",
+        "concept": "desplazamiento_norte_aumenta_latitud",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un viajero se desplaza desde el ecuador hacia el norte sin cambiar de meridiano. ¿Qué ocurre con su latitud?",
+        "options": [
+          "Se mantiene en cero",
+          "Aumenta hacia el norte",
+          "Cambia de longitud, no de latitud",
+          "Se vuelve negativa en todo el recorrido"
+        ],
+        "correctAnswer": "Aumenta hacia el norte",
+        "explanation": "La latitud aumenta desde 0° en el ecuador hasta 90° norte en el polo norte.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-023",
+        "number": 23,
+        "topic": "Costas y temperatura",
+        "concept": "mar_modera_cambios_temperatura_costera",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad costera suele tener cambios de temperatura menos extremos que una ciudad interior cercana. ¿Qué factor ayuda a explicarlo?",
+        "options": [
+          "La costa recibe luz solo de noche",
+          "El agua cambia de temperatura más rápido que la tierra",
+          "El mar se calienta y se enfría más lentamente que el suelo",
+          "La latitud deja de influir junto al mar"
+        ],
+        "correctAnswer": "El mar se calienta y se enfría más lentamente que el suelo",
+        "explanation": "El agua se calienta y enfría más lentamente que la tierra, lo que puede moderar las temperaturas costeras.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-024",
+        "number": 24,
+        "topic": "Mapas",
+        "concept": "conversion_escala_uno_a_cien_mil",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "En un mapa a escala 1:100.000, un centímetro representa un kilómetro en el terreno.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "A esa escala, 1 cm en el mapa equivale a 100.000 cm en la realidad, es decir, 1 km.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-025",
+        "number": 25,
+        "topic": "Proyecciones cartográficas",
+        "concept": "proyeccion_plana_distorsiona_areas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una proyección como Mercator muestra Groenlandia casi tan grande como África. ¿Qué cautela debe tener quien la interpreta?",
+        "options": [
+          "La proyección puede distorsionar las áreas",
+          "Groenlandia tiene el área real de África",
+          "Los continentes están dibujados a escala idéntica",
+          "La forma rectangular garantiza tamaños reales"
+        ],
+        "correctAnswer": "La proyección puede distorsionar las áreas",
+        "explanation": "Al representar una superficie curva en un plano, algunas proyecciones distorsionan el tamaño relativo de las regiones.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-026",
+        "number": 26,
+        "topic": "Orientación",
+        "concept": "rosa_vientos_indica_puntos_cardinales",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué muestra una rosa de los vientos?",
+        "options": [
+          "Puntos cardinales",
+          "Alturas del terreno",
+          "Límites políticos",
+          "Distancias reales"
+        ],
+        "correctAnswer": "Puntos cardinales",
+        "explanation": "La rosa de los vientos indica direcciones como norte, sur, este y oeste.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-027",
+        "number": 27,
+        "topic": "Cuadrículas cartográficas",
+        "concept": "cuadrícula_ubicacion_columna_fila",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una cuadrícula, las columnas tienen letras y las filas números. ¿Cómo se señala una celda?",
+        "options": [
+          "Con una escala y una altura",
+          "Con una letra y un número",
+          "Con dos puntos cardinales",
+          "Con latitud y temperatura"
+        ],
+        "correctAnswer": "Con una letra y un número",
+        "explanation": "La combinación de columna y fila permite ubicar una celda, por ejemplo C4.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-028",
+        "number": 28,
+        "topic": "Continentes",
+        "concept": "asia_continente_mayor_extension",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es el continente de mayor extensión?",
+        "options": [
+          "África",
+          "América",
+          "Asia",
+          "Europa"
+        ],
+        "correctAnswer": "Asia",
+        "explanation": "Asia es el continente más extenso por superficie.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-029",
+        "number": 29,
+        "topic": "Tierra y hemisferios",
+        "concept": "ecuador_division_hemisferios_norte_sur",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué línea divide la Tierra en hemisferios norte y sur?",
+        "options": [
+          "Meridiano de Greenwich",
+          "Trópico de Capricornio",
+          "Círculo polar ártico",
+          "Ecuador"
+        ],
+        "correctAnswer": "Ecuador",
+        "explanation": "El ecuador, situado en 0° de latitud, separa los hemisferios norte y sur.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-030",
+        "number": 30,
+        "topic": "Mapas políticos",
+        "concept": "mapa_politico_muestra_limites_territoriales",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un mapa político puede mostrar fronteras entre países y divisiones internas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Los mapas políticos representan territorios y límites administrativos; sus detalles dependen de la escala.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-031",
+        "number": 31,
+        "topic": "Ríos",
+        "concept": "afluente_desemboca_en_rio_principal",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama un río o arroyo que desemboca en otro río?",
+        "options": [
+          "Estuario",
+          "Delta",
+          "Meandro",
+          "Afluente"
+        ],
+        "correctAnswer": "Afluente",
+        "explanation": "Un afluente vierte sus aguas en un río principal.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-032",
+        "number": 32,
+        "topic": "Relieve",
+        "concept": "llanura_superficie_extensa_poco_inclinada",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe mejor una llanura?",
+        "options": [
+          "Terreno rodeado por agua",
+          "Superficie extensa y poco inclinada",
+          "Valle estrecho entre montañas",
+          "Elevación aislada de gran altura"
+        ],
+        "correctAnswer": "Superficie extensa y poco inclinada",
+        "explanation": "Una llanura es un terreno amplio con relieve relativamente plano o de poca pendiente.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-033",
+        "number": 33,
+        "topic": "Representaciones geográficas",
+        "concept": "atlas_coleccion_organizada_de_mapas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué reúne normalmente un atlas?",
+        "options": [
+          "Fotografías de una sola ciudad",
+          "Instrucciones para usar una brújula",
+          "Colección organizada de mapas",
+          "Relatos de exploradores"
+        ],
+        "correctAnswer": "Colección organizada de mapas",
+        "explanation": "Un atlas es una colección de mapas organizada en un libro o formato digital.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-034",
+        "number": 34,
+        "topic": "Navegación",
+        "concept": "brujula_norte_magnetico_no_es_polo_geografico",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una brújula siempre apunta exactamente al polo norte geográfico.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso.  ",
+        "explanation": "La brújula responde al campo magnético terrestre, cuyo norte no coincide exactamente con el polo geográfico.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-035",
+        "number": 35,
+        "topic": "Formas del relieve",
+        "concept": "istmo_conecta_masas_terrestres",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma de terreno conecta dos áreas continentales y queda entre dos cuerpos de agua?",
+        "options": [
+          "Istmo",
+          "Península",
+          "Archipiélago",
+          "Bahía"
+        ],
+        "correctAnswer": "Istmo",
+        "explanation": "Un istmo es una franja estrecha de tierra que une dos masas terrestres y separa aguas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-036",
+        "number": 36,
+        "topic": "Coordenadas geográficas",
+        "concept": "desplazamiento_este_mismo_paralelo_cambia_longitud",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una persona avanza hacia el este siguiendo el mismo paralelo. ¿Qué cambia principalmente?",
+        "options": [
+          "La altitud",
+          "La longitud",
+          "La latitud",
+          "La distancia al ecuador"
+        ],
+        "correctAnswer": "La longitud",
+        "explanation": "Al desplazarse por el mismo paralelo, la latitud se mantiene y cambia la longitud.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-037",
+        "number": 37,
+        "topic": "Cuencas hidrográficas",
+        "concept": "cuenca_area_drenada_hacia_salida_comun",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué caracteriza principalmente una cuenca hidrográfica?",
+        "options": [
+          "Área que drena a un río principal",
+          "Curso principal de una red de ríos",
+          "Valle cubierto por hielo permanente",
+          "Costa cerrada entre dos montañas"
+        ],
+        "correctAnswer": "Valle cubierto por hielo permanente",
+        "explanation": "Una cuenca reúne el área que aporta escorrentía a un río, lago u otra salida común.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-038",
+        "number": 38,
+        "topic": "Escala cartográfica",
+        "concept": "escala_grande_muestra_area_menor_mas_detalle",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele mostrar un mapa a escala 1:10.000 frente a uno a 1:1.000.000?",
+        "options": [
+          "Más territorio y menos detalle",
+          "El mismo territorio con idéntico detalle",
+          "Un territorio mayor con más detalle",
+          "Un área menor con más detalle"
+        ],
+        "correctAnswer": "Un área menor con más detalle",
+        "explanation": "Una escala grande como 1:10.000 representa menos superficie con mayor detalle.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-039",
+        "number": 39,
+        "topic": "Mapas temáticos",
+        "concept": "mapa_tematico_muestra_distribucion_precipitacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué permite comparar principalmente un mapa de precipitación?",
+        "options": [
+          "La distribución espacial de la lluvia",
+          "La edad de las rocas",
+          "Los límites de los municipios",
+          "La profundidad del suelo"
+        ],
+        "correctAnswer": "La distribución espacial de la lluvia",
+        "explanation": "Un mapa temático representa un fenómeno específico, como la precipitación, en distintos lugares.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-040",
+        "number": 40,
+        "topic": "Globo terráqueo",
+        "concept": "globo_muestra_superficie_curva_sin_aplanar",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un globo representa la superficie curva terrestre sin extenderla sobre un plano rectangular.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "A diferencia de un mapa plano, el globo conserva la forma esférica general de la Tierra.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-041",
+        "number": 41,
+        "topic": "Colombia: hidrografía",
+        "concept": "rios_llanos_colombianos_cuenca_orinoco",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Hacia qué gran cuenca drenan muchos ríos de los Llanos orientales colombianos?",
+        "options": [
+          "Cuenca del Amazonas",
+          "Cuenca del Orinoco",
+          "Cuenca del Magdalena",
+          "Cuenca del Atrato"
+        ],
+        "correctAnswer": "Cuenca del Orinoco",
+        "explanation": "Los ríos de la Orinoquía colombiana hacen parte, en gran medida, de la cuenca del Orinoco.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-042",
+        "number": 42,
+        "topic": "Geografía humana",
+        "concept": "mapa_coropletico_densidad_poblacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un mapa usa tonos más oscuros para lugares con más habitantes por km², según su leyenda. ¿Qué representa?",
+        "options": [
+          "El crecimiento anual",
+          "La población total del país",
+          "La densidad de población",
+          "La migración entre ciudades"
+        ],
+        "correctAnswer": "La densidad de población",
+        "explanation": "La densidad expresa la cantidad de habitantes en relación con una superficie determinada.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-043",
+        "number": 43,
+        "topic": "Proyecciones cartográficas",
+        "concept": "mercator_conserva_angulos_locales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propiedad de Mercator facilita trazar rumbos de brújula en una carta náutica?",
+        "options": [
+          "Conserva el área de todos los continentes",
+          "Elimina cualquier distorsión",
+          "Mantiene el tamaño real de las regiones polares",
+          "Conserva ángulos locales"
+        ],
+        "correctAnswer": "Conserva ángulos locales",
+        "explanation": "Mercator conserva ángulos locales, aunque distorsiona mucho las áreas cerca de los polos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-044",
+        "number": 44,
+        "topic": "Mapas topográficos",
+        "concept": "curva_nivel_conecta_igual_elevacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Cada curva de nivel une puntos que tienen la misma elevación.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Las curvas de nivel conectan lugares de igual altura sobre el nivel de referencia del mapa.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-045",
+        "number": 45,
+        "topic": "Orientación cartográfica",
+        "concept": "longitud_este_mediodia_solar_local",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos ciudades están en una latitud similar, pero una queda mucho más al este. ¿Cuál alcanza primero el mediodía solar?",
+        "options": [
+          "La ciudad más al este",
+          "La ciudad más al oeste",
+          "La ciudad de mayor altitud",
+          "La ciudad más cercana al ecuador"
+        ],
+        "correctAnswer": "La ciudad más al este",
+        "explanation": "Debido a la rotación terrestre, los lugares más al este llegan antes al mediodía solar local.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-046",
+        "number": 46,
+        "topic": "Mapas urbanos",
+        "concept": "ruta_urbana_considera_red_y_obstaculos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un plano, una línea recta hacia el hospital cruza un río sin puente. ¿Qué conviene hacer?",
+        "options": [
+          "Buscar un puente en calles conectadas",
+          "Seguir la línea recta sobre el agua",
+          "Elegir la ruta más corta sin cruces",
+          "Ignorar el río y medir la distancia directa"
+        ],
+        "correctAnswer": "Buscar un puente en calles conectadas",
+        "explanation": "Una ruta posible depende de la red de calles y cruces; la distancia recta no siempre es transitable.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-047",
+        "number": 47,
+        "topic": "Orientación",
+        "concept": "mapa_girado_flecha_norte_derecha_borde_superior_oeste",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa girado, la flecha del norte apunta hacia la derecha de la página. ¿Hacia dónde queda el borde superior?",
+        "options": [
+          "Norte",
+          "Oeste",
+          "Este",
+          "Sur"
+        ],
+        "correctAnswer": "Oeste",
+        "explanation": "Si el norte queda a la derecha, al girar 90° en sentido antihorario desde esa dirección se encuentra el oeste en el borde superior.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-048",
+        "number": 48,
+        "topic": "Uso del suelo",
+        "concept": "comparacion_temporal_mapas_cambio_uso_suelo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos mapas del mismo lugar, separados por diez años, muestran menos bosque y más cultivos. ¿Qué conclusión apoyan?",
+        "options": [
+          "La región se volvió más alta",
+          "El río cambió de cuenca",
+          "Cambió el uso del suelo",
+          "Aumentó la distancia entre pueblos"
+        ],
+        "correctAnswer": "Cambió el uso del suelo",
+        "explanation": "La comparación temporal muestra una transformación de cobertura forestal a terreno cultivado, aunque no identifica por sí sola sus causas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-049",
+        "number": 49,
+        "topic": "Mapas topográficos",
+        "concept": "elegir_mapa_topografico_para_altura_y_pendiente",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una caminante necesita conocer las alturas y pendientes de un sendero. ¿Qué mapa le sirve más?",
+        "options": [
+          "Mapa político",
+          "Mapa de población",
+          "Mapa de carreteras",
+          "Mapa topográfico"
+        ],
+        "correctAnswer": "Mapa topográfico",
+        "explanation": "Un mapa topográfico representa elevaciones y formas del terreno, a menudo mediante curvas de nivel.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-050",
+        "number": 50,
+        "topic": "Fuentes cartográficas",
+        "concept": "fecha_mapa_importa_para_vigencia_de_datos",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un mapa antiguo puede representar correctamente cómo eran las calles cuando se elaboró, aunque ya hayan cambiado.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "La fecha importa: un mapa puede ser preciso para su época y estar desactualizado para orientarse hoy.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-051",
+        "number": 51,
+        "topic": "Formas del relieve",
+        "concept": "meseta_superficie_plana_elevada",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué caracteriza principalmente una meseta?",
+        "options": [
+          "Superficie elevada y relativamente plana",
+          "Terreno bajo entre dos laderas",
+          "Franja estrecha entre dos mares",
+          "Grupo de islas cercanas"
+        ],
+        "correctAnswer": "Superficie elevada y relativamente plana",
+        "explanation": "Una meseta es una extensión relativamente plana situada a mayor altura que las tierras vecinas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-052",
+        "number": 52,
+        "topic": "Islas",
+        "concept": "archipielago_conjunto_de_islas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama un conjunto de islas relacionadas entre sí?",
+        "options": [
+          "Península",
+          "Archipiélago",
+          "Istmo",
+          "Estrecho"
+        ],
+        "correctAnswer": "Archipiélago",
+        "explanation": "Un archipiélago es un grupo o conjunto de islas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-053",
+        "number": 53,
+        "topic": "Costas",
+        "concept": "estrecho_paso_angosto_de_agua",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un estrecho?",
+        "options": [
+          "Entrada amplia del mar en la costa",
+          "Línea que separa dos países",
+          "Paso angosto de agua entre tierras",
+          "Franja de tierra que une continentes"
+        ],
+        "correctAnswer": "Paso angosto de agua entre tierras",
+        "explanation": "Un estrecho es un paso de agua relativamente angosto entre dos masas de tierra.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-054",
+        "number": 54,
+        "topic": "América del Sur",
+        "concept": "andes_recorrido_borde_occidental_sudamerica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué borde de Sudamérica se extiende principalmente la cordillera de los Andes?",
+        "options": [
+          "Norte",
+          "Este",
+          "Centro",
+          "Oeste"
+        ],
+        "correctAnswer": "Oeste",
+        "explanation": "Los Andes recorren el borde occidental de Sudamérica, junto al océano Pacífico.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-055",
+        "number": 55,
+        "topic": "Costas",
+        "concept": "gravedad_lunar_y_solar_influye_mareas",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La gravedad de la Luna y del Sol influye en las mareas oceánicas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "La atracción gravitacional de ambos astros participa en las mareas; la Luna tiene la influencia mayor.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-056",
+        "number": 56,
+        "topic": "Glaciares",
+        "concept": "glaciar_masa_hielo_terrestre_en_movimiento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe mejor un glaciar?",
+        "options": [
+          "Masa de hielo terrestre que fluye lentamente",
+          "Lago salado formado en una costa",
+          "Río cálido que nace en un desierto",
+          "Capa de nubes que cubre una montaña"
+        ],
+        "correctAnswer": "Masa de hielo terrestre que fluye lentamente",
+        "explanation": "Los glaciares son masas de hielo en tierra que se deforman y desplazan lentamente por gravedad.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-057",
+        "number": 57,
+        "topic": "África",
+        "concept": "sahara_ubicacion_continente_africa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué continente se encuentra el desierto del Sahara?",
+        "options": [
+          "Europa",
+          "África",
+          "Asia",
+          "América del Sur"
+        ],
+        "correctAnswer": "África",
+        "explanation": "El Sahara se extiende por una amplia zona del norte de África.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-058",
+        "number": 58,
+        "topic": "Ramas de la geografía",
+        "concept": "geografia_humana_poblacion_asentamientos_actividades",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estudia principalmente la geografía humana?",
+        "options": [
+          "Minerales y capas de roca",
+          "Formas del relieve y volcanes",
+          "Población, asentamientos y actividades",
+          "Instrumentos para medir terremotos"
+        ],
+        "correctAnswer": "Población, asentamientos y actividades",
+        "explanation": "La geografía humana estudia cómo se distribuyen las personas y sus actividades en el espacio.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-059",
+        "number": 59,
+        "topic": "Relieve y lluvia",
+        "concept": "barlovento_ascenso_aire_y_precipitacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "El aire húmedo asciende por una montaña y se enfría. ¿Qué ladera suele recibir más lluvia?",
+        "options": [
+          "Barlovento",
+          "Sotavento",
+          "La más seca del valle",
+          "La que mira al ecuador"
+        ],
+        "correctAnswer": "Barlovento",
+        "explanation": "En la ladera de barlovento, el aire húmedo asciende, se enfría y puede condensarse.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-060",
+        "number": 60,
+        "topic": "Altitud y temperatura",
+        "concept": "aumento_altitud_suele_reducir_temperatura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos pueblos están a una latitud parecida. Uno se encuentra mucho más alto. ¿Qué condición es más probable allí?",
+        "options": [
+          "Temperatura promedio mayor",
+          "Temperatura promedio menor",
+          "Igual temperatura en toda estación",
+          "Ausencia total de viento"
+        ],
+        "correctAnswer": "Temperatura promedio menor",
+        "explanation": "En general, la temperatura disminuye con la altitud, aunque otros factores locales también influyen.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-061",
+        "number": 61,
+        "topic": "Mapas meteorológicos",
+        "concept": "isobara_conecta_igual_presion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué une una isóbara en un mapa del tiempo?",
+        "options": [
+          "Lugares con igual lluvia",
+          "Puntos de igual altura",
+          "Lugares con igual presión atmosférica",
+          "Puntos con igual profundidad marina"
+        ],
+        "correctAnswer": "Lugares con igual presión atmosférica",
+        "explanation": "Una isóbara conecta puntos que tienen la misma presión atmosférica.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-062",
+        "number": 62,
+        "topic": "Procesos costeros",
+        "concept": "olas_depositan_arena_formacion_playa",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Cuando las olas pierden energía y depositan arena junto a la costa, ¿qué forma puede crecer?",
+        "options": [
+          "Acantilado",
+          "Cañón",
+          "Volcán",
+          "Playa"
+        ],
+        "correctAnswer": "Playa",
+        "explanation": "La acumulación de sedimentos transportados por el agua contribuye a formar playas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-063",
+        "number": 63,
+        "topic": "Tectónica",
+        "concept": "terremotos_concentracion_limites_placas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué zonas ocurren muchos terremotos?",
+        "options": [
+          "Cerca de los límites entre placas",
+          "Solo en el centro de continentes",
+          "Exclusivamente en las costas bajas",
+          "Únicamente dentro de los desiertos"
+        ],
+        "correctAnswer": "Cerca de los límites entre placas",
+        "explanation": "Muchos terremotos se concentran cerca de límites de placas, aunque también pueden ocurrir dentro de ellas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-064",
+        "number": 64,
+        "topic": "Arrecifes",
+        "concept": "arrecifes_coralinos_ambiente_marino_calido_somero",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué ambiente suelen desarrollarse muchos arrecifes coralinos?",
+        "options": [
+          "Aguas profundas, frías y oscuras",
+          "Aguas cálidas, poco profundas y claras",
+          "Ríos rápidos de montaña",
+          "Lagos de agua dulce"
+        ],
+        "correctAnswer": "Aguas cálidas, poco profundas y claras",
+        "explanation": "Muchos arrecifes constructores prosperan en aguas marinas cálidas, claras y poco profundas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-065",
+        "number": 65,
+        "topic": "Desiertos",
+        "concept": "desierto_definido_por_aridez_no_por_calor",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Todos los desiertos tienen temperaturas altas durante todo el año.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso.  ",
+        "explanation": "Un desierto se define sobre todo por su escasa precipitación; existen desiertos fríos y con estaciones distintas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-066",
+        "number": 66,
+        "topic": "Geografía humana",
+        "concept": "urbanizacion_aumento_poblacion_urbana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso describe el aumento de la proporción de personas que vive en ciudades?",
+        "options": [
+          "Erosión",
+          "Desertificación",
+          "Urbanización",
+          "Sedimentación"
+        ],
+        "correctAnswer": "Urbanización",
+        "explanation": "La urbanización implica el crecimiento de las ciudades o de la proporción de población que vive en ellas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-067",
+        "number": 67,
+        "topic": "Relieve kárstico",
+        "concept": "disolucion_caliza_formacion_relieve_karstico",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El agua puede disolver lentamente la roca caliza y contribuir a formar cuevas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "En terrenos de caliza, el agua disuelve parte de la roca y puede desarrollar formas kársticas, como cuevas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-068",
+        "number": 68,
+        "topic": "Localización relativa",
+        "concept": "ubicacion_relativa_referencias_cercanas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“La escuela está al norte de la plaza y cerca del río” describe principalmente una ubicación:",
+        "options": [
+          "Absoluta",
+          "Astronómica",
+          "Hipsométrica",
+          "Relativa"
+        ],
+        "correctAnswer": "Relativa",
+        "explanation": "La ubicación relativa indica dónde está un lugar en relación con otros sitios o referencias.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-069",
+        "number": 69,
+        "topic": "Corrientes marinas",
+        "concept": "corriente_marina_influencia_condiciones_costeras",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una corriente marina fría puede influir en las condiciones de las costas cercanas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Las corrientes transportan agua y calor, por lo que pueden afectar el ambiente costero según la región.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-070",
+        "number": 70,
+        "topic": "Movimientos en masa",
+        "concept": "deslizamiento_desplazamiento_gravedad_pendiente",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso desplaza suelo o roca cuesta abajo por efecto de la gravedad?",
+        "options": [
+          "Erosión",
+          "Deposición",
+          "Infiltración",
+          "Deslizamiento"
+        ],
+        "correctAnswer": "Deslizamiento",
+        "explanation": "Un deslizamiento es un tipo de movimiento en masa que desplaza materiales por una pendiente.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-071",
+        "number": 71,
+        "topic": "Planeación urbana",
+        "concept": "planeacion_hospital_combina_demanda_y_accesibilidad",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad busca ubicar un hospital de emergencias para atender a más barrios. ¿Qué información conviene combinar?",
+        "options": [
+          "Población y red vial",
+          "Relieve y tipos de roca",
+          "Precipitación y vegetación",
+          "Altitud y cuencas"
+        ],
+        "correctAnswer": "Población y red vial",
+        "explanation": "La distribución de habitantes y las vías ayudan a estimar demanda y acceso, junto con otros criterios de seguridad y servicio.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-072",
+        "number": 72,
+        "topic": "Conservación del suelo",
+        "concept": "cobertura_y_curvas_nivel_reducen_escorrentia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una ladera cultivada, ¿qué práctica ayuda a reducir la pérdida de suelo por escorrentía?",
+        "options": [
+          "Retirar cobertura y arar cuesta abajo",
+          "Conservar plantas y arar en contorno",
+          "Canalizar agua hacia la pendiente",
+          "Quitar vegetación antes de las lluvias"
+        ],
+        "correctAnswer": "Conservar plantas y arar en contorno",
+        "explanation": "La cobertura vegetal y los surcos a nivel pueden reducir la velocidad con que el agua baja por la pendiente.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-073",
+        "number": 73,
+        "topic": "Riesgo costero",
+        "concept": "retroceso_costero_planificacion_retiro_exposicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad observa que el borde de la costa retrocede y consulta un mapa de riesgo. ¿Qué decisión es más prudente?",
+        "options": [
+          "Reubicar obras junto al borde costero",
+          "Aplazar obras sin cambiar el sitio",
+          "Alejar obras nuevas de la zona expuesta",
+          "Rellenar la costa sin estudio local"
+        ],
+        "correctAnswer": "Alejar obras nuevas de la zona expuesta",
+        "explanation": "Respetar zonas expuestas y planear retiros reduce la exposición, aunque la decisión requiere estudios y normas locales.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-074",
+        "number": 74,
+        "topic": "Páramos colombianos",
+        "concept": "conservacion_paramo_protege_regulacion_hidrica",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad depende del agua que nace en un páramo. ¿Qué acción favorece mejor el abastecimiento a largo plazo?",
+        "options": [
+          "Reforestar zonas bajas lejos de nacimientos",
+          "Extender ganadería hacia la parte alta",
+          "Drenar humedales para ampliar cultivos",
+          "Proteger vegetación y nacimientos de agua"
+        ],
+        "correctAnswer": "Proteger vegetación y nacimientos de agua",
+        "explanation": "Los páramos ayudan a regular y almacenar agua; conservar su cobertura protege ese servicio ecosistémico.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-075",
+        "number": 75,
+        "topic": "Comparación de mapas",
+        "concept": "comparacion_cobertura_controla_area_y_escala",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Para comparar cambios de cobertura entre dos mapas, conviene mantener iguales el área y la escala representadas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Usar el mismo recorte y escala ayuda a comparar áreas de forma justa; también se debe revisar la leyenda y la fecha.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-076",
+        "number": 76,
+        "topic": "Población",
+        "concept": "poblacion_absoluta_total_habitantes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué representa la población absoluta de un territorio?",
+        "options": [
+          "Número total de habitantes",
+          "Promedio de personas por km²",
+          "Cantidad de viviendas por barrio",
+          "Porcentaje de personas migrantes"
+        ],
+        "correctAnswer": "Número total de habitantes",
+        "explanation": "La población absoluta es el total de personas que habita un territorio en un momento determinado.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-077",
+        "number": 77,
+        "topic": "Recursos y energía",
+        "concept": "viento_recurso_energetico_renovable",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál fuente de energía se renueva de manera natural?",
+        "options": [
+          "Carbón",
+          "Viento",
+          "Petróleo",
+          "Gas natural"
+        ],
+        "correctAnswer": "Viento",
+        "explanation": "El viento es una fuente renovable; carbón, petróleo y gas natural son combustibles fósiles finitos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-078",
+        "number": 78,
+        "topic": "Regiones",
+        "concept": "region_area_con_rasgos_o_conexiones_comunes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué permite reconocer una región geográfica?",
+        "options": [
+          "Tener fronteras nacionales",
+          "Contener ciudades del mismo tamaño",
+          "Compartir un rasgo geográfico",
+          "Tener habitantes con el mismo empleo"
+        ],
+        "correctAnswer": "Compartir un rasgo geográfico",
+        "explanation": "Una región puede reconocerse por características comunes o por las conexiones entre sus lugares.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-079",
+        "number": 79,
+        "topic": "Migración",
+        "concept": "migracion_interna_mismo_pais",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una familia se muda de un municipio a otro dentro del mismo país. ¿Qué tipo de migración realiza?",
+        "options": [
+          "Internacional",
+          "Intercontinental",
+          "Transoceánica",
+          "Interna"
+        ],
+        "correctAnswer": "Interna",
+        "explanation": "La migración interna ocurre dentro de las fronteras de un mismo país.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-080",
+        "number": 80,
+        "topic": "Asentamientos",
+        "concept": "coexistencia_asentamientos_rurales_y_urbanos",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un país puede tener asentamientos rurales y urbanos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "En un mismo país coexisten lugares rurales y ciudades, con distintas actividades y formas de ocupación.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-081",
+        "number": 81,
+        "topic": "Actividades económicas",
+        "concept": "sector_primario_obtencion_productos_naturaleza",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué actividad pertenece principalmente al sector primario?",
+        "options": [
+          "Cultivar café",
+          "Tostar café en una fábrica",
+          "Vender café en una tienda",
+          "Diseñar una campaña para café"
+        ],
+        "correctAnswer": "Cultivar café",
+        "explanation": "El sector primario obtiene productos o recursos directamente de la naturaleza, como los cultivos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-082",
+        "number": 82,
+        "topic": "Asentamientos urbanos",
+        "concept": "asentamiento_urbano_concentracion_construcciones_servicios",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué rasgo suele distinguir a un asentamiento urbano?",
+        "options": [
+          "Viviendas muy dispersas y pocos servicios",
+          "Mayor concentración de construcciones y servicios",
+          "Ausencia completa de vías",
+          "Actividades exclusivamente agrícolas"
+        ],
+        "correctAnswer": "Mayor concentración de construcciones y servicios",
+        "explanation": "Las zonas urbanas suelen concentrar más edificaciones, población y servicios; hay excepciones según el lugar.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-083",
+        "number": 83,
+        "topic": "Intercambio regional",
+        "concept": "comercio_intercambio_bienes_servicios_regiones",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa comercio entre regiones?",
+        "options": [
+          "Medir la altura de sus montañas",
+          "Trazar sus límites políticos",
+          "Intercambiar bienes o servicios",
+          "Dividir sus territorios en cuadrículas"
+        ],
+        "correctAnswer": "Intercambiar bienes o servicios",
+        "explanation": "El comercio conecta lugares mediante el intercambio de bienes y servicios.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-084",
+        "number": 84,
+        "topic": "Regiones funcionales",
+        "concept": "region_funcional_vinculos_con_centro",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Personas de varios municipios viajan a diario a una ciudad para trabajar y acceder a servicios. ¿Qué tipo de región puede formar esa conexión?",
+        "options": [
+          "Región climática",
+          "Región de relieve",
+          "Región insular",
+          "Región funcional"
+        ],
+        "correctAnswer": "Región funcional",
+        "explanation": "Una región funcional se organiza alrededor de un centro conectado con lugares cercanos por actividades y desplazamientos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-085",
+        "number": 85,
+        "topic": "Ciudades y límites",
+        "concept": "area_urbana_construida_cruza_limite_administrativo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "El área construida de una ciudad se extiende más allá del límite de su municipio. ¿Qué conclusión es adecuada?",
+        "options": [
+          "El espacio urbano puede cruzar límites administrativos",
+          "El municipio deja de tener un límite oficial",
+          "Las viviendas pasan a ser rurales automáticamente",
+          "Todas las personas viven dentro de una sola ciudad"
+        ],
+        "correctAnswer": "El espacio urbano puede cruzar límites administrativos",
+        "explanation": "La expansión física de una zona construida no siempre coincide con los límites administrativos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-086",
+        "number": 86,
+        "topic": "Demografía",
+        "concept": "piramide_poblacional_edad_y_sexo",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una pirámide poblacional organiza datos por grupos de edad y sexo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Esta gráfica representa la composición de la población por edad y sexo, con grupos en cada lado.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-087",
+        "number": 87,
+        "topic": "Migración estacional",
+        "concept": "migracion_estacional_labor_cosecha",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una persona se desplaza temporalmente a otra región durante la cosecha y luego regresa. ¿Qué movimiento describe mejor la situación?",
+        "options": [
+          "Migración internacional permanente",
+          "Migración estacional",
+          "Desplazamiento intercontinental",
+          "Expansión urbana"
+        ],
+        "correctAnswer": "Migración estacional",
+        "explanation": "La migración estacional se relaciona con actividades que requieren trabajadores durante una parte del año.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-088",
+        "number": 88,
+        "topic": "Factores de migración",
+        "concept": "oferta_educativa_factor_atraccion_migratoria",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad ofrece estudios que no existen en el pueblo de origen. Para algunos jóvenes, esa oferta puede actuar como:",
+        "options": [
+          "Factor de expulsión",
+          "Barrera física",
+          "Factor de atracción",
+          "Límite político"
+        ],
+        "correctAnswer": "Factor de atracción",
+        "explanation": "Una oportunidad educativa puede atraer a personas hacia otro lugar, aunque cada decisión tenga varias causas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-089",
+        "number": 89,
+        "topic": "Sectores económicos",
+        "concept": "sector_secundario_transformacion_materias_primas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una fábrica transforma madera en muebles. ¿A qué sector pertenece esa actividad?",
+        "options": [
+          "Primario",
+          "Terciario",
+          "Extractivo",
+          "Secundario"
+        ],
+        "correctAnswer": "Secundario",
+        "explanation": "El sector secundario transforma materias primas en productos elaborados o procesados.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-090",
+        "number": 90,
+        "topic": "Distribución de población",
+        "concept": "total_poblacion_no_muestra_distribucion_espacial",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El total de habitantes de un país no indica por sí solo cómo se distribuyen entre sus regiones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Para conocer la distribución espacial se necesitan datos por lugares, no solo el total nacional.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-091",
+        "number": 91,
+        "topic": "Localización económica",
+        "concept": "industria_localizacion_cerca_materias_primas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una procesadora de minerales se instala junto a una mina. ¿Qué factor de localización aprovecha?",
+        "options": [
+          "Proximidad a materias primas",
+          "Cercanía a mercados consumidores",
+          "Acceso a mano de obra",
+          "Conexión a vías de transporte"
+        ],
+        "correctAnswer": "Proximidad a materias primas",
+        "explanation": "Estar cerca de los insumos puede reducir traslados y facilitar el abastecimiento de la planta.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-092",
+        "number": 92,
+        "topic": "Puertos e intercambio",
+        "concept": "puerto_conexion_rutas_y_transporte_de_carga",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ventaja geográfica puede ofrecer un puerto conectado con rutas marítimas?",
+        "options": [
+          "Reducir automáticamente los impuestos",
+          "Conectar barcos con transporte terrestre",
+          "Eliminar por completo los costos",
+          "Igualar los ingresos de las regiones"
+        ],
+        "correctAnswer": "Conectar barcos con transporte terrestre",
+        "explanation": "Los puertos conectan transporte marítimo y terrestre, lo que puede facilitar el comercio de mercancías.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-093",
+        "number": 93,
+        "topic": "Pirámides poblacionales",
+        "concept": "piramide_base_estrecha_menor_proporcion_infantil",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una pirámide, los grupos infantiles son más estrechos que los grupos adultos. ¿Qué indica directamente esa forma?",
+        "options": [
+          "Hay más niños que adultos",
+          "Todas las edades tienen igual número",
+          "La proporción infantil es menor que la adulta",
+          "La población está repartida igual por regiones"
+        ],
+        "correctAnswer": "La proporción infantil es menor que la adulta",
+        "explanation": "El ancho de cada grupo representa su tamaño relativo; una base más estrecha indica menos población infantil que en los grupos más anchos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-094",
+        "number": 94,
+        "topic": "Actividades de servicios",
+        "concept": "sector_terciario_servicios_transporte",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál actividad pertenece al sector terciario?",
+        "options": [
+          "Extraer carbón",
+          "Cultivar arroz",
+          "Fabricar muebles",
+          "Transportar pasajeros"
+        ],
+        "correctAnswer": "Transportar pasajeros",
+        "explanation": "El sector terciario reúne servicios, entre ellos transporte, comercio, salud y educación.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-095",
+        "number": 95,
+        "topic": "Movilidad y migración",
+        "concept": "movilidad_diaria_no_implica_cambio_residencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Viajar cada día a otra ciudad para trabajar no significa necesariamente cambiar allí la residencia.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "El desplazamiento cotidiano puede conectar lugares sin que la persona se mude a vivir al sitio de trabajo.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-096",
+        "number": 96,
+        "topic": "Producción y mercados",
+        "concept": "acopio_fruticola_cerca_produccion_y_vias",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una cosecha de fruta se daña en el trayecto hacia el mercado. ¿Dónde ayudaría más una central de acopio con refrigeración?",
+        "options": [
+          "Cerca de productores y vías de salida",
+          "Lejos de fincas y carreteras",
+          "En una zona sin conexión de transporte",
+          "Junto a un destino sin comercio"
+        ],
+        "correctAnswer": "Cerca de productores y vías de salida",
+        "explanation": "Acercar acopio y refrigeración a las zonas productoras conectadas puede reducir el tiempo de traslado y las pérdidas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-097",
+        "number": 97,
+        "topic": "Servicios educativos",
+        "concept": "escuela_ubicacion_demanda_y_accesibilidad",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un municipio planea una escuela nueva. Tiene un mapa de los hogares con niños y otro de las rutas de transporte. ¿Qué sitio conviene evaluar primero?",
+        "options": [
+          "Un lugar aislado de las rutas",
+          "Un punto cercano a los barrios y accesible",
+          "Un terreno lejano sin viviendas",
+          "Un sitio elegido solo por su altura"
+        ],
+        "correctAnswer": "Un punto cercano a los barrios y accesible",
+        "explanation": "Combinar población atendida y acceso ayuda a proponer una ubicación útil; también deben revisarse seguridad y capacidad.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-098",
+        "number": 98,
+        "topic": "Conectividad territorial",
+        "concept": "redundancia_vial_reduce_aislamiento_por_cierre",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un deslizamiento puede cerrar la única carretera que comunica varios pueblos. ¿Qué medida reduce mejor su aislamiento futuro?",
+        "options": [
+          "Aumentar la velocidad permitida",
+          "Quitar las señales de desvío",
+          "Planear una conexión alternativa segura",
+          "Medir la carretera solo en línea recta"
+        ],
+        "correctAnswer": "Planear una conexión alternativa segura",
+        "explanation": "Una ruta alternativa segura mantiene conexiones si el corredor principal se interrumpe.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-099",
+        "number": 99,
+        "topic": "Interdependencia regional",
+        "concept": "intercambio_regional_producciones_complementarias",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una región produce alimentos y otra fabrica herramientas agrícolas. ¿Qué intercambio puede beneficiar a ambas?",
+        "options": [
+          "Enviar herramientas a una zona sin cultivos",
+          "Evitar todo traslado entre regiones",
+          "Producir los mismos bienes en cada lugar",
+          "Intercambiar herramientas por alimentos"
+        ],
+        "correctAnswer": "Intercambiar herramientas por alimentos",
+        "explanation": "El intercambio permite aprovechar producciones distintas y conectar necesidades entre regiones.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-100",
+        "number": 100,
+        "topic": "Límites de datos demográficos",
+        "concept": "piramide_poblacional_no_muestra_localizacion",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una pirámide poblacional muestra edades y sexos, pero no revela por sí sola dónde vive cada grupo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "La pirámide resume composición demográfica; se requieren datos o mapas adicionales para localizar a la población.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-101",
+        "number": 101,
+        "topic": "Ecosistemas costeros",
+        "concept": "manglar_ecosistema_costero_agua_salobre",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué ambiente se encuentran muchos manglares?",
+        "options": [
+          "Cumbres frías sin influencia marina",
+          "Desiertos alejados del mar",
+          "Bosques boreales de clima frío",
+          "Costas tropicales con agua salobre"
+        ],
+        "correctAnswer": "Costas tropicales con agua salobre",
+        "explanation": "Los manglares crecen en costas tropicales y estuarios, donde algunas especies toleran cambios de salinidad.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-102",
+        "number": 102,
+        "topic": "Biomas",
+        "concept": "sabana_pastizal_tropical_arboles_dispersos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué vegetación es común en muchas sabanas tropicales?",
+        "options": [
+          "Hielo permanente",
+          "Pastos con árboles dispersos",
+          "Bosque de coníferas denso",
+          "Musgos bajo el hielo"
+        ],
+        "correctAnswer": "Pastos con árboles dispersos",
+        "explanation": "Las sabanas tropicales son pastizales cálidos, a menudo con árboles dispersos y temporadas lluviosas y secas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-103",
+        "number": 103,
+        "topic": "Biomas",
+        "concept": "tundra_frio_y_vegetacion_baja",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición es característica de la tundra?",
+        "options": [
+          "Calor húmedo todo el año",
+          "Bosque tropical muy denso",
+          "Frío y vegetación baja",
+          "Arrecifes coralinos extensos"
+        ],
+        "correctAnswer": "Frío y vegetación baja",
+        "explanation": "El frío y la corta temporada de crecimiento limitan el desarrollo de árboles en muchas zonas de tundra.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-104",
+        "number": 104,
+        "topic": "Biodiversidad",
+        "concept": "biodiversidad_variedad_vida_y_ecosistemas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa biodiversidad?",
+        "options": [
+          "Cantidad de montañas de una región",
+          "Número de carreteras por ciudad",
+          "Tamaño de una sola población",
+          "Variedad de seres vivos y ecosistemas"
+        ],
+        "correctAnswer": "Variedad de seres vivos y ecosistemas",
+        "explanation": "La biodiversidad abarca la variedad de formas de vida, sus diferencias y los ecosistemas donde se encuentran.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-105",
+        "number": 105,
+        "topic": "Hábitats",
+        "concept": "carretera_puede_fragmentar_habitat_continuo",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una carretera que atraviesa un bosque continuo puede dividir el hábitat en partes separadas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Una vía u otra barrera puede fragmentar un hábitat y separar los espacios usados por algunas especies.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-106",
+        "number": 106,
+        "topic": "Especies y territorio",
+        "concept": "especie_endemica_distribucion_restringida",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa que una especie sea endémica de una región?",
+        "options": [
+          "Que vive de forma natural solo allí",
+          "Que se encuentra en todos los continentes",
+          "Que fue introducida por una carretera",
+          "Que migra cada día a otra ciudad"
+        ],
+        "correctAnswer": "Que vive de forma natural solo allí",
+        "explanation": "Una especie endémica es nativa y está restringida naturalmente a un área determinada.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-107",
+        "number": 107,
+        "topic": "Especies introducidas",
+        "concept": "especie_invasora_no_nativa_se_propaga_y_dana",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué caracteriza a una especie invasora?",
+        "options": [
+          "Solo habita en reservas naturales",
+          "Es introducida y puede propagarse causando daño",
+          "Desaparece al cambiar de estación",
+          "Es propia de todos los ecosistemas"
+        ],
+        "correctAnswer": "Es introducida y puede propagarse causando daño",
+        "explanation": "Una especie no nativa se considera invasora cuando se propaga y perjudica ecosistemas, economía o salud.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-108",
+        "number": 108,
+        "topic": "Conectividad ecológica",
+        "concept": "corredor_ecologico_conecta_parches_habitat",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un corredor de hábitat?",
+        "options": [
+          "Un camino pavimentado entre ciudades",
+          "Un muro que divide una reserva",
+          "Una franja natural que conecta hábitats",
+          "Un límite entre dos municipios"
+        ],
+        "correctAnswer": "Una franja natural que conecta hábitats",
+        "explanation": "La vegetación que conecta parches de hábitat puede facilitar el desplazamiento de algunas especies.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-109",
+        "number": 109,
+        "topic": "Estuarios",
+        "concept": "estuario_mezcla_agua_dulce_y_marina",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre en un estuario?",
+        "options": [
+          "Un glaciar cubre una montaña",
+          "El viento forma dunas interiores",
+          "Un río se convierte en desierto",
+          "El agua dulce se mezcla con la marina"
+        ],
+        "correctAnswer": "El agua dulce se mezcla con la marina",
+        "explanation": "Un estuario es una zona costera donde el agua de los ríos se mezcla con el agua del mar.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-110",
+        "number": 110,
+        "topic": "Humedales",
+        "concept": "humedal_costero_retiene_agua_y_reduce_inundacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función puede cumplir un humedal costero?",
+        "options": [
+          "Retener agua y amortiguar inundaciones",
+          "Detener por completo las mareas",
+          "Impedir toda entrada de sedimentos",
+          "Convertir agua salada en potable"
+        ],
+        "correctAnswer": "Retener agua y amortiguar inundaciones",
+        "explanation": "Algunos humedales absorben o ralentizan el agua y ayudan a reducir inundaciones y erosión.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-111",
+        "number": 111,
+        "topic": "Ecosistemas costeros",
+        "concept": "carbono_azul_ecosistemas_costeros",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ecosistemas pueden almacenar carbono azul en sus plantas y suelos?",
+        "options": [
+          "Desiertos y sabanas secas",
+          "Manglares, marismas y pastos marinos",
+          "Tundras y glaciares interiores",
+          "Montañas y bosques de coníferas"
+        ],
+        "correctAnswer": "Manglares, marismas y pastos marinos",
+        "explanation": "Manglares, marismas y pastos marinos costeros pueden capturar y almacenar carbono en biomasa y sedimentos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-112",
+        "number": 112,
+        "topic": "Distribución de especies",
+        "concept": "altitud_crea_condiciones_para_distribucion_vegetal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una montaña, algunas plantas crecen arriba y otras más abajo. ¿Qué puede explicar ese patrón?",
+        "options": [
+          "El idioma de las poblaciones",
+          "La distancia entre municipios",
+          "Cambios de clima y condiciones con la altura",
+          "El número de carreteras del país"
+        ],
+        "correctAnswer": "Cambios de clima y condiciones con la altura",
+        "explanation": "La temperatura, humedad y suelo suelen cambiar con la altura, creando condiciones distintas para las especies.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-113",
+        "number": 113,
+        "topic": "Conectividad",
+        "concept": "corredor_reconecta_habitats_separados",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un corredor puede conectar dos hábitats que quedaron separados por terrenos transformados.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "La conectividad puede facilitar el desplazamiento entre parches, aunque su utilidad depende de cada especie y paisaje.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-114",
+        "number": 114,
+        "topic": "Turismo de naturaleza",
+        "concept": "turismo_beneficios_economicos_y_presion_ambiental",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué combinación describe mejor un posible efecto del turismo en un ecosistema?",
+        "options": [
+          "Puede generar ingresos y también presión ambiental",
+          "Siempre elimina los empleos locales",
+          "No modifica ningún lugar visitado",
+          "Garantiza que todas las especies aumenten"
+        ],
+        "correctAnswer": "Puede generar ingresos y también presión ambiental",
+        "explanation": "El turismo puede apoyar empleos y conservación, pero el tránsito y la infraestructura también pueden afectar hábitats.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-115",
+        "number": 115,
+        "topic": "Invasiones biológicas",
+        "concept": "especie_invasora_compite_con_especies_nativas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué efecto puede producir una especie invasora en un ecosistema?",
+        "options": [
+          "Crear límites entre países",
+          "Competir con especies nativas por recursos",
+          "Detener el movimiento de placas",
+          "Evitar toda pérdida de hábitat"
+        ],
+        "correctAnswer": "Competir con especies nativas por recursos",
+        "explanation": "Algunas invasoras compiten por alimento o espacio y pueden alterar las relaciones del ecosistema.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-116",
+        "number": 116,
+        "topic": "Pastos marinos",
+        "concept": "pastos_marinos_estabilizan_fondo_y_ofrecen_habitat",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función pueden cumplir los pastos marinos en zonas costeras?",
+        "options": [
+          "Formar montañas volcánicas",
+          "Cambiar la latitud del litoral",
+          "Estabilizar el fondo y servir de hábitat",
+          "Convertir agua dulce en salada"
+        ],
+        "correctAnswer": "Estabilizar el fondo y servir de hábitat",
+        "explanation": "Los pastos marinos pueden estabilizar el fondo y ofrecer alimento o refugio a distintas especies.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-117",
+        "number": 117,
+        "topic": "Conservación",
+        "concept": "planear_vias_considerando_rutas_de_fauna",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué conviene estudiar las rutas que usan los animales antes de construir una vía?",
+        "options": [
+          "Para aumentar la pendiente del terreno",
+          "Para cambiar el curso de todos los ríos",
+          "Para eliminar límites administrativos",
+          "Para reducir cortes en sus desplazamientos"
+        ],
+        "correctAnswer": "Para reducir cortes en sus desplazamientos",
+        "explanation": "Identificar rutas de movimiento permite evaluar pasos de fauna y otras medidas que reduzcan la fragmentación.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-118",
+        "number": 118,
+        "topic": "Estuarios",
+        "concept": "aporte_agua_dulce_modifica_salinidad_estuario",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Cambios en la cantidad de agua dulce que llega a un estuario pueden alterar sus condiciones de salinidad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "La mezcla de agua dulce y marina define gradientes de salinidad que influyen en los hábitats del estuario.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-119",
+        "number": 119,
+        "topic": "Protección de hábitats",
+        "concept": "reserva_aislada_evaluar_conectividad_ecologica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una reserva protege un bosque, pero está aislada por cultivos y carreteras. ¿Qué aspecto adicional conviene evaluar?",
+        "options": [
+          "La conectividad con otros hábitats",
+          "El nombre del municipio vecino",
+          "La distancia al ecuador solamente",
+          "El tamaño de los edificios cercanos"
+        ],
+        "correctAnswer": "La conectividad con otros hábitats",
+        "explanation": "Una reserva puede conservar un área, pero su conexión con otros hábitats también puede importar para ciertas especies.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-120",
+        "number": 120,
+        "topic": "Servicios ecosistémicos",
+        "concept": "marisma_retiene_sedimentos_y_amortigua_oleaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La vegetación de algunas marismas puede retener sedimentos y amortiguar el oleaje.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Las plantas y los sedimentos de marismas pueden ayudar a proteger orillas y servir de hábitat.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-121",
+        "number": 121,
+        "topic": "Planeación costera",
+        "concept": "trazado_vial_evitar_habitat_manglar_sensible",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una carretera propuesta atravesaría un manglar que sirve de refugio a peces jóvenes. ¿Qué ajuste conviene evaluar?",
+        "options": [
+          "Rodear el área sensible y conservar conexiones naturales",
+          "Ampliar la vía dentro del manglar",
+          "Rellenar canales antes de estudiar el sitio",
+          "Desviar todos los ríos hacia la carretera"
+        ],
+        "correctAnswer": "Rodear el área sensible y conservar conexiones naturales",
+        "explanation": "Comparar alternativas que eviten hábitats sensibles puede reducir impactos; la decisión requiere estudios locales.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-122",
+        "number": 122,
+        "topic": "Restauración de hábitats",
+        "concept": "restaurar_franja_vegetal_conecta_parches",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una carretera separó dos parches de bosque. ¿Qué proyecto podría mejorar la conexión ecológica?",
+        "options": [
+          "Ampliar el claro entre ambos",
+          "Restaurar una franja vegetal que los una",
+          "Retirar la vegetación de los bordes",
+          "Construir más vías entre los parches"
+        ],
+        "correctAnswer": "Restaurar una franja vegetal que los una",
+        "explanation": "Restaurar una franja de hábitat puede volver a conectar los parches, según las necesidades de las especies locales.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-123",
+        "number": 123,
+        "topic": "Uso público y conservación",
+        "concept": "senderos_guiados_reducen_molestia_en_dunas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una playa recibe visitantes y tiene dunas donde anidan aves. ¿Qué medida permite ordenar mejor las visitas?",
+        "options": [
+          "Permitir vehículos por toda la playa",
+          "Retirar las señales de protección",
+          "Guiar el tránsito por senderos fuera de zonas sensibles",
+          "Iluminar toda la duna durante la noche"
+        ],
+        "correctAnswer": "Guiar el tránsito por senderos fuera de zonas sensibles",
+        "explanation": "Delimitar senderos y proteger áreas de anidación puede reducir molestias sin cerrar necesariamente toda la costa.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-124",
+        "number": 124,
+        "topic": "Seguimiento ambiental",
+        "concept": "comparar_cobertura_misma_zona_y_temporada",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad compara imágenes de cobertura vegetal de dos años. ¿Qué condición mejora la comparación?",
+        "options": [
+          "Usar lugares distintos en cada imagen",
+          "Ignorar las leyendas y las fechas",
+          "Cambiar la escala sin registrarlo",
+          "Comparar la misma zona y revisar la temporada"
+        ],
+        "correctAnswer": "Comparar la misma zona y revisar la temporada",
+        "explanation": "Usar la misma zona y considerar la temporada ayuda a distinguir cambios duraderos de variaciones estacionales.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-125",
+        "number": 125,
+        "topic": "Áreas protegidas",
+        "concept": "area_protegida_no_garantiza_conectividad_sola",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Declarar un área protegida garantiza por sí solo que las especies puedan desplazarse entre hábitats separados.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso.  ",
+        "explanation": "La protección de un área no asegura conectividad; también pueden requerirse corredores y manejo del paisaje circundante.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-126",
+        "number": 126,
+        "topic": "Formas costeras",
+        "concept": "bahia_entrada_amplia_del_mar_en_la_costa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es una bahía?",
+        "options": [
+          "Entrada del mar en la costa",
+          "Elevación aislada en una llanura",
+          "Paso angosto entre montañas",
+          "Curso de agua bajo tierra"
+        ],
+        "correctAnswer": "Entrada del mar en la costa",
+        "explanation": "Una bahía es una entrada amplia del mar en la costa, parcialmente rodeada por tierra.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-127",
+        "number": 127,
+        "topic": "Coordenadas",
+        "concept": "coordenada_geografica_interseccion_paralelo_meridiano",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dos líneas se cruzan para ubicar un punto con coordenadas geográficas?",
+        "options": [
+          "Dos ríos",
+          "Un paralelo y un meridiano",
+          "Una carretera y una frontera",
+          "Dos curvas de nivel"
+        ],
+        "correctAnswer": "Un paralelo y un meridiano",
+        "explanation": "La latitud se mide sobre los paralelos y la longitud sobre los meridianos; juntas localizan un punto.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-128",
+        "number": 128,
+        "topic": "Relieve costero",
+        "concept": "acantilado_costa_abrupta_junto_al_mar",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma del relieve suele tener paredes altas y estrechas junto al mar?",
+        "options": [
+          "Delta",
+          "Llanura aluvial",
+          "Acantilado",
+          "Duna"
+        ],
+        "correctAnswer": "Acantilado",
+        "explanation": "Un acantilado es una costa abrupta que puede formarse por la erosión del oleaje.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-129",
+        "number": 129,
+        "topic": "Relieve fluvial",
+        "concept": "meandro_curva_amplia_de_un_rio",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma una curva pronunciada de un río en una llanura?",
+        "options": [
+          "Glaciar",
+          "Fiordo",
+          "Cráter",
+          "Meandro"
+        ],
+        "correctAnswer": "Meandro",
+        "explanation": "Un meandro es una curva amplia del cauce, común en ríos que atraviesan terrenos de poca pendiente.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-130",
+        "number": 130,
+        "topic": "Aguas continentales",
+        "concept": "lago_masa_de_agua_rodeada_de_tierra",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un lago?",
+        "options": [
+          "Cuerpo de agua rodeado de tierra",
+          "Brazo de mar entre dos costas",
+          "Río que solo aparece con lluvia",
+          "Zona donde nace una cordillera"
+        ],
+        "correctAnswer": "Cuerpo de agua rodeado de tierra",
+        "explanation": "Un lago es una masa de agua continental rodeada por tierra; puede recibir agua de ríos o lluvias.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-131",
+        "number": 131,
+        "topic": "Riesgos naturales",
+        "concept": "sismo_submarino_puede_generar_tsunami",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué fenómeno puede producir olas muy grandes tras un sismo submarino?",
+        "options": [
+          "Tornado",
+          "Tsunami",
+          "Sequía",
+          "Avalancha"
+        ],
+        "correctAnswer": "Tsunami",
+        "explanation": "Un sismo bajo el mar puede desplazar grandes volúmenes de agua y generar un tsunami.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-132",
+        "number": 132,
+        "topic": "Territorio colombiano",
+        "concept": "costa_norte_colombiana_mira_al_caribe",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué mar baña la costa norte de Colombia?",
+        "options": [
+          "Mar Mediterráneo",
+          "Mar Negro",
+          "Mar Caribe",
+          "Mar de Japón"
+        ],
+        "correctAnswer": "Mar Caribe",
+        "explanation": "La costa norte colombiana se extiende sobre el mar Caribe.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-133",
+        "number": 133,
+        "topic": "Clima y vegetación",
+        "concept": "bosque_tropical_humedo_calor_y_lluvia_abundante",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición suele favorecer la presencia de bosques tropicales húmedos?",
+        "options": [
+          "Lluvias escasas casi todo el año",
+          "Heladas permanentes",
+          "Suelo cubierto de hielo",
+          "Lluvias abundantes y temperaturas cálidas"
+        ],
+        "correctAnswer": "Lluvias abundantes y temperaturas cálidas",
+        "explanation": "El calor y la disponibilidad de agua durante gran parte del año favorecen bosques tropicales húmedos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-134",
+        "number": 134,
+        "topic": "Geografía económica",
+        "concept": "potencial_hidroelectrico_requiere_caudal_y_desnivel",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué combinación favorece la generación de energía hidroeléctrica?",
+        "options": [
+          "Un río caudaloso y un desnivel",
+          "Un río con caudal escaso y un desnivel bajo",
+          "Un río caudaloso en una llanura casi plana",
+          "Un río estacional con poco caudal"
+        ],
+        "correctAnswer": "Un río caudaloso y un desnivel",
+        "explanation": "El caudal y el desnivel permiten aprovechar el movimiento del agua para producir electricidad.  ",
+        "stability": "STABLE",
+        "source": "https://www.eia.gov/energyexplained/hydropower/"
+      },
+      {
+        "id": "GEO6-135",
+        "number": 135,
+        "topic": "Orientación",
+        "concept": "direccion_relativa_entre_dos_destinos_cardinales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Desde un punto, una escuela está al norte y el río al este. ¿En qué dirección queda el río respecto a la escuela?",
+        "options": [
+          "Noroeste",
+          "Sureste",
+          "Suroeste",
+          "Noreste"
+        ],
+        "correctAnswer": "Sureste",
+        "explanation": "Si la escuela está al norte del punto y el río al este, desde la escuela el río queda hacia el sureste.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-136",
+        "number": 136,
+        "topic": "Relieve fluvial",
+        "concept": "abanico_aluvial_deposito_en_pie_de_montana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un río sale de una zona montañosa, pierde velocidad y deposita sedimentos en forma de abanico. ¿Qué relieve puede formar?",
+        "options": [
+          "Un meandro",
+          "Una bahía",
+          "Un abanico aluvial",
+          "Un acantilado"
+        ],
+        "correctAnswer": "Un abanico aluvial",
+        "explanation": "Al salir de la montaña y perder energía, una corriente puede depositar sedimentos que se extienden en forma de abanico.  ",
+        "stability": "STABLE",
+        "source": "https://www.usgs.gov/news/science-snippet/earthword-alluvial-fan"
+      },
+      {
+        "id": "GEO6-137",
+        "number": 137,
+        "topic": "Ríos",
+        "concept": "cauce_efimero_responde_brevemente_a_precipitacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una zona seca, algunos cauces llevan agua brevemente solo después de lluvias. ¿Cómo se clasifican?",
+        "options": [
+          "Perennes",
+          "Glaciares",
+          "Subterráneos",
+          "Efímeros"
+        ],
+        "correctAnswer": "Efímeros",
+        "explanation": "Los cauces efímeros llevan agua durante poco tiempo como respuesta directa a la precipitación.  ",
+        "stability": "STABLE",
+        "source": "https://pubs.usgs.gov/pp/0437a/report.pdf"
+      },
+      {
+        "id": "GEO6-138",
+        "number": 138,
+        "topic": "Estaciones",
+        "concept": "inclinacion_eje_terrestre_produce_estaciones_opuestas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos ciudades, una al norte y otra al sur del ecuador, tienen estaciones opuestas. ¿Qué lo explica principalmente?",
+        "options": [
+          "La inclinación del eje terrestre orienta un hemisferio más hacia el Sol",
+          "Los meridianos cambian la distancia entre ambas ciudades",
+          "La rotación diaria desplaza las estaciones de un hemisferio al otro",
+          "La Luna bloquea la luz solar durante varios meses"
+        ],
+        "correctAnswer": "La inclinación del eje terrestre orienta un hemisferio más hacia el Sol",
+        "explanation": "Por la inclinación del eje terrestre, durante el recorrido anual un hemisferio recibe más luz directa mientras el otro recibe menos.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-139",
+        "number": 139,
+        "topic": "Aguas subterráneas",
+        "concept": "acuifero_almacena_y_transmite_agua_subterranea",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica describe mejor un acuífero?",
+        "options": [
+          "Una corriente de aire entre montañas",
+          "Una reserva de agua subterránea en rocas permeables",
+          "Una capa de lava bajo un volcán",
+          "Una zona donde se unen dos océanos"
+        ],
+        "correctAnswer": "Una reserva de agua subterránea en rocas permeables",
+        "explanation": "Un acuífero es una formación geológica que almacena y transmite agua subterránea.  ",
+        "stability": "STABLE",
+        "source": "https://md.water.usgs.gov/preview/faq/groundwater.html"
+      },
+      {
+        "id": "GEO6-140",
+        "number": 140,
+        "topic": "Regiones naturales",
+        "concept": "region_natural_delimitada_por_rasgos_ambientales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué rasgo distingue a una región natural de una división política?",
+        "options": [
+          "Se delimita solo por acuerdos entre gobiernos",
+          "Siempre tiene una capital administrativa",
+          "Se reconoce por rasgos físicos o ambientales compartidos",
+          "Sus límites coinciden con los de cada municipio"
+        ],
+        "correctAnswer": "Se reconoce por rasgos físicos o ambientales compartidos",
+        "explanation": "Una región natural agrupa espacios con características como clima, relieve, vegetación o hidrografía; no necesita coincidir con fronteras políticas.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-141",
+        "number": 141,
+        "topic": "Cartografía climática",
+        "concept": "isoyeta_une_puntos_con_igual_precipitacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué línea de un mapa une lugares con la misma cantidad de lluvia?",
+        "options": [
+          "Isobara",
+          "Isobata",
+          "Isoterma",
+          "Isoyeta"
+        ],
+        "correctAnswer": "Isoyeta",
+        "explanation": "Una isoyeta une puntos que registran igual precipitación durante el periodo representado.  ",
+        "stability": "STABLE",
+        "source": "https://marine.weather.gov/glossary.php?word=isohyet"
+      },
+      {
+        "id": "GEO6-142",
+        "number": 142,
+        "topic": "Ríos y relieve",
+        "concept": "mayor_pendiente_aumenta_energia_y_erosion_del_rio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele ocurrir con la velocidad de un río cuando aumenta mucho la pendiente de su cauce?",
+        "options": [
+          "Aumenta y puede erosionar más el lecho",
+          "Disminuye hasta detenerse",
+          "Se vuelve agua salada",
+          "Cambia necesariamente de dirección hacia el norte"
+        ],
+        "correctAnswer": "Aumenta y puede erosionar más el lecho",
+        "explanation": "Una pendiente mayor suele acelerar el flujo y aumentar su capacidad de erosionar el cauce.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-143",
+        "number": 143,
+        "topic": "Riesgo costero",
+        "concept": "evacuacion_por_tsunami_hacia_terreno_elevado",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un mapa de evacuación muestra que el barrio está en una zona costera baja. ¿Hacia dónde conviene dirigir a las personas ante una alerta de tsunami?",
+        "options": [
+          "Hacia una playa más cercana",
+          "Hacia terreno elevado y rutas señalizadas",
+          "Hacia el borde del río",
+          "Hacia edificios junto al mar"
+        ],
+        "correctAnswer": "Hacia terreno elevado y rutas señalizadas",
+        "explanation": "Alejarse de la costa y llegar a terreno elevado por rutas de evacuación reduce la exposición a la inundación.  ",
+        "stability": "STABLE",
+        "source": "https://tsunami.coast.noaa.gov/"
+      },
+      {
+        "id": "GEO6-144",
+        "number": 144,
+        "topic": "Relieve y transporte",
+        "concept": "curvas_cerradas_con_cotas_ascendentes_indican_colina",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa topográfico, varias curvas cerradas rodean un punto y las cotas aumentan hacia el centro. ¿Qué forma del relieve representan?",
+        "options": [
+          "Una depresión",
+          "Un valle",
+          "Una colina",
+          "Una meseta"
+        ],
+        "correctAnswer": "Una colina",
+        "explanation": "Las curvas cerradas con cotas más altas hacia el centro representan una elevación como una colina.  ",
+        "stability": "STABLE",
+        "source": "https://www.usgs.gov/faqs/what-a-topographic-map"
+      },
+      {
+        "id": "GEO6-145",
+        "number": 145,
+        "topic": "Proyecciones cartográficas",
+        "concept": "proyeccion_equivalente_conserva_proporciones_de_area",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un atlas compara el tamaño de varios países. ¿Qué tipo de proyección conviene para reducir la distorsión de sus áreas?",
+        "options": [
+          "Una que conserva únicamente las direcciones",
+          "Una que conserva los ángulos locales",
+          "Una que agranda las zonas polares",
+          "Una proyección equivalente"
+        ],
+        "correctAnswer": "Una proyección equivalente",
+        "explanation": "Las proyecciones equivalentes conservan las proporciones de área, aunque puedan deformar otras características.  ",
+        "stability": "STABLE",
+        "source": "https://www.usgs.gov/faqs/how-are-different-map-projections-used"
+      },
+      {
+        "id": "GEO6-146",
+        "number": 146,
+        "topic": "",
+        "concept": "agua_de_acuifero_puede_alimentar_manantiales_y_pozos",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un acuífero puede alimentar manantiales o pozos cuando el agua subterránea llega a la superficie.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "El agua almacenada en formaciones permeables puede emerger de manera natural o extraerse mediante pozos.  ",
+        "stability": "STABLE",
+        "source": "https://md.water.usgs.gov/preview/faq/groundwater.html"
+      },
+      {
+        "id": "GEO6-147",
+        "number": 147,
+        "topic": "",
+        "concept": "valle_puede_facilitar_comunicacion_entre_elevaciones",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Los valles pueden funcionar como corredores naturales de comunicación porque ofrecen pasos bajos entre elevaciones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "En zonas montañosas, los valles suelen facilitar el tránsito entre lugares separados por elevaciones.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-148",
+        "number": 148,
+        "topic": "",
+        "concept": "oleaje_erosiona_base_de_acantilado_y_retrocede_costa",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El oleaje puede erosionar la base de un acantilado y contribuir a que la costa retroceda.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "El impacto repetido de las olas desgasta la costa y puede hacer que el borde del acantilado avance tierra adentro.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-149",
+        "number": 149,
+        "topic": "",
+        "concept": "ausencia_de_registros_en_mapa_no_demuestra_riesgo_nulo",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si un mapa muestra menos sismos en una zona, eso demuestra por sí solo que allí no ocurren terremotos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso.  ",
+        "explanation": "La ausencia de puntos puede deberse al periodo observado, a pocos registros o a la escala; el mapa no demuestra riesgo nulo.  ",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO6-150",
+        "number": 150,
+        "topic": "",
+        "concept": "falso_color_satelital_resalta_vegetacion_con_colores_asignados",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "En algunas imágenes satelitales se asignan colores para resaltar la vegetación, así que el color mostrado puede no ser el que vemos a simple vista.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero.  ",
+        "explanation": "Las composiciones de falso color combinan bandas de luz para facilitar la observación de ciertos rasgos del terreno.  ",
+        "stability": "STABLE",
+        "source": "https://vlab.noaa.gov/web/oclo/gamma"
+      }
+    ]
   }
 ];

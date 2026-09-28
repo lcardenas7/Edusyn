@@ -153,7 +153,7 @@ export default function Arena() {
         </main>}
 
         {dashboard?.role === 'student' && <main className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-          <div className="space-y-6">
+          <div className={`space-y-6 ${duel ? 'order-2 lg:order-1' : 'order-1 lg:order-1'}`}>
             <section className="rounded-3xl border border-violet-300/20 bg-[#222348] p-5 shadow-2xl sm:p-7">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-400/20 text-violet-200"><Users size={22} /></span>
               <h2 className="mt-4 text-xl font-bold">Prepara el reto</h2>
@@ -174,7 +174,7 @@ export default function Arena() {
             <section className="rounded-3xl border border-white/10 bg-[#1d2240] p-5 sm:p-7"><h2 className="text-xl font-bold">Mis duelos <span className="text-sm font-medium text-teal-200">· {dashboard.duels.filter((item) => item.status === 'ACTIVE' || item.status === 'INVITED').length} abiertos</span></h2><div className="mt-4 space-y-2">{dashboard.duels.length === 0 && <p className="text-sm text-slate-300">Todavía no tienes partidas.</p>}{dashboard.duels.map((item) => <button key={item.id} type="button" onClick={() => act(() => openDuel(item.id))} className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border p-3 text-left ${duel?.id === item.id ? 'border-teal-300 bg-teal-300/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}><span><span className="block font-semibold">{item.opponent}</span><span className="mt-0.5 block text-xs text-slate-300">{item.category} · {statusLabel[item.status] ?? item.status} · {item.myProgress}/7</span></span><ChevronRight size={18} /></button>)}</div></section>
           </div>
 
-          <section className="min-h-[320px] rounded-3xl border border-white/10 bg-[#f7f4e8] p-5 text-[#24243c] shadow-2xl sm:p-7" aria-live="polite">
+          <section className={`min-h-[320px] rounded-3xl border border-white/10 bg-[#f7f4e8] p-5 text-[#24243c] shadow-2xl sm:p-7 ${duel ? 'order-1 lg:order-2' : 'order-2 lg:order-2'}`} aria-live="polite">
             {!duel && <div className="flex h-full min-h-[270px] flex-col items-center justify-center text-center"><Swords size={44} className="text-violet-600" /><h2 className="mt-4 text-2xl font-black">Tu próxima partida empieza aquí</h2><p className="mt-2 max-w-sm text-sm text-[#5d6074]">Elige un compañero o abre uno de tus duelos para continuar.</p></div>}
             {duel?.status === 'INVITED' && <div><Clock3 className="text-violet-600" size={36} /><h2 className="mt-5 text-2xl font-black">{duel.isInvitee ? 'Te invitaron a jugar' : 'Esperando respuesta'}</h2><p className="mt-2 text-sm text-[#5d6074]">Categoría: <strong>{duel.category}</strong>{duel.selectionMode === 'ROULETTE' ? ' · elegida por la ruleta' : ''}. {duel.isInvitee ? 'Las siete preguntas serán iguales para ambos. ¿Aceptas el duelo?' : 'Tu compañero verá la invitación al entrar en esta aula.'}</p>{duel.isInvitee && <div className="mt-6 flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={() => respond(true)} className="min-h-12 rounded-xl bg-violet-700 px-5 font-bold text-white">Aceptar reto</button><button type="button" disabled={busy} onClick={() => respond(false)} className="min-h-12 rounded-xl border border-[#c4c4ce] px-5 font-semibold">Rechazar</button></div>}</div>}
             {duel?.status === 'ACTIVE' && duel.question && <div>
