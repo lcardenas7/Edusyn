@@ -19479,5 +19479,2829 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
         "source": null
       }
     ]
+  },
+  {
+    "catalogId": "edusyn-tecnologia-grade-6-v1",
+    "title": "Tecnología · 6.º",
+    "grade": 6,
+    "subjectArea": "Duelos",
+    "category": "Tecnología",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://www.colombiaaprende.edu.co/sites/default/files/files_public/2022-11/Orientaciones_Curricures_Tecnologia.pdf",
+      "https://www.mineducacion.gov.co/1780/articles-411706_recurso_5.pdf"
+    ],
+    "questions": [
+      {
+        "id": "TEC6-001",
+        "number": 1,
+        "topic": "Tecnología en la vida cotidiana",
+        "concept": "tecnologia_solucion_necesidad_no_solo_digital",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe mejor una tecnología?",
+        "options": [
+          "Una creación para resolver una necesidad",
+          "Un objeto que siempre usa electricidad",
+          "Un recurso que solo existe en internet",
+          "Un aparato fabricado en una industria"
+        ],
+        "correctAnswer": "Una creación para resolver una necesidad",
+        "explanation": "La tecnología incluye conocimientos, procesos y artefactos creados para atender necesidades; no se limita a aparatos digitales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-002",
+        "number": 2,
+        "topic": "Dispositivos de entrada",
+        "concept": "teclado_dispositivo_entrada_texto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál dispositivo permite introducir texto en un computador?",
+        "options": [
+          "Parlante",
+          "Teclado",
+          "Proyector",
+          "Monitor"
+        ],
+        "correctAnswer": "Teclado",
+        "explanation": "El teclado envía al computador las letras y comandos que escribe el usuario.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-003",
+        "number": 3,
+        "topic": "Hardware y software",
+        "concept": "software_programa_frente_a_hardware",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál elemento es software?",
+        "options": [
+          "Ratón",
+          "Memoria USB",
+          "Procesador de textos",
+          "Pantalla"
+        ],
+        "correctAnswer": "Procesador de textos",
+        "explanation": "Un procesador de textos es un programa; los otros elementos son componentes físicos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-004",
+        "number": 4,
+        "topic": "Algoritmos",
+        "concept": "algoritmo_secuencia_ordenada_de_pasos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un algoritmo?",
+        "options": [
+          "Una pieza del computador",
+          "Un tipo de pantalla",
+          "Una red inalámbrica",
+          "Una secuencia de pasos para una tarea"
+        ],
+        "correctAnswer": "Una secuencia de pasos para una tarea",
+        "explanation": "Un algoritmo organiza instrucciones para alcanzar un resultado o resolver un problema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-005",
+        "number": 5,
+        "topic": "Dispositivos de salida",
+        "concept": "monitor_dispositivo_salida_visual",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál dispositivo presenta imágenes del computador al usuario?",
+        "options": [
+          "Monitor",
+          "Micrófono",
+          "Teclado",
+          "Escáner"
+        ],
+        "correctAnswer": "Monitor",
+        "explanation": "El monitor muestra visualmente la información procesada por el equipo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-006",
+        "number": 6,
+        "topic": "Sensores",
+        "concept": "sensor_captar_variable_fisica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un sensor de temperatura conectado a una placa electrónica sirve principalmente para:",
+        "options": [
+          "Guardar archivos",
+          "Medir el ambiente",
+          "Mostrar una imagen",
+          "Escribir instrucciones"
+        ],
+        "correctAnswer": "Medir el ambiente",
+        "explanation": "El sensor capta una condición física —la temperatura— y la convierte en un dato que el sistema puede usar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-007",
+        "number": 7,
+        "topic": "Archivos digitales",
+        "concept": "extension_jpg_archivo_imagen",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál nombre suele corresponder a una imagen?",
+        "options": [
+          "mapa.mp3",
+          "mapa.pdf",
+          "mapa.jpg",
+          "mapa.exe"
+        ],
+        "correctAnswer": "mapa.jpg",
+        "explanation": "La extensión .jpg se usa habitualmente para archivos de imagen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-008",
+        "number": 8,
+        "topic": "Verdadero o falso · Tecnología",
+        "concept": "tecnologia_analogica_sin_electricidad",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una tecnología puede ser analógica y no necesitar electricidad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Una brújula o una palanca son ejemplos de tecnologías que no dependen de energía eléctrica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-009",
+        "number": 9,
+        "topic": "Internet y Wi-Fi",
+        "concept": "diferenciar_wifi_red_local_acceso_internet",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un portátil se conecta al Wi-Fi de una casa, pero el router no tiene conexión al proveedor. ¿Qué puede ocurrir?",
+        "options": [
+          "El portátil tiene internet por usar Wi-Fi",
+          "El router funciona como un navegador",
+          "El Wi-Fi convierte archivos en páginas web",
+          "Hay red local, pero no acceso a internet"
+        ],
+        "correctAnswer": "Hay red local, pero no acceso a internet",
+        "explanation": "Wi-Fi conecta dispositivos a una red local; esa red puede existir aunque no tenga salida a internet.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-010",
+        "number": 10,
+        "topic": "Navegador y buscador",
+        "concept": "navegador_abrir_paginas_frente_a_buscar",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué herramienta permite abrir y recorrer páginas web?",
+        "options": [
+          "Navegador",
+          "Buscador",
+          "Hoja de cálculo",
+          "Sistema operativo"
+        ],
+        "correctAnswer": "Navegador",
+        "explanation": "El navegador abre páginas web; un buscador ayuda a encontrar páginas dentro de la Web.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-011",
+        "number": 11,
+        "topic": "Condicionales",
+        "concept": "condicional_decidir_segun_sensor",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un programa, “si el sensor detecta poca luz, enciende la lámpara” es un ejemplo de:",
+        "options": [
+          "Repetición",
+          "Variable",
+          "Condición",
+          "Comentario"
+        ],
+        "correctAnswer": "Condición",
+        "explanation": "La acción de encender depende de que se cumpla una condición: detectar poca luz.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-012",
+        "number": 12,
+        "topic": "Ciclos",
+        "concept": "ciclo_repetir_instrucciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una instrucción de ciclo sirve para:",
+        "options": [
+          "Cambiar el nombre de un archivo",
+          "Repetir una o más instrucciones",
+          "Conectar el equipo a una pantalla",
+          "Borrar siempre los datos"
+        ],
+        "correctAnswer": "Repetir una o más instrucciones",
+        "explanation": "Un ciclo repite instrucciones mientras se cumple una condición o durante una cantidad definida de veces.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-013",
+        "number": 13,
+        "topic": "Contraseñas",
+        "concept": "contrasena_larga_y_no_predecible",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál contraseña es más difícil de adivinar?",
+        "options": [
+          "12345678",
+          "valeria",
+          "colegio2026",
+          "R7!mQ2#p"
+        ],
+        "correctAnswer": "R7!mQ2#p",
+        "explanation": "Una clave larga que combina caracteres variados y no usa datos obvios suele ser más resistente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-014",
+        "number": 14,
+        "topic": "Búsqueda de información",
+        "concept": "busqueda_web_palabras_clave_especificas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al buscar una tarea, ¿qué acción mejora la posibilidad de encontrar fuentes útiles?",
+        "options": [
+          "Escribir palabras clave específicas",
+          "Abrir el primer anuncio",
+          "Usar una frase sin relación",
+          "Elegir solo el resultado más corto"
+        ],
+        "correctAnswer": "Escribir palabras clave específicas",
+        "explanation": "Las palabras clave concretas enfocan la búsqueda; después conviene comparar la confiabilidad de las fuentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-015",
+        "number": 15,
+        "topic": "Copias de seguridad",
+        "concept": "respaldo_recuperar_datos_perdidos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué sirve una copia de seguridad?",
+        "options": [
+          "Aumentar el brillo de la pantalla",
+          "Evitar que el equipo se caliente",
+          "Hacer que internet sea más rápido",
+          "Recuperar archivos si se pierden"
+        ],
+        "correctAnswer": "Recuperar archivos si se pierden",
+        "explanation": "Una copia conserva otra versión de los datos para recuperarlos ante daño, pérdida o eliminación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-016",
+        "number": 16,
+        "topic": "Protección contra engaños",
+        "concept": "phishing_presion_para_robar_credenciales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un mensaje inesperado pide la contraseña y amenaza con cerrar una cuenta. ¿Qué conviene hacer?",
+        "options": [
+          "Responder con la clave para verificar",
+          "Abrir el enlace de inmediato",
+          "No compartirla y verificar por un canal oficial",
+          "Reenviar el mensaje a todos"
+        ],
+        "correctAnswer": "No compartirla y verificar por un canal oficial",
+        "explanation": "Los mensajes que presionan para revelar credenciales pueden ser intentos de suplantación; se debe verificar por un canal oficial.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-017",
+        "number": 17,
+        "topic": "Información personal",
+        "concept": "privacidad_dato_ubicacion_residencial",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál dato merece más cuidado antes de publicarlo en una red social?",
+        "options": [
+          "El color favorito",
+          "La dirección de la casa",
+          "El nombre de una película",
+          "Un dibujo propio"
+        ],
+        "correctAnswer": "La dirección de la casa",
+        "explanation": "La dirección permite localizar a una persona y no debería compartirse públicamente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-018",
+        "number": 18,
+        "topic": "Verdadero o falso · Componentes",
+        "concept": "hardware_componentes_fisicos",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El teclado y la pantalla son componentes físicos del computador.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Ambos se pueden tocar y forman parte del hardware del equipo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-019",
+        "number": 19,
+        "topic": "Verdadero o falso · Algoritmos",
+        "concept": "algoritmo_ejecucion_y_verificacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un algoritmo bien definido puede tener instrucciones ordenadas y comprobar si logró su objetivo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La secuencia debe poder ejecutarse y sus resultados permiten verificar si resuelve la tarea.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-020",
+        "number": 20,
+        "topic": "Verdadero o falso · Tecnología y ambiente",
+        "concept": "evaluar_consumo_y_reparabilidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Al elegir un dispositivo, el consumo de energía y la posibilidad de repararlo pueden ser criterios importantes.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La eficiencia y la vida útil influyen en el costo y en el impacto ambiental de una solución tecnológica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-021",
+        "number": 21,
+        "topic": "Elegir una solución",
+        "concept": "seleccionar_dispositivo_segun_necesidad_visual",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "El salón necesita mostrar un mapa grande a todo el grupo y ya tiene un computador. ¿Qué dispositivo resuelve mejor esa necesidad?",
+        "options": [
+          "Un proyector",
+          "Un micrófono",
+          "Un escáner",
+          "Una memoria USB"
+        ],
+        "correctAnswer": "Un proyector",
+        "explanation": "El proyector amplía la imagen del computador para que varias personas puedan verla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-022",
+        "number": 22,
+        "topic": "Depuración de algoritmos",
+        "concept": "depurar_cantidad_de_repeticiones",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un robot debe avanzar exactamente 4 casillas, pero el programa tiene “repetir 5 veces: avanzar”. ¿Qué cambio corrige el recorrido?",
+        "options": [
+          "Repetir 3 veces",
+          "Repetir 4 veces",
+          "Repetir 6 veces",
+          "Quitar el bloque de repetición"
+        ],
+        "correctAnswer": "Repetir 4 veces",
+        "explanation": "El bloque debe ejecutar el avance una vez por cada casilla: cuatro repeticiones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-023",
+        "number": 23,
+        "topic": "Datos de sensores",
+        "concept": "elegir_dato_relevante_para_control",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una planta se riega solo si la tierra está seca. ¿Qué dato necesita comprobar el sistema antes de activar el agua?",
+        "options": [
+          "El color de la maceta",
+          "La hora de compra",
+          "La humedad del suelo",
+          "El tamaño de la pantalla"
+        ],
+        "correctAnswer": "La humedad del suelo",
+        "explanation": "La humedad del suelo indica si se cumple la condición que activa el riego.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-024",
+        "number": 24,
+        "topic": "Diseñar con criterios",
+        "concept": "evaluar_alternativa_eficiencia_y_reparacion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos ventiladores resuelven el calor del aula. Uno consume menos energía y tiene repuestos disponibles. ¿Qué criterio favorece esa alternativa?",
+        "options": [
+          "Color y publicidad",
+          "Tamaño de la caja",
+          "Marca más conocida",
+          "Eficiencia y reparabilidad"
+        ],
+        "correctAnswer": "Eficiencia y reparabilidad",
+        "explanation": "El consumo y la disponibilidad de repuestos ayudan a valorar eficiencia, costo de uso y vida útil.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-025",
+        "number": 25,
+        "topic": "Verdadero o falso · Solución de problemas",
+        "concept": "definir_problema_antes_de_prototipar",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Antes de construir una solución tecnológica, definir con claridad la necesidad ayuda a elegir y probar alternativas adecuadas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Comprender el problema permite comparar opciones con criterios pertinentes y comprobar si funcionan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-026",
+        "number": 26,
+        "topic": "Procesamiento",
+        "concept": "procesador_ejecutar_instrucciones",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué componente ejecuta instrucciones y procesa datos en un computador?",
+        "options": [
+          "Procesador",
+          "Parlante",
+          "Teclado",
+          "Cámara"
+        ],
+        "correctAnswer": "Procesador",
+        "explanation": "El procesador ejecuta instrucciones y coordina operaciones sobre los datos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-027",
+        "number": 27,
+        "topic": "Memoria",
+        "concept": "ram_memoria_temporal_en_uso",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica describe mejor la memoria RAM?",
+        "options": [
+          "Conserva los archivos aunque se apague el equipo",
+          "Guarda temporalmente datos usados por programas",
+          "Imprime documentos",
+          "Conecta el computador al router"
+        ],
+        "correctAnswer": "Guarda temporalmente datos usados por programas",
+        "explanation": "La RAM mantiene temporalmente datos e instrucciones mientras el equipo está funcionando.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-028",
+        "number": 28,
+        "topic": "Periféricos",
+        "concept": "parlante_salida_audio",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál periférico permite escuchar el sonido del computador?",
+        "options": [
+          "Escáner",
+          "Teclado",
+          "Parlante",
+          "Cámara"
+        ],
+        "correctAnswer": "Parlante",
+        "explanation": "Los parlantes convierten la señal de audio en sonido audible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-029",
+        "number": 29,
+        "topic": "Sistemas operativos",
+        "concept": "sistema_operativo_administrar_recursos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es una función de un sistema operativo?",
+        "options": [
+          "Crear conexión eléctrica en la casa",
+          "Aumentar físicamente el tamaño de la pantalla",
+          "Reemplazar todos los archivos del usuario",
+          "Gestionar recursos y permitir usar programas"
+        ],
+        "correctAnswer": "Gestionar recursos y permitir usar programas",
+        "explanation": "El sistema operativo administra recursos del equipo y ofrece servicios para ejecutar aplicaciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-030",
+        "number": 30,
+        "topic": "Almacenamiento",
+        "concept": "almacenamiento_persistente_solid_state",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál medio puede conservar archivos incluso cuando se apaga el computador?",
+        "options": [
+          "Memoria RAM",
+          "Disco de estado sólido",
+          "Portapapeles",
+          "Caché del procesador"
+        ],
+        "correctAnswer": "Disco de estado sólido",
+        "explanation": "Una unidad de estado sólido guarda datos de forma persistente sin energía.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-031",
+        "number": 31,
+        "topic": "Direcciones web",
+        "concept": "url_localizar_recurso_web",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué identifica principalmente una dirección URL?",
+        "options": [
+          "La ubicación de un recurso en la Web",
+          "La marca del computador",
+          "El nivel de batería",
+          "El tamaño de una imagen"
+        ],
+        "correctAnswer": "La ubicación de un recurso en la Web",
+        "explanation": "Una URL señala dónde se encuentra un recurso, como una página o un archivo web.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-032",
+        "number": 32,
+        "topic": "Computación física",
+        "concept": "sensor_detectar_estado_entorno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué componente puede detectar si una puerta está abierta?",
+        "options": [
+          "Batería",
+          "Parlante",
+          "Sensor",
+          "Teclado"
+        ],
+        "correctAnswer": "Sensor",
+        "explanation": "Un sensor puede captar una condición del entorno, como la apertura de una puerta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-033",
+        "number": 33,
+        "topic": "Verdadero o falso · Datos",
+        "concept": "nube_archivos_en_servidores_remotos",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un archivo guardado en una nube digital suele almacenarse en servidores accesibles por una red.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los servicios en la nube guardan datos en servidores y permiten acceder a ellos mediante una conexión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-034",
+        "number": 34,
+        "topic": "Redes locales",
+        "concept": "red_local_compartir_recurso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un aula se conectan varios computadores para compartir una impresora. ¿Qué tipo de red basta para hacerlo?",
+        "options": [
+          "Red local",
+          "Red satelital mundial",
+          "Televisión digital",
+          "Sistema de posicionamiento"
+        ],
+        "correctAnswer": "Red local",
+        "explanation": "Una red local conecta dispositivos cercanos y puede permitir compartir recursos como una impresora.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-035",
+        "number": 35,
+        "topic": "Píxeles e imágenes",
+        "concept": "pixel_unidad_imagen_raster",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al ampliar mucho una imagen de mapa de bits, se ven pequeños cuadrados de color. ¿Qué representan?",
+        "options": [
+          "Capas",
+          "Píxeles",
+          "Enlaces",
+          "Carpetas"
+        ],
+        "correctAnswer": "Píxeles",
+        "explanation": "Una imagen de mapa de bits está formada por píxeles, cada uno con información de color.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-036",
+        "number": 36,
+        "topic": "Actualizaciones",
+        "concept": "actualizacion_corregir_vulnerabilidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué es útil instalar actualizaciones de seguridad del sistema?",
+        "options": [
+          "Porque garantizan que nunca habrá errores",
+          "Porque eliminan todos los archivos antiguos",
+          "Porque pueden corregir vulnerabilidades conocidas",
+          "Porque sustituyen la necesidad de una contraseña"
+        ],
+        "correctAnswer": "Porque pueden corregir vulnerabilidades conocidas",
+        "explanation": "Las actualizaciones pueden reparar fallos de seguridad, aunque no garantizan protección absoluta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-037",
+        "number": 37,
+        "topic": "Hojas de cálculo",
+        "concept": "formula_hoja_calculo_operacion_entre_celdas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una hoja de cálculo, la celda C2 contiene =A2+B2. ¿Qué representa esa expresión?",
+        "options": [
+          "Un enlace a una página",
+          "Un nombre de archivo",
+          "Una fórmula que suma dos celdas",
+          "Una instrucción para apagar el equipo"
+        ],
+        "correctAnswer": "Una fórmula que suma dos celdas",
+        "explanation": "La fórmula toma los valores de A2 y B2 y calcula su suma.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-038",
+        "number": 38,
+        "topic": "Variables",
+        "concept": "variable_nombre_asociado_a_valor",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un programa, una variable llamada puntaje almacena el resultado actual del jugador. ¿Qué representa puntaje?",
+        "options": [
+          "Un valor que puede consultarse o cambiar",
+          "Una pieza física de la pantalla",
+          "Una dirección de internet",
+          "Una regla que siempre repite código"
+        ],
+        "correctAnswer": "Un valor que puede consultarse o cambiar",
+        "explanation": "Una variable es un nombre asociado a un valor que el programa puede utilizar y, según el caso, actualizar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-039",
+        "number": 39,
+        "topic": "Depuración",
+        "concept": "depurar_seguir_ejecucion_con_pruebas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un programa muestra 12 cuando debería mostrar 10. ¿Qué acción ayuda más a encontrar el problema?",
+        "options": [
+          "Cambiar el color de la pantalla",
+          "Revisar las instrucciones y probar valores paso a paso",
+          "Borrar todos los archivos",
+          "Desconectar el teclado"
+        ],
+        "correctAnswer": "Revisar las instrucciones y probar valores paso a paso",
+        "explanation": "Seguir la ejecución con datos de prueba ayuda a localizar la instrucción que produce el resultado incorrecto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-040",
+        "number": 40,
+        "topic": "Sistema binario",
+        "concept": "digitos_del_sistema_binario",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dos símbolos se usan en el sistema binario?",
+        "options": [
+          "1 y 2",
+          "0 y 2",
+          "1 y 10",
+          "0 y 1"
+        ],
+        "correctAnswer": "0 y 1",
+        "explanation": "El sistema binario representa cantidades utilizando los dígitos 0 y 1.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-041",
+        "number": 41,
+        "topic": "Seguridad de cuentas",
+        "concept": "autenticacion_dos_factores_segundo_control",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué agrega la verificación en dos pasos a una cuenta?",
+        "options": [
+          "Acceso sin contraseña a cualquier persona",
+          "Dos nombres de usuario públicos",
+          "Una copia automática de cada mensaje",
+          "Una segunda comprobación de identidad"
+        ],
+        "correctAnswer": "Una segunda comprobación de identidad",
+        "explanation": "Además de la contraseña, se solicita otra prueba de identidad para dificultar el acceso no autorizado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-042",
+        "number": 42,
+        "topic": "Organización de problemas",
+        "concept": "descomponer_problema_en_subtareas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Para programar un robot que entregue libros, ¿qué paso facilita resolver la tarea?",
+        "options": [
+          "Elegir colores antes de conocer el recorrido",
+          "Probarlo solo cuando esté terminado",
+          "Escribir todas las órdenes sin orden",
+          "Dividir la tarea en pasos pequeños"
+        ],
+        "correctAnswer": "Dividir la tarea en pasos pequeños",
+        "explanation": "Dividir un problema en partes permite planear, programar y probar cada etapa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-043",
+        "number": 43,
+        "topic": "Verdadero o falso · Control de flujo",
+        "concept": "control_flujo_alterar_secuencia_lineal",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un programa, las instrucciones pueden ejecutarse en otro orden si un ciclo o una condición modifica el flujo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las estructuras de control pueden repetir instrucciones o elegir entre caminos distintos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-044",
+        "number": 44,
+        "topic": "Verdadero o falso · Licencias",
+        "concept": "codigo_abierto_respetar_licencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Que un programa sea de código abierto significa que puede usarse y modificarse según las condiciones de su licencia.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El código puede consultarse y modificarse, pero se deben respetar los términos de la licencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-045",
+        "number": 45,
+        "topic": "Elegir almacenamiento",
+        "concept": "seleccionar_medio_portatil_para_archivos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un equipo necesita transportar trabajos escolares y abrirlos en computadores distintos. ¿Qué opción es más adecuada?",
+        "options": [
+          "La memoria RAM del primer computador",
+          "El volumen del parlante",
+          "El historial del navegador",
+          "Una memoria USB"
+        ],
+        "correctAnswer": "Una memoria USB",
+        "explanation": "Una memoria USB es portátil y puede trasladar archivos entre equipos compatibles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-046",
+        "number": 46,
+        "topic": "Evaluar información en línea",
+        "concept": "evaluar_fuente_autoria_fecha_evidencia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos páginas dan cifras distintas sobre el mismo tema. ¿Qué criterio ayuda más a decidir cuál usar?",
+        "options": [
+          "Comparar autoría, fecha y fuentes citadas",
+          "Elegir la que tenga más animaciones",
+          "Preferir la que tenga menos texto",
+          "Usar la primera que se abrió"
+        ],
+        "correctAnswer": "Comparar autoría, fecha y fuentes citadas",
+        "explanation": "Autoría, vigencia y evidencia permiten juzgar mejor la confiabilidad de una publicación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-047",
+        "number": 47,
+        "topic": "Automatización",
+        "concept": "combinar_condiciones_sensor_movimiento_luz",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una luz debe encenderse solo cuando alguien entra y el salón está oscuro. ¿Qué datos debe combinar el sistema?",
+        "options": [
+          "Nivel de batería y nombre del aula",
+          "Movimiento y nivel de luz",
+          "Color de pared y tamaño del salón",
+          "Hora de compra y marca del sensor"
+        ],
+        "correctAnswer": "Movimiento y nivel de luz",
+        "explanation": "La decisión depende de dos condiciones: detectar movimiento y poca luz.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-048",
+        "number": 48,
+        "topic": "Cuidado de residuos tecnológicos",
+        "concept": "disposicion_responsable_baterias_usadas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una batería usada ya no sirve. ¿Cuál decisión es más responsable?",
+        "options": [
+          "Tirarla en una quebrada",
+          "Quemarla con basura común",
+          "Llevarla a un punto de recolección autorizado",
+          "Abrirla para vaciar su contenido"
+        ],
+        "correctAnswer": "Llevarla a un punto de recolección autorizado",
+        "explanation": "Las baterías requieren manejo adecuado; se deben entregar en sistemas de recolección establecidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-049",
+        "number": 49,
+        "topic": "Verdadero o falso · Accesibilidad",
+        "concept": "accesibilidad_grafica_no_depender_solo_color",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una gráfica con etiquetas o patrones además del color puede ser más accesible para personas que no distinguen bien algunos colores.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Ofrecer señales adicionales permite interpretar los datos sin depender solo del color.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-050",
+        "number": 50,
+        "topic": "Verdadero o falso · Diseño tecnológico",
+        "concept": "prueba_prototipo_retroalimentacion_usuario",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Probar un prototipo con personas usuarias puede revelar cambios necesarios antes de construir la versión final.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las pruebas con usuarios muestran si la solución responde a la necesidad y qué conviene mejorar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-051",
+        "number": 51,
+        "topic": "Diagramas de flujo",
+        "concept": "rombo_diagrama_decision",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un diagrama de flujo, ¿qué suele indicar un rombo?",
+        "options": [
+          "Inicio o final",
+          "Una decisión",
+          "Una operación de cálculo",
+          "Un documento impreso"
+        ],
+        "correctAnswer": "Una decisión",
+        "explanation": "El rombo representa una decisión que puede conducir por caminos distintos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-052",
+        "number": 52,
+        "topic": "Pantallas táctiles",
+        "concept": "pantalla_tactil_entrada_y_salida",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una pantalla táctil puede servir para:",
+        "options": [
+          "Mostrar información y recibir toques",
+          "Almacenar energía para toda la casa",
+          "Imprimir en papel",
+          "Reemplazar la conexión eléctrica"
+        ],
+        "correctAnswer": "Mostrar información y recibir toques",
+        "explanation": "La pantalla presenta imágenes y también registra toques como entradas del usuario.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-053",
+        "number": 53,
+        "topic": "Hojas de cálculo",
+        "concept": "celda_interseccion_fila_columna",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una hoja de cálculo, ¿qué se forma en el cruce de una fila y una columna?",
+        "options": [
+          "Un enlace",
+          "Una diapositiva",
+          "Una celda",
+          "Un navegador"
+        ],
+        "correctAnswer": "Una celda",
+        "explanation": "Cada intersección de fila y columna es una celda que puede contener datos o fórmulas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-054",
+        "number": 54,
+        "topic": "Seguridad digital",
+        "concept": "actualizar_programas_desde_fuente_oficial",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué práctica ayuda a mantener actualizado un programa?",
+        "options": [
+          "Desactivar todas las alertas",
+          "Instalar actualizaciones desde la fuente oficial",
+          "Descargar copias de cualquier anuncio",
+          "Compartir la contraseña con el grupo"
+        ],
+        "correctAnswer": "Instalar actualizaciones desde la fuente oficial",
+        "explanation": "Las actualizaciones deben obtenerse desde canales confiables para reducir el riesgo de instalar archivos falsos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-055",
+        "number": 55,
+        "topic": "Accesibilidad digital",
+        "concept": "lector_pantalla_acceso_contenido",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función lee en voz alta el texto que aparece en una pantalla?",
+        "options": [
+          "Compresor de archivos",
+          "Filtro de búsqueda",
+          "Lector de pantalla",
+          "Captura de pantalla"
+        ],
+        "correctAnswer": "Lector de pantalla",
+        "explanation": "Un lector de pantalla convierte en voz o braille la información digital para apoyar el acceso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-056",
+        "number": 56,
+        "topic": "Datos digitales",
+        "concept": "comparar_unidades_byte_bit_kilobyte",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué unidad es mayor?",
+        "options": [
+          "Kilobyte",
+          "Byte",
+          "Bit",
+          "Carácter"
+        ],
+        "correctAnswer": "Kilobyte",
+        "explanation": "Un kilobyte representa más información que un byte o un bit.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-057",
+        "number": 57,
+        "topic": "Verdadero o falso · Tecnología",
+        "concept": "electricidad_energia_sistemas_tecnologicos",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La electricidad es una fuente de energía utilizada por muchos sistemas tecnológicos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Muchos dispositivos transforman energía eléctrica para realizar funciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-058",
+        "number": 58,
+        "topic": "Componentes",
+        "concept": "placa_base_conectar_componentes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué componente conecta varias partes internas de un computador?",
+        "options": [
+          "Procesador",
+          "Memoria RAM",
+          "Parlante",
+          "Placa base"
+        ],
+        "correctAnswer": "Placa base",
+        "explanation": "La placa base ofrece conexiones para que distintos componentes se comuniquen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-059",
+        "number": 59,
+        "topic": "Entrada, proceso y salida",
+        "concept": "identificar_salida_en_sistema_digital",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un computador recibe números, calcula su promedio y lo muestra en pantalla. ¿Cuál es la salida?",
+        "options": [
+          "Los números ingresados",
+          "El teclado",
+          "La operación de cálculo",
+          "El promedio mostrado"
+        ],
+        "correctAnswer": "El promedio mostrado",
+        "explanation": "La salida es el resultado que el sistema presenta después de procesar las entradas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-060",
+        "number": 60,
+        "topic": "Códigos visuales",
+        "concept": "codigo_qr_representar_datos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una cámara lee un código QR en un afiche y abre una página. ¿Qué función cumple el código?",
+        "options": [
+          "Representar información que puede decodificarse",
+          "Producir energía para el teléfono",
+          "Reemplazar el sistema operativo",
+          "Proteger la pantalla de golpes"
+        ],
+        "correctAnswer": "Representar información que puede decodificarse",
+        "explanation": "El patrón visual codifica datos que un lector puede interpretar, como una dirección web.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-061",
+        "number": 61,
+        "topic": "Colaboración digital",
+        "concept": "colaboracion_documento_version_compartida",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Cuatro estudiantes editan un mismo documento compartido. ¿Qué ventaja ofrece trabajar en una sola versión?",
+        "options": [
+          "Impide que alguien cometa errores",
+          "Evita mantener copias separadas con cambios distintos",
+          "Garantiza que siempre haya internet",
+          "Elimina la necesidad de ponerse de acuerdo"
+        ],
+        "correctAnswer": "Evita mantener copias separadas con cambios distintos",
+        "explanation": "Una versión compartida ayuda a reunir cambios y reduce la confusión entre archivos separados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-062",
+        "number": 62,
+        "topic": "Permisos de aplicaciones",
+        "concept": "evaluar_permiso_segun_funcion_aplicacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una linterna digital pide permiso para acceder a los contactos. ¿Qué conviene considerar?",
+        "options": [
+          "Si ocupa poco espacio",
+          "Si tiene un ícono brillante",
+          "Si el permiso es necesario para su función",
+          "Si aparece en la primera página"
+        ],
+        "correctAnswer": "Si el permiso es necesario para su función",
+        "explanation": "Es prudente revisar si un permiso guarda relación con lo que la aplicación necesita hacer.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-063",
+        "number": 63,
+        "topic": "Archivos comprimidos",
+        "concept": "compresion_reducir_y_agrupar_archivos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué se comprime normalmente un conjunto de archivos?",
+        "options": [
+          "Para cambiar su autor",
+          "Para volverlos imposibles de abrir",
+          "Para convertirlos en componentes físicos",
+          "Para reducir su tamaño o reunirlos en un paquete"
+        ],
+        "correctAnswer": "Para reducir su tamaño o reunirlos en un paquete",
+        "explanation": "La compresión puede ahorrar espacio y facilitar el traslado conjunto de archivos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-064",
+        "number": 64,
+        "topic": "Sistemas automatizados",
+        "concept": "actuador_convertir_senal_en_accion_fisica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un sistema de riego, ¿qué componente abre físicamente el paso del agua después de recibir una señal?",
+        "options": [
+          "Actuador",
+          "Sensor",
+          "Dato",
+          "Algoritmo"
+        ],
+        "correctAnswer": "Actuador",
+        "explanation": "El actuador realiza una acción física, como abrir una válvula.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-065",
+        "number": 65,
+        "topic": "Información y datos",
+        "concept": "informacion_interpretar_datos_organizados",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una aplicación organiza registros de ventas y muestra que el producto más comprado fue el cuaderno. ¿Qué aporta el resumen?",
+        "options": [
+          "Solo más datos sin organizar",
+          "Información que ayuda a interpretar los registros",
+          "Energía para el computador",
+          "Una copia física del producto"
+        ],
+        "correctAnswer": "Información que ayuda a interpretar los registros",
+        "explanation": "Al organizar y resumir datos se obtiene información útil para responder preguntas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-066",
+        "number": 66,
+        "topic": "Redes y comunicaciones",
+        "concept": "dns_resolver_nombre_dominio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué servicio asigna nombres fáciles de recordar a direcciones de servidores en internet?",
+        "options": [
+          "RAM",
+          "USB",
+          "DNS",
+          "HDMI"
+        ],
+        "correctAnswer": "DNS",
+        "explanation": "El sistema DNS relaciona nombres de dominio con direcciones de red.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-067",
+        "number": 67,
+        "topic": "Control de flujo",
+        "concept": "seleccion_condicional_dos_caminos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una condición “si hay obstáculo, girar; de lo contrario, avanzar” permite que un robot:",
+        "options": [
+          "Aumente la energía de la batería",
+          "Repita siempre el mismo movimiento",
+          "Guarde una foto en la nube",
+          "Elija una acción según lo que detecta"
+        ],
+        "correctAnswer": "Elija una acción según lo que detecta",
+        "explanation": "La condición selecciona una de dos acciones según el resultado de una comprobación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-068",
+        "number": 68,
+        "topic": "Verdadero o falso · Conectividad",
+        "concept": "punto_acceso_conectar_dispositivos_wifi",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un punto de acceso puede permitir que varios dispositivos se conecten a una red local inalámbrica.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El punto de acceso ofrece conexión inalámbrica a dispositivos cercanos dentro de una red.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-069",
+        "number": 69,
+        "topic": "Verdadero o falso · Software",
+        "concept": "aplicacion_movil_categoria_software",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una aplicación móvil es un tipo de software.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Una aplicación es un programa diseñado para cumplir funciones en un dispositivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-070",
+        "number": 70,
+        "topic": "Protección de datos",
+        "concept": "minimizar_permiso_ubicacion_no_necesario",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una aplicación solicita ubicación precisa para cambiar el color de fondo. ¿Cuál decisión protege mejor la privacidad?",
+        "options": [
+          "Permitirla siempre",
+          "Publicar una captura con la dirección",
+          "Compartir la ubicación con todos",
+          "Revisar si es necesaria y negarla si no lo es"
+        ],
+        "correctAnswer": "Revisar si es necesaria y negarla si no lo es",
+        "explanation": "La ubicación no parece necesaria para cambiar el color, por lo que se puede negar ese permiso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-071",
+        "number": 71,
+        "topic": "Tecnología asistiva",
+        "concept": "seleccionar_tecnologia_asistiva_para_texto",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una estudiante con baja visión necesita escuchar los textos de una guía digital. ¿Qué apoyo es más adecuado?",
+        "options": [
+          "Lector de pantalla o lectura en voz alta",
+          "Un compresor de carpetas",
+          "Una aplicación de cronómetro",
+          "Un filtro para ordenar filas"
+        ],
+        "correctAnswer": "Lector de pantalla o lectura en voz alta",
+        "explanation": "La lectura en voz alta brinda acceso al contenido textual sin depender solo de la visión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-072",
+        "number": 72,
+        "topic": "Depuración de condiciones",
+        "concept": "depurar_condicion_sensor_invertida",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un robot debe girar solo si detecta una pared, pero gira incluso cuando el camino está libre. ¿Qué conviene revisar primero?",
+        "options": [
+          "El color de los bloques",
+          "La condición que interpreta el sensor",
+          "El nombre del archivo",
+          "El volumen del parlante"
+        ],
+        "correctAnswer": "La condición que interpreta el sensor",
+        "explanation": "Revisar la condición permite comprobar si el programa interpreta correctamente la lectura del sensor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-073",
+        "number": 73,
+        "topic": "Prototipado",
+        "concept": "iterar_prototipo_con_prueba_de_carga",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un primer modelo de puente se dobla cuando se ponen libros encima. ¿Qué paso ayuda más a mejorarlo?",
+        "options": [
+          "Ocultar el resultado de la prueba",
+          "Pintar el modelo antes de revisarlo",
+          "Probar una estructura reforzada y volver a medir",
+          "Añadir libros sin cambiar el diseño"
+        ],
+        "correctAnswer": "Probar una estructura reforzada y volver a medir",
+        "explanation": "Una prueba revela una debilidad; modificar el diseño y volver a probar permite mejorarlo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-074",
+        "number": 74,
+        "topic": "Verdadero o falso · Actuadores",
+        "concept": "sirena_actuador_salida_sonora",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "En una alarma automática, una sirena puede actuar como actuador porque produce una acción física o sonora tras recibir una señal.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El actuador convierte una señal de control en una respuesta, como emitir sonido.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-075",
+        "number": 75,
+        "topic": "Verdadero o falso · Huella digital",
+        "concept": "persistencia_y_copia_de_contenido_digital",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Las publicaciones y comentarios en línea pueden permanecer o circular incluso después de que alguien los borra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Otras personas pueden guardar, copiar o compartir contenido antes de que se elimine del sitio original.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-076",
+        "number": 76,
+        "topic": "Periféricos",
+        "concept": "impresora_salida_en_papel",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dispositivo produce una copia de un documento en papel?",
+        "options": [
+          "Impresora",
+          "Micrófono",
+          "Teclado",
+          "Router"
+        ],
+        "correctAnswer": "Impresora",
+        "explanation": "La impresora genera una copia física del documento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-077",
+        "number": 77,
+        "topic": "Hipervínculos",
+        "concept": "hipervinculo_acceder_a_otro_recurso",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele hacer un hipervínculo en un documento digital?",
+        "options": [
+          "Aumentar la capacidad de la batería",
+          "Abrir otro recurso al seleccionarlo",
+          "Reparar automáticamente el computador",
+          "Cambiar una imagen en sonido"
+        ],
+        "correctAnswer": "Abrir otro recurso al seleccionarlo",
+        "explanation": "Un hipervínculo permite acceder a otra página, archivo o sección al seleccionarlo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-078",
+        "number": 78,
+        "topic": "Correo electrónico",
+        "concept": "estructura_direccion_correo_arroba",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una dirección de correo, ¿qué separa el símbolo @?",
+        "options": [
+          "La contraseña y el mensaje",
+          "El asunto y el archivo",
+          "El nombre de usuario y el dominio",
+          "El teléfono y la red Wi-Fi"
+        ],
+        "correctAnswer": "El nombre de usuario y el dominio",
+        "explanation": "El formato habitual contiene un nombre de usuario, @ y un dominio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-079",
+        "number": 79,
+        "topic": "Gestores de contraseñas",
+        "concept": "gestor_almacenar_credenciales",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué sirve principalmente un gestor de contraseñas?",
+        "options": [
+          "Medir la velocidad de internet",
+          "Imprimir claves en papel",
+          "Cambiar el sistema operativo",
+          "Guardar y organizar credenciales de forma protegida"
+        ],
+        "correctAnswer": "Guardar y organizar credenciales de forma protegida",
+        "explanation": "Un gestor ayuda a almacenar y organizar contraseñas sin tener que reutilizar una sola para todas las cuentas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-080",
+        "number": 80,
+        "topic": "Energía solar",
+        "concept": "panel_fotovoltaico_luz_a_electricidad",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué transformación realiza un panel solar fotovoltaico?",
+        "options": [
+          "Luz en energía eléctrica",
+          "Sonido en energía química",
+          "Movimiento en datos escritos",
+          "Calor en imágenes digitales"
+        ],
+        "correctAnswer": "Luz en energía eléctrica",
+        "explanation": "Las celdas fotovoltaicas convierten parte de la luz en energía eléctrica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-081",
+        "number": 81,
+        "topic": "Hojas de cálculo",
+        "concept": "referencia_celda_columna_y_fila",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una hoja de cálculo, ¿cómo se identifica una celda ubicada en la columna B y la fila 4?",
+        "options": [
+          "4B",
+          "B4",
+          "B-4",
+          "Columna 4"
+        ],
+        "correctAnswer": "B4",
+        "explanation": "Las referencias de celda escriben primero la columna y después el número de fila.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-082",
+        "number": 82,
+        "topic": "Transferencia de archivos",
+        "concept": "carga_transferir_archivo_a_servicio_remoto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Enviar una foto desde un teléfono a un servicio en línea se llama:",
+        "options": [
+          "Descargar",
+          "Imprimir",
+          "Subir o cargar",
+          "Comprimir"
+        ],
+        "correctAnswer": "Subir o cargar",
+        "explanation": "Subir o cargar significa transferir datos desde un dispositivo hacia un servicio remoto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-083",
+        "number": 83,
+        "topic": "Verdadero o falso · Extensiones",
+        "concept": "extension_indica_formato_no_seguridad",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La extensión de un archivo puede dar una pista sobre su formato, pero no garantiza que sea seguro abrirlo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El nombre y la extensión orientan sobre el formato; aun así, conviene verificar el origen del archivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-084",
+        "number": 84,
+        "topic": "Imágenes digitales",
+        "concept": "diferenciar_imagen_vectorial_y_raster",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué diferencia principal hay entre una imagen vectorial y una de mapa de bits?",
+        "options": [
+          "La de mapa de bits siempre es más pequeña",
+          "La de mapa de bits nunca contiene píxeles",
+          "La vectorial solo puede incluir sonido",
+          "La vectorial se define con formas y puede ampliarse con menos pérdida"
+        ],
+        "correctAnswer": "La vectorial se define con formas y puede ampliarse con menos pérdida",
+        "explanation": "Las imágenes vectoriales se describen mediante formas; las de mapa de bits usan píxeles y pueden verse pixeladas al ampliarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-085",
+        "number": 85,
+        "topic": "Accesibilidad audiovisual",
+        "concept": "subtitulos_acceso_contenido_audiovisual",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ayuda a una persona sorda a seguir un video con diálogos?",
+        "options": [
+          "Subtítulos",
+          "Un código QR",
+          "Un archivo comprimido",
+          "Una contraseña más larga"
+        ],
+        "correctAnswer": "Subtítulos",
+        "explanation": "Los subtítulos presentan por escrito los diálogos y otros sonidos relevantes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-086",
+        "number": 86,
+        "topic": "Uso de imágenes",
+        "concept": "verificar_condiciones_de_uso_imagen",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante quiere incluir una fotografía encontrada en internet en un proyecto público. ¿Qué debe revisar?",
+        "options": [
+          "Si aparece en el primer resultado",
+          "Si puede usarla según su licencia y condiciones",
+          "Si tiene el color más llamativo",
+          "Si el archivo ocupa poco espacio"
+        ],
+        "correctAnswer": "Si puede usarla según su licencia y condiciones",
+        "explanation": "Encontrar una imagen en línea no significa que sea libre de uso; se deben comprobar sus condiciones y atribución requerida.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-087",
+        "number": 87,
+        "topic": "Seguridad de red",
+        "concept": "cautela_credenciales_en_red_publica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una red Wi-Fi pública, ¿qué práctica reduce el riesgo al abrir una cuenta importante?",
+        "options": [
+          "Usar una página falsa parecida",
+          "Compartir la clave con desconocidos",
+          "Evitar ingresar credenciales si no se puede verificar la conexión",
+          "Desactivar las actualizaciones para siempre"
+        ],
+        "correctAnswer": "Evitar ingresar credenciales si no se puede verificar la conexión",
+        "explanation": "Una red pública puede no ser confiable; verifica el sitio y evita enviar credenciales si hay dudas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-088",
+        "number": 88,
+        "topic": "Dominios web",
+        "concept": "leer_partes_dominio_web_colombiano",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En la dirección `biblioteca.edu.co`, ¿qué indica la terminación `.edu.co`?",
+        "options": [
+          "Una red local",
+          "Un dominio educativo colombiano",
+          "Un archivo de imagen",
+          "El navegador usado"
+        ],
+        "correctAnswer": "Un dominio educativo colombiano",
+        "explanation": "`.edu.co` identifica dominios asociados con entidades educativas en Colombia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-089",
+        "number": 89,
+        "topic": "Ordenar datos",
+        "concept": "ordenar_registros_por_campo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una tabla tiene nombres y puntajes. ¿Qué permite ordenar los puntajes de menor a mayor?",
+        "options": [
+          "Clasificar registros según un campo",
+          "Convertirlos en una presentación",
+          "Borrar automáticamente los nombres",
+          "Cambiar el idioma del teclado"
+        ],
+        "correctAnswer": "Clasificar registros según un campo",
+        "explanation": "Ordenar por el campo puntaje organiza los registros según sus valores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-090",
+        "number": 90,
+        "topic": "Diagramas de flujo",
+        "concept": "rectangulo_diagrama_proceso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué símbolo suele representar una operación o proceso en un diagrama de flujo?",
+        "options": [
+          "Rombo",
+          "Óvalo",
+          "Rectángulo",
+          "Flecha circular"
+        ],
+        "correctAnswer": "Rectángulo",
+        "explanation": "El rectángulo suele indicar un proceso; el rombo representa una decisión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-091",
+        "number": 91,
+        "topic": "Direcciones de red",
+        "concept": "ip_identificar_dispositivo_o_destino_red",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué se utiliza principalmente una dirección IP?",
+        "options": [
+          "Para comprimir una fotografía",
+          "Para medir la carga de la batería",
+          "Para cambiar el color de una página",
+          "Para identificar un dispositivo o destino en una red"
+        ],
+        "correctAnswer": "Para identificar un dispositivo o destino en una red",
+        "explanation": "Las direcciones IP permiten identificar equipos o destinos para intercambiar datos en redes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-092",
+        "number": 92,
+        "topic": "Simulaciones",
+        "concept": "simulacion_explorar_comportamiento_escenarios",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué puede servir una simulación digital de un puente antes de construirlo?",
+        "options": [
+          "Para reemplazar toda prueba real",
+          "Para almacenar contraseñas",
+          "Para cambiar la licencia del programa",
+          "Para explorar cómo responde bajo distintas condiciones"
+        ],
+        "correctAnswer": "Para explorar cómo responde bajo distintas condiciones",
+        "explanation": "Una simulación permite probar escenarios y observar resultados antes de construir, aunque no sustituye todas las pruebas físicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-093",
+        "number": 93,
+        "topic": "Verdadero o falso · Datos",
+        "concept": "ordenar_no_alterar_valores_de_registros",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Ordenar una tabla por puntaje cambia la presentación de los registros, pero no necesariamente sus valores.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Ordenar reorganiza las filas según un campo; no modifica por sí mismo los datos almacenados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-094",
+        "number": 94,
+        "topic": "Verdadero o falso · Inteligencia artificial",
+        "concept": "verificar_resultado_generado_por_ia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una respuesta producida por inteligencia artificial puede contener errores y conviene verificarla.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los sistemas de IA pueden generar información incorrecta, así que es necesario contrastarla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-095",
+        "number": 95,
+        "topic": "Consentimiento y publicación",
+        "concept": "consentimiento_y_audiencia_al_compartir_imagenes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo quiere publicar fotos de compañeros en un mural en línea. ¿Qué paso debe dar primero?",
+        "options": [
+          "Aumentar la resolución",
+          "Publicarlas sin avisar",
+          "Añadir la ubicación del colegio",
+          "Pedir consentimiento y limitar quién puede verlas"
+        ],
+        "correctAnswer": "Pedir consentimiento y limitar quién puede verlas",
+        "explanation": "Las personas deben poder decidir si aceptan que sus imágenes se compartan y con quién.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-096",
+        "number": 96,
+        "topic": "Copias y versiones",
+        "concept": "prevenir_perdida_con_historial_versiones",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos compañeros sobrescribieron cambios distintos en un archivo. ¿Qué hábito habría ayudado a prevenir la pérdida?",
+        "options": [
+          "Mantener historial de versiones o copias identificadas",
+          "Usar siempre nombres idénticos para archivos distintos",
+          "Borrar el documento al terminar",
+          "Desactivar el guardado"
+        ],
+        "correctAnswer": "Mantener historial de versiones o copias identificadas",
+        "explanation": "El historial o las copias con versiones permite recuperar cambios anteriores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-097",
+        "number": 97,
+        "topic": "Diseño responsable",
+        "concept": "evaluar_reparacion_y_disposicion_de_equipos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un colegio reemplazará computadores lentos. Algunos aún funcionan y pueden actualizarse. ¿Qué decisión reduce mejor los residuos sin ignorar las necesidades?",
+        "options": [
+          "Desecharlos todos de inmediato",
+          "Evaluar cuáles se pueden reparar o actualizar y gestionar los demás adecuadamente",
+          "Conservarlos aunque no puedan cumplir ninguna tarea",
+          "Guardarlos indefinidamente en una bodega"
+        ],
+        "correctAnswer": "Evaluar cuáles se pueden reparar o actualizar y gestionar los demás adecuadamente",
+        "explanation": "Evaluar reparación y uso prolonga la vida de equipos útiles y permite disponer responsablemente de los que ya no sirven.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-098",
+        "number": 98,
+        "topic": "Interoperabilidad",
+        "concept": "interoperabilidad_formato_compatible_entre_aplicaciones",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un compañero no puede abrir un modelo creado en una aplicación de diseño. ¿Qué conviene probar primero?",
+        "options": [
+          "Borrar el original",
+          "Compartir la contraseña del equipo",
+          "Exportarlo en un formato compatible con su aplicación",
+          "Cambiar el brillo de la pantalla"
+        ],
+        "correctAnswer": "Exportarlo en un formato compatible con su aplicación",
+        "explanation": "Exportar en un formato compatible permite abrir el contenido en otra aplicación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-099",
+        "number": 99,
+        "topic": "Verdadero o falso · Prototipos",
+        "concept": "aprendizaje_desde_prueba_fallida",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una prueba de prototipo que revela un problema puede ser útil aunque el primer diseño no haya funcionado.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El resultado ayuda a decidir qué cambiar y qué volver a probar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-100",
+        "number": 100,
+        "topic": "Verdadero o falso · Sistemas tecnológicos",
+        "concept": "tecnologia_no_siempre_requiere_electricidad",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Toda solución tecnológica necesita electricidad para funcionar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Hay soluciones como una palanca, una brújula o una herramienta manual que no requieren electricidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-101",
+        "number": 101,
+        "topic": "Interfaces",
+        "concept": "interfaz_grafica_ventanas_iconos_menus",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elementos permiten interactuar con una interfaz gráfica?",
+        "options": [
+          "Ventanas, íconos y menús",
+          "Cables, tornillos y pilas",
+          "Píxeles, carpetas y voltios",
+          "Dominios, baterías y circuitos"
+        ],
+        "correctAnswer": "Ventanas, íconos y menús",
+        "explanation": "Las interfaces gráficas organizan controles visuales para que el usuario interactúe con el sistema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-102",
+        "number": 102,
+        "topic": "Conectividad inalámbrica",
+        "concept": "bluetooth_conexion_cercana_inalambrica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tecnología suele conectar de forma inalámbrica dispositivos cercanos, como audífonos y un teléfono?",
+        "options": [
+          "HDMI",
+          "Bluetooth",
+          "Ethernet",
+          "USB"
+        ],
+        "correctAnswer": "Bluetooth",
+        "explanation": "Bluetooth permite conexiones inalámbricas de corto alcance entre dispositivos compatibles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-103",
+        "number": 103,
+        "topic": "Portapapeles digital",
+        "concept": "portapapeles_contenido_copiado_temporal",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Después de copiar un texto, ¿qué suele conservar temporalmente el portapapeles?",
+        "options": [
+          "La temperatura del equipo",
+          "La contraseña del router",
+          "El contenido copiado para pegarlo",
+          "El nivel de brillo"
+        ],
+        "correctAnswer": "El contenido copiado para pegarlo",
+        "explanation": "El portapapeles mantiene temporalmente el contenido copiado o cortado hasta pegarlo o reemplazarlo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-104",
+        "number": 104,
+        "topic": "Formatos de datos",
+        "concept": "csv_datos_tabulares_texto_delimitado",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele contener un archivo CSV?",
+        "options": [
+          "Una animación tridimensional",
+          "Una grabación de sonido",
+          "Un programa ejecutable",
+          "Datos tabulares en texto separados por delimitadores"
+        ],
+        "correctAnswer": "Datos tabulares en texto separados por delimitadores",
+        "explanation": "CSV guarda filas de datos como texto, normalmente separando valores con comas u otros delimitadores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-105",
+        "number": 105,
+        "topic": "Visualización de datos",
+        "concept": "grafica_barras_comparar_categorias",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ayuda a comparar rápidamente los valores de varias categorías?",
+        "options": [
+          "Gráfica de barras",
+          "Contraseña",
+          "Captura de pantalla",
+          "Archivo comprimido"
+        ],
+        "correctAnswer": "Gráfica de barras",
+        "explanation": "Las barras facilitan comparar cantidades entre categorías.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-106",
+        "number": 106,
+        "topic": "Consumo energético",
+        "concept": "vatio_potencia_uso_energia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indica normalmente la potencia eléctrica expresada en vatios de un dispositivo?",
+        "options": [
+          "Su peso",
+          "La rapidez con que usa o transforma energía",
+          "La cantidad de archivos guardados",
+          "La distancia de conexión Wi-Fi"
+        ],
+        "correctAnswer": "La rapidez con que usa o transforma energía",
+        "explanation": "Los vatios expresan potencia, es decir, energía usada o transformada por unidad de tiempo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-107",
+        "number": 107,
+        "topic": "Eventos en programación",
+        "concept": "evento_pulsacion_iniciar_accion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un programa, “al presionar el botón, iniciar el juego” comienza con:",
+        "options": [
+          "Una copia de seguridad",
+          "Un filtro de datos",
+          "Un evento",
+          "Una actualización de pantalla"
+        ],
+        "correctAnswer": "Un evento",
+        "explanation": "El clic o la pulsación es un evento que puede activar instrucciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-108",
+        "number": 108,
+        "topic": "Ergonomía digital",
+        "concept": "ergonomia_pantalla_brillo_y_reflejos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al leer en una pantalla durante mucho tiempo, ¿qué ajuste puede reducir reflejos molestos?",
+        "options": [
+          "Subir el volumen",
+          "Aumentar las notificaciones",
+          "Cambiar la contraseña",
+          "Ajustar brillo y ubicación frente a la luz"
+        ],
+        "correctAnswer": "Ajustar brillo y ubicación frente a la luz",
+        "explanation": "Ajustar el brillo y evitar reflejos facilita la lectura y el uso cómodo del dispositivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-109",
+        "number": 109,
+        "topic": "Verdadero o falso · Conectividad",
+        "concept": "bluetooth_conexion_sin_cable",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Bluetooth suele permitir conectar dispositivos cercanos sin usar un cable.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Es una tecnología inalámbrica de corto alcance para intercambiar datos entre equipos compatibles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-110",
+        "number": 110,
+        "topic": "Conexiones web seguras",
+        "concept": "https_cifrar_conexion_no_garantizar_contenido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una dirección empieza por HTTPS. ¿Qué indica principalmente esa conexión?",
+        "options": [
+          "Los datos entre navegador y sitio viajan cifrados",
+          "Todo lo publicado en el sitio es verdadero",
+          "El sitio no puede contener errores",
+          "La página pertenece necesariamente al Gobierno"
+        ],
+        "correctAnswer": "Los datos entre navegador y sitio viajan cifrados",
+        "explanation": "HTTPS cifra la conexión, pero no garantiza por sí solo que el contenido sea confiable.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-111",
+        "number": 111,
+        "topic": "Filtros de datos",
+        "concept": "filtrar_registros_segun_criterio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una tabla contiene notas de todo el curso. ¿Qué permite un filtro?",
+        "options": [
+          "Eliminar el archivo original",
+          "Mostrar solo filas que cumplen un criterio",
+          "Convertir cada número en una contraseña",
+          "Imprimir sin seleccionar una impresora"
+        ],
+        "correctAnswer": "Mostrar solo filas que cumplen un criterio",
+        "explanation": "Un filtro oculta temporalmente los registros que no cumplen una condición seleccionada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-112",
+        "number": 112,
+        "topic": "Datos estáticos y variables",
+        "concept": "distinguir_dato_variable_de_dato_estable",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál dato suele cambiar con el tiempo?",
+        "options": [
+          "La fecha de nacimiento de una persona",
+          "El número de lados de un triángulo",
+          "La temperatura de una habitación",
+          "La cantidad de días de una semana"
+        ],
+        "correctAnswer": "La temperatura de una habitación",
+        "explanation": "La temperatura puede variar; los otros datos permanecen estables en el contexto indicado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-113",
+        "number": 113,
+        "topic": "Eventos y acciones",
+        "concept": "evento_tecla_controlar_personaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un juego debe mover un personaje cuando se pulsa la flecha derecha. ¿Qué bloque debe iniciar esa acción?",
+        "options": [
+          "Al recibir un correo",
+          "Al cambiar el brillo",
+          "Al guardar una imagen",
+          "Al presionar flecha derecha"
+        ],
+        "correctAnswer": "Al presionar flecha derecha",
+        "explanation": "El evento de pulsar la flecha puede activar el movimiento correspondiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-114",
+        "number": 114,
+        "topic": "Actualización de datos",
+        "concept": "recalculo_formula_al_cambiar_datos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una hoja calcula el total con una fórmula. Si cambia uno de los valores usados, ¿qué se espera?",
+        "options": [
+          "Que el resultado pueda recalcularse",
+          "Que se dañe el teclado",
+          "Que cambie la dirección IP",
+          "Que la fórmula se convierta en una imagen"
+        ],
+        "correctAnswer": "Que el resultado pueda recalcularse",
+        "explanation": "Las hojas de cálculo actualizan el resultado de una fórmula cuando cambian sus valores de entrada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-115",
+        "number": 115,
+        "topic": "Intercambio de archivos",
+        "concept": "compatibilidad_formato_entre_aplicaciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición permite que dos aplicaciones intercambien un archivo con menos problemas?",
+        "options": [
+          "Que ambas tengan colores parecidos",
+          "Que usen un formato compatible",
+          "Que el archivo tenga muchas páginas",
+          "Que los equipos tengan la misma marca"
+        ],
+        "correctAnswer": "Que usen un formato compatible",
+        "explanation": "Un formato compatible permite que otra aplicación interprete correctamente el archivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-116",
+        "number": 116,
+        "topic": "Protección de cuentas",
+        "concept": "contrasenas_unicas_limitar_reutilizacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué conviene usar contraseñas diferentes para cuentas importantes?",
+        "options": [
+          "Para que el teclado escriba más rápido",
+          "Para que cada cuenta tenga un color distinto",
+          "Para limitar el daño si una contraseña se filtra",
+          "Para evitar las actualizaciones"
+        ],
+        "correctAnswer": "Para limitar el daño si una contraseña se filtra",
+        "explanation": "Si una clave se expone, las otras cuentas no quedan automáticamente protegidas por la misma contraseña compartida.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-117",
+        "number": 117,
+        "topic": "Representación vectorial",
+        "concept": "vectorial_escalable_bordes_definidos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ventaja tiene una imagen vectorial al ampliarla mucho?",
+        "options": [
+          "Siempre ocupa cero espacio",
+          "Se convierte automáticamente en sonido",
+          "Pierde todos sus colores",
+          "Conserva bordes definidos en muchos tamaños"
+        ],
+        "correctAnswer": "Conserva bordes definidos en muchos tamaños",
+        "explanation": "Las formas vectoriales se recalculan al cambiar de tamaño y suelen conservar bordes nítidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-118",
+        "number": 118,
+        "topic": "Verdadero o falso · Software",
+        "concept": "actualizacion_seguridad_mantener_funcion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una actualización puede corregir una vulnerabilidad sin cambiar el propósito principal de una aplicación.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Algunas actualizaciones reparan fallos o mejoran la seguridad de funciones existentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-119",
+        "number": 119,
+        "topic": "Verdadero o falso · Publicidad digital",
+        "concept": "resultado_patrocinado_no_indica_confiabilidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Que un anuncio aparezca primero en una búsqueda demuestra que es la fuente más confiable.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La posición puede depender de publicidad u otros criterios y no prueba la calidad de la información.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-120",
+        "number": 120,
+        "topic": "Programación con datos",
+        "concept": "clasificar_paridad_con_residuo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un programa debe mostrar “par” si un número se divide exactamente entre 2 y “impar” en otro caso. ¿Qué comprobación sirve?",
+        "options": [
+          "Comprobar si el residuo al dividir entre 2 es cero",
+          "Revisar si el número es mayor que 100",
+          "Comparar el color de la pantalla",
+          "Contar las letras de su nombre"
+        ],
+        "correctAnswer": "Comprobar si el residuo al dividir entre 2 es cero",
+        "explanation": "Los números pares dejan residuo cero al dividirse entre 2; esa condición separa ambos casos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-121",
+        "number": 121,
+        "topic": "Accesibilidad y audio",
+        "concept": "elegir_grafico_lineas_para_cambios_temporales",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una clase registra la temperatura cada hora y quiere observar cómo cambia durante el día. ¿Qué gráfico conviene usar?",
+        "options": [
+          "Gráfico circular",
+          "Gráfico de líneas",
+          "Diagrama de partes",
+          "Mapa de símbolos"
+        ],
+        "correctAnswer": "Gráfico de líneas",
+        "explanation": "Un gráfico de líneas permite observar tendencias y cambios a lo largo del tiempo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-122",
+        "number": 122,
+        "topic": "Pruebas de software",
+        "concept": "caso_limite_cero_en_pruebas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una app funciona con números positivos, pero falla con cero. ¿Qué prueba conviene agregar?",
+        "options": [
+          "Probar únicamente con números positivos más grandes",
+          "Cambiar el fondo de la pantalla",
+          "Incluir cero como caso de prueba",
+          "Borrar los resultados anteriores"
+        ],
+        "correctAnswer": "Incluir cero como caso de prueba",
+        "explanation": "Probar el caso límite cero ayuda a encontrar condiciones incompletas en el programa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-123",
+        "number": 123,
+        "topic": "Respaldo preventivo",
+        "concept": "verificar_respaldo_antes_de_restablecer_dispositivo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante va a restablecer su tableta y tiene trabajos sin entregar. ¿Qué debería hacer antes?",
+        "options": [
+          "Apagar el router",
+          "Borrar las carpetas",
+          "Desinstalar todas las aplicaciones",
+          "Guardar una copia en un lugar seguro y comprobarla"
+        ],
+        "correctAnswer": "Guardar una copia en un lugar seguro y comprobarla",
+        "explanation": "Una copia comprobada permite recuperar archivos importantes después del restablecimiento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-124",
+        "number": 124,
+        "topic": "Verdadero o falso · Simulaciones",
+        "concept": "limites_de_modelo_en_simulacion",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una simulación representa un modelo y puede omitir factores del mundo real.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las simulaciones simplifican sistemas; sus resultados deben interpretarse considerando sus límites.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-125",
+        "number": 125,
+        "topic": "Verdadero o falso · Residuos electrónicos",
+        "concept": "detener_ciclo_robot_por_condicion_de_sensor",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "En un robot, un ciclo puede repetir un avance y detenerse cuando un sensor detecta una pared.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El ciclo repite instrucciones y una condición basada en el sensor puede indicar cuándo detenerse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-126",
+        "number": 126,
+        "topic": "Archivos",
+        "concept": "reconocer_extension_pdf",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué extensión suele identificar un documento PDF?",
+        "options": [
+          ".jpg",
+          ".mp3",
+          ".pdf",
+          ".exe"
+        ],
+        "correctAnswer": ".pdf",
+        "explanation": "La extensión .pdf identifica archivos en formato de documento portátil.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-127",
+        "number": 127,
+        "topic": "Periféricos",
+        "concept": "teclado_como_dispositivo_de_entrada",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál dispositivo permite introducir texto en un computador?",
+        "options": [
+          "Teclado",
+          "Monitor",
+          "Parlante",
+          "Proyector"
+        ],
+        "correctAnswer": "Teclado",
+        "explanation": "El teclado es un dispositivo de entrada usado para escribir datos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-128",
+        "number": 128,
+        "topic": "Programación",
+        "concept": "instruccion_como_orden_de_programa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un programa, una instrucción es:",
+        "options": [
+          "Una pieza del computador",
+          "Una orden que ejecuta el sistema",
+          "Una conexión inalámbrica",
+          "Una copia de seguridad"
+        ],
+        "correctAnswer": "Una orden que ejecuta el sistema",
+        "explanation": "Las instrucciones indican al programa qué acciones debe realizar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-129",
+        "number": 129,
+        "topic": "Internet",
+        "concept": "navegador_para_acceder_a_web",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué programa permite abrir y recorrer páginas web?",
+        "options": [
+          "Compresor",
+          "Editor de audio",
+          "Calculadora",
+          "Navegador"
+        ],
+        "correctAnswer": "Navegador",
+        "explanation": "Un navegador muestra páginas y permite navegar por la Web.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-130",
+        "number": 130,
+        "topic": "Diseño tecnológico",
+        "concept": "representar_solucion_antes_de_construir",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Antes de fabricar una solución, un dibujo con sus partes puede servir como:",
+        "options": [
+          "Prototipo o representación",
+          "Contraseña",
+          "Archivo temporal",
+          "Resultado de búsqueda"
+        ],
+        "correctAnswer": "Prototipo o representación",
+        "explanation": "Una representación permite comunicar y revisar una idea antes de construirla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-131",
+        "number": 131,
+        "topic": "Energía",
+        "concept": "energia_solar_fuente_renovable",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es una fuente renovable de energía?",
+        "options": [
+          "Carbón",
+          "Gasolina",
+          "Luz solar",
+          "Gas natural"
+        ],
+        "correctAnswer": "Luz solar",
+        "explanation": "La energía solar proviene de una fuente que se renueva naturalmente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-132",
+        "number": 132,
+        "topic": "Tecnología cotidiana",
+        "concept": "leer_codigo_qr_con_camara",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un código QR se lee normalmente con:",
+        "options": [
+          "Un micrófono",
+          "Una cámara o lector",
+          "Un parlante",
+          "Un teclado musical"
+        ],
+        "correctAnswer": "Una cámara o lector",
+        "explanation": "La cámara o un lector reconoce el patrón del código para mostrar la información asociada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-133",
+        "number": 133,
+        "topic": "Verdadero o falso · Sensores",
+        "concept": "sensor_recoge_datos_del_entorno",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un sensor puede recoger datos del entorno, como luz o temperatura.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los sensores detectan características del entorno y producen datos que un sistema puede usar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-134",
+        "number": 134,
+        "topic": "Seguridad de cuentas",
+        "concept": "usar_contrasenas_unicas_y_privadas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una contraseña larga combina palabras y caracteres difíciles de adivinar. ¿Qué práctica la mejora más?",
+        "options": [
+          "Usar la misma en todos los sitios",
+          "Publicarla para no olvidarla",
+          "Cambiarla por el nombre propio",
+          "Mantenerla privada y usar claves distintas"
+        ],
+        "correctAnswer": "Mantenerla privada y usar claves distintas",
+        "explanation": "Las claves únicas limitan el daño si una cuenta resulta comprometida; deben mantenerse privadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-135",
+        "number": 135,
+        "topic": "Redes",
+        "concept": "distinguir_red_local_de_internet",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué diferencia mejor una red local de Internet?",
+        "options": [
+          "La red local conecta equipos cercanos; Internet interconecta redes",
+          "La red local solo sirve para escribir; Internet solo para dibujar",
+          "Internet conecta un único equipo",
+          "No existe diferencia entre ambas"
+        ],
+        "correctAnswer": "La red local conecta equipos cercanos; Internet interconecta redes",
+        "explanation": "Una red local comunica dispositivos en un entorno limitado; Internet conecta redes de todo el mundo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-136",
+        "number": 136,
+        "topic": "Datos",
+        "concept": "fila_de_tabla_como_registro",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una tabla, ¿qué representa normalmente cada fila?",
+        "options": [
+          "El color del programa",
+          "Una contraseña completa",
+          "Un registro con datos relacionados",
+          "Una instrucción de apagado"
+        ],
+        "correctAnswer": "Un registro con datos relacionados",
+        "explanation": "Cada fila suele reunir los valores correspondientes a un elemento o registro.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-137",
+        "number": 137,
+        "topic": "Programación",
+        "concept": "condicion_selecciona_ruta_de_ejecucion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una condición permite que un programa:",
+        "options": [
+          "Aumente siempre el volumen",
+          "Elija acciones según si algo se cumple",
+          "Guarde cualquier archivo automáticamente",
+          "Cambie de dispositivo"
+        ],
+        "correctAnswer": "Elija acciones según si algo se cumple",
+        "explanation": "Una condición permite seleccionar una ruta u otra según el resultado de una comprobación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-138",
+        "number": 138,
+        "topic": "Búsqueda en línea",
+        "concept": "precisar_busqueda_con_tema_lugar_y_fuente",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué búsqueda suele ser más precisa para hallar información sobre reciclaje de baterías en Colombia?",
+        "options": [
+          "Cosas útiles",
+          "Baterías",
+          "Tecnología interesante",
+          "reciclaje de baterías Colombia fuente oficial"
+        ],
+        "correctAnswer": "reciclaje de baterías Colombia fuente oficial",
+        "explanation": "Incluir el tema, el lugar y un criterio de fuente reduce resultados poco pertinentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-139",
+        "number": 139,
+        "topic": "Accesibilidad digital",
+        "concept": "identificar_controles_sin_depender_solo_del_color",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un botón de una aplicación solo se distingue por ser verde o rojo. ¿Qué cambio ayuda a más usuarios?",
+        "options": [
+          "Añadir texto o iconos que indiquen su función",
+          "Hacerlo más brillante",
+          "Ocultarlo en un menú",
+          "Reducir el tamaño de letra"
+        ],
+        "correctAnswer": "Añadir texto o iconos que indiquen su función",
+        "explanation": "Combinar color con texto o símbolos facilita reconocer la función sin depender solo del color.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-140",
+        "number": 140,
+        "topic": "Inteligencia artificial",
+        "concept": "calidad_de_datos_en_aprendizaje_automatico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un sistema aprende patrones a partir de muchos ejemplos. ¿Qué necesita para hacer predicciones útiles?",
+        "options": [
+          "Una pantalla más grande",
+          "Un nombre atractivo",
+          "Datos pertinentes y de calidad",
+          "Un cable más largo"
+        ],
+        "correctAnswer": "Datos pertinentes y de calidad",
+        "explanation": "Los datos influyen en los patrones que aprende el sistema y en la calidad de sus resultados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-141",
+        "number": 141,
+        "topic": "Colaboración digital",
+        "concept": "historial_versiones_documento_compartido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función de un documento compartido permite revisar quién cambió un texto?",
+        "options": [
+          "Modo avión",
+          "Historial de versiones",
+          "Brillo automático",
+          "Papelera del dispositivo"
+        ],
+        "correctAnswer": "Historial de versiones",
+        "explanation": "El historial registra versiones anteriores y puede mostrar cambios realizados por colaboradores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-142",
+        "number": 142,
+        "topic": "Hardware y software",
+        "concept": "distinguir_hardware_y_software_en_una_pareja",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál pareja relaciona correctamente un componente físico con un programa?",
+        "options": [
+          "Pantalla y teclado",
+          "Navegador y aplicación",
+          "Impresora y parlante",
+          "Ratón y editor de texto"
+        ],
+        "correctAnswer": "Ratón y editor de texto",
+        "explanation": "El ratón es hardware; el editor de texto es software.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-143",
+        "number": 143,
+        "topic": "Representación de datos",
+        "concept": "comparar_categorias_con_grafico_de_barras",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una tabla contiene nombres de frutas y cantidades vendidas. ¿Qué ayuda a comparar rápidamente las cantidades?",
+        "options": [
+          "Un gráfico de barras",
+          "Un mapa de carreteras",
+          "Una secuencia de audio",
+          "Un diagrama de circuito"
+        ],
+        "correctAnswer": "Un gráfico de barras",
+        "explanation": "Las barras permiten comparar valores de distintas categorías de manera visual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-144",
+        "number": 144,
+        "topic": "Verdadero o falso · Huella digital",
+        "concept": "persistencia_de_contenido_en_linea",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Lo que se publica en línea puede copiarse o compartirse incluso después de borrar la publicación original.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Otras personas pueden guardar o distribuir copias, por lo que conviene pensar antes de publicar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-145",
+        "number": 145,
+        "topic": "Verdadero o falso · Consumo tecnológico",
+        "concept": "consumo_en_reposo_de_cargadores",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Dejar cargadores conectados sin usarlos nunca consume energía.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Algunos cargadores siguen consumiendo una pequeña cantidad de energía cuando permanecen conectados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-146",
+        "number": 146,
+        "topic": "Depuración de programas",
+        "concept": "depurar_ciclo_con_repeticiones_excesivas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un personaje debe avanzar tres casillas, pero el programa lo mueve cuatro. ¿Qué ajuste prueba primero?",
+        "options": [
+          "Cambiar el fondo",
+          "Revisar el número de repeticiones del ciclo",
+          "Subir el brillo",
+          "Renombrar el proyecto"
+        ],
+        "correctAnswer": "Revisar el número de repeticiones del ciclo",
+        "explanation": "Si el movimiento se repite de más, conviene revisar cuántas veces se ejecuta la instrucción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-147",
+        "number": 147,
+        "topic": "Evaluación de prototipos",
+        "concept": "comparar_prototipos_con_pruebas_controladas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un prototipo de puente de papel se dobla al colocarle peso. ¿Qué prueba aporta información más útil para mejorarlo?",
+        "options": [
+          "Cambiar el nombre del equipo",
+          "Decorar el tablero",
+          "Probar diseños con cargas medidas y comparables",
+          "Aumentar la música del salón"
+        ],
+        "correctAnswer": "Probar diseños con cargas medidas y comparables",
+        "explanation": "Mantener una prueba comparable permite evaluar qué diseño soporta más carga y por qué.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-148",
+        "number": 148,
+        "topic": "Privacidad digital",
+        "concept": "cuestionar_permisos_no_necesarios_de_aplicacion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una aplicación de linterna solicita acceso a contactos y ubicación. ¿Qué decisión es más prudente?",
+        "options": [
+          "Revisar si esos permisos son necesarios y denegarlos si no lo son",
+          "Aceptar todos para que funcione más rápido",
+          "Compartir también la contraseña",
+          "Publicar los permisos en redes"
+        ],
+        "correctAnswer": "Publicar los permisos en redes",
+        "explanation": "Los permisos deben corresponder a funciones necesarias; una linterna normalmente no requiere contactos ni ubicación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-149",
+        "number": 149,
+        "topic": "Verdadero o falso · Pruebas",
+        "concept": "un_caso_no_demuestra_correctitud_general",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si un programa funciona con un ejemplo, eso demuestra que funcionará correctamente con cualquier entrada.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Un solo caso no cubre todas las entradas; conviene probar valores y situaciones diferentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "TEC6-150",
+        "number": 150,
+        "topic": "Verdadero o falso · Diseño responsable",
+        "concept": "evaluar_impactos_sociales_y_ambientales",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Al elegir una solución tecnológica, además de que funcione, conviene considerar sus efectos en las personas y el ambiente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Una solución responsable contempla consecuencias sociales y ambientales, además de su funcionamiento.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
   }
 ];
