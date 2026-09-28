@@ -6,7 +6,7 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 
 | Grado | Arte y cultura | Historia | Deportes | Ciencia y naturaleza | Geografía | Lengua y literatura | Matemáticas y lógica | Tecnología |
 |---|---|---|---|---|---|---|---|---|
-| 6.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging (importado en 8C) | Completo · staging | Completo · staging | Completo · revisión local |
+| 6.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging (importado en 8C) | Completo · staging | Completo · staging | Completo · commit en staging |
 | 7.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 8.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 9.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
@@ -23,7 +23,7 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 - **Ciencia y naturaleza:** `docs/duelos/oficial/ciencia_naturaleza_6.json`. 150 preguntas, 120/30 por tipo, 50/70/30 por dificultad, 30 claves por letra y 150 conceptos únicos. Sus seis lotes de revisión están en `docs/DUELOS_CIENCIA_NATURALEZA_6_BLOQUE_01.md` a `_06.md`. Ya está en el catálogo opcional de staging; pasan la prueba de importación y la compilación de la API.
 - **Geografía:** `docs/duelos/oficial/geografia_6.json`. 150 preguntas, 120/30 por tipo, 50/70/30 por dificultad, 30 claves por letra y 150 conceptos únicos. En catálogo opcional de staging e importado en el aula 8C; se corrigió la clave de la pregunta 37 tras detectar el error en revisión.
 - **Matemáticas y lógica:** banco de 150 preguntas auditado y convertido en `docs/duelos/oficial/matematicas_logica_6.json`, con su revisión legible en `docs/DUELOS_MATEMATICAS_LOGICA_6_BLOQUE_01.md`. Publicado y verificado en el catálogo opcional de staging; aparece como banco disponible para importar en el aula de 8.º.
-- **Tecnología:** banco de 150 preguntas en `docs/duelos/oficial/tecnologia_6.json` y sus seis lotes de revisión en `docs/DUELOS_TECNOLOGIA_6_BLOQUE_01.md`, con base en las orientaciones curriculares de Tecnología e Informática para 6.º–7.º. Quedó convertido y registrado localmente; falta ejecutar pruebas y publicar en staging.
+- **Tecnología:** banco de 150 preguntas en `docs/duelos/oficial/tecnologia_6.json` y sus seis lotes de revisión en `docs/DUELOS_TECNOLOGIA_6_BLOQUE_01.md`, con base en las orientaciones curriculares de Tecnología e Informática para 6.º–7.º. Convertido, registrado, probado y enviado a staging; pendiente confirmar que Railway lo haya desplegado.
 
 ## Integración
 
