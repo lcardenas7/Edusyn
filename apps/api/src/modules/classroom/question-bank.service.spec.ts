@@ -25,7 +25,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1']);
+    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1', 'edusyn-ciencia-naturaleza-grade-6-v1']);
     expect(catalogs.every((item) => item.questionCount === 150 && !item.imported)).toBe(true);
   });
 
@@ -45,6 +45,26 @@ describe('QuestionBankService', () => {
     }) });
     expect(tx.questionBankItem.createMany).toHaveBeenCalledWith({ data: expect.arrayContaining([expect.objectContaining({ collectionId: 'official-copy' })]) });
     expect(tx.questionBankItem.createMany.mock.calls[0][0].data).toHaveLength(150);
+  });
+
+
+  it('imports the official science bank with all 150 questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'science-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-ciencia-naturaleza-grade-6-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-ciencia-naturaleza-grade-6-v1', title: 'Ciencia y naturaleza · 6.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('unidad básica');
+    expect(imported[149].text).toContain('linterna');
   });
 
   it('does not expose official grade-six banks to other grades', async () => {

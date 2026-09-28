@@ -1,0 +1,2683 @@
+{
+  "catalogId": "edusyn-ciencia-naturaleza-grade-6-v1",
+  "title": "Ciencia y naturaleza · 6.º",
+  "grade": 6,
+  "subjectArea": "Duelos",
+  "category": "Ciencia y naturaleza",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://science.nasa.gov/moon/moon-phases/",
+    "https://science.nasa.gov/moon/tides/",
+    "https://science.nasa.gov/earth/earth-observatory/ozone/",
+    "https://science.nasa.gov/solar-system/solar-system-facts/",
+    "https://www.noaa.gov/education/resource-collections/freshwater/water-cycle",
+    "https://www.noaa.gov/education/resource-collections/weather-atmosphere",
+    "https://openstax.org/details/books/biology-2e",
+    "https://openstax.org/books/biology-2e/pages/46-1-ecology-of-ecosystems",
+    "https://openstax.org/books/biology-2e/pages/19-3-adaptive-evolution",
+    "https://pubs.usgs.gov/gip/collect1/collectgip.html",
+    "https://www.usgs.gov/programs/earthquake-hazards/science-earthquakes"
+  ],
+  "questions": [
+    {
+      "id": "CIE6-001",
+      "number": 1,
+      "topic": "Biología",
+      "concept": "celula_unidad_basica_vida",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es la unidad básica que forma a los seres vivos?",
+      "options": [
+        "La célula",
+        "El órgano",
+        "El tejido",
+        "El sistema"
+      ],
+      "correctAnswer": "La célula",
+      "explanation": "Todos los seres vivos están formados por una o más células, que realizan funciones vitales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-002",
+      "number": 2,
+      "topic": "Materia",
+      "concept": "materia_masa_y_espacio",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La materia tiene masa y ocupa espacio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Estas dos propiedades permiten distinguir la materia de otras formas de energía.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-003",
+      "number": 3,
+      "topic": "Biología",
+      "concept": "funcion_raiz_planta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple principalmente la raíz de una planta?",
+      "options": [
+        "Producir semillas",
+        "Absorber agua y sujetar la planta",
+        "Atraer insectos con colores",
+        "Fabricar frutos"
+      ],
+      "correctAnswer": "Absorber agua y sujetar la planta",
+      "explanation": "Las raíces absorben agua y minerales del suelo y ayudan a fijar la planta.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-004",
+      "number": 4,
+      "topic": "Investigación científica",
+      "concept": "distinguir_observacion_cientifica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una estudiante ve gotas en una hoja y las dibuja en su cuaderno. ¿Qué hizo principalmente?",
+      "options": [
+        "Una predicción",
+        "Una conclusión",
+        "Una observación",
+        "Una explicación causal"
+      ],
+      "correctAnswer": "Una observación",
+      "explanation": "Describir o registrar lo que percibe directamente es una observación.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-005",
+      "number": 5,
+      "topic": "Ecosistemas",
+      "concept": "productor_fotosintetico",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué organismo produce su propio alimento usando luz solar?",
+      "options": [
+        "El hongo",
+        "El conejo",
+        "El águila",
+        "La planta"
+      ],
+      "correctAnswer": "La planta",
+      "explanation": "Las plantas son productores porque fabrican alimento mediante la fotosíntesis.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-006",
+      "number": 6,
+      "topic": "Ciclo del agua",
+      "concept": "evaporacion_charco",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un charco desaparece después de varias horas cálidas y soleadas. ¿Qué proceso ocurrió principalmente?",
+      "options": [
+        "Evaporación",
+        "Condensación",
+        "Congelación",
+        "Precipitación"
+      ],
+      "correctAnswer": "Evaporación",
+      "explanation": "El calor aporta energía para que parte del agua líquida pase al aire como vapor.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-007",
+      "number": 7,
+      "topic": "Materia",
+      "concept": "punto_congelacion_agua_pura",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "A presión normal, el agua pura se congela cerca de 0 °C.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El punto de congelación del agua pura a presión atmosférica normal es aproximadamente 0 °C.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-008",
+      "number": 8,
+      "topic": "Tierra y espacio",
+      "concept": "rotacion_y_dia_noche",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué movimiento de la Tierra produce la alternancia entre día y noche?",
+      "options": [
+        "Traslación alrededor del Sol",
+        "Rotación sobre su eje",
+        "Inclinación de la Luna",
+        "Cambio de estaciones"
+      ],
+      "correctAnswer": "Rotación sobre su eje",
+      "explanation": "Al rotar, distintas partes de la Tierra quedan orientadas hacia el Sol o alejadas de él.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-009",
+      "number": 9,
+      "topic": "Ciclo del agua",
+      "concept": "condensacion_formacion_nubes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Cuando el vapor de agua se enfría y forma pequeñas gotas en una nube, ocurre:",
+      "options": [
+        "Fusión",
+        "Evaporación",
+        "Condensación",
+        "Escorrentía"
+      ],
+      "correctAnswer": "Condensación",
+      "explanation": "En la condensación, el vapor pierde energía y pasa a formar gotas líquidas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-010",
+      "number": 10,
+      "topic": "Hongos",
+      "concept": "reino_hongos_distinto_plantas",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los hongos son plantas porque no se desplazan de un lugar a otro.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los hongos pertenecen a un reino distinto; obtienen nutrientes de otros organismos o de materia orgánica.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-011",
+      "number": 11,
+      "topic": "Física",
+      "concept": "instrumento_medir_temperatura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mide directamente un termómetro?",
+      "options": [
+        "La masa",
+        "El volumen",
+        "La presión",
+        "La temperatura"
+      ],
+      "correctAnswer": "La temperatura",
+      "explanation": "El termómetro indica la temperatura de un objeto o del entorno.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-012",
+      "number": 12,
+      "topic": "Materia",
+      "concept": "mezcla_sin_reaccion_quimica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Se mezclan arena y limaduras de hierro sin transformar sus materiales. ¿Qué se formó?",
+      "options": [
+        "Una mezcla",
+        "Un elemento nuevo",
+        "Un gas puro",
+        "Un compuesto químico"
+      ],
+      "correctAnswer": "Una mezcla",
+      "explanation": "En una mezcla, las sustancias se combinan físicamente y conservan sus propiedades.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-013",
+      "number": 13,
+      "topic": "Ecosistemas",
+      "concept": "flujo_energia_cadena_alimentaria",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En la cadena pasto → saltamontes → rana, ¿hacia dónde fluye la energía?",
+      "options": [
+        "De la rana al pasto",
+        "Del pasto al saltamontes y a la rana",
+        "Del saltamontes al pasto y a la rana",
+        "Solo hacia el pasto"
+      ],
+      "correctAnswer": "Del pasto al saltamontes y a la rana",
+      "explanation": "Las flechas muestran el paso de energía desde el organismo que sirve de alimento hacia quien lo consume.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-014",
+      "number": 14,
+      "topic": "Fuerzas",
+      "concept": "friccion_opone_deslizamiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un libro se desliza sobre una mesa áspera y pierde velocidad. ¿Qué fuerza se opone al movimiento?",
+      "options": [
+        "Magnetismo",
+        "Flotación",
+        "Fricción",
+        "Luz"
+      ],
+      "correctAnswer": "Fricción",
+      "explanation": "La fricción entre las superficies se opone al deslizamiento y puede reducir la velocidad.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-015",
+      "number": 15,
+      "topic": "Geología",
+      "concept": "diferencia_meteorizacion_erosion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una roca se rompe en fragmentos pequeños sin que estos sean transportados lejos. ¿Qué proceso predomina?",
+      "options": [
+        "Erosión",
+        "Sedimentación",
+        "Fusión",
+        "Meteorización"
+      ],
+      "correctAnswer": "Meteorización",
+      "explanation": "La meteorización descompone rocas en el lugar; la erosión implica desprender y transportar materiales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-016",
+      "number": 16,
+      "topic": "Tierra y espacio",
+      "concept": "inclinacion_terrestre_y_estaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué explica principalmente que existan estaciones distintas durante el año?",
+      "options": [
+        "La inclinación del eje terrestre mientras la Tierra orbita el Sol",
+        "Que el Sol se apague cada noche",
+        "Que la Luna cambie de tamaño",
+        "La rotación diaria de la Tierra"
+      ],
+      "correctAnswer": "La inclinación del eje terrestre mientras la Tierra orbita el Sol",
+      "explanation": "La inclinación hace que cada hemisferio reciba distinta cantidad y ángulo de luz solar a lo largo de la órbita.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-017",
+      "number": 17,
+      "topic": "Sonido",
+      "concept": "sonido_requiere_medio_material",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El sonido puede propagarse por el vacío del espacio igual que por el aire.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El sonido necesita un medio material, como aire, agua o sólidos; el vacío no tiene partículas que transmitan la vibración.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-018",
+      "number": 18,
+      "topic": "Electricidad",
+      "concept": "cobre_conductor_electrico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál de estos materiales conduce bien la electricidad?",
+      "options": [
+        "Caucho",
+        "Cobre",
+        "Madera seca",
+        "Plástico"
+      ],
+      "correctAnswer": "Cobre",
+      "explanation": "El cobre es un metal conductor utilizado en muchos cables eléctricos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-019",
+      "number": 19,
+      "topic": "Densidad",
+      "concept": "flotacion_por_densidad_relativa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un trozo de madera flota en agua. ¿Cuál explicación es la más adecuada?",
+      "options": [
+        "La madera no tiene masa",
+        "El agua deja de ejercer fuerzas",
+        "La densidad promedio de la madera es menor que la del agua",
+        "La madera se convierte en aire"
+      ],
+      "correctAnswer": "La densidad promedio de la madera es menor que la del agua",
+      "explanation": "Un objeto suele flotar si su densidad promedio es menor que la del líquido que desplaza.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-020",
+      "number": 20,
+      "topic": "Diseño experimental",
+      "concept": "variable_independiente_experimento_plantas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos plantas iguales reciben la misma agua y suelo, pero distinta cantidad de luz. ¿Qué factor se está poniendo a prueba?",
+      "options": [
+        "El tipo de recipiente",
+        "La cantidad de agua",
+        "El tamaño de las semillas",
+        "La luz recibida"
+      ],
+      "correctAnswer": "La luz recibida",
+      "explanation": "Al mantener iguales las otras condiciones y variar solo la luz, se puede estudiar su efecto en el crecimiento.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-021",
+      "number": 21,
+      "topic": "Biología",
+      "concept": "transpiracion_y_condensacion_en_bolsa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una bolsa transparente cubre algunas hojas de una planta. Luego aparecen gotas en su interior. ¿De dónde provino principalmente esa agua?",
+      "options": [
+        "Del vapor liberado por las hojas",
+        "De la luz atrapada en la bolsa",
+        "De oxígeno que se volvió líquido",
+        "Del plástico que produjo agua"
+      ],
+      "correctAnswer": "Del vapor liberado por las hojas",
+      "explanation": "Las plantas liberan vapor de agua por las hojas; al enfriarse, puede condensarse en la bolsa.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-022",
+      "number": 22,
+      "topic": "Electricidad",
+      "concept": "cerrar_circuito_interruptor_abierto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una linterna tiene pilas nuevas, pero no enciende. El interruptor está abierto. ¿Qué acción probarías primero?",
+      "options": [
+        "Cubrir el foco con papel",
+        "Cerrar el interruptor para completar el circuito",
+        "Sacar todas las conexiones",
+        "Enfriar la carcasa"
+      ],
+      "correctAnswer": "Cerrar el interruptor para completar el circuito",
+      "explanation": "Al cerrar el interruptor se completa el circuito y puede circular corriente hasta el foco.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-023",
+      "number": 23,
+      "topic": "Ecosistemas",
+      "concept": "efecto_disminucion_recurso_alimenticio",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un bosque disminuyen mucho los insectos que comen ciertas aves. ¿Qué cambio podría ocurrir después?",
+      "options": [
+        "Las aves tendrán más alimento disponible",
+        "Las plantas dejarán de necesitar agua",
+        "Algunas aves podrían disminuir o buscar otro alimento",
+        "La luz solar desaparecerá"
+      ],
+      "correctAnswer": "Algunas aves podrían disminuir o buscar otro alimento",
+      "explanation": "Menos alimento puede reducir la supervivencia o reproducción de sus consumidores, o hacer que busquen otros recursos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-024",
+      "number": 24,
+      "topic": "Magnetismo",
+      "concept": "evidencia_prueba_atraccion_magnetica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un imán atrae un clavo de hierro, pero no una pieza de plástico, el resultado apoya la idea de que ciertos materiales son atraídos por imanes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La observación concuerda con la hipótesis, aunque conviene repetir pruebas con varios objetos de cada material.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-025",
+      "number": 25,
+      "topic": "Tierra y espacio",
+      "concept": "hemisferio_hacia_sol_temporada",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En junio, el hemisferio norte está inclinado hacia el Sol. ¿Qué sucede allí respecto al hemisferio sur?",
+      "options": [
+        "Recibe menos luz directa y tiene invierno",
+        "Tiene el mismo patrón que el hemisferio sur",
+        "Deja de rotar durante esa estación",
+        "Recibe luz más directa y tiene verano"
+      ],
+      "correctAnswer": "Recibe luz más directa y tiene verano",
+      "explanation": "La inclinación hace que el hemisferio norte reciba luz más directa en junio; el sur se inclina en sentido contrario.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-026",
+      "number": 26,
+      "topic": "Química",
+      "concept": "carga_electron_negativa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué partícula del átomo tiene carga eléctrica negativa?",
+      "options": [
+        "Electrón",
+        "Protón",
+        "Neutrón",
+        "Núcleo"
+      ],
+      "correctAnswer": "Electrón",
+      "explanation": "Los electrones tienen carga negativa y se encuentran alrededor del núcleo del átomo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-027",
+      "number": 27,
+      "topic": "Óptica",
+      "concept": "aumento_imagen_lupa",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una lupa puede hacer que un objeto parezca más grande sin cambiar el tamaño real del objeto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La lente curva desvía la luz y forma una imagen aumentada; el objeto conserva su tamaño.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-028",
+      "number": 28,
+      "topic": "Biología",
+      "concept": "intercambio_gaseoso_pulmones",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Dónde ocurre principalmente el intercambio de oxígeno y dióxido de carbono al respirar?",
+      "options": [
+        "En el estómago",
+        "En los pulmones",
+        "En los riñones",
+        "En los huesos"
+      ],
+      "correctAnswer": "En los pulmones",
+      "explanation": "En los pulmones, el oxígeno pasa a la sangre y parte del dióxido de carbono pasa de la sangre al aire exhalado.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-029",
+      "number": 29,
+      "topic": "Geología",
+      "concept": "roca_ignea_desde_lava",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una roca se forma cuando la lava se enfría y se endurece. ¿A qué grupo pertenece?",
+      "options": [
+        "Sedimentaria",
+        "Metamórfica",
+        "Ígnea",
+        "Orgánica"
+      ],
+      "correctAnswer": "Ígnea",
+      "explanation": "Las rocas ígneas se forman cuando el magma o la lava se enfrían y solidifican.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-030",
+      "number": 30,
+      "topic": "Astronomía",
+      "concept": "luz_propia_sol_reflejada_luna",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia al Sol de la Luna en cuanto a luz visible?",
+      "options": [
+        "La Luna produce más luz",
+        "Ambos producen su propia luz",
+        "Ninguno emite ni refleja luz",
+        "El Sol emite luz propia; la Luna refleja luz solar"
+      ],
+      "correctAnswer": "El Sol emite luz propia; la Luna refleja luz solar",
+      "explanation": "El Sol es una estrella que emite luz; la Luna se ve brillante porque refleja luz del Sol.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-031",
+      "number": 31,
+      "topic": "Astronomía",
+      "concept": "luna_satelite_natural_tierra",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Luna es el satélite natural de la Tierra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La Luna gira alrededor de la Tierra de forma natural.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-032",
+      "number": 32,
+      "topic": "Meteorología",
+      "concept": "instrumento_medicion_lluvia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento recoge y mide cuánta lluvia cae en un lugar?",
+      "options": [
+        "Pluviómetro",
+        "Termómetro",
+        "Brújula",
+        "Barómetro"
+      ],
+      "correctAnswer": "Pluviómetro",
+      "explanation": "El pluviómetro recoge la precipitación para medir su cantidad durante un periodo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-033",
+      "number": 33,
+      "topic": "Biología",
+      "concept": "caracteristica_animales_vertebrados",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica tienen en común los animales vertebrados?",
+      "options": [
+        "Todos viven en el agua",
+        "Tienen columna vertebral",
+        "Ponen huevos",
+        "Tienen seis patas"
+      ],
+      "correctAnswer": "Tienen columna vertebral",
+      "explanation": "Los vertebrados poseen una columna vertebral; pueden vivir en distintos ambientes y tener formas diversas de reproducción.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-034",
+      "number": 34,
+      "topic": "Cambios de la materia",
+      "concept": "fusion_cambio_fisico_agua",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cubo de hielo se derrite y se convierte en agua líquida. ¿Qué tipo de cambio ocurrió?",
+      "options": [
+        "Una combustión",
+        "Una reacción que crea otra sustancia",
+        "Un cambio físico de estado",
+        "Una descomposición biológica"
+      ],
+      "correctAnswer": "Un cambio físico de estado",
+      "explanation": "Al derretirse, el agua cambia de estado, pero sigue siendo la misma sustancia.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-035",
+      "number": 35,
+      "topic": "Ecología",
+      "concept": "habitat_lugar_y_recursos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El hábitat de un organismo incluye el lugar y las condiciones donde encuentra recursos para vivir.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un hábitat ofrece condiciones y recursos como alimento, agua y refugio.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-036",
+      "number": 36,
+      "topic": "Física",
+      "concept": "funcion_mecanica_palanca",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una persona usa una palanca para levantar una roca pesada. ¿Qué hace una máquina simple como la palanca?",
+      "options": [
+        "Elimina la gravedad",
+        "Produce energía de la nada",
+        "Cambia la roca por otra sustancia",
+        "Puede cambiar la dirección o la fuerza necesaria para moverla"
+      ],
+      "correctAnswer": "Puede cambiar la dirección o la fuerza necesaria para moverla",
+      "explanation": "Las máquinas simples pueden cambiar la dirección de una fuerza o ayudar a mover una carga aplicando la fuerza de otra manera.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-037",
+      "number": 37,
+      "topic": "Energía",
+      "concept": "conversion_fotovoltaica_luz_electricidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué transformación ocurre principalmente en un panel solar fotovoltaico?",
+      "options": [
+        "Luz solar en energía eléctrica",
+        "Sonido en energía química",
+        "Electricidad en carbón",
+        "Calor en viento"
+      ],
+      "correctAnswer": "Luz solar en energía eléctrica",
+      "explanation": "Las celdas fotovoltaicas convierten parte de la luz recibida en energía eléctrica.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-038",
+      "number": 38,
+      "topic": "Astronomía",
+      "concept": "fases_luna_por_orbita_y_luz",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué vemos diferentes fases de la Luna durante el mes?",
+      "options": [
+        "La Luna cambia de forma cada noche",
+        "Cambia nuestra vista de la parte iluminada mientras la Luna orbita la Tierra",
+        "La sombra de la Tierra cubre la Luna todas las noches",
+        "Las nubes modifican permanentemente la superficie lunar"
+      ],
+      "correctAnswer": "Cambia nuestra vista de la parte iluminada mientras la Luna orbita la Tierra",
+      "explanation": "El Sol ilumina siempre una mitad de la Luna; al orbitar, desde la Tierra vemos distintas porciones de esa mitad.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-039",
+      "number": 39,
+      "topic": "Cuerpo humano",
+      "concept": "contraccion_muscular_mueve_huesos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo ayudan los músculos a que el cuerpo mueva los huesos?",
+      "options": [
+        "Los convierten en sangre",
+        "Los hacen crecer durante cada movimiento",
+        "Al contraerse, tiran de los huesos unidos a ellos",
+        "Los separan de las articulaciones"
+      ],
+      "correctAnswer": "Al contraerse, tiran de los huesos unidos a ellos",
+      "explanation": "Los músculos se contraen y ejercen fuerza sobre los huesos mediante tendones para producir movimiento.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-040",
+      "number": 40,
+      "topic": "Magnetismo",
+      "concept": "repulsion_polos_iguales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele ocurrir cuando se acercan dos polos iguales de imanes?",
+      "options": [
+        "Se derriten",
+        "Se vuelven invisibles",
+        "Se atraen siempre",
+        "Se repelen"
+      ],
+      "correctAnswer": "Se repelen",
+      "explanation": "Los polos iguales se repelen; los polos opuestos se atraen.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-041",
+      "number": 41,
+      "topic": "Atmósfera",
+      "concept": "tiempo_meteorologico_troposfera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué capa de la atmósfera ocurren la mayoría de los fenómenos meteorológicos que vivimos?",
+      "options": [
+        "Troposfera",
+        "Exosfera",
+        "Termosfera",
+        "Mesosfera"
+      ],
+      "correctAnswer": "Troposfera",
+      "explanation": "La mayor parte del tiempo atmosférico se desarrolla en la troposfera, la capa más cercana a la superficie.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-042",
+      "number": 42,
+      "topic": "Microorganismos",
+      "concept": "microorganismos_no_siempre_patogenos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Todos los microorganismos causan enfermedades.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Muchos microorganismos no causan enfermedad; algunos son beneficiosos o cumplen funciones importantes en los ecosistemas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-043",
+      "number": 43,
+      "topic": "Ecología",
+      "concept": "comunidad_conjunto_de_poblaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un bosque viven varias especies de árboles, aves e insectos. ¿Cómo se llama el conjunto de sus poblaciones?",
+      "options": [
+        "Una célula",
+        "Una comunidad",
+        "Un individuo",
+        "Una roca"
+      ],
+      "correctAnswer": "Una comunidad",
+      "explanation": "Una comunidad reúne las poblaciones de diferentes especies que viven en un área.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-044",
+      "number": 44,
+      "topic": "Atmósfera",
+      "concept": "aire_ocupa_espacio_y_ejerce_presion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una bolsa vacía se infla cuando se sopla dentro. ¿Qué evidencia muestra esto sobre el aire?",
+      "options": [
+        "No ocupa espacio",
+        "No ejerce ninguna fuerza",
+        "Ocupa espacio y puede ejercer presión",
+        "Es siempre un líquido"
+      ],
+      "correctAnswer": "Ocupa espacio y puede ejercer presión",
+      "explanation": "El aire ocupa el interior de la bolsa y sus partículas ejercen presión sobre sus paredes.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-045",
+      "number": 45,
+      "topic": "Geología",
+      "concept": "formacion_roca_sedimentaria",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se forman muchas rocas sedimentarias?",
+      "options": [
+        "Al congelarse el núcleo terrestre",
+        "Cuando una estrella explota",
+        "Al transformarse un metal en gas",
+        "Cuando sedimentos se acumulan y se consolidan"
+      ],
+      "correctAnswer": "Cuando sedimentos se acumulan y se consolidan",
+      "explanation": "Los sedimentos pueden acumularse y, con el tiempo, compactarse y cementarse hasta formar roca.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-046",
+      "number": 46,
+      "topic": "Fuerzas",
+      "concept": "friccion_calzado_y_superficie_mojada",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una cancha está mojada y resbalosa. ¿Qué calzado ayudaría más a evitar que una persona se deslice?",
+      "options": [
+        "Zapatos con suela de buen agarre",
+        "Medias lisas",
+        "Zapatos con suela pulida",
+        "Caminar sobre plástico suelto"
+      ],
+      "correctAnswer": "Zapatos con suela de buen agarre",
+      "explanation": "Una suela con buen agarre aumenta la fricción con el suelo y puede reducir el riesgo de resbalar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-047",
+      "number": 47,
+      "topic": "Calor",
+      "concept": "comparar_materiales_aislantes_controlando_variables",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una clase quiere comparar qué material mantiene caliente el agua por más tiempo. ¿Qué prueba sería más justa?",
+      "options": [
+        "Usar vasos distintos y volúmenes diferentes",
+        "Poner igual cantidad de agua a igual temperatura en vasos iguales y cambiar solo el material aislante",
+        "Medir un vaso por la mañana y otro al día siguiente",
+        "Elegir el vaso que se vea más grueso sin medir"
+      ],
+      "correctAnswer": "Poner igual cantidad de agua a igual temperatura en vasos iguales y cambiar solo el material aislante",
+      "explanation": "Mantener iguales las otras condiciones y cambiar solo el aislante permite comparar su efecto en la pérdida de calor.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-048",
+      "number": 48,
+      "topic": "Interpretación de datos",
+      "concept": "calcular_promedio_crecimiento",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una semana, tres plantas crecieron 2 cm, 5 cm y 3 cm. ¿Cuál fue el crecimiento promedio?",
+      "options": [
+        "2 cm",
+        "3 cm",
+        "3⅓ cm",
+        "5 cm"
+      ],
+      "correctAnswer": "3⅓ cm",
+      "explanation": "Se suman las medidas (10 cm) y se divide entre las tres plantas: 10 ÷ 3 ≈ 3⅓ cm.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-049",
+      "number": 49,
+      "topic": "Cambio climático",
+      "concept": "diferenciar_tiempo_y_tendencia_climatica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un solo día frío demuestra por sí mismo que el clima de una región se está enfriando a largo plazo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El tiempo cambia día a día; para reconocer tendencias del clima se analizan registros prolongados.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-050",
+      "number": 50,
+      "topic": "Agua y suelo",
+      "concept": "investigar_turbidez_tras_lluvia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Después de una tormenta, el agua de un arroyo se ve turbia. ¿Qué observación ayudaría a investigar si arrastra sedimentos del suelo?",
+      "options": [
+        "Medir solo la temperatura del aire en la ciudad",
+        "Mirar el arroyo una semana después sin tomar datos",
+        "Preguntar de qué color era el cielo",
+        "Comparar muestras de agua tomadas antes y después de la lluvia y observar partículas"
+      ],
+      "correctAnswer": "Comparar muestras de agua tomadas antes y después de la lluvia y observar partículas",
+      "explanation": "Comparar muestras en condiciones distintas permite comprobar si aumentan las partículas transportadas por la escorrentía.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-051",
+      "number": 51,
+      "topic": "Cuerpo humano",
+      "concept": "costillas_protegen_organos_torax",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué huesos forman una caja que protege el corazón y los pulmones?",
+      "options": [
+        "Las costillas",
+        "Las vértebras",
+        "Las clavículas",
+        "Los huesos de la pelvis"
+      ],
+      "correctAnswer": "Las costillas",
+      "explanation": "Las costillas se unen al esternón y forman una caja que protege órganos del tórax.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-052",
+      "number": 52,
+      "topic": "Ecosistemas",
+      "concept": "descomponedores_reciclan_nutrientes",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Algunos hongos y bacterias descomponen restos de seres vivos y devuelven nutrientes al ambiente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los descomponedores transforman materia orgánica y contribuyen al reciclaje de nutrientes.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-053",
+      "number": 53,
+      "topic": "Cuerpo humano",
+      "concept": "corazon_bombea_sangre",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué órgano impulsa la sangre por el cuerpo?",
+      "options": [
+        "Pulmón",
+        "Corazón",
+        "Estómago",
+        "Riñón"
+      ],
+      "correctAnswer": "Corazón",
+      "explanation": "El corazón se contrae para mover la sangre por los vasos sanguíneos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-054",
+      "number": 54,
+      "topic": "Paleontología",
+      "concept": "fosil_resto_o_huella_antigua",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es un fósil?",
+      "options": [
+        "Un mineral formado dentro de una roca",
+        "Un cristal que creció en el agua",
+        "Un resto o huella preservada de vida antigua",
+        "Un sedimento reciente del fondo de un río"
+      ],
+      "correctAnswer": "Un resto o huella preservada de vida antigua",
+      "explanation": "Los fósiles conservan restos o señales de organismos que vivieron en el pasado.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-055",
+      "number": 55,
+      "topic": "Física",
+      "concept": "diferencia_masa_y_peso_gravedad",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Si una persona lleva una mochila de la Tierra a la Luna, ¿qué propiedad cambia más por la menor gravedad lunar?",
+      "options": [
+        "Su masa",
+        "El material de la mochila",
+        "El número de objetos dentro",
+        "Su peso"
+      ],
+      "correctAnswer": "Su peso",
+      "explanation": "La masa no cambia por trasladarla, pero el peso depende de la fuerza de gravedad del lugar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-056",
+      "number": 56,
+      "topic": "Astronomía",
+      "concept": "sol_estrella_mas_cercana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es la estrella más cercana a la Tierra?",
+      "options": [
+        "El Sol",
+        "Sirio",
+        "Próxima Centauri",
+        "Polaris"
+      ],
+      "correctAnswer": "El Sol",
+      "explanation": "El Sol es la estrella del sistema solar y la más cercana a nuestro planeta.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-057",
+      "number": 57,
+      "topic": "Astronomía",
+      "concept": "ubicacion_cinturon_asteroides",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El cinturón principal de asteroides se encuentra entre Marte y Júpiter.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La mayoría de los asteroides del cinturón principal orbitan alrededor del Sol entre esos planetas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-058",
+      "number": 58,
+      "topic": "Astronomía",
+      "concept": "composicion_general_cometas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica se asocia con muchos cometas?",
+      "options": [
+        "Son cuerpos rocosos ricos en metales, como muchos asteroides",
+        "Contienen hielo, polvo y material rocoso",
+        "Son estrellas calientes formadas por gas",
+        "Son planetas con una superficie sólida y estable"
+      ],
+      "correctAnswer": "Contienen hielo, polvo y material rocoso",
+      "explanation": "Los cometas son cuerpos pequeños que contienen hielo y polvo; al acercarse al Sol pueden formar una coma y una cola.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-059",
+      "number": 59,
+      "topic": "Sistema solar",
+      "concept": "gravedad_sol_y_orbitas_planetarias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mantiene a los planetas en órbita alrededor del Sol?",
+      "options": [
+        "El viento solar los empuja hacia afuera",
+        "La luz del Sol los atrae como un imán",
+        "La gravedad del Sol",
+        "La rotación de la Tierra"
+      ],
+      "correctAnswer": "La gravedad del Sol",
+      "explanation": "La gravedad del Sol mantiene a los planetas ligados a órbitas alrededor de él.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-060",
+      "number": 60,
+      "topic": "Cuerpo humano",
+      "concept": "funcion_filtracion_rinones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hacen principalmente los riñones con la sangre?",
+      "options": [
+        "Intercambian gases durante la respiración",
+        "Descomponen los alimentos",
+        "Bombean sangre por los vasos",
+        "Filtran desechos y regulan el agua del cuerpo"
+      ],
+      "correctAnswer": "Filtran desechos y regulan el agua del cuerpo",
+      "explanation": "Los riñones filtran la sangre, eliminan desechos y ayudan a regular el agua y las sales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-061",
+      "number": 61,
+      "topic": "Ecosistemas",
+      "concept": "multiples_relaciones_red_alimentaria",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué muestra una red alimentaria que una cadena simple no representa por completo?",
+      "options": [
+        "Varias relaciones de alimentación conectadas",
+        "Un único recorrido lineal de alimentación",
+        "Un listado de factores no vivos del lugar",
+        "Un mapa de refugios sin relaciones de alimentación"
+      ],
+      "correctAnswer": "Varias relaciones de alimentación conectadas",
+      "explanation": "Una red alimentaria conecta distintas cadenas y muestra que un organismo puede relacionarse con varios otros.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-062",
+      "number": 62,
+      "topic": "Cuerpo humano",
+      "concept": "absorcion_nutrientes_intestino_delgado",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué parte del sistema digestivo se absorbe la mayor parte de los nutrientes de los alimentos?",
+      "options": [
+        "Esófago",
+        "Intestino delgado",
+        "Boca",
+        "Intestino grueso"
+      ],
+      "correctAnswer": "Intestino delgado",
+      "explanation": "La mayor parte de los nutrientes pasa a la sangre a través de las paredes del intestino delgado.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-063",
+      "number": 63,
+      "topic": "Fenómenos atmosféricos",
+      "concept": "origen_comun_relampago_y_trueno",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El relámpago y el trueno se originan en la misma descarga eléctrica de una tormenta.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El relámpago es la luz de la descarga; el trueno es el sonido producido cuando esta calienta rápidamente el aire.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-064",
+      "number": 64,
+      "topic": "Geología",
+      "concept": "movimiento_lento_placas_tectonicas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurre con las placas tectónicas de la superficie terrestre?",
+      "options": [
+        "Permanecen inmóviles para siempre",
+        "Flotan separadas de la Tierra",
+        "Se mueven lentamente unas respecto a otras",
+        "Cambian de posición cada día por las mareas"
+      ],
+      "correctAnswer": "Se mueven lentamente unas respecto a otras",
+      "explanation": "Las placas se desplazan lentamente; sus interacciones pueden producir sismos y formar montañas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-065",
+      "number": 65,
+      "topic": "Sonido",
+      "concept": "frecuencia_y_tono_sonido",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio produce normalmente un sonido de tono más alto?",
+      "options": [
+        "Una vibración más lenta",
+        "Una vibración con mayor amplitud",
+        "Una distancia mayor a quien escucha",
+        "Una vibración más rápida"
+      ],
+      "correctAnswer": "Una vibración más rápida",
+      "explanation": "El tono aumenta cuando aumenta la frecuencia de vibración.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-066",
+      "number": 66,
+      "topic": "Biología celular",
+      "concept": "cloroplasto_captura_luz",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué estructura de las células vegetales captura energía luminosa para la fotosíntesis?",
+      "options": [
+        "Cloroplasto",
+        "Núcleo",
+        "Membrana externa",
+        "Vacuola"
+      ],
+      "correctAnswer": "Cloroplasto",
+      "explanation": "Los cloroplastos contienen clorofila y son el sitio principal de la fotosíntesis en las células vegetales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-067",
+      "number": 67,
+      "topic": "Cambios químicos",
+      "concept": "oxidacion_hierro_forma_oxido",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un clavo de hierro queda expuesto al agua y al oxígeno y aparece óxido. ¿Qué tipo de cambio ocurrió?",
+      "options": [
+        "Un cambio de estado",
+        "Una reacción química que formó otra sustancia",
+        "Una disolución sin cambio de material",
+        "Una separación de la mezcla"
+      ],
+      "correctAnswer": "Una reacción química que formó otra sustancia",
+      "explanation": "El hierro reacciona con el oxígeno y forma óxido, una sustancia distinta del hierro original.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-068",
+      "number": 68,
+      "topic": "Atmósfera",
+      "concept": "efecto_invernadero_absorcion_infrarroja",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué algunos gases de la atmósfera contribuyen a mantener la Tierra más cálida?",
+      "options": [
+        "Porque reflejan toda la luz visible hacia el suelo",
+        "Porque bloquean toda la radiación ultravioleta",
+        "Porque absorben y reemiten parte de la energía infrarroja que sale de la superficie",
+        "Porque producen calor al convertir oxígeno en luz"
+      ],
+      "correctAnswer": "Porque absorben y reemiten parte de la energía infrarroja que sale de la superficie",
+      "explanation": "Los gases de efecto invernadero absorben parte de la radiación infrarroja y reemiten energía, lo que calienta la atmósfera baja.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-069",
+      "number": 69,
+      "topic": "Química",
+      "concept": "atomos_se_reorganizan_reacciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "En una reacción química común, los átomos desaparecen por completo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "En una reacción, los átomos se reorganizan para formar sustancias nuevas; no desaparecen.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-070",
+      "number": 70,
+      "topic": "Meteorología",
+      "concept": "viento_por_diferencia_presion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué movimiento del aire suele llamarse viento?",
+      "options": [
+        "El giro de la Tierra alrededor del Sol",
+        "El cambio de estado del agua",
+        "La vibración de las nubes",
+        "El desplazamiento del aire de zonas de mayor presión hacia zonas de menor presión"
+      ],
+      "correctAnswer": "El desplazamiento del aire de zonas de mayor presión hacia zonas de menor presión",
+      "explanation": "Las diferencias de presión impulsan el movimiento del aire, que percibimos como viento.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-071",
+      "number": 71,
+      "topic": "Suelo y ecosistemas",
+      "concept": "vegetacion_reduce_erosion_ladera",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ladera sin plantas pierde suelo durante las lluvias. ¿Qué acción puede ayudar a reducir la erosión?",
+      "options": [
+        "Recuperar una cubierta de plantas con raíces que sujeten el suelo",
+        "Retirar las piedras y raíces restantes",
+        "Dejar el suelo descubierto",
+        "Aumentar el escurrimiento cuesta abajo"
+      ],
+      "correctAnswer": "Recuperar una cubierta de plantas con raíces que sujeten el suelo",
+      "explanation": "La vegetación reduce el impacto de la lluvia y sus raíces ayudan a mantener el suelo en su lugar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-072",
+      "number": 72,
+      "topic": "Energía solar",
+      "concept": "absorcion_luz_superficie_oscura",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un horno solar debe calentar una olla usando luz del Sol. ¿Qué superficie interior suele absorber más energía luminosa?",
+      "options": [
+        "Una superficie blanca y brillante",
+        "Una superficie oscura y poco reflectante",
+        "Un espejo orientado hacia afuera",
+        "Una lámina transparente que no cubra la olla"
+      ],
+      "correctAnswer": "Una superficie oscura y poco reflectante",
+      "explanation": "Las superficies oscuras absorben más luz que las claras y brillantes, que reflejan una mayor parte.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-073",
+      "number": 73,
+      "topic": "Astronomía",
+      "concept": "alineacion_eclipse_lunar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Durante un eclipse lunar, ¿cómo se ubican el Sol, la Tierra y la Luna?",
+      "options": [
+        "La Luna queda entre el Sol y la Tierra",
+        "El Sol queda entre la Tierra y la Luna",
+        "La Tierra queda entre el Sol y la Luna",
+        "Los tres cuerpos dejan de moverse"
+      ],
+      "correctAnswer": "La Tierra queda entre el Sol y la Luna",
+      "explanation": "La Tierra se interpone entre el Sol y la Luna y su sombra oscurece la Luna.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-074",
+      "number": 74,
+      "topic": "Germinación",
+      "concept": "luz_no_es_requisito_universal_germinacion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Todas las semillas necesitan recibir luz directa para comenzar a germinar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Muchas semillas pueden germinar bajo el suelo sin luz directa, si tienen agua, oxígeno y condiciones adecuadas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-075",
+      "number": 75,
+      "topic": "Reacciones químicas",
+      "concept": "burbujas_evidencia_produccion_gas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al mezclar vinagre y bicarbonato aparecen burbujas. ¿Qué evidencia aporta esto?",
+      "options": [
+        "El líquido se congeló",
+        "Un sólido se trituró en piezas pequeñas",
+        "Una sustancia se disolvió sin burbujas",
+        "Se produjo un gas durante la reacción"
+      ],
+      "correctAnswer": "Se produjo un gas durante la reacción",
+      "explanation": "Las burbujas son evidencia de un gas que se forma cuando las sustancias reaccionan.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-076",
+      "number": 76,
+      "topic": "Biodiversidad",
+      "concept": "biodiversidad_variedad_seres_vivos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué describe la biodiversidad de un lugar?",
+      "options": [
+        "La variedad de seres vivos que habitan allí",
+        "La cantidad de lluvia de un día",
+        "La profundidad de sus rocas",
+        "El número de edificios"
+      ],
+      "correctAnswer": "La variedad de seres vivos que habitan allí",
+      "explanation": "La biodiversidad se refiere a la variedad de formas de vida presentes en un lugar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-077",
+      "number": 77,
+      "topic": "Ecosistemas",
+      "concept": "ecosistema_factores_vivos_y_no_vivos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un ecosistema incluye seres vivos y elementos no vivos del ambiente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los organismos interactúan entre sí y con factores como el agua, el suelo y la luz.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-078",
+      "number": 78,
+      "topic": "Meteorología",
+      "concept": "instrumento_medicion_presion_aire",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mide un barómetro?",
+      "options": [
+        "La cantidad de lluvia",
+        "La presión del aire",
+        "La velocidad de un río",
+        "La temperatura corporal"
+      ],
+      "correctAnswer": "La presión del aire",
+      "explanation": "El barómetro mide la presión atmosférica, que puede ayudar a observar cambios del tiempo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-079",
+      "number": 79,
+      "topic": "Geología",
+      "concept": "formacion_roca_metamorfica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué condiciones transforman una roca en roca metamórfica?",
+      "options": [
+        "Congelación y evaporación",
+        "Compactación y cementación solamente",
+        "Calor y presión dentro de la Tierra",
+        "Derretimiento completo en la superficie"
+      ],
+      "correctAnswer": "Calor y presión dentro de la Tierra",
+      "explanation": "El calor y la presión pueden cambiar una roca sin fundirla por completo y formar una roca metamórfica.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-080",
+      "number": 80,
+      "topic": "Cuerpo humano",
+      "concept": "componentes_sistema_nervioso_central",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué estructuras forman el sistema nervioso central?",
+      "options": [
+        "Corazón y vasos sanguíneos",
+        "Pulmones y tráquea",
+        "Estómago e intestinos",
+        "Encéfalo y médula espinal"
+      ],
+      "correctAnswer": "Encéfalo y médula espinal",
+      "explanation": "El sistema nervioso central está formado por el encéfalo y la médula espinal.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-081",
+      "number": 81,
+      "topic": "Agua subterránea",
+      "concept": "acuifero_almacena_agua_subterranea",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama una capa de roca o sedimento que puede almacenar y transmitir agua subterránea?",
+      "options": [
+        "Acuífero",
+        "Cráter",
+        "Glaciar",
+        "Delta"
+      ],
+      "correctAnswer": "Acuífero",
+      "explanation": "Un acuífero es una formación subterránea capaz de almacenar y permitir el movimiento del agua.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-082",
+      "number": 82,
+      "topic": "Alimentación animal",
+      "concept": "dieta_omnivora",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué animal se clasifica como omnívoro?",
+      "options": [
+        "Uno que come únicamente plantas",
+        "Uno que se alimenta de plantas y animales",
+        "Uno que produce su alimento con luz",
+        "Uno que come solamente restos minerales"
+      ],
+      "correctAnswer": "Uno que se alimenta de plantas y animales",
+      "explanation": "Los omnívoros obtienen alimento tanto de plantas como de otros animales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-083",
+      "number": 83,
+      "topic": "Materia",
+      "concept": "estados_naturales_agua",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En la naturaleza, el agua puede encontrarse como sólido, líquido y gas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El hielo, el agua líquida y el vapor de agua son los tres estados comunes del agua.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-084",
+      "number": 84,
+      "topic": "Cambios de estado",
+      "concept": "sublimacion_solido_a_gas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el cambio directo de sólido a gas, sin pasar por líquido?",
+      "options": [
+        "Condensación",
+        "Fusión",
+        "Sublimación",
+        "Congelación"
+      ],
+      "correctAnswer": "Sublimación",
+      "explanation": "En la sublimación, una sustancia pasa del estado sólido al gaseoso directamente.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-085",
+      "number": 85,
+      "topic": "Clima",
+      "concept": "diferencia_tiempo_y_clima",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué resume principalmente el clima de una región?",
+      "options": [
+        "Cambios de cada hora",
+        "Condiciones de un día",
+        "Patrones de muchos años",
+        "Lluvia de una tarde"
+      ],
+      "correctAnswer": "Lluvia de una tarde",
+      "explanation": "El tiempo puede variar en horas o días; el clima describe tendencias observadas durante periodos largos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-086",
+      "number": 86,
+      "topic": "Ciclo del agua",
+      "concept": "infiltracion_agua_en_suelo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Cuando parte de la lluvia se filtra desde la superficie hacia el suelo, ocurre:",
+      "options": [
+        "Infiltración",
+        "Fusión",
+        "Condensación",
+        "Combustión"
+      ],
+      "correctAnswer": "Infiltración",
+      "explanation": "La infiltración es el paso del agua desde la superficie hacia el suelo y sus capas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-087",
+      "number": 87,
+      "topic": "Atmósfera",
+      "concept": "presion_atmosferica_y_altitud",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La presión del aire suele disminuir al aumentar la altitud.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "A mayor altura hay menos aire por encima que ejerza peso y presión.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-088",
+      "number": 88,
+      "topic": "Biología vegetal",
+      "concept": "funcion_estomas_hojas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumplen principalmente los estomas de las hojas?",
+      "options": [
+        "Producir raíces nuevas",
+        "Permitir el intercambio de gases y la salida de vapor de agua",
+        "Transportar sangre",
+        "Formar semillas directamente"
+      ],
+      "correctAnswer": "Permitir el intercambio de gases y la salida de vapor de agua",
+      "explanation": "Los estomas son poros que regulan el intercambio de gases y la pérdida de vapor de agua de la planta.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-089",
+      "number": 89,
+      "topic": "Energía",
+      "concept": "escala_tiempo_formacion_petroleo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el petróleo se considera un recurso no renovable a escala humana?",
+      "options": [
+        "Porque nunca contiene energía",
+        "Porque se forma cada vez que llueve",
+        "Porque tarda millones de años en formarse y se consume mucho más rápido",
+        "Porque solo existe en el océano"
+      ],
+      "correctAnswer": "Porque tarda millones de años en formarse y se consume mucho más rápido",
+      "explanation": "El petróleo se forma durante tiempos geológicos, mientras que las personas lo consumen en periodos mucho más cortos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-090",
+      "number": 90,
+      "topic": "Astronomía",
+      "concept": "ano_luz_unidad_distancia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mide un año luz?",
+      "options": [
+        "Un periodo orbital",
+        "La edad de una estrella",
+        "Una distancia astronómica",
+        "La distancia que recorre la luz en un año"
+      ],
+      "correctAnswer": "La distancia que recorre la luz en un año",
+      "explanation": "Aunque contiene la palabra “año”, el año luz es una unidad de distancia.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-091",
+      "number": 91,
+      "topic": "Geología",
+      "concept": "sismos_en_fallas_y_limites_placas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Dónde ocurren muchos terremotos porque las rocas se traban y luego se desplazan?",
+      "options": [
+        "En fallas y límites entre placas tectónicas",
+        "En el centro de cada nube",
+        "Dentro de todos los océanos al mismo tiempo",
+        "Solo en los polos"
+      ],
+      "correctAnswer": "En fallas y límites entre placas tectónicas",
+      "explanation": "El movimiento y la fricción en fallas, a menudo cerca de límites de placas, pueden liberar energía como un sismo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-092",
+      "number": 92,
+      "topic": "Ecología",
+      "concept": "competencia_especie_introducida_y_nativa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede ocurrir si una especie introducida compite por alimento con especies nativas?",
+      "options": [
+        "Las poblaciones nativas aumentan siempre",
+        "Las poblaciones nativas pueden disminuir",
+        "Las poblaciones nativas no se ven afectadas",
+        "Puede reducirse la biodiversidad del lugar"
+      ],
+      "correctAnswer": "Las poblaciones nativas pueden disminuir",
+      "explanation": "Si una especie introducida obtiene recursos que también necesitan las nativas, la competencia puede afectar sus poblaciones.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-093",
+      "number": 93,
+      "topic": "Física",
+      "concept": "caida_libre_sin_resistencia_aire",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Al ignorar la resistencia del aire, una pelota pesada cae siempre más rápido que una ligera.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Sin resistencia del aire, los objetos caen con la misma aceleración gravitatoria, aunque tengan masas distintas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-094",
+      "number": 94,
+      "topic": "Óptica",
+      "concept": "dispersion_luz_en_gotas_agua",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué puede aparecer un arcoíris cuando la luz solar atraviesa gotas de agua?",
+      "options": [
+        "Las gotas convierten la luz en sonido",
+        "El agua crea nuevos colores sin luz",
+        "Las gotas separan la luz blanca en distintos colores",
+        "La luz deja de viajar"
+      ],
+      "correctAnswer": "Las gotas separan la luz blanca en distintos colores",
+      "explanation": "Al refractarse y reflejarse en gotas, la luz blanca se separa en colores visibles.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-095",
+      "number": 95,
+      "topic": "Astronomía",
+      "concept": "alineacion_eclipse_solar",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué alineación produce un eclipse solar?",
+      "options": [
+        "La Tierra entre el Sol y la Luna",
+        "El Sol entre la Tierra y la Luna",
+        "La Luna detrás de Marte",
+        "La Luna entre el Sol y la Tierra"
+      ],
+      "correctAnswer": "La Luna entre el Sol y la Tierra",
+      "explanation": "En un eclipse solar, la Luna pasa entre el Sol y la Tierra y puede cubrir parte de la luz solar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-096",
+      "number": 96,
+      "topic": "Conservación de suelos",
+      "concept": "restaurar_cobertura_vegetal_anti_erosion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Tras una obra, una ladera quedó sin vegetación y el barro llega al arroyo cuando llueve. ¿Qué acción ayudaría más a reducir el problema?",
+      "options": [
+        "Replantar vegetación adecuada para cubrir y sujetar el suelo",
+        "Retirar las pocas raíces que quedan",
+        "Abrir más surcos cuesta abajo",
+        "Dejar el suelo expuesto hasta la próxima tormenta"
+      ],
+      "correctAnswer": "Replantar vegetación adecuada para cubrir y sujetar el suelo",
+      "explanation": "La cobertura vegetal amortigua la lluvia y las raíces ayudan a mantener el suelo, reduciendo el arrastre de sedimentos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-097",
+      "number": 97,
+      "topic": "Luz y sombras",
+      "concept": "longitud_sombra_posicion_aparente_sol",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "La sombra de un poste es corta al mediodía solar y más larga en la mañana. ¿Qué explica mejor el cambio?",
+      "options": [
+        "El poste cambia de altura",
+        "Cambia la posición aparente del Sol en el cielo",
+        "La Tierra deja de rotar por la mañana",
+        "La sombra produce su propia luz"
+      ],
+      "correctAnswer": "Cambia la posición aparente del Sol en el cielo",
+      "explanation": "La dirección y altura aparente del Sol cambian durante el día, modificando la longitud de la sombra.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-098",
+      "number": 98,
+      "topic": "Adaptación",
+      "concept": "camuflaje_y_supervivencia_polillas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En árboles de corteza clara, las aves detectan más fácilmente las polillas oscuras. ¿Qué cambio podría ocurrir con varias generaciones?",
+      "options": [
+        "Aumentaría la proporción de polillas claras",
+        "Aumentaría la proporción de polillas oscuras",
+        "Se mantendría siempre igual la proporción",
+        "Desaparecerían ambas poblaciones"
+      ],
+      "correctAnswer": "Se mantendría siempre igual la proporción",
+      "explanation": "El camuflaje puede ayudar a sobrevivir; con varias generaciones, esa ventaja puede aumentar la proporción de polillas claras.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-099",
+      "number": 99,
+      "topic": "Ecosistemas",
+      "concept": "competencia_por_recurso_limitado",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "En un ecosistema, dos especies que necesitan el mismo alimento pueden competir por ese recurso limitado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Cuando un recurso no alcanza para todos los organismos que lo necesitan, puede producirse competencia.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-100",
+      "number": 100,
+      "topic": "Separación de mezclas",
+      "concept": "separar_arena_sal_por_filtracion_evaporacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una mezcla de agua, sal y arena, ¿qué secuencia permite separar la arena y recuperar la sal?",
+      "options": [
+        "Congelar todo y triturarlo",
+        "Usar un imán para atraer la sal",
+        "Filtrar primero para separar la sal y después evaporar la arena",
+        "Filtrar para retirar la arena y evaporar el agua restante"
+      ],
+      "correctAnswer": "Filtrar para retirar la arena y evaporar el agua restante",
+      "explanation": "El filtro retiene la arena; al evaporarse el agua, la sal disuelta queda como sólido.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-101",
+      "number": 101,
+      "topic": "Animales",
+      "concept": "caracteristica_mamiferos_leche",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distingue a los mamíferos?",
+      "options": [
+        "Las crías reciben leche producida por la madre",
+        "Todos desarrollan plumas",
+        "Todos respiran por branquias",
+        "Todos ponen huevos"
+      ],
+      "correctAnswer": "Las crías reciben leche producida por la madre",
+      "explanation": "Las hembras de los mamíferos producen leche para alimentar a sus crías; hay mamíferos terrestres y acuáticos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-102",
+      "number": 102,
+      "topic": "Plantas",
+      "concept": "polen_reproduccion_plantas_flor",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En muchas plantas con flores, el polen participa en la reproducción.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El polen contiene células reproductoras que intervienen en la fecundación de las plantas con flores.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-103",
+      "number": 103,
+      "topic": "Medición",
+      "concept": "probeta_medir_volumen_liquido",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento sirve para medir el volumen de un líquido en el laboratorio?",
+      "options": [
+        "Balanza",
+        "Probeta",
+        "Termómetro",
+        "Brújula"
+      ],
+      "correctAnswer": "Probeta",
+      "explanation": "La probeta graduada permite medir volúmenes de líquidos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-104",
+      "number": 104,
+      "topic": "Plantas",
+      "concept": "fototropismo_crecimiento_hacia_luz",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una planta de interior crece inclinándose hacia la ventana. ¿Qué respuesta al estímulo observa?",
+      "options": [
+        "Germinación",
+        "Evaporación",
+        "Fototropismo",
+        "Descomposición"
+      ],
+      "correctAnswer": "Fototropismo",
+      "explanation": "El fototropismo es el crecimiento de una planta en respuesta a la dirección de la luz.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-105",
+      "number": 105,
+      "topic": "Energía",
+      "concept": "energia_solar_fuente_renovable",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál fuente se repone de manera natural y produce energía eléctrica?",
+      "options": [
+        "Carbón",
+        "Gasolina",
+        "Gas natural",
+        "Luz solar"
+      ],
+      "correctAnswer": "Luz solar",
+      "explanation": "La energía solar proviene de la radiación del Sol y se considera renovable a escala humana.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-106",
+      "number": 106,
+      "topic": "Cuerpo humano",
+      "concept": "estomago_mezcla_alimentos_jugos_digestivos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué órgano mezcla los alimentos con jugos digestivos?",
+      "options": [
+        "Pulmón",
+        "Riñón",
+        "Corazón",
+        "Estómago"
+      ],
+      "correctAnswer": "Estómago",
+      "explanation": "El estómago mezcla los alimentos con jugos digestivos y los transforma parcialmente antes de que pasen al intestino.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-107",
+      "number": 107,
+      "topic": "Ciencia",
+      "concept": "hipotesis_cientifica_comprobable",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una hipótesis científica es una idea que no puede ponerse a prueba.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Una hipótesis científica debe poder examinarse mediante observaciones o pruebas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-108",
+      "number": 108,
+      "topic": "Geología",
+      "concept": "cuarzo_es_mineral_granito_roca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál de estos materiales es un mineral?",
+      "options": [
+        "Granito",
+        "Madera",
+        "Cuarzo",
+        "Plástico"
+      ],
+      "correctAnswer": "Cuarzo",
+      "explanation": "El cuarzo es un mineral; el granito es una roca formada por varios minerales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-109",
+      "number": 109,
+      "topic": "Calor",
+      "concept": "conduccion_calor_en_metal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una cuchara metálica se calienta al dejarla dentro de una sopa caliente. ¿Cómo se transfiere principalmente el calor por la cuchara?",
+      "options": [
+        "Conducción",
+        "Evaporación",
+        "Reflexión",
+        "Condensación"
+      ],
+      "correctAnswer": "Conducción",
+      "explanation": "En la conducción, el calor se transfiere a través de un material por contacto entre sus partículas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-110",
+      "number": 110,
+      "topic": "Ecosistemas",
+      "concept": "flechas_cadena_alimentaria_transferencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una cadena alimentaria, las flechas suelen indicar:",
+      "options": [
+        "Dónde se refugia cada organismo",
+        "El sentido del paso de materia y energía",
+        "Qué organismo es más grande",
+        "Cuánto tiempo vive cada especie"
+      ],
+      "correctAnswer": "El sentido del paso de materia y energía",
+      "explanation": "Las flechas apuntan desde el organismo que sirve de alimento hacia quien lo consume.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-111",
+      "number": 111,
+      "topic": "Electricidad",
+      "concept": "circuito_paralelo_ramas_independientes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja puede tener un circuito con bombillas conectadas en paralelo?",
+      "options": [
+        "La corriente deja de circular",
+        "Todas se apagan si una se desconecta",
+        "Cada bombilla puede seguir encendida si otra falla",
+        "No necesita una fuente eléctrica"
+      ],
+      "correctAnswer": "Cada bombilla puede seguir encendida si otra falla",
+      "explanation": "En un circuito paralelo hay más de una ruta para la corriente, por lo que una bombilla puede funcionar aunque otra rama falle.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-112",
+      "number": 112,
+      "topic": "Herencia",
+      "concept": "herencia_rasgos_entre_generaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cachorro se parece a sus padres en el color del pelaje. ¿Qué explica mejor esa semejanza?",
+      "options": [
+        "El clima de ese día",
+        "El alimento que comió una vez",
+        "La sombra del lugar",
+        "La herencia de características"
+      ],
+      "correctAnswer": "La herencia de características",
+      "explanation": "Los descendientes reciben información hereditaria de sus progenitores que influye en muchos rasgos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-113",
+      "number": 113,
+      "topic": "Ciencia",
+      "concept": "repetir_mediciones_aumenta_confiabilidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Repetir una medición y obtener resultados parecidos ayuda a confiar más en el resultado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Repetir una medición permite comprobar si el resultado es consistente o si pudo deberse a una variación accidental.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-114",
+      "number": 114,
+      "topic": "Movimiento",
+      "concept": "rapidez_promedio_distancia_tiempo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una bicicleta recorre 60 metros en 10 segundos. ¿Cuál es su rapidez promedio?",
+      "options": [
+        "6 m/s",
+        "10 m/s",
+        "50 m/s",
+        "600 m/s"
+      ],
+      "correctAnswer": "6 m/s",
+      "explanation": "La rapidez promedio es distancia dividida por tiempo: 60 ÷ 10 = 6 metros por segundo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-115",
+      "number": 115,
+      "topic": "Energía",
+      "concept": "pila_transformacion_quimica_a_electrica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una linterna encendida, ¿qué transformación realiza principalmente la pila?",
+      "options": [
+        "Energía eléctrica en química",
+        "Energía química en eléctrica",
+        "Energía sonora en luminosa",
+        "Energía térmica en gravitatoria"
+      ],
+      "correctAnswer": "Energía química en eléctrica",
+      "explanation": "La pila convierte energía química almacenada en energía eléctrica para el circuito.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-116",
+      "number": 116,
+      "topic": "Biología",
+      "concept": "absorcion_agua_y_anclaje_raices",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumplen principalmente las raíces de muchas plantas?",
+      "options": [
+        "Producir sonidos",
+        "Fabricar semillas sin flores",
+        "Absorber agua y ayudar a fijar la planta",
+        "Convertir rocas en luz"
+      ],
+      "correctAnswer": "Absorber agua y ayudar a fijar la planta",
+      "explanation": "Las raíces absorben agua y minerales del suelo, y contribuyen al anclaje de la planta.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-117",
+      "number": 117,
+      "topic": "Atmósfera",
+      "concept": "ozono_estratosfera_absorbe_ultravioleta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué capa de la atmósfera se concentra la mayor parte del ozono que absorbe radiación ultravioleta?",
+      "options": [
+        "Troposfera",
+        "Mesosfera",
+        "Exosfera",
+        "Estratosfera"
+      ],
+      "correctAnswer": "Estratosfera",
+      "explanation": "La capa de ozono se encuentra principalmente en la estratosfera y absorbe gran parte de la radiación ultravioleta solar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-118",
+      "number": 118,
+      "topic": "Calor",
+      "concept": "corrientes_conveccion_agua_calentada",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fenómeno puede hacer que el agua de una olla circule al calentarse desde el fondo?",
+      "options": [
+        "Convección",
+        "Reflexión",
+        "Magnetismo",
+        "Condensación"
+      ],
+      "correctAnswer": "Convección",
+      "explanation": "Al calentarse desde abajo, el agua caliente asciende y la más fría desciende, formando corrientes de convección.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-119",
+      "number": 119,
+      "topic": "Ciencia",
+      "concept": "atmosfera_lunar_extremadamente_tenue",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Luna tiene una atmósfera densa, parecida a la de la Tierra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La Luna posee una exosfera extremadamente tenue, no una atmósfera densa como la terrestre.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-120",
+      "number": 120,
+      "topic": "Astronomía",
+      "concept": "meteoro_destello_entrada_atmosfera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el destello que produce un fragmento espacial al entrar en la atmósfera?",
+      "options": [
+        "Meteorito",
+        "Meteoro",
+        "Asteroide",
+        "Cometa"
+      ],
+      "correctAnswer": "Meteoro",
+      "explanation": "El meteoro es el destello observado cuando un meteoroide atraviesa la atmósfera; si un fragmento llega al suelo, se llama meteorito.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-121",
+      "number": 121,
+      "topic": "Electricidad",
+      "concept": "bombillas_conectadas_en_serie",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos bombillas están en una sola ruta eléctrica. Al retirar una, ambas se apagan. ¿Cómo están conectadas?",
+      "options": [
+        "En paralelo",
+        "Sin circuito",
+        "En serie",
+        "En una red inalámbrica"
+      ],
+      "correctAnswer": "En serie",
+      "explanation": "En un circuito en serie, los componentes comparten una sola ruta; si se interrumpe, la corriente deja de circular por todos.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-122",
+      "number": 122,
+      "topic": "Ecología",
+      "concept": "migracion_aves_busca_recursos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Durante una estación seca, algunas aves se desplazan desde un humedal con poco alimento hacia otro con más insectos. ¿Qué ventaja puede tener ese movimiento?",
+      "options": [
+        "Acceder a más alimento",
+        "Evitar competencia en cualquier lugar",
+        "Reproducirse sin alimento",
+        "Garantizar la supervivencia individual"
+      ],
+      "correctAnswer": "Acceder a más alimento",
+      "explanation": "Desplazarse puede permitir a las aves encontrar recursos disponibles en otro lugar; la migración no elimina todas las dificultades ambientales.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-123",
+      "number": 123,
+      "topic": "Propiedades de materiales",
+      "concept": "dilatacion_termica_afloja_tapa_metalica",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al calentar una tapa metálica, esta se dilata un poco. ¿Qué cambio podría facilitar abrir un frasco con tapa atascada?",
+      "options": [
+        "Enfriar la tapa para contraerla",
+        "Mojarla para que se evapore",
+        "Girar el frasco sin sujetarlo",
+        "Calentar la tapa para que se dilate"
+      ],
+      "correctAnswer": "Calentar la tapa para que se dilate",
+      "explanation": "Al calentarse, el metal se expande ligeramente; ese cambio puede aflojar la tapa respecto al frasco.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-124",
+      "number": 124,
+      "topic": "Sistema respiratorio",
+      "concept": "ejercicio_aumenta_demanda_oxigeno",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Al correr, los músculos suelen necesitar más oxígeno que cuando el cuerpo está en reposo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Durante el ejercicio aumenta la actividad muscular y el cuerpo incrementa el intercambio de gases para responder a esa demanda.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-125",
+      "number": 125,
+      "topic": "Ecosistemas",
+      "concept": "turbidez_reduce_luz_para_plantas_acuaticas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "El agua de un lago se vuelve muy turbia después de una tormenta. ¿Qué efecto podría tener en las plantas acuáticas?",
+      "options": [
+        "Producirían luz propia",
+        "Recibirían menos luz para fotosintetizar",
+        "Dejarían de necesitar agua",
+        "Se convertirían en animales"
+      ],
+      "correctAnswer": "Recibirían menos luz para fotosintetizar",
+      "explanation": "Las partículas suspendidas pueden reducir la luz que llega a las plantas acuáticas y dificultar la fotosíntesis.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-126",
+      "number": 126,
+      "topic": "Materiales",
+      "concept": "transparencia_deja_pasar_luz_visible",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué material deja pasar la mayor parte de la luz y permite ver con claridad a través de él?",
+      "options": [
+        "Vidrio transparente",
+        "Cartón",
+        "Madera",
+        "Lámina de aluminio"
+      ],
+      "correctAnswer": "Vidrio transparente",
+      "explanation": "Un material transparente deja pasar la luz y permite distinguir con claridad los objetos que están detrás.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-127",
+      "number": 127,
+      "topic": "Cuerpo humano",
+      "concept": "cerebro_coordina_respuestas_nerviosas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué órgano coordina muchas respuestas del sistema nervioso?",
+      "options": [
+        "Estómago",
+        "Cerebro",
+        "Pulmón",
+        "Riñón"
+      ],
+      "correctAnswer": "Cerebro",
+      "explanation": "El cerebro procesa información y coordina numerosas respuestas del cuerpo junto con otras partes del sistema nervioso.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-128",
+      "number": 128,
+      "topic": "Ciclos de vida",
+      "concept": "etapa_crisalida_mariposa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué etapa sigue normalmente a la oruga en el ciclo de vida de una mariposa?",
+      "options": [
+        "Huevo",
+        "Adulto",
+        "Crisálida",
+        "Semilla"
+      ],
+      "correctAnswer": "Crisálida",
+      "explanation": "En la metamorfosis completa, la mariposa pasa de huevo a larva, luego a crisálida y finalmente a adulto.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-129",
+      "number": 129,
+      "topic": "Tierra y océanos",
+      "concept": "gravedad_lunar_contribuye_mareas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La atracción gravitatoria de la Luna contribuye a producir las mareas terrestres.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La gravedad lunar influye en los océanos; el Sol también contribuye a las mareas.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-130",
+      "number": 130,
+      "topic": "Sistema solar",
+      "concept": "jupiter_planeta_mayor_tamano",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es el planeta más grande del sistema solar?",
+      "options": [
+        "Tierra",
+        "Neptuno",
+        "Saturno",
+        "Júpiter"
+      ],
+      "correctAnswer": "Júpiter",
+      "explanation": "Júpiter es el planeta de mayor tamaño del sistema solar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-131",
+      "number": 131,
+      "topic": "Energía y espacio",
+      "concept": "radiacion_transfiere_energia_en_vacio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo llega principalmente el calor del Sol a la Tierra a través del espacio?",
+      "options": [
+        "Radiación",
+        "Conducción",
+        "Convección",
+        "Evaporación"
+      ],
+      "correctAnswer": "Radiación",
+      "explanation": "La radiación puede viajar por el vacío; la conducción y la convección requieren materia.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-132",
+      "number": 132,
+      "topic": "Medición",
+      "concept": "newton_unidad_medicion_fuerza",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es la unidad de fuerza en el sistema internacional?",
+      "options": [
+        "Grado Celsius",
+        "Newton",
+        "Watt",
+        "Metro"
+      ],
+      "correctAnswer": "Newton",
+      "explanation": "La fuerza se mide en newtons; el watt mide potencia y el metro, longitud.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-133",
+      "number": 133,
+      "topic": "Propiedades del agua",
+      "concept": "punto_ebullicion_depende_presion",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El agua pura hierve siempre exactamente a 100 °C, sin importar la presión del aire.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El punto de ebullición cambia con la presión atmosférica; a menor presión, el agua hierve a menor temperatura.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-134",
+      "number": 134,
+      "topic": "Sonido",
+      "concept": "frecuencia_mayor_sonido_agudo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos sonidos tienen igual volumen, pero uno es más agudo. ¿Qué propiedad es mayor en el sonido agudo?",
+      "options": [
+        "Amplitud",
+        "Duración",
+        "Frecuencia",
+        "Distancia"
+      ],
+      "correctAnswer": "Frecuencia",
+      "explanation": "Un sonido más agudo tiene mayor frecuencia; el volumen se relaciona principalmente con la amplitud.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-135",
+      "number": 135,
+      "topic": "Atmósfera",
+      "concept": "anemometro_mide_velocidad_viento",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento permite medir la velocidad del viento?",
+      "options": [
+        "Barómetro",
+        "Anemómetro",
+        "Pluviómetro",
+        "Termómetro"
+      ],
+      "correctAnswer": "Anemómetro",
+      "explanation": "Un anemómetro mide la velocidad del viento; el barómetro mide presión y el pluviómetro recoge precipitación.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-136",
+      "number": 136,
+      "topic": "Cambios químicos",
+      "concept": "combustion_madera_forma_sustancias_nuevas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál situación produce una sustancia nueva?",
+      "options": [
+        "Cortar una hoja de papel",
+        "Derretir un cubo de hielo",
+        "Disolver sal en agua",
+        "Quemar un trozo de madera"
+      ],
+      "correctAnswer": "Quemar un trozo de madera",
+      "explanation": "Al quemarse, la madera reacciona y forma sustancias distintas, como gases y ceniza.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-137",
+      "number": 137,
+      "topic": "Geología",
+      "concept": "corteza_capa_solida_externa_tierra",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama la capa sólida más externa de la Tierra?",
+      "options": [
+        "Corteza",
+        "Manto",
+        "Núcleo externo",
+        "Núcleo interno"
+      ],
+      "correctAnswer": "Corteza",
+      "explanation": "La corteza es la capa sólida más externa de la Tierra; debajo se encuentra el manto.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-138",
+      "number": 138,
+      "topic": "Magnetismo",
+      "concept": "brujula_se_alinea_campo_terrestre",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una brújula puede orientarse porque su aguja responde al campo magnético de la Tierra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La aguja imantada se alinea aproximadamente con el campo magnético terrestre.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-139",
+      "number": 139,
+      "topic": "Tierra y espacio",
+      "concept": "orbita_terrestre_dura_un_ano",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué movimiento de la Tierra dura aproximadamente un año?",
+      "options": [
+        "Una rotación sobre su eje",
+        "Una órbita alrededor del Sol",
+        "Una vuelta de la Luna alrededor de la Tierra",
+        "Un cambio de fase lunar"
+      ],
+      "correctAnswer": "Una órbita alrededor del Sol",
+      "explanation": "La Tierra completa una órbita alrededor del Sol en aproximadamente un año.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-140",
+      "number": 140,
+      "topic": "Biología",
+      "concept": "falta_luz_afecta_crecimiento_plantas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una planta crece con tallos delgados y pálidos después de permanecer mucho tiempo en oscuridad. ¿Qué explicación es más probable?",
+      "options": [
+        "Recibió demasiada luz",
+        "Absorbió demasiados minerales",
+        "Le faltó luz para crecer normalmente",
+        "Produjo alimento en exceso"
+      ],
+      "correctAnswer": "Le faltó luz para crecer normalmente",
+      "explanation": "La luz es necesaria para la fotosíntesis; sin ella, muchas plantas presentan crecimiento débil y pérdida de color.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-141",
+      "number": 141,
+      "topic": "Cuerpo humano",
+      "concept": "arterias_llevan_sangre_desde_corazon",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué vasos sanguíneos llevan la sangre desde el corazón hacia el cuerpo?",
+      "options": [
+        "Venas",
+        "Capilares",
+        "Alvéolos",
+        "Arterias"
+      ],
+      "correctAnswer": "Arterias",
+      "explanation": "Las arterias conducen la sangre desde el corazón; las venas la llevan de regreso.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-142",
+      "number": 142,
+      "topic": "Fuerzas",
+      "concept": "area_mayor_reduce_presion_correas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las correas anchas de una mochila pueden resultar más cómodas que las estrechas?",
+      "options": [
+        "Reparten la fuerza sobre un área mayor",
+        "Eliminan el peso de la mochila",
+        "Aumentan la gravedad sobre los hombros",
+        "Reducen la masa de los objetos"
+      ],
+      "correctAnswer": "Reparten la fuerza sobre un área mayor",
+      "explanation": "Al distribuir la fuerza sobre un área mayor, disminuye la presión en cada punto del hombro.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-143",
+      "number": 143,
+      "topic": "Sonido",
+      "concept": "amplitud_mayor_sonido_mas_intenso",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Al aumentar la amplitud de un sonido, normalmente se percibe más fuerte.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La amplitud se relaciona con la intensidad percibida; la frecuencia se relaciona principalmente con el tono.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-144",
+      "number": 144,
+      "topic": "Máquinas simples",
+      "concept": "plano_inclinado_reduce_fuerza_aumenta_distancia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una rampa permite subir una caja aplicando menos fuerza que al levantarla verticalmente. ¿Qué ventaja ofrece principalmente?",
+      "options": [
+        "Elimina el peso de la caja",
+        "Reduce la fuerza necesaria a cambio de recorrer más distancia",
+        "Cambia la caja por una palanca",
+        "Hace que la gravedad deje de actuar"
+      ],
+      "correctAnswer": "Reduce la fuerza necesaria a cambio de recorrer más distancia",
+      "explanation": "Un plano inclinado permite aplicar una fuerza menor a lo largo de una distancia mayor.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-145",
+      "number": 145,
+      "topic": "Tierra sólida",
+      "concept": "magma_enfria_roca_ignea_intrusiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede formar una roca cuando el magma se enfría y solidifica bajo la superficie?",
+      "options": [
+        "Roca sedimentaria",
+        "Combustible fósil",
+        "Roca ígnea",
+        "Suelo orgánico"
+      ],
+      "correctAnswer": "Roca ígnea",
+      "explanation": "El magma que se enfría bajo tierra forma roca ígnea intrusiva; si sale a la superficie se denomina lava.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-146",
+      "number": 146,
+      "topic": "Interpretación de datos",
+      "concept": "grafico_lineas_cambio_temperatura_tiempo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una estudiante mide la temperatura del agua cada minuto mientras se calienta. ¿Qué gráfico permite observar mejor cómo cambia con el tiempo?",
+      "options": [
+        "Un gráfico de líneas",
+        "Un mapa de carreteras",
+        "Un dibujo sin escala",
+        "Una lista de nombres"
+      ],
+      "correctAnswer": "Un gráfico de líneas",
+      "explanation": "Un gráfico de líneas muestra cómo cambia una medida continua, como la temperatura, a medida que transcurre el tiempo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-147",
+      "number": 147,
+      "topic": "Sonido",
+      "concept": "eco_reflexion_sonido_superficie",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una persona aplaude cerca de una pared y escucha el sonido otra vez. ¿Qué ocurrió principalmente?",
+      "options": [
+        "Se refractó al atravesar la pared",
+        "Se difractó alrededor de la pared",
+        "Fue absorbido por la pared",
+        "Se reflejó en la pared"
+      ],
+      "correctAnswer": "Se reflejó en la pared",
+      "explanation": "Una superficie puede reflejar el sonido y hacer que regrese como eco si llega con suficiente demora.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-148",
+      "number": 148,
+      "topic": "Diseño experimental",
+      "concept": "comparar_retencion_agua_suelos_controlando_condiciones",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Se quiere comparar qué suelo retiene más agua. ¿Qué procedimiento permite una comparación más justa?",
+      "options": [
+        "Usar cantidades distintas de cada suelo",
+        "Verter agua sin medir",
+        "Poner cada suelo en recipientes de tamaño distinto",
+        "Usar la misma masa de suelo, volumen de agua y tiempo de espera"
+      ],
+      "correctAnswer": "Usar la misma masa de suelo, volumen de agua y tiempo de espera",
+      "explanation": "Mantener iguales las condiciones y medir el agua retenida permite atribuir mejor la diferencia al tipo de suelo.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-149",
+      "number": 149,
+      "topic": "Astronomía",
+      "concept": "luz_estelar_tiempo_de_viaje",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La luz de una estrella distante puede haber viajado mucho tiempo antes de llegar a la Tierra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La luz tiene una velocidad muy alta, pero las estrellas están tan lejos que puede tardar años o mucho más en llegar.",
+      "stability": "STABLE"
+    },
+    {
+      "id": "CIE6-150",
+      "number": 150,
+      "topic": "Electricidad",
+      "concept": "diagnosticar_contacto_circuito_linterna",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una linterna no enciende aunque la pila sea nueva. ¿Qué revisión sencilla conviene hacer primero?",
+      "options": [
+        "Cambiar el color de la carcasa",
+        "Sacudirla para producir electricidad",
+        "Comprobar que la bombilla haga contacto y el circuito esté cerrado",
+        "Cubrir la bombilla con papel"
+      ],
+      "correctAnswer": "Comprobar que la bombilla haga contacto y el circuito esté cerrado",
+      "explanation": "Un contacto flojo o un circuito abierto impiden que circule corriente hasta la bombilla.",
+      "stability": "STABLE"
+    }
+  ]
+}
