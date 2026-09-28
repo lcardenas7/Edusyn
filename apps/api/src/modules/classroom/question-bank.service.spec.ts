@@ -29,6 +29,30 @@ describe('QuestionBankService', () => {
     expect(catalogs.every((item) => item.questionCount === 150 && !item.imported)).toBe(true);
   });
 
+  it('offers official banks from the current grade and the two grades below', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    const catalogs = await service.officialCatalog(actor, 'classroom-1');
+    expect(catalogs.map((item) => item.grade)).toEqual([6, 6, 6, 6]);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
+  });
+
+  it('imports a lower-grade official bank into the current classroom grade', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'lower-grade-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-ciencia-naturaleza-grade-6-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      institutionId: 'school-1', gradeId: 'grade-8', title: 'Ciencia y naturaleza · 6.º', isPublished: true,
+    }) });
+    expect(tx.questionBankItem.createMany.mock.calls[0][0].data).toHaveLength(150);
+  });
+
   it('imports an official bank into the institution grade and publishes it for Arena', async () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
@@ -67,9 +91,9 @@ describe('QuestionBankService', () => {
     expect(imported[149].text).toContain('linterna');
   });
 
-  it('does not expose official grade-six banks to other grades', async () => {
+  it('does not expose banks more than two grades below the classroom', async () => {
     const { service, prisma } = setup();
-    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-7', name: 'Séptimo' } });
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-9', name: 'Noveno' } });
     await expect(service.importOfficial(actor, 'classroom-1', 'edusyn-arte-cultura-grade-6-v1')).rejects.toThrow('no disponible para este grado');
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });

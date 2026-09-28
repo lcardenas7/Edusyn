@@ -1,9 +1,17 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { deriveGradeNumber } from '../../common/utils/academic-level.util';
 import { Prisma, QuestionType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { norm } from '../../common/utils/answer-matching.util';
 import { ClassroomActor, ClassroomTenantAccessService } from './classroom-tenant-access.service';
 import { OFFICIAL_DUEL_BANKS } from './official-duel-banks';
+
+const OFFICIAL_BANK_GRADE_LOOKBACK = 2;
+
+function isOfficialBankGradeCompatible(classroomGradeName: string, bankGrade: number) {
+  const classroomGrade = deriveGradeNumber(classroomGradeName);
+  return classroomGrade !== null && bankGrade <= classroomGrade && classroomGrade - bankGrade <= OFFICIAL_BANK_GRADE_LOOKBACK;
+}
 
 export type BankCollectionInput = { title: string; subjectArea: string; category: string; isPublished: boolean };
 export type BankQuestionInput = { type: QuestionType; text: string; options: string[]; correctAnswer: string; explanation?: string | null };
@@ -74,8 +82,7 @@ export class QuestionBankService {
 
   async officialCatalog(actor: ClassroomActor, classroomId: string) {
     const grade = await this.gradeContext(actor, classroomId);
-    const gradeNumber = /(?:^|\D)6(?:\D|$)|sexto/i.test(grade.name) ? 6 : null;
-    const catalogs = OFFICIAL_DUEL_BANKS.filter((catalog) => catalog.grade === gradeNumber);
+    const catalogs = OFFICIAL_DUEL_BANKS.filter((catalog) => isOfficialBankGradeCompatible(grade.name, catalog.grade));
     const imported = catalogs.length ? await this.prisma.questionBankCollection.findMany({
       where: { institutionId: actor.institutionId, gradeId: grade.id, officialCatalogId: { in: catalogs.map((catalog) => catalog.catalogId) }, isActive: true },
       select: { officialCatalogId: true },
@@ -86,8 +93,7 @@ export class QuestionBankService {
 
   async importOfficial(actor: ClassroomActor, classroomId: string, catalogId: string) {
     const grade = await this.gradeContext(actor, classroomId);
-    const gradeNumber = /(?:^|\D)6(?:\D|$)|sexto/i.test(grade.name) ? 6 : null;
-    const catalog = OFFICIAL_DUEL_BANKS.find((item) => item.catalogId === catalogId && item.grade === gradeNumber);
+    const catalog = OFFICIAL_DUEL_BANKS.find((item) => item.catalogId === catalogId && isOfficialBankGradeCompatible(grade.name, item.grade));
     if (!catalog) throw new NotFoundException('Banco oficial no disponible para este grado');
     const existing = await this.prisma.questionBankCollection.findFirst({ where: { institutionId: actor.institutionId, gradeId: grade.id, officialCatalogId: catalogId, isActive: true }, select: { id: true } });
     if (existing) return this.list(actor, classroomId);
