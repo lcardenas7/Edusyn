@@ -6,7 +6,7 @@ Alcance aprobado: 8 categorías por cada grado de 6.º a 11.º; 48 bancos de 150
 
 | Grado | Arte y cultura | Historia | Deportes | Ciencia y naturaleza | Geografía | Lengua y literatura | Matemáticas y lógica | Tecnología |
 |---|---|---|---|---|---|---|---|---|
-| 6.º | Completo · staging | Completo · staging | Completo · listo para staging | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
+| 6.º | Completo · staging | Completo · staging | Completo · staging | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 7.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 8.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 9.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
@@ -21,11 +21,12 @@ Alcance aprobado: 8 categorías por cada grado de 6.º a 11.º; 48 bancos de 150
 
 ## Integración
 
-El commit `0cd5c31a` está en la rama remota `staging`. La Biblioteca docente muestra los bancos completos del grado con la acción **Usar este banco**. La importación crea una copia publicada para Arena, limitada al grado y la institución, y conserva los cuestionarios creados por cada docente. Deportes se añadió al catálogo oficial de grado 6 y se conserva como importación voluntaria por institución.
+El commit `c0e63bf6` incorpora Deportes · 6.º y está publicado en la rama remota `staging`. La web y la API responden; la ruta protegida del catálogo existe (responde 401 sin sesión). No se verificó el listado institucional con autenticación. La Biblioteca docente muestra los bancos completos del grado con la acción **Usar este banco**. La importación crea una copia publicada para Arena, limitada al grado y la institución, y conserva los cuestionarios creados por cada docente. Deportes se añadió al catálogo oficial de grado 6 y se conserva como importación voluntaria por institución.
 
 ## Siguiente
 
 Continuar con **Ciencia y naturaleza · 6.º** y avanzar después por las categorías y grados pendientes.
+
 
 
 
