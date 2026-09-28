@@ -22,6 +22,15 @@
 
 ## Historial (más reciente arriba)
 
+### Lengua y literatura · 6.º para Duelos — staging · 2026-09-28
+
+`ce0650ff`. API + documentación, sin migración. Se añadió el banco opcional de
+150 preguntas con distribución auditada 120/30, dificultad 50/70/30, 30 claves por
+letra y 150 conceptos únicos. Build de API y 15 pruebas de `question-bank.service.spec.ts`
+aprobados; disponible para instituciones al completar el deploy de Railway.
+Verificado después del deploy en el banco docente de staging: **Lengua y literatura · 6.º**
+aparece como opción para el aula de 8.º, con 150 preguntas y acción **Usar este banco**.
+
 ### Corrección de Geografía · 6.º — staging · 2026-09-28
 
 `6eae7395`. API + documentación, sin migración. Se corrigió la respuesta correcta de

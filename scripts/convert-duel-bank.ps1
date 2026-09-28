@@ -9,6 +9,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$idPrefix = switch -Exact ($Category) {
+  'Lengua y literatura' { 'LEN' }
+  'Matemáticas y lógica' { 'MAT' }
+  default { throw "No hay un prefijo de identificador configurado para la categoría: $Category" }
+}
+
 function Remove-MarkdownEmphasis([string]$Text) {
   $plainText = [regex]::Replace($Text, '\*\*(.+?)\*\*', '$1')
   return [regex]::Replace($plainText, '(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', '$1')
@@ -69,7 +75,7 @@ foreach ($match in $questionMatches) {
   if (-not $concept) { throw "Concepto vacío en la pregunta $number." }
 
   $questions.Add([ordered]@{
-    id = ('LEN{0}-{1:D3}' -f $Grade, $number)
+    id = ('{0}{1}-{2:D3}' -f $idPrefix, $Grade, $number)
     number = $number
     topic = $match.Groups['topic'].Value.Trim()
     concept = $concept
