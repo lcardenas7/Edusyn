@@ -6,7 +6,7 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 
 | Grado | Arte y cultura | Historia | Deportes | Ciencia y naturaleza | Geografía | Lengua y literatura | Matemáticas y lógica | Tecnología |
 |---|---|---|---|---|---|---|---|---|
-| 6.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging (importado en 8C) | En curso | Pendiente | Pendiente |
+| 6.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging (importado en 8C) | Completo · listo para staging | Pendiente | Pendiente |
 | 7.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 8.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 9.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
@@ -14,6 +14,8 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 | 11.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 
 ## Bancos completos de sexto
+
+- **Lengua y literatura:** banco completo de 150 preguntas en `docs/duelos/oficial/lengua_literatura_6.json` y sus seis lotes de revisión en `docs/DUELOS_LENGUA_LITERATURA_6_BLOQUE_01.md`. Conversión con validación automática de cantidad, tipos, dificultad, claves y conceptos mediante `scripts/convert-duel-bank.ps1`; integrado localmente al catálogo y listo para publicar en staging.
 
 - **Arte y cultura:** `docs/duelos/oficial/arte_cultura_6.json`. Banco piloto de 150 preguntas con las distribuciones previstas y opción de importación institucional. El documento incluye una nota para revisar visualmente las sustituciones del anexo fuente.
 - **Historia:** `docs/duelos/oficial/historia_6.json`. 150 preguntas con 120/30 por tipo, 50/70/30 por dificultad y claves A/B/C/D equilibradas.
@@ -23,8 +25,8 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 
 ## Integración
 
-Arte, Historia, Deportes, Ciencia y naturaleza y Geografía · 6.º están publicados en `staging`. Cada institución elige si importa los bancos, y la copia queda disponible para Arena. La Biblioteca docente ofrece **Usar este banco** y mantiene independientes los cuestionarios creados por los docentes.
+Arte, Historia, Deportes, Ciencia y naturaleza y Geografía · 6.º están publicados en `staging`; Lengua y literatura · 6.º está integrado localmente, con build y prueba de importación aprobados, pendiente de publicación. Cada institución elige si importa los bancos, y la copia queda disponible para Arena. La Biblioteca docente ofrece **Usar este banco** y mantiene independientes los cuestionarios creados por los docentes.
 
 ## Siguiente
 
-Continuar con **Lengua y literatura · 6.º**.
+Continuar con **Matemáticas y lógica · 6.º** al terminar la publicación de Lengua y literatura.

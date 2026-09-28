@@ -25,7 +25,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1', 'edusyn-ciencia-naturaleza-grade-6-v1', 'edusyn-geografia-grade-6-v1']);
+    expect(catalogs.map((item) => item.catalogId)).toEqual(['edusyn-arte-cultura-grade-6-v1', 'edusyn-historia-grade-6-v1', 'edusyn-deportes-grade-6-v1', 'edusyn-ciencia-naturaleza-grade-6-v1', 'edusyn-geografia-grade-6-v1', 'edusyn-lengua-literatura-grade-6-v1']);
     expect(catalogs.every((item) => item.questionCount === 150 && !item.imported)).toBe(true);
   });
 
@@ -33,8 +33,9 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.grade)).toEqual([6, 6, 6, 6, 6]);
+    expect(catalogs.map((item) => item.grade)).toEqual([6, 6, 6, 6, 6, 6]);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-6-v1')).toBe(true);
   });
 
   it('imports a lower-grade official bank into the current classroom grade', async () => {
@@ -112,6 +113,27 @@ describe('QuestionBankService', () => {
     expect(imported[36].correctAnswer).toBe('El área que aporta agua a una salida común');
     expect(imported[36].options).toContain(imported[36].correctAnswer);
     expect(imported[149].text).toContain('imágenes satelitales');
+  });
+
+  it('imports the official sixth-grade language and literature bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'language-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-lengua-literatura-grade-6-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-lengua-literatura-grade-6-v1', title: 'Lengua y literatura · 6.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[132].text).toContain('diccionario bilingüe');
+    expect(imported[132].correctAnswer).toBe('El equivalente de una palabra en otra lengua');
+    expect(imported[132].options).toContain(imported[132].correctAnswer);
+    expect(imported[143].correctAnswer).toBe('Verdadero');
   });
 
   it('does not expose banks more than two grades below the classroom', async () => {

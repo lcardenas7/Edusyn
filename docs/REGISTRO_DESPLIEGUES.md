@@ -22,6 +22,13 @@
 
 ## Historial (más reciente arriba)
 
+### Corrección de Geografía · 6.º — staging · 2026-09-28
+
+`6eae7395`. API + documentación, sin migración. Se corrigió la respuesta correcta de
+GEO6-037 en el catálogo oficial y se añadió una prueba de importación para protegerla.
+El banco sigue con sus 150 preguntas y distribuciones auditadas. Push a `staging`;
+prueba automatizada: 14/14 y build de API correcto.
+
 ### Geografía · 6.º para Duelos + priorización móvil — staging · 2026-09-28
 
 `e8a73310`. API + web, sin migración. Se incorpora el banco optativo institucional

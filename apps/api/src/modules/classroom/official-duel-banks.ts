@@ -13830,5 +13830,2830 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
         "source": "https://vlab.noaa.gov/web/oclo/gamma"
       }
     ]
+  },
+        {
+    "catalogId": "edusyn-lengua-literatura-grade-6-v1",
+    "title": "Lengua y literatura · 6.º",
+    "grade": 6,
+    "subjectArea": "Duelos",
+    "category": "Lengua y literatura",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://colombiaaprende.edu.co/sites/default/files/files_public/2022-06/DBA_Lenguaje-min.pdf",
+      "https://www.colombiaaprende.edu.co/sites/default/files/files_public/contenidosaprender/G_6/L/index.html",
+      "https://www.mineducacion.gov.co/1621/article-116042.html"
+    ],
+    "questions": [
+      {
+        "id": "LEN6-001",
+        "number": 1,
+        "topic": "Comprensión literal",
+        "concept": "causa_explicita_enunciado",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “La niña guardó el cuaderno porque comenzó a llover”, ¿por qué lo guardó?",
+        "options": [
+          "Terminó la clase",
+          "Perdió el cuaderno",
+          "Comenzó a llover",
+          "Quería prestarlo"
+        ],
+        "correctAnswer": "Comenzó a llover",
+        "explanation": "El texto expresa directamente que la lluvia motivó la acción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-002",
+        "number": 2,
+        "topic": "Vocabulario en contexto",
+        "concept": "significado_estrecho_contexto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El sendero era estrecho”, ¿qué significa estrecho?",
+        "options": [
+          "De poca anchura",
+          "Muy empinado",
+          "Cubierto de agua",
+          "Difícil de encontrar"
+        ],
+        "correctAnswer": "De poca anchura",
+        "explanation": "Estrecho describe algo que tiene poca anchura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-003",
+        "number": 3,
+        "topic": "Géneros literarios",
+        "concept": "cuento_texto_narrativo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál texto suele narrar hechos imaginarios con personajes y acciones?",
+        "options": [
+          "Una novela",
+          "Una fábula",
+          "Una leyenda",
+          "Un cuento"
+        ],
+        "correctAnswer": "Un cuento",
+        "explanation": "El cuento es una narración breve con personajes y una secuencia de hechos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-004",
+        "number": 4,
+        "topic": "Categorías gramaticales",
+        "concept": "verbo_accion_oracion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Los pájaros vuelan”, ¿cuál palabra expresa la acción?",
+        "options": [
+          "Los",
+          "Vuelan",
+          "Pájaros",
+          "Ninguna"
+        ],
+        "correctAnswer": "Vuelan",
+        "explanation": "Vuelan es el verbo y expresa lo que hacen los pájaros.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-005",
+        "number": 5,
+        "topic": "Signos de puntuación",
+        "concept": "cierre_pregunta_directa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué signo cierra normalmente una pregunta directa?",
+        "options": [
+          "Punto",
+          "Coma",
+          "Signo de interrogación",
+          "Dos puntos"
+        ],
+        "correctAnswer": "Signo de interrogación",
+        "explanation": "En español, la pregunta directa se escribe entre signos de interrogación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-006",
+        "number": 6,
+        "topic": "Secuencia narrativa",
+        "concept": "funcion_inicio_relato",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué parte de un relato suele presentar personajes y situación inicial?",
+        "options": [
+          "Inicio",
+          "Desenlace",
+          "Nota al pie",
+          "Bibliografía"
+        ],
+        "correctAnswer": "Inicio",
+        "explanation": "El inicio introduce la situación y, con frecuencia, a los personajes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-007",
+        "number": 7,
+        "topic": "Recursos poéticos",
+        "concept": "aliteracion_repeticion_sonidos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué recurso repite sonidos para crear un efecto musical?",
+        "options": [
+          "Hipérbole",
+          "Comparación",
+          "Personificación",
+          "Aliteración"
+        ],
+        "correctAnswer": "Aliteración",
+        "explanation": "La aliteración repite uno o varios sonidos de manera intencional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-008",
+        "number": 8,
+        "topic": "Comunicación",
+        "concept": "receptor_funcion_comunicativa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Quién recibe principalmente el mensaje en un acto comunicativo?",
+        "options": [
+          "Emisor",
+          "Receptor",
+          "Código",
+          "Canal"
+        ],
+        "correctAnswer": "Receptor",
+        "explanation": "El receptor es quien recibe e interpreta el mensaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-009",
+        "number": 9,
+        "topic": "Inferencia",
+        "concept": "inferir_lluvia_por_indicios",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Sara cerró el paraguas y sacudió las gotas al entrar.” ¿Qué se puede inferir?",
+        "options": [
+          "Venía de la lluvia",
+          "Iba a salir",
+          "Estaba nadando",
+          "El día era soleado"
+        ],
+        "correctAnswer": "Venía de la lluvia",
+        "explanation": "Las gotas en el paraguas permiten inferir que estuvo bajo la lluvia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-010",
+        "number": 10,
+        "topic": "Figura literaria",
+        "concept": "personificacion_accion_humana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El viento susurraba entre los árboles” atribuye al viento una acción humana. ¿Qué recurso aparece?",
+        "options": [
+          "Hipérbole",
+          "Metáfora",
+          "Enumeración",
+          "Personificación"
+        ],
+        "correctAnswer": "Personificación",
+        "explanation": "Se presenta al viento realizando la acción humana de susurrar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-011",
+        "number": 11,
+        "topic": "Conectores",
+        "concept": "conector_adversativo_contexto",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Quería ir al partido, ___ tenía que terminar la tarea.” ¿Qué conector expresa contraste?",
+        "options": [
+          "Además",
+          "Pero",
+          "Por eso",
+          "Luego"
+        ],
+        "correctAnswer": "Pero",
+        "explanation": "Pero contrapone el deseo de ir con la obligación pendiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-012",
+        "number": 12,
+        "topic": "Propósito comunicativo",
+        "concept": "proposito_aviso_informativo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una cartelera anuncia fecha, lugar y hora de una reunión escolar. ¿Cuál es su propósito principal?",
+        "options": [
+          "Narrar una aventura",
+          "Expresar sentimientos",
+          "Informar un evento",
+          "Dar instrucciones de cocina"
+        ],
+        "correctAnswer": "Informar un evento",
+        "explanation": "Los datos concretos permiten que la comunidad conozca cuándo y dónde será la reunión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-013",
+        "number": 13,
+        "topic": "Idea principal",
+        "concept": "resumir_dos_ideas_centrales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Las abejas visitan flores para obtener néctar. Al hacerlo, transportan polen entre ellas.” ¿Cuál idea resume mejor el fragmento?",
+        "options": [
+          "Las abejas se alimentan y ayudan a polinizar",
+          "Todas las flores producen miel",
+          "El polen solo se mueve con el viento",
+          "Las abejas viven dentro de las flores"
+        ],
+        "correctAnswer": "Las abejas se alimentan y ayudan a polinizar",
+        "explanation": "La opción reúne las dos acciones centrales sin añadir información no dicha.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-014",
+        "number": 14,
+        "topic": "Texto argumentativo",
+        "concept": "razon_apoya_opinion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El colegio debería sembrar árboles porque dan sombra y mejoran el entorno.” ¿Qué función cumple la segunda parte?",
+        "options": [
+          "Presenta una pregunta",
+          "Cuenta un recuerdo",
+          "Cambia de tema",
+          "Da razones para la propuesta"
+        ],
+        "correctAnswer": "Da razones para la propuesta",
+        "explanation": "La frase ofrece motivos que apoyan la propuesta de sembrar árboles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-015",
+        "number": 15,
+        "topic": "Orden lógico",
+        "concept": "secuencia_logica_instrucciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué orden hace más clara una instrucción para preparar limonada?",
+        "options": [
+          "Servir, exprimir, cortar, mezclar",
+          "Cortar, exprimir, mezclar, servir",
+          "Mezclar, servir, cortar, exprimir",
+          "Exprimir, servir, mezclar, cortar"
+        ],
+        "correctAnswer": "Cortar, exprimir, mezclar, servir",
+        "explanation": "Primero se prepara el limón, luego se mezcla y al final se sirve.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-016",
+        "number": 16,
+        "topic": "Narrador",
+        "concept": "narrador_personaje_primera_persona",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Me escondí detrás de la puerta y escuché pasos.” ¿Quién cuenta los hechos?",
+        "options": [
+          "Un narrador externo que no aparece",
+          "La persona que lee",
+          "Un personaje que participa",
+          "El autor dirigiéndose al público"
+        ],
+        "correctAnswer": "Un personaje que participa",
+        "explanation": "La primera persona (“me escondí”) indica que quien narra participa en los hechos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-017",
+        "number": 17,
+        "topic": "Comprensión de poemas",
+        "concept": "reconocer_rima_final",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un poema, dos versos terminan en “camino” y “destino”. ¿Qué relación sonora comparten al final?",
+        "options": [
+          "Prosa",
+          "Diálogo",
+          "Acotación",
+          "Rima"
+        ],
+        "correctAnswer": "Rima",
+        "explanation": "Las palabras comparten sonidos finales, lo que produce rima.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-018",
+        "number": 18,
+        "topic": "Verdadero o falso · Lenguaje figurado",
+        "concept": "hiperbole_exageracion_intencional",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La frase “tengo un millón de cosas por hacer” puede ser una exageración y no una cantidad exacta.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En el uso cotidiano, la hipérbole exagera para enfatizar una idea.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-019",
+        "number": 19,
+        "topic": "Verdadero o falso · Coherencia",
+        "concept": "coherencia_orden_ideas",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un texto puede ser coherente aunque sus oraciones aparezcan en cualquier orden.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "El orden debe permitir que las ideas se relacionen y se comprendan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-020",
+        "number": 20,
+        "topic": "Verdadero o falso · Fuentes",
+        "concept": "apariencia_no_verifica_fuente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Si una página web incluye una imagen llamativa, sus datos quedan comprobados automáticamente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una imagen atractiva no verifica la información; hay que revisar su origen y contrastarla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-021",
+        "number": 21,
+        "topic": "Adecuación al destinatario",
+        "concept": "registro_segun_destinatario",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante invita a familias y docentes a una muestra escolar. ¿Qué saludo resulta más adecuado?",
+        "options": [
+          "Apreciadas familias y docentes:",
+          "Quiubo, parceros:",
+          "Oigan, caigan por allá:",
+          "Eh, vengan ya:"
+        ],
+        "correctAnswer": "Apreciadas familias y docentes:",
+        "explanation": "El saludo mantiene un tono respetuoso para los destinatarios de la invitación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-022",
+        "number": 22,
+        "topic": "Revisar un texto",
+        "concept": "organizar_parrafos_por_idea",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una noticia escolar mezcla tres temas en un solo párrafo. ¿Qué mejora ayudaría más a comprenderla?",
+        "options": [
+          "Quitar todos los conectores",
+          "Separar las ideas por tema",
+          "Escribir cada palabra en mayúscula",
+          "Eliminar el título"
+        ],
+        "correctAnswer": "Separar las ideas por tema",
+        "explanation": "Agrupar cada idea en un párrafo facilita seguir la información.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-023",
+        "number": 23,
+        "topic": "Evaluación de evidencia",
+        "concept": "generalizacion_muestra_insuficiente",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un texto afirma que “todos prefieren la biblioteca”, pero solo entrevista a una persona. ¿Qué problema tiene esa conclusión?",
+        "options": [
+          "Usa una palabra desconocida",
+          "Presenta demasiados ejemplos",
+          "Generaliza con evidencia insuficiente",
+          "Confunde el título con el autor"
+        ],
+        "correctAnswer": "Generaliza con evidencia insuficiente",
+        "explanation": "Una sola opinión no permite concluir qué piensa todo el grupo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-024",
+        "number": 24,
+        "topic": "Verdadero o falso · Interpretación",
+        "concept": "inferencia_sustentada_en_indicios",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si un cuento no explica por qué un personaje se fue, el lector puede proponer una inferencia, pero debe apoyarla en pistas del relato.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Inferir es completar información implícita con indicios del texto, no inventar sin sustento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-025",
+        "number": 25,
+        "topic": "Verdadero o falso · Revisión",
+        "concept": "revisar_claridad_accion_y_fecha",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Para que un mensaje escolar sea más claro, conviene revisar si el destinatario puede identificar qué debe hacer y cuándo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La revisión comprueba que el propósito y los datos necesarios queden claros para quien recibe el mensaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-026",
+        "number": 26,
+        "topic": "Estructura de un texto",
+        "concept": "titulo_anticipa_tema",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento suele anticipar el tema de un texto informativo?",
+        "options": [
+          "El título",
+          "La firma",
+          "La fecha de impresión",
+          "El número de página"
+        ],
+        "correctAnswer": "El título",
+        "explanation": "El título presenta o anuncia el tema principal del texto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-027",
+        "number": 27,
+        "topic": "Sujeto de la oración",
+        "concept": "identificar_sujeto_explicito",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Las jugadoras entrenaron temprano”, ¿quiénes realizaron la acción?",
+        "options": [
+          "Temprano",
+          "Las jugadoras",
+          "Entrenaron",
+          "La acción"
+        ],
+        "correctAnswer": "Las jugadoras",
+        "explanation": "“Las jugadoras” es el sujeto que concuerda con el verbo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-028",
+        "number": 28,
+        "topic": "Acentuación",
+        "concept": "tilde_palabra_esdrujula",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra lleva tilde por ser esdrújula?",
+        "options": [
+          "Papel",
+          "Reloj",
+          "Brújula",
+          "Canción"
+        ],
+        "correctAnswer": "Brújula",
+        "explanation": "“Brújula” tiene la sílaba tónica en la antepenúltima posición; las esdrújulas llevan tilde.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-029",
+        "number": 29,
+        "topic": "Elementos del texto",
+        "concept": "firma_identifica_autoria",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento de una noticia suele indicar quién la escribió?",
+        "options": [
+          "El subtítulo",
+          "El pie de foto",
+          "La entradilla",
+          "La firma"
+        ],
+        "correctAnswer": "La firma",
+        "explanation": "La firma identifica a la persona autora de la noticia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-030",
+        "number": 30,
+        "topic": "Signos de puntuación",
+        "concept": "coma_enumeracion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué signo suele separar elementos de una enumeración sencilla?",
+        "options": [
+          "La coma",
+          "El punto final",
+          "El signo de cierre",
+          "Los paréntesis"
+        ],
+        "correctAnswer": "La coma",
+        "explanation": "La coma separa elementos de una enumeración, salvo convenciones especiales antes del último elemento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-031",
+        "number": 31,
+        "topic": "Clases de palabras",
+        "concept": "adjetivo_calificativo_contexto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “La mochila azul está junto a la puerta”, ¿qué palabra describe la mochila?",
+        "options": [
+          "Está",
+          "Azul",
+          "Junto",
+          "Puerta"
+        ],
+        "correctAnswer": "Azul",
+        "explanation": "“Azul” es el adjetivo que expresa una característica de la mochila.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-032",
+        "number": 32,
+        "topic": "Orden alfabético",
+        "concept": "orden_alfabetico_comparar_letras",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra aparecería en segundo lugar en un diccionario?",
+        "options": [
+          "Barco",
+          "Balón",
+          "Banco",
+          "Banda"
+        ],
+        "correctAnswer": "Banco",
+        "explanation": "Todas empiezan por “ba”; al comparar las letras siguientes, “banco” aparece antes que “banda” y “barco”, mientras “balón” va primero.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-033",
+        "number": 33,
+        "topic": "Biblioteca",
+        "concept": "catalogo_busqueda_titulo_autor",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dato ayuda más a encontrar un libro específico en el catálogo de una biblioteca?",
+        "options": [
+          "El color de la portada",
+          "El tamaño del libro",
+          "La fecha de visita",
+          "El título o el autor"
+        ],
+        "correctAnswer": "El título o el autor",
+        "explanation": "Los catálogos permiten localizar obras por campos como título y autor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-034",
+        "number": 34,
+        "topic": "Verdadero o falso · Texto expositivo",
+        "concept": "proposito_texto_expositivo",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un texto expositivo busca principalmente presentar información para explicar un tema.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Su propósito central es organizar y comunicar información sobre un asunto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-035",
+        "number": 35,
+        "topic": "Coherencia referencial",
+        "concept": "pronombre_referencia_ambigua",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Camila prestó su novela a Laura. Ella la leerá este fin de semana.” ¿Qué palabra puede causar confusión sobre quién leerá?",
+        "options": [
+          "Novela",
+          "Fin de semana",
+          "Prestó",
+          "Ella"
+        ],
+        "correctAnswer": "Ella",
+        "explanation": "“Ella” podría referirse a Camila o a Laura; repetir el nombre aclararía la referencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-036",
+        "number": 36,
+        "topic": "Elementos de una noticia",
+        "concept": "entradilla_amplia_titular",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué parte de una noticia suele ampliar brevemente lo anunciado en el titular?",
+        "options": [
+          "La entradilla",
+          "La firma",
+          "El pie de página",
+          "El índice"
+        ],
+        "correctAnswer": "La entradilla",
+        "explanation": "La entradilla resume datos esenciales y desarrolla el titular antes del cuerpo de la noticia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-037",
+        "number": 37,
+        "topic": "Citas y fuentes",
+        "concept": "cita_textual_marca_y_atribucion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un texto incorpora una frase exacta de una entrevista. ¿Qué conviene hacer para distinguirla de las palabras de quien escribe?",
+        "options": [
+          "Escribirla sin espacios",
+          "Marcarla con comillas e identificar la fuente",
+          "Cambiar algunas palabras y dejarla igual",
+          "Ponerla como título"
+        ],
+        "correctAnswer": "Marcarla con comillas e identificar la fuente",
+        "explanation": "Las comillas señalan una cita textual y la fuente permite reconocer de dónde proviene.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-038",
+        "number": 38,
+        "topic": "Registro lingüístico",
+        "concept": "registro_formal_solicitud",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una carta formal a la rectora, ¿qué expresión mantiene mejor un tono respetuoso?",
+        "options": [
+          "“Oye, necesito que…”",
+          "“Pásame el permiso ya.”",
+          "“Solicito amablemente información sobre…”",
+          "“Qué más, resuélveme esto.”"
+        ],
+        "correctAnswer": "“Solicito amablemente información sobre…”",
+        "explanation": "La formulación cortés se ajusta a la relación y al contexto institucional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-039",
+        "number": 39,
+        "topic": "Comprensión de gráficos",
+        "concept": "grafica_barras_comparar_cantidades",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un aviso incluye una gráfica de barras sobre libros prestados por mes. ¿Qué permite comparar directamente?",
+        "options": [
+          "Opiniones sobre cada título",
+          "Cantidades por género literario",
+          "Edades de quienes leen",
+          "Préstamos entre meses"
+        ],
+        "correctAnswer": "Préstamos entre meses",
+        "explanation": "La longitud de las barras permite comparar cantidades asociadas a cada mes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-040",
+        "number": 40,
+        "topic": "Relaciones de significado",
+        "concept": "polisemia_banco_contexto",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El banco de la plaza está recién pintado”, ¿qué significado tiene banco?",
+        "options": [
+          "Entidad que guarda dinero",
+          "Grupo de peces",
+          "Conjunto de preguntas",
+          "Asiento para varias personas"
+        ],
+        "correctAnswer": "Asiento para varias personas",
+        "explanation": "“De la plaza” aporta el contexto para interpretar banco como asiento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-041",
+        "number": 41,
+        "topic": "Diálogo",
+        "concept": "acotacion_indicacion_escenica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una obra teatral, ¿qué indican normalmente las acotaciones?",
+        "options": [
+          "El diálogo que dice cada personaje",
+          "Gestos y acciones que deben representarse",
+          "La división de la obra en actos",
+          "El nombre de cada personaje"
+        ],
+        "correctAnswer": "Gestos y acciones que deben representarse",
+        "explanation": "Las acotaciones orientan la representación con indicaciones escénicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-042",
+        "number": 42,
+        "topic": "Verdadero o falso · Organización de libros",
+        "concept": "indice_localiza_secciones_y_paginas",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El índice de un libro puede ayudar a localizar un capítulo y la página donde empieza.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El índice relaciona secciones del libro con las páginas correspondientes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-043",
+        "number": 43,
+        "topic": "Opinión y hecho",
+        "concept": "distinguir_hecho_y_valoracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál afirmación expresa una opinión y no un hecho verificable?",
+        "options": [
+          "El parque abre a las ocho",
+          "La biblioteca tiene doce mesas",
+          "El parque es el lugar más bonito",
+          "La sala cuenta con dos ventanas"
+        ],
+        "correctAnswer": "El parque es el lugar más bonito",
+        "explanation": "“Más bonito” expresa una valoración personal, mientras las otras afirmaciones pueden comprobarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-044",
+        "number": 44,
+        "topic": "Verdadero o falso · Derechos de autor",
+        "concept": "autoria_digital_no_es_libre_apropiacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Si un texto está publicado en internet, cualquiera puede copiarlo y presentarlo como propio.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La disponibilidad en línea no elimina la autoría ni la necesidad de respetar permisos y citar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-045",
+        "number": 45,
+        "topic": "Revisión de argumentos",
+        "concept": "argumento_evidencia_y_accion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un afiche dice “Debemos ahorrar agua porque la usamos todos los días”. ¿Qué evidencia fortalecería mejor la propuesta?",
+        "options": [
+          "Un dato local sobre consumo y una acción concreta para reducirlo",
+          "Una frase que repita que el agua es importante",
+          "Una imagen sin relación con el consumo",
+          "El nombre de quien diseñó el afiche"
+        ],
+        "correctAnswer": "Un dato local sobre consumo y una acción concreta para reducirlo",
+        "explanation": "Un dato pertinente y una acción aplicable sustentan la propuesta y orientan al público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-046",
+        "number": 46,
+        "topic": "Contrastar fuentes",
+        "concept": "contrastar_fuentes_discrepancia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos páginas dan fechas distintas para un hecho histórico. ¿Qué paso ayuda más a verificar cuál dato usar?",
+        "options": [
+          "Elegir el primer resultado",
+          "Comparar referencias institucionales",
+          "Elegir la fecha más nueva",
+          "Elegir la página más visitada"
+        ],
+        "correctAnswer": "Comparar referencias institucionales",
+        "explanation": "Contrastar con fuentes identificables y revisar sus referencias permite evaluar la confiabilidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-047",
+        "number": 47,
+        "topic": "Adaptación del mensaje",
+        "concept": "adaptar_informe_a_audio_sintesis",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo transforma un informe sobre reciclaje en un audio de un minuto para el curso. ¿Qué decisión resulta más útil?",
+        "options": [
+          "Leer cada párrafo sin seleccionar nada",
+          "Agregar datos que el informe no contiene",
+          "Conservar las ideas clave y expresarlas con claridad para quienes escuchan",
+          "Eliminar el propósito para usar el tiempo en saludos"
+        ],
+        "correctAnswer": "Conservar las ideas clave y expresarlas con claridad para quienes escuchan",
+        "explanation": "Adaptar el formato requiere seleccionar y comunicar las ideas esenciales al público previsto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-048",
+        "number": 48,
+        "topic": "Verdadero o falso · Enumeraciones complejas",
+        "concept": "punto_coma_separa_elementos_complejos",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Cuando los elementos de una lista ya incluyen comas, el punto y coma puede ayudar a separarlos con claridad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El punto y coma distingue elementos extensos que ya contienen comas internas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-049",
+        "number": 49,
+        "topic": "Verdadero o falso · Lectura de imágenes",
+        "concept": "pie_foto_aporta_contexto_visual",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "El pie de foto puede aportar datos de lugar o contexto que no se distinguen solo con observar la imagen.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El texto que acompaña una imagen puede identificar personas, lugares o circunstancias.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-050",
+        "number": 50,
+        "topic": "Comprensión multimodal",
+        "concept": "integrar_simbolo_direccion_y_texto",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un cartel de seguridad usa un dibujo de salida, una flecha y la frase “Siga esta ruta”. ¿Qué lectura integra mejor sus elementos?",
+        "options": [
+          "Imagen, flecha y frase se complementan",
+          "Solo importa la frase",
+          "Solo importa la imagen",
+          "La flecha contradice la ruta"
+        ],
+        "correctAnswer": "Imagen, flecha y frase se complementan",
+        "explanation": "Interpretar el cartel exige relacionar el símbolo, la dirección de la flecha y la instrucción verbal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-051",
+        "number": 51,
+        "topic": "Formación de palabras",
+        "concept": "prefijo_repeticion_re",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En releer, ¿qué aporta el prefijo re-?",
+        "options": [
+          "La idea de hacer algo otra vez",
+          "La idea de hacerlo en secreto",
+          "La idea de hacerlo lentamente",
+          "La idea de dejar de hacerlo"
+        ],
+        "correctAnswer": "La idea de hacer algo otra vez",
+        "explanation": "El prefijo re- puede indicar repetición: releer es leer de nuevo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-052",
+        "number": 52,
+        "topic": "Antónimos",
+        "concept": "antonimo_generoso_egoista",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra expresa lo contrario de generoso?",
+        "options": [
+          "Amable",
+          "Egoísta",
+          "Solidario",
+          "Atento"
+        ],
+        "correctAnswer": "Egoísta",
+        "explanation": "Una persona egoísta tiende a guardar para sí, mientras generoso describe a quien comparte.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-053",
+        "number": 53,
+        "topic": "Partes del poema",
+        "concept": "estrofa_grupo_de_versos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama cada grupo de versos separado por un espacio en un poema?",
+        "options": [
+          "Capítulo",
+          "Escena",
+          "Estrofa",
+          "Párrafo"
+        ],
+        "correctAnswer": "Estrofa",
+        "explanation": "Una estrofa agrupa versos dentro de un poema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-054",
+        "number": 54,
+        "topic": "Uso de dos puntos",
+        "concept": "dos_puntos_introductores_enumeracion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué signo puede anunciar una enumeración después de una frase completa?",
+        "options": [
+          "La coma",
+          "El punto y coma",
+          "Los puntos suspensivos",
+          "Los dos puntos"
+        ],
+        "correctAnswer": "Los dos puntos",
+        "explanation": "Los dos puntos pueden introducir los elementos que se van a enumerar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-055",
+        "number": 55,
+        "topic": "Fábula",
+        "concept": "moraleja_fabula_ensenanza",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento suele aparecer al final de una fábula tradicional?",
+        "options": [
+          "Una enseñanza",
+          "Una lista de capítulos",
+          "Una noticia reciente",
+          "Una receta"
+        ],
+        "correctAnswer": "Una enseñanza",
+        "explanation": "Muchas fábulas cierran con una moraleja o enseñanza relacionada con la historia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-056",
+        "number": 56,
+        "topic": "Comunicación oral",
+        "concept": "escucha_activa_respetar_turno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una conversación, ¿qué acción muestra que alguien escucha con atención?",
+        "options": [
+          "Interrumpir para cambiar de tema",
+          "Esperar el turno y responder a lo que se dijo",
+          "Repetir una frase sin escuchar",
+          "Hablar más fuerte que los demás"
+        ],
+        "correctAnswer": "Esperar el turno y responder a lo que se dijo",
+        "explanation": "Escuchar implica atender el mensaje y participar respetando los turnos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-057",
+        "number": 57,
+        "topic": "Prefijos y significados",
+        "concept": "prefijo_des_inversion_accion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa desconectar?",
+        "options": [
+          "Conectar con más fuerza",
+          "Conectar varias veces",
+          "Interrumpir una conexión",
+          "Conectar por primera vez"
+        ],
+        "correctAnswer": "Interrumpir una conexión",
+        "explanation": "El prefijo des- puede indicar inversión o interrupción de la acción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-058",
+        "number": 58,
+        "topic": "Signos de diálogo",
+        "concept": "raya_inicio_parlamento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un relato, ¿qué signo suele iniciar la intervención hablada de un personaje?",
+        "options": [
+          "Los puntos suspensivos",
+          "Los paréntesis",
+          "Los dos puntos",
+          "La raya"
+        ],
+        "correctAnswer": "La raya",
+        "explanation": "La raya de diálogo suele introducir el parlamento de un personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-059",
+        "number": 59,
+        "topic": "Palabras según el contexto",
+        "concept": "ovacionar_aplauso_entusiasta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El público ovacionó a la banda”, ¿qué significa ovacionó?",
+        "options": [
+          "Aplaudió con entusiasmo",
+          "Invitó a retirarse",
+          "Cambió de canción",
+          "Guardó silencio"
+        ],
+        "correctAnswer": "Aplaudió con entusiasmo",
+        "explanation": "Una ovación es una manifestación colectiva de aprobación, normalmente con aplausos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-060",
+        "number": 60,
+        "topic": "Figuras literarias",
+        "concept": "metafora_identificacion_sin_como",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Tus palabras son un puente” compara sin usar como. ¿Qué recurso emplea?",
+        "options": [
+          "Onomatopeya",
+          "Metáfora",
+          "Enumeración",
+          "Hipérbole"
+        ],
+        "correctAnswer": "Metáfora",
+        "explanation": "La metáfora identifica una cosa con otra para sugerir una semejanza.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-061",
+        "number": 61,
+        "topic": "Campo semántico",
+        "concept": "campo_semantico_orientacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué palabra pertenece al mismo campo semántico que brújula, mapa y ruta?",
+        "options": [
+          "Receta",
+          "Melodía",
+          "Orientación",
+          "Retrato"
+        ],
+        "correctAnswer": "Orientación",
+        "explanation": "Brújula, mapa y ruta se relacionan con orientarse y desplazarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-062",
+        "number": 62,
+        "topic": "Clases de texto",
+        "concept": "guia_pasos_texto_instructivo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una guía explica cómo llegar a un lugar con pasos numerados. ¿Qué tipo de texto predomina?",
+        "options": [
+          "Poético",
+          "Dramático",
+          "Narrativo",
+          "Instructivo"
+        ],
+        "correctAnswer": "Instructivo",
+        "explanation": "La guía indica acciones ordenadas para alcanzar un resultado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-063",
+        "number": 63,
+        "topic": "Interpretación de refranes",
+        "concept": "refran_evitar_postergacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué idea expresa mejor “No dejes para mañana lo que puedes hacer hoy”?",
+        "options": [
+          "Organizarse antes de comenzar",
+          "Pedir ayuda cuando algo cuesta",
+          "Priorizar las tareas urgentes",
+          "Evitar postergar lo que ya puedes hacer"
+        ],
+        "correctAnswer": "Evitar postergar lo que ya puedes hacer",
+        "explanation": "El refrán recomienda no postergar tareas que pueden realizarse en el presente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-064",
+        "number": 64,
+        "topic": "Léxico",
+        "concept": "verbo_preciso_elaborar_obra",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra es más precisa para reemplazar hizo en “El equipo hizo un mural en la pared”?",
+        "options": [
+          "Elaboró",
+          "Vio",
+          "Llevó",
+          "Tuvo"
+        ],
+        "correctAnswer": "Elaboró",
+        "explanation": "Elaboró expresa con mayor precisión que el equipo creó el mural.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-065",
+        "number": 65,
+        "topic": "Tiempos verbales",
+        "concept": "tiempo_pasado_ayer_verbo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Ayer el curso visitó el museo.” ¿En qué tiempo está el verbo visitó?",
+        "options": [
+          "Presente",
+          "Futuro",
+          "Pasado",
+          "Condicional"
+        ],
+        "correctAnswer": "Pasado",
+        "explanation": "Ayer sitúa la acción antes del momento actual y visitó está en pasado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-066",
+        "number": 66,
+        "topic": "Referencias de consulta",
+        "concept": "diccionario_acepciones_palabras",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué obra suele organizar palabras con sus significados y acepciones?",
+        "options": [
+          "Un calendario",
+          "Un diccionario",
+          "Un directorio telefónico",
+          "Un mapa vial"
+        ],
+        "correctAnswer": "Un diccionario",
+        "explanation": "El diccionario presenta palabras y explica sus significados y usos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-067",
+        "number": 67,
+        "topic": "Verdadero o falso · Lenguaje regional",
+        "concept": "variedad_regional_validez_contextual",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una palabra puede tener un uso regional distinto y seguir siendo válida en la comunidad donde se emplea.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las variedades regionales forman parte de la diversidad del español.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-068",
+        "number": 68,
+        "topic": "Verdadero o falso · Palabras homófonas",
+        "concept": "homofonos_votar_botar_significado",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Votar y botar significan exactamente lo mismo porque suenan igual en muchas regiones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Aunque pueden sonar igual, votar es elegir en una votación y botar es arrojar o desechar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-069",
+        "number": 69,
+        "topic": "Verdadero o falso · Conectores",
+        "concept": "porque_conector_causal",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En “No salimos porque llovía”, la palabra porque introduce una causa.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El conector explica la razón por la que no salieron.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-070",
+        "number": 70,
+        "topic": "Conectores temporales",
+        "concept": "luego_conector_temporal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué conector indica que una acción ocurre después de otra?",
+        "options": [
+          "Aunque",
+          "Sin embargo",
+          "Debido a",
+          "Luego"
+        ],
+        "correctAnswer": "Luego",
+        "explanation": "Luego sitúa una acción después de otra en una secuencia temporal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-071",
+        "number": 71,
+        "topic": "Revisión de concordancia",
+        "concept": "concordancia_sujeto_plural_verbo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un informe aparece: “Las aves migratorias llega al humedal”. ¿Qué cambio corrige la concordancia?",
+        "options": [
+          "Cambiar llega por llegan",
+          "Cambiar aves por ave",
+          "Cambiar al por a la",
+          "Cambiar humedal por humedales"
+        ],
+        "correctAnswer": "Cambiar llega por llegan",
+        "explanation": "El verbo debe concordar en plural con el sujeto las aves migratorias.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-072",
+        "number": 72,
+        "topic": "Edición para el público",
+        "concept": "ajustar_vocabulario_al_publico",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un folleto para niños de primaria usa varios términos técnicos sin explicarlos. ¿Qué mejora conviene hacer?",
+        "options": [
+          "Añadir más términos especializados",
+          "Sustituirlos o explicarlos con palabras claras",
+          "Quitar el tema del folleto",
+          "Escribir todo en una sola oración"
+        ],
+        "correctAnswer": "Sustituirlos o explicarlos con palabras claras",
+        "explanation": "Adecuar el vocabulario al público facilita que comprenda el mensaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-073",
+        "number": 73,
+        "topic": "Selección de información",
+        "concept": "seleccionar_datos_segun_proposito_y_tiempo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una exposición dura dos minutos y el tema tiene veinte datos. ¿Qué estrategia ayuda más a comunicar lo esencial?",
+        "options": [
+          "Leer los veinte datos sin pausa",
+          "Elegir datos al azar",
+          "Seleccionar los que responden al propósito y organizarlos",
+          "Repetir varias veces el título"
+        ],
+        "correctAnswer": "Seleccionar los que responden al propósito y organizarlos",
+        "explanation": "Seleccionar y ordenar información pertinente ayuda a cumplir el propósito dentro del tiempo disponible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-074",
+        "number": 74,
+        "topic": "Verdadero o falso · Citas",
+        "concept": "fidelidad_cita_textual",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una cita textual debe conservar las palabras de la fuente; si se modifica, no debe presentarse como reproducción exacta.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las comillas indican que las palabras reproducen lo dicho o escrito por la fuente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-075",
+        "number": 75,
+        "topic": "Verdadero o falso · Producción oral",
+        "concept": "pertinencia_respuesta_en_exposicion",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si durante una exposición alguien formula una pregunta, responderla sin relación con el tema ayuda a mantener la coherencia.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una respuesta pertinente mantiene el hilo y atiende la intención de la pregunta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-076",
+        "number": 76,
+        "topic": "Prefijos",
+        "concept": "prefijo_sub_posicion_inferior",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En submarino, ¿qué idea aporta el prefijo sub-?",
+        "options": [
+          "Debajo de",
+          "Alrededor de",
+          "En contra de",
+          "Antes de"
+        ],
+        "correctAnswer": "Debajo de",
+        "explanation": "Sub- expresa posición inferior o debajo de algo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-077",
+        "number": 77,
+        "topic": "Sufijos",
+        "concept": "sufijo_ista_persona_actividad",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En deportista, ¿qué indica principalmente el sufijo -ista?",
+        "options": [
+          "Una acción terminada",
+          "Una persona relacionada con una actividad",
+          "Un lugar pequeño",
+          "Una cualidad contraria"
+        ],
+        "correctAnswer": "Una persona relacionada con una actividad",
+        "explanation": "El sufijo -ista puede formar nombres de personas vinculadas con una actividad o práctica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-078",
+        "number": 78,
+        "topic": "Hiato",
+        "concept": "hiato_vocal_cerrada_tonica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra contiene un hiato entre vocales?",
+        "options": [
+          "Ruido",
+          "Causa",
+          "Río",
+          "Ciudad"
+        ],
+        "correctAnswer": "Río",
+        "explanation": "En río, la vocal cerrada tónica y la abierta se pronuncian en sílabas separadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-079",
+        "number": 79,
+        "topic": "Mayúsculas",
+        "concept": "mayuscula_y_tilde_nombre_ciudad",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál opción escribe correctamente el nombre de una ciudad colombiana?",
+        "options": [
+          "medellín",
+          "Medellin",
+          "MEDELLÍN ciudad",
+          "Medellín"
+        ],
+        "correctAnswer": "Medellín",
+        "explanation": "Los nombres propios de ciudades empiezan con mayúscula y Medellín lleva tilde.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-080",
+        "number": 80,
+        "topic": "Géneros literarios",
+        "concept": "mito_relato_origen_y_seres_sobrenaturales",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tipo de relato tradicional suele explicar el origen de un pueblo o un fenómeno mediante seres sobrenaturales?",
+        "options": [
+          "Mito",
+          "Noticia",
+          "Instructivo",
+          "Carta formal"
+        ],
+        "correctAnswer": "Mito",
+        "explanation": "Los mitos son relatos tradicionales asociados, entre otros temas, con orígenes y seres sobrenaturales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-081",
+        "number": 81,
+        "topic": "Recursos expresivos",
+        "concept": "onomatopeya_imita_sonido",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué palabra imita un sonido, como tic-tac?",
+        "options": [
+          "Sinónimo",
+          "Onomatopeya",
+          "Antónimo",
+          "Prefijo"
+        ],
+        "correctAnswer": "Onomatopeya",
+        "explanation": "Una onomatopeya representa o imita un sonido mediante una palabra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-082",
+        "number": 82,
+        "topic": "Acrósticos",
+        "concept": "acrostico_iniciales_forman_mensaje",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un acróstico, ¿qué pueden formar las letras iniciales de cada verso?",
+        "options": [
+          "Una rima obligatoria",
+          "El final de la historia",
+          "Una palabra o mensaje",
+          "La lista de personajes"
+        ],
+        "correctAnswer": "Una palabra o mensaje",
+        "explanation": "En muchos acrósticos, las letras iniciales alineadas verticalmente forman una palabra o frase.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-083",
+        "number": 83,
+        "topic": "Verdadero o falso · Versificación",
+        "concept": "verso_no_exige_extension_igual",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Todos los versos de un poema deben tener obligatoriamente la misma extensión.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Algunos poemas mantienen una medida regular y otros combinan versos de extensiones distintas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-084",
+        "number": 84,
+        "topic": "Concordancia",
+        "concept": "concordancia_articulo_sustantivo_adjetivo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál opción concuerda en género y número?",
+        "options": [
+          "Las montaña alta",
+          "El niñas curiosas",
+          "Un flores amarilla",
+          "Los caminos largos"
+        ],
+        "correctAnswer": "Los caminos largos",
+        "explanation": "El artículo, el sustantivo y el adjetivo aparecen en masculino plural.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-085",
+        "number": 85,
+        "topic": "Conectores de consecuencia",
+        "concept": "conector_consecuencia_por_eso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El bus se retrasó; ___, llegamos después de la hora prevista.” ¿Qué conector completa la relación?",
+        "options": [
+          "Por eso",
+          "Aunque",
+          "Mientras",
+          "En cambio"
+        ],
+        "correctAnswer": "Por eso",
+        "explanation": "Por eso introduce la consecuencia del retraso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-086",
+        "number": 86,
+        "topic": "Pronombre tácito",
+        "concept": "sujeto_tacito_primera_persona_plural",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Llegamos temprano al ensayo”, ¿quiénes realizan la acción?",
+        "options": [
+          "Una persona que escucha",
+          "Quienes hablan, junto con otras personas",
+          "El ensayo",
+          "Un grupo del que quien habla no forma parte"
+        ],
+        "correctAnswer": "Quienes hablan, junto con otras personas",
+        "explanation": "La terminación -amos indica primera persona plural: “nosotros” o “nosotras”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-087",
+        "number": 87,
+        "topic": "Función de la pregunta retórica",
+        "concept": "pregunta_retorica_enfatiza_postura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un discurso, alguien pregunta “¿Acaso no merecemos un parque limpio?” y no espera una respuesta oral. ¿Qué busca principalmente?",
+        "options": [
+          "Confirmar la hora del evento",
+          "Abrir una encuesta inmediata",
+          "Invitar a reflexionar o apoyar una idea",
+          "Cambiar de tema"
+        ],
+        "correctAnswer": "Invitar a reflexionar o apoyar una idea",
+        "explanation": "La pregunta retórica enfatiza una postura e invita al público a considerarla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-088",
+        "number": 88,
+        "topic": "Orden de la información",
+        "concept": "noticia_presenta_hecho_y_lugar",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una noticia sobre una inundación, ¿qué dato conviene presentar primero para orientar al lector?",
+        "options": [
+          "Una anécdota sin relación",
+          "El nombre de todas las fuentes al final",
+          "La opinión personal del periodista",
+          "Qué ocurrió y dónde"
+        ],
+        "correctAnswer": "Qué ocurrió y dónde",
+        "explanation": "Identificar pronto el hecho y el lugar ayuda a comprender de qué trata la noticia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-089",
+        "number": 89,
+        "topic": "Diálogo y narración",
+        "concept": "atribucion_parlamento_personaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“—No encuentro mis llaves —dijo Mateo.” ¿Qué aporta dijo Mateo?",
+        "options": [
+          "Identifica quién pronunció el parlamento",
+          "Explica dónde están las llaves",
+          "Describe el aspecto de Mateo",
+          "Revela quién leerá la historia"
+        ],
+        "correctAnswer": "Identifica quién pronunció el parlamento",
+        "explanation": "La acotación narrativa atribuye el diálogo al personaje que habla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-090",
+        "number": 90,
+        "topic": "Lectura de una tabla",
+        "concept": "tabla_cantidades_no_mide_gustos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una tabla muestra el número de libros leídos por cuatro cursos. ¿Qué pregunta se puede responder con esos datos?",
+        "options": [
+          "¿Qué género prefiere cada curso?",
+          "¿Qué curso leyó más libros?",
+          "¿Cuánto tiempo leyó cada curso?",
+          "¿Qué opina el grupo de los libros?"
+        ],
+        "correctAnswer": "¿Qué curso leyó más libros?",
+        "explanation": "La tabla permite comparar cantidades, pero no revela gustos ni calidad literaria.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-091",
+        "number": 91,
+        "topic": "Ironía en contexto",
+        "concept": "ironia_contradiccion_contexto",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Alguien llega una hora tarde y le dicen “¡Qué puntual!”. ¿Qué comunica probablemente la frase?",
+        "options": [
+          "Un elogio sincero por llegar a tiempo",
+          "Una pregunta sobre la hora",
+          "Una invitación a llegar más tarde",
+          "Una crítica irónica por la tardanza"
+        ],
+        "correctAnswer": "Una crítica irónica por la tardanza",
+        "explanation": "La situación contradice el sentido literal del elogio; por eso puede entenderse como ironía.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-092",
+        "number": 92,
+        "topic": "Verdadero o falso · Bibliografía",
+        "concept": "bibliografia_identifica_materiales_consultados",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una bibliografía puede ayudar a identificar los libros o materiales consultados para elaborar un trabajo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La bibliografía registra fuentes utilizadas y permite reconocerlas o buscarlas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-093",
+        "number": 93,
+        "topic": "Significado figurado",
+        "concept": "interpretar_expresion_figurado_difusion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “la noticia corrió por todo el colegio”, ¿qué significa corrió?",
+        "options": [
+          "La noticia desapareció del colegio",
+          "La noticia se movió por los pasillos",
+          "La noticia se anunció en voz baja",
+          "La noticia se difundió rápidamente"
+        ],
+        "correctAnswer": "La noticia se difundió rápidamente",
+        "explanation": "Corrió se usa en sentido figurado para indicar que la noticia se difundió rápidamente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-094",
+        "number": 94,
+        "topic": "Verdadero o falso · Tradición oral",
+        "concept": "tradicion_oral_versiones_comunitarias",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un relato transmitido oralmente puede conservar una idea central y presentar versiones distintas en diferentes comunidades.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Al transmitirse entre personas y generaciones, las narraciones pueden adaptarse a cada comunidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-095",
+        "number": 95,
+        "topic": "Uso de la coma",
+        "concept": "coma_separa_vocativo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Gracias, profesora, por ayudarnos”, ¿qué función cumplen las comas alrededor de profesora?",
+        "options": [
+          "Separan elementos de una enumeración",
+          "Marcan el inicio de una cita",
+          "Aíslan el vocativo",
+          "Cierran una pregunta"
+        ],
+        "correctAnswer": "Aíslan el vocativo",
+        "explanation": "Profesora nombra a la persona a quien se dirige el mensaje; la coma separa el vocativo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-096",
+        "number": 96,
+        "topic": "Revisar una instrucción",
+        "concept": "instruccion_tecnica_dato_necesario",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una receta dice “hornee 20 minutos” pero no indica la temperatura. ¿Qué dato falta para que la instrucción sea más útil?",
+        "options": [
+          "El color del recipiente",
+          "La temperatura del horno",
+          "El nombre de quien escribió la receta",
+          "El sabor preferido del lector"
+        ],
+        "correctAnswer": "La temperatura del horno",
+        "explanation": "El tiempo sin temperatura puede ser insuficiente para repetir correctamente la preparación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-097",
+        "number": 97,
+        "topic": "Evaluación de una conclusión",
+        "concept": "conclusion_preferencia_requiere_datos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un informe afirma que “el recreo favorito es el martes” porque ese día un estudiante llevó un balón. ¿Qué falta para sostener la conclusión?",
+        "options": [
+          "Una encuesta o evidencia sobre las preferencias del grupo",
+          "El color del balón",
+          "Una lista de los docentes presentes",
+          "El horario de salida"
+        ],
+        "correctAnswer": "Una encuesta o evidencia sobre las preferencias del grupo",
+        "explanation": "Un solo caso no demuestra la preferencia de todo el grupo; se necesitan datos pertinentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-098",
+        "number": 98,
+        "topic": "Verdadero o falso · Adaptación de una exposición",
+        "concept": "definir_con_ejemplo_cercano",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Para explicar una palabra nueva a niños pequeños, puede ser útil combinar una definición sencilla con un ejemplo familiar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La definición clara y el ejemplo cercano ayudan a comprender el significado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-099",
+        "number": 99,
+        "topic": "Verdadero o falso · Integridad de la información",
+        "concept": "alteracion_cita_distorsiona_sentido",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Cambiar una cita para que apoye una idea distinta, sin indicarlo, conserva fielmente el sentido de la fuente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Alterar las palabras o el sentido de una fuente presenta su mensaje de forma engañosa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-100",
+        "number": 100,
+        "topic": "Lectura de instrucciones",
+        "concept": "leyenda_explicar_simbolo_mapa",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un mapa escolar incluye una leyenda, pero la ruta accesible está marcada con un símbolo que la leyenda no explica. ¿Qué ajuste ayudaría más a sus lectores?",
+        "options": [
+          "Cambiar el título del mapa por una frase larga",
+          "Quitar todas las rutas dibujadas",
+          "Añadir el significado del símbolo a la leyenda",
+          "Decorar el símbolo con más colores"
+        ],
+        "correctAnswer": "Añadir el significado del símbolo a la leyenda",
+        "explanation": "La leyenda debe explicar los símbolos para que los lectores puedan interpretar el mapa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-101",
+        "number": 101,
+        "topic": "Formación de palabras",
+        "concept": "sufijo_mente_adverbio_modo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tipo de palabra es cuidadosamente?",
+        "options": [
+          "Un adverbio",
+          "Un pronombre",
+          "Una conjunción",
+          "Una preposición"
+        ],
+        "correctAnswer": "Un adverbio",
+        "explanation": "El sufijo -mente suele formar adverbios de modo a partir de adjetivos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-102",
+        "number": 102,
+        "topic": "Signos de puntuación",
+        "concept": "puntos_suspensivos_idea_inconclusa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una narración, ¿qué pueden indicar los puntos suspensivos al final de una frase?",
+        "options": [
+          "Que empieza una enumeración",
+          "Una pausa, duda o idea inconclusa",
+          "Que termina una pregunta",
+          "Que comienza una cita textual"
+        ],
+        "correctAnswer": "Una pausa, duda o idea inconclusa",
+        "explanation": "Los puntos suspensivos pueden señalar interrupción, duda o una expresión que queda abierta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-103",
+        "number": 103,
+        "topic": "Elementos narrativos",
+        "concept": "protagonista_personaje_central",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el personaje central cuyas acciones impulsan principalmente un relato?",
+        "options": [
+          "El antagonista",
+          "El narrador",
+          "El protagonista",
+          "El lector"
+        ],
+        "correctAnswer": "El protagonista",
+        "explanation": "El protagonista ocupa el papel central en el desarrollo de la historia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-104",
+        "number": 104,
+        "topic": "Contexto narrativo",
+        "concept": "ambiente_lugar_y_tiempo_relato",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento permite saber dónde y cuándo ocurre una historia?",
+        "options": [
+          "La moraleja",
+          "El título",
+          "El diálogo",
+          "El ambiente"
+        ],
+        "correctAnswer": "El ambiente",
+        "explanation": "El ambiente reúne referencias de lugar y tiempo en que se desarrollan los hechos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-105",
+        "number": 105,
+        "topic": "Recursos de consulta",
+        "concept": "atlas_consulta_cartografica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué libro reúne mapas para consultar lugares y territorios?",
+        "options": [
+          "Un atlas",
+          "Un diccionario",
+          "Una antología",
+          "Una enciclopedia de biografías"
+        ],
+        "correctAnswer": "Un atlas",
+        "explanation": "Un atlas es una colección organizada de mapas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-106",
+        "number": 106,
+        "topic": "Concordancia verbal",
+        "concept": "concordancia_verbo_primera_persona_singular",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Yo ___ las instrucciones”, ¿qué forma completa correctamente la oración?",
+        "options": [
+          "Leemos",
+          "Leo",
+          "Lees",
+          "Lee"
+        ],
+        "correctAnswer": "Leo",
+        "explanation": "El verbo debe concordar con el sujeto yo: leo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-107",
+        "number": 107,
+        "topic": "Géneros literarios",
+        "concept": "teatro_texto_para_representacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma literaria está escrita principalmente para ser representada por actores?",
+        "options": [
+          "La biografía",
+          "La noticia",
+          "El teatro",
+          "La receta"
+        ],
+        "correctAnswer": "El teatro",
+        "explanation": "Las obras teatrales están concebidas para representarse ante un público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-108",
+        "number": 108,
+        "topic": "Antología",
+        "concept": "antologia_reune_textos_seleccionados",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué reúne normalmente una antología literaria?",
+        "options": [
+          "Mapas de una región",
+          "Definiciones de palabras",
+          "Fechas de una sola biografía",
+          "Obras seleccionadas por tema o autor"
+        ],
+        "correctAnswer": "Obras seleccionadas por tema o autor",
+        "explanation": "Una antología reúne textos elegidos, por ejemplo, por tema, género o autor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-109",
+        "number": 109,
+        "topic": "Preguntas abiertas",
+        "concept": "pregunta_abierta_invita_detalle",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una entrevista, ¿qué pregunta invita a responder con más detalle?",
+        "options": [
+          "¿Leíste ayer?",
+          "¿Te gusta este libro?",
+          "¿Terminaste la historia?",
+          "¿Qué parte te sorprendió y por qué?"
+        ],
+        "correctAnswer": "¿Qué parte te sorprendió y por qué?",
+        "explanation": "Una pregunta abierta permite explicar una idea y aportar razones o detalles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-110",
+        "number": 110,
+        "topic": "Intención del autor",
+        "concept": "intencion_comparar_caracteristicas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un texto compara dos parques y destaca cuál tiene más árboles y senderos. ¿Qué intención parece predominar?",
+        "options": [
+          "Comparar características",
+          "Narrar una leyenda",
+          "Explicar una receta",
+          "Dar una orden"
+        ],
+        "correctAnswer": "Comparar características",
+        "explanation": "El texto organiza semejanzas o diferencias entre dos lugares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-111",
+        "number": 111,
+        "topic": "Conectores de contraste",
+        "concept": "conector_contraste_sin_embargo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El camino era corto; ___, tardamos mucho por la lluvia.” ¿Qué conector expresa mejor el contraste?",
+        "options": [
+          "Por eso",
+          "Después",
+          "Sin embargo",
+          "También"
+        ],
+        "correctAnswer": "Sin embargo",
+        "explanation": "Sin embargo introduce una idea que contrasta con lo esperado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-112",
+        "number": 112,
+        "topic": "Intención en una imagen",
+        "concept": "campana_visual_persuadir_conducta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una campaña muestra un río con basura y pide a la comunidad no arrojar residuos. ¿Qué busca principalmente?",
+        "options": [
+          "Entretener con una historia",
+          "Describir un paisaje sin opinar",
+          "Informar el horario de un evento",
+          "Persuadir para cambiar una conducta"
+        ],
+        "correctAnswer": "Persuadir para cambiar una conducta",
+        "explanation": "La imagen y el llamado buscan influir en lo que hace el público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-113",
+        "number": 113,
+        "topic": "Revisión lingüística",
+        "concept": "concordancia_articulo_sustantivo_verbo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué oración está escrita sin errores de concordancia?",
+        "options": [
+          "La grupo prepararon la cartelera",
+          "El grupo preparó la cartelera",
+          "Los grupo prepara la cartelera",
+          "La grupos preparó la cartelera"
+        ],
+        "correctAnswer": "El grupo preparó la cartelera",
+        "explanation": "El artículo, el sustantivo y el verbo concuerdan en singular masculino.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-114",
+        "number": 114,
+        "topic": "Variedad de fuentes",
+        "concept": "entrevista_recoge_relato_comunitario",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Para conocer distintas versiones de una leyenda local, ¿qué fuente puede aportar un relato transmitido en la comunidad?",
+        "options": [
+          "Una entrevista a una persona mayor del lugar",
+          "El horario de una ruta de bus",
+          "Una lista de precios del mercado",
+          "Un manual de uso de un teléfono"
+        ],
+        "correctAnswer": "Una entrevista a una persona mayor del lugar",
+        "explanation": "Una entrevista puede recoger versiones orales compartidas en la comunidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-115",
+        "number": 115,
+        "topic": "Voz narrativa",
+        "concept": "tercera_persona_referente_externo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“La niña abrió la ventana. Afuera, la lluvia cubría el patio.” ¿Desde qué persona está narrado?",
+        "options": [
+          "Primera persona plural",
+          "Segunda persona",
+          "Tercera persona",
+          "Primera persona singular"
+        ],
+        "correctAnswer": "Tercera persona",
+        "explanation": "El narrador se refiere a la protagonista como la niña, sin usar yo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-116",
+        "number": 116,
+        "topic": "Verdadero o falso · Lenguaje no verbal",
+        "concept": "comunicacion_no_verbal_apoya_mensaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En una exposición, los gestos y la postura también pueden influir en cómo recibe el público el mensaje.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los elementos no verbales acompañan el habla y pueden reforzar o dificultar la comunicación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-117",
+        "number": 117,
+        "topic": "Verdadero o falso · Poesía",
+        "concept": "estribillo_repite_frase_poetica",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En una canción o poema, un estribillo puede repetir versos o frases a lo largo de la composición.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El estribillo es una parte que vuelve a aparecer, especialmente en canciones y algunas formas poéticas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-118",
+        "number": 118,
+        "topic": "Verdadero o falso · Revisión entre pares",
+        "concept": "retroalimentacion_lector_orienta_revision",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las sugerencias de un lector pueden ayudar a descubrir una parte confusa, aunque quien escribe decide qué cambios hacer.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La retroalimentación muestra cómo otra persona entiende el texto y puede orientar su revisión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-119",
+        "number": 119,
+        "topic": "Conectores de condición",
+        "concept": "conector_condicional_si",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“___ lees la etiqueta, podrás seguir las instrucciones del producto.” ¿Qué conector establece una condición?",
+        "options": [
+          "Aunque",
+          "Si",
+          "Por lo tanto",
+          "Mientras tanto"
+        ],
+        "correctAnswer": "Si",
+        "explanation": "Si introduce la condición necesaria para que ocurra lo expresado en la oración principal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-120",
+        "number": 120,
+        "topic": "Comprensión de subtítulos",
+        "concept": "subtitulo_organiza_apartados",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un texto largo sobre animales, ¿para qué sirven principalmente los subtítulos?",
+        "options": [
+          "Para resumir todo el texto",
+          "Para expresar siempre una opinión",
+          "Para señalar quién lo escribió",
+          "Para organizar el contenido por temas"
+        ],
+        "correctAnswer": "Para organizar el contenido por temas",
+        "explanation": "Los subtítulos dividen el texto por temas y facilitan localizar información.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-121",
+        "number": 121,
+        "topic": "Revisión de un mensaje",
+        "concept": "aviso_reunion_datos_para_asistencia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un aviso dice “La reunión será el viernes” y se comparte con familias de varios cursos. ¿Qué información conviene añadir para que puedan asistir?",
+        "options": [
+          "La hora y el lugar",
+          "El color favorito del autor",
+          "Una historia sin relación",
+          "El nombre de todos los estudiantes"
+        ],
+        "correctAnswer": "La hora y el lugar",
+        "explanation": "La fecha sola no basta; la hora y el lugar permiten planear la asistencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-122",
+        "number": 122,
+        "topic": "Evaluación de un titular",
+        "concept": "titular_no_excede_evidencia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un titular afirma “Todos los estudiantes aman las tareas”, pero el artículo cita solo a una persona. ¿Qué sería más responsable?",
+        "options": [
+          "Mantener “todos” para llamar la atención",
+          "Ajustar el titular a lo que realmente muestran los testimonios",
+          "Eliminar la fuente para evitar preguntas",
+          "Añadir un signo de exclamación"
+        ],
+        "correctAnswer": "Ajustar el titular a lo que realmente muestran los testimonios",
+        "explanation": "El titular no debe generalizar más de lo que permite la evidencia presentada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-123",
+        "number": 123,
+        "topic": "Planear una exposición",
+        "concept": "exposicion_pasos_breves_con_ejemplos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un equipo debe explicar cómo separar residuos en tres minutos. ¿Qué plan ayudará a que el público recuerde los pasos?",
+        "options": [
+          "Presentar datos sin orden",
+          "Leer la misma definición varias veces",
+          "Organizar pasos breves con un ejemplo de cada tipo de residuo",
+          "Hablar de otro tema al final"
+        ],
+        "correctAnswer": "Organizar pasos breves con un ejemplo de cada tipo de residuo",
+        "explanation": "Una secuencia breve con ejemplos vincula cada paso con una acción reconocible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-124",
+        "number": 124,
+        "topic": "Verdadero o falso · Reseña",
+        "concept": "resena_sintesis_y_valoracion_razonada",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una reseña puede combinar una síntesis breve de una obra con una valoración sustentada del lector.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La reseña informa sobre una obra y presenta una opinión acompañada de razones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-125",
+        "number": 125,
+        "topic": "Verdadero o falso · Adecuación del texto",
+        "concept": "instruccion_emergencia_prioriza_claridad",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una instrucción para una emergencia puede usar expresiones decorativas y ambiguas, siempre que suene llamativa.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "En una emergencia, las instrucciones deben ser claras, precisas y fáciles de seguir.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-126",
+        "number": 126,
+        "topic": "Sustantivos colectivos",
+        "concept": "colectivo_abejas_enjambre",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué sustantivo colectivo nombra un conjunto de abejas?",
+        "options": [
+          "Enjambre",
+          "Rebaño",
+          "Manada",
+          "Bandada"
+        ],
+        "correctAnswer": "Enjambre",
+        "explanation": "Enjambre nombra un grupo numeroso de abejas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-127",
+        "number": 127,
+        "topic": "Familia de palabras",
+        "concept": "familia_lexica_pan_panaderia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué palabra pertenece a la misma familia que pan?",
+        "options": [
+          "Palo",
+          "Panadería",
+          "Pañuelo",
+          "Pantalón"
+        ],
+        "correctAnswer": "Panadería",
+        "explanation": "Panadería se forma a partir de pan y se relaciona con su elaboración o venta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-128",
+        "number": 128,
+        "topic": "Verbos",
+        "concept": "infinitivo_terminacion_ar_er_ir",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra está en infinitivo?",
+        "options": [
+          "Cantaron",
+          "Cantando",
+          "Cantar",
+          "Cantaba"
+        ],
+        "correctAnswer": "Cantar",
+        "explanation": "El infinitivo es la forma del verbo terminada en -ar, -er o -ir.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-129",
+        "number": 129,
+        "topic": "Clases de oración",
+        "concept": "oracion_imperativa_instruccion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tipo de oración expresa principalmente una orden o instrucción?",
+        "options": [
+          "Interrogativa",
+          "Exclamativa",
+          "Enunciativa",
+          "Imperativa"
+        ],
+        "correctAnswer": "Imperativa",
+        "explanation": "La oración imperativa comunica una orden, petición o instrucción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-130",
+        "number": 130,
+        "topic": "Adjetivos",
+        "concept": "superlativo_sufijo_isima",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “La montaña altísima se veía desde el pueblo”, ¿qué expresa altísima?",
+        "options": [
+          "Una cualidad en grado muy alto",
+          "Una acción repetida",
+          "El nombre de un lugar",
+          "Una relación de causa"
+        ],
+        "correctAnswer": "Una cualidad en grado muy alto",
+        "explanation": "El sufijo -ísima intensifica la cualidad expresada por el adjetivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-131",
+        "number": 131,
+        "topic": "Ortografía",
+        "concept": "ortografia_forma_verbal_hubo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra está escrita correctamente?",
+        "options": [
+          "Huvieron",
+          "Hubo",
+          "Havía",
+          "Hiba"
+        ],
+        "correctAnswer": "Hubo",
+        "explanation": "Hubo es una forma del verbo haber; las otras opciones presentan errores ortográficos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-132",
+        "number": 132,
+        "topic": "Poesía",
+        "concept": "hablante_lirico_voz_poema",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama la voz que expresa pensamientos o sentimientos dentro de un poema?",
+        "options": [
+          "El narrador de un cuento",
+          "El autor real del libro",
+          "El hablante lírico",
+          "El lector en voz alta"
+        ],
+        "correctAnswer": "El hablante lírico",
+        "explanation": "El hablante lírico es la voz que se expresa en el poema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-133",
+        "number": 133,
+        "topic": "Tipos de diccionario",
+        "concept": "diccionario_bilingue_equivalencias",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué puede buscar una persona en un diccionario bilingüe?",
+        "options": [
+          "La biografía completa de un escritor",
+          "El origen geográfico de una palabra",
+          "La rima de un poema",
+          "El equivalente de una palabra en otra lengua"
+        ],
+        "correctAnswer": "El equivalente de una palabra en otra lengua",
+        "explanation": "Un diccionario bilingüe presenta equivalencias entre vocabulario de dos idiomas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-134",
+        "number": 134,
+        "topic": "Literatura",
+        "concept": "conflicto_impulsa_acciones_relato",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento pone a prueba al protagonista y hace avanzar los hechos de una narración?",
+        "options": [
+          "El conflicto",
+          "El ambiente",
+          "El narrador",
+          "El desenlace"
+        ],
+        "correctAnswer": "El conflicto",
+        "explanation": "El conflicto es el problema o reto que impulsa las acciones del relato.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-135",
+        "number": 135,
+        "topic": "Expresiones de duda",
+        "concept": "expresion_tal_vez_posibilidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Quizá el equipo termine antes del cierre.” ¿Qué expresión conserva la idea de posibilidad?",
+        "options": [
+          "Sin duda",
+          "Con certeza",
+          "Sin falta",
+          "Tal vez"
+        ],
+        "correctAnswer": "Tal vez",
+        "explanation": "Tal vez expresa una posibilidad que no se presenta como segura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-136",
+        "number": 136,
+        "topic": "Cohesión",
+        "concept": "referencia_nominal_retomar_personaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El colibrí visita las flores. Este pequeño animal busca néctar”, ¿a quién se refiere este pequeño animal?",
+        "options": [
+          "Al néctar",
+          "A las flores",
+          "Al colibrí",
+          "A la visita"
+        ],
+        "correctAnswer": "Al colibrí",
+        "explanation": "La expresión retoma al colibrí sin repetir exactamente el mismo nombre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-137",
+        "number": 137,
+        "topic": "Texto biográfico",
+        "concept": "biografia_relata_vida_persona_real",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una biografía cuenta la vida de una persona real usando información sobre su trayectoria. ¿Qué tipo de texto es?",
+        "options": [
+          "Instructivo",
+          "Poético",
+          "Publicitario",
+          "Biográfico"
+        ],
+        "correctAnswer": "Biográfico",
+        "explanation": "La biografía narra y organiza hechos relevantes de la vida de una persona.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-138",
+        "number": 138,
+        "topic": "Textos de opinión",
+        "concept": "marcador_explicito_opinion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué expresión permite reconocer con más claridad que una frase presenta una opinión?",
+        "options": [
+          "“El martes a las ocho”",
+          "“Tiene dos ventanas”",
+          "“Mide tres metros”",
+          "“A mi parecer”"
+        ],
+        "correctAnswer": "“A mi parecer”",
+        "explanation": "La expresión anuncia explícitamente un punto de vista personal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-139",
+        "number": 139,
+        "topic": "Perspectiva narrativa",
+        "concept": "perspectiva_narrativa_conocimiento_limitado",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un cuento narra lo que siente y piensa un solo personaje, pero no revela lo que saben los demás. ¿Qué perspectiva predomina?",
+        "options": [
+          "Una voz que conoce todo",
+          "Una perspectiva limitada",
+          "La voz de un testigo personaje",
+          "Una narración sin personajes"
+        ],
+        "correctAnswer": "Una perspectiva limitada",
+        "explanation": "La narración limitada presenta información desde el conocimiento de un personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-140",
+        "number": 140,
+        "topic": "Texto publicitario",
+        "concept": "eslogan_sintesis_memorable",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué recurso busca que el público recuerde con facilidad una marca o campaña?",
+        "options": [
+          "Una bibliografía extensa",
+          "Una secuencia de instrucciones",
+          "Un eslogan breve",
+          "Una tabla de contenidos"
+        ],
+        "correctAnswer": "Un eslogan breve",
+        "explanation": "Un eslogan sintetiza un mensaje en una frase corta y memorable.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-141",
+        "number": 141,
+        "topic": "Ambigüedad",
+        "concept": "ambiguedad_modificador_material",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Se venden zapatos para niños de cuero.” ¿Qué puede resultar ambiguo?",
+        "options": [
+          "Si “de cuero” describe a los niños o a los zapatos",
+          "Si los zapatos se venden o se prestan",
+          "Si tienen cordones o hebillas",
+          "Si la venta es hoy o mañana"
+        ],
+        "correctAnswer": "Si “de cuero” describe a los niños o a los zapatos",
+        "explanation": "La frase puede hacer parecer que los niños son de cuero; reordenarla aclara que los zapatos están hechos de ese material.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-142",
+        "number": 142,
+        "topic": "Verdadero o falso · Información visual",
+        "concept": "grafico_titulo_etiquetas_escala",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un gráfico debe leerse junto con su título, sus etiquetas y la escala para interpretar correctamente los datos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Esos elementos indican qué se mide y cómo se representan las cantidades.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-143",
+        "number": 143,
+        "topic": "Verdadero o falso · Textos discontinuos",
+        "concept": "rotulo_formulario_orienta_dato",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un formulario, los rótulos de cada campo orientan qué información debe escribirse en ese espacio.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los rótulos organizan los datos que solicita cada campo del formulario.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-144",
+        "number": 144,
+        "topic": "Verdadero o falso · Acentuación",
+        "concept": "tilde_diacritica_tu_pronombre_posesivo",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En “Tú trajiste tu cuaderno”, la tilde permite distinguir el pronombre tú del posesivo tu.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Tú con tilde es pronombre; tu sin tilde acompaña al sustantivo como posesivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-145",
+        "number": 145,
+        "topic": "Uso de la coma",
+        "concept": "coma_separa_complemento_temporal_inicial",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Al terminar la lectura los estudiantes conversaron”, ¿dónde ayuda más una coma para marcar el inicio de la oración principal?",
+        "options": [
+          "Después de los",
+          "Después de estudiantes",
+          "Después de lectura",
+          "Antes de Al"
+        ],
+        "correctAnswer": "Después de lectura",
+        "explanation": "La coma separa el complemento temporal inicial de la oración principal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-146",
+        "number": 146,
+        "topic": "Elegir una fuente",
+        "concept": "norma_escolar_consulta_fuente_institucional",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo debe explicar una norma escolar vigente. ¿Qué fuente debería consultar primero?",
+        "options": [
+          "El manual institucional actualizado",
+          "Un comentario anónimo de una red social",
+          "Un anuncio antiguo sin fecha",
+          "La opinión de una persona que no conoce el colegio"
+        ],
+        "correctAnswer": "El manual institucional actualizado",
+        "explanation": "El manual institucional actualizado es una fuente directa para conocer las normas del colegio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-147",
+        "number": 147,
+        "topic": "Interpretar una escena",
+        "concept": "inferir_expectativa_lluvia_por_acciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un cuento, el personaje mira el cielo oscuro, guarda los juguetes y llama a su hermana para entrar. ¿Qué se puede inferir?",
+        "options": [
+          "Quiere empezar un juego nuevo",
+          "Cree que pronto lloverá",
+          "Busca a alguien que perdió",
+          "Está preparando una merienda"
+        ],
+        "correctAnswer": "Cree que pronto lloverá",
+        "explanation": "El cielo oscuro y entrar los juguetes sugieren que espera lluvia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-148",
+        "number": 148,
+        "topic": "Editar una descripción",
+        "concept": "descripcion_detalle_concreto_evitar_redundancia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un texto dice “El salón era grande, amplio y espacioso”. ¿Qué revisión lo haría más preciso?",
+        "options": [
+          "Añadir más sinónimos de grande",
+          "Sustituirla por un dato o rasgo concreto del salón",
+          "Repetir la oración tres veces",
+          "Eliminar todos los sustantivos"
+        ],
+        "correctAnswer": "Sustituirla por un dato o rasgo concreto del salón",
+        "explanation": "Los sinónimos repiten la misma idea; un detalle observable aporta información nueva.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-149",
+        "number": 149,
+        "topic": "Verdadero o falso · Información patrocinada",
+        "concept": "patrocinio_influye_interpretacion_mensaje",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si una publicación recomienda un producto y fue pagada por la marca, el lector puede considerar ese patrocinio al evaluar el mensaje.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Conocer el interés de quien publica ayuda a interpretar el propósito y valorar la recomendación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN6-150",
+        "number": 150,
+        "topic": "Verdadero o falso · Lectura crítica de gráficos",
+        "concept": "eje_truncado_exagera_diferencias_visuales",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si el eje vertical de un gráfico comienza muy cerca de los valores representados y no en cero, las diferencias entre barras pueden parecer mayores; conviene revisar la escala.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El punto de inicio y la escala del eje influyen en la impresión visual de las diferencias.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
   }
 ];
