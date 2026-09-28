@@ -26,6 +26,18 @@ export class QuestionBankController {
     return this.actor(req).then((actor) => this.service.list(actor, classroomId));
   }
 
+  @Get('classrooms/:classroomId/official')
+  @Roles('DOCENTE')
+  officialCatalog(@Param('classroomId') classroomId: string, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.officialCatalog(actor, classroomId));
+  }
+
+  @Post('classrooms/:classroomId/official/:catalogId/import')
+  @Roles('DOCENTE')
+  importOfficial(@Param('classroomId') classroomId: string, @Param('catalogId') catalogId: string, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.importOfficial(actor, classroomId, catalogId));
+  }
+
   @Post('classrooms/:classroomId/collections')
   @Roles('DOCENTE')
   createCollection(@Param('classroomId') classroomId: string, @Body() body: BankCollectionInput, @Request() req: any) {

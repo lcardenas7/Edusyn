@@ -3,6 +3,7 @@ import { Prisma, QuestionType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { norm } from '../../common/utils/answer-matching.util';
 import { ClassroomActor, ClassroomTenantAccessService } from './classroom-tenant-access.service';
+import { OFFICIAL_DUEL_BANKS } from './official-duel-banks';
 
 export type BankCollectionInput = { title: string; subjectArea: string; category: string; isPublished: boolean };
 export type BankQuestionInput = { type: QuestionType; text: string; options: string[]; correctAnswer: string; explanation?: string | null };
@@ -58,14 +59,43 @@ export class QuestionBankService {
 
   async list(actor: ClassroomActor, classroomId: string) {
     const grade = await this.gradeContext(actor, classroomId);
-    const collections = await this.prisma.questionBankCollection.findMany({
-      where: { institutionId: actor.institutionId, gradeId: grade.id, isActive: true },
-      select: { id: true, title: true, subjectArea: true, category: true, isPublished: true, createdById: true, updatedAt: true, questions: {
+    const [collections, targetActivities] = await Promise.all([this.prisma.questionBankCollection.findMany({
+      where: { institutionId: actor.institutionId, gradeId: grade.id, isActive: true, OR: [{ isPublished: true }, { createdById: actor.userId }] },
+      select: { id: true, officialCatalogId: true, title: true, subjectArea: true, category: true, isPublished: true, createdById: true, updatedAt: true, questions: {
         where: { isActive: true }, select: { id: true, type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' },
       } },
       orderBy: { updatedAt: 'desc' },
+    }), this.prisma.classroomActivity.findMany({
+      where: { classroomId, isPublished: false, type: { in: ['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'] } },
+      select: { id: true, title: true, type: true }, orderBy: { updatedAt: 'desc' },
+    })]);
+    return { grade, collections: collections.map(({ createdById, ...collection }) => ({ ...collection, canEdit: createdById === actor.userId })), targetActivities };
+  }
+
+  async officialCatalog(actor: ClassroomActor, classroomId: string) {
+    const grade = await this.gradeContext(actor, classroomId);
+    const gradeNumber = /(?:^|\D)6(?:\D|$)|sexto/i.test(grade.name) ? 6 : null;
+    const catalogs = OFFICIAL_DUEL_BANKS.filter((catalog) => catalog.grade === gradeNumber);
+    const imported = catalogs.length ? await this.prisma.questionBankCollection.findMany({
+      where: { institutionId: actor.institutionId, gradeId: grade.id, officialCatalogId: { in: catalogs.map((catalog) => catalog.catalogId) }, isActive: true },
+      select: { officialCatalogId: true },
+    }) : [];
+    const importedIds = new Set(imported.map((item) => item.officialCatalogId));
+    return catalogs.map(({ questions, ...catalog }) => ({ ...catalog, questionCount: questions.length, imported: importedIds.has(catalog.catalogId) }));
+  }
+
+  async importOfficial(actor: ClassroomActor, classroomId: string, catalogId: string) {
+    const grade = await this.gradeContext(actor, classroomId);
+    const gradeNumber = /(?:^|\D)6(?:\D|$)|sexto/i.test(grade.name) ? 6 : null;
+    const catalog = OFFICIAL_DUEL_BANKS.find((item) => item.catalogId === catalogId && item.grade === gradeNumber);
+    if (!catalog) throw new NotFoundException('Banco oficial no disponible para este grado');
+    const existing = await this.prisma.questionBankCollection.findFirst({ where: { institutionId: actor.institutionId, gradeId: grade.id, officialCatalogId: catalogId, isActive: true }, select: { id: true } });
+    if (existing) return this.list(actor, classroomId);
+    await this.prisma.$transaction(async (tx) => {
+      const collection = await tx.questionBankCollection.create({ data: { institutionId: actor.institutionId, gradeId: grade.id, createdById: actor.userId, title: catalog.title, subjectArea: catalog.subjectArea, category: catalog.category, isPublished: true, officialCatalogId: catalog.catalogId } });
+      await tx.questionBankItem.createMany({ data: catalog.questions.map((question) => ({ institutionId: actor.institutionId, collectionId: collection.id, type: question.type, text: question.text, options: question.options as Prisma.InputJsonValue, correctAnswer: question.correctAnswer, explanation: question.explanation })) });
     });
-    return { grade, collections: collections.map(({ createdById, ...collection }) => ({ ...collection, canEdit: createdById === actor.userId })) };
+    return this.list(actor, classroomId);
   }
 
   async createCollection(actor: ClassroomActor, classroomId: string, input: BankCollectionInput) {
@@ -94,5 +124,28 @@ export class QuestionBankService {
     const question = this.validQuestion(input);
     await this.prisma.questionBankItem.update({ where: { id: itemId }, data: { ...question, options: question.options as Prisma.InputJsonValue } });
     return this.list(actor, classroomId);
+  }
+
+  async copyToActivity(actor: ClassroomActor, classroomId: string, collectionId: string, activityId: string) {
+    const grade = await this.gradeContext(actor, classroomId);
+    const collection = await this.prisma.questionBankCollection.findFirst({
+      where: { id: collectionId, institutionId: actor.institutionId, gradeId: grade.id, isActive: true, OR: [{ isPublished: true }, { createdById: actor.userId }] },
+      select: { id: true, subjectArea: true, questions: { where: { isActive: true }, select: { type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' } } },
+    });
+    if (!collection) throw new NotFoundException('Cuestionario no encontrado');
+    if (collection.questions.length < 1 || collection.questions.length > 200) throw new BadRequestException('El cuestionario debe tener entre 1 y 200 preguntas');
+    const activity = await this.access.activityInScope(actor, activityId);
+    if (activity.classroomId !== classroomId || activity.isPublished || !['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'].includes(activity.type)) throw new BadRequestException('Elige un quiz en borrador de esta aula');
+    await this.prisma.$transaction(async (tx) => {
+      const current = await tx.classroomActivity.findUnique({ where: { id: activityId }, select: { isPublished: true } });
+      if (!current || current.isPublished) throw new BadRequestException('El quiz ya fue publicado');
+      const last = await tx.activityQuestion.findFirst({ where: { activityId }, select: { sortOrder: true }, orderBy: { sortOrder: 'desc' } });
+      const firstOrder = (last?.sortOrder ?? -1) + 1;
+      await tx.activityQuestion.createMany({ data: collection.questions.map((question, index) => ({
+          activityId, type: question.type, text: question.text, options: question.options as Prisma.InputJsonValue,
+          correctAnswer: question.correctAnswer, explanation: question.explanation, subjectArea: collection.subjectArea, sortOrder: firstOrder + index,
+        })) });
+    });
+    return { copied: collection.questions.length, activityId };
   }
 }

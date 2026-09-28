@@ -1,0 +1,2971 @@
+{
+  "catalogId": "edusyn-arte-cultura-grade-6-v1",
+  "title": "Arte y cultura · 6.º",
+  "grade": 6,
+  "subjectArea": "Duelos",
+  "category": "Arte y cultura",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "B": 30,
+      "C": 30,
+      "D": 30,
+      "A": 30
+    },
+    "sourceAnswerMarker": "PDF trailing-space check mark verified on sample pages; option ordering balanced without changing answers",
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "questions": [
+    {
+      "id": "ART6-001",
+      "number": 1,
+      "topic": "Artes visuales",
+      "concept": "artes_visuales_elemento_permite_distinguir_figura_fondo_contorno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál elemento permite distinguir principalmente una figura de su fondo por su contorno?",
+      "options": [
+        "Ritmo",
+        "Línea",
+        "Volumen",
+        "Textura"
+      ],
+      "correctAnswer": "Línea",
+      "explanation": "La línea puede delimitar el contorno de una figura.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-002",
+      "number": 2,
+      "topic": "Color",
+      "concept": "color_color_obtiene_normalmente_mezclar_pintura_azul",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué color se obtiene normalmente al mezclar pintura azul y amarilla?",
+      "options": [
+        "Violeta",
+        "Naranja",
+        "Verde",
+        "Marrón"
+      ],
+      "correctAnswer": "Verde",
+      "explanation": "En la mezcla tradicional de pigmentos, azul y amarillo producen verde.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-003",
+      "number": 3,
+      "topic": "Música",
+      "concept": "musica_pertenece_a_familia_instrumentos_percusion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál pertenece a la familia de instrumentos de percusión?",
+      "options": [
+        "Flauta",
+        "Tambor",
+        "Violín",
+        "Trompeta"
+      ],
+      "correctAnswer": "Tambor",
+      "explanation": "El tambor produce sonido principalmente al ser golpeado.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-004",
+      "number": 4,
+      "topic": "Música",
+      "concept": "musica_melodia_pasa_sonidos_suaves_a_sonidos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una melodía pasa de sonidos suaves a sonidos cada vez más fuertes. ¿Qué característica está cambiando?",
+      "options": [
+        "Duración",
+        "Intensidad",
+        "Altura",
+        "Timbre"
+      ],
+      "correctAnswer": "Intensidad",
+      "explanation": "La intensidad permite diferenciar sonidos fuertes y suaves.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-005",
+      "number": 5,
+      "topic": "Teatro",
+      "concept": "teatro_elemento_permite_a_actor_representar_a",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento permite a un actor representar a otra persona dentro de una obra?",
+      "options": [
+        "Escenario",
+        "Personaje",
+        "Público",
+        "Utilería"
+      ],
+      "correctAnswer": "Personaje",
+      "explanation": "El personaje es el papel representado por el actor.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-006",
+      "number": 6,
+      "topic": "Artes visuales",
+      "concept": "artes_visuales_dibujante_quiere_montana_parezca_muy_lejana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un dibujante quiere que una montaña parezca muy lejana. ¿Qué recurso ayuda más?",
+      "options": [
+        "Aumentar su tamaño",
+        "Reducir su tamaño",
+        "Engrosar su contorno",
+        "Centrarla en la hoja"
+      ],
+      "correctAnswer": "Reducir su tamaño",
+      "explanation": "Representar objetos más pequeños puede producir sensación de distancia.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-007",
+      "number": 7,
+      "topic": "Danza",
+      "concept": "danza_elemento_permite_organizar_movimientos_siguiendo_pieza",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento permite organizar movimientos siguiendo una pieza musical?",
+      "options": [
+        "Color",
+        "Ritmo",
+        "Textura",
+        "Volumen"
+      ],
+      "correctAnswer": "Ritmo",
+      "explanation": "El ritmo permite organizar movimientos en relación con el tiempo musical.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-008",
+      "number": 8,
+      "topic": "Patrimonio",
+      "concept": "patrimonio_comunidad_conserva_danza_tradicional_ensenandola_generacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad conserva una danza tradicional enseñándola de generación en generación. Esa danza forma parte principalmente de su patrimonio:",
+      "options": [
+        "Natural",
+        "Material",
+        "Inmaterial",
+        "Arquitectónico"
+      ],
+      "correctAnswer": "Inmaterial",
+      "explanation": "Las tradiciones y expresiones transmitidas entre generaciones forman parte del patrimonio cultural inmaterial.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-009",
+      "number": 9,
+      "topic": "Literatura oral",
+      "concept": "literatura_oral_historia_tradicional_explica_forma_simbolica_origen",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una historia tradicional que explica de forma simbólica el origen de un fenómeno suele considerarse:",
+      "options": [
+        "Crónica",
+        "Mito",
+        "Noticia",
+        "Biografía"
+      ],
+      "correctAnswer": "Mito",
+      "explanation": "Los mitos suelen ofrecer explicaciones simbólicas sobre orígenes y fenómenos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-010",
+      "number": 10,
+      "topic": "Artes visuales",
+      "concept": "artes_visuales_afiche_titulo_debe_llamar_atencion_antes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un afiche, el título debe llamar la atención antes que los demás elementos. ¿Qué decisión ayuda más?",
+      "options": [
+        "Reducir su tamaño",
+        "Ocultarlo al fondo",
+        "Aumentar su tamaño",
+        "Repetir el fondo"
+      ],
+      "correctAnswer": "Aumentar su tamaño",
+      "explanation": "Un mayor tamaño puede establecer jerarquía visual y dirigir primero la atención hacia el título.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-011",
+      "number": 11,
+      "topic": "Color",
+      "concept": "color_pareja_presenta_mayor_contraste",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué pareja presenta mayor contraste?",
+      "options": [
+        "Azul y celeste",
+        "Amarillo y violeta",
+        "Rojo y rosado",
+        "Verde y verde claro"
+      ],
+      "correctAnswer": "Amarillo y violeta",
+      "explanation": "Amarillo y violeta son colores complementarios en el círculo cromático tradicional.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-012",
+      "number": 12,
+      "topic": "Música colombiana",
+      "concept": "musica_colombiana_estos_ritmos_esta_especialmente_asociado_region",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál de estos ritmos está especialmente asociado con la región Caribe colombiana?",
+      "options": [
+        "Bambuco",
+        "Joropo",
+        "Cumbia",
+        "Currulao"
+      ],
+      "correctAnswer": "Cumbia",
+      "explanation": "La cumbia tiene una fuerte asociación histórica y cultural con el Caribe colombiano.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-013",
+      "number": 13,
+      "topic": "Música colombiana",
+      "concept": "musica_colombiana_region_colombiana_relaciona_joropo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué región colombiana se relaciona principalmente el joropo?",
+      "options": [
+        "Caribe",
+        "Andina",
+        "Orinoquía",
+        "Pacífica"
+      ],
+      "correctAnswer": "Orinoquía",
+      "explanation": "El joropo es una expresión musical y dancística característica de los Llanos y la Orinoquía.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-014",
+      "number": 14,
+      "topic": "Instrumentos",
+      "concept": "instrumentos_instrumento_produce_sonido_mediante_cuerdas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál instrumento produce sonido principalmente mediante cuerdas?",
+      "options": [
+        "Maraca",
+        "Violín",
+        "Flauta",
+        "Tambor"
+      ],
+      "correctAnswer": "Violín",
+      "explanation": "En el violín, la vibración de sus cuerdas es fundamental para producir el sonido.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-015",
+      "number": 15,
+      "topic": "Teatro",
+      "concept": "teatro_si_obra_ocurre_bosque_elemento_ayuda",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Si una obra ocurre en un bosque, ¿qué elemento ayuda principalmente a comunicar ese lugar al público?",
+      "options": [
+        "Argumento",
+        "Escenografía",
+        "Personaje",
+        "Diálogo"
+      ],
+      "correctAnswer": "Escenografía",
+      "explanation": "La escenografía representa visualmente los espacios donde ocurre la acción.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-016",
+      "number": 16,
+      "topic": "Interpretación artística",
+      "concept": "interpretacion_artistica_dos_estudiantes_observan_pintura_proponen_interpretaciones",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos estudiantes observan una pintura y proponen interpretaciones diferentes. ¿Cuál debería estar mejor sustentada?",
+      "options": [
+        "La más extensa",
+        "La más popular",
+        "La basada en la obra",
+        "La dicha primero"
+      ],
+      "correctAnswer": "La basada en la obra",
+      "explanation": "Una interpretación artística se fortalece cuando utiliza elementos observables de la obra como evidencia.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-017",
+      "number": 17,
+      "topic": "Artesanía",
+      "concept": "artesania_caracteristica_distingue_mejor_artesania_producto_industrial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distingue mejor una artesanía de un producto industrial fabricado en serie?",
+      "options": [
+        "Precio elevado",
+        "Producción artesanal",
+        "Tamaño reducido",
+        "Uso decorativo"
+      ],
+      "correctAnswer": "Producción artesanal",
+      "explanation": "La artesanía se caracteriza especialmente por la intervención directa de técnicas y trabajo artesanal.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-018",
+      "number": 18,
+      "topic": "Patrimonio",
+      "concept": "patrimonio_ejemplo_corresponde_a_patrimonio_cultural_material",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál ejemplo corresponde principalmente a patrimonio cultural material?",
+      "options": [
+        "Una leyenda",
+        "Una danza",
+        "Una fortaleza",
+        "Una canción"
+      ],
+      "correctAnswer": "Una fortaleza",
+      "explanation": "Una construcción histórica es un bien material; danzas, relatos y determinadas tradiciones pertenecen al patrimonio inmaterial.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-019",
+      "number": 19,
+      "topic": "Arte",
+      "concept": "arte_obra_creada_mediante_imagenes_capturadas_camara",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra creada principalmente mediante imágenes capturadas con una cámara pertenece a:",
+      "options": [
+        "Escultura",
+        "Fotografía",
+        "Arquitectura",
+        "Danza"
+      ],
+      "correctAnswer": "Fotografía",
+      "explanation": "La fotografía utiliza dispositivos de captura de imágenes como medio principal.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-020",
+      "number": 20,
+      "topic": "Cultura colombiana",
+      "concept": "cultura_colombiana_manifestacion_combina_especialmente_musica_movimiento_corporal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál manifestación combina especialmente música, movimiento corporal y expresión cultural?",
+      "options": [
+        "Escultura",
+        "Danza",
+        "Arquitectura",
+        "Fotografía"
+      ],
+      "correctAnswer": "Danza",
+      "explanation": "La danza utiliza el movimiento corporal y suele relacionarse estrechamente con música y cultura.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-021",
+      "number": 21,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_escultura_necesariamente_debe_ser_completamente_plana",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una escultura necesariamente debe ser completamente plana.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La escultura normalmente trabaja con formas tridimensionales y volumen.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-022",
+      "number": 22,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_tradicion_puede_ser_patrimonio_cultural_aunque",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una tradición puede ser patrimonio cultural aunque no sea un objeto físico.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El patrimonio cultural también puede ser inmaterial, como tradiciones, prácticas y expresiones.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-023",
+      "number": 23,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_dos_instrumentos_pueden_tocar_misma_nota",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Dos instrumentos pueden tocar la misma nota y aun así sonar diferentes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El timbre permite distinguir sonidos producidos por diferentes instrumentos incluso cuando tienen igual altura.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-024",
+      "number": 24,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_si_dos_personas_interpretan_obra_manera",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si dos personas interpretan una obra de manera diferente, necesariamente una de ellas está equivocada.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Pueden existir interpretaciones diferentes siempre que puedan justificarse razonablemente con elementos de la obra y su contexto.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-025",
+      "number": 25,
+      "topic": "Cultura y patrimonio",
+      "concept": "cultura_y_patrimonio_comunidad_reemplaza_materiales_tradicionales_artesania_pero",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad reemplaza los materiales tradicionales de una artesanía, pero conserva sus técnicas, diseños y significado cultural. ¿Qué aspecto permanece principalmente?",
+      "options": [
+        "El material original",
+        "La producción industrial",
+        "La tradición cultural",
+        "El valor comercial"
+      ],
+      "correctAnswer": "La tradición cultural",
+      "explanation": "Una manifestación cultural puede conservar elementos de su tradición aunque algunos materiales cambien.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-026",
+      "number": 26,
+      "topic": "Elementos visuales",
+      "concept": "elementos_visuales_dibujo_recurso_permite_representar_mejor_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un dibujo, ¿qué recurso permite representar mejor una superficie áspera?",
+      "options": [
+        "Contorno",
+        "Proporción",
+        "Textura",
+        "Simetría"
+      ],
+      "correctAnswer": "Textura",
+      "explanation": "La textura representa visualmente cómo se percibe una superficie.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-027",
+      "number": 27,
+      "topic": "Color",
+      "concept": "color_color_secundario_modelo_tradicional_pigmentos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es un color secundario en el modelo tradicional de pigmentos?",
+      "options": [
+        "Azul",
+        "Rojo",
+        "Naranja",
+        "Amarillo"
+      ],
+      "correctAnswer": "Naranja",
+      "explanation": "El naranja se obtiene tradicionalmente mezclando rojo y amarillo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-028",
+      "number": 28,
+      "topic": "Composición",
+      "concept": "composicion_figura_aparece_exactamente_igual_a_ambos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una figura aparece exactamente igual a ambos lados de un eje central. ¿Qué principio presenta?",
+      "options": [
+        "Contraste",
+        "Simetría",
+        "Profundidad",
+        "Movimiento"
+      ],
+      "correctAnswer": "Simetría",
+      "explanation": "La simetría implica correspondencia de formas respecto a un eje.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-029",
+      "number": 29,
+      "topic": "Composición",
+      "concept": "composicion_disenador_quiere_destacar_figura_roja_dentro",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un diseñador quiere destacar una figura roja dentro de una composición. ¿Qué fondo generaría mayor contraste?",
+      "options": [
+        "Naranja",
+        "Violeta",
+        "Verde",
+        "Rosado"
+      ],
+      "correctAnswer": "Verde",
+      "explanation": "Rojo y verde son colores complementarios y producen un contraste fuerte.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-030",
+      "number": 30,
+      "topic": "Música",
+      "concept": "musica_caracteristica_permite_distinguir_voz_grave_aguda",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica permite distinguir una voz grave de una aguda?",
+      "options": [
+        "Ritmo",
+        "Timbre",
+        "Altura",
+        "Intensidad"
+      ],
+      "correctAnswer": "Altura",
+      "explanation": "La altura permite distinguir sonidos graves y agudos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-031",
+      "number": 31,
+      "topic": "Música",
+      "concept": "musica_dos_musicos_tocan_misma_nota_igual",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos músicos tocan la misma nota con igual intensidad, uno con flauta y otro con violín. ¿Qué permite distinguirlos?",
+      "options": [
+        "Altura",
+        "Duración",
+        "Timbre",
+        "Intensidad"
+      ],
+      "correctAnswer": "Timbre",
+      "explanation": "El timbre permite identificar diferentes fuentes sonoras.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-032",
+      "number": 32,
+      "topic": "Instrumentos",
+      "concept": "instrumentos_instrumento_produce_sonido_mediante_aire",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál instrumento produce sonido principalmente mediante aire?",
+      "options": [
+        "Guitarra",
+        "Tambor",
+        "Flauta",
+        "Maraca"
+      ],
+      "correctAnswer": "Flauta",
+      "explanation": "En la flauta, una columna de aire participa en la producción del sonido. Más natural que preguntar simplemente por la “familia de viento”. Pregunta 37 — mejora",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-033",
+      "number": 33,
+      "topic": "Música",
+      "concept": "musica_cancion_mantiene_mismas_notas_pero_interpreta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una canción mantiene las mismas notas, pero se interpreta más rápido. ¿Qué cambió principalmente?",
+      "options": [
+        "Timbre",
+        "Tempo",
+        "Altura",
+        "Melodía"
+      ],
+      "correctAnswer": "Tempo",
+      "explanation": "El tempo indica la velocidad de ejecución musical.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-034",
+      "number": 34,
+      "topic": "Música",
+      "concept": "musica_musico_toca_primero_suavemente_luego_mucha",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un músico toca primero suavemente y luego con mucha fuerza, sin cambiar las notas. ¿Qué está modificando?",
+      "options": [
+        "Melodía",
+        "Intensidad",
+        "Altura",
+        "Duración"
+      ],
+      "correctAnswer": "Intensidad",
+      "explanation": "Cambiar de suave a fuerte modifica principalmente la intensidad.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-035",
+      "number": 35,
+      "topic": "Arte colombiano",
+      "concept": "artista_colombiano_botero",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál de estos artistas es colombiano?",
+      "options": [
+        "Pablo Picasso",
+        "Fernando Botero",
+        "Vincent van Gogh",
+        "Claude Monet"
+      ],
+      "correctAnswer": "Fernando Botero",
+      "explanation": "Fernando Botero fue un artista colombiano reconocido internacionalmente.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-036",
+      "number": 36,
+      "topic": "Danza",
+      "concept": "danza_dos_bailarines_realizan_movimientos_iguales_mismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos bailarines realizan movimientos iguales al mismo tiempo. ¿Qué característica presentan?",
+      "options": [
+        "Improvisación",
+        "Sincronización",
+        "Contraste",
+        "Perspectiva"
+      ],
+      "correctAnswer": "Sincronización",
+      "explanation": "Existe sincronización cuando las acciones se coordinan temporalmente.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-037",
+      "number": 37,
+      "topic": "Teatro",
+      "concept": "teatro_elemento_contiene_lo_dicen_personajes",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento contiene lo que dicen los personajes?",
+      "options": [
+        "Escenario",
+        "Vestuario",
+        "Diálogo",
+        "Utilería"
+      ],
+      "correctAnswer": "Diálogo",
+      "explanation": "El diálogo contiene las intervenciones verbales de los personajes.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-038",
+      "number": 38,
+      "topic": "Teatro",
+      "concept": "teatro_personaje_entra_temblando_habla_lentamente_evita",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un personaje entra temblando, habla lentamente y evita mirar a los demás. ¿Qué comunica principalmente?",
+      "options": [
+        "Escenografía",
+        "Caracterización",
+        "Iluminación",
+        "Argumento"
+      ],
+      "correctAnswer": "Caracterización",
+      "explanation": "Gestos, voz y comportamiento contribuyen a construir o caracterizar un personaje.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-039",
+      "number": 39,
+      "topic": "Teatro",
+      "concept": "teatro_escena_no_hay_dialogo_pero_publico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una escena no hay diálogo, pero el público comprende que un personaje está preocupado. ¿Qué recurso pudo comunicarlo mejor?",
+      "options": [
+        "Escenografía",
+        "Utilería",
+        "Gestualidad",
+        "Narración"
+      ],
+      "correctAnswer": "Gestualidad",
+      "explanation": "Los gestos y movimientos corporales pueden comunicar emociones sin palabras.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-040",
+      "number": 40,
+      "topic": "Tradición oral",
+      "concept": "tradicion_oral_historia_transmite_oralmente_durante_generaciones_mezcla",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una historia se transmite oralmente durante generaciones y mezcla acontecimientos con elementos fantásticos. ¿Qué corresponde mejor?",
+      "options": [
+        "Biografía",
+        "Reportaje",
+        "Leyenda",
+        "Instructivo"
+      ],
+      "correctAnswer": "Leyenda",
+      "explanation": "Las leyendas suelen transmitirse tradicionalmente y combinar referencias culturales o históricas con elementos fantásticos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-041",
+      "number": 41,
+      "topic": "Cultura colombiana",
+      "concept": "cultura_colombiana_ritmo_relaciona_region_pacifica_colombiana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál ritmo se relaciona principalmente con la región Pacífica colombiana?",
+      "options": [
+        "Joropo",
+        "Currulao",
+        "Vallenato",
+        "Bambuco"
+      ],
+      "correctAnswer": "Currulao",
+      "explanation": "El currulao constituye una importante expresión musical y dancística del Pacífico colombiano.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-042",
+      "number": 42,
+      "topic": "Cultura colombiana",
+      "concept": "cultura_colombiana_instrumento_caracteristico_muchas_expresiones_musicales_caribe",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál instrumento es característico de muchas expresiones musicales del Caribe colombiano?",
+      "options": [
+        "Arpa",
+        "Tiple",
+        "Gaita",
+        "Marimba"
+      ],
+      "correctAnswer": "Gaita",
+      "explanation": "Las gaitas tienen una presencia destacada en diversas músicas tradicionales del Caribe colombiano.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-043",
+      "number": 43,
+      "topic": "Música",
+      "concept": "silencio_musical",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué permite reconocer una pausa dentro de una pieza musical?",
+      "options": [
+        "Timbre",
+        "Altura",
+        "Silencio",
+        "Melodía"
+      ],
+      "correctAnswer": "Silencio",
+      "explanation": "El silencio también forma parte de la organización musical.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-044",
+      "number": 44,
+      "topic": "Patrimonio",
+      "concept": "patrimonio_edificio_historico_sufre_danos_pero_existen",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un edificio histórico sufre daños, pero existen planos y fotografías detalladas. ¿Para qué serían especialmente útiles?",
+      "options": [
+        "Comercializarlo",
+        "Modernizarlo",
+        "Restaurarlo",
+        "Trasladarlo"
+      ],
+      "correctAnswer": "Restaurarlo",
+      "explanation": "Los registros permiten conocer características anteriores y pueden orientar procesos de restauración.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-045",
+      "number": 45,
+      "topic": "Arte precolombino",
+      "concept": "orfebreria_precolombina",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué material fue utilizado por diferentes pueblos precolombinos de Colombia para elaborar piezas artísticas y ceremoniales?",
+      "options": [
+        "Plástico",
+        "Aluminio",
+        "Oro",
+        "Acero"
+      ],
+      "correctAnswer": "Oro",
+      "explanation": "Diferentes sociedades precolombinas desarrollaron importantes técnicas de orfebrería.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-046",
+      "number": 46,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_ritmo_solamente_existe_musica",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El ritmo solamente existe en la música.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "También puede existir ritmo visual, corporal y en otras manifestaciones artísticas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-047",
+      "number": 47,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_fotografia_puede_considerarse_manifestacion_artistica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una fotografía puede considerarse una manifestación artística.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La fotografía puede utilizar composición, intención y recursos expresivos propios del arte.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-048",
+      "number": 48,
+      "topic": "TRUE/FALSE",
+      "concept": "funcion_comunicativa_arte",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una obra artística puede comunicar ideas además de buscar belleza.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El arte puede comunicar ideas, emociones, críticas, historias y diferentes formas de comprender el mundo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-049",
+      "number": 49,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_obra_puede_tener_valor_cultural_aunque",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una obra puede tener valor cultural aunque esté hecha con materiales cotidianos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El valor cultural o artístico no depende exclusivamente del costo o rareza de sus materiales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-050",
+      "number": 50,
+      "topic": "Interpretación artística",
+      "concept": "interpretacion_artistica_pintura_usa_tonos_oscuros_figuras_inclinadas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pintura usa principalmente tonos oscuros y figuras inclinadas para crear tensión. ¿Qué interpretación está mejor sustentada?",
+      "options": [
+        "Representa necesariamente la noche",
+        "Fue pintada rápidamente",
+        "Busca generar inquietud",
+        "Tiene mayor valor económico"
+      ],
+      "correctAnswer": "Busca generar inquietud",
+      "explanation": "Los colores y la disposición de las figuras proporcionan evidencia visual para interpretar una sensación de tensión.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-051",
+      "number": 51,
+      "topic": "Arte colombiano",
+      "concept": "museo_oro_orfebreria",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué material se relacionan especialmente muchas piezas del Museo del Oro?",
+      "options": [
+        "Vidrio",
+        "Plástico",
+        "Metal",
+        "Papel"
+      ],
+      "correctAnswer": "Metal",
+      "explanation": "Su colección es especialmente reconocida por piezas de orfebrería de sociedades prehispánicas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-052",
+      "number": 52,
+      "topic": "Color",
+      "concept": "color_pareja_esta_formada_colores_primarios_tradicionales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál pareja está formada por colores primarios tradicionales?",
+      "options": [
+        "Verde y azul",
+        "Naranja y rojo",
+        "Rojo y azul",
+        "Violeta y amarillo"
+      ],
+      "correctAnswer": "Rojo y azul",
+      "explanation": "Rojo, amarillo y azul se consideran primarios en el modelo tradicional trabajado en artes.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-053",
+      "number": 53,
+      "topic": "Composición",
+      "concept": "composicion_afiche_hay_muchos_elementos_pero_sobresale",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un afiche hay muchos elementos, pero uno sobresale por su tamaño. ¿Qué se produce principalmente?",
+      "options": [
+        "Simetría",
+        "Jerarquía",
+        "Textura",
+        "Perspectiva"
+      ],
+      "correctAnswer": "Jerarquía",
+      "explanation": "La diferencia de tamaño puede establecer qué elemento se observa primero.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-054",
+      "number": 54,
+      "topic": "Color",
+      "concept": "color_ilustrador_quiere_transmitir_sensacion_frio_combinacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un ilustrador quiere transmitir sensación de frío. ¿Qué combinación sería más apropiada?",
+      "options": [
+        "Rojo y naranja",
+        "Amarillo y rojo",
+        "Azul y violeta",
+        "Naranja y amarillo"
+      ],
+      "correctAnswer": "Azul y violeta",
+      "explanation": "Azules y violetas suelen clasificarse como colores fríos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-055",
+      "number": 55,
+      "topic": "Artes visuales",
+      "concept": "artes_visuales_artista_repite_varias_veces_misma_forma",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista repite varias veces una misma forma en su obra. ¿Qué puede generar visualmente?",
+      "options": [
+        "Volumen",
+        "Perspectiva",
+        "Ritmo",
+        "Contorno"
+      ],
+      "correctAnswer": "Ritmo",
+      "explanation": "La repetición organizada de elementos puede producir ritmo visual.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-056",
+      "number": 56,
+      "topic": "Música",
+      "concept": "musica_elemento_organiza_sonidos_silencios_tiempo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento organiza los sonidos y silencios en el tiempo?",
+      "options": [
+        "Timbre",
+        "Altura",
+        "Intensidad",
+        "Ritmo"
+      ],
+      "correctAnswer": "Ritmo",
+      "explanation": "El ritmo organiza temporalmente sonidos y silencios.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-057",
+      "number": 57,
+      "topic": "Música",
+      "concept": "musica_dos_sonidos_tienen_igual_duracion_e",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos sonidos tienen igual duración e intensidad, pero uno es grave y otro agudo. ¿Qué cambia?",
+      "options": [
+        "Timbre",
+        "Altura",
+        "Ritmo",
+        "Volumen"
+      ],
+      "correctAnswer": "Altura",
+      "explanation": "La altura permite diferenciar sonidos graves y agudos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-058",
+      "number": 58,
+      "topic": "Música",
+      "concept": "musica_estudiante_golpea_mesa_siguiendo_regularmente_fuerte",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante golpea una mesa siguiendo regularmente: fuerte-suave-suave, fuerte-suave-suave. ¿Qué está creando?",
+      "options": [
+        "Timbre",
+        "Ritmo",
+        "Altura",
+        "Melodía"
+      ],
+      "correctAnswer": "Ritmo",
+      "explanation": "La repetición temporal de un patrón de golpes constituye un ritmo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-059",
+      "number": 59,
+      "topic": "Instrumentos",
+      "concept": "instrumentos_pareja_pertenece_a_misma_familia_instrumental",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál pareja pertenece principalmente a la misma familia instrumental?",
+      "options": [
+        "Flauta y tambor",
+        "Trompeta y arpa",
+        "Maraca y clarinete",
+        "Violín y guitarra"
+      ],
+      "correctAnswer": "Violín y guitarra",
+      "explanation": "Violín y guitarra producen sonido principalmente mediante cuerdas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-060",
+      "number": 60,
+      "topic": "Música colombiana",
+      "concept": "musica_colombiana_instrumento_asocia_especialmente_musicas_tradicionales_pacifico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento se asocia especialmente con músicas tradicionales del Pacífico colombiano?",
+      "options": [
+        "Acordeón",
+        "Marimba",
+        "Arpa",
+        "Tiple"
+      ],
+      "correctAnswer": "Marimba",
+      "explanation": "La marimba tiene una importante presencia en expresiones musicales tradicionales del Pacífico colombiano.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-061",
+      "number": 61,
+      "topic": "Cultura artística",
+      "concept": "funcion_museo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Dónde es más probable encontrar una colección permanente de pinturas históricas?",
+      "options": [
+        "Estadio",
+        "Aeropuerto",
+        "Gimnasio",
+        "Museo"
+      ],
+      "correctAnswer": "Museo",
+      "explanation": "Los museos pueden conservar y exhibir colecciones artísticas e históricas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-062",
+      "number": 62,
+      "topic": "Danza",
+      "concept": "danza_danza_utiliza_movimientos_rapidos_coinciden_cambios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una danza utiliza movimientos rápidos que coinciden con cambios rápidos de la música. ¿Qué relación se evidencia?",
+      "options": [
+        "Color y textura",
+        "Espacio y volumen",
+        "Forma y contraste",
+        "Movimiento y ritmo"
+      ],
+      "correctAnswer": "Movimiento y ritmo",
+      "explanation": "Los movimientos pueden organizarse de acuerdo con el ritmo musical.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-063",
+      "number": 63,
+      "topic": "Danza",
+      "concept": "danza_cuatro_bailarines_deben_realizar_figura_mismo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Cuatro bailarines deben realizar una figura al mismo tiempo. ¿Qué necesitan principalmente?",
+      "options": [
+        "Improvisación",
+        "Contraste",
+        "Escenografía",
+        "Sincronización"
+      ],
+      "correctAnswer": "Sincronización",
+      "explanation": "La sincronización permite coordinar acciones en un mismo momento.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-064",
+      "number": 64,
+      "topic": "Teatro",
+      "concept": "teatro_actor_cambia_manera_caminar_hablar_representar",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un actor cambia su manera de caminar y hablar para representar a un anciano. ¿Qué está construyendo?",
+      "options": [
+        "Escenario",
+        "Argumento",
+        "Público",
+        "Personaje"
+      ],
+      "correctAnswer": "Personaje",
+      "explanation": "Los recursos corporales y vocales ayudan al actor a construir un personaje.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-065",
+      "number": 65,
+      "topic": "Teatro",
+      "concept": "teatro_durante_escena_luces_cambian_claras_a",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Durante una escena, las luces cambian de claras a oscuras justo cuando aparece un peligro. ¿Qué función cumplen?",
+      "options": [
+        "Cambiar el diálogo",
+        "Definir el vestuario",
+        "Reemplazar al actor",
+        "Crear ambiente"
+      ],
+      "correctAnswer": "Crear ambiente",
+      "explanation": "La iluminación puede reforzar el ambiente y las emociones de una escena.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-066",
+      "number": 66,
+      "topic": "Literatura oral",
+      "concept": "literatura_oral_caracteristica_permite_diferenciar_mejor_mito_noticia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica permite diferenciar mejor un mito de una noticia?",
+      "options": [
+        "Presencia de personajes",
+        "Uso de palabras",
+        "Relato de sucesos",
+        "Explicación simbólica"
+      ],
+      "correctAnswer": "Explicación simbólica",
+      "explanation": "El mito puede explicar simbólicamente orígenes o fenómenos mediante relatos tradicionales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-067",
+      "number": 67,
+      "topic": "Tradición oral",
+      "concept": "tradicion_oral_abuela_cuenta_a_nietos_historia_escucho",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una abuela cuenta a sus nietos una historia que escuchó de sus propios abuelos. ¿Qué proceso ocurre?",
+      "options": [
+        "Producción industrial",
+        "Restauración artística",
+        "Representación gráfica",
+        "Transmisión oral"
+      ],
+      "correctAnswer": "Transmisión oral",
+      "explanation": "El relato se conserva y transmite principalmente mediante la palabra hablada.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-068",
+      "number": 68,
+      "topic": "Cultura",
+      "concept": "comparacion_practicas_culturales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos comunidades utilizan instrumentos diferentes para interpretar canciones con funciones similares en sus celebraciones. ¿Qué permite comparar esto?",
+      "options": [
+        "Sus límites geográficos",
+        "Sus tamaños poblacionales",
+        "Sus sistemas políticos",
+        "Sus prácticas culturales"
+      ],
+      "correctAnswer": "Sus prácticas culturales",
+      "explanation": "Las expresiones musicales permiten comparar prácticas culturales entre comunidades.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-069",
+      "number": 69,
+      "topic": "Artesanía",
+      "concept": "artesania_dos_vasijas_tienen_misma_funcion_pero",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos vasijas tienen la misma función, pero una fue elaborada manualmente con técnicas tradicionales. ¿Qué la distingue principalmente?",
+      "options": [
+        "Su capacidad",
+        "Su utilidad",
+        "Su forma circular",
+        "Su proceso de elaboración"
+      ],
+      "correctAnswer": "Su proceso de elaboración",
+      "explanation": "El proceso y las técnicas tradicionales son elementos centrales de una producción artesanal.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-070",
+      "number": 70,
+      "topic": "Cultura",
+      "concept": "cultura_misma_cancion_tradicional_presenta_versiones_distintas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una misma canción tradicional presenta versiones distintas en dos comunidades. ¿Qué explica mejor esta situación?",
+      "options": [
+        "Error musical",
+        "Pérdida automática",
+        "Copia industrial",
+        "Adaptación cultural"
+      ],
+      "correctAnswer": "Adaptación cultural",
+      "explanation": "Las expresiones culturales pueden adquirir variaciones al transmitirse entre comunidades y generaciones.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-071",
+      "number": 71,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_textura_puede_representarse_visualmente_dibujo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La textura puede representarse visualmente en un dibujo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Líneas, puntos y otros recursos pueden sugerir visualmente diferentes texturas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-072",
+      "number": 72,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_objeto_pequeno_dibujo_necesariamente_pequeno_realidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un objeto más pequeño en un dibujo necesariamente es más pequeño en la realidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El tamaño representado también puede utilizarse para mostrar distancia o profundidad.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-073",
+      "number": 73,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_danza_puede_transmitir_informacion_cultura_comunidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una danza puede transmitir información sobre la cultura de una comunidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las danzas pueden expresar tradiciones, historias, prácticas e identidades culturales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-074",
+      "number": 74,
+      "topic": "TRUE/FALSE",
+      "concept": "material_mensaje_artistico",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una obra creada con materiales reciclados puede comunicar una idea sobre el ambiente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La selección de materiales también puede formar parte del mensaje de una obra.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-075",
+      "number": 75,
+      "topic": "Interpretación artística",
+      "concept": "interpretacion_artistica_dos_afiches_anuncian_mismo_evento_permite",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos afiches anuncian el mismo evento. Uno permite identificar la información importante mucho más rápido. ¿Qué característica probablemente maneja mejor?",
+      "options": [
+        "Textura visual",
+        "Simetría radial",
+        "Volumen aparente",
+        "Jerarquía visual"
+      ],
+      "correctAnswer": "Jerarquía visual",
+      "explanation": "Una buena jerarquía visual ayuda a reconocer primero la información más importante.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-076",
+      "number": 76,
+      "topic": "Arte ancestral",
+      "concept": "arte_como_fuente_cultural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Las figuras y diseños presentes en objetos antiguos pueden servir para estudiar:",
+      "options": [
+        "El clima actual",
+        "La tecnología moderna",
+        "El tráfico urbano",
+        "Su cultura"
+      ],
+      "correctAnswer": "Su cultura",
+      "explanation": "Los objetos antiguos pueden aportar información sobre las sociedades que los produjeron.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-077",
+      "number": 77,
+      "topic": "Patrimonio",
+      "concept": "patrimonio_ejemplo_patrimonio_material",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es un ejemplo de patrimonio material?",
+      "options": [
+        "Una danza",
+        "Una leyenda",
+        "Una catedral",
+        "Una canción"
+      ],
+      "correctAnswer": "Una catedral",
+      "explanation": "Una construcción histórica es un bien cultural material.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-078",
+      "number": 78,
+      "topic": "Arquitectura",
+      "concept": "arquitectura_edificio_tiene_arcos_columnas_grandes_espacios",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un edificio tiene arcos, columnas y grandes espacios interiores. ¿A qué manifestación artística pertenece principalmente?",
+      "options": [
+        "Escultura",
+        "Arquitectura",
+        "Fotografía",
+        "Pintura"
+      ],
+      "correctAnswer": "Arquitectura",
+      "explanation": "La arquitectura comprende el diseño y construcción de espacios y edificaciones.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-079",
+      "number": 79,
+      "topic": "Patrimonio",
+      "concept": "patrimonio_escultura_historica_ubicada_aire_libre_comienza",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura histórica ubicada al aire libre comienza a deteriorarse por la lluvia. ¿Qué acción favorece mejor su conservación?",
+      "options": [
+        "Cambiar su diseño",
+        "Pintarla libremente",
+        "Ocultar sus daños",
+        "Evaluar su estado"
+      ],
+      "correctAnswer": "Evaluar su estado",
+      "explanation": "Antes de intervenir un bien patrimonial es necesario conocer su estado de conservación.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-080",
+      "number": 80,
+      "topic": "Arte ancestral",
+      "concept": "arte_ancestral_conocer_comunidad_antigua_representaba_animales_fuente",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Para conocer cómo una comunidad antigua representaba animales, ¿qué fuente sería más útil?",
+      "options": [
+        "Un mapa actual",
+        "Una noticia reciente",
+        "Un anuncio comercial",
+        "Sus cerámicas"
+      ],
+      "correctAnswer": "Sus cerámicas",
+      "explanation": "Las piezas producidas por una comunidad pueden aportar información sobre sus representaciones culturales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-081",
+      "number": 81,
+      "topic": "Música colombiana",
+      "concept": "musica_colombiana_instrumento_tiene_relacion_especialmente_fuerte_vallenato",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento tiene una relación especialmente fuerte con el vallenato?",
+      "options": [
+        "Marimba",
+        "Arpa",
+        "Flauta",
+        "Acordeón"
+      ],
+      "correctAnswer": "Acordeón",
+      "explanation": "El acordeón es uno de los instrumentos característicos del vallenato.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-082",
+      "number": 82,
+      "topic": "Cultura colombiana",
+      "concept": "carnaval_barranquilla_manifestaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "El Carnaval de Barranquilla integra principalmente:",
+      "options": [
+        "Pintura, cálculo y deporte",
+        "Arquitectura, física y cine",
+        "Escultura, astronomía y teatro",
+        "Música, danza y tradición"
+      ],
+      "correctAnswer": "Música, danza y tradición",
+      "explanation": "El Carnaval reúne numerosas expresiones musicales, dancísticas y tradicionales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-083",
+      "number": 83,
+      "topic": "Música colombiana",
+      "concept": "musica_colombiana_region_asocia_tradicionalmente_bambuco",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué región se asocia tradicionalmente el bambuco?",
+      "options": [
+        "Caribe",
+        "Insular",
+        "Orinoquía",
+        "Andina"
+      ],
+      "correctAnswer": "Andina",
+      "explanation": "El bambuco tiene una importante relación histórica con la región Andina colombiana.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-084",
+      "number": 84,
+      "topic": "Cultura colombiana",
+      "concept": "cultura_colombiana_presentacion_aparecen_marimba_cununos_cantos_tradicionales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una presentación aparecen marimba, cununos y cantos tradicionales. ¿Qué región colombiana está mejor representada?",
+      "options": [
+        "Andina",
+        "Orinoquía",
+        "Amazónica",
+        "Pacífica"
+      ],
+      "correctAnswer": "Pacífica",
+      "explanation": "Estos instrumentos y expresiones tienen una fuerte relación con músicas tradicionales del Pacífico.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-085",
+      "number": 85,
+      "topic": "Danza",
+      "concept": "espacio_en_danza",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un bailarín cambia de dirección, nivel y ubicación durante una presentación. ¿Qué elemento está utilizando?",
+      "options": [
+        "Timbre",
+        "Textura",
+        "Color",
+        "Espacio"
+      ],
+      "correctAnswer": "Espacio",
+      "explanation": "En la danza, el cuerpo utiliza y transforma el espacio mediante sus movimientos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-086",
+      "number": 86,
+      "topic": "Arte universal",
+      "concept": "arte_universal_manifestacion_artistica_trabaja_formas_tridimensionales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál manifestación artística trabaja principalmente con formas tridimensionales?",
+      "options": [
+        "Pintura",
+        "Escultura",
+        "Dibujo",
+        "Fotografía"
+      ],
+      "correctAnswer": "Escultura",
+      "explanation": "La escultura trabaja principalmente con volumen y formas tridimensionales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-087",
+      "number": 87,
+      "topic": "Escultura",
+      "concept": "escultura_artista_quiere_crear_obra_pueda_observarse",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista quiere crear una obra que pueda observarse desde diferentes lados. ¿Qué opción sería más adecuada?",
+      "options": [
+        "Fotografía",
+        "Dibujo",
+        "Grabado",
+        "Escultura"
+      ],
+      "correctAnswer": "Escultura",
+      "explanation": "Una escultura tridimensional puede observarse desde diferentes puntos de vista.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-088",
+      "number": 88,
+      "topic": "Artes visuales",
+      "concept": "artes_visuales_retrato_muestra_cabeza_demasiado_grande_respecto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un retrato muestra una cabeza demasiado grande respecto al cuerpo sin intención artística. ¿Qué aspecto presenta un problema?",
+      "options": [
+        "Textura",
+        "Ritmo",
+        "Contraste",
+        "Proporción"
+      ],
+      "correctAnswer": "Proporción",
+      "explanation": "La proporción se refiere a la relación de tamaño entre las partes.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-089",
+      "number": 89,
+      "topic": "Fotografía",
+      "concept": "fotografia_fotografo_cambia_posicion_desde_toma_imagen",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un fotógrafo cambia la posición desde donde toma una imagen. ¿Qué modifica principalmente?",
+      "options": [
+        "Patrimonio",
+        "Ritmo musical",
+        "Material",
+        "Punto de vista"
+      ],
+      "correctAnswer": "Punto de vista",
+      "explanation": "Cambiar la posición de la cámara modifica el punto de vista de la imagen.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-090",
+      "number": 90,
+      "topic": "Fotografía",
+      "concept": "fotografia_dos_fotografias_muestran_mismo_objeto_lo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos fotografías muestran el mismo objeto. Una lo hace parecer enorme porque fue tomada muy cerca y desde abajo. ¿Qué influyó principalmente?",
+      "options": [
+        "Textura real",
+        "Edad del objeto",
+        "Material original",
+        "Punto de vista"
+      ],
+      "correctAnswer": "Punto de vista",
+      "explanation": "La posición y el ángulo de la cámara pueden cambiar la percepción visual de un objeto.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-091",
+      "number": 91,
+      "topic": "Teatro",
+      "concept": "teatro_recurso_permite_cambiar_rapidamente_apariencia_personaje",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso permite cambiar rápidamente la apariencia de un personaje sin modificar el escenario?",
+      "options": [
+        "Escenografía",
+        "Iluminación",
+        "Argumento",
+        "Vestuario"
+      ],
+      "correctAnswer": "Vestuario",
+      "explanation": "El vestuario contribuye a representar visualmente las características de un personaje.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-092",
+      "number": 92,
+      "topic": "Teatro",
+      "concept": "teatro_actor_dice_estoy_feliz_pero_habla",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un actor dice «estoy feliz», pero habla en tono triste y mantiene la mirada baja. ¿Qué genera principalmente?",
+      "options": [
+        "Contradicción expresiva",
+        "Cambio de escenario",
+        "Cambio de personaje",
+        "Ritmo visual"
+      ],
+      "correctAnswer": "Contradicción expresiva",
+      "explanation": "Las palabras y la expresión corporal o vocal transmiten mensajes diferentes.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-093",
+      "number": 93,
+      "topic": "Cultura",
+      "concept": "cultura_comunidad_quiere_conocer_vestian_antepasados_fuente",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad quiere conocer cómo vestían sus antepasados. ¿Qué fuente sería más útil?",
+      "options": [
+        "Fotografías antiguas",
+        "Pronóstico del tiempo",
+        "Mapa de carreteras",
+        "Tabla de precios"
+      ],
+      "correctAnswer": "Fotografías antiguas",
+      "explanation": "Las fotografías históricas pueden aportar evidencia visual sobre vestuario y costumbres.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-094",
+      "number": 94,
+      "topic": "Interpretación",
+      "concept": "interpretacion_pintura_muestra_arboles_inclinados_nubes_oscuras",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pintura muestra árboles inclinados, nubes oscuras y personas corriendo. ¿Qué interpretación tiene mayor apoyo visual?",
+      "options": [
+        "Se aproxima una tormenta",
+        "Comienza una celebración",
+        "Es un día tranquilo",
+        "Termina una competencia"
+      ],
+      "correctAnswer": "Se aproxima una tormenta",
+      "explanation": "Los elementos representados aportan evidencias compatibles con la llegada de una tormenta.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-095",
+      "number": 95,
+      "topic": "Cultura universal",
+      "concept": "cultura_universal_obra_representa_escenas_personajes_mediante_movimientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra representa escenas y personajes mediante movimientos, música y actuación, pero no utiliza diálogo hablado. ¿Qué sigue siendo fundamental?",
+      "options": [
+        "Expresión corporal",
+        "Texto escrito",
+        "Narración oral",
+        "Lectura pública"
+      ],
+      "correctAnswer": "Expresión corporal",
+      "explanation": "El cuerpo puede comunicar acciones, emociones e ideas sin necesidad de diálogo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-096",
+      "number": 96,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_arquitectura_puede_considerarse_manifestacion_artistica",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La arquitectura puede considerarse una manifestación artística.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La arquitectura puede integrar función, diseño, técnica y expresión estética.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-097",
+      "number": 97,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_fotografia_siempre_muestra_realidad_manera_completamente",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una fotografía siempre muestra la realidad de manera completamente neutral.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El encuadre, el momento y el punto de vista influyen en lo que muestra una fotografía.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-098",
+      "number": 98,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_vestuario_puede_aportar_informacion_personaje_teatral",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El vestuario puede aportar información sobre un personaje teatral.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Puede comunicar época, ocupación, características o contexto del personaje.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-099",
+      "number": 99,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_si_pintura_representa_hecho_historico_si",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una pintura representa un hecho histórico, por sí sola demuestra exactamente cómo ocurrió.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Una obra artística puede ofrecer una representación o interpretación y debe contrastarse con otras fuentes.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-100",
+      "number": 100,
+      "topic": "Arte y ambiente",
+      "concept": "volumen_escultura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura pública fue diseñada para observarse mientras las personas caminan alrededor de ella. ¿Qué característica resulta importante?",
+      "options": [
+        "Volumen",
+        "Ortografía",
+        "Melodía",
+        "Narración"
+      ],
+      "correctAnswer": "Volumen",
+      "explanation": "El volumen permite que una obra tridimensional pueda apreciarse desde distintos puntos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-101",
+      "number": 101,
+      "topic": "Artes visuales",
+      "concept": "artes_visuales_dibujo_utiliza_lineas_horizontales_formas_estables",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un dibujo utiliza principalmente líneas horizontales y formas estables. ¿Qué sensación puede reforzar?",
+      "options": [
+        "Calma",
+        "Velocidad",
+        "Caos",
+        "Tensión"
+      ],
+      "correctAnswer": "Calma",
+      "explanation": "Las líneas horizontales suelen asociarse visualmente con estabilidad y reposo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-102",
+      "number": 102,
+      "topic": "Formas",
+      "concept": "formas_figura_corresponde_a_forma_geometrica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál figura corresponde a una forma geométrica?",
+      "options": [
+        "Triángulo",
+        "Nube",
+        "Hoja",
+        "Mancha"
+      ],
+      "correctAnswer": "Triángulo",
+      "explanation": "El triángulo es una forma geométrica definida.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-103",
+      "number": 103,
+      "topic": "Formas",
+      "concept": "formas_artista_representa_arboles_mediante_figuras_irregulares",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista representa árboles mediante figuras irregulares inspiradas en la naturaleza. ¿Qué tipo de formas utiliza?",
+      "options": [
+        "Orgánicas",
+        "Geométricas",
+        "Simétricas",
+        "Numéricas"
+      ],
+      "correctAnswer": "Orgánicas",
+      "explanation": "Las formas orgánicas suelen ser irregulares y estar relacionadas con elementos naturales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-104",
+      "number": 104,
+      "topic": "Composición",
+      "concept": "composicion_afiche_tiene_textos_imagenes_colores_compitiendo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un afiche tiene textos, imágenes y colores compitiendo por llamar la atención al mismo tiempo. ¿Qué problema presenta principalmente?",
+      "options": [
+        "Jerarquía visual",
+        "Perspectiva lineal",
+        "Textura táctil",
+        "Simetría axial"
+      ],
+      "correctAnswer": "Jerarquía visual",
+      "explanation": "Sin una jerarquía clara resulta difícil reconocer qué información debe observarse primero.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-105",
+      "number": 105,
+      "topic": "Color",
+      "concept": "color_ocurre_anadir_blanco_progresivamente_a_color",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurre al añadir blanco progresivamente a un color?",
+      "options": [
+        "Se aclara",
+        "Se complementa",
+        "Se invierte",
+        "Se neutraliza"
+      ],
+      "correctAnswer": "Se aclara",
+      "explanation": "Añadir blanco permite obtener valores más claros del color.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-106",
+      "number": 106,
+      "topic": "Color",
+      "concept": "color_grupo_contiene_colores_calidos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál grupo contiene principalmente colores cálidos?",
+      "options": [
+        "Rojo, naranja, amarillo",
+        "Azul, verde, violeta",
+        "Azul, celeste, verde",
+        "Violeta, azul, celeste"
+      ],
+      "correctAnswer": "Rojo, naranja, amarillo",
+      "explanation": "Rojos, naranjas y amarillos suelen clasificarse como colores cálidos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-107",
+      "number": 107,
+      "topic": "Diseño",
+      "concept": "diseno_aviso_debe_poder_leerse_rapidamente_desde",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un aviso debe poder leerse rápidamente desde lejos. ¿Qué característica conviene priorizar?",
+      "options": [
+        "Legibilidad",
+        "Textura",
+        "Simetría",
+        "Volumen"
+      ],
+      "correctAnswer": "Legibilidad",
+      "explanation": "La legibilidad facilita reconocer y comprender el texto rápidamente.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-108",
+      "number": 108,
+      "topic": "Música",
+      "concept": "musica_denomina_sucesion_organizada_sonidos_podemos_reconocer",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se denomina una sucesión organizada de sonidos que podemos reconocer musicalmente?",
+      "options": [
+        "Melodía",
+        "Textura",
+        "Escena",
+        "Perspectiva"
+      ],
+      "correctAnswer": "Melodía",
+      "explanation": "Una melodía es una sucesión organizada de sonidos con sentido musical.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-109",
+      "number": 109,
+      "topic": "Música",
+      "concept": "armonia_basica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una canción tiene varias voces que suenan simultáneamente de forma organizada. ¿Qué elemento aparece?",
+      "options": [
+        "Armonía",
+        "Perspectiva",
+        "Simetría",
+        "Escala visual"
+      ],
+      "correctAnswer": "Armonía",
+      "explanation": "La armonía se relaciona con la combinación simultánea y organizada de sonidos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-110",
+      "number": 110,
+      "topic": "Música",
+      "concept": "musica_dos_grupos_interpretan_misma_cancion_instrumentos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos grupos interpretan la misma canción con instrumentos diferentes. ¿Qué elemento permite reconocer que sigue siendo la misma canción?",
+      "options": [
+        "Melodía",
+        "Timbre",
+        "Intensidad",
+        "Instrumentación"
+      ],
+      "correctAnswer": "Melodía",
+      "explanation": "La melodía puede mantenerse aunque cambien los instrumentos y sus timbres.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-111",
+      "number": 111,
+      "topic": "Expresión corporal",
+      "concept": "expresion_corporal_actor_permanece_silencio_pero_retrocede_ver",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un actor permanece en silencio, pero retrocede al ver entrar a otro personaje. ¿Qué comunica principalmente la acción?",
+      "options": [
+        "Reacción corporal",
+        "Cambio musical",
+        "Cambio escénico",
+        "Narración escrita"
+      ],
+      "correctAnswer": "Reacción corporal",
+      "explanation": "El movimiento corporal puede comunicar una reacción sin necesidad de palabras.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-112",
+      "number": 112,
+      "topic": "Teatro",
+      "concept": "teatro_publico_escucha_pasos_antes_aparezca_personaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "El público escucha pasos antes de que aparezca un personaje. ¿Qué recurso crea expectativa?",
+      "options": [
+        "Sonido",
+        "Vestuario",
+        "Maquillaje",
+        "Escenografía"
+      ],
+      "correctAnswer": "Sonido",
+      "explanation": "Un efecto sonoro puede anticipar una acción o presencia que todavía no se observa.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-113",
+      "number": 113,
+      "topic": "Teatro",
+      "concept": "teatro_indicacion_pertenece_a_acotacion_teatral",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué indicación pertenece principalmente a una acotación teatral?",
+      "options": [
+        "«Entra lentamente»",
+        "«¿Dónde estabas?»",
+        "«No lo recuerdo»",
+        "«Volveré mañana»"
+      ],
+      "correctAnswer": "«Entra lentamente»",
+      "explanation": "Las acotaciones orientan acciones, movimientos u otros aspectos de la representación.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-114",
+      "number": 114,
+      "topic": "Narración",
+      "concept": "narracion_relato_comienza_final_despues_muestra_ocurrieron",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un relato comienza con el final y después muestra cómo ocurrieron los hechos. ¿Qué cambió principalmente?",
+      "options": [
+        "Orden temporal",
+        "Tipo de personaje",
+        "Lugar del relato",
+        "Tema principal"
+      ],
+      "correctAnswer": "Orden temporal",
+      "explanation": "Los acontecimientos no necesariamente tienen que narrarse en orden cronológico.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-115",
+      "number": 115,
+      "topic": "Literatura oral",
+      "concept": "literatura_oral_caracteristica_ayuda_especialmente_a_conservar_oralmente",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál característica ayuda especialmente a conservar oralmente un poema o canción tradicional?",
+      "options": [
+        "Repetición",
+        "Perspectiva",
+        "Volumen",
+        "Escenografía"
+      ],
+      "correctAnswer": "Repetición",
+      "explanation": "Las repeticiones y patrones pueden facilitar la memorización y transmisión oral.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-116",
+      "number": 116,
+      "topic": "Técnicas artísticas",
+      "concept": "tecnicas_artisticas_tecnica_utiliza_pigmentos_aplicados_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica utiliza principalmente pigmentos aplicados sobre una superficie?",
+      "options": [
+        "Pintura",
+        "Escultura",
+        "Danza",
+        "Teatro"
+      ],
+      "correctAnswer": "Pintura",
+      "explanation": "La pintura utiliza pigmentos para producir imágenes sobre diferentes superficies.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-117",
+      "number": 117,
+      "topic": "Técnicas artísticas",
+      "concept": "tecnicas_artisticas_imagen_forma_pegando_recortes_distintos_materiales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una imagen se forma pegando recortes de distintos materiales. ¿Qué técnica se utiliza?",
+      "options": [
+        "Collage",
+        "Grabado",
+        "Modelado",
+        "Acuarela"
+      ],
+      "correctAnswer": "Collage",
+      "explanation": "El collage combina y pega diferentes materiales sobre una superficie.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-118",
+      "number": 118,
+      "topic": "Escultura",
+      "concept": "escultura_estudiante_da_forma_a_figura_utilizando",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante da forma a una figura utilizando arcilla blanda. ¿Qué procedimiento realiza?",
+      "options": [
+        "Modelado",
+        "Grabado",
+        "Collage",
+        "Tejido"
+      ],
+      "correctAnswer": "Modelado",
+      "explanation": "El modelado consiste en dar forma a materiales maleables como la arcilla.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-119",
+      "number": 119,
+      "topic": "Técnicas",
+      "concept": "tecnicas_artista_quiere_producir_varias_copias_imagen",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista quiere producir varias copias de una imagen a partir de una matriz. ¿Qué técnica resulta más apropiada?",
+      "options": [
+        "Grabado",
+        "Modelado",
+        "Collage",
+        "Escultura"
+      ],
+      "correctAnswer": "Grabado",
+      "explanation": "El grabado permite obtener impresiones a partir de una matriz preparada.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-120",
+      "number": 120,
+      "topic": "Cultura",
+      "concept": "cultura_cancion_incorpora_elementos_musicales_dos_tradiciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una canción incorpora elementos musicales de dos tradiciones diferentes. ¿Qué concepto describe mejor el resultado?",
+      "options": [
+        "Fusión cultural",
+        "Restauración",
+        "Simetría",
+        "Perspectiva"
+      ],
+      "correctAnswer": "Fusión cultural",
+      "explanation": "Una fusión combina elementos procedentes de diferentes tradiciones o estilos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-121",
+      "number": 121,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_collage_puede_combinar_materiales_diferentes_misma",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El collage puede combinar materiales diferentes en una misma obra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Precisamente una característica del collage es combinar distintos elementos o materiales.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-122",
+      "number": 122,
+      "topic": "TRUE/FALSE",
+      "concept": "uso_expresivo_silencio",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El silencio puede utilizarse intencionalmente dentro de una obra musical.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los silencios forman parte de la organización y expresión musical.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-123",
+      "number": 123,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_efectos_sonido_pueden_aportar_informacion_obra",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los efectos de sonido pueden aportar información en una obra teatral.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los sonidos pueden indicar acciones, lugares, ambientes o acontecimientos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-124",
+      "number": 124,
+      "topic": "TRUE/FALSE",
+      "concept": "true_false_imagen_llamativa_garantiza_mensaje_sea_facil",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una imagen llamativa garantiza que su mensaje sea fácil de comprender.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Una imagen puede llamar la atención y, aun así, presentar problemas de organización o claridad.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-125",
+      "number": 125,
+      "topic": "Interpretación visual",
+      "concept": "interpretacion_visual_cartel_utiliza_letras_amarillas_fondo_blanco",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cartel utiliza letras amarillas sobre un fondo blanco y cuesta leerlo. ¿Qué debería mejorarse principalmente?",
+      "options": [
+        "Contraste",
+        "Ritmo",
+        "Perspectiva",
+        "Volumen"
+      ],
+      "correctAnswer": "Contraste",
+      "explanation": "Aumentar el contraste entre texto y fondo facilita distinguir las letras.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "source_pdf_corrected"
+    },
+    {
+      "id": "ART6-126",
+      "number": 126,
+      "topic": "Arte universal",
+      "concept": "autor_mona_lisa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Quién pintó *La Mona Lisa*?",
+      "options": [
+        "Pablo Picasso",
+        "Leonardo da Vinci",
+        "Claude Monet",
+        "Miguel Ángel"
+      ],
+      "correctAnswer": "Leonardo da Vinci",
+      "explanation": "Leonardo da Vinci pintó *La Mona Lisa*.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-127",
+      "number": 127,
+      "topic": "Arte público — TRUE/FALSE",
+      "concept": "mural_espacio_publico",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un mural puede realizarse sobre una pared exterior.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los murales pueden ocupar muros interiores o exteriores.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-128",
+      "number": 128,
+      "topic": "Arte universal",
+      "concept": "autor_noche_estrellada",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Quién pintó *La noche estrellada*?",
+      "options": [
+        "Claude Monet",
+        "Pablo Picasso",
+        "Salvador Dalí",
+        "Vincent van Gogh"
+      ],
+      "correctAnswer": "Vincent van Gogh",
+      "explanation": "Vincent van Gogh pintó *La noche estrellada* en 1889.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-129",
+      "number": 129,
+      "topic": "Arte colombiano",
+      "concept": "estilo_visual_botero",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué rasgo visual se asocia especialmente con muchas obras de Fernando Botero?",
+      "options": [
+        "Figuras voluminosas",
+        "Perspectiva geométrica",
+        "Pincelada impresionista",
+        "Formas cubistas fragmentadas"
+      ],
+      "correctAnswer": "Figuras voluminosas",
+      "explanation": "Botero desarrolló un estilo reconocible por sus volúmenes amplios.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-130",
+      "number": 130,
+      "topic": "Patrimonio colombiano",
+      "concept": "fortificaciones_cartagena",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué rasgo de Cartagena destaca en su centro histórico?",
+      "options": [
+        "Canales prehispánicos",
+        "Templos de madera",
+        "Fortificaciones coloniales",
+        "Murales rupestres"
+      ],
+      "correctAnswer": "Fortificaciones coloniales",
+      "explanation": "Las murallas y fortificaciones forman parte destacada del patrimonio arquitectónico de Cartagena.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-131",
+      "number": 131,
+      "topic": "Composición visual",
+      "concept": "espacio_negativo_aislamiento",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ilustración deja amplio espacio vacío alrededor de una figura pequeña. ¿Qué efecto puede producir?",
+      "options": [
+        "Dinamismo",
+        "Equilibrio",
+        "Profundidad",
+        "Aislamiento visual"
+      ],
+      "correctAnswer": "Aislamiento visual",
+      "explanation": "El espacio vacío puede hacer que una figura parezca aislada o atraer la atención hacia ella.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-132",
+      "number": 132,
+      "topic": "Historieta",
+      "concept": "secuencia_visual_narrativa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una historieta, varias viñetas ordenadas muestran una acción sin texto. ¿Qué comunican principalmente?",
+      "options": [
+        "Una escala cromática",
+        "Una secuencia narrativa",
+        "Una ficha técnica",
+        "Una composición simétrica"
+      ],
+      "correctAnswer": "Una secuencia narrativa",
+      "explanation": "La sucesión de imágenes permite representar acciones y contar una historia visualmente.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-133",
+      "number": 133,
+      "topic": "Lectura de imágenes",
+      "concept": "escala_relativa_en_composicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un personaje aparece diminuto frente a un edificio enorme. ¿Qué recurso visual cambia entre ambos?",
+      "options": [
+        "Escala",
+        "Textura",
+        "Simetría",
+        "Ritmo"
+      ],
+      "correctAnswer": "Escala",
+      "explanation": "El tamaño relativo de los elementos corresponde a la escala y puede crear una sensación de pequeñez frente al entorno.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-134",
+      "number": 134,
+      "topic": "Arte universal — TRUE/FALSE",
+      "concept": "david_escultura",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El *David* de Miguel Ángel es una escultura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Miguel Ángel realizó el *David* como una escultura de mármol.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-135",
+      "number": 135,
+      "topic": "Cine — TRUE/FALSE",
+      "concept": "lenguajes_del_cine",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una película puede combinar imágenes, sonido y actuación.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El cine integra recursos visuales, sonoros y escénicos.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-136",
+      "number": 136,
+      "topic": "Cine",
+      "concept": "musica_creacion_suspenso",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Antes de mostrar un peligro, una película aumenta gradualmente la intensidad de la música. ¿Qué busca crear?",
+      "options": [
+        "Simetría",
+        "Perspectiva",
+        "Suspenso",
+        "Proporción"
+      ],
+      "correctAnswer": "Suspenso",
+      "explanation": "La música puede anticipar un riesgo y aumentar la tensión de una escena.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-137",
+      "number": 137,
+      "topic": "Fotografía y cine",
+      "concept": "encuadre_reaccion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escena muestra solo los ojos de un personaje para destacar su reacción. ¿Qué decisión visual determina ese recorte?",
+      "options": [
+        "Encuadre",
+        "Vestuario",
+        "Escenografía",
+        "Coreografía"
+      ],
+      "correctAnswer": "Encuadre",
+      "explanation": "El encuadre decide qué parte de la escena aparece en la imagen.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-138",
+      "number": 138,
+      "topic": "Creación digital",
+      "concept": "atribucion_autoria_imagen",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al incluir en un collage una fotografía ajena, ¿qué práctica reconoce mejor la autoría?",
+      "options": [
+        "Cambiar el tamaño",
+        "Añadir un filtro",
+        "Recortar el fondo",
+        "Atribuir la fuente"
+      ],
+      "correctAnswer": "Atribuir la fuente",
+      "explanation": "Atribuir la fuente reconoce quién creó la imagen utilizada.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-139",
+      "number": 139,
+      "topic": "Cultura visual digital",
+      "concept": "contexto_meme",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un meme reutiliza una imagen conocida para comentar una situación nueva. ¿Qué influye más en su nuevo sentido?",
+      "options": [
+        "La resolución",
+        "El contexto",
+        "El formato",
+        "El tamaño"
+      ],
+      "correctAnswer": "El contexto",
+      "explanation": "El contexto nuevo modifica cómo se interpreta una imagen reutilizada.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-140",
+      "number": 140,
+      "topic": "Arte colombiano — TRUE/FALSE",
+      "concept": "medios_artistico_botero",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Fernando Botero trabajó tanto en pintura como en escultura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Su producción artística incluye obras pictóricas y escultóricas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-141",
+      "number": 141,
+      "topic": "Patrimonio",
+      "concept": "procedencia_piezas_museo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dato permite rastrear de dónde provino una pieza de museo?",
+      "options": [
+        "Su técnica",
+        "Su tamaño",
+        "Su procedencia",
+        "Su color"
+      ],
+      "correctAnswer": "Su procedencia",
+      "explanation": "La procedencia registra el origen y la trayectoria conocida de una pieza.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-142",
+      "number": 142,
+      "topic": "Lectura de imágenes",
+      "concept": "direccion_luz_sombras",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una pintura, las sombras de varios objetos apuntan en la misma dirección. ¿Qué puede inferirse?",
+      "options": [
+        "La dirección de la luz",
+        "La edad de los objetos",
+        "El material del marco",
+        "La hora exacta del día"
+      ],
+      "correctAnswer": "La dirección de la luz",
+      "explanation": "La dirección de las sombras aporta pistas sobre la dirección de la fuente de luz.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-143",
+      "number": 143,
+      "topic": "Teatro — TRUE/FALSE",
+      "concept": "escenografia_vs_dialogo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "En una obra teatral, la escenografía contiene las palabras que dicen los personajes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La escenografía representa el espacio; las palabras de los personajes forman parte del diálogo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-144",
+      "number": 144,
+      "topic": "Diversidad cultural",
+      "concept": "diversidad_en_relatos_tradicionales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos comunidades representan un relato tradicional con músicas y vestuarios distintos. ¿Qué muestra principalmente?",
+      "options": [
+        "Error de representación",
+        "Pérdida de la historia",
+        "Copia exacta",
+        "Diversidad cultural"
+      ],
+      "correctAnswer": "Diversidad cultural",
+      "explanation": "Una misma historia puede expresarse de maneras diferentes según cada contexto cultural.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-145",
+      "number": 145,
+      "topic": "Museos — TRUE/FALSE",
+      "concept": "funciones_museo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un museo puede documentar una pieza además de exhibirla.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los museos pueden conservar, documentar, investigar y exhibir sus colecciones.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-146",
+      "number": 146,
+      "topic": "Cine — TRUE/FALSE",
+      "concept": "comunicacion_no_verbal_cine",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una película puede comunicar una acción sin usar diálogo hablado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las imágenes, los gestos y los sonidos también comunican acciones e ideas.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-147",
+      "number": 147,
+      "topic": "Símbolos visuales — TRUE/FALSE",
+      "concept": "simbolo_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un símbolo visual puede representar una idea sin escribirla directamente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un símbolo comunica una idea mediante una imagen reconocible.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-148",
+      "number": 148,
+      "topic": "Cultura artística — TRUE/FALSE",
+      "concept": "reconocimiento_artistas_colombianos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una obra reconocida puede haber sido creada por un artista colombiano.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El reconocimiento artístico no depende de que el autor sea extranjero.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-149",
+      "number": 149,
+      "topic": "Interpretación artística — TRUE/FALSE",
+      "concept": "interpretacion_multifactorial_obra",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Conocer quién creó una obra basta para comprender por completo su significado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "También pueden aportar significado la época, el contexto, los recursos visuales y distintas interpretaciones.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    },
+    {
+      "id": "ART6-150",
+      "number": 150,
+      "topic": "Comparación de objetos",
+      "concept": "comparacion_material_funcion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un museo compara dos objetos semejantes de épocas distintas. ¿Qué pareja de aspectos ayuda más a reconocer cambios en su uso y fabricación?",
+      "options": [
+        "Precio y ubicación",
+        "Material y función",
+        "Peso y vitrina",
+        "Altura y color"
+      ],
+      "correctAnswer": "Material y función",
+      "explanation": "Comparar materiales y funciones ayuda a reconocer cómo cambiaron la fabricación y el uso de objetos a través del tiempo.",
+      "stability": "STABLE",
+      "source": null,
+      "provenance": "user_supplied_corrected_batch"
+    }
+  ]
+}

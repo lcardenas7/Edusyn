@@ -6148,6 +6148,7 @@ model QuestionBankCollection {
   institutionId String
   gradeId       String
   createdById   String
+  officialCatalogId String?
   title         String
   category      String
   subjectArea   String
@@ -6161,6 +6162,7 @@ model QuestionBankCollection {
 
   @@index([institutionId, gradeId, isPublished])
   @@index([institutionId, createdById])
+  @@unique([institutionId, gradeId, officialCatalogId])
 }
 
 model QuestionBankItem {
