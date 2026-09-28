@@ -108,6 +108,9 @@ describe('QuestionBankService', () => {
     expect(imported).toHaveLength(150);
     expect(imported[0].text).toContain('latitud');
     expect(imported[125].text).toContain('bahía');
+    expect(imported[36].text).toContain('cuenca hidrográfica');
+    expect(imported[36].correctAnswer).toBe('El área que aporta agua a una salida común');
+    expect(imported[36].options).toContain(imported[36].correctAnswer);
     expect(imported[149].text).toContain('imágenes satelitales');
   });
 

@@ -11035,7 +11035,8 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
       "https://www.eia.gov/energyexplained/hydropower/",
       "https://tsunami.coast.noaa.gov/",
       "https://vlab.noaa.gov/web/oclo/gamma",
-      "https://pubs.usgs.gov/pp/0437a/report.pdf"
+      "https://pubs.usgs.gov/pp/0437a/report.pdf",
+      "https://www.usgs.gov/water-science-school/science/watersheds-and-drainage-basins"
     ],
     "questions": [
       {
@@ -11717,15 +11718,15 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
         "type": "MULTIPLE_CHOICE",
         "text": "¿Qué caracteriza principalmente una cuenca hidrográfica?",
         "options": [
-          "Área que drena a un río principal",
-          "Curso principal de una red de ríos",
-          "Valle cubierto por hielo permanente",
-          "Costa cerrada entre dos montañas"
+          "El cauce por el que circula el río principal",
+          "La longitud total de los ríos de la región",
+          "El área que aporta agua a una salida común",
+          "El punto donde el río llega a otro cuerpo de agua"
         ],
-        "correctAnswer": "Valle cubierto por hielo permanente",
-        "explanation": "Una cuenca reúne el área que aporta escorrentía a un río, lago u otra salida común.  ",
+        "correctAnswer": "El área que aporta agua a una salida común",
+        "explanation": "Una cuenca hidrográfica es el terreno desde el que el agua drena hacia un río, lago u otra salida común.  ",
         "stability": "STABLE",
-        "source": null
+        "source": "https://www.usgs.gov/water-science-school/science/watersheds-and-drainage-basins"
       },
       {
         "id": "GEO6-038",

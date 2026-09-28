@@ -7,6 +7,8 @@
 **Dificultad del lote:** 8 básicas · 12 intermedias · 5 aplicación/razonamiento  
 **Claves MC:** A=5 · B=5 · C=5 · D=5
 
+**Fuente de verificación:** [USGS — Watersheds and Drainage Basins](https://www.usgs.gov/water-science-school/science/watersheds-and-drainage-basins)
+
 ### 26. Básica · Orientación
 ¿Qué muestra una rosa de los vientos?
 
@@ -132,13 +134,13 @@ D. La distancia al ecuador
 ### 37. Intermedia · Cuencas hidrográficas
 ¿Qué caracteriza principalmente una cuenca hidrográfica?
 
-A. Área que drena a un río principal  
-B. Curso principal de una red de ríos  
-C. Valle cubierto por hielo permanente  
-D. Costa cerrada entre dos montañas
+A. El cauce por el que circula el río principal  
+B. La longitud total de los ríos de la región  
+C. El área que aporta agua a una salida común  
+D. El punto donde el río llega a otro cuerpo de agua
 
 **Respuesta:** C.  
-**Explicación:** Una cuenca reúne el área que aporta escorrentía a un río, lago u otra salida común.  
+**Explicación:** Una cuenca hidrográfica es el terreno desde el que el agua drena hacia un río, lago u otra salida común.  
 **Concepto:** cuenca_area_drenada_hacia_salida_comun
 
 ### 38. Intermedia · Escala cartográfica

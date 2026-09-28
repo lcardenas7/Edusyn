@@ -22,6 +22,15 @@
 
 ## Historial (más reciente arriba)
 
+### Geografía · 6.º para Duelos + priorización móvil — staging · 2026-09-28
+
+`e8a73310`. API + web, sin migración. Se incorpora el banco optativo institucional
+Geografía · 6.º (150 preguntas) con distribución auditada 120/30, dificultad 50/70/30,
+30 respuestas por letra y 150 conceptos; en móvil, la partida activa aparece antes
+de la configuración cuando el estudiante responde. Verificado: build de API,
+14 pruebas de `question-bank.service.spec.ts` y auditoría del banco. Push a `staging`;
+pendiente confirmar que Railway terminó el despliegue y hacer prueba visual con estudiante.
+
 ### Cuestionarios de 150 preguntas — staging · 2026-09-28
 
 `d866a577`. API, sin migración. La copia de un cuestionario del banco a un quiz
