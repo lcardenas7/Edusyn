@@ -22,6 +22,24 @@
 
 ## Historial (más reciente arriba)
 
+### Arena: ajustes tras la prueba con dos estudiantes — staging · 2026-09-29
+
+`742e35f4`. API + web; **sin migración**. Sale de la primera partida real en staging
+(Ciudadela, Informática 8C, Jesús A. contra Camila M.; duelo completo, revancha, ranking y
+perfil verificados con datos reales). La ruleta la gira el estudiante; tocar una opción
+responde; **acierto inmediato** con la correcta y la explicación, y por eso **cada
+estudiante recibe su propia pregunta del mismo tema en cada ronda** (decisión del
+fundador; los duelos anteriores, de lista compartida, siguen leyéndose igual). Marcador de
+aciertos en vivo; bonos junto al reloj; pantalla final con revancha, rival al azar y elegir
+rival. Sonido desbloqueado en el toque del estudiante (antes quedaba mudo en el celular).
+Retos recibidos arriba en la Arena; «Retar a» con nombre completo; accesos al ranking de
+curso y grado. `GET /classroom-duels/classrooms/:id/status`: la tarjeta de Actividades
+avisa de retos pendientes y se oculta al estudiante sin preguntas suficientes. Fuera la
+tarjeta de la maqueta de Bloques; categorías sin el prefijo «Duelos ·»; «Nuevo cuestionario»
+fijo en el banco. Verificado: 331 pruebas del módulo classroom, `tsc` de api y web, build
+de web, y recorrido en `arena-local.html` a 375×640. **Pendiente:** prueba en el celular
+con dos estudiantes sobre este despliegue.
+
 ### Verificación de Matemáticas y lógica · 7.º en staging · 2026-09-28
 
 Tras `35149bdd`, la Biblioteca docente del aula 8C muestra **Matemáticas y lógica · 7.º**
