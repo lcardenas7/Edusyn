@@ -33,7 +33,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.filter((item) => item.grade === 7)).toHaveLength(6);
+    expect(catalogs.filter((item) => item.grade === 7)).toHaveLength(7);
     expect(catalogs.filter((item) => item.grade === 6)).toHaveLength(8);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-arte-cultura-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-7-v1')).toBe(true);
@@ -41,6 +41,7 @@ describe('QuestionBankService', () => {
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-geografia-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-matematicas-logica-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-8-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-6-v1')).toBe(true);
@@ -225,6 +226,27 @@ describe('QuestionBankService', () => {
     expect(imported[136].correctAnswer).toBe('5 cm');
     expect(imported[145].text).toContain('robot');
     expect(imported[145].correctAnswer).toBe('7');
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
+  it('imports the official seventh-grade mathematics and logic bank into eighth grade', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'mathematics7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-matematicas-logica-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-matematicas-logica-grade-7-v1', title: 'Matemáticas y lógica · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[113].correctAnswer).toBe('52°');
+    expect(imported[148].correctAnswer).toBe('23 m');
+    expect(imported.filter((item: { type: string }) => item.type === 'TRUE_FALSE')).toHaveLength(30);
     expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
   });
 

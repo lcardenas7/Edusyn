@@ -7,7 +7,7 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 | Grado | Arte y cultura | Historia | Deportes | Ciencia y naturaleza | Geografía | Lengua y literatura | Matemáticas y lógica | Tecnología |
 |---|---|---|---|---|---|---|---|---|
 | 6.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging (importado en 8C) | Completo · staging | Completo · staging | Completo · staging |
-| 7.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging | En curso (100/150) | Pendiente |
+| 7.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · pendiente staging | Pendiente |
 | 8.º | Pendiente | Completo · staging | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 9.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 10.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
@@ -19,7 +19,7 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 - **Ciencia y naturaleza · 7.º:** banco de 150 preguntas en `docs/duelos/oficial/ciencia_naturaleza_7.json` y seis lotes de revisión en `docs/DUELOS_CIENCIA_NATURALEZA_7_BLOQUE_01.md`. Cumple las cantidades y distribuciones acordadas, 30 respuestas correctas por letra y 150 conceptos únicos; está disponible en el catálogo opcional de staging y pasa la prueba de importación.
 - **Geografía · 7.º:** banco de 150 preguntas en `docs/duelos/oficial/geografia_7.json` y seis lotes de revisión en `docs/DUELOS_GEOGRAFIA_7_BLOQUE_01.md`. Incluye referencias de IGAC, DANE, UNGRD e IDEAM; cumple las distribuciones y tiene 150 conceptos únicos; está disponible en staging y tiene prueba de importación.
 - **Lengua y literatura · 7.º:** banco completo de 150 preguntas en `docs/duelos/oficial/lengua_literatura_7.json` y seis lotes de revisión en `docs/DUELOS_LENGUA_LITERATURA_7_BLOQUE_01.md`. Incluye comprensión, gramática, géneros, argumentación y lectura crítica; cumple las distribuciones, tiene claves balanceadas y conceptos únicos, e incluye referencias del MEN y la RAE. Disponible en staging y probado para importación.
-- **Matemáticas y lógica · 7.º:** cuatro lotes (100/150) en `docs/DUELOS_MATEMATICAS_LOGICA_7_BLOQUE_01.md`, con enteros, fracciones, proporcionalidad, porcentajes, álgebra, geometría, estadística, probabilidad y razonamiento con datos. Los lotes auditados mantienen 20/5 por tipo, conceptos únicos hasta ahora y claves A/B/C/D balanceadas. Falta completar el último tercio y hacer auditoría total.
+- **Matemáticas y lógica · 7.º:** banco completo de 150 preguntas en `docs/duelos/oficial/matematicas_logica_7.json` y seis lotes de revisión en `docs/DUELOS_MATEMATICAS_LOGICA_7_BLOQUE_01.md`. Auditado con 120/30 por tipo, 50/70/30 por dificultad, 30 claves por letra y 150 conceptos únicos; prueba de importación aprobada. Pendiente de staging.
 
 ## Bancos completos de sexto
 
@@ -35,8 +35,8 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 
 ## Integración
 
-Arte, Historia, Deportes, Ciencia y naturaleza, Geografía, Lengua y literatura, Matemáticas y lógica y Tecnología · 6.º están publicados en `staging`. También están disponibles los seis bancos completos de 7.º y el banco de Historia · 8.º. Se verificó en la biblioteca docente del aula de 8.º; cada institución decide si importa cada banco. La Biblioteca docente ofrece **Usar este banco** y mantiene independientes los cuestionarios creados por los docentes.
+Arte, Historia, Deportes, Ciencia y naturaleza, Geografía, Lengua y literatura, Matemáticas y lógica y Tecnología · 6.º están publicados en `staging`. También están disponibles siete bancos completos de 7.º y el banco de Historia · 8.º. Se verificó en la biblioteca docente del aula de 8.º; cada institución decide si importa cada banco. La Biblioteca docente ofrece **Usar este banco** y mantiene independientes los cuestionarios creados por los docentes.
 
 ## Siguiente
 
-Siguiente: completar **Matemáticas y lógica · 7.º**; después cerrar Tecnología · 7.º y continuar con las demás combinaciones de grado y categoría.
+Siguiente: completar **Tecnología · 7.º**; después avanzar con las demás combinaciones de grado y categoría.

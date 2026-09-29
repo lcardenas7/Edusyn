@@ -42102,5 +42102,2829 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
         "source": null
       }
     ]
-  }
+  },
+  {
+      "catalogId": "edusyn-matematicas-logica-grade-7-v1",
+      "title": "Matemáticas y lógica · 7.º",
+      "grade": 7,
+      "subjectArea": "Duelos",
+      "category": "Matemáticas y lógica",
+      "version": "1.0",
+      "availability": "institution-opt-in",
+      "editorialStatus": "ready-for-import",
+      "audit": {
+        "questions": 150,
+        "multipleChoice": 120,
+        "trueFalse": 30,
+        "difficulty": {
+          "basic": 50,
+          "intermediate": 70,
+          "application": 30
+        },
+        "answerPositions": {
+          "A": 30,
+          "B": 30,
+          "C": 30,
+          "D": 30
+        },
+        "conceptsPresent": 150,
+        "conceptsMissing": 0
+      },
+      "sources": [
+        "https://www.colombiaaprende.edu.co/contenidos/coleccion/derechos-basicos-de-aprendizaje",
+        "https://www.mineducacion.gov.co/1621/article-116042.html"
+      ],
+      "questions": [
+        {
+          "id": "MAT7-001",
+          "number": 1,
+          "topic": "Enteros",
+          "concept": "opuesto_de_entero_cambia_signo",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el opuesto de −12?",
+          "options": [
+            "−12",
+            "0",
+            "12",
+            "1/12"
+          ],
+          "correctAnswer": "12",
+          "explanation": "El opuesto está a la misma distancia del cero, pero al lado contrario de la recta numérica.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-002",
+          "number": 2,
+          "topic": "Fracciones",
+          "concept": "fraccion_impropia_mayor_que_uno",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál fracción representa una cantidad mayor que 1?",
+          "options": [
+            "7/5",
+            "4/7",
+            "5/8",
+            "3/4"
+          ],
+          "correctAnswer": "7/5",
+          "explanation": "Una fracción es mayor que 1 cuando su numerador supera al denominador positivo.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-003",
+          "number": 3,
+          "topic": "Números decimales",
+          "concept": "multiplicar_decimal_por_diez",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el resultado de 2,5 × 10?",
+          "options": [
+            "2,50",
+            "25",
+            "250",
+            "0,25"
+          ],
+          "correctAnswer": "25",
+          "explanation": "Multiplicar por 10 desplaza la coma un lugar hacia la derecha.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-004",
+          "number": 4,
+          "topic": "Razones",
+          "concept": "razon_en_orden_de_cantidades",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una receta usa 2 tazas de arroz por 3 de agua. ¿Cuál es la razón arroz:agua?",
+          "options": [
+            "3:2",
+            "2:5",
+            "5:2",
+            "2:3"
+          ],
+          "correctAnswer": "2:3",
+          "explanation": "La razón conserva el orden indicado: primero arroz y luego agua.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-005",
+          "number": 5,
+          "topic": "Porcentajes",
+          "concept": "porcentaje_cincuenta_equivale_mitad",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto es el 50 % de 80?",
+          "options": [
+            "20",
+            "30",
+            "40",
+            "50"
+          ],
+          "correctAnswer": "40",
+          "explanation": "El 50 % representa la mitad; la mitad de 80 es 40.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-006",
+          "number": 6,
+          "topic": "Expresiones algebraicas",
+          "concept": "evaluar_expresion_lineal_por_sustitucion",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Si x = 4, ¿cuánto vale x + 3?",
+          "options": [
+            "7",
+            "12",
+            "1",
+            "43"
+          ],
+          "correctAnswer": "7",
+          "explanation": "Se reemplaza x por 4 y se suma: 4 + 3 = 7.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-007",
+          "number": 7,
+          "topic": "Geometría · Verdadero o falso",
+          "concept": "medida_de_angulo_recto",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "Un ángulo recto mide 90°.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Por definición, la medida de un ángulo recto es 90 grados.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-008",
+          "number": 8,
+          "topic": "Probabilidad · Verdadero o falso",
+          "concept": "resultados_equilibrados_tienen_probabilidad_igual",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "Al lanzar una moneda equilibrada, cara y sello tienen la misma probabilidad.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "La moneda tiene dos resultados igualmente posibles, uno para cada lado.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-009",
+          "number": 9,
+          "topic": "Operaciones con enteros",
+          "concept": "suma_y_resta_secuencial_de_enteros",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el resultado de −6 + 14 − 3?",
+          "options": [
+            "−23",
+            "−5",
+            "11",
+            "5"
+          ],
+          "correctAnswer": "5",
+          "explanation": "−6 + 14 = 8 y 8 − 3 = 5.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-010",
+          "number": 10,
+          "topic": "Fracciones equivalentes",
+          "concept": "ampliar_fraccion_a_denominador_dado",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué fracción equivale a 3/5 y tiene denominador 20?",
+          "options": [
+            "6/20",
+            "12/20",
+            "15/20",
+            "18/20"
+          ],
+          "correctAnswer": "12/20",
+          "explanation": "Al multiplicar numerador y denominador por 4 se obtiene 12/20.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-011",
+          "number": 11,
+          "topic": "Proporcionalidad directa",
+          "concept": "precio_total_por_proporcionalidad_directa",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Cuatro cuadernos cuestan $12 000. Al mismo precio unitario, ¿cuánto cuestan seis?",
+          "options": [
+            "$14 000",
+            "$16 000",
+            "$18 000",
+            "$24 000"
+          ],
+          "correctAnswer": "$18 000",
+          "explanation": "Cada cuaderno cuesta $3 000; seis cuestan $18 000.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-012",
+          "number": 12,
+          "topic": "Porcentajes",
+          "concept": "precio_final_despues_de_descuento",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una chaqueta cuesta $100 000 y tiene 20 % de descuento. ¿Cuál es el precio final?",
+          "options": [
+            "$80 000",
+            "$20 000",
+            "$90 000",
+            "$120 000"
+          ],
+          "correctAnswer": "$80 000",
+          "explanation": "El descuento es $20 000, por lo que se pagan $80 000.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-013",
+          "number": 13,
+          "topic": "Ecuaciones",
+          "concept": "resolver_ecuacion_lineal_de_dos_pasos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué valor de x satisface 3x + 2 = 17?",
+          "options": [
+            "3",
+            "4",
+            "6",
+            "5"
+          ],
+          "correctAnswer": "5",
+          "explanation": "Al restar 2 queda 3x = 15; al dividir entre 3, x = 5.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-014",
+          "number": 14,
+          "topic": "Perímetro",
+          "concept": "perimetro_rectangulo_suma_lados",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un rectángulo mide 8 cm de largo y 3 cm de ancho. ¿Cuál es su perímetro?",
+          "options": [
+            "11 cm",
+            "48 cm",
+            "24 cm",
+            "22 cm"
+          ],
+          "correctAnswer": "22 cm",
+          "explanation": "El perímetro suma los cuatro lados: 8 + 3 + 8 + 3 = 22 cm.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-015",
+          "number": 15,
+          "topic": "Área de triángulos",
+          "concept": "area_triangulo_mitad_base_por_altura",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un triángulo tiene base de 10 cm y altura de 6 cm. ¿Cuál es su área?",
+          "options": [
+            "16 cm²",
+            "60 cm²",
+            "30 cm²",
+            "32 cm²"
+          ],
+          "correctAnswer": "30 cm²",
+          "explanation": "El área es base por altura dividida entre dos: 10 × 6 ÷ 2 = 30 cm².",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-016",
+          "number": 16,
+          "topic": "Ángulos · Verdadero o falso",
+          "concept": "suplementarios_suman_ciento_ochenta_no_son_iguales",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Dos ángulos suplementarios siempre tienen la misma medida.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Falso",
+          "explanation": "Sus medidas suman 180°, pero pueden ser diferentes, como 70° y 110°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-017",
+          "number": 17,
+          "topic": "Estadística",
+          "concept": "mediana_de_cinco_datos_ordenados",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es la mediana de 2, 4, 7, 9 y 12?",
+          "options": [
+            "7",
+            "6,8",
+            "9",
+            "34"
+          ],
+          "correctAnswer": "7",
+          "explanation": "En cinco datos ordenados, la mediana es el valor central: 7.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-018",
+          "number": 18,
+          "topic": "Probabilidad · Verdadero o falso",
+          "concept": "evento_imposible_fuera_del_espacio_muestral",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Si una bolsa contiene solo fichas rojas, sacar una ficha azul es imposible.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Un resultado imposible no pertenece a los resultados disponibles del experimento.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-019",
+          "number": 19,
+          "topic": "Coordenadas",
+          "concept": "cuadrante_dos_signos_menos_mas",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En el plano cartesiano, ¿en qué cuadrante está el punto (−3, 4)?",
+          "options": [
+            "I",
+            "II",
+            "III",
+            "IV"
+          ],
+          "correctAnswer": "II",
+          "explanation": "En el segundo cuadrante, la coordenada x es negativa y la coordenada y positiva.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-020",
+          "number": 20,
+          "topic": "Secuencias",
+          "concept": "secuencia_aritmetica_incremento_constante",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué número sigue en la secuencia 5, 9, 13, 17, …?",
+          "options": [
+            "19",
+            "20",
+            "21",
+            "22"
+          ],
+          "correctAnswer": "21",
+          "explanation": "Cada término aumenta en 4; después de 17 viene 21.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-021",
+          "number": 21,
+          "topic": "Razones y escalas",
+          "concept": "convertir_distancia_en_mapa_con_escala",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En un mapa, 1 cm representa 5 km. Dos pueblos están a 7 cm. ¿Qué distancia real los separa?",
+          "options": [
+            "12 km",
+            "25 km",
+            "30 km",
+            "35 km"
+          ],
+          "correctAnswer": "35 km",
+          "explanation": "Cada centímetro representa 5 km; 7 × 5 = 35 km.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-022",
+          "number": 22,
+          "topic": "Análisis de datos",
+          "concept": "promedio_de_resultados_repetidos",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un equipo anotó 4, 6, 6 y 8 puntos en cuatro rondas. ¿Cuál fue su promedio?",
+          "options": [
+            "5",
+            "6",
+            "6,5",
+            "24"
+          ],
+          "correctAnswer": "6",
+          "explanation": "La suma es 24 y al dividirla entre las cuatro rondas se obtiene un promedio de 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-023",
+          "number": 23,
+          "topic": "Error en una ecuación",
+          "concept": "detectar_distributiva_aplicada_a_un_solo_termino",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Sara resuelve 2(x + 3) = 14 y escribe 2x + 3 = 14. ¿Qué error cometió?",
+          "options": [
+            "No distribuyó el 2 a ambos términos del paréntesis",
+            "Sumó 2 en vez de restarlo",
+            "Dividió entre 3 antes de operar",
+            "Cambió el signo de 14"
+          ],
+          "correctAnswer": "No distribuyó el 2 a ambos términos del paréntesis",
+          "explanation": "La propiedad distributiva exige multiplicar 2 por x y también por 3, obteniendo 2x + 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-024",
+          "number": 24,
+          "topic": "Descuento",
+          "concept": "calcular_monto_de_descuento_porcentual",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una tienda ofrece 25 % de descuento en una mochila de $80 000. ¿Cuánto se descuenta?",
+          "options": [
+            "$15 000",
+            "$20 000",
+            "$25 000",
+            "$60 000"
+          ],
+          "correctAnswer": "$20 000",
+          "explanation": "Una cuarta parte de $80 000 es $20 000; ese es el valor descontado.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-025",
+          "number": 25,
+          "topic": "Interpretación de datos · Verdadero o falso",
+          "concept": "datos_muestran_diferencia_sin_explicar_causa",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "En un gráfico, las barras de dos equipos muestran 18 y 12 puntos. Se puede concluir que el primero anotó 6 puntos más, pero no por qué ganó.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Los datos respaldan una diferencia de seis puntos, pero no explican por sí solos sus causas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-026",
+          "number": 26,
+          "topic": "Números racionales",
+          "concept": "racional_entre_un_medio_y_uno",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál número está entre 1/2 y 1?",
+          "options": [
+            "1/4",
+            "1/2",
+            "3/4",
+            "5/4"
+          ],
+          "correctAnswer": "3/4",
+          "explanation": "Tres cuartos es mayor que un medio y menor que una unidad.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-027",
+          "number": 27,
+          "topic": "Divisibilidad · Verdadero o falso",
+          "concept": "multiplos_de_diez_terminan_en_cero",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "Todo múltiplo de 10 termina en 0.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "En el sistema decimal, los múltiplos enteros de 10 tienen 0 en la posición de unidades.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-028",
+          "number": 28,
+          "topic": "Potencias",
+          "concept": "potencia_segunda_como_producto_de_dos_factores",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el valor de 3²?",
+          "options": [
+            "6",
+            "9",
+            "8",
+            "32"
+          ],
+          "correctAnswer": "9",
+          "explanation": "Tres al cuadrado significa 3 × 3, que es 9.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-029",
+          "number": 29,
+          "topic": "Plano cartesiano",
+          "concept": "identificar_segunda_coordenada_ordenada",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es la coordenada y del punto (5, −2)?",
+          "options": [
+            "5",
+            "2",
+            "−2",
+            "−5"
+          ],
+          "correctAnswer": "−2",
+          "explanation": "En un par ordenado (x, y), la segunda coordenada corresponde a y.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-030",
+          "number": 30,
+          "topic": "Circunferencia",
+          "concept": "segmento_centro_borde_es_radio",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cómo se llama el segmento que une el centro de una circunferencia con su borde?",
+          "options": [
+            "Radio",
+            "Diámetro",
+            "Cuerda",
+            "Arco"
+          ],
+          "correctAnswer": "Radio",
+          "explanation": "El radio va desde el centro hasta cualquier punto de la circunferencia.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-031",
+          "number": 31,
+          "topic": "Unidades de longitud",
+          "concept": "conversion_de_metros_a_centimetros",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos centímetros hay en 2 metros?",
+          "options": [
+            "20",
+            "200",
+            "2 000",
+            "0,2"
+          ],
+          "correctAnswer": "200",
+          "explanation": "Un metro contiene 100 centímetros; 2 × 100 = 200.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-032",
+          "number": 32,
+          "topic": "Expresión algebraica",
+          "concept": "traducir_doble_de_variable_menos_constante",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál expresión representa “el doble de un número n, menos 5”?",
+          "options": [
+            "2(n − 5)",
+            "n/2 − 5",
+            "2n + 5",
+            "2n − 5"
+          ],
+          "correctAnswer": "2n − 5",
+          "explanation": "El doble de n es 2n; luego se restan 5 unidades.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-033",
+          "number": 33,
+          "topic": "Promedio",
+          "concept": "media_de_tres_datos_no_consecutivos",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es la media de 3, 5 y 10?",
+          "options": [
+            "6",
+            "5",
+            "18",
+            "7"
+          ],
+          "correctAnswer": "6",
+          "explanation": "La suma es 18 y al dividirla entre los tres datos se obtiene 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-034",
+          "number": 34,
+          "topic": "Simetría · Verdadero o falso",
+          "concept": "figura_puede_tener_varios_ejes_de_simetria",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "Una figura puede tener más de un eje de simetría.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Algunas figuras, como un cuadrado, tienen varios ejes que las dividen en mitades reflejadas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-035",
+          "number": 35,
+          "topic": "Suma de racionales",
+          "concept": "suma_de_fracciones_con_denominadores_distintos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto es 3/4 + 1/6?",
+          "options": [
+            "4/10",
+            "5/12",
+            "11/12",
+            "1/2"
+          ],
+          "correctAnswer": "11/12",
+          "explanation": "Con denominador 12, las fracciones son 9/12 y 2/12; su suma es 11/12.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-036",
+          "number": 36,
+          "topic": "Multiplicación de enteros",
+          "concept": "producto_entero_signos_opuestos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el producto de −7 y 4?",
+          "options": [
+            "−28",
+            "28",
+            "−11",
+            "11"
+          ],
+          "correctAnswer": "−28",
+          "explanation": "Un número negativo por uno positivo da negativo; 7 × 4 = 28.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-037",
+          "number": 37,
+          "topic": "Proporcionalidad",
+          "concept": "escalar_cantidad_de_unidades_contenido_unitario",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Seis botellas iguales contienen 9 litros en total. ¿Cuántos litros contienen 10 botellas?",
+          "options": [
+            "12",
+            "15",
+            "18",
+            "1,5"
+          ],
+          "correctAnswer": "15",
+          "explanation": "Cada botella contiene 1,5 litros; diez contienen 15 litros.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-038",
+          "number": 38,
+          "topic": "Ecuaciones",
+          "concept": "despejar_variable_con_sustraccion_y_producto",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Si 5x − 7 = 18, ¿cuánto vale x?",
+          "options": [
+            "3",
+            "4",
+            "6",
+            "5"
+          ],
+          "correctAnswer": "5",
+          "explanation": "Se suma 7 a ambos lados y se divide 25 entre 5; x = 5.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-039",
+          "number": 39,
+          "topic": "Ángulos en rectas",
+          "concept": "angulo_suplementario_completa_recta",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Dos ángulos adyacentes forman una línea recta. Si uno mide 65°, ¿cuánto mide el otro?",
+          "options": [
+            "65°",
+            "105°",
+            "115°",
+            "295°"
+          ],
+          "correctAnswer": "115°",
+          "explanation": "Los ángulos que forman una línea recta suman 180°; 180° − 65° = 115°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-040",
+          "number": 40,
+          "topic": "Probabilidad · Verdadero o falso",
+          "concept": "probabilidad_de_dos_dias_favorables_de_siete",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Al elegir al azar un día de la semana, la probabilidad de que sea sábado o domingo es 2/7.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Hay dos días de fin de semana entre los siete días posibles, todos igualmente probables.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-041",
+          "number": 41,
+          "topic": "Área de paralelogramo",
+          "concept": "area_paralelogramo_base_por_altura",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un paralelogramo tiene base de 9 cm y altura perpendicular de 4 cm. ¿Cuál es su área?",
+          "options": [
+            "36 cm²",
+            "26 cm²",
+            "13 cm²",
+            "72 cm²"
+          ],
+          "correctAnswer": "36 cm²",
+          "explanation": "El área de un paralelogramo es base por altura: 9 × 4 = 36 cm².",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-042",
+          "number": 42,
+          "topic": "Moda estadística",
+          "concept": "moda_es_dato_mas_frecuente",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En los datos 4, 6, 6, 7, 8, ¿cuál es la moda?",
+          "options": [
+            "4",
+            "6",
+            "7",
+            "8"
+          ],
+          "correctAnswer": "6",
+          "explanation": "La moda es el dato que aparece más veces; 6 aparece dos veces.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-043",
+          "number": 43,
+          "topic": "Transformaciones geométricas",
+          "concept": "traslacion_conserva_forma_y_tamano",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Al trasladar una figura 3 unidades a la derecha, ¿qué ocurre con su forma y tamaño?",
+          "options": [
+            "Cambian ambos",
+            "Cambia solo el tamaño",
+            "Se conservan ambos",
+            "Cambia solo la forma"
+          ],
+          "correctAnswer": "Se conservan ambos",
+          "explanation": "Una traslación desplaza todos los puntos la misma distancia y dirección, sin deformar la figura.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-044",
+          "number": 44,
+          "topic": "Divisibilidad · Verdadero o falso",
+          "concept": "divisibilidad_por_seis_implica_por_tres",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Si un número es divisible por 6, también es divisible por 3.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Ser divisible por 6 implica ser múltiplo de 6, y todo múltiplo de 6 también es múltiplo de 3.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-045",
+          "number": 45,
+          "topic": "Patrones",
+          "concept": "regla_multiplicativa_en_secuencia_geometrica",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En la secuencia 2, 6, 18, 54, …, ¿qué operación lleva de un término al siguiente?",
+          "options": [
+            "Sumar 4",
+            "Multiplicar por 2",
+            "Sumar 12",
+            "Multiplicar por 3"
+          ],
+          "correctAnswer": "Multiplicar por 3",
+          "explanation": "Cada término es tres veces el anterior: 2×3=6, 6×3=18 y 18×3=54.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-046",
+          "number": 46,
+          "topic": "Comparación de ofertas",
+          "concept": "comparar_precios_unitarios_de_ofertas",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una tienda vende 3 jugos por $6 000 y otra ofrece 5 por $9 000. ¿Cuál tiene menor precio por jugo?",
+          "options": [
+            "La primera, $2 000",
+            "La segunda, $1 900",
+            "La primera, $1 800",
+            "La segunda, $1 800"
+          ],
+          "correctAnswer": "La segunda, $1 800",
+          "explanation": "En la primera cada jugo cuesta $2 000; en la segunda, $9 000 ÷ 5 = $1 800.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-047",
+          "number": 47,
+          "topic": "Resolución geométrica",
+          "concept": "hallar_ancho_desde_perimetro_y_largo",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un jardín rectangular tiene perímetro de 30 m y largo de 9 m. ¿Cuánto mide el ancho?",
+          "options": [
+            "6 m",
+            "12 m",
+            "21 m",
+            "3 m"
+          ],
+          "correctAnswer": "6 m",
+          "explanation": "Dos largos suman 18 m; quedan 12 m para los dos anchos, así que cada uno mide 6 m.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-048",
+          "number": 48,
+          "topic": "Inferencia con promedio",
+          "concept": "recuperar_dato_desconocido_desde_media",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Cuatro puntajes tienen promedio 7. Tres son 5, 7 y 8. ¿Cuál es el cuarto puntaje?",
+          "options": [
+            "7",
+            "8",
+            "6",
+            "10"
+          ],
+          "correctAnswer": "8",
+          "explanation": "El total debe ser 4 × 7 = 28; los tres conocidos suman 20, por lo que falta 8.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-049",
+          "number": 49,
+          "topic": "Medidas",
+          "concept": "convertir_litros_a_mililitros_y_dividir",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una botella contiene 1,5 litros. Se sirven vasos de 250 ml. ¿Cuántos vasos completos se llenan?",
+          "options": [
+            "4",
+            "5",
+            "7",
+            "6"
+          ],
+          "correctAnswer": "6",
+          "explanation": "1,5 litros equivalen a 1 500 ml; 1 500 ÷ 250 = 6 vasos.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-050",
+          "number": 50,
+          "topic": "Interpretar un gráfico · Verdadero o falso",
+          "concept": "eje_truncado_exagera_diferencias_visuales",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Un gráfico de barras empieza su eje vertical en 90 y muestra valores entre 95 y 100. La diferencia visual puede parecer mayor que la diferencia real.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Un eje truncado puede exagerar visualmente las variaciones aunque los datos numéricos sean correctos.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-051",
+          "number": 51,
+          "topic": "Números racionales",
+          "concept": "decimal_finito_representa_numero_racional",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál número es racional?",
+          "options": [
+            "0,6",
+            "√2",
+            "π",
+            "√7"
+          ],
+          "correctAnswer": "0,6",
+          "explanation": "0,6 puede escribirse como fracción, 6/10, por lo que es racional.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-052",
+          "number": 52,
+          "topic": "Factores",
+          "concept": "identificar_pareja_de_factores_de_veinticuatro",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál pareja de números tiene producto 24?",
+          "options": [
+            "3 y 7",
+            "3 y 8",
+            "5 y 4",
+            "4 y 6"
+          ],
+          "correctAnswer": "4 y 6",
+          "explanation": "4 × 6 = 24.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-053",
+          "number": 53,
+          "topic": "Clasificación de triángulos",
+          "concept": "triangulo_tres_lados_iguales_equilatero",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cómo se clasifica un triángulo que tiene sus tres lados iguales?",
+          "options": [
+            "Escaleno",
+            "Isósceles",
+            "Equilátero",
+            "Acutángulo"
+          ],
+          "correctAnswer": "Equilátero",
+          "explanation": "Un triángulo equilátero tiene sus tres lados de igual longitud.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-054",
+          "number": 54,
+          "topic": "Notación algebraica",
+          "concept": "coeficiente_numerico_de_termino_algebraico",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En la expresión 7a, ¿qué número es el coeficiente de a?",
+          "options": [
+            "a",
+            "0",
+            "1",
+            "7"
+          ],
+          "correctAnswer": "7",
+          "explanation": "El coeficiente numérico que multiplica a la variable a es 7.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-055",
+          "number": 55,
+          "topic": "Equivalencias",
+          "concept": "convertir_cuarto_a_porcentaje",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué porcentaje equivale a 1/4?",
+          "options": [
+            "25 %",
+            "20 %",
+            "40 %",
+            "75 %"
+          ],
+          "correctAnswer": "25 %",
+          "explanation": "Una cuarta parte equivale a 0,25, es decir, 25 de cada 100.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-056",
+          "number": 56,
+          "topic": "Potencias · Verdadero o falso",
+          "concept": "exponente_indica_repeticion_de_base_como_factor",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "La potencia 4³ significa 4 × 4 × 4.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "El exponente indica cuántas veces se usa la base como factor.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-057",
+          "number": 57,
+          "topic": "Igualdades",
+          "concept": "despejar_variable_en_resta_de_constante",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Si x − 8 = 5, ¿cuánto vale x?",
+          "options": [
+            "−3",
+            "13",
+            "40",
+            "3"
+          ],
+          "correctAnswer": "13",
+          "explanation": "Se suma 8 a ambos lados de la igualdad; x = 13.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-058",
+          "number": 58,
+          "topic": "Razones equivalentes",
+          "concept": "equivalencia_de_razones_multiplicar_ambos_terminos",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál razón es equivalente a 2:5?",
+          "options": [
+            "4:7",
+            "5:2",
+            "6:15",
+            "8:15"
+          ],
+          "correctAnswer": "6:15",
+          "explanation": "Al multiplicar ambos términos de 2:5 por 3 se obtiene 6:15.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-059",
+          "number": 59,
+          "topic": "Enteros · Verdadero o falso",
+          "concept": "producto_de_dos_negativos_es_positivo",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "El producto de dos números negativos es positivo.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Al multiplicar dos factores con signo negativo, el resultado tiene signo positivo.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-060",
+          "number": 60,
+          "topic": "Orden de operaciones",
+          "concept": "prioridad_de_multiplicacion_sobre_resta",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el valor de 18 − 2 × 5?",
+          "options": [
+            "80",
+            "8",
+            "20",
+            "40"
+          ],
+          "correctAnswer": "8",
+          "explanation": "Primero se multiplica 2 × 5 = 10; luego 18 − 10 = 8.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-061",
+          "number": 61,
+          "topic": "Clasificación de cuadriláteros",
+          "concept": "rombo_definido_por_cuatro_lados_iguales",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué característica define a un rombo?",
+          "options": [
+            "Cuatro ángulos rectos",
+            "Un solo par de lados paralelos",
+            "Cuatro lados iguales",
+            "Solo dos lados iguales"
+          ],
+          "correctAnswer": "Cuatro lados iguales",
+          "explanation": "Un rombo es un cuadrilátero cuyos cuatro lados tienen la misma longitud.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-062",
+          "number": 62,
+          "topic": "Expresiones · Verdadero o falso",
+          "concept": "exponente_se_aplica_antes_de_multiplicar_coeficiente",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Si n = 3, entonces 2n² = 36.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Falso",
+          "explanation": "Primero se eleva 3 al cuadrado y luego se multiplica por 2: 2 × 9 = 18.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-063",
+          "number": 63,
+          "topic": "Área de trapecio",
+          "concept": "area_trapecio_semisuma_de_bases_por_altura",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un trapecio tiene bases de 8 cm y 4 cm y altura de 5 cm. ¿Cuál es su área?",
+          "options": [
+            "30 cm²",
+            "20 cm²",
+            "60 cm²",
+            "40 cm²"
+          ],
+          "correctAnswer": "30 cm²",
+          "explanation": "Se suman las bases y se multiplica por la altura y se divide entre dos: (8 + 4) × 5 ÷ 2 = 30 cm².",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-064",
+          "number": 64,
+          "topic": "Probabilidad compuesta",
+          "concept": "extraccion_sin_reemplazo_modifica_probabilidad_condicionada",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En una caja hay 3 fichas verdes y 2 amarillas. Sin devolver la primera, se extraen dos. ¿Puede cambiar la probabilidad de la segunda extracción según la primera ficha?",
+          "options": [
+            "No, porque siempre hay cinco fichas",
+            "Sí, porque la composición de la caja cambia",
+            "No, porque las fichas tienen colores",
+            "Sí, porque se devuelve la primera ficha"
+          ],
+          "correctAnswer": "Sí, porque la composición de la caja cambia",
+          "explanation": "Al no devolver la primera ficha, quedan cuatro y la cantidad de cada color depende del resultado inicial.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-065",
+          "number": 65,
+          "topic": "Unidades de masa",
+          "concept": "conversion_de_kilogramos_a_gramos_con_decimal",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos gramos equivalen a 2,4 kilogramos?",
+          "options": [
+            "24",
+            "240",
+            "2 400",
+            "24 000"
+          ],
+          "correctAnswer": "2 400",
+          "explanation": "Cada kilogramo equivale a 1 000 gramos; 2,4 × 1 000 = 2 400.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-066",
+          "number": 66,
+          "topic": "Ángulos de polígonos",
+          "concept": "suma_angulos_interiores_cuadrilatero",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto suman los ángulos interiores de un cuadrilátero?",
+          "options": [
+            "180°",
+            "270°",
+            "540°",
+            "360°"
+          ],
+          "correctAnswer": "360°",
+          "explanation": "Un cuadrilátero puede dividirse en dos triángulos; sus ángulos suman 2 × 180° = 360°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-067",
+          "number": 67,
+          "topic": "Expresiones equivalentes",
+          "concept": "distributiva_de_factor_sobre_suma",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué expresión equivale a 3(x + 2)?",
+          "options": [
+            "3x + 6",
+            "3x + 2",
+            "x + 6",
+            "5x"
+          ],
+          "correctAnswer": "3x + 6",
+          "explanation": "La propiedad distributiva multiplica 3 por x y por 2: 3x + 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-068",
+          "number": 68,
+          "topic": "Variación proporcional",
+          "concept": "razon_constante_caracteriza_proporcionalidad_directa",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Si y aumenta en la misma proporción que x y ambas cantidades son positivas, ¿qué describe una relación directamente proporcional?",
+          "options": [
+            "x + y siempre es cero",
+            "y/x mantiene un valor constante",
+            "x − y siempre es cero",
+            "x × y mantiene un valor constante"
+          ],
+          "correctAnswer": "y/x mantiene un valor constante",
+          "explanation": "En una proporcionalidad directa, el cociente entre las cantidades correspondientes es constante.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-069",
+          "number": 69,
+          "topic": "Secuencias",
+          "concept": "secuencia_descendente_diferencia_constante",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En la secuencia 30, 25, 20, 15, …, ¿cuál es el siguiente término?",
+          "options": [
+            "12",
+            "11",
+            "5",
+            "10"
+          ],
+          "correctAnswer": "10",
+          "explanation": "Cada término disminuye en 5; después de 15 sigue 10.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-070",
+          "number": 70,
+          "topic": "Media estadística · Verdadero o falso",
+          "concept": "traslacion_de_datos_traslada_media_por_constante",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Agregar el mismo valor a todos los datos de un conjunto aumenta su media en ese valor.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Al sumar una constante a cada dato, la suma total aumenta esa constante por cada observación y la media aumenta en la misma cantidad.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-071",
+          "number": 71,
+          "topic": "Comparar expresiones",
+          "concept": "evaluar_expresion_con_dos_variables",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una aplicación calcula un puntaje con la regla 3a − 2b. Si a = 4 y b = 2, ¿qué puntaje muestra?",
+          "options": [
+            "8",
+            "10",
+            "12",
+            "16"
+          ],
+          "correctAnswer": "8",
+          "explanation": "Se sustituye y opera: 3 × 4 − 2 × 2 = 12 − 4 = 8.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-072",
+          "number": 72,
+          "topic": "Elección de medida estadística",
+          "concept": "seleccionar_mediana_ante_valor_extremo",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En cinco días una tienda vendió 8, 9, 9, 10 y 40 panes. ¿Qué medida describe mejor una venta diaria típica sin dejarse dominar por el dato extremo?",
+          "options": [
+            "Rango",
+            "Media",
+            "Mediana",
+            "Máximo"
+          ],
+          "correctAnswer": "Mediana",
+          "explanation": "La mediana es 9 y representa el centro del conjunto; el valor 40 eleva mucho la media.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-073",
+          "number": 73,
+          "topic": "Presupuesto",
+          "concept": "calcular_saldo_con_compra_de_varios_articulos",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Luis tiene $50 000. Compra un cuaderno de $12 500 y tres lápices de $2 500 cada uno. ¿Cuánto dinero le queda?",
+          "options": [
+            "$25 000",
+            "$30 000",
+            "$32 500",
+            "$37 500"
+          ],
+          "correctAnswer": "$30 000",
+          "explanation": "Los lápices cuestan $7 500; el gasto total es $20 000 y quedan $30 000.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-074",
+          "number": 74,
+          "topic": "Suma de ángulos",
+          "concept": "hallar_angulo_desconocido_en_triangulo",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Dos ángulos de un triángulo miden 48° y 67°. ¿Cuánto mide el tercero?",
+          "options": [
+            "55°",
+            "115°",
+            "75°",
+            "65°"
+          ],
+          "correctAnswer": "65°",
+          "explanation": "Los ángulos suman 180°; 180° − 48° − 67° = 65°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-075",
+          "number": 75,
+          "topic": "Razonamiento proporcional · Verdadero o falso",
+          "concept": "proporcionalidad_inversa_requiere_condiciones_del_modelo",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Si 4 máquinas idénticas hacen un trabajo en 6 horas, necesariamente 8 máquinas tardan 3 horas, sin importar cómo sea el trabajo.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Falso",
+          "explanation": "La relación inversa solo puede usarse bajo condiciones adecuadas, como máquinas iguales trabajando al mismo ritmo y sin interferencias.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-076",
+          "number": 76,
+          "topic": "Números decimales",
+          "concept": "suma_de_decimales_alineando_comas",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el resultado de 4,8 + 2,35?",
+          "options": [
+            "7,15",
+            "6,83",
+            "7,13",
+            "6,115"
+          ],
+          "correctAnswer": "7,15",
+          "explanation": "Al alinear las comas decimales, 4,80 + 2,35 = 7,15.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-077",
+          "number": 77,
+          "topic": "Términos algebraicos",
+          "concept": "identificar_coeficiente_en_binomio",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el coeficiente de x en 9x + 4?",
+          "options": [
+            "4",
+            "9",
+            "x",
+            "13"
+          ],
+          "correctAnswer": "9",
+          "explanation": "El coeficiente es el número que multiplica a la variable x.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-078",
+          "number": 78,
+          "topic": "Circunferencia",
+          "concept": "diametro_es_dos_veces_radio",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el diámetro de una circunferencia cuyo radio mide 6 cm?",
+          "options": [
+            "3 cm",
+            "6 cm",
+            "12 cm",
+            "36 cm"
+          ],
+          "correctAnswer": "12 cm",
+          "explanation": "El diámetro equivale a dos radios: 2 × 6 = 12 cm.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-079",
+          "number": 79,
+          "topic": "Paralelismo",
+          "concept": "rectas_coplanarias_que_no_se_intersectan",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué nombre reciben dos rectas de un mismo plano que nunca se cruzan?",
+          "options": [
+            "Perpendiculares",
+            "Secantes",
+            "Oblicuas",
+            "Paralelas"
+          ],
+          "correctAnswer": "Paralelas",
+          "explanation": "Las rectas paralelas mantienen una distancia constante y no se intersectan.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-080",
+          "number": 80,
+          "topic": "Fracciones · Verdadero o falso",
+          "concept": "fraccion_como_partes_iguales_de_un_todo",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "Al dividir una pizza en 8 partes iguales, 3 partes representan 3/8 de la pizza.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "El denominador cuenta las partes iguales totales y el numerador las partes consideradas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-081",
+          "number": 81,
+          "topic": "Divisibilidad",
+          "concept": "criterio_de_divisibilidad_por_cinco",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál número es divisible por 5?",
+          "options": [
+            "135",
+            "132",
+            "143",
+            "148"
+          ],
+          "correctAnswer": "135",
+          "explanation": "Un número entero es divisible por 5 si termina en 0 o en 5.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-082",
+          "number": 82,
+          "topic": "Expresiones algebraicas",
+          "concept": "traducir_aumento_de_variable_por_constante",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál expresión representa “un número aumentado en 11”?",
+          "options": [
+            "11 − n",
+            "n + 11",
+            "11n",
+            "n ÷ 11"
+          ],
+          "correctAnswer": "n + 11",
+          "explanation": "Aumentar un número en 11 significa sumarle 11.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-083",
+          "number": 83,
+          "topic": "Números enteros · Verdadero o falso",
+          "concept": "orden_numero_en_recta_hacia_la_derecha",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "En la recta numérica, todo número situado a la derecha de −2 es mayor que −2.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Los números aumentan al avanzar hacia la derecha en la recta numérica.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-084",
+          "number": 84,
+          "topic": "Ecuaciones",
+          "concept": "resolver_ecuacion_lineal_con_coeficiente_y_suma",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué valor de x cumple 4x + 3 = 27?",
+          "options": [
+            "5",
+            "7",
+            "9",
+            "6"
+          ],
+          "correctAnswer": "6",
+          "explanation": "Al restar 3 se obtiene 4x = 24; luego x = 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-085",
+          "number": 85,
+          "topic": "Comparación de fracciones",
+          "concept": "comparar_cuatro_fracciones_con_distinto_denominador",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál de estas fracciones es menor?",
+          "options": [
+            "5/6",
+            "3/4",
+            "2/3",
+            "7/8"
+          ],
+          "correctAnswer": "2/3",
+          "explanation": "Con denominador 24 son 16/24, 20/24, 18/24 y 21/24; 2/3 es la menor.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-086",
+          "number": 86,
+          "topic": "Precio unitario",
+          "concept": "obtener_precio_unitario_desde_costo_total",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Si 3 kilogramos de manzanas cuestan $18 000, ¿cuál es el precio de 1 kilogramo?",
+          "options": [
+            "$6 000",
+            "$3 000",
+            "$9 000",
+            "$18 000"
+          ],
+          "correctAnswer": "$6 000",
+          "explanation": "Se divide el costo total entre los 3 kilogramos: $18 000 ÷ 3 = $6 000.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-087",
+          "number": 87,
+          "topic": "Simetría de polígonos",
+          "concept": "ejes_de_simetria_de_rectangulo_no_cuadrado",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos ejes de simetría tiene un rectángulo que no es un cuadrado?",
+          "options": [
+            "1",
+            "4",
+            "2",
+            "0"
+          ],
+          "correctAnswer": "2",
+          "explanation": "Sus ejes pasan por los puntos medios de lados opuestos, horizontal y verticalmente.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-088",
+          "number": 88,
+          "topic": "Medidas de dispersión · Verdadero o falso",
+          "concept": "rango_como_diferencia_entre_extremos",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "El rango de 3, 8, 11 y 15 es 12.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "El rango es la diferencia entre el máximo y el mínimo: 15 − 3 = 12.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-089",
+          "number": 89,
+          "topic": "Área y unidades",
+          "concept": "area_rectangular_con_unidades_cuadradas",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un piso rectangular mide 6 m por 4 m. ¿Cuál es su área?",
+          "options": [
+            "10 m²",
+            "20 m²",
+            "48 m²",
+            "24 m²"
+          ],
+          "correctAnswer": "24 m²",
+          "explanation": "El área rectangular es largo por ancho: 6 × 4 = 24 m².",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-090",
+          "number": 90,
+          "topic": "Desigualdades",
+          "concept": "solucion_de_desigualdad_estricta_menor_que",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué número satisface la desigualdad x < 4?",
+          "options": [
+            "4",
+            "5",
+            "3",
+            "8"
+          ],
+          "correctAnswer": "3",
+          "explanation": "Tres es menor que cuatro; la desigualdad es estricta y no incluye el 4.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-091",
+          "number": 91,
+          "topic": "Fracciones de una cantidad",
+          "concept": "hallar_fraccion_unitaria_de_cantidad_y_escalar",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto es 2/5 de 30?",
+          "options": [
+            "10",
+            "12",
+            "15",
+            "20"
+          ],
+          "correctAnswer": "12",
+          "explanation": "Un quinto de 30 es 6; dos quintos son 12.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-092",
+          "number": 92,
+          "topic": "Paralelogramos",
+          "concept": "lados_opuestos_de_paralelogramo_son_iguales",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué propiedad cumplen los lados opuestos de todo paralelogramo?",
+          "options": [
+            "Siempre tienen longitudes distintas",
+            "Nunca son paralelos",
+            "Tienen la misma longitud",
+            "Forman siempre ángulos rectos"
+          ],
+          "correctAnswer": "Tienen la misma longitud",
+          "explanation": "En todo paralelogramo, cada par de lados opuestos es paralelo y tiene igual longitud.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-093",
+          "number": 93,
+          "topic": "Promedios · Verdadero o falso",
+          "concept": "media_de_datos_identicos_es_el_mismo_valor",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Si todos los datos de una lista son iguales a 8, su media también es 8.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "El promedio de valores iguales coincide con el valor que se repite.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-094",
+          "number": 94,
+          "topic": "Diagramas y probabilidad",
+          "concept": "probabilidad_de_obtener_valor_mayor_que_cuatro",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Al lanzar un dado común, ¿cuál es la probabilidad de obtener un número mayor que 4?",
+          "options": [
+            "1/6",
+            "1/3",
+            "2/3",
+            "1/2"
+          ],
+          "correctAnswer": "1/3",
+          "explanation": "Los resultados favorables son 5 y 6: dos de seis, equivalentes a 1/3.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-095",
+          "number": 95,
+          "topic": "Polígonos",
+          "concept": "cantidad_de_lados_de_un_heptagono",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos lados tiene un heptágono?",
+          "options": [
+            "6",
+            "8",
+            "9",
+            "7"
+          ],
+          "correctAnswer": "7",
+          "explanation": "El prefijo “hepta-” indica siete; un heptágono tiene siete lados.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-096",
+          "number": 96,
+          "topic": "Lectura crítica de gráficos",
+          "concept": "verificar_escalas_antes_de_comparar_graficos",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un informe compara ventas mensuales y usa escalas verticales distintas en dos gráficos. ¿Qué debe hacer quien los compara?",
+          "options": [
+            "Comparar solo la altura de las barras",
+            "Revisar las escalas antes de interpretar diferencias",
+            "Suponer que ambos ejes empiezan en cero",
+            "Ignorar las unidades indicadas"
+          ],
+          "correctAnswer": "Revisar las escalas antes de interpretar diferencias",
+          "explanation": "Una escala diferente puede cambiar la apariencia de las variaciones; revisar los ejes evita comparaciones engañosas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-097",
+          "number": 97,
+          "topic": "Plan de ahorro",
+          "concept": "determinar_periodos_para_alcanzar_meta_de_ahorro",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Valeria ahorra $8 000 cada semana. Ya tiene $24 000 y quiere llegar a $64 000. ¿Cuántas semanas más necesita?",
+          "options": [
+            "5",
+            "6",
+            "8",
+            "11"
+          ],
+          "correctAnswer": "5",
+          "explanation": "Le faltan $40 000; al ahorrar $8 000 por semana, necesita 40 000 ÷ 8 000 = 5 semanas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-098",
+          "number": 98,
+          "topic": "Conversión y comparación",
+          "concept": "comparar_capacidades_tras_convertir_unidades",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Dos recipientes contienen 0,75 L y 680 ml. ¿Cuál contiene más líquido y cuánto más?",
+          "options": [
+            "El de 0,75 L, por 70 ml",
+            "El de 680 ml, por 70 ml",
+            "El de 0,75 L, por 7 ml",
+            "El de 680 ml, por 7 ml"
+          ],
+          "correctAnswer": "El de 0,75 L, por 70 ml",
+          "explanation": "0,75 L son 750 ml y la diferencia con 680 ml es 70 ml.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-099",
+          "number": 99,
+          "topic": "Diseño geométrico",
+          "concept": "teselacion_cuadrada_por_conteo_en_filas_y_columnas",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un mosaico cuadrado de 1 m de lado se cubre con piezas cuadradas de 20 cm de lado, sin huecos ni cortes. ¿Cuántas piezas se necesitan?",
+          "options": [
+            "10",
+            "20",
+            "50",
+            "25"
+          ],
+          "correctAnswer": "25",
+          "explanation": "Un metro equivale a 100 cm; caben 5 piezas por lado y 5 × 5 = 25 en total.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-100",
+          "number": 100,
+          "topic": "Razonamiento con datos · Verdadero o falso",
+          "concept": "promedio_no_revela_distribucion_completa",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Un promedio puede ocultar diferencias entre los valores individuales de un grupo.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Distintos conjuntos pueden tener la misma media y distribuciones muy diferentes.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-101",
+          "number": 101,
+          "topic": "Divisibilidad",
+          "concept": "criterio_de_divisibilidad_por_tres",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál de estos números es divisible entre 3?",
+          "options": [
+            "42",
+            "25",
+            "34",
+            "50"
+          ],
+          "correctAnswer": "42",
+          "explanation": "La suma de las cifras de 42 es 6, múltiplo de 3; por eso 42 también es divisible entre 3.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-102",
+          "number": 102,
+          "topic": "Números primos",
+          "concept": "reconocer_numero_primo_compuesto_y_unidad",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es un número primo?",
+          "options": [
+            "21",
+            "19",
+            "27",
+            "1"
+          ],
+          "correctAnswer": "19",
+          "explanation": "19 tiene exactamente dos divisores positivos: 1 y 19.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-103",
+          "number": 103,
+          "topic": "Múltiplos",
+          "concept": "identificar_siguiente_multiplo_mayor_que_un_limite",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el primer múltiplo positivo de 8 mayor que 30?",
+          "options": [
+            "36",
+            "40",
+            "32",
+            "48"
+          ],
+          "correctAnswer": "32",
+          "explanation": "Los múltiplos cercanos son 24 y 32; 32 es el primero que supera 30.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-104",
+          "number": 104,
+          "topic": "Potencias",
+          "concept": "interpretar_exponente_dos_como_producto",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto vale 3²?",
+          "options": [
+            "6",
+            "8",
+            "32",
+            "9"
+          ],
+          "correctAnswer": "9",
+          "explanation": "Tres al cuadrado significa 3 × 3, que es 9.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-105",
+          "number": 105,
+          "topic": "Valor posicional · Verdadero o falso",
+          "concept": "valor_posicional_de_decimas_en_decimal",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "En 5,37, la cifra 3 representa tres décimas.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "La primera cifra a la derecha de la coma ocupa la posición de las décimas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-106",
+          "number": 106,
+          "topic": "Fracciones",
+          "concept": "generar_fraccion_equivalente_por_ampliacion",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál fracción equivale a 3/4?",
+          "options": [
+            "9/12",
+            "6/12",
+            "8/12",
+            "10/12"
+          ],
+          "correctAnswer": "9/12",
+          "explanation": "Al multiplicar numerador y denominador de 3/4 por 3 se obtiene 9/12.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-107",
+          "number": 107,
+          "topic": "Unidades de longitud",
+          "concept": "convertir_metros_decimales_a_centimetros",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos centímetros hay en 2,4 metros?",
+          "options": [
+            "24",
+            "240",
+            "2 400",
+            "0,24"
+          ],
+          "correctAnswer": "240",
+          "explanation": "Cada metro tiene 100 centímetros; 2,4 × 100 = 240.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-108",
+          "number": 108,
+          "topic": "Clasificación de números",
+          "concept": "distinguir_entero_negativo_de_natural_y_racional_no_entero",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál número es entero, pero no natural?",
+          "options": [
+            "0,5",
+            "4",
+            "−3",
+            "2/3"
+          ],
+          "correctAnswer": "−3",
+          "explanation": "−3 es un entero negativo; no pertenece a los naturales.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-109",
+          "number": 109,
+          "topic": "Mínimo común múltiplo",
+          "concept": "calcular_mcm_de_dos_numeros",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el mínimo común múltiplo de 6 y 8?",
+          "options": [
+            "12",
+            "18",
+            "36",
+            "24"
+          ],
+          "correctAnswer": "24",
+          "explanation": "24 es el menor número positivo que aparece en ambas listas de múltiplos.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-110",
+          "number": 110,
+          "topic": "Suma de fracciones",
+          "concept": "sumar_fracciones_con_denominadores_distintos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto es 1/3 + 1/4?",
+          "options": [
+            "7/12",
+            "2/7",
+            "1/7",
+            "2/12"
+          ],
+          "correctAnswer": "7/12",
+          "explanation": "Con denominador 12, la suma es 4/12 + 3/12 = 7/12.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-111",
+          "number": 111,
+          "topic": "Enteros",
+          "concept": "producto_de_dos_enteros_negativos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el resultado de (−7) × (−4)?",
+          "options": [
+            "−28",
+            "28",
+            "−11",
+            "11"
+          ],
+          "correctAnswer": "28",
+          "explanation": "El producto de dos números negativos es positivo y 7 × 4 = 28.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-112",
+          "number": 112,
+          "topic": "Expresiones algebraicas · Verdadero o falso",
+          "concept": "reducir_terminos_semejantes_con_variable_comun",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "La expresión 4a + 3a equivale a 7a.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Son términos semejantes; se suman sus coeficientes y se conserva la variable.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-113",
+          "number": 113,
+          "topic": "Ecuaciones",
+          "concept": "resolver_ecuacion_con_parentesis_y_factor",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué valor de x satisface 5(x − 2) = 20?",
+          "options": [
+            "2",
+            "4",
+            "6",
+            "8"
+          ],
+          "correctAnswer": "6",
+          "explanation": "Al dividir entre 5 queda x − 2 = 4; por tanto, x = 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-114",
+          "number": 114,
+          "topic": "Ángulos",
+          "concept": "hallar_complemento_suplementario_sobre_linea_recta",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Dos ángulos forman una línea recta. Si uno mide 128°, ¿cuánto mide el otro?",
+          "options": [
+            "128°",
+            "62°",
+            "42°",
+            "52°"
+          ],
+          "correctAnswer": "52°",
+          "explanation": "Los ángulos adyacentes sobre una línea recta suman 180°; 180° − 128° = 52°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-115",
+          "number": 115,
+          "topic": "Circunferencia",
+          "concept": "calcular_longitud_de_circunferencia_con_diametro",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una rueda tiene diámetro de 14 cm. Usando π ≈ 3, ¿cuál es su longitud aproximada?",
+          "options": [
+            "42 cm",
+            "21 cm",
+            "28 cm",
+            "84 cm"
+          ],
+          "correctAnswer": "42 cm",
+          "explanation": "La longitud de la circunferencia es π por el diámetro: 3 × 14 = 42 cm.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-116",
+          "number": 116,
+          "topic": "Volumen",
+          "concept": "calcular_volumen_de_prisma_rectangular",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una caja mide 5 cm de largo, 3 cm de ancho y 4 cm de alto. ¿Cuál es su volumen?",
+          "options": [
+            "12 cm³",
+            "60 cm³",
+            "47 cm³",
+            "120 cm³"
+          ],
+          "correctAnswer": "60 cm³",
+          "explanation": "El volumen del prisma rectangular es largo × ancho × alto: 5 × 3 × 4 = 60 cm³.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-117",
+          "number": 117,
+          "topic": "Moda estadística",
+          "concept": "hallar_moda_en_lista_de_datos",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es la moda de 2, 3, 3, 5, 7?",
+          "options": [
+            "2",
+            "5",
+            "3",
+            "4"
+          ],
+          "correctAnswer": "3",
+          "explanation": "La moda es el dato que aparece con mayor frecuencia; 3 aparece dos veces.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-118",
+          "number": 118,
+          "topic": "Probabilidad · Verdadero o falso",
+          "concept": "probabilidad_de_evento_con_tres_resultados_de_seis",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Al lanzar un dado común, obtener un número par tiene probabilidad 1/2.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Tres de los seis resultados posibles son pares: 2, 4 y 6; 3/6 = 1/2.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-119",
+          "number": 119,
+          "topic": "Plano cartesiano",
+          "concept": "distancia_horizontal_entre_puntos_de_igual_ordenada",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es la distancia horizontal entre los puntos (−2, 3) y (5, 3)?",
+          "options": [
+            "3 unidades",
+            "5 unidades",
+            "9 unidades",
+            "7 unidades"
+          ],
+          "correctAnswer": "7 unidades",
+          "explanation": "Tienen la misma coordenada vertical; la distancia horizontal es 5 − (−2) = 7.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-120",
+          "number": 120,
+          "topic": "Transformaciones geométricas",
+          "concept": "efecto_de_reflexion_en_eje_x_sobre_coordenadas",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Al reflejar un punto respecto del eje x, ¿qué coordenada cambia de signo?",
+          "options": [
+            "La coordenada y",
+            "La coordenada x",
+            "Ambas coordenadas",
+            "Ninguna coordenada"
+          ],
+          "correctAnswer": "La coordenada y",
+          "explanation": "La reflexión en el eje x conserva x y cambia y por su opuesto: (x, y) → (x, −y).",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-121",
+          "number": 121,
+          "topic": "Divisores y agrupación",
+          "concept": "seleccionar_divisor_que_cumple_restriccion_de_tamano",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Hay 36 lápices y se quieren formar paquetes iguales, sin sobrantes, con más de 4 y menos de 10 lápices cada uno. ¿Qué tamaño sirve?",
+          "options": [
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
+          "correctAnswer": "6",
+          "explanation": "Seis divide exactamente a 36 y está entre 4 y 10; los otros valores no forman paquetes sin sobrantes.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-122",
+          "number": 122,
+          "topic": "Proporcionalidad inversa",
+          "concept": "aplicar_proporcionalidad_inversa_personas_y_tiempo",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Seis personas tardan 4 horas en limpiar un salón al mismo ritmo. Si trabajan 8 personas, ¿cuánto tardarían?",
+          "options": [
+            "5 horas",
+            "4 horas",
+            "3 horas",
+            "2 horas"
+          ],
+          "correctAnswer": "3 horas",
+          "explanation": "El trabajo equivale a 6 × 4 = 24 persona-horas; 24 ÷ 8 = 3 horas.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-123",
+          "number": 123,
+          "topic": "Elección de representación · Verdadero o falso",
+          "concept": "elegir_grafico_de_lineas_para_cambio_temporal",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Para mostrar cómo cambia la temperatura de una ciudad durante una semana, un gráfico de líneas suele ser adecuado.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Los puntos unidos facilitan observar variaciones y tendencias a lo largo del tiempo.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-124",
+          "number": 124,
+          "topic": "Estimación de área",
+          "concept": "estimar_area_rectangular_con_medidas_decimales",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Un patio rectangular mide cerca de 9,8 m por 4,1 m. ¿Qué estimación de su área es más razonable?",
+          "options": [
+            "14 m²",
+            "20 m²",
+            "90 m²",
+            "40 m²"
+          ],
+          "correctAnswer": "40 m²",
+          "explanation": "Al aproximar a 10 m y 4 m, el área es cercana a 40 m²; el producto exacto es 40,18 m².",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-125",
+          "number": 125,
+          "topic": "Error de razonamiento · Verdadero o falso",
+          "concept": "detectar_error_al_aplicar_propiedad_distributiva",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Una estudiante afirma que 3(x + 2) = 3x + 2 porque el 3 solo multiplica a x.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Falso",
+          "explanation": "La propiedad distributiva multiplica el 3 por cada término: 3(x + 2) = 3x + 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-126",
+          "number": 126,
+          "topic": "Divisores",
+          "concept": "reconocer_divisor_entero_de_un_numero",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es un divisor de 42?",
+          "options": [
+            "20",
+            "8",
+            "16",
+            "7"
+          ],
+          "correctAnswer": "7",
+          "explanation": "42 ÷ 7 = 6, sin residuo; por eso 7 es divisor de 42.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-127",
+          "number": 127,
+          "topic": "Fracciones y decimales",
+          "concept": "convertir_decimas_a_notacion_decimal",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué número decimal equivale a 3/10?",
+          "options": [
+            "0,03",
+            "0,3",
+            "3,0",
+            "30"
+          ],
+          "correctAnswer": "0,3",
+          "explanation": "Tres décimas se escriben 0,3 en notación decimal.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-128",
+          "number": 128,
+          "topic": "Porcentajes",
+          "concept": "interpretar_porcentaje_como_cantidad_sobre_cien",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué porcentaje representa 25 de 100?",
+          "options": [
+            "2,5 %",
+            "250 %",
+            "25 %",
+            "75 %"
+          ],
+          "correctAnswer": "25 %",
+          "explanation": "25 de cada 100 corresponde directamente al 25 %.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-129",
+          "number": 129,
+          "topic": "Unidades de tiempo",
+          "concept": "convertir_horas_decimales_a_minutos",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos minutos hay en 2,5 horas?",
+          "options": [
+            "125",
+            "130",
+            "250",
+            "150"
+          ],
+          "correctAnswer": "150",
+          "explanation": "Dos horas son 120 minutos y media hora son 30; en total, 150 minutos.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-130",
+          "number": 130,
+          "topic": "Fracciones · Verdadero o falso",
+          "concept": "simplificar_fraccion_dividiendo_por_factor_comun",
+          "difficulty": "BASIC",
+          "type": "TRUE_FALSE",
+          "text": "La fracción 6/8 se simplifica a 3/4.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Al dividir numerador y denominador entre 2 se obtiene 3/4.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-131",
+          "number": 131,
+          "topic": "Ángulos",
+          "concept": "clasificar_angulo_mayor_que_noventa_menor_que_ciento_ochenta",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Qué tipo de ángulo mide 120°?",
+          "options": [
+            "Obtuso",
+            "Agudo",
+            "Recto",
+            "Llano"
+          ],
+          "correctAnswer": "Obtuso",
+          "explanation": "Un ángulo obtuso mide más de 90° y menos de 180°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-132",
+          "number": 132,
+          "topic": "Plano cartesiano",
+          "concept": "identificar_primera_coordenada_de_par_ordenado",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En el punto (4, −2), ¿cuál es la coordenada x?",
+          "options": [
+            "−2",
+            "4",
+            "2",
+            "−4"
+          ],
+          "correctAnswer": "4",
+          "explanation": "En un par ordenado (x, y), la primera coordenada corresponde a x.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-133",
+          "number": 133,
+          "topic": "Números enteros",
+          "concept": "comparar_distancia_al_cero_de_enteros",
+          "difficulty": "BASIC",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál número está más cerca de cero: −5 o 3?",
+          "options": [
+            "−5",
+            "Están igual de cerca",
+            "3",
+            "No se puede saber"
+          ],
+          "correctAnswer": "3",
+          "explanation": "La distancia de −5 a cero es 5 y la de 3 es 3; por eso 3 está más cerca.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-134",
+          "number": 134,
+          "topic": "Máximo común divisor",
+          "concept": "calcular_mcd_de_dos_numeros",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál es el máximo común divisor de 18 y 30?",
+          "options": [
+            "3",
+            "9",
+            "12",
+            "6"
+          ],
+          "correctAnswer": "6",
+          "explanation": "Los divisores comunes incluyen 1, 2, 3 y 6; el mayor es 6.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-135",
+          "number": 135,
+          "topic": "Resta de fracciones",
+          "concept": "restar_fracciones_con_denominadores_distintos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto es 5/6 − 1/4?",
+          "options": [
+            "7/12",
+            "4/2",
+            "1/2",
+            "4/10"
+          ],
+          "correctAnswer": "7/12",
+          "explanation": "Con denominador 12, 5/6 − 1/4 = 10/12 − 3/12 = 7/12.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-136",
+          "number": 136,
+          "topic": "Expresiones algebraicas",
+          "concept": "traducir_doble_de_variable_mas_constante",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuál expresión representa “el doble de n, aumentado en 5”?",
+          "options": [
+            "2(n + 5)",
+            "2n + 5",
+            "n² + 5",
+            "5n + 2"
+          ],
+          "correctAnswer": "2n + 5",
+          "explanation": "El doble de n es 2n; luego se agregan 5 unidades.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-137",
+          "number": 137,
+          "topic": "Ecuaciones · Verdadero o falso",
+          "concept": "comprobar_solucion_de_ecuacion_por_sustitucion",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "La ecuación 2x + 1 = 9 tiene solución x = 4.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "Al sustituir, 2 × 4 + 1 = 9; la igualdad se cumple.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-138",
+          "number": 138,
+          "topic": "Escalas",
+          "concept": "interpretar_escala_numerica_en_plano",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En un plano, 1 cm representa 5 km. ¿Qué distancia real representan 4 cm?",
+          "options": [
+            "9 km",
+            "15 km",
+            "20 km",
+            "25 km"
+          ],
+          "correctAnswer": "20 km",
+          "explanation": "Cada centímetro representa 5 km; 4 × 5 = 20 km.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-139",
+          "number": 139,
+          "topic": "Área de figuras compuestas",
+          "concept": "sumar_areas_de_componentes_sin_superposicion",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una figura se forma con dos rectángulos sin superposición, de áreas 12 cm² y 7 cm². ¿Cuál es el área total?",
+          "options": [
+            "5 cm²",
+            "38 cm²",
+            "84 cm²",
+            "19 cm²"
+          ],
+          "correctAnswer": "19 cm²",
+          "explanation": "Al no superponerse, las áreas se suman: 12 + 7 = 19 cm².",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-140",
+          "number": 140,
+          "topic": "Probabilidad",
+          "concept": "probabilidad_de_resultado_por_conteo_de_casos",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una bolsa tiene 3 bolas rojas y 2 azules. ¿Cuál es la probabilidad de sacar una azul?",
+          "options": [
+            "2/5",
+            "3/5",
+            "1/2",
+            "2/3"
+          ],
+          "correctAnswer": "2/5",
+          "explanation": "Hay dos bolas azules entre cinco bolas en total, así que la probabilidad es 2/5.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-141",
+          "number": 141,
+          "topic": "Razones",
+          "concept": "simplificar_razon_de_dos_cantidades",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "En un grupo hay 12 niñas y 8 niños. ¿Cuál es la razón niñas:niños en forma simplificada?",
+          "options": [
+            "8:12",
+            "3:2",
+            "12:20",
+            "2:3"
+          ],
+          "correctAnswer": "3:2",
+          "explanation": "La razón 12:8 se simplifica dividiendo ambos términos entre 4: 3:2.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-142",
+          "number": 142,
+          "topic": "Simetría",
+          "concept": "ejes_de_simetria_de_triangulo_equilatero",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos ejes de simetría tiene un triángulo equilátero?",
+          "options": [
+            "1",
+            "2",
+            "3",
+            "6"
+          ],
+          "correctAnswer": "3",
+          "explanation": "Cada vértice puede reflejarse sobre el punto medio del lado opuesto; hay tres ejes.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-143",
+          "number": 143,
+          "topic": "Estadística · Verdadero o falso",
+          "concept": "efecto_de_valor_extremo_sobre_la_media",
+          "difficulty": "INTERMEDIATE",
+          "type": "TRUE_FALSE",
+          "text": "Si se agrega un valor muy alto a una lista, la media puede aumentar.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "El valor alto eleva la suma total y puede subir el promedio, según los datos existentes.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-144",
+          "number": 144,
+          "topic": "Volumen y capacidad",
+          "concept": "convertir_litros_decimales_a_mililitros",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuántos mililitros equivalen a 1,2 litros?",
+          "options": [
+            "120",
+            "12",
+            "12 000",
+            "1 200"
+          ],
+          "correctAnswer": "1 200",
+          "explanation": "Un litro equivale a 1 000 ml; 1,2 litros son 1 200 ml.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-145",
+          "number": 145,
+          "topic": "Polígonos",
+          "concept": "suma_de_angulos_interiores_de_cuadrilatero",
+          "difficulty": "INTERMEDIATE",
+          "type": "MULTIPLE_CHOICE",
+          "text": "¿Cuánto suman los ángulos interiores de un cuadrilátero?",
+          "options": [
+            "360°",
+            "180°",
+            "270°",
+            "540°"
+          ],
+          "correctAnswer": "360°",
+          "explanation": "Un cuadrilátero puede dividirse en dos triángulos; sus ángulos suman 2 × 180° = 360°.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-146",
+          "number": 146,
+          "topic": "Decisión financiera",
+          "concept": "calcular_precio_final_con_descuento_porcentual",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una camiseta cuesta $80 000. Una tienda ofrece 25 % de descuento. ¿Cuánto se paga?",
+          "options": [
+            "$20 000",
+            "$60 000",
+            "$65 000",
+            "$75 000"
+          ],
+          "correctAnswer": "$60 000",
+          "explanation": "El descuento es la cuarta parte de $80 000, es decir $20 000; el precio final es $60 000.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-147",
+          "number": 147,
+          "topic": "Interpretar un patrón",
+          "concept": "extender_patron_multiplicativo",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Una secuencia comienza 2, 6, 18, 54. Si cada término se obtiene multiplicando el anterior por 3, ¿cuál sigue?",
+          "options": [
+            "108",
+            "150",
+            "162",
+            "216"
+          ],
+          "correctAnswer": "162",
+          "explanation": "Se mantiene la regla de multiplicar por 3: 54 × 3 = 162.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-148",
+          "number": 148,
+          "topic": "Análisis de datos · Verdadero o falso",
+          "concept": "igualdad_de_medias_no_implica_igual_dispersion",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Dos cursos tienen el mismo promedio en una prueba; eso garantiza que todos sus estudiantes obtuvieron resultados parecidos.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Falso",
+          "explanation": "El promedio no muestra por sí solo la dispersión; un curso puede tener resultados muy variados y el otro, concentrados.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-149",
+          "number": 149,
+          "topic": "Diseño y perímetro",
+          "concept": "calcular_material_de_cercado_con_apertura",
+          "difficulty": "APPLICATION",
+          "type": "MULTIPLE_CHOICE",
+          "text": "Se cercará un jardín cuadrado de 6 m de lado, dejando una entrada de 1 m sin cerca. ¿Cuántos metros de cerca se necesitan?",
+          "options": [
+            "23 m",
+            "24 m",
+            "35 m",
+            "36 m"
+          ],
+          "correctAnswer": "23 m",
+          "explanation": "El perímetro es 4 × 6 = 24 m; al dejar 1 m abierto, se requieren 23 m de cerca.",
+          "stability": "STABLE",
+          "source": null
+        },
+        {
+          "id": "MAT7-150",
+          "number": 150,
+          "topic": "Razón y toma de decisión · Verdadero o falso",
+          "concept": "escalar_razon_directa_manteniendo_proporcion",
+          "difficulty": "APPLICATION",
+          "type": "TRUE_FALSE",
+          "text": "Para una bebida se mezclan 2 vasos de concentrado por cada 5 de agua. Si se usan 6 vasos de concentrado, mantener la misma proporción requiere 15 vasos de agua.",
+          "options": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctAnswer": "Verdadero",
+          "explanation": "El concentrado se triplicó de 2 a 6; el agua también: 5 × 3 = 15.",
+          "stability": "STABLE",
+          "source": null
+        }
+      ]
+    }
 ];
