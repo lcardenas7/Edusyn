@@ -7,18 +7,18 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 | Grado | Arte y cultura | Historia | Deportes | Ciencia y naturaleza | Geografía | Lengua y literatura | Matemáticas y lógica | Tecnología |
 |---|---|---|---|---|---|---|---|---|
 | 6.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging (importado en 8C) | Completo · staging | Completo · staging | Completo · staging |
-| 7.º | Completo · pendiente staging | Completo · pendiente staging | Completo · pendiente staging | Completo · pendiente staging | Completo · pendiente staging | Completo · pendiente staging | En curso (100/150) | Pendiente |
-| 8.º | Pendiente | Completo · integrado local | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
+| 7.º | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging | Completo · staging | En curso (100/150) | Pendiente |
+| 8.º | Pendiente | Completo · staging | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 9.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 10.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | 11.º | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 
-- **Historia · 7.º:** 150 preguntas auditadas y convertidas en `docs/duelos/oficial/historia_7.json`; integrado al catálogo opcional local. Incluye seis lotes de revisión en `docs/DUELOS_HISTORIA_7_BLOQUE_01.md`.
-- **Historia · 8.º:** banco completo de 150 preguntas en `docs/duelos/oficial/historia_8.json` y seis lotes de revisión en `docs/DUELOS_HISTORIA_8_BLOQUE_01.md`. Aborda revoluciones atlánticas, industrialización, formación de repúblicas, imperialismo y Colombia del siglo XIX; cumple las proporciones acordadas, tiene claves balanceadas y conceptos únicos, y pasa la prueba de importación. Integrado en el catálogo opcional local, pendiente de staging.
-- **Deportes · 7.º:** banco completo de 150 preguntas en `docs/duelos/oficial/deportes_7.json` y seis lotes en `docs/DUELOS_DEPORTES_7_BLOQUE_01.md`. Combina reglas, estrategia, seguridad, inclusión, cultura deportiva y análisis, evitando récords dinámicos; está integrado en el catálogo local y tiene prueba de importación.
-- **Ciencia y naturaleza · 7.º:** banco de 150 preguntas en `docs/duelos/oficial/ciencia_naturaleza_7.json` y seis lotes de revisión en `docs/DUELOS_CIENCIA_NATURALEZA_7_BLOQUE_01.md`. Cumple las cantidades y distribuciones acordadas, 30 respuestas correctas por letra y 150 conceptos únicos; está integrado en el catálogo opcional local y pasa la prueba de importación.
-- **Geografía · 7.º:** banco de 150 preguntas en `docs/duelos/oficial/geografia_7.json` y seis lotes de revisión en `docs/DUELOS_GEOGRAFIA_7_BLOQUE_01.md`. Incluye referencias de IGAC, DANE, UNGRD e IDEAM; cumple las distribuciones y tiene 150 conceptos únicos; integrado en el catálogo opcional local y con prueba de importación.
-- **Lengua y literatura · 7.º:** banco completo de 150 preguntas en `docs/duelos/oficial/lengua_literatura_7.json` y seis lotes de revisión en `docs/DUELOS_LENGUA_LITERATURA_7_BLOQUE_01.md`. Incluye comprensión, gramática, géneros, argumentación y lectura crítica; cumple las distribuciones, tiene claves balanceadas y conceptos únicos, e incluye referencias del MEN y la RAE. Integrado al catálogo local opcional y probado para importación.
+- **Historia · 7.º:** 150 preguntas auditadas y convertidas en `docs/duelos/oficial/historia_7.json`; disponible en el catálogo opcional de staging. Incluye seis lotes de revisión en `docs/DUELOS_HISTORIA_7_BLOQUE_01.md`.
+- **Historia · 8.º:** banco completo de 150 preguntas en `docs/duelos/oficial/historia_8.json` y seis lotes de revisión en `docs/DUELOS_HISTORIA_8_BLOQUE_01.md`. Aborda revoluciones atlánticas, industrialización, formación de repúblicas, imperialismo y Colombia del siglo XIX; cumple las proporciones acordadas, tiene claves balanceadas y conceptos únicos, y pasa la prueba de importación. Disponible en el catálogo opcional de staging.
+- **Deportes · 7.º:** banco completo de 150 preguntas en `docs/duelos/oficial/deportes_7.json` y seis lotes en `docs/DUELOS_DEPORTES_7_BLOQUE_01.md`. Combina reglas, estrategia, seguridad, inclusión, cultura deportiva y análisis, evitando récords dinámicos; está disponible en el catálogo de staging y tiene prueba de importación.
+- **Ciencia y naturaleza · 7.º:** banco de 150 preguntas en `docs/duelos/oficial/ciencia_naturaleza_7.json` y seis lotes de revisión en `docs/DUELOS_CIENCIA_NATURALEZA_7_BLOQUE_01.md`. Cumple las cantidades y distribuciones acordadas, 30 respuestas correctas por letra y 150 conceptos únicos; está disponible en el catálogo opcional de staging y pasa la prueba de importación.
+- **Geografía · 7.º:** banco de 150 preguntas en `docs/duelos/oficial/geografia_7.json` y seis lotes de revisión en `docs/DUELOS_GEOGRAFIA_7_BLOQUE_01.md`. Incluye referencias de IGAC, DANE, UNGRD e IDEAM; cumple las distribuciones y tiene 150 conceptos únicos; está disponible en staging y tiene prueba de importación.
+- **Lengua y literatura · 7.º:** banco completo de 150 preguntas en `docs/duelos/oficial/lengua_literatura_7.json` y seis lotes de revisión en `docs/DUELOS_LENGUA_LITERATURA_7_BLOQUE_01.md`. Incluye comprensión, gramática, géneros, argumentación y lectura crítica; cumple las distribuciones, tiene claves balanceadas y conceptos únicos, e incluye referencias del MEN y la RAE. Disponible en staging y probado para importación.
 - **Matemáticas y lógica · 7.º:** cuatro lotes (100/150) en `docs/DUELOS_MATEMATICAS_LOGICA_7_BLOQUE_01.md`, con enteros, fracciones, proporcionalidad, porcentajes, álgebra, geometría, estadística, probabilidad y razonamiento con datos. Los lotes auditados mantienen 20/5 por tipo, conceptos únicos hasta ahora y claves A/B/C/D balanceadas. Falta completar el último tercio y hacer auditoría total.
 
 ## Bancos completos de sexto
@@ -35,7 +35,7 @@ Alcance aprobado: 8 categorías × 6 grados (6.º–11.º), 48 bancos de 150 pre
 
 ## Integración
 
-Arte, Historia, Deportes, Ciencia y naturaleza, Geografía, Lengua y literatura, Matemáticas y lógica y Tecnología · 6.º están publicados en `staging`. Los seis bancos completos de 7.º, más Historia · 8.º, están integrados y pendientes de este despliegue. Cada institución elige si importa los bancos, y la copia queda disponible para Arena. La Biblioteca docente ofrece **Usar este banco** y mantiene independientes los cuestionarios creados por los docentes.
+Arte, Historia, Deportes, Ciencia y naturaleza, Geografía, Lengua y literatura, Matemáticas y lógica y Tecnología · 6.º están publicados en `staging`. También están disponibles los seis bancos completos de 7.º y el banco de Historia · 8.º. Se verificó en la biblioteca docente del aula de 8.º; cada institución decide si importa cada banco. La Biblioteca docente ofrece **Usar este banco** y mantiene independientes los cuestionarios creados por los docentes.
 
 ## Siguiente
 

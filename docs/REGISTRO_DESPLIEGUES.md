@@ -30,9 +30,12 @@ y Historia · 8.º. Sin migración. La Arena conectada a la aplicación añade r
 ronda, bonos, partidas con compañeros, ranking general/curso/aula y perfil con
 insignias. Se corrigió el cómputo de remontadas y puntos del perfil. Verificado:
 typecheck API y web, build web, 30 pruebas de Duelos, 24 de bancos y `git diff --check`.
-Pendiente: prueba manual en staging con dos estudiantes autenticados; también quedan
-para un alcance posterior el torneo entre aulas, el modo máquina, la configuración
-docente y el reloj con efecto real.
+Verificación en staging: la Arena real carga en el aula 8C con 890 preguntas
+disponibles y la Biblioteca docente de 8.º muestra los siete bancos nuevos con
+**Usar este banco**; ninguno se importó automáticamente. Pendiente: prueba manual
+con dos estudiantes autenticados. También quedan para un alcance posterior el
+torneo entre aulas, el modo máquina, la configuración docente y el reloj con efecto
+real.
 
 ### Tecnología · 6.º para Duelos — staging · 2026-09-28
 
