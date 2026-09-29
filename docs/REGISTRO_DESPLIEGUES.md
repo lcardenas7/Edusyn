@@ -22,6 +22,18 @@
 
 ## Historial (más reciente arriba)
 
+### Arena de Duelos y bancos oficiales · staging · 2026-09-28
+
+`9b396869` (integración de `32364b54`). API + web + siete bancos oficiales nuevos:
+Arte, Deportes, Ciencia y naturaleza, Geografía, Historia, Lengua y literatura · 7.º,
+y Historia · 8.º. Sin migración. La Arena conectada a la aplicación añade ruleta por
+ronda, bonos, partidas con compañeros, ranking general/curso/aula y perfil con
+insignias. Se corrigió el cómputo de remontadas y puntos del perfil. Verificado:
+typecheck API y web, build web, 30 pruebas de Duelos, 24 de bancos y `git diff --check`.
+Pendiente: prueba manual en staging con dos estudiantes autenticados; también quedan
+para un alcance posterior el torneo entre aulas, el modo máquina, la configuración
+docente y el reloj con efecto real.
+
 ### Tecnología · 6.º para Duelos — staging · 2026-09-28
 
 `ec205500`. API + documentación, sin migración. Se agregó el banco institucional
