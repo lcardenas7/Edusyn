@@ -8,7 +8,8 @@
  */
 
 export type Source = { id: string; title: string; questionCount: number; enabled: boolean }
-export type Peer = { id: string; name: string }
+/** `name` es el corto de la cuadrícula («CAMILA M.»); `fullName`, el completo. */
+export type Peer = { id: string; name: string; fullName?: string }
 export type Category = { name: string; count: number }
 export type DuelSummary = {
   id: string; status: string; category: string; selectionMode: string; opponent: string
@@ -24,6 +25,10 @@ export type Duel = {
   opponent: string; opponentEnrollmentId: string
   myProgress: number; opponentProgress: number; total: number; powerAvailable: boolean
   powerCategories: string[]
+  /** Aciertos en vivo de cada lado. */
+  myScore: number; opponentScore: number
+  /** Resultado de la última pregunta ya respondida: se muestra al instante. */
+  lastResult: { ordinal: number; isCorrect: boolean; answer: string; correctAnswer: string; explanation: string | null } | null
   question: { ordinal: number; text: string; options: string[]; category: string; powerApplied: boolean } | null
   result: {
     myScore: number; opponentScore: number

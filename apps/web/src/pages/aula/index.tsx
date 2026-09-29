@@ -34,6 +34,7 @@ import { GestionarAula, type GestionAula } from './ui/GestionarAula'
 import { useAula, useAulas, type Rol } from './data/useAula'
 import { useActividad } from './data/useActividad'
 import { useLiveSession } from './data/useLiveSession'
+import { useArenaStatus } from './data/useArenaStatus'
 import { useProgresoAulas } from './data/useProgresoAulas'
 import { buildTeacherToday, buildStudentToday } from './model/today'
 import { PERIOD_ALL } from './model/list'
@@ -159,6 +160,12 @@ export default function AulaVirtual() {
   // ─── Con aula: sus datos ───────────────────────────────────────────────
   const { aula, actividades, cargando, error, recargar } = useAula(classroomId ?? null, rol)
   const { session } = useLiveSession(classroomId ?? null)
+  const arena = useArenaStatus(classroomId ?? null)
+  // El docente siempre ve la Arena: tiene que poder prepararla. Al estudiante
+  // solo se le ofrece cuando hay preguntas suficientes para jugar; si la
+  // consulta falla, se muestra como antes en vez de esconderla.
+  const arenaVisible = rol === 'docente' || arena.failed || arena.status?.ready === true
+  const arenaAvisos = (arena.status?.pendingInvites ?? 0) + (arena.status?.myTurn ?? 0)
 
   // La ruta del detalle (`/aula/:id/actividades/:activityId`) no lleva `:vista`, así que sin
   // esto el aula se creía en "Hoy" mientras mostraba una actividad: las migas de pan y el
@@ -423,8 +430,8 @@ export default function AulaVirtual() {
             totalEstudiantes={aula?.estudiantes ?? null}
             onCrear={rol === 'docente' ? () => abrirCreacion() : undefined}
             onCrearConIA={rol === 'docente' ? () => setCreandoConIA(true) : undefined}
-            onAbrirBloques={() => navigate(`/aula/${classroomId}/bloques`)}
-            onAbrirDuelos={() => navigate(`/aula/${classroomId}/duelos`)}
+            onAbrirDuelos={arenaVisible ? () => navigate(`/aula/${classroomId}/duelos`) : undefined}
+            arenaAvisos={rol === 'estudiante' ? arenaAvisos : 0}
             onAbrirBanco={rol === 'docente' ? () => navigate(`/aula/${classroomId}/banco-preguntas`) : undefined}
           />
         ) : vista === 'notas' ? (

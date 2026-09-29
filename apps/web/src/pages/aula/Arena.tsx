@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, Dices, Library, ListChecks, Medal, Shuffle, Swords, Trophy } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Dices, Library, ListChecks, Medal, Shuffle, Swords, Trophy, X } from 'lucide-react'
 import api from '../../lib/api/client'
 import { toast } from '../../lib/toast'
 import { formatBogota } from '../../lib/datetime'
@@ -24,6 +24,14 @@ import { categoryLook, wheelSlices } from './arena/categories'
 import { ARENA_STATUS, Avatar, ProgressDots, type ArenaProfile, type Dashboard, type Duel, type Ranking, type RankingScope, type Source } from './arena/shared'
 
 type Tab = 'play' | 'duels' | 'ranking' | 'profile'
+
+/** Compañeros visibles antes de «Ver todos». Dos filas en el celular. */
+const PEERS_VISIBLE = 8
+
+/** Primer nombre para el botón: «Retar a Camila». */
+function firstName(peer: { name: string; fullName?: string }) {
+  return (peer.fullName ?? peer.name).split(/\s+/)[0]
+}
 
 
 
@@ -38,6 +46,8 @@ export default function Arena() {
   const [profile, setProfile] = useState<ArenaProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [peer, setPeer] = useState('')
+  const [peerQuery, setPeerQuery] = useState('')
+  const [allPeers, setAllPeers] = useState(false)
   const [category, setCategory] = useState('Mixta')
   const [pickTheme, setPickTheme] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -171,6 +181,8 @@ export default function Arena() {
         duel={duel} wheel={wheelCategories()} busy={busy}
         onClose={() => { setDuel(null); void refresh() }}
         onRespond={respond} onAnswer={answer} onPower={usePower} onRematch={rematch}
+        onRandom={() => { setDuel(null); void invite('ROULETTE', '', 'RANDOM') }}
+        onNewDuel={() => { setDuel(null); setPeer(''); setTab('play'); void refresh() }}
         onRanking={() => { setDuel(null); setTab('ranking') }}
       />
     )
@@ -179,6 +191,16 @@ export default function Arena() {
   const isTeacher = dashboard?.role === 'teacher'
   const duels = dashboard?.duels ?? []
   const myTurn = duels.filter((item) => (item.status === 'INVITED' && item.isInvitee) || (item.status === 'ACTIVE' && item.myProgress < 7))
+  const peers = dashboard?.peers ?? []
+  const chosenPeer = peers.find((item) => item.id === peer) ?? null
+  const query = peerQuery.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  // Buscar ignora tildes y mayúsculas: «jesus» encuentra a «JESUS A.». La lista
+  // se recorta a dos filas, pero el rival elegido nunca se esconde.
+  const shownPeers = query
+    ? peers.filter((item) => item.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(query))
+    : allPeers || peers.length <= PEERS_VISIBLE
+      ? peers
+      : [...peers.slice(0, PEERS_VISIBLE), ...peers.slice(PEERS_VISIBLE).filter((item) => item.id === peer)]
   const waiting = duels.filter((item) => (item.status === 'INVITED' && !item.isInvitee) || (item.status === 'ACTIVE' && item.myProgress >= 7))
   const closed = duels.filter((item) => ['COMPLETED', 'DECLINED', 'EXPIRED'].includes(item.status))
   const ready = !!dashboard && dashboard.questionCount >= dashboard.minimumQuestions
@@ -239,33 +261,128 @@ export default function Arena() {
             </div>
           ) : (
             <>
+              {/* Lo que espera al estudiante va primero. Un reto recibido vivía solo en
+                  la pestaña «Duelos»: quien entraba a la Arena veía el vestíbulo y no
+                  se enteraba de que lo habían retado. */}
+              {myTurn.length > 0 && (
+                <section className="mb-6" aria-labelledby="te-toca">
+                  <h2 id="te-toca" className="text-sm font-bold uppercase tracking-wider text-amber-200">Te están esperando</h2>
+                  <ul className="mt-3 space-y-2">
+                    {myTurn.slice(0, 3).map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button" onClick={() => act(() => openDuel(item.id))}
+                          className="flex w-full items-center gap-3 rounded-2xl border-2 border-amber-300/60 bg-amber-300/10 p-3 text-left active:bg-amber-300/20"
+                        >
+                          <Avatar name={item.opponent} size={44} />
+                          <span className="min-w-0 flex-1">
+                            <strong className="block truncate">{item.opponent}</strong>
+                            <span className="text-xs text-amber-100/80">
+                              {item.status === 'INVITED' ? 'Te retó · acepta o rechaza' : `Te toca · llevas ${item.myProgress} de 7`}
+                            </span>
+                          </span>
+                          <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1.5 text-xs font-black text-[#1A1633]">
+                            {item.status === 'INVITED' ? 'Ver reto' : 'Jugar'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {myTurn.length > 3 && (
+                    <button type="button" onClick={() => setTab('duels')} className="mt-2 text-sm font-bold text-amber-200 underline underline-offset-4">
+                      Ver los {myTurn.length}
+                    </button>
+                  )}
+                </section>
+              )}
+
+              {/* Accesos directos al ranking. La tabla de curso y la de grado ya
+                  existían dentro de la pestaña «Ranking», pero en la prueba real
+                  nadie las encontró: aquí quedan a la vista, a un toque. */}
+              <div className="mb-6 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[.05] p-2">
+                <Trophy size={18} className="ml-1.5 shrink-0 text-amber-300" />
+                <span className="flex-1 text-xs font-bold text-slate-300">Ranking</span>
+                {([['group', 'Mi curso'], ['grade', 'Mi grado']] as const).map(([value, label]) => (
+                  <button
+                    key={value} type="button" onClick={() => { setScope(value); setTab('ranking') }}
+                    className="min-h-9 rounded-xl bg-white/10 px-3 text-xs font-bold text-white hover:bg-white/15"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">1 · Elige rival</h2>
+
+              {/* A quién vas a retar, con nombre completo. En la cuadrícula solo cabe
+                  el corto, y en un grupo de 36 puede haber dos «Camila M.». La franja
+                  ocupa siempre el mismo alto para que los cuadritos no salten. */}
+              <div className="mt-3 flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-white/10 bg-white/[.05] px-3 py-2" aria-live="polite">
+                {chosenPeer ? (
+                  <>
+                    <Avatar name={chosenPeer.name} size={38} ring="rgba(255,201,74,.5)" />
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block text-[11px] font-bold uppercase tracking-wider text-amber-200">Retar a</span>
+                      <strong className="block truncate text-base">{chosenPeer.fullName ?? chosenPeer.name}</strong>
+                    </span>
+                    <button
+                      type="button" onClick={() => setPeer('')} aria-label="Quitar el rival elegido"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-slate-200 hover:bg-white/15"
+                    >
+                      <X size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <span className="w-full text-center text-sm text-slate-400">Toca a un compañero para elegirlo</span>
+                )}
+              </div>
+
+              {/* El azar va antes de la lista: con un grupo real de 36, la lista ocupaba
+                  varias pantallas y este botón quedaba al fondo. */}
+              <button
+                type="button" disabled={busy || dashboard.peers.length === 0} onClick={() => invite('ROULETTE', '', 'RANDOM')}
+                className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/25 text-sm font-bold text-slate-200 disabled:opacity-40"
+              >
+                <Shuffle size={17} /> Que me toque un rival al azar
+              </button>
+
               {dashboard.peers.length === 0 ? (
                 <p className="mt-3 rounded-2xl bg-white/5 p-4 text-sm text-slate-300">No hay compañeros disponibles en este grupo.</p>
               ) : (
-                <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
-                  {dashboard.peers.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button" aria-pressed={peer === item.id} onClick={() => setPeer(item.id)}
-                        className={`flex w-full flex-col items-center gap-1.5 rounded-2xl border-2 p-2 transition-colors ${
-                          peer === item.id ? 'border-amber-300 bg-amber-300/10' : 'border-transparent bg-white/[.06] active:bg-white/10'
-                        }`}
-                      >
-                        <Avatar name={item.name} size={42} />
-                        <span className="w-full truncate text-center text-[11px] font-semibold leading-tight text-slate-200">{item.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  {dashboard.peers.length > PEERS_VISIBLE && (
+                    <input
+                      type="search" value={peerQuery} onChange={(event) => setPeerQuery(event.target.value)}
+                      placeholder={`Buscar entre ${dashboard.peers.length} compañeros`}
+                      aria-label="Buscar compañero"
+                      className="mt-3 min-h-11 w-full rounded-xl border border-white/15 bg-white/[.06] px-4 text-white placeholder:text-slate-400"
+                    />
+                  )}
+                  <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                    {shownPeers.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button" aria-pressed={peer === item.id} onClick={() => setPeer(item.id)}
+                          className={`flex w-full flex-col items-center gap-1.5 rounded-2xl border-2 p-2 transition-colors ${
+                            peer === item.id ? 'border-amber-300 bg-amber-300/10' : 'border-transparent bg-white/[.06] active:bg-white/10'
+                          }`}
+                        >
+                          <Avatar name={item.name} size={40} />
+                          <span className="w-full truncate text-center text-[11px] font-semibold leading-tight text-slate-200">{item.name}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {shownPeers.length === 0 && (
+                    <p className="mt-3 rounded-2xl bg-white/5 p-3 text-center text-sm text-slate-300">Nadie coincide con «{peerQuery}».</p>
+                  )}
+                  {!peerQuery && dashboard.peers.length > PEERS_VISIBLE && (
+                    <button type="button" onClick={() => setAllPeers((open) => !open)} className="mt-2 min-h-11 w-full text-sm font-bold text-slate-300">
+                      {allPeers ? 'Ver menos' : `Ver los ${dashboard.peers.length} compañeros`}
+                    </button>
+                  )}
+                </>
               )}
-
-              <button
-                type="button" disabled={busy} onClick={() => invite('ROULETTE', '', 'RANDOM')}
-                className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/25 text-sm font-bold text-slate-200 disabled:opacity-40"
-              >
-                <Shuffle size={17} /> O que me toque un rival al azar
-              </button>
 
               <h2 className="mt-7 text-sm font-bold uppercase tracking-wider text-slate-400">2 · Lanza el duelo</h2>
               <section className="mt-3 rounded-3xl border border-white/10 bg-white/[.05] p-5 text-center">
@@ -291,7 +408,7 @@ export default function Arena() {
                   type="button" disabled={!peer || busy} onClick={() => invite('ROULETTE')}
                   className="mt-5 min-h-14 w-full rounded-2xl bg-amber-300 text-lg font-black text-[#1A1633] shadow-[0_5px_0_#C99A2E] transition-all active:translate-y-[3px] active:shadow-[0_2px_0_#C99A2E] disabled:bg-white/10 disabled:text-slate-500 disabled:shadow-none"
                 >
-                  {peer ? '🎡 Girar y retar' : 'Elige un rival'}
+                  {chosenPeer ? `🎡 Retar a ${firstName(chosenPeer)}` : 'Elige un rival'}
                 </button>
               </section>
 
@@ -420,10 +537,11 @@ export default function Arena() {
             <section className="mt-7 rounded-3xl border border-amber-300/20 bg-amber-300/[.07] p-5">
               <h2 className="font-black text-amber-200">Cómo funciona el juego</h2>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
-                <li>· Una categoría se puede jugar cuando reúne 7 preguntas compatibles; «Mixta» las combina todas.</li>
+                <li>· Una categoría entra en la ruleta cuando reúne 7 preguntas compatibles.</li>
+                <li>· Siete rondas: en cada una el estudiante gira la ruleta, que decide el tema, y de ese tema sale una pregunta.</li>
                 <li>· Los dos rivales reciben exactamente las mismas 7 preguntas.</li>
                 <li>· Cada quien responde cuando puede: no hace falta coincidir.</li>
-                <li>· Cada jugador tiene un descarte 50/50 por duelo.</li>
+                <li>· Un bono por duelo, a elegir: descartar dos opciones o escoger el tema de la ronda siguiente.</li>
                 <li>· Las respuestas correctas solo se revelan cuando ambos terminan.</li>
                 <li>· Cada estudiante envía hasta 3 retos en 24 horas y mantiene un duelo abierto por compañero.</li>
                 <li>· El resultado es interno de la institución y no cambia las notas.</li>

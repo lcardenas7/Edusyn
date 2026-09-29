@@ -63,8 +63,9 @@ export interface ActividadesProps {
   /** Flujo guiado con una IA externa (lección, quiz o tarea). */
   onCrearConIA?: () => void
   /** Entrada visible a la maqueta de bloques en staging. */
-  onAbrirBloques?: () => void
   onAbrirDuelos?: () => void
+  /** Retos recibidos + duelos en los que le toca jugar al estudiante. */
+  arenaAvisos?: number
   onAbrirBanco?: () => void
   /** Estudiantes del grupo, para que la barra de entregas diga la verdad. */
   totalEstudiantes?: number | null
@@ -80,8 +81,8 @@ export function Actividades({
   onAbrirActividad,
   onCrear,
   onCrearConIA,
-  onAbrirBloques,
   onAbrirDuelos,
+  arenaAvisos = 0,
   onAbrirBanco,
   totalEstudiantes,
   now = new Date(),
@@ -148,39 +149,37 @@ export function Actividades({
         )}
       </header>
 
+      {/* Arena y banco en una sola tarjeta compacta. Eran tres tarjetas grandes
+          (Arena, Banco y la maqueta de Bloques) que ocupaban el primer pantallazo y
+          empujaban la lista de actividades del curso fuera de la vista. */}
       {onAbrirDuelos && (
-        <section className="mt-5 flex flex-wrap items-center gap-4 rounded-2xl border border-violet-300/30 bg-gradient-to-r from-[#232444] via-[#32305d] to-[#174d52] p-5 text-white shadow-lg" aria-labelledby="duelos-title">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-amber-300/15 text-3xl" aria-hidden="true">⚔️</span>
-          <div className="min-w-0 flex-1"><span className="text-[11px] font-black uppercase tracking-[.18em] text-amber-200">Actividad · Edusyn Arena</span><h2 id="duelos-title" className="mt-1 text-xl font-bold">Duelos entre compañeros</h2><p className="mt-1 text-sm text-slate-200">{role === 'docente' ? 'Usa el banco por grado o habilita cuestionarios del aula.' : 'Elige categoría o gira la ruleta y compite con alguien de tu grupo.'}</p></div>
-          <button type="button" onClick={onAbrirDuelos} className="min-h-12 w-full rounded-xl bg-amber-300 px-5 font-bold text-[#25243f] hover:bg-amber-200 sm:w-auto">{role === 'docente' ? 'Preparar Arena' : 'Entrar a Arena'} →</button>
-        </section>
-      )}
-
-      {onAbrirBanco && (
-        <section className="mt-3 flex flex-wrap items-center gap-4 rounded-2xl border border-teal-200 bg-[#e7f3eb] p-5 text-[#214d42]" aria-labelledby="banco-title">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#d0e8dc] text-2xl" aria-hidden="true">📚</span>
-          <div className="min-w-0 flex-1"><span className="text-[11px] font-black uppercase tracking-[.18em] text-[#3a7863]">Herramienta docente · independiente de Arena</span><h2 id="banco-title" className="mt-1 text-lg font-bold">Banco de cuestionarios del grado</h2><p className="mt-1 text-sm">Crea cuestionarios propios con preguntas por materia y categoría para reutilizarlos en distintas experiencias.</p></div>
-          <button type="button" onClick={onAbrirBanco} className="min-h-12 w-full rounded-xl bg-[#285e4d] px-5 font-bold text-white sm:w-auto">Abrir banco →</button>
-        </section>
-      )}
-
-      {onAbrirBloques && (
-        <section className="mt-5 overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-[#e8f1e2] via-[#f7f5e9] to-[#e9ecdb] p-4 shadow-sm sm:p-5" aria-labelledby="bloques-preview-title">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#285e4d] text-2xl shadow-sm" aria-hidden="true">🧭</span>
-            <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#416b50]">Vista previa interactiva</span>
-              <h2 id="bloques-preview-title" className="text-lg font-bold leading-tight text-[#233b34]">Bloques · El bosque de Lía</h2>
-              <p className="mt-1 text-sm text-[#4e6659]">Conecta instrucciones y observa el recorrido junto al bloque que se ejecuta.</p>
-            </div>
-            <button type="button" onClick={onAbrirBloques} className="hidden min-h-btn shrink-0 items-center rounded-xl bg-[#285e4d] px-4 text-sm font-semibold text-white hover:bg-[#1e493b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#285e4d] sm:inline-flex">
-              Abrir maqueta →
+        <section className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-gradient-to-r from-[#232444] via-[#32305d] to-[#174d52] p-4 text-white shadow-md" aria-labelledby="duelos-title">
+          <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-300/15 text-2xl" aria-hidden="true">
+            ⚔️
+            {arenaAvisos > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">{arenaAvisos}</span>
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id="duelos-title" className="text-base font-bold leading-tight">Arena · Duelos entre compañeros</h2>
+            <p className="mt-0.5 text-sm text-slate-200">
+              {role === 'docente'
+                ? 'Prepara las preguntas del grado y sigue el ranking.'
+                : arenaAvisos > 0
+                  ? `Tienes ${arenaAvisos} ${arenaAvisos === 1 ? 'duelo esperándote' : 'duelos esperándote'}.`
+                  : 'Gira la ruleta y reta a alguien de tu grupo.'}
+            </p>
+          </div>
+          <div className="flex w-full gap-2 sm:w-auto">
+            {onAbrirBanco && (
+              <button type="button" onClick={onAbrirBanco} className="min-h-11 flex-1 rounded-xl border border-white/30 px-4 text-sm font-bold text-white hover:bg-white/10 sm:flex-none">
+                Banco
+              </button>
+            )}
+            <button type="button" onClick={onAbrirDuelos} className="min-h-11 flex-[2] rounded-xl bg-amber-300 px-4 text-sm font-bold text-[#25243f] hover:bg-amber-200 sm:flex-none">
+              {role === 'docente' ? 'Preparar Arena' : arenaAvisos > 0 ? 'Ver mis retos' : 'Entrar a Arena'} →
             </button>
           </div>
-          <button type="button" onClick={onAbrirBloques} className="mt-4 min-h-btn w-full rounded-xl bg-[#285e4d] px-4 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#285e4d] sm:hidden">
-            Abrir maqueta →
-          </button>
-          <p className="mt-2 text-xs text-[#617467]">Práctica de revisión: todavía no guarda avances ni genera calificación.</p>
         </section>
       )}
 

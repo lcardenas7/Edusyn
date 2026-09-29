@@ -580,3 +580,14 @@ body {
     animation: none;
   }
 }
+
+/* El botón «¡Gira la ruleta!» late despacio mientras espera el toque: es la
+   única acción posible en esa pantalla y tiene que verse invitando. */
+@keyframes arena-late {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+.arena-pulso { animation: arena-late 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .arena-pulso { animation: none; }
+}

@@ -1,4 +1,4 @@
-import { DuelService } from './duel.service';
+import { DuelService, bankCategoryLabel, personName } from './duel.service';
 
 const actor = { userId: 'user-1', institutionId: 'school-1', roles: ['ESTUDIANTE'], isSuperAdmin: false };
 const baseDuel = {
@@ -78,8 +78,13 @@ describe('DuelService privacy', () => {
     await service.invite(actor, 'class-1', 'enroll-2', { category: 'Fracciones', selectionMode: 'CHOSEN' });
     const data = prisma.classroomDuel.create.mock.calls[0][0].data;
     expect(data.category).toBe('Fracciones');
-    expect(data.questions).toHaveLength(7);
-    expect(data.questions.every((question: { category: string }) => question.category === 'Fracciones')).toBe(true);
+    const { inviter, invitee } = data.questions;
+    expect(inviter).toHaveLength(7);
+    expect(invitee).toHaveLength(7);
+    expect([...inviter, ...invitee].every((question: { category: string }) => question.category === 'Fracciones')).toBe(true);
+    // Cada uno, siete distintas dentro de su propia secuencia.
+    expect(new Set(inviter.map((question: { id: string }) => question.id)).size).toBe(7);
+    expect(new Set(invitee.map((question: { id: string }) => question.id)).size).toBe(7);
   });
 
   it('draws a category per round when the wheel decides', async () => {
@@ -91,10 +96,17 @@ describe('DuelService privacy', () => {
     await service.invite(actor, 'class-1', 'enroll-2', { selectionMode: 'ROULETTE' });
     const data = prisma.classroomDuel.create.mock.calls[0][0].data;
     expect(data.category).toBe('Ruleta');
-    expect(data.questions).toHaveLength(7);
-    // Las siete preguntas son distintas y cada una conserva su propia categoría.
-    expect(new Set(data.questions.map((question: { id: string }) => question.id)).size).toBe(7);
-    expect(data.questions.every((question: { category: string }) => ['Fracciones', 'Geometría', 'Medida'].includes(question.category))).toBe(true);
+    const { inviter, invitee } = data.questions;
+    expect(inviter).toHaveLength(7);
+    expect(invitee).toHaveLength(7);
+    // Ronda a ronda: el MISMO tema para los dos y una pregunta DISTINTA para cada uno.
+    inviter.forEach((question: { id: string; category: string }, round: number) => {
+      expect(invitee[round].category).toBe(question.category);
+      expect(invitee[round].id).not.toBe(question.id);
+    });
+    // Nadie repite pregunta dentro de su propio duelo.
+    expect(new Set(inviter.map((question: { id: string }) => question.id)).size).toBe(7);
+    expect(new Set(invitee.map((question: { id: string }) => question.id)).size).toBe(7);
   });
 
   it('draws a random rival from the classmates with no open duel', async () => {
@@ -163,8 +175,64 @@ describe('DuelService privacy', () => {
     await service.invite(actor, 'class-1', 'enroll-2', { selectionMode: 'ROULETTE' });
     const data = prisma.classroomDuel.create.mock.calls[0][0].data;
     expect(data.category).toBe('Mixta');
-    expect(data.questions).toHaveLength(7);
-    expect(new Set(data.questions.map((question: { id: string }) => question.id)).size).toBe(7);
+    const { inviter, invitee } = data.questions;
+    // Solo hay 8 preguntas: el segundo completa sus 7 con algunas del primero,
+    // pero ninguno repite dentro de su propia secuencia.
+    expect(inviter).toHaveLength(7);
+    expect(invitee).toHaveLength(7);
+    expect(new Set(inviter.map((question: { id: string }) => question.id)).size).toBe(7);
+    expect(new Set(invitee.map((question: { id: string }) => question.id)).size).toBe(7);
+  });
+});
+
+describe('DuelService own questions and instant feedback', () => {
+  const round = (id: string, category: string, correct: string) => ({ id, category, text: `Enunciado ${id}`, options: ['A', 'B', 'C'], correctAnswer: correct, explanation: `Porque ${id}` });
+  const paired = {
+    version: 2,
+    inviter: [round('i0', 'Historia', 'A'), round('i1', 'Arte', 'B')],
+    invitee: [round('e0', 'Historia', 'C'), round('e1', 'Arte', 'A')],
+  };
+
+  it('gives each participant their own question in the same round', async () => {
+    const asInviter = setup({ ...baseDuel, questions: paired });
+    const asInvitee = setup({ ...baseDuel, questions: paired, inviterEnrollmentId: 'enroll-2', inviteeEnrollmentId: 'enroll-1' });
+    const mine = await asInviter.service.get(actor, 'duel-1');
+    const theirs = await asInvitee.service.get(actor, 'duel-1');
+    expect(mine.question).toMatchObject({ ordinal: 0, category: 'Historia', text: 'Enunciado i0' });
+    expect(theirs.question).toMatchObject({ ordinal: 0, category: 'Historia', text: 'Enunciado e0' });
+  });
+
+  it('reveals right away whether the last answer was correct, and nothing about the current one', async () => {
+    const { service } = setup({ ...baseDuel, questions: paired }, [
+      { enrollmentId: 'enroll-1', ordinal: 0, isCorrect: false, answer: 'B' } as any,
+    ]);
+    const state = await service.get(actor, 'duel-1');
+    expect(state.lastResult).toEqual({ ordinal: 0, isCorrect: false, answer: 'B', correctAnswer: 'A', explanation: 'Porque i0' });
+    expect(state.question).toMatchObject({ ordinal: 1, text: 'Enunciado i1' });
+    // La correcta de la pregunta en pantalla (B) y su explicación no viajan.
+    expect(JSON.stringify(state)).not.toContain('Porque i1');
+    expect(JSON.stringify(state.question)).not.toContain('correctAnswer');
+  });
+
+  it('keeps a live score of correct answers for both sides', async () => {
+    const { service } = setup({ ...baseDuel, questions: paired }, [
+      { enrollmentId: 'enroll-1', ordinal: 0, isCorrect: true, answer: 'A' } as any,
+      { enrollmentId: 'enroll-2', ordinal: 0, isCorrect: false, answer: 'A' } as any,
+      { enrollmentId: 'enroll-2', ordinal: 1, isCorrect: true, answer: 'A' } as any,
+    ]);
+    const state = await service.get(actor, 'duel-1');
+    expect(state).toMatchObject({ myScore: 1, opponentScore: 1, myProgress: 1, opponentProgress: 2 });
+  });
+
+  it('has no feedback before the first answer', async () => {
+    const { service } = setup({ ...baseDuel, questions: paired });
+    expect((await service.get(actor, 'duel-1')).lastResult).toBeNull();
+  });
+
+  it('still reads duels created before, with one shared list', async () => {
+    const { service } = setup(); // baseDuel.questions es la lista antigua, compartida
+    const state = await service.get(actor, 'duel-1');
+    expect(state.question).toMatchObject({ ordinal: 0, text: '¿Cuánto es 2 + 2?' });
   });
 });
 
@@ -390,5 +458,90 @@ describe('DuelService arena profile', () => {
     expect(where.status).toBe('COMPLETED');
     expect(where.institutionId).toBe('school-1');
     expect(where.OR).toEqual([{ inviterEnrollmentId: 'enroll-1' }, { inviteeEnrollmentId: 'enroll-1' }]);
+  });
+});
+
+describe('bankCategoryLabel', () => {
+  it('drops the generic «Duelos» subject of the official banks', () => {
+    expect(bankCategoryLabel('Duelos', 'Historia')).toBe('Historia');
+    expect(bankCategoryLabel('duelos', 'Arte y cultura')).toBe('Arte y cultura');
+  });
+
+  it('keeps a real subject in front of the category', () => {
+    expect(bankCategoryLabel('Matemáticas', 'Fracciones')).toBe('Matemáticas · Fracciones');
+  });
+
+  it('does not repeat a subject that is the same as the category', () => {
+    expect(bankCategoryLabel('Geografía', 'geografía')).toBe('geografía');
+    expect(bankCategoryLabel('', 'Tecnología')).toBe('Tecnología');
+  });
+});
+
+describe('DuelService arena status', () => {
+  function statusSetup({ bank = 0, activities = [] as object[], open = [] as object[], enrollment = 'enroll-1' as string | null } = {}) {
+    const prisma = {
+      group: { findFirst: jest.fn().mockResolvedValue({ gradeId: 'grade-8' }) },
+      questionBankItem: { count: jest.fn().mockResolvedValue(bank) },
+      classroomActivity: { findMany: jest.fn().mockResolvedValue(activities) },
+      classroomDuel: { findMany: jest.fn().mockResolvedValue(open) },
+    };
+    const access = {
+      classroomInScope: jest.fn().mockResolvedValue({ title: 'Informática', teacherAssignment: { teacherId: 'teacher-1', groupId: 'group-1', academicYearId: 'year-1' } }),
+      studentEnrollmentInClassroom: jest.fn().mockResolvedValue(enrollment),
+    };
+    return { service: new DuelService(prisma as any, access as any), prisma };
+  }
+
+  it('is not ready below seven usable questions, and is ready from seven on', async () => {
+    expect((await statusSetup({ bank: 6 }).service.status(actor, 'class-1')).ready).toBe(false);
+    expect((await statusSetup({ bank: 7 }).service.status(actor, 'class-1')).ready).toBe(true);
+  });
+
+  it('counts only quizzes the teacher enabled for the Arena', async () => {
+    const { service } = statusSetup({
+      activities: [
+        { metadata: { duelEligible: true }, _count: { questions: 4 } },
+        { metadata: { duelEligible: false }, _count: { questions: 20 } },
+        { metadata: null, _count: { questions: 20 } },
+      ],
+      bank: 3,
+    });
+    expect((await service.status(actor, 'class-1')).ready).toBe(true);
+  });
+
+  it('tells the student about challenges received and duels waiting for them', async () => {
+    const { service } = statusSetup({
+      bank: 50,
+      open: [
+        { status: 'INVITED', inviteeEnrollmentId: 'enroll-1', _count: { answers: 0 } }, // me retaron
+        { status: 'INVITED', inviteeEnrollmentId: 'enroll-9', _count: { answers: 0 } }, // yo reté: no cuenta
+        { status: 'ACTIVE', inviteeEnrollmentId: 'enroll-9', _count: { answers: 3 } },  // me toca
+        { status: 'ACTIVE', inviteeEnrollmentId: 'enroll-1', _count: { answers: 7 } },  // ya terminé mis 7
+      ],
+    });
+    expect(await service.status(actor, 'class-1')).toMatchObject({ pendingInvites: 1, myTurn: 1 });
+  });
+
+  it('never counts duels for the teacher, who does not play', async () => {
+    const { service, prisma } = statusSetup({ bank: 50, enrollment: null });
+    // El docente del aula no tiene matrícula: el contexto lo resuelve como docente.
+    const state = await service.status({ ...actor, userId: 'teacher-1' }, 'class-1');
+    expect(state).toMatchObject({ role: 'teacher', pendingInvites: 0, myTurn: 0 });
+    expect(prisma.classroomDuel.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('personName', () => {
+  it('turns the uppercase enrollment name into a readable one', () => {
+    expect(personName('CAMILA', 'MORA RODRÍGUEZ')).toBe('Camila Mora Rodríguez');
+  });
+
+  it('keeps Spanish name particles in lowercase, except at the start', () => {
+    expect(personName('MARÍA JOSÉ', 'DE LA HOZ Y PÉREZ')).toBe('María José de la Hoz y Pérez');
+    expect(personName('DEL', 'CARMEN')).toBe('Del Carmen');
+  });
+
+  it('collapses stray spaces', () => {
+    expect(personName('  JUAN  ', ' DAVID  GÓMEZ ')).toBe('Juan David Gómez');
   });
 });

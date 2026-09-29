@@ -25,6 +25,12 @@ export class DuelController {
     return this.actor(req).then((actor) => this.service.dashboard(actor, classroomId));
   }
 
+  @Get('classrooms/:classroomId/status')
+  @Roles('DOCENTE', 'ESTUDIANTE')
+  status(@Param('classroomId') classroomId: string, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.status(actor, classroomId));
+  }
+
   @Get('classrooms/:classroomId/ranking')
   @Roles('DOCENTE', 'ESTUDIANTE')
   ranking(@Param('classroomId') classroomId: string, @Query('scope') scope: string, @Request() req: any) {

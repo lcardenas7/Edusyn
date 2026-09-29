@@ -39,13 +39,13 @@ const BANCO: Pregunta[] = TEMAS.flatMap((category, t) =>
     text: `${category}: pregunta de ejemplo número ${index + 1} para revisar cómo se ve un enunciado de dos renglones en el celular.`,
     options: ['Primera opción', 'Segunda opción', 'Tercera opción', 'Cuarta opción'],
     correctAnswer: 'Segunda opción',
-    explanation: 'Explicación breve que solo aparece cuando los dos participantes terminaron el duelo.',
+    explanation: 'Explicación breve de por qué esa es la respuesta correcta.',
     category,
   })),
 )
 
 const COMPANEROS = [
-  { id: 'e2', name: 'Camila M.' }, { id: 'e3', name: 'Santiago R.' }, { id: 'e4', name: 'Valentina L.' },
+  { id: 'e2', name: 'Camila M.', fullName: 'Camila Mora Rodríguez' }, { id: 'e3', name: 'Santiago R.', fullName: 'Santiago Ramírez de la Hoz' }, { id: 'e4', name: 'Valentina L.' },
   { id: 'e5', name: 'Mateo G.' }, { id: 'e6', name: 'Isabella P.' }, { id: 'e7', name: 'Samuel T.' },
   { id: 'e8', name: 'Luciana F.' }, { id: 'e9', name: 'Emiliano C.' },
 ]
@@ -56,6 +56,8 @@ type Duelo = {
   id: string; status: string; category: string; selectionMode: string; isInvitee: boolean
   opponent: string; opponentEnrollmentId: string
   questions: Pregunta[]; mine: boolean[]; theirs: boolean[]
+  /** Opciones que eligió el estudiante, ronda a ronda (para el resultado inmediato). */
+  chosen?: string[]
   power: { ordinal: number; options: string[] } | null
   swap: [number, number] | null
   createdAt: string
@@ -105,6 +107,17 @@ function estado(duelo: Duelo) {
     selectionMode: duelo.selectionMode, isInvitee: duelo.isInvitee,
     opponent: duelo.opponent, opponentEnrollmentId: duelo.opponentEnrollmentId,
     myProgress: duelo.mine.length, opponentProgress: duelo.theirs.length, total,
+    myScore: duelo.mine.filter(Boolean).length,
+    opponentScore: duelo.theirs.filter(Boolean).length,
+    lastResult: duelo.mine.length
+      ? {
+          ordinal: duelo.mine.length - 1,
+          isCorrect: duelo.mine[duelo.mine.length - 1],
+          answer: (duelo.chosen ?? [])[duelo.mine.length - 1] ?? '',
+          correctAnswer: preguntas[duelo.mine.length - 1].correctAnswer,
+          explanation: preguntas[duelo.mine.length - 1].explanation,
+        }
+      : null,
     powerAvailable: !duelo.power && !duelo.swap,
     powerCategories: duelo.power || duelo.swap || duelo.status !== 'ACTIVE'
       ? []
@@ -261,6 +274,7 @@ api.defaults.adapter = async (config) => {
 
   if (url.endsWith('/answers')) {
     const duelo = buscar(id)
+    duelo.chosen = [...(duelo.chosen ?? []), cuerpo.answer]
     duelo.mine.push(cuerpo.answer === secuencia(duelo)[duelo.mine.length].correctAnswer)
     // El rival avanza solo, para ver el marcador moverse por los dos lados.
     if (duelo.theirs.length < duelo.questions.length) duelo.theirs.push(Math.random() > 0.45)

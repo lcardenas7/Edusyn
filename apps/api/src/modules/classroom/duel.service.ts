@@ -49,6 +49,45 @@ function displayName(enrollment: { student: { firstName: string; lastName: strin
   return `${enrollment.student.firstName} ${enrollment.student.lastName.charAt(0)}.`;
 }
 
+// Partículas que en un nombre propio van en minúscula: «Pedro de la Hoz».
+const NAME_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'van', 'von']);
+
+/**
+ * Nombre completo legible. La matrícula guarda los nombres en mayúsculas
+ * («CAMILA MORA RODRÍGUEZ»), que en pantalla se leen como un grito. Se pasa a
+ * «Camila Mora Rodríguez», con las partículas en minúscula salvo al principio.
+ *
+ * Solo se usa para compañeros del MISMO grupo, que son los únicos que la Arena
+ * ya listaba: sirve para distinguir a dos «Camila M.» antes de retar.
+ */
+export function personName(firstName: string, lastName: string) {
+  return `${firstName} ${lastName}`
+    .trim()
+    .split(/\s+/)
+    .map((word, index) => {
+      const lower = word.toLocaleLowerCase('es');
+      if (index > 0 && NAME_PARTICLES.has(lower)) return lower;
+      return lower.charAt(0).toLocaleUpperCase('es') + lower.slice(1);
+    })
+    .join(' ');
+}
+
+/**
+ * Nombre de la categoría de un cuestionario del banco, tal como lo ve el
+ * estudiante en la ruleta, el anuncio y su perfil.
+ *
+ * Normalmente es «Materia · Categoría». Pero los bancos oficiales traen como
+ * materia el marcador genérico «Duelos», y la ruleta acababa anunciando «Te tocó:
+ * Duelos · Historia». Cuando la materia no informa nada —es ese marcador, está
+ * vacía o repite la categoría— se muestra solo la categoría.
+ */
+export function bankCategoryLabel(subjectArea: string | null | undefined, category: string) {
+  const subject = (subjectArea ?? '').trim();
+  const name = category.trim();
+  const redundant = !subject || subject.toLowerCase() === 'duelos' || subject.toLowerCase() === name.toLowerCase();
+  return (redundant ? name : `${subject} · ${name}`).slice(0, 160);
+}
+
 function isEligible(metadata: unknown) {
   return !!metadata && typeof metadata === 'object' && !Array.isArray(metadata) && (metadata as Record<string, unknown>).duelEligible === true;
 }
@@ -61,32 +100,81 @@ function categoryChoices(questions: DuelQuestion[]) {
 }
 
 /**
- * Selección de la ruleta: para cada una de las siete rondas se sortea primero
- * una categoría y después una pregunta de esa categoría. Dos sorteos, como en la
- * rueda que ve el estudiante — no se reparte a partes iguales ni se sigue un
- * orden fijo, y una misma categoría puede repetirse.
+ * Preguntas de un duelo: una secuencia por participante.
  *
- * Cada pregunta sale de la bolsa al usarse, así que las siete son distintas.
+ * Decisión del fundador (2026-09-29): el estudiante ve al instante si acertó y
+ * cuál era la correcta. Con las mismas siete preguntas para los dos, quien juega
+ * primero podría pasarle las respuestas a su rival. Por eso cada uno recibe su
+ * PROPIA pregunta en cada ronda, del MISMO tema: la ronda 3 es «Historia» para
+ * ambos, pero con preguntas distintas. Es como funciona Preguntados.
+ *
+ * Los duelos anteriores guardaban una sola lista, compartida. `sequences` los
+ * sigue leyendo así, de modo que las partidas que ya estaban en curso terminan
+ * con las reglas con las que empezaron.
  */
-function rouletteQuestions(pool: DuelQuestion[], categories: string[]) {
-  const remaining = new Map(categories.map((name) => [name, pool.filter((question) => question.category === name)]));
-  const picked: DuelQuestion[] = [];
-  while (picked.length < QUESTION_COUNT) {
-    const available = [...remaining].filter(([, questions]) => questions.length > 0);
-    if (!available.length) break;
-    const [, questions] = available[randomInt(available.length)];
-    picked.push(questions.splice(randomInt(questions.length), 1)[0]);
+type PairedQuestions = { version: 2; inviter: DuelQuestion[]; invitee: DuelQuestion[] };
+
+function sequences(raw: unknown): { inviter: DuelQuestion[]; invitee: DuelQuestion[] } {
+  if (Array.isArray(raw)) return { inviter: raw as DuelQuestion[], invitee: raw as DuelQuestion[] };
+  if (raw && typeof raw === 'object') {
+    const paired = raw as Partial<PairedQuestions>;
+    if (Array.isArray(paired.inviter) && Array.isArray(paired.invitee)) return { inviter: paired.inviter, invitee: paired.invitee };
   }
-  return picked;
+  return { inviter: [], invitee: [] };
 }
 
-function randomQuestions(questions: DuelQuestion[]) {
-  const shuffled = [...questions];
-  for (let index = shuffled.length - 1; index > 0; index--) {
-    const other = randomInt(index + 1);
-    [shuffled[index], shuffled[other]] = [shuffled[other], shuffled[index]];
+/** Las preguntas que responde un participante concreto, en su orden. */
+function questionsFor(duel: { questions: unknown; inviterEnrollmentId: string }, enrollmentId: string) {
+  const both = sequences(duel.questions);
+  return duel.inviterEnrollmentId === enrollmentId ? both.inviter : both.invitee;
+}
+
+/** Saca una pregunta al azar de la bolsa (y la quita de ella). */
+function takeRandom(bag: DuelQuestion[]) {
+  return bag.splice(randomInt(bag.length), 1)[0];
+}
+
+/**
+ * Ruleta: en cada una de las siete rondas se sortea primero la categoría y
+ * después, de esa categoría, una pregunta para cada participante. La categoría
+ * de la ronda es la misma para los dos; las preguntas, distintas.
+ *
+ * Cada pregunta sale de la bolsa al usarse, así que nadie repite pregunta dentro
+ * de su duelo. Si a una categoría solo le queda una pregunta, esa ronda la
+ * comparten: es preferible a dejar la ronda sin pregunta.
+ */
+function drawRoulette(pool: DuelQuestion[], categories: string[]) {
+  const bags = new Map(categories.map((name) => [name, pool.filter((question) => question.category === name)]));
+  const inviter: DuelQuestion[] = [];
+  const invitee: DuelQuestion[] = [];
+  while (inviter.length < QUESTION_COUNT) {
+    const available = [...bags].filter(([, bag]) => bag.length > 0);
+    if (!available.length) break;
+    // Se prefieren categorías que alcancen para dos preguntas distintas.
+    const roomy = available.filter(([, bag]) => bag.length > 1);
+    const [, bag] = (roomy.length ? roomy : available)[randomInt((roomy.length ? roomy : available).length)];
+    const mine = takeRandom(bag);
+    inviter.push(mine);
+    invitee.push(bag.length ? takeRandom(bag) : mine);
   }
-  return shuffled.slice(0, QUESTION_COUNT);
+  return { inviter, invitee };
+}
+
+/**
+ * Tema elegido o «Mixta»: siete preguntas distintas para cada uno. Si la bolsa
+ * no llega a catorce, el segundo participante completa sus siete con preguntas
+ * que también recibió el primero, sin repetir ninguna dentro de su propia
+ * secuencia.
+ */
+function drawFromBag(pool: DuelQuestion[]) {
+  const bag = [...pool];
+  const inviter: DuelQuestion[] = [];
+  while (inviter.length < QUESTION_COUNT && bag.length) inviter.push(takeRandom(bag));
+  const invitee: DuelQuestion[] = [];
+  while (invitee.length < QUESTION_COUNT && bag.length) invitee.push(takeRandom(bag));
+  const reuse = [...inviter];
+  while (invitee.length < QUESTION_COUNT && reuse.length) invitee.push(takeRandom(reuse));
+  return { inviter, invitee };
 }
 
 @Injectable()
@@ -127,9 +215,67 @@ export class DuelService {
       id: item.id, text: item.text,
       options: Array.isArray(item.options) ? item.options.filter((option): option is string => typeof option === 'string') : [],
       correctAnswer: item.correctAnswer, explanation: item.explanation,
-      category: `${collection.subjectArea} · ${collection.category}`.slice(0, 160),
+      category: bankCategoryLabel(collection.subjectArea, collection.category),
     }))).filter((question) => question.options.length >= 2 && new Set(question.options.map(norm)).size === question.options.length && question.options.some((option) => norm(option) === norm(question.correctAnswer)));
     return [...activityQuestions, ...bankQuestions];
+  }
+
+  /**
+   * Estado mínimo de la Arena para la tarjeta de Actividades.
+   *
+   * La tarjeta se pinta en cada visita al aula, así que no puede cargar el
+   * tablero completo: en 8.º eso son 2.400 preguntas con su texto. Aquí solo se
+   * cuenta.
+   *
+   * `ready` es una cota: cuenta preguntas de opción múltiple y V/F sin aplicar
+   * las validaciones finas del sorteo (opciones repetidas, correcta ausente). En
+   * el caso límite puede decir «lista» y el tablero mostrar «todavía no abre»; lo
+   * contrario no ocurre.
+   *
+   * `pendingInvites` y `myTurn` existen porque un estudiante retado no tenía
+   * ninguna señal fuera de la Arena: se enteraba solo si entraba a buscarla.
+   */
+  async status(actor: ClassroomActor, classroomId: string) {
+    const { classroom, enrollmentId, isTeacher } = await this.context(actor, classroomId);
+    const group = await this.prisma.group.findFirst({
+      where: { id: classroom.teacherAssignment.groupId, grade: { institutionId: actor.institutionId } },
+      select: { gradeId: true },
+    });
+    const [bankCount, activities] = await Promise.all([
+      group ? this.prisma.questionBankItem.count({
+        where: {
+          institutionId: actor.institutionId, isActive: true, type: { in: ['MULTIPLE_CHOICE', 'TRUE_FALSE'] },
+          collection: { institutionId: actor.institutionId, gradeId: group.gradeId, isPublished: true, isActive: true },
+        },
+      }) : Promise.resolve(0),
+      this.prisma.classroomActivity.findMany({
+        where: { classroomId, classroom: { institutionId: actor.institutionId }, isPublished: true, isVisible: true, isRestrictedToAssigned: false, isRouteScoped: false, type: { in: [...sourceTypes] } },
+        select: { metadata: true, _count: { select: { questions: true } } },
+      }),
+    ]);
+    const activityCount = activities.filter((activity) => isEligible(activity.metadata)).reduce((sum, activity) => sum + activity._count.questions, 0);
+
+    let pendingInvites = 0;
+    let myTurn = 0;
+    if (enrollmentId) {
+      const now = new Date();
+      const open = await this.prisma.classroomDuel.findMany({
+        where: {
+          institutionId: actor.institutionId, classroomId, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { gt: now },
+          OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }],
+        },
+        select: { status: true, inviteeEnrollmentId: true, _count: { select: { answers: { where: { enrollmentId } } } } },
+      });
+      pendingInvites = open.filter((duel) => duel.status === 'INVITED' && duel.inviteeEnrollmentId === enrollmentId).length;
+      myTurn = open.filter((duel) => duel.status === 'ACTIVE' && duel._count.answers < QUESTION_COUNT).length;
+    }
+
+    return {
+      role: isTeacher ? 'teacher' : 'student',
+      ready: bankCount + activityCount >= QUESTION_COUNT,
+      pendingInvites,
+      myTurn,
+    };
   }
 
   async dashboard(actor: ClassroomActor, classroomId: string) {
@@ -161,7 +307,7 @@ export class DuelService {
       categories: categoryChoices(questions),
       minimumQuestions: QUESTION_COUNT,
       sources: activities.map((activity) => ({ id: activity.id, title: activity.title, questionCount: activity._count.questions, enabled: isEligible(activity.metadata) })),
-      peers: peers.map((peer) => ({ id: peer.id, name: displayName(peer) })),
+      peers: peers.map((peer) => ({ id: peer.id, name: displayName(peer), fullName: personName(peer.student.firstName, peer.student.lastName) })),
       duels: duels.map((duel) => ({
         id: duel.id, status: this.visibleStatus(duel.status, duel.expiresAt), category: duel.category, selectionMode: duel.selectionMode,
         opponent: displayName(duel.inviterEnrollmentId === enrollmentId ? duel.invitee : duel.inviter),
@@ -278,7 +424,9 @@ export class DuelService {
     if (me && !rows.some((row) => row.isMe)) rows.push(me);
 
     const labels: Record<RankingScope, { label: string; hint: string }> = {
-      group: { label: `${group?.name ?? 'Mi curso'} · ${classroom.title}`, hint: 'Duelos terminados en esta aula.' },
+      // El título del aula ya nombra el curso («INFORMATICA - Octavo C»); anteponer
+      // el grupo lo repetía: «C · INFORMATICA - Octavo C».
+      group: { label: classroom.title || group?.name || 'Mi curso', hint: 'Duelos terminados en esta aula.' },
       grade: { label: `Grado ${group?.grade.name ?? ''}`.trim(), hint: 'Duelos terminados del grado, en todas las materias.' },
       general: { label: 'Toda la institución', hint: 'Duelos terminados en el año escolar en curso, en todos los grados.' },
     };
@@ -312,7 +460,7 @@ export class DuelService {
         institutionId: actor.institutionId, status: 'COMPLETED',
         OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }],
       },
-      select: { questions: true, completedAt: true, answers: { select: { enrollmentId: true, ordinal: true, isCorrect: true } } },
+      select: { questions: true, inviterEnrollmentId: true, completedAt: true, answers: { select: { enrollmentId: true, ordinal: true, isCorrect: true } }, powerUses: { where: { enrollmentId }, select: { options: true } } },
       orderBy: { completedAt: 'asc' },
       take: RANKING_DUEL_LIMIT,
     });
@@ -321,7 +469,10 @@ export class DuelService {
     let played = 0; let draws = 0; let losses = 0; let answered = 0; let streak = 0;
 
     for (const duel of duels) {
-      const questions = Array.isArray(duel.questions) ? duel.questions as DuelQuestion[] : [];
+      // La secuencia propia, con el bono de tema aplicado: si no se aplicara, los
+      // aciertos de las dos rondas intercambiadas se contarían en la categoría
+      // equivocada.
+      const questions = this.applySwap(questionsFor(duel, enrollmentId), duel.powerUses?.[0] ?? null);
       const mine = duel.answers.filter((answer) => answer.enrollmentId === enrollmentId);
       const theirs = duel.answers.filter((answer) => answer.enrollmentId !== enrollmentId);
       const myScore = mine.filter((answer) => answer.isCorrect).length;
@@ -429,22 +580,23 @@ export class DuelService {
     const categories = categoryChoices(pool);
     const selectionMode = choice.selectionMode === 'ROULETTE' ? 'ROULETTE' : 'CHOSEN';
     let category = 'Mixta';
-    let questions: DuelQuestion[] = [];
+    let drawn: { inviter: DuelQuestion[]; invitee: DuelQuestion[] } = { inviter: [], invitee: [] };
     if (selectionMode === 'ROULETTE' && categories.length) {
       // La rueda gira una vez por ronda: cada pregunta trae su propia categoría y
       // el cliente la muestra antes de enseñar el enunciado.
       category = 'Ruleta';
-      questions = rouletteQuestions(pool, categories.map((item) => item.name));
+      drawn = drawRoulette(pool, categories.map((item) => item.name));
     } else if (selectionMode === 'CHOSEN' && choice.category && choice.category !== 'Mixta') {
       if (!categories.some((item) => item.name === choice.category)) throw new BadRequestException('Esta categoría necesita al menos 7 preguntas disponibles');
       category = choice.category;
     }
     // Sin categorías jugables la ruleta cae a «Mixta»: se sortea sobre todo el
     // banco habilitado en lugar de dejar al estudiante sin partida.
-    if (questions.length < QUESTION_COUNT) {
+    if (drawn.inviter.length < QUESTION_COUNT) {
       if (selectionMode === 'ROULETTE') category = 'Mixta';
-      questions = randomQuestions(category === 'Mixta' ? pool : pool.filter((question) => question.category === category));
+      drawn = drawFromBag(category === 'Mixta' ? pool : pool.filter((question) => question.category === category));
     }
+    const questions: PairedQuestions = { version: 2, ...drawn };
     const pairKey = [enrollmentId, opponentEnrollmentId].sort().join(':');
     const now = new Date();
     await this.prisma.classroomDuel.updateMany({ where: { institutionId: actor.institutionId, classroomId, pairKey, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { lt: now } }, data: { status: 'EXPIRED' } });
@@ -533,15 +685,19 @@ export class DuelService {
   async get(actor: ClassroomActor, duelId: string) {
     const { duel, enrollmentId } = await this.member(actor, duelId);
     const [answers, powerUse] = await Promise.all([
-      this.prisma.classroomDuelAnswer.findMany({ where: { duelId, institutionId: actor.institutionId }, orderBy: { ordinal: 'asc' }, select: { enrollmentId: true, ordinal: true, isCorrect: true } }),
+      this.prisma.classroomDuelAnswer.findMany({ where: { duelId, institutionId: actor.institutionId }, orderBy: { ordinal: 'asc' }, select: { enrollmentId: true, ordinal: true, isCorrect: true, answer: true } }),
       this.prisma.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId } }, select: { ordinal: true, options: true } }),
     ]);
     const mine = answers.filter((answer) => answer.enrollmentId === enrollmentId);
     const theirs = answers.filter((answer) => answer.enrollmentId !== enrollmentId);
-    const all = Array.isArray(duel.questions) ? duel.questions as DuelQuestion[] : [];
-    // Ambos responden las mismas siete; solo el orden cambia para quien gastó
-    // el bono de tema.
-    const questions = this.applySwap(all, powerUse);
+    // Cada participante responde su propia secuencia; el bono de tema, además,
+    // reordena la de quien lo gastó.
+    const questions = this.applySwap(questionsFor(duel, enrollmentId), powerUse);
+    // Resultado de la última pregunta que YA respondió: el estudiante ve al
+    // instante si acertó y cuál era la correcta. Nunca se revela la pregunta en
+    // pantalla ni las siguientes, solo las ya contestadas.
+    const last = mine.length ? mine[mine.length - 1] : null;
+    const lastQuestion = last ? questions[last.ordinal] : null;
     const finished = duel.status === 'COMPLETED';
     const current = duel.status === 'ACTIVE' && mine.length < questions.length ? questions[mine.length] : null;
     const fifty = powerUse?.ordinal === mine.length ? this.fiftyOptions(powerUse) : null;
@@ -555,6 +711,14 @@ export class DuelService {
       opponent: displayName(isInvitee ? duel.inviter : duel.invitee),
       opponentEnrollmentId: isInvitee ? duel.inviterEnrollmentId : duel.inviteeEnrollmentId,
       myProgress: mine.length, opponentProgress: theirs.length, total: questions.length,
+      // Marcador de aciertos en vivo. Con preguntas distintas para cada uno, ver
+      // cuántas lleva el rival no revela ninguna respuesta.
+      myScore: mine.filter((answer) => answer.isCorrect).length,
+      opponentScore: theirs.filter((answer) => answer.isCorrect).length,
+      lastResult: last && lastQuestion ? {
+        ordinal: last.ordinal, isCorrect: last.isCorrect, answer: last.answer,
+        correctAnswer: lastQuestion.correctAnswer, explanation: lastQuestion.explanation,
+      } : null,
       powerAvailable: !powerUse,
       // Temas que el bono puede adelantar: los de las rondas que aún faltan, sin
       // contar la que ya está en pantalla.
@@ -585,7 +749,9 @@ export class DuelService {
   async usePower(actor: ClassroomActor, duelId: string, ordinal: number, kind: 'FIFTY' | 'CATEGORY' = 'FIFTY', category?: string) {
     const { duel, enrollmentId } = await this.member(actor, duelId);
     if (duel.status !== 'ACTIVE') throw new ConflictException('El duelo no está activo');
-    const questions = Array.isArray(duel.questions) ? duel.questions as DuelQuestion[] : [];
+    // El bono se gasta sobre la secuencia de quien lo usa. Como hay uno solo por
+    // duelo, todavía no hay ningún intercambio previo que aplicar.
+    const questions = questionsFor(duel, enrollmentId);
     if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= questions.length) throw new BadRequestException('Ronda no válida');
     if (kind === 'FIFTY' && questions[ordinal].options.length < 3) throw new BadRequestException('El descarte necesita una pregunta con al menos 3 opciones');
     if (kind === 'CATEGORY' && (typeof category !== 'string' || !category.trim())) throw new BadRequestException('Elige un tema');
@@ -631,7 +797,7 @@ export class DuelService {
     const power = await this.prisma.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId } }, select: { options: true } });
     // Se califica contra la secuencia de ESTE jugador: si gastó el bono de tema,
     // su ronda N es otra de las mismas siete preguntas.
-    const questions = this.applySwap(Array.isArray(duel.questions) ? duel.questions as DuelQuestion[] : [], power);
+    const questions = this.applySwap(questionsFor(duel, enrollmentId), power);
     if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= questions.length || typeof answer !== 'string' || answer.length > 500) throw new BadRequestException('Respuesta no válida');
     if (!questions[ordinal].options.some((option) => norm(option) === norm(answer))) throw new BadRequestException('Selecciona una opción válida');
     try {
@@ -642,7 +808,9 @@ export class DuelService {
         if (answered !== ordinal) throw new ConflictException('Responde la pregunta actual');
         await tx.classroomDuelAnswer.create({ data: { institutionId: actor.institutionId, duelId, enrollmentId, ordinal, answer, isCorrect: norm(answer) === norm(questions[ordinal].correctAnswer) } });
         const total = await tx.classroomDuelAnswer.count({ where: { duelId } });
-        if (total === questions.length * 2) await tx.classroomDuel.update({ where: { id: duelId }, data: { status: 'COMPLETED', completedAt: new Date() } });
+        // Termina cuando cada uno respondió toda SU secuencia.
+        const both = sequences(duel.questions);
+        if (total === both.inviter.length + both.invitee.length) await tx.classroomDuel.update({ where: { id: duelId }, data: { status: 'COMPLETED', completedAt: new Date() } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002' || (error as { code?: string }).code === 'P2034') throw new ConflictException('La respuesta ya se registró. Actualiza la partida.');
