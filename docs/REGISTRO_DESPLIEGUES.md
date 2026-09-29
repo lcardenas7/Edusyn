@@ -29,6 +29,8 @@ opcional de 150 preguntas, auditado con 120/30 por tipo, dificultad 50/70/30,
 30 respuestas correctas por letra y conceptos únicos. Build de API y 17 pruebas de
 `question-bank.service.spec.ts` aprobados. Pendiente verificar la opción en la biblioteca
 docente una vez Railway complete el despliegue.
+Verificación posterior: aparece en la biblioteca del aula de 8.º con 150 preguntas y la
+acción **Usar este banco**; no se importó al aula.
 
 ### Matemáticas y lógica · 6.º para Duelos — staging · 2026-09-28
 

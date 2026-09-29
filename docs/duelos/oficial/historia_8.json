@@ -1,0 +1,2832 @@
+{
+  "catalogId": "edusyn-historia-grade-8-v1",
+  "title": "Historia · 8.º",
+  "grade": 8,
+  "subjectArea": "Duelos",
+  "category": "Historia",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll10/id/2804/download",
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll23/id/524/download",
+    "https://enciclopedia.banrepcultural.org/Lucas_Caballero_Barrera",
+    "https://pancanal.com/culminacion-de-la-construccion/",
+    "https://www.archives.gov/milestone-documents/declaration-of-independence",
+    "https://www.britannica.com/topic/Haitian-Revolution",
+    "https://www.iwm.org.uk/history/first-world-war",
+    "https://www.mineducacion.gov.co/1621/articles-116042_archivo_pdf3.pdf",
+    "https://www.museonacional.gov.co/colecciones/Pieza_del_mes/pieza-del-mes-2010/Paginas/489_2010-01-19.aspx",
+    "https://www.un.org/en/about-us/history-of-the-un"
+  ],
+  "questions": [
+    {
+      "id": "HIS8-001",
+      "number": 1,
+      "topic": "Revolución industrial",
+      "concept": "vapor_impulsa_primera_industrializacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fuente de energía impulsó muchas fábricas británicas del siglo XVIII?",
+      "options": [
+        "Gas natural",
+        "Energía solar",
+        "Vapor de agua",
+        "Petróleo refinado"
+      ],
+      "correctAnswer": "Vapor de agua",
+      "explanation": "Las máquinas de vapor transformaron la producción y el transporte durante la industrialización.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-002",
+      "number": 2,
+      "topic": "Revolución francesa",
+      "concept": "lema_revolucion_francesa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué lema se asocia con la Revolución francesa?",
+      "options": [
+        "Orden, patria y rey",
+        "Tierra, paz y trabajo",
+        "Fe, corona y conquista",
+        "Libertad, igualdad y fraternidad"
+      ],
+      "correctAnswer": "Libertad, igualdad y fraternidad",
+      "explanation": "El lema expresó ideales de ciudadanía y cambio político vinculados con la revolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-003",
+      "number": 3,
+      "topic": "Independencia de Estados Unidos",
+      "concept": "declaracion_independencia_estados_unidos_1776",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se aprobó la Declaración de Independencia de Estados Unidos?",
+      "options": [
+        "1492",
+        "1776",
+        "1789",
+        "1810"
+      ],
+      "correctAnswer": "1776",
+      "explanation": "Las trece colonias aprobaron la declaración el 4 de julio de 1776.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-004",
+      "number": 4,
+      "topic": "Industrialización y ciudades",
+      "concept": "migracion_fabril_acelera_urbanizacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fenómeno creció cuando muchas personas dejaron el campo para trabajar en fábricas?",
+      "options": [
+        "Urbanización",
+        "Nomadismo",
+        "Feudalismo",
+        "Colonización"
+      ],
+      "correctAnswer": "Urbanización",
+      "explanation": "La migración hacia centros industriales amplió las ciudades y modificó su población.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-005",
+      "number": 5,
+      "topic": "Independencias latinoamericanas",
+      "concept": "imperios_ibericos_en_america",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué imperios europeos gobernaban gran parte de América antes de las independencias?",
+      "options": [
+        "Portugués y español",
+        "Ruso y otomano",
+        "Alemán e italiano",
+        "Japonés y chino"
+      ],
+      "correctAnswer": "Portugués y español",
+      "explanation": "España y Portugal controlaban extensos territorios americanos antes de los movimientos independentistas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-006",
+      "number": 6,
+      "topic": "Derechos políticos",
+      "concept": "sectores_populares_reclaman_representacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo reclamó derechos políticos durante varias revoluciones modernas?",
+      "options": [
+        "Gremios medievales",
+        "Ciudadanos y sectores populares",
+        "Cortes reales únicamente",
+        "Compañías mercantiles extranjeras"
+      ],
+      "correctAnswer": "Ciudadanos y sectores populares",
+      "explanation": "Distintos sectores exigieron representación y límites al poder, aunque la participación se amplió de manera desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-007",
+      "number": 7,
+      "topic": "Verdadero o falso · Producción industrial",
+      "concept": "mecanizacion_aumenta_volumen_productivo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La mecanización permitió fabricar algunos productos en mayor cantidad y en menos tiempo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las máquinas aceleraron tareas que antes dependían principalmente del trabajo manual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Revoluciones modernas",
+      "concept": "derechos_revolucionarios_tuvieron_exclusiones",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las declaraciones de derechos del siglo XVIII reconocieron desde el comienzo igualdad política plena para todas las personas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Aunque formularon principios de igualdad, mujeres, personas esclavizadas y otros grupos quedaron excluidos de muchos derechos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-009",
+      "number": 9,
+      "topic": "Revolución industrial",
+      "concept": "fabrica_concentra_y_divide_produccion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio distinguió principalmente el sistema fabril del taller artesanal?",
+      "options": [
+        "Trabajo individual sin herramientas",
+        "Intercambio limitado al trueque",
+        "Producción concentrada y mecanizada",
+        "Fabricación doméstica sin división"
+      ],
+      "correctAnswer": "Producción concentrada y mecanizada",
+      "explanation": "La fábrica reunió trabajadores y máquinas, organizando tareas para producir a mayor escala.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-010",
+      "number": 10,
+      "topic": "Revolución francesa",
+      "concept": "revolucion_francesa_cuestiona_absolutismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político cuestionó la Revolución francesa?",
+      "options": [
+        "La existencia de asambleas locales",
+        "El poder absoluto de la monarquía",
+        "El comercio entre ciudades",
+        "La publicación de periódicos"
+      ],
+      "correctAnswer": "El poder absoluto de la monarquía",
+      "explanation": "La revolución disputó la autoridad absoluta y propuso nuevas formas de soberanía política.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-011",
+      "number": 11,
+      "topic": "Revoluciones atlánticas",
+      "concept": "soberania_nacional_en_revoluciones_atlanticas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué idea compartieron algunos movimientos revolucionarios de fines del siglo XVIII?",
+      "options": [
+        "La soberanía reside en la nación",
+        "El poder pertenece solo al clero",
+        "La sociedad no debe tener leyes",
+        "Las colonias deben carecer de gobierno"
+      ],
+      "correctAnswer": "La soberanía reside en la nación",
+      "explanation": "La soberanía nacional cuestionó que el poder político proviniera exclusivamente de una monarquía hereditaria.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-012",
+      "number": 12,
+      "topic": "Haití",
+      "concept": "revolucion_haitiana_derrota_esclavitud",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hizo singular a la Revolución haitiana en el mundo atlántico?",
+      "options": [
+        "Abolió la esclavitud y creó una república",
+        "Restauró el dominio francés",
+        "Unió Haití con las colonias británicas",
+        "Prohibió la participación de antiguos esclavizados"
+      ],
+      "correctAnswer": "Abolió la esclavitud y creó una república",
+      "explanation": "La revolución derrotó el régimen esclavista y condujo a la independencia haitiana en 1804.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-013",
+      "number": 13,
+      "topic": "Independencias americanas",
+      "concept": "invasion_napoleonica_abre_crisis_de_soberania",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las guerras napoleónicas debilitaron el control español sobre América?",
+      "options": [
+        "América dejó de comerciar por completo",
+        "Portugal ocupó todas las colonias",
+        "Las ciudades americanas desaparecieron",
+        "España perdió estabilidad y autoridad"
+      ],
+      "correctAnswer": "España perdió estabilidad y autoridad",
+      "explanation": "La crisis de la monarquía española abrió disputas sobre quién debía gobernar los territorios americanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-014",
+      "number": 14,
+      "topic": "Trabajo industrial",
+      "concept": "fabrica_organiza_tiempo_laboral",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación surgió entre la fábrica y la jornada laboral?",
+      "options": [
+        "El horario se organizó según la producción",
+        "La jornada dependía solo de la cosecha",
+        "Los turnos desaparecieron de inmediato",
+        "El trabajo volvió exclusivamente artesanal"
+      ],
+      "correctAnswer": "El horario se organizó según la producción",
+      "explanation": "El ritmo de las máquinas y la organización fabril impusieron horarios regulares y disciplinados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-015",
+      "number": 15,
+      "topic": "Liberalismo",
+      "concept": "constituciones_liberales_limites_al_poder",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban limitar muchas constituciones liberales del siglo XIX?",
+      "options": [
+        "La educación de la población",
+        "La circulación de periódicos",
+        "El poder concentrado del gobierno",
+        "La existencia de elecciones"
+      ],
+      "correctAnswer": "El poder concentrado del gobierno",
+      "explanation": "Las constituciones liberales establecieron reglas e instituciones para distribuir o limitar el poder estatal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-016",
+      "number": 16,
+      "topic": "Transporte industrial",
+      "concept": "ferrocarril_conecta_mercados_regionales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto tuvo el ferrocarril en muchas economías industrializadas?",
+      "options": [
+        "Redujo el movimiento de mercancías",
+        "Conectó mercados y aceleró viajes",
+        "Eliminó la necesidad de puertos",
+        "Sustituyó todas las rutas marítimas"
+      ],
+      "correctAnswer": "Conectó mercados y aceleró viajes",
+      "explanation": "El tren facilitó transportar personas y productos con mayor rapidez entre regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-017",
+      "number": 17,
+      "topic": "Independencia de Brasil",
+      "concept": "independencia_brasil_conserva_monarquia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distinguió el proceso independentista brasileño del de varias repúblicas hispanoamericanas?",
+      "options": [
+        "Brasil se convirtió en colonia francesa",
+        "Brasil abolió toda forma de gobierno",
+        "Brasil se dividió en virreinatos españoles",
+        "Brasil mantuvo una monarquía tras independizarse"
+      ],
+      "correctAnswer": "Brasil mantuvo una monarquía tras independizarse",
+      "explanation": "Tras separarse de Portugal en 1822, Brasil fue un imperio gobernado por Pedro I.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Industrialización",
+      "concept": "ferrocarril_crea_beneficios_y_desplazamientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La expansión ferroviaria pudo beneficiar el comercio y también desplazar actividades económicas anteriores.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La nueva infraestructura abrió mercados, pero alteró rutas y oficios ligados a transportes previos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-019",
+      "number": 19,
+      "topic": "Verdadero o falso · Ciudadanía",
+      "concept": "constituciones_restringen_ciudadania",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La ciudadanía definida por una constitución siempre incluyó a todas las personas adultas por igual.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los requisitos de propiedad, género, origen o condición social restringieron el voto en distintos países.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-020",
+      "number": 20,
+      "topic": "Economía y sociedad",
+      "concept": "industrializacion_amplia_burguesia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo social creció con la expansión de fábricas y negocios urbanos?",
+      "options": [
+        "Nobleza feudal exclusivamente rural",
+        "Burguesía industrial y comercial",
+        "Sacerdocio imperial hereditario",
+        "Servidumbre ligada a feudos"
+      ],
+      "correctAnswer": "Burguesía industrial y comercial",
+      "explanation": "Propietarios de fábricas, comerciantes y empresarios ganaron peso económico en las sociedades industriales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-021",
+      "number": 21,
+      "topic": "Cambios en el trabajo",
+      "concept": "division_laboral_aumenta_produccion_repetitiva",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una fábrica produce más tela, pero sus obreros realizan tareas repetidas durante largas jornadas. ¿Qué cambio describe mejor la situación?",
+      "options": [
+        "Aumentó la producción y se dividió el trabajo",
+        "Desapareció la disciplina de horarios",
+        "Se restauró la producción feudal",
+        "Cada obrero controló todo el proceso"
+      ],
+      "correctAnswer": "Aumentó la producción y se dividió el trabajo",
+      "explanation": "La producción mecanizada elevó el volumen y organizó el trabajo en tareas especializadas y repetitivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-022",
+      "number": 22,
+      "topic": "Lectura de fuentes",
+      "concept": "comparar_fuentes_revela_efectos_desiguales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un periódico de 1840 celebra el ferrocarril; una carta de un arriero describe la pérdida de clientes. ¿Qué conclusión compara mejor ambas fuentes?",
+      "options": [
+        "Una fuente debe ser necesariamente falsa",
+        "Una innovación puede generar efectos distintos",
+        "El tren no tuvo consecuencias económicas",
+        "Las experiencias individuales no son evidencia"
+      ],
+      "correctAnswer": "Una innovación puede generar efectos distintos",
+      "explanation": "Las fuentes reflejan posiciones distintas y ayudan a reconocer que un cambio puede crear ganadores y afectados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-023",
+      "number": 23,
+      "topic": "Revolución y derechos",
+      "concept": "igualdad_declarada_contrasta_con_voto_restringido",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una constitución proclama igualdad, pero reserva el voto a propietarios varones. ¿Qué tensión muestra?",
+      "options": [
+        "Ausencia total de ideas políticas",
+        "Principios universales y ciudadanía restringida",
+        "Igualdad económica ya alcanzada",
+        "Rechazo de toda forma de constitución"
+      ],
+      "correctAnswer": "Principios universales y ciudadanía restringida",
+      "explanation": "La proclamación de igualdad convivió con reglas que excluían a amplios sectores de la participación política.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-024",
+      "number": 24,
+      "topic": "Economía mundial",
+      "concept": "division_internacional_del_trabajo_algodon_textiles",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una región produce algodón para fábricas extranjeras y compra textiles manufacturados. ¿Qué relación económica refleja?",
+      "options": [
+        "Independencia completa de los mercados",
+        "Especialización desigual entre regiones",
+        "Intercambio sin producción industrial",
+        "Fin de las relaciones comerciales"
+      ],
+      "correctAnswer": "Especialización desigual entre regiones",
+      "explanation": "La división internacional del trabajo asignó funciones diferentes a las regiones y pudo mantener relaciones desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Interpretación histórica",
+      "concept": "cambio_legal_no_elimina_inmediatamente_practicas_sociales",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una ley abolió una institución, sus efectos sociales desaparecieron inmediatamente en todos los lugares.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los cambios legales pueden tardar en transformar prácticas, condiciones materiales y relaciones de poder.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-026",
+      "number": 26,
+      "topic": "Revolución haitiana",
+      "concept": "saint_domingue_se_convierte_en_haiti",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué país declaró su independencia tras la revolución iniciada en Saint-Domingue?",
+      "options": [
+        "Cuba",
+        "Jamaica",
+        "Puerto Rico",
+        "Haití"
+      ],
+      "correctAnswer": "Haití",
+      "explanation": "La antigua colonia francesa se convirtió en Haití independiente en 1804.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-027",
+      "number": 27,
+      "topic": "Simón Bolívar",
+      "concept": "gran_colombia_reune_territorios_liberados",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proyecto político buscó unir varios territorios liberados del dominio español?",
+      "options": [
+        "Provincias Unidas del Río de la Plata",
+        "Imperio del Brasil",
+        "Confederación Germánica",
+        "Gran Colombia"
+      ],
+      "correctAnswer": "Gran Colombia",
+      "explanation": "La Gran Colombia reunió territorios que hoy corresponden a Colombia, Venezuela, Ecuador y Panamá.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-028",
+      "number": 28,
+      "topic": "Independencia de México",
+      "concept": "miguel_hidalgo_inicia_insurreccion_mexicana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sacerdote inició en 1810 un levantamiento independentista en México?",
+      "options": [
+        "Miguel Hidalgo",
+        "José María Morelos",
+        "Agustín de Iturbide",
+        "Vicente Guerrero"
+      ],
+      "correctAnswer": "Miguel Hidalgo",
+      "explanation": "Miguel Hidalgo llamó a levantarse contra el dominio español en septiembre de 1810.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-029",
+      "number": 29,
+      "topic": "Congreso de Viena",
+      "concept": "congreso_viena_reorganiza_europa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban principalmente las potencias reunidas en el Congreso de Viena de 1814–1815?",
+      "options": [
+        "Crear una república continental",
+        "Abolir las fronteras nacionales",
+        "Restaurar el equilibrio monárquico europeo",
+        "Unificar los imperios americanos"
+      ],
+      "correctAnswer": "Restaurar el equilibrio monárquico europeo",
+      "explanation": "Tras las guerras napoleónicas, los gobiernos intentaron reorganizar Europa y contener nuevas revoluciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-030",
+      "number": 30,
+      "topic": "Verdadero o falso · Independencias",
+      "concept": "independencias_no_eliminan_desigualdad_social",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las independencias americanas terminaron de inmediato con todas las desigualdades sociales heredadas de la colonia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cambió la autoridad política, pero muchas jerarquías y desigualdades persistieron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-031",
+      "number": 31,
+      "topic": "Abolicionismo",
+      "concept": "movimiento_abolicionista_busca_fin_esclavitud",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué defendía el movimiento abolicionista?",
+      "options": [
+        "La expansión del trabajo esclavizado",
+        "El regreso del poder monárquico",
+        "La prohibición de la industria",
+        "La eliminación legal de la esclavitud"
+      ],
+      "correctAnswer": "La eliminación legal de la esclavitud",
+      "explanation": "Los abolicionistas promovieron terminar jurídicamente con la esclavitud y la trata.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-032",
+      "number": 32,
+      "topic": "Nacionalismo",
+      "concept": "nacionalismo_vincula_identidad_y_autogobierno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué idea ganó fuerza con varios movimientos nacionalistas del siglo XIX?",
+      "options": [
+        "Las fronteras nunca deben modificarse",
+        "Toda comunidad debe obedecer un imperio",
+        "Los idiomas deben desaparecer",
+        "Un pueblo puede reclamar autogobierno"
+      ],
+      "correctAnswer": "Un pueblo puede reclamar autogobierno",
+      "explanation": "El nacionalismo vinculó identidad colectiva con la aspiración a formar o controlar un Estado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Ciudadanía",
+      "concept": "voto_republicano_mantuvo_restricciones",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En el siglo XIX, el derecho al voto fue igual para todas las personas adultas en las nuevas repúblicas americanas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Diversas repúblicas impusieron requisitos de sexo, propiedad, alfabetización o condición jurídica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-034",
+      "number": 34,
+      "topic": "Independencias latinoamericanas",
+      "concept": "crisis_monarquica_promueve_juntas_americanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto tuvo la invasión napoleónica de la península ibérica en las colonias españolas?",
+      "options": [
+        "Unificó todas las colonias con Francia",
+        "Abrió debates sobre la autoridad legítima",
+        "Eliminó las juntas locales americanas",
+        "Restableció el comercio sin restricciones"
+      ],
+      "correctAnswer": "Abrió debates sobre la autoridad legítima",
+      "explanation": "La ausencia del monarca reconocido impulsó discusiones sobre quién podía gobernar en su nombre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-035",
+      "number": 35,
+      "topic": "Gran Colombia",
+      "concept": "tensiones_regionales_debilitan_gran_colombia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué factor contribuyó a la disolución de la Gran Colombia?",
+      "options": [
+        "Tensiones regionales y desacuerdos sobre el gobierno",
+        "Una invasión portuguesa de Bogotá",
+        "La desaparición de las rutas comerciales",
+        "Una decisión del Congreso de Viena"
+      ],
+      "correctAnswer": "Tensiones regionales y desacuerdos sobre el gobierno",
+      "explanation": "Diferencias políticas y regionales dificultaron mantener unido el territorio y sus instituciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-036",
+      "number": 36,
+      "topic": "México independiente",
+      "concept": "mexico_discute_federalismo_y_centralismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué disputa política marcó buena parte del México del siglo XIX?",
+      "options": [
+        "Monjes y comerciantes fenicios",
+        "Federalistas y centralistas",
+        "Navegantes y pueblos vikingos",
+        "Republicanos y faraones"
+      ],
+      "correctAnswer": "Federalistas y centralistas",
+      "explanation": "Los grupos debatían cuánto poder debían tener el gobierno nacional y las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-037",
+      "number": 37,
+      "topic": "Verdadero o falso · Abolición",
+      "concept": "libertad_juridica_no_garantiza_igualdad_economica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una ley abolicionista podía cambiar el estatus jurídico sin garantizar por sí sola igualdad económica.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La libertad legal no eliminó automáticamente la pobreza, la discriminación ni la falta de acceso a tierras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-038",
+      "number": 38,
+      "topic": "Revoluciones de 1848",
+      "concept": "revoluciones_1848_reclaman_constitucion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué demandas aparecieron en varias revoluciones europeas de 1848?",
+      "options": [
+        "Restauración de servidumbre feudal",
+        "Prohibición de asambleas nacionales",
+        "Constitución y participación política",
+        "Expansión del absolutismo real"
+      ],
+      "correctAnswer": "Constitución y participación política",
+      "explanation": "Diversos movimientos reclamaron constituciones, libertades y mayor participación política.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-039",
+      "number": 39,
+      "topic": "Unificación italiana",
+      "concept": "unificacion_italiana_forma_estado",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué resultado político tuvo el proceso de unificación italiana?",
+      "options": [
+        "Formación de un Estado italiano",
+        "División de Italia entre colonias americanas",
+        "Restauración del Imperio romano",
+        "Incorporación a la Gran Colombia"
+      ],
+      "correctAnswer": "Formación de un Estado italiano",
+      "explanation": "Durante el siglo XIX, distintos territorios quedaron reunidos bajo el Reino de Italia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-040",
+      "number": 40,
+      "topic": "Unificación alemana",
+      "concept": "prusia_lidera_unificacion_alemana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué Estado lideró la unificación alemana del siglo XIX?",
+      "options": [
+        "Prusia",
+        "Baviera",
+        "Sajonia",
+        "Austria-Hungría"
+      ],
+      "correctAnswer": "Prusia",
+      "explanation": "Prusia dirigió el proceso que culminó con la creación del Imperio alemán en 1871.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-041",
+      "number": 41,
+      "topic": "Industrialización global",
+      "concept": "industria_europea_aumenta_demanda_materias_primas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se relacionó la industrialización europea con la economía de otras regiones?",
+      "options": [
+        "Cerró todos los puertos europeos",
+        "Eliminó el comercio intercontinental",
+        "Sustituyó los cultivos por fábricas en todo lugar",
+        "Aumentó la demanda de materias primas"
+      ],
+      "correctAnswer": "Aumentó la demanda de materias primas",
+      "explanation": "Las industrias requirieron materias primas y mercados, ampliando la integración desigual de la economía mundial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-042",
+      "number": 42,
+      "topic": "Verdadero o falso · Nacionalismo",
+      "concept": "nacionalismo_puede_excluir_minorías",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los movimientos nacionalistas del siglo XIX siempre defendieron la igualdad de derechos para todas las minorías.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Algunos proyectos nacionales excluyeron o discriminaron a comunidades con otras lenguas, religiones o identidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-043",
+      "number": 43,
+      "topic": "Constitución y poder",
+      "concept": "federalismo_distribuye_poder_territorial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia expresa mejor el federalismo frente al centralismo?",
+      "options": [
+        "Reemplazo de leyes por costumbres",
+        "Ausencia de gobiernos locales",
+        "Prohibición de elecciones nacionales",
+        "Distribución territorial del poder político"
+      ],
+      "correctAnswer": "Distribución territorial del poder político",
+      "explanation": "El federalismo reparte competencias entre autoridades nacionales y entidades regionales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-044",
+      "number": 44,
+      "topic": "Revoluciones",
+      "concept": "revolucion_cambia_gobierno_pero_conserva_estructuras",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué interpretación reconoce mejor los límites de una revolución política?",
+      "options": [
+        "Puede cambiar el gobierno y conservar jerarquías sociales",
+        "Siempre transforma toda relación económica",
+        "Impide cualquier cambio institucional",
+        "Elimina de inmediato todos los conflictos"
+      ],
+      "correctAnswer": "Puede cambiar el gobierno y conservar jerarquías sociales",
+      "explanation": "Los cambios políticos no transforman automáticamente todas las relaciones económicas y sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-045",
+      "number": 45,
+      "topic": "Economía y transporte",
+      "concept": "vapor_regulariza_rutas_marítimas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la navegación a vapor favoreció el comercio del siglo XIX?",
+      "options": [
+        "Eliminó la necesidad de combustible",
+        "Impidió transportar cargas pesadas",
+        "Hizo más regulares ciertos trayectos",
+        "Volvió innecesarios los puertos"
+      ],
+      "correctAnswer": "Hizo más regulares ciertos trayectos",
+      "explanation": "Los barcos de vapor dependían menos del viento y facilitaron planear algunos recorridos comerciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-046",
+      "number": 46,
+      "topic": "Construcción de repúblicas",
+      "concept": "disputa_autonomia_regional_y_poder_central",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una provincia rechaza las decisiones de la capital y pide controlar impuestos y milicias locales. ¿Qué debate refleja?",
+      "options": [
+        "Monarquía frente a industrialización",
+        "Centralismo frente a autonomía regional",
+        "Abolicionismo frente a navegación",
+        "Nacionalismo frente a alfabetización"
+      ],
+      "correctAnswer": "Centralismo frente a autonomía regional",
+      "explanation": "La disputa trata sobre dónde debe concentrarse el poder y qué atribuciones conservan las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-047",
+      "number": 47,
+      "topic": "Interpretación de estadísticas",
+      "concept": "leer_comercio_creciente_sin_inferir_beneficio_igual",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un gráfico muestra que las exportaciones crecen, pero también aumentan las importaciones de productos manufacturados. ¿Qué inferencia es más prudente?",
+      "options": [
+        "La población dejó de producir alimentos",
+        "El comercio exterior se volvió innecesario",
+        "Todos los grupos recibieron beneficios iguales",
+        "La economía se integró más al comercio externo"
+      ],
+      "correctAnswer": "La economía se integró más al comercio externo",
+      "explanation": "El crecimiento de ambos flujos indica mayor intercambio, pero no basta para concluir cómo se repartieron sus beneficios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-048",
+      "number": 48,
+      "topic": "Abolición y sociedad",
+      "concept": "falta_de_recursos_perpetua_desigualdad_tras_abolicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Después de abolir la esclavitud, un gobierno no entrega tierras ni facilita empleo. ¿Qué problema puede persistir?",
+      "options": [
+        "Regreso automático al régimen colonial",
+        "Desaparición de toda discriminación",
+        "Fin de los conflictos laborales",
+        "Dependencia económica y desigualdad"
+      ],
+      "correctAnswer": "Dependencia económica y desigualdad",
+      "explanation": "Sin recursos ni oportunidades, la libertad legal puede coexistir con relaciones económicas desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-049",
+      "number": 49,
+      "topic": "Fuentes históricas",
+      "concept": "contrastar_proposito_y_contexto_de_fuentes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un discurso oficial llama “unidad” a una anexión; una carta local la describe como imposición. ¿Qué debe hacer quien estudia el caso?",
+      "options": [
+        "Elegir el documento con más páginas",
+        "Comparar propósito, autoría y contexto",
+        "Suponer que solo una fuente es auténtica",
+        "Ignorar las diferencias entre testimonios"
+      ],
+      "correctAnswer": "Comparar propósito, autoría y contexto",
+      "explanation": "La procedencia y el propósito ayudan a interpretar por qué las fuentes describen el mismo proceso de maneras distintas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Historia económica",
+      "concept": "exportaciones_no_demuestran_bienestar_general",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si las exportaciones de un país aumentan, se puede concluir sin más datos que toda su población mejoró económicamente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El volumen exportado no indica por sí solo quién recibió los ingresos ni cómo cambiaron las condiciones de vida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-051",
+      "number": 51,
+      "topic": "Imperialismo del siglo XIX",
+      "concept": "imperialismo_busca_recursos_y_posiciones_estrategicas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban varias potencias europeas al expandir sus imperios en África y Asia?",
+      "options": [
+        "Abandonar todos sus mercados",
+        "Evitar cualquier contacto marítimo",
+        "Materias primas y control estratégico",
+        "Disolver sus gobiernos nacionales"
+      ],
+      "correctAnswer": "Materias primas y control estratégico",
+      "explanation": "La expansión imperial respondió a intereses económicos, políticos y estratégicos diversos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-052",
+      "number": 52,
+      "topic": "Canal de Suez",
+      "concept": "canal_suez_conecta_mediterraneo_y_mar_rojo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué conecta el canal de Suez?",
+      "options": [
+        "Mar Negro y mar Caspio",
+        "Océano Pacífico y mar Caribe",
+        "Mar Mediterráneo y mar Rojo",
+        "río Nilo y río Congo"
+      ],
+      "correctAnswer": "Mar Mediterráneo y mar Rojo",
+      "explanation": "El canal une el Mediterráneo con el mar Rojo y acorta rutas entre Europa y Asia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-053",
+      "number": 53,
+      "topic": "Abolicionismo en Estados Unidos",
+      "concept": "guerra_secesion_y_abolición_estados_unidos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué conflicto terminó con la esclavitud en Estados Unidos?",
+      "options": [
+        "Guerra de los Siete Años",
+        "Guerra de Secesión",
+        "Guerra de Crimea",
+        "Guerra de los Cien Años"
+      ],
+      "correctAnswer": "Guerra de Secesión",
+      "explanation": "La Guerra de Secesión concluyó en 1865; la Decimotercera Enmienda abolió la esclavitud ese año.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-054",
+      "number": 54,
+      "topic": "Verdadero o falso · Imperialismo",
+      "concept": "dominio_colonial_limita_autonomia_politica",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La expansión imperial del siglo XIX afectó las decisiones políticas de sociedades colonizadas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El dominio colonial transfirió poder y control territorial a las potencias imperiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-055",
+      "number": 55,
+      "topic": "Revolución industrial",
+      "concept": "carbon_alimenta_maquinas_vapor_industriales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué combustible alimentó muchas máquinas de vapor y hornos industriales?",
+      "options": [
+        "Turba",
+        "Uranio",
+        "Gasolina",
+        "Carbón"
+      ],
+      "correctAnswer": "Carbón",
+      "explanation": "El carbón fue una fuente de energía central para la industrialización del siglo XIX.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-056",
+      "number": 56,
+      "topic": "Migración europea",
+      "concept": "migracion_europea_del_siglo_xix_hacia_america",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Hacia qué continente emigraron millones de europeos durante el siglo XIX?",
+      "options": [
+        "América",
+        "Antártida",
+        "Oceanía únicamente",
+        "Asia central"
+      ],
+      "correctAnswer": "América",
+      "explanation": "Muchas personas buscaron tierras, empleo u oportunidades en distintos países americanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-057",
+      "number": 57,
+      "topic": "Japón moderno",
+      "concept": "restauracion_meiji_moderniza_japon",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio inició la Restauración Meiji en Japón desde 1868?",
+      "options": [
+        "Restauración del dominio portugués",
+        "División permanente en feudos europeos",
+        "Abandono de toda tecnología extranjera",
+        "Reformas para fortalecer un Estado moderno"
+      ],
+      "correctAnswer": "Reformas para fortalecer un Estado moderno",
+      "explanation": "El nuevo gobierno impulsó reformas políticas, militares y económicas para transformar Japón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Industrialización",
+      "concept": "industrializacion_avanza_con_ritmos_desiguales",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La industrialización ocurrió al mismo tiempo y con igual intensidad en todas las regiones del mundo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los procesos industriales avanzaron en distintos momentos y con ritmos desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-059",
+      "number": 59,
+      "topic": "Imperialismo y economía",
+      "concept": "colonia_dependiente_exporta_materias_primas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo podía una colonia quedar subordinada económicamente a una potencia?",
+      "options": [
+        "Prohibiendo toda actividad agrícola",
+        "Controlando por igual todos los mercados mundiales",
+        "Eliminando el uso de puertos",
+        "Exportando materias primas e importando manufacturas"
+      ],
+      "correctAnswer": "Exportando materias primas e importando manufacturas",
+      "explanation": "Algunas economías coloniales se organizaron para proveer recursos y comprar productos manufacturados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-060",
+      "number": 60,
+      "topic": "Imperialismo en África",
+      "concept": "fronteras_coloniales_reordenan_comunidades_africanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema generaron varias fronteras coloniales trazadas en África?",
+      "options": [
+        "Coincidieron siempre con límites culturales",
+        "Eliminaron todas las disputas territoriales",
+        "Separaron comunidades o reunieron grupos diversos",
+        "Restituyeron cada reino precolonial"
+      ],
+      "correctAnswer": "Separaron comunidades o reunieron grupos diversos",
+      "explanation": "Las fronteras impuestas atendieron a intereses coloniales y no siempre consideraron las comunidades locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-061",
+      "number": 61,
+      "topic": "Reforma Meiji",
+      "concept": "reformas_meiji_fortalecen_capacidad_estatal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el gobierno Meiji impulsó la educación y la industria?",
+      "options": [
+        "Para restaurar el sistema feudal sin cambios",
+        "Para depender militarmente de Europa",
+        "Para fortalecer la capacidad del Estado",
+        "Para cerrar las ciudades japonesas"
+      ],
+      "correctAnswer": "Para fortalecer la capacidad del Estado",
+      "explanation": "Las reformas buscaron construir instituciones y capacidades económicas y militares modernas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-062",
+      "number": 62,
+      "topic": "Abolición y reconstrucción",
+      "concept": "reconstruccion_debate_ciudadania_afroamericana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurrió en Estados Unidos durante la Reconstrucción posterior a la Guerra de Secesión?",
+      "options": [
+        "Se restauró la independencia de las colonias",
+        "Se disolvieron todos los gobiernos estatales",
+        "Se debatió la ciudadanía de las personas liberadas",
+        "Se trasladó la capital a México"
+      ],
+      "correctAnswer": "Se debatió la ciudadanía de las personas liberadas",
+      "explanation": "La posguerra abrió disputas sobre ciudadanía, derechos y participación de la población afroamericana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-063",
+      "number": 63,
+      "topic": "Verdadero o falso · Fronteras coloniales",
+      "concept": "fronteras_coloniales_afectan_comunidades_previas",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las fronteras coloniales podían alterar la vida de comunidades que ya existían antes de la conquista.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La demarcación de territorios podía dividir comunidades o someterlas a autoridades nuevas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-064",
+      "number": 64,
+      "topic": "Economía extractiva",
+      "concept": "demanda_global_impulsa_extraccion_de_caucho",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio produjo la demanda industrial de caucho en algunas regiones tropicales?",
+      "options": [
+        "Desapareció la navegación fluvial",
+        "Se prohibió todo intercambio internacional",
+        "La producción se limitó al consumo familiar",
+        "Creció la extracción para mercados externos"
+      ],
+      "correctAnswer": "Creció la extracción para mercados externos",
+      "explanation": "La demanda global de caucho impulsó su extracción, con efectos sociales y ambientales en regiones productoras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-065",
+      "number": 65,
+      "topic": "Movimiento obrero",
+      "concept": "sindicatos_reclaman_mejoras_laborales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban muchos sindicatos surgidos durante la industrialización?",
+      "options": [
+        "Mejorar salarios y condiciones laborales",
+        "Restablecer la servidumbre feudal",
+        "Prohibir toda asociación de trabajadores",
+        "Entregar fábricas a monarquías extranjeras"
+      ],
+      "correctAnswer": "Mejorar salarios y condiciones laborales",
+      "explanation": "La organización colectiva permitió reclamar jornadas, salarios y condiciones de trabajo más seguras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-066",
+      "number": 66,
+      "topic": "Ciencia y sociedad",
+      "concept": "educacion_publica_amplia_alfabetizacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia social pudo tener la expansión de la educación pública en el siglo XIX?",
+      "options": [
+        "Todas las diferencias sociales desaparecieron",
+        "Más personas accedieron a la lectura",
+        "La prensa dejó de circular",
+        "Las escuelas sustituyeron a los parlamentos"
+      ],
+      "correctAnswer": "Más personas accedieron a la lectura",
+      "explanation": "La ampliación escolar favoreció la alfabetización, aunque su cobertura y acceso siguieron siendo desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-067",
+      "number": 67,
+      "topic": "Verdadero o falso · Trabajo",
+      "concept": "problemas_compartidos_impulsan_organizacion_sindical",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La organización sindical surgió, entre otros motivos, porque los trabajadores compartían problemas laborales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La acción colectiva permitió negociar demandas que cada trabajador tenía menos capacidad de plantear por separado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-068",
+      "number": 68,
+      "topic": "Imperialismo y resistencia",
+      "concept": "sociedades_colonizadas_resisten_de_varias_formas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué respuesta adoptaron algunas sociedades frente al dominio colonial?",
+      "options": [
+        "Resistencia armada o política",
+        "Aceptación unánime sin oposición",
+        "Renuncia permanente a sus lenguas",
+        "Desaparición de toda autoridad local"
+      ],
+      "correctAnswer": "Resistencia armada o política",
+      "explanation": "Hubo distintas formas de resistencia, desde rebeliones hasta negociación y defensa de prácticas culturales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-069",
+      "number": 69,
+      "topic": "Transporte global",
+      "concept": "suez_acorta_ruta_europa_Asia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hizo el canal de Suez para las rutas marítimas entre Europa y Asia?",
+      "options": [
+        "Cerró el acceso al océano Índico",
+        "Evitó rodear África en muchos viajes",
+        "Sustituyó todos los puertos asiáticos",
+        "Conectó el Mediterráneo con el Pacífico"
+      ],
+      "correctAnswer": "Evitó rodear África en muchos viajes",
+      "explanation": "El canal redujo la distancia de muchas rutas al evitar rodear el extremo sur de África.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-070",
+      "number": 70,
+      "topic": "Nacionalismo y minorías",
+      "concept": "identidad_nacional_dominante_presiona_minorías_lingüísticas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué un proyecto nacional podía entrar en conflicto con una minoría lingüística?",
+      "options": [
+        "Toda minoría rechazaba cualquier educación",
+        "Podía imponer una lengua e identidad oficiales",
+        "Las lenguas no se relacionan con identidad",
+        "Las fronteras impedían hablar"
+      ],
+      "correctAnswer": "Podía imponer una lengua e identidad oficiales",
+      "explanation": "Un Estado que favorece una identidad dominante puede limitar el reconocimiento de otras comunidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-071",
+      "number": 71,
+      "topic": "Trabajo y reforma",
+      "concept": "asociacion_laboral_promueve_regulacion_de_seguridad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe registra accidentes frecuentes en una fábrica; los obreros crean una asociación y reclaman inspecciones. ¿Qué proceso refleja?",
+      "options": [
+        "Restauración de privilegios feudales",
+        "Rechazo de toda regulación estatal",
+        "Organización laboral para exigir reformas",
+        "Fin de la producción industrial"
+      ],
+      "correctAnswer": "Organización laboral para exigir reformas",
+      "explanation": "La asociación colectiva convierte problemas compartidos en demandas de protección y cambio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-072",
+      "number": 72,
+      "topic": "Interpretación de mapas",
+      "concept": "investigar_efectos_de_frontera_sobre_comunidad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa colonial muestra una frontera recta que divide un territorio habitado por una misma comunidad. ¿Qué pregunta de investigación resulta más útil?",
+      "options": [
+        "¿Qué técnica cartográfica se utilizó?",
+        "¿Qué autoridad negoció el límite?",
+        "¿Cómo cambió la movilidad comunitaria?",
+        "¿En qué fecha se imprimió el mapa?"
+      ],
+      "correctAnswer": "¿Cómo cambió la movilidad comunitaria?",
+      "explanation": "Indagar por la movilidad conecta la frontera dibujada con la vida de quienes habitaban el territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-073",
+      "number": 73,
+      "topic": "Evidencia económica",
+      "concept": "evaluar_beneficio_minero_con_evidencias_distributivas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una empresa afirma que una mina benefició a toda la región. ¿Qué evidencia permitiría evaluar mejor esa afirmación?",
+      "options": [
+        "Salarios, propiedad y efectos locales",
+        "Anuncios de la empresa",
+        "Planos del edificio administrativo",
+        "Fecha de apertura"
+      ],
+      "correctAnswer": "Salarios, propiedad y efectos locales",
+      "explanation": "Distribución de ingresos y efectos locales permiten contrastar quiénes obtuvieron beneficios y quiénes asumieron costos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-074",
+      "number": 74,
+      "topic": "Imperios y tecnología",
+      "concept": "infraestructura_colonial_orientada_a_exportacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un ferrocarril colonial conecta una mina con un puerto, pero no une las poblaciones cercanas entre sí. ¿Qué propósito parece priorizar?",
+      "options": [
+        "Exportar recursos al mercado exterior",
+        "Facilitar viajes cotidianos de todas las comunidades",
+        "Eliminar el comercio con la metrópoli",
+        "Crear rutas para la agricultura local únicamente"
+      ],
+      "correctAnswer": "Exportar recursos al mercado exterior",
+      "explanation": "La ruta entre zona extractiva y puerto sugiere una infraestructura organizada para sacar recursos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-075",
+      "number": 75,
+      "topic": "Verdadero o falso · Explicaciones históricas",
+      "concept": "correlacion_temporal_no_prueba_causa_unica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La coincidencia temporal entre la apertura de una fábrica y el crecimiento de una ciudad basta para demostrar que la fábrica fue su única causa.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La coincidencia temporal no prueba causalidad; también deben estudiarse migración, políticas y otras actividades económicas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-076",
+      "number": 76,
+      "topic": "Colombia federal",
+      "concept": "constitucion_1863_estados_unidos_colombia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibió Colombia bajo la Constitución federal de 1863?",
+      "options": [
+        "Virreinato de la Nueva Granada",
+        "República de la Gran Colombia",
+        "Estados Unidos de Colombia",
+        "Confederación del Caribe"
+      ],
+      "correctAnswer": "Estados Unidos de Colombia",
+      "explanation": "La Constitución de Rionegro organizó el país como una federación llamada Estados Unidos de Colombia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-077",
+      "number": 77,
+      "topic": "Constitución de 1886",
+      "concept": "constitucion_1886_refuerza_centralismo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma de organización política estableció la Constitución colombiana de 1886?",
+      "options": [
+        "Confederación de provincias independientes",
+        "República centralista",
+        "Monarquía parlamentaria",
+        "Protectorado extranjero"
+      ],
+      "correctAnswer": "República centralista",
+      "explanation": "La Constitución fortaleció el gobierno central y reemplazó el modelo federal anterior.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-078",
+      "number": 78,
+      "topic": "Guerra de los Mil Días",
+      "concept": "guerra_mil_dias_fechas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué años ocurrió la Guerra de los Mil Días en Colombia?",
+      "options": [
+        "1899–1902",
+        "1810–1819",
+        "1851–1854",
+        "1903–1910"
+      ],
+      "correctAnswer": "1899–1902",
+      "explanation": "El conflicto enfrentó a liberales y conservadores entre 1899 y 1902.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-079",
+      "number": 79,
+      "topic": "Verdadero o falso · Federalismo",
+      "concept": "federalismo_colombiano_amplia_autonomia_estatal",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El federalismo colombiano del siglo XIX otorgó mayor autonomía política a los estados regionales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El modelo federal distribuyó competencias entre el gobierno nacional y los estados soberanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-080",
+      "number": 80,
+      "topic": "Separación de Panamá",
+      "concept": "separacion_panama_1903",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año Panamá se separó de Colombia?",
+      "options": [
+        "1903",
+        "1886",
+        "1899",
+        "1914"
+      ],
+      "correctAnswer": "1903",
+      "explanation": "Panamá se separó de Colombia en 1903, en medio de una crisis política y de intereses estratégicos sobre el canal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-081",
+      "number": 81,
+      "topic": "Economía colombiana",
+      "concept": "cafe_gana_peso_exportador_colombiano",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué producto ganó importancia en las exportaciones colombianas durante el siglo XIX?",
+      "options": [
+        "Automóviles",
+        "Petróleo refinado",
+        "Algodón industrial",
+        "Café"
+      ],
+      "correctAnswer": "Café",
+      "explanation": "El café se convirtió en un producto central de exportación y vinculó regiones colombianas a mercados externos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-082",
+      "number": 82,
+      "topic": "Verdadero o falso · Transporte",
+      "concept": "ferrocarriles_colombianos_redes_regionales_fragmentadas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los ferrocarriles colombianos del siglo XIX se construyeron todos como una red nacional conectada.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Muchas líneas se desarrollaron de forma regional y no siempre quedaron conectadas entre sí.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-083",
+      "number": 83,
+      "topic": "Transformación urbana",
+      "concept": "registro_civil_documenta_eventos_personales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué institución suele registrar nacimientos, matrimonios y defunciones en un Estado moderno?",
+      "options": [
+        "Aduana portuaria",
+        "Registro civil",
+        "Casa de moneda",
+        "Archivo militar"
+      ],
+      "correctAnswer": "Registro civil",
+      "explanation": "El registro civil documenta eventos de la vida de las personas para fines legales y administrativos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-084",
+      "number": 84,
+      "topic": "Federalismo y centralismo",
+      "concept": "conflicto_colombiano_por_distribucion_territorial_del_poder",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la disputa entre federalistas y centralistas generó conflictos en Colombia?",
+      "options": [
+        "Querían abolir todas las instituciones",
+        "Rechazaban la existencia de regiones",
+        "Discutían únicamente sobre rutas marítimas",
+        "Diferían sobre cómo distribuir el poder territorial"
+      ],
+      "correctAnswer": "Diferían sobre cómo distribuir el poder territorial",
+      "explanation": "La disputa definía qué decisiones correspondían al gobierno nacional y cuáles a las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-085",
+      "number": 85,
+      "topic": "Guerra de los Mil Días",
+      "concept": "guerra_mil_dias_impacta_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia tuvo la Guerra de los Mil Días para la población civil?",
+      "options": [
+        "Desplazamiento y pérdidas económicas",
+        "Universalización inmediata de la educación",
+        "Desaparición de las diferencias partidistas",
+        "Industrialización completa del país"
+      ],
+      "correctAnswer": "Desplazamiento y pérdidas económicas",
+      "explanation": "La guerra produjo muertes, desplazamientos y daños que afectaron la economía y la vida cotidiana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-086",
+      "number": 86,
+      "topic": "Canal de Panamá",
+      "concept": "canal_panama_acorta_conexion_interoceanica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la ruta del canal de Panamá tenía importancia estratégica internacional?",
+      "options": [
+        "Conectaba directamente todos los ríos colombianos",
+        "Permitía evitar la larga ruta alrededor de Sudamérica",
+        "Eliminaba los viajes entre océanos",
+        "Separaba las rutas comerciales de Asia y Europa"
+      ],
+      "correctAnswer": "Permitía evitar la larga ruta alrededor de Sudamérica",
+      "explanation": "El canal acortó la conexión marítima entre los océanos Atlántico y Pacífico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-087",
+      "number": 87,
+      "topic": "Economía cafetera",
+      "concept": "economia_cafetera_impulsa_conexiones_regionales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo influyó el cultivo del café en varias regiones colombianas?",
+      "options": [
+        "Eliminó la agricultura de subsistencia",
+        "Impulsó caminos, comercio y poblados",
+        "Sustituyó todos los cultivos nacionales",
+        "Cerró las conexiones con puertos"
+      ],
+      "correctAnswer": "Impulsó caminos, comercio y poblados",
+      "explanation": "La expansión cafetera estimuló transporte y comercio, aunque sus beneficios y cambios variaron entre regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-088",
+      "number": 88,
+      "topic": "Constitución y religión",
+      "concept": "constitucion_1886_amplia_influencia_catolica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio en la relación entre Iglesia y Estado se asocia con la Constitución colombiana de 1886?",
+      "options": [
+        "Mayor influencia institucional de la Iglesia católica",
+        "Separación completa de toda religión en la vida pública",
+        "Prohibición de la educación religiosa",
+        "Gobierno oficial de varias iglesias"
+      ],
+      "correctAnswer": "Mayor influencia institucional de la Iglesia católica",
+      "explanation": "El nuevo orden constitucional reconoció un papel importante a la Iglesia católica en la sociedad y la educación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-089",
+      "number": 89,
+      "topic": "Verdadero o falso · Panamá",
+      "concept": "rechazo_tratado_precede_separacion_panama",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La separación de Panamá ocurrió después de que Colombia rechazara un tratado relacionado con la construcción del canal.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El rechazo del tratado Hay–Herrán en el Congreso colombiano precedió a la separación de 1903, aunque también influyeron otros intereses y procesos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-090",
+      "number": 90,
+      "topic": "Economía y territorio",
+      "concept": "exportaciones_requieren_conexion_productores_puertos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una economía exportadora podía depender de caminos y puertos?",
+      "options": [
+        "Debía impedir el movimiento de mercancías",
+        "Necesitaba llevar productos a mercados externos",
+        "Solo comerciaba dentro de cada finca",
+        "No requería conectar zonas productoras"
+      ],
+      "correctAnswer": "Necesitaba llevar productos a mercados externos",
+      "explanation": "La infraestructura conectaba las zonas productoras con puertos y compradores de otros países.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-091",
+      "number": 91,
+      "topic": "Participación política",
+      "concept": "sufragio_censitario_concentra_participacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema puede surgir cuando el acceso al voto depende de tener propiedades?",
+      "options": [
+        "Todas las personas votan con más frecuencia",
+        "Desaparecen las diferencias de riqueza",
+        "La participación política se concentra en ciertos grupos",
+        "Los gobiernos locales dejan de existir"
+      ],
+      "correctAnswer": "La participación política se concentra en ciertos grupos",
+      "explanation": "Los requisitos de propiedad excluyen a personas con menos recursos y limitan la representación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-092",
+      "number": 92,
+      "topic": "Fuentes sobre conflictos",
+      "concept": "fuentes_locales_revelan_experiencias_de_guerra",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fuente ayudaría más a estudiar el efecto de una guerra en la vida cotidiana?",
+      "options": [
+        "Un mapa físico sin fechas",
+        "Una lista de gobernantes de otro siglo",
+        "Un anuncio comercial sin contexto",
+        "Cartas personales y registros locales"
+      ],
+      "correctAnswer": "Cartas personales y registros locales",
+      "explanation": "Cartas y registros locales pueden mostrar experiencias, necesidades y cambios vividos por la población.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-093",
+      "number": 93,
+      "topic": "Verdadero o falso · Café",
+      "concept": "exportaciones_cafeteras_generan_beneficios_desiguales",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El crecimiento de las exportaciones cafeteras benefició de manera idéntica a todos los trabajadores y regiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los resultados dependieron de la propiedad, el acceso al transporte, los precios y las condiciones laborales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-094",
+      "number": 94,
+      "topic": "Construcción estatal",
+      "concept": "constitucion_organiza_instituciones_y_limites",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple una constitución en una república?",
+      "options": [
+        "Define instituciones y reglas para ejercer el poder",
+        "Reemplaza todas las decisiones judiciales",
+        "Evita cualquier desacuerdo político",
+        "Garantiza por sí sola igualdad material"
+      ],
+      "correctAnswer": "Define instituciones y reglas para ejercer el poder",
+      "explanation": "Una constitución organiza el Estado y establece principios y límites para sus autoridades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-095",
+      "number": 95,
+      "topic": "Historia regional",
+      "concept": "autonomias_regionales_defienden_recursos_y_decisiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las regiones podían oponerse a un gobierno central fuerte?",
+      "options": [
+        "Querían eliminar sus propias actividades económicas",
+        "Rechazaban toda forma de comercio",
+        "Buscaban trasladar todas las ciudades al litoral",
+        "Temían perder control de recursos y decisiones locales"
+      ],
+      "correctAnswer": "Temían perder control de recursos y decisiones locales",
+      "explanation": "Las élites y poblaciones regionales podían defender autonomía fiscal, política o administrativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-096",
+      "number": 96,
+      "topic": "Lectura de datos históricos",
+      "concept": "volumen_exportado_no_determina_ingreso_por_precios",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un gráfico muestra que el café exportado crece mientras los precios internacionales fluctúan. ¿Qué conclusión está mejor sustentada?",
+      "options": [
+        "Cada familia cafetera obtuvo el mismo ingreso",
+        "Aumentó el volumen exportado, pero el ingreso pudo variar",
+        "El crecimiento eliminó los riesgos comerciales",
+        "La producción dejó de depender de los mercados"
+      ],
+      "correctAnswer": "Aumentó el volumen exportado, pero el ingreso pudo variar",
+      "explanation": "Las cantidades exportadas no bastan para conocer ingresos: también importan precios y distribución de ganancias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-097",
+      "number": 97,
+      "topic": "Comparación constitucional",
+      "concept": "comparar_autonomia_provincial_y_poder_central",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una constitución entrega amplias competencias a las provincias; otra concentra impuestos y decisiones en la capital. ¿Qué eje se compara?",
+      "options": [
+        "Organización federal o centralista",
+        "Monarquía o sistema colonial",
+        "Economía agrícola o minera",
+        "Educación pública o privada"
+      ],
+      "correctAnswer": "Organización federal o centralista",
+      "explanation": "La comparación se centra en dónde se ubica la autoridad política y fiscal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-098",
+      "number": 98,
+      "topic": "Panamá y causalidad",
+      "concept": "separacion_panama_requiere_explicacion_multicausal",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante afirma que el rechazo de un tratado fue la única causa de la separación de Panamá. ¿Qué respuesta mejora su explicación?",
+      "options": [
+        "Repetir la afirmación porque una causa basta",
+        "Considerar también intereses estratégicos y tensiones previas",
+        "Ignorar la intervención de otros gobiernos",
+        "Explicar el proceso solo con una fecha"
+      ],
+      "correctAnswer": "Considerar también intereses estratégicos y tensiones previas",
+      "explanation": "Los procesos históricos suelen combinar factores internos y externos; un hecho aislado no explica por completo la separación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-099",
+      "number": 99,
+      "topic": "Memoria y guerra",
+      "concept": "memoria_de_guerra_incluye_experiencias_civiles",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una placa recuerda a soldados de una guerra, pero no menciona a civiles desplazados. ¿Qué complemento amplía la memoria histórica?",
+      "options": [
+        "Borrar la placa sin investigar",
+        "Reemplazar relatos por una lista de fechas",
+        "Recoger testimonios de comunidades afectadas",
+        "Excluir fuentes personales del archivo"
+      ],
+      "correctAnswer": "Recoger testimonios de comunidades afectadas",
+      "explanation": "Incorporar voces civiles permite reconocer experiencias que un homenaje militar puede dejar fuera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-100",
+      "number": 100,
+      "topic": "Verdadero o falso · Interpretación política",
+      "concept": "centralismo_no_suprime_toda_gestion_local",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una constitución es centralista, todas las decisiones locales desaparecen necesariamente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El centralismo concentra atribuciones nacionales, pero pueden mantenerse gobiernos y funciones locales con competencias menores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-101",
+      "number": 101,
+      "topic": "Restauración Meiji",
+      "concept": "japon_inicia_reformas_meiji",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué país inició una rápida modernización estatal con la Restauración Meiji?",
+      "options": [
+        "Japón",
+        "Corea",
+        "China",
+        "Siam"
+      ],
+      "correctAnswer": "Japón",
+      "explanation": "Desde 1868, el gobierno japonés impulsó cambios para fortalecer sus instituciones y capacidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-102",
+      "number": 102,
+      "topic": "Imperialismo en Asia",
+      "concept": "comercio_opio_en_guerras_del_opio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué producto fue central en el comercio colonial británico con China durante las guerras del Opio?",
+      "options": [
+        "Café",
+        "Caucho",
+        "Algodón egipcio",
+        "Opio"
+      ],
+      "correctAnswer": "Opio",
+      "explanation": "El comercio de opio y las restricciones chinas al mismo fueron parte del conflicto con Gran Bretaña.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-103",
+      "number": 103,
+      "topic": "Verdadero o falso · Colonialismo",
+      "concept": "imperialismo_se_justifica_con_discursos_diversos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las potencias coloniales justificaron su expansión únicamente con razones económicas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "También invocaron motivos estratégicos, políticos y culturales, a menudo para legitimar el dominio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-104",
+      "number": 104,
+      "topic": "Movimiento obrero",
+      "concept": "sindicato_representa_intereses_laborales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué organización podía negociar colectivamente en nombre de trabajadores?",
+      "options": [
+        "Sindicato",
+        "Virreinato",
+        "Monasterio",
+        "Casa real"
+      ],
+      "correctAnswer": "Sindicato",
+      "explanation": "Los sindicatos representan intereses laborales y pueden negociar condiciones con empleadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-105",
+      "number": 105,
+      "topic": "Abolición en Brasil",
+      "concept": "ley_aurea_abolio_esclavitud_brasil",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ley abolió la esclavitud en Brasil en 1888?",
+      "options": [
+        "Ley Sáenz Peña",
+        "Ley de Reforma",
+        "Ley Áurea",
+        "Ley de Vientres"
+      ],
+      "correctAnswer": "Ley Áurea",
+      "explanation": "La Ley Áurea, promulgada en 1888, abolió legalmente la esclavitud en Brasil.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-106",
+      "number": 106,
+      "topic": "Nacionalismo italiano",
+      "concept": "roma_se_incorpora_a_italia_en_1870",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ciudad fue incorporada al Reino de Italia en 1870 y se convirtió en su capital?",
+      "options": [
+        "Nápoles",
+        "Roma",
+        "Turín",
+        "Venecia"
+      ],
+      "correctAnswer": "Roma",
+      "explanation": "La incorporación de Roma completó una etapa decisiva de la unificación italiana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-107",
+      "number": 107,
+      "topic": "Verdadero o falso · Ferrocarriles",
+      "concept": "ferrocarriles_conectan_produccion_y_puertos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los ferrocarriles podían facilitar el transporte de mercancías hacia puertos de exportación.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las líneas ferroviarias conectaban centros de producción con puertos y mercados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-108",
+      "number": 108,
+      "topic": "Educación y Estado",
+      "concept": "escuela_primaria_extiende_alfabetizacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué habilidad promovió la expansión de la escuela primaria en el siglo XIX?",
+      "options": [
+        "Navegación astronómica",
+        "Equitación militar",
+        "Lectura y escritura",
+        "Minería subterránea"
+      ],
+      "correctAnswer": "Lectura y escritura",
+      "explanation": "La escolarización elemental buscó ampliar capacidades básicas, aunque el acceso fue desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-109",
+      "number": 109,
+      "topic": "Guerras del Opio",
+      "concept": "tratados_desiguales_reducen_soberania_china",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia tuvieron los tratados impuestos a China tras las guerras del Opio?",
+      "options": [
+        "Cerraron China a todo comercio",
+        "Convirtieron a Gran Bretaña en provincia china",
+        "Abolieron los imperios europeos",
+        "Abrieron puertos y otorgaron privilegios a potencias extranjeras"
+      ],
+      "correctAnswer": "Abrieron puertos y otorgaron privilegios a potencias extranjeras",
+      "explanation": "Los acuerdos ampliaron el acceso extranjero y limitaron la soberanía china en varios asuntos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-110",
+      "number": 110,
+      "topic": "Imperialismo africano",
+      "concept": "competencia_europea_acelera_reparto_de_africa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso impulsó la ocupación europea de gran parte de África en el siglo XIX?",
+      "options": [
+        "Retiro simultáneo de todos los imperios",
+        "Un acuerdo para crear estados africanos soberanos",
+        "Competencia por territorios y recursos",
+        "Fin de la extracción de materias primas"
+      ],
+      "correctAnswer": "Competencia por territorios y recursos",
+      "explanation": "La rivalidad entre potencias aceleró la ocupación y el reparto colonial de territorios africanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-111",
+      "number": 111,
+      "topic": "Derechos de las mujeres",
+      "concept": "sufragismo_reclama_voto_femenino",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reclamaban los movimientos sufragistas del siglo XIX?",
+      "options": [
+        "Restablecimiento de las monarquías absolutas",
+        "Prohibición de la educación femenina",
+        "Supresión de las constituciones",
+        "Derecho de las mujeres a votar"
+      ],
+      "correctAnswer": "Derecho de las mujeres a votar",
+      "explanation": "Las sufragistas organizaron campañas para ampliar los derechos políticos de las mujeres.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-112",
+      "number": 112,
+      "topic": "Migración y ciudades",
+      "concept": "empleo_fabril_atrae_migracion_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué combinación explica el crecimiento de algunas ciudades industriales?",
+      "options": [
+        "Descenso de empleos y cierre de talleres",
+        "Regreso general al trabajo feudal",
+        "Prohibición de construir viviendas",
+        "Migración laboral y expansión de fábricas"
+      ],
+      "correctAnswer": "Migración laboral y expansión de fábricas",
+      "explanation": "La concentración de empleos industriales atrajo población y amplió los asentamientos urbanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-113",
+      "number": 113,
+      "topic": "Japón y expansión imperial",
+      "concept": "modernizacion_japonesa_precede_expansion_regional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación hubo entre la modernización japonesa y su expansión imperial posterior?",
+      "options": [
+        "Las reformas eliminaron toda capacidad militar",
+        "Japón se convirtió en colonia portuguesa",
+        "La modernización impidió cualquier actividad industrial",
+        "El fortalecimiento estatal facilitó ampliar su poder regional"
+      ],
+      "correctAnswer": "El fortalecimiento estatal facilitó ampliar su poder regional",
+      "explanation": "Las reformas fortalecieron las capacidades del Estado; posteriormente Japón también adoptó políticas imperiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-114",
+      "number": 114,
+      "topic": "Verdadero o falso · Urbanización",
+      "concept": "urbanizacion_rapida_no_garantiza_vivienda_saludable",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El crecimiento urbano industrial garantizó desde el inicio viviendas saludables para todos los trabajadores.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La expansión rápida de las ciudades produjo hacinamiento y problemas sanitarios en muchos barrios obreros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-115",
+      "number": 115,
+      "topic": "Producción y consumo",
+      "concept": "produccion_mecanizada_amplia_acceso_a_bienes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio permitió que ciertos bienes llegaran a más consumidores durante la industrialización?",
+      "options": [
+        "Producción en serie y reducción de costos",
+        "Prohibición de máquinas fabriles",
+        "Regreso a la manufactura individual",
+        "Desaparición del transporte de carga"
+      ],
+      "correctAnswer": "Producción en serie y reducción de costos",
+      "explanation": "La mecanización y la producción a mayor escala abarataron algunos productos, aunque el acceso siguió dependiendo de los ingresos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-116",
+      "number": 116,
+      "topic": "Verdadero o falso · Sufragio",
+      "concept": "sufragio_femenino_reconocido_en_distintos_momentos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La conquista del voto femenino ocurrió al mismo tiempo en todos los países.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El sufragio femenino se reconoció en momentos distintos según cada país y sus luchas políticas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-117",
+      "number": 117,
+      "topic": "Imperios y puertos",
+      "concept": "puertos_estrategicos_sostienen_redes_imperiales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las potencias imperiales buscaban controlar puertos estratégicos?",
+      "options": [
+        "Impedían el acceso a rutas oceánicas",
+        "Eliminaban la necesidad de barcos",
+        "Aislaban por completo las colonias",
+        "Facilitaban el comercio y el movimiento naval"
+      ],
+      "correctAnswer": "Facilitaban el comercio y el movimiento naval",
+      "explanation": "Los puertos apoyaban redes de comercio, abastecimiento y presencia naval.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-118",
+      "number": 118,
+      "topic": "Economía colombiana",
+      "concept": "relieve_y_caminos_limitan_integracion_colombiana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dificultad limitaba el transporte de productos entre regiones colombianas montañosas?",
+      "options": [
+        "Relieve complejo y caminos escasos",
+        "Exceso de canales navegables",
+        "Ausencia total de población rural",
+        "Prohibición de usar animales de carga"
+      ],
+      "correctAnswer": "Relieve complejo y caminos escasos",
+      "explanation": "La geografía y la infraestructura limitada encarecían los desplazamientos y dificultaban integrar mercados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-119",
+      "number": 119,
+      "topic": "Historia social",
+      "concept": "abolicion_legal_no_elimina_racismo_estructural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las leyes de abolición no eliminaron automáticamente el racismo?",
+      "options": [
+        "La esclavitud continuó siendo legal en todos los países",
+        "Las personas liberadas dejaron de vivir en sociedad",
+        "Los gobiernos suprimieron toda forma de educación",
+        "Las normas no transforman de inmediato prejuicios y desigualdades"
+      ],
+      "correctAnswer": "Las normas no transforman de inmediato prejuicios y desigualdades",
+      "explanation": "Las prácticas discriminatorias y desigualdades pueden persistir después de un cambio legal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-120",
+      "number": 120,
+      "topic": "Imperialismo cultural",
+      "concept": "imposicion_linguistica_presiona_lenguas_locales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto podía tener la imposición de una lengua colonial en una comunidad?",
+      "options": [
+        "Crear igualdad inmediata entre grupos",
+        "Hacer innecesaria la educación",
+        "Eliminar toda comunicación oral",
+        "Debilitar la transmisión de lenguas locales"
+      ],
+      "correctAnswer": "Debilitar la transmisión de lenguas locales",
+      "explanation": "La presión institucional por usar una lengua dominante podía reducir espacios para las lenguas locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-121",
+      "number": 121,
+      "topic": "Fuentes y trabajo",
+      "concept": "contrastar_fuentes_empresariales_y_testimoniales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe empresarial afirma que una fábrica mejoró la vida obrera; entrevistas describen jornadas extensas. ¿Qué estrategia permite evaluar ambas afirmaciones?",
+      "options": [
+        "Aceptar el informe por ser oficial",
+        "Descartar las entrevistas personales",
+        "Contar cuántas páginas tiene cada fuente",
+        "Contrastar testimonios con registros laborales"
+      ],
+      "correctAnswer": "Contrastar testimonios con registros laborales",
+      "explanation": "Comparar fuentes de distinto origen permite revisar sus perspectivas y comprobar afirmaciones con evidencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-122",
+      "number": 122,
+      "topic": "Colonialismo y recursos",
+      "concept": "distribucion_de_ganancias_y_servicios_en_economia_extractiva",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un territorio exporta minerales, mientras la mayoría de sus habitantes tiene poco acceso a escuelas y servicios. ¿Qué pregunta analiza mejor la relación?",
+      "options": [
+        "¿Qué color tenían los vagones mineros?",
+        "¿Cuántos barcos cabían en un puerto?",
+        "¿Quién controlaba las ganancias y los servicios?",
+        "¿Qué título usaba el gobernador?"
+      ],
+      "correctAnswer": "¿Quién controlaba las ganancias y los servicios?",
+      "explanation": "Analizar la distribución de ingresos y recursos permite investigar quiénes se beneficiaron de la actividad extractiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-123",
+      "number": 123,
+      "topic": "Ciudad industrial",
+      "concept": "crecimiento_urbano_supera_servicios_basicos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad fabril crece más rápido que sus redes de agua y vivienda. ¿Qué problema es más probable?",
+      "options": [
+        "Reducción automática de la población",
+        "Desaparición de los empleos fabriles",
+        "Hacinamiento y riesgos sanitarios",
+        "Aislamiento completo de los mercados"
+      ],
+      "correctAnswer": "Hacinamiento y riesgos sanitarios",
+      "explanation": "Si los servicios no acompañan el crecimiento, la densidad y las condiciones insalubres pueden empeorar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-124",
+      "number": 124,
+      "topic": "Cambios sociales",
+      "concept": "expansion_escolar_puede_conservar_brechas_territoriales_y_de_genero",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un país amplía la educación primaria, pero las niñas de zonas rurales siguen asistiendo menos. ¿Qué conclusión es más adecuada?",
+      "options": [
+        "La matrícula prueba igualdad educativa completa",
+        "La distancia no influye en la asistencia",
+        "La educación rural desapareció por ley",
+        "La expansión educativa puede mantener brechas de acceso"
+      ],
+      "correctAnswer": "La expansión educativa puede mantener brechas de acceso",
+      "explanation": "Una política general puede ampliar la oferta sin resolver desigualdades relacionadas con género y territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Interpretación de progreso",
+      "concept": "infraestructura_no_mide_bienestar_de_toda_la_poblacion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Que un país construya fábricas y ferrocarriles demuestra por sí solo que toda su población vivía mejor.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La infraestructura indica cambios productivos, pero evaluar bienestar requiere estudiar salarios, acceso a servicios y distribución de beneficios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-126",
+      "number": 126,
+      "topic": "Primera Guerra Mundial",
+      "concept": "asesinato_francisco_fernando_desencadena_crisis",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué asesinato desencadenó la crisis inmediata que precedió a la Primera Guerra Mundial?",
+      "options": [
+        "Del archiduque Francisco Fernando",
+        "Del zar Nicolás II",
+        "Del káiser Guillermo II",
+        "Del presidente Woodrow Wilson"
+      ],
+      "correctAnswer": "Del archiduque Francisco Fernando",
+      "explanation": "El asesinato del archiduque austrohúngaro en Sarajevo precipitó una crisis entre potencias europeas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-127",
+      "number": 127,
+      "topic": "Primera Guerra Mundial",
+      "concept": "triple_entente_antes_de_1914",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué alianza integró a Francia, Rusia y el Reino Unido antes de la guerra?",
+      "options": [
+        "Triple Alianza",
+        "Pacto de Varsovia",
+        "Liga Hanseática",
+        "Triple Entente"
+      ],
+      "correctAnswer": "Triple Entente",
+      "explanation": "La Triple Entente agrupó a Francia, Rusia y el Reino Unido antes de 1914.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-128",
+      "number": 128,
+      "topic": "Verdadero o falso · Guerra mundial",
+      "concept": "primera_guerra_mundial_comienza_1914",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Primera Guerra Mundial comenzó en 1914.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El conflicto se inició en Europa en 1914 y terminó en 1918.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-129",
+      "number": 129,
+      "topic": "Revolución rusa",
+      "concept": "bolcheviques_toman_poder_octubre_1917",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo tomó el poder durante la Revolución de Octubre de 1917?",
+      "options": [
+        "Jacobinos",
+        "Bolcheviques",
+        "Girondinos",
+        "Mencheviques blancos"
+      ],
+      "correctAnswer": "Bolcheviques",
+      "explanation": "Los bolcheviques dirigidos por Lenin asumieron el poder en Petrogrado en octubre de 1917, según el calendario juliano.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-130",
+      "number": 130,
+      "topic": "Tratado de Versalles",
+      "concept": "versalles_paz_con_alemania_1919",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tratado formalizó la paz entre Alemania y los Aliados tras la Primera Guerra Mundial?",
+      "options": [
+        "Tratado de Tordesillas",
+        "Tratado de Utrecht",
+        "Tratado de Versalles",
+        "Tratado de Guadalupe Hidalgo"
+      ],
+      "correctAnswer": "Tratado de Versalles",
+      "explanation": "El Tratado de Versalles fue firmado en 1919 y estableció condiciones de paz para Alemania.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-131",
+      "number": 131,
+      "topic": "Verdadero o falso · Sociedad de Naciones",
+      "concept": "sociedad_naciones_busca_cooperacion_posguerra",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Sociedad de Naciones se creó después de la Primera Guerra Mundial para promover la cooperación internacional.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La organización buscó prevenir conflictos mediante cooperación y mecanismos colectivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-132",
+      "number": 132,
+      "topic": "Revolución mexicana",
+      "concept": "zapata_defiende_restitucion_de_tierras",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consigna se asocia con las demandas agrarias de Emiliano Zapata?",
+      "options": [
+        "Tierra y libertad",
+        "Orden y progreso",
+        "Paz y neutralidad",
+        "Dios y monarquía"
+      ],
+      "correctAnswer": "Tierra y libertad",
+      "explanation": "Zapata defendió la restitución de tierras y los derechos de comunidades campesinas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-133",
+      "number": 133,
+      "topic": "Derechos laborales",
+      "concept": "movimiento_obrero_reclama_limites_de_jornada",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio buscó limitar la jornada de trabajo en muchas luchas obreras?",
+      "options": [
+        "Prohibición de descansos",
+        "Eliminación de todo salario",
+        "Reconocimiento de horas máximas",
+        "Regreso al trabajo servil"
+      ],
+      "correctAnswer": "Reconocimiento de horas máximas",
+      "explanation": "Los movimientos obreros impulsaron límites de jornada y otras protecciones laborales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-134",
+      "number": 134,
+      "topic": "Primera Guerra Mundial",
+      "concept": "alianzas_amplian_crisis_a_guerra_general",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el sistema de alianzas amplió una crisis entre dos países?",
+      "options": [
+        "Comprometió a otros Estados a intervenir",
+        "Eliminó las rivalidades imperiales",
+        "Impidió la movilización de ejércitos",
+        "Sustituyó los tratados por acuerdos comerciales"
+      ],
+      "correctAnswer": "Comprometió a otros Estados a intervenir",
+      "explanation": "Los compromisos entre potencias extendieron la confrontación más allá de sus protagonistas iniciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-135",
+      "number": 135,
+      "topic": "Guerra de trincheras",
+      "concept": "trincheras_prolongan_guerra_de_desgaste",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué condición caracterizó muchos frentes de la Primera Guerra Mundial?",
+      "options": [
+        "Combate prolongado desde trincheras",
+        "Batallas exclusivamente navales",
+        "Ausencia de armas industriales",
+        "Retorno a ejércitos medievales"
+      ],
+      "correctAnswer": "Combate prolongado desde trincheras",
+      "explanation": "En el frente occidental, las trincheras sostuvieron una guerra de desgaste con avances limitados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-136",
+      "number": 136,
+      "topic": "Revolución rusa",
+      "concept": "guerra_y_crisis_debilitan_zarismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué factor contribuyó a la caída del zarismo en Rusia en 1917?",
+      "options": [
+        "Prosperidad general en todas las regiones",
+        "Abolición de las ciudades industriales",
+        "Descontento por guerra, escasez y desigualdad",
+        "Apoyo unánime a la monarquía"
+      ],
+      "correctAnswer": "Descontento por guerra, escasez y desigualdad",
+      "explanation": "La guerra y las crisis económicas y sociales debilitaron el régimen y aumentaron las protestas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-137",
+      "number": 137,
+      "topic": "Verdadero o falso · Tratados de paz",
+      "concept": "versalles_impone_reparaciones_y_restricciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El Tratado de Versalles impuso a Alemania reparaciones y restricciones después de la guerra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El tratado fijó reparaciones y limitaciones militares, además de otras condiciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-138",
+      "number": 138,
+      "topic": "Revolución mexicana",
+      "concept": "concentracion_de_tierra_alimenta_revolucion_mexicana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema rural alimentó demandas de la Revolución mexicana?",
+      "options": [
+        "Exceso de tierras comunales disponibles",
+        "Prohibición de cultivar en todo el país",
+        "Concentración de tierras y despojo campesino",
+        "Ausencia de comunidades rurales"
+      ],
+      "correctAnswer": "Concentración de tierras y despojo campesino",
+      "explanation": "La desigual distribución de la tierra y el reclamo de comunidades campesinas fueron centrales en el conflicto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-139",
+      "number": 139,
+      "topic": "Nacionalismos y guerra",
+      "concept": "nacionalismos_intensifican_tensiones_europeas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo contribuyeron los nacionalismos a las tensiones europeas antes de 1914?",
+      "options": [
+        "Eliminaron disputas territoriales",
+        "Alimentaron rivalidades entre pueblos y Estados",
+        "Impidieron la formación de alianzas",
+        "Disolvieron los imperios existentes"
+      ],
+      "correctAnswer": "Alimentaron rivalidades entre pueblos y Estados",
+      "explanation": "Las identidades y aspiraciones nacionales podían intensificar rivalidades y demandas territoriales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-140",
+      "number": 140,
+      "topic": "Imperialismo y guerra",
+      "concept": "competencia_imperial_aumenta_desconfianza_entre_potencias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación existía entre competencia imperial y rivalidad entre potencias?",
+      "options": [
+        "Los imperios eliminaron las fuerzas armadas",
+        "La disputa por colonias podía aumentar tensiones",
+        "Las colonias decidían la política europea",
+        "La rivalidad cesó antes de 1900"
+      ],
+      "correctAnswer": "La disputa por colonias podía aumentar tensiones",
+      "explanation": "La competencia por territorios y recursos contribuyó a la desconfianza entre potencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-141",
+      "number": 141,
+      "topic": "Verdadero o falso · Revolución rusa",
+      "concept": "revolucion_rusa_en_contexto_de_guerra_y_crisis",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Revolución rusa de 1917 ocurrió en un contexto de guerra y crisis política.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las derrotas, la escasez y el descontento contribuyeron al colapso del gobierno zarista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-142",
+      "number": 142,
+      "topic": "Sociedad de Naciones",
+      "concept": "sociedad_naciones_tiene_capacidad_coercitiva_limitada",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál fue una limitación importante de la Sociedad de Naciones?",
+      "options": [
+        "Prohibía cualquier reunión diplomática",
+        "Gobernaba directamente todos los países",
+        "Carecía de medios eficaces para obligar a cumplir sus decisiones",
+        "Eliminó los conflictos internacionales"
+      ],
+      "correctAnswer": "Carecía de medios eficaces para obligar a cumplir sus decisiones",
+      "explanation": "La organización tenía capacidad limitada para hacer cumplir acuerdos y frenar agresiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-143",
+      "number": 143,
+      "topic": "Guerra y población",
+      "concept": "guerra_total_moviliza_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracteriza a una guerra total?",
+      "options": [
+        "Excluye a la economía del conflicto",
+        "Moviliza recursos y población civil",
+        "Limita la lucha a fuerzas navales",
+        "Impide que cambie la vida cotidiana"
+      ],
+      "correctAnswer": "Moviliza recursos y población civil",
+      "explanation": "La producción, el trabajo y la vida cotidiana se movilizaron para sostener el esfuerzo bélico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-144",
+      "number": 144,
+      "topic": "Cambios sociales",
+      "concept": "guerra_amplia_empleo_femenino_en_industrias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio laboral ocurrió para muchas mujeres durante la Primera Guerra Mundial?",
+      "options": [
+        "Dejaron de participar en toda actividad económica",
+        "Fueron excluidas de todos los empleos urbanos",
+        "Ocuparon trabajos que antes realizaban muchos hombres",
+        "Sustituyeron a los parlamentos nacionales"
+      ],
+      "correctAnswer": "Ocuparon trabajos que antes realizaban muchos hombres",
+      "explanation": "La movilización militar de hombres abrió empleos a mujeres en industrias y servicios, aunque persistieron desigualdades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-145",
+      "number": 145,
+      "topic": "Consecuencias de la guerra",
+      "concept": "colapso_imperios_reconfigura_fronteras_europeas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio territorial ocurrió tras la disolución de imperios después de la Primera Guerra Mundial?",
+      "options": [
+        "Todas las fronteras regresaron a 1500",
+        "Aparecieron nuevos Estados en Europa",
+        "Europa quedó bajo un solo gobierno",
+        "Desaparecieron las naciones europeas"
+      ],
+      "correctAnswer": "Aparecieron nuevos Estados en Europa",
+      "explanation": "La caída de imperios contribuyó a crear nuevos Estados y a redibujar fronteras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-146",
+      "number": 146,
+      "topic": "Causas de la guerra",
+      "concept": "detonante_no_equivale_a_causa_estructural",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un análisis atribuye la guerra de 1914 solo al asesinato de Sarajevo. ¿Qué corrección mejora la explicación?",
+      "options": [
+        "Eliminar toda causa anterior a 1914",
+        "Relacionar el atentado con alianzas y rivalidades previas",
+        "Afirmar que ningún Estado intervino",
+        "Reemplazar causas por una lista de batallas"
+      ],
+      "correctAnswer": "Relacionar el atentado con alianzas y rivalidades previas",
+      "explanation": "El atentado fue el detonante, pero alianzas, militarismo e intereses imperiales ayudan a explicar la expansión de la guerra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-147",
+      "number": 147,
+      "topic": "Lectura de propaganda",
+      "concept": "propaganda_selecciona_imagenes_para_persuadir",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un afiche de guerra presenta al enemigo como una amenaza sin mostrar daños propios. ¿Qué debe considerar el historiador?",
+      "options": [
+        "Que toda imagen es neutral",
+        "Que el afiche muestra la guerra completa",
+        "Propósito persuasivo y selección de imágenes",
+        "Solo el precio de impresión"
+      ],
+      "correctAnswer": "Propósito persuasivo y selección de imágenes",
+      "explanation": "La propaganda selecciona elementos para persuadir y debe contrastarse con otras fuentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-148",
+      "number": 148,
+      "topic": "Revolución y reformas",
+      "concept": "reformas_agrarias_generan_resultados_desiguales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un gobierno concede tierras a algunas comunidades, pero mantiene grandes propiedades en otras regiones. ¿Qué conclusión es más cuidadosa?",
+      "options": [
+        "Se eliminó toda desigualdad agraria",
+        "Ninguna comunidad obtuvo cambios",
+        "Hubo reformas parciales y resultados desiguales",
+        "La propiedad privada desapareció por completo"
+      ],
+      "correctAnswer": "Hubo reformas parciales y resultados desiguales",
+      "explanation": "Las reformas pueden beneficiar a ciertos grupos sin resolver de forma uniforme un problema nacional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-149",
+      "number": 149,
+      "topic": "Evidencia y causalidad",
+      "concept": "evaluar_influencia_de_huelgas_con_evidencia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Tras una revolución aumentan las huelgas y también cambian las leyes laborales. ¿Qué evidencia ayudaría a evaluar si las huelgas influyeron?",
+      "options": [
+        "El número de edificios del parlamento",
+        "Una lista de presidentes sin fechas",
+        "Fechas, demandas y debates legislativos relacionados",
+        "Un mapa físico sin información política"
+      ],
+      "correctAnswer": "Fechas, demandas y debates legislativos relacionados",
+      "explanation": "Comparar cronología, demandas y decisiones permite evaluar vínculos causales sin asumirlos automáticamente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Explicación histórica",
+      "concept": "armisticio_difiere_de_tratado_de_paz",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un armisticio y un tratado de paz son necesariamente el mismo acto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Un armisticio suspende los combates; un tratado establece condiciones políticas de paz.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}

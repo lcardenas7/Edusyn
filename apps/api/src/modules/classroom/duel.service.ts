@@ -233,13 +233,14 @@ export class DuelService {
     };
 
     // Se recorre del duelo más antiguo al más nuevo: la bonificación por ganarle
-    // a quien iba por delante necesita saber cómo estaba la tabla en ese momento.
+    // a quien iba por delante necesita reconstruir la tabla antes de cada partida.
     for (const duel of [...duels].reverse()) {
       const sides = [
         { row: entry(duel.inviterEnrollmentId, duel.inviter), id: duel.inviterEnrollmentId },
         { row: entry(duel.inviteeEnrollmentId, duel.invitee), id: duel.inviteeEnrollmentId },
       ];
-      const before = sides.map((side) => side.row.points);
+      const before = [...totals.values()].sort(compareRanking);
+      const beforePosition = (id: string) => before.findIndex((row) => row.enrollmentId === id);
       const answered = sides.map((side) => duel.answers.filter((answer) => answer.enrollmentId === side.id).length);
       const scores = sides.map((side) => duel.answers.filter((answer) => answer.enrollmentId === side.id && answer.isCorrect).length);
       sides.forEach((side, index) => {
@@ -251,7 +252,10 @@ export class DuelService {
         if (mine > theirs) {
           side.row.wins += 1;
           side.row.points += POINTS.win;
-          if (before[1 - index] > before[index]) { side.row.upsets += 1; side.row.points += POINTS.upset; }
+          const opponent = sides[1 - index].row;
+          const opponentPosition = beforePosition(opponent.enrollmentId);
+          const myPosition = beforePosition(side.row.enrollmentId);
+          if (opponent.played > 0 && opponentPosition < myPosition) { side.row.upsets += 1; side.row.points += POINTS.upset; }
         } else if (mine === theirs) {
           side.row.draws += 1;
           side.row.points += POINTS.draw;
@@ -314,7 +318,7 @@ export class DuelService {
     });
 
     const stats: ArenaStats = { wins: 0, correct: 0, perfects: 0, upsets: 0, bestStreak: 0, byCategory: new Map() };
-    let played = 0; let draws = 0; let losses = 0; let answered = 0; let points = 0; let streak = 0;
+    let played = 0; let draws = 0; let losses = 0; let answered = 0; let streak = 0;
 
     for (const duel of duels) {
       const questions = Array.isArray(duel.questions) ? duel.questions as DuelQuestion[] : [];
@@ -340,15 +344,21 @@ export class DuelService {
       }
 
       if (myScore > theirScore) {
-        stats.wins += 1; points += POINTS.win; streak += 1;
+        stats.wins += 1; streak += 1;
         stats.bestStreak = Math.max(stats.bestStreak, streak);
       } else if (myScore === theirScore) {
-        draws += 1; points += POINTS.draw; streak = 0;
+        draws += 1; streak = 0;
       } else {
         losses += 1; streak = 0;
       }
-      if (mine.length > 0 && myScore === mine.length) { stats.perfects += 1; points += POINTS.perfect; }
+      if (mine.length > 0 && myScore === mine.length) stats.perfects += 1;
     }
+
+    // Los puntos y las insignias de remontada siguen el mismo ranking general
+    // del año que ve el estudiante; los demás contadores del perfil son históricos.
+    const currentSeason = await this.ranking(actor, classroomId, 'general');
+    const currentSeasonMe = currentSeason.rows.find((row) => row.isMe);
+    stats.upsets = currentSeasonMe?.upsets ?? 0;
 
     const badges = arenaBadges(stats);
     return {
@@ -356,9 +366,7 @@ export class DuelService {
       correct: stats.correct, answered,
       accuracy: answered ? Math.round((stats.correct / answered) * 100) : 0,
       perfects: stats.perfects, currentStreak: streak, bestStreak: stats.bestStreak,
-      // Los puntos del perfil no incluyen la remontada: esa bonificación depende
-      // de cómo iba la tabla de un alcance concreto, y aquí no hay alcance.
-      points,
+      points: currentSeasonMe?.points ?? 0,
       categories: [...stats.byCategory]
         .map(([name, totals]) => ({ name, ...totals, accuracy: totals.answered ? Math.round((totals.correct / totals.answered) * 100) : 0 }))
         .sort((a, b) => b.correct - a.correct),

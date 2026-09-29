@@ -1,8 +1,8 @@
 # Entrega · Arena (Duelos) — experiencia de juego
 
-**Rama:** `feat/duelos-experiencia-claude` · **Base:** `origin/staging` (584f4ed5)
+**Rama de integración:** `codex/duelos-staging` · **Base:** `origin/staging` (584f4ed5)
 **Worktree de origen:** `Edusyn/worktrees/duelos-experiencia`
-**Estado:** sin commit, sin push. Todo el trabajo está en el árbol de trabajo.
+**Estado de origen:** commit `32364b54`, sin push. Integrado a `codex/duelos-staging` como `30c5ce6f`; los arreglos de revisión continúan en esa rama.
 
 > Se partió de `staging`, que ya incluía los Duelos y los bancos oficiales. **No se
 > tocó el worktree `student-blocks-staging`** (tenía trabajo sin confirmar de los
@@ -123,28 +123,19 @@ npm run dev --prefix apps/web
 
 ## 3. Qué está verificado y qué no
 
-**Verificado**
+**Verificado en la integración actual**
 
-- `npx jest src/modules/classroom/duel.service.spec.ts` → **28 pruebas en verde**.
-- `npx tsc --noEmit` en `apps/web` → **0 errores propios** (los de
-  `features/construye` son anteriores, por dependencias de CodeMirror no instaladas).
+- `npx jest src/modules/classroom/duel.service.spec.ts --runInBand` → **30 pruebas en verde**.
+- `npx tsc --noEmit` en `apps/api` → **sin errores**.
+- `npx vite build --configLoader runner` en `apps/web` → **compilación exitosa** (4259 módulos).
+- `npx jest src/modules/classroom/question-bank.service.spec.ts --runInBand` → **24 pruebas en verde**.
 - Recorrido completo en el navegador a 375×812 sobre el banco de pruebas: rival al
   azar, secuencia de los cinco pasos (medida en el DOM, no a ojo), los dos bonos,
   ranking, perfil y tarjetas de categoría.
 
-**NO verificado — importante**
+**Todavía no verificado en entorno real**
 
-- ⚠️ **`npx tsc --noEmit` en `apps/api` no se pudo ejecutar.** El worktree no tiene
-  `node_modules` propio y resuelve el del checkout principal, cuyo cliente de Prisma
-  está generado de un esquema **sin** `ClassroomDuel`. Salen 34 errores del tipo
-  «este modelo no existe», que afectan igual al código de Duelos anterior. Regenerarlo
-  habría pisado el cliente del repo principal, así que no se hizo.
-  **Antes de desplegar: `npx prisma generate` en `apps/api` y volver a comprobar.**
-- Por lo mismo falla `classroom-b1-prisma-contract.spec.ts`, que compara el cliente
-  generado con el esquema. **No se modificó `schema.prisma`.**
-- **Nunca se probó contra base de datos real ni con dos estudiantes de verdad.** El
-  banco de pruebas simula el backend; la paridad de reglas se comprobó leyendo el
-  servicio, no ejecutándolo.
+- No se probó contra base de datos real ni con dos estudiantes autenticados en staging. Las pruebas automatizadas cubren privacidad, reglas de ranking y poderes con mocks.
 
 ---
 
@@ -163,8 +154,7 @@ model Classroom {
 }
 ```
 
-No se hizo porque no se puede comprobar que `apps/api` compile con el cliente
-desactualizado, y el proyecto exige `tsc` limpio antes de desplegar.
+No se implementó en este alcance; la API actual sí pasa `tsc`.
 
 ### 4.2 Reloj con efecto real (parcial)
 
@@ -205,5 +195,4 @@ la pantalla.
 4. Probar en el banco `arena-local.html` y luego con datos reales en staging.
 5. Antes de `push`, añadir fila en `docs/REGISTRO_DESPLIEGUES.md` (regla del CLAUDE.md).
 
-**Sugerencia de orden:** cerrar primero la migración (reloj + `arenaConfig`), porque
-las tres cosas pendientes que importan dependen de ella, y así se hace una sola.
+**Siguiente alcance recomendado:** decidir una migración única para el reloj con efecto real, preferencias de Arena del docente y torneos entre grupos del mismo grado. También queda práctica contra la máquina. Estas funciones no están incluidas en la Arena que se prepara para staging.

@@ -1,0 +1,2825 @@
+{
+  "catalogId": "edusyn-lengua-literatura-grade-7-v1",
+  "title": "Lengua y literatura · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Lengua y literatura",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://www.mineducacion.gov.co/1621/article-116042.html",
+    "https://www.rae.es/libro-estilo-lengua-espa%C3%B1ola/el-modo-indicativo-o-subjuntivo",
+    "https://www.rae.es/ortograf%C3%ADa/los-dos-puntos"
+  ],
+  "questions": [
+    {
+      "id": "LEN7-001",
+      "number": 1,
+      "topic": "Textos informativos",
+      "concept": "titular_presenta_asunto_central_de_noticia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento de una noticia suele resumir el hecho principal y atraer al lector?",
+      "options": [
+        "Titular",
+        "Bibliografía",
+        "Glosario",
+        "Desenlace"
+      ],
+      "correctAnswer": "Titular",
+      "explanation": "El titular presenta de forma breve el asunto central de una noticia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-002",
+      "number": 2,
+      "topic": "Discurso",
+      "concept": "cita_directa_reproduce_palabras_de_fuente",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso permite reproducir literalmente las palabras de una persona en un texto?",
+      "options": [
+        "Resumen",
+        "Cita directa",
+        "Paráfrasis",
+        "Descripción"
+      ],
+      "correctAnswer": "Cita directa",
+      "explanation": "Una cita directa reproduce las palabras de una fuente y debe distinguirse claramente del resto del texto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-003",
+      "number": 3,
+      "topic": "Uso de fuentes",
+      "concept": "autoria_identifica_responsable_de_texto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dato ayuda a identificar quién escribió un artículo?",
+      "options": [
+        "El color del fondo",
+        "La cantidad de párrafos",
+        "La autoría",
+        "El tamaño de la pantalla"
+      ],
+      "correctAnswer": "La autoría",
+      "explanation": "La autoría indica quién es responsable del contenido y permite valorar su experiencia o trayectoria.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-004",
+      "number": 4,
+      "topic": "Tiempos verbales",
+      "concept": "visitaremos_expresa_tiempo_futuro",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En la oración “Mañana visitaremos la biblioteca”, ¿qué tiempo expresa “visitaremos”?",
+      "options": [
+        "Presente",
+        "Pasado",
+        "Condicional",
+        "Futuro"
+      ],
+      "correctAnswer": "Futuro",
+      "explanation": "“Visitaremos” expresa una acción que ocurrirá después del momento en que se habla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-005",
+      "number": 5,
+      "topic": "Poesía · Verdadero o falso",
+      "concept": "poema_puede_existir_sin_rima",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Todo poema debe tener rima para ser considerado poema.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Hay poemas con rima y poemas en verso libre que no siguen un patrón fijo de rima.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-006",
+      "number": 6,
+      "topic": "Oración y sentido",
+      "concept": "temprano_modifica_verbo_como_adverbio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué palabra funciona como adverbio en “El equipo llegó temprano”?",
+      "options": [
+        "Temprano",
+        "Equipo",
+        "Llegó",
+        "El"
+      ],
+      "correctAnswer": "Temprano",
+      "explanation": "“Temprano” modifica al verbo “llegó” e indica cuándo ocurrió la acción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-007",
+      "number": 7,
+      "topic": "Vocabulario",
+      "concept": "preciso_equivale_a_exacto_en_contexto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál palabra es sinónimo de “preciso” en la expresión “una explicación precisa”?",
+      "options": [
+        "Dudosa",
+        "Exacta",
+        "Extensa",
+        "Divertida"
+      ],
+      "correctAnswer": "Exacta",
+      "explanation": "En este contexto, “precisa” significa clara y exacta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-008",
+      "number": 8,
+      "topic": "Adecuación",
+      "concept": "saludo_se_adecua_a_destinatario_institucional",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué saludo resulta más adecuado al escribir una solicitud formal a una institución?",
+      "options": [
+        "Qué más, parce",
+        "Hola, ¿todo bien?",
+        "Señores: cordial saludo",
+        "Ey, necesito algo"
+      ],
+      "correctAnswer": "Señores: cordial saludo",
+      "explanation": "El saludo formal se ajusta al destinatario y a la situación institucional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-009",
+      "number": 9,
+      "topic": "Inferencia",
+      "concept": "inferir_fin_de_jornada_por_indicios_del_aula",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“El salón quedó vacío, las sillas estaban sobre las mesas y el tablero limpio.” ¿Qué pudo ocurrir?",
+      "options": [
+        "La clase aún no había empezado",
+        "Se suspendieron todas las clases del año",
+        "El salón estaba en construcción",
+        "La jornada terminó y dejaron el aula organizada"
+      ],
+      "correctAnswer": "La jornada terminó y dejaron el aula organizada",
+      "explanation": "Los indicios sugieren que la jornada terminó y el espacio se preparó para después.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-010",
+      "number": 10,
+      "topic": "Punto de vista narrativo",
+      "concept": "narrador_omnisciente_conoce_varios_puntos_de_vista",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un narrador cuenta los pensamientos de varios personajes y conoce hechos que ellos ignoran. ¿Qué tipo de narrador es?",
+      "options": [
+        "Omnisciente",
+        "Testigo limitado",
+        "Protagonista en primera persona",
+        "Narrador objetivo sin acceso a pensamientos"
+      ],
+      "correctAnswer": "Omnisciente",
+      "explanation": "El narrador omnisciente puede conocer pensamientos y hechos fuera de la experiencia de un solo personaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-011",
+      "number": 11,
+      "topic": "Argumentación",
+      "concept": "tesis_presenta_postura_central_de_argumentacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple la tesis en un texto argumentativo?",
+      "options": [
+        "Enumerar todos los personajes",
+        "Presentar la postura principal que se defenderá",
+        "Describir el escenario",
+        "Cerrar siempre con una pregunta"
+      ],
+      "correctAnswer": "Presentar la postura principal que se defenderá",
+      "explanation": "La tesis comunica la idea o postura central que los argumentos buscarán sostener.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-012",
+      "number": 12,
+      "topic": "Cohesión",
+      "concept": "por_eso_introduce_consecuencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“El equipo entrenó durante semanas; ___, mejoró su coordinación.” ¿Qué conector completa mejor la relación?",
+      "options": [
+        "Aunque",
+        "Sin embargo",
+        "Por eso",
+        "Mientras"
+      ],
+      "correctAnswer": "Por eso",
+      "explanation": "“Por eso” introduce una consecuencia relacionada con el entrenamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-013",
+      "number": 13,
+      "topic": "Citas · Verdadero o falso",
+      "concept": "cita_textual_requiere_atribucion_a_fuente",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Si se copian palabras exactas de una fuente, se deben presentar como propias siempre que se cambie el tipo de letra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las palabras ajenas deben identificarse como cita y atribuirse a su fuente; cambiar el formato no reemplaza la atribución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-014",
+      "number": 14,
+      "topic": "Ironía",
+      "concept": "ironia_expresa_sentido_opuesto_al_literal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Tras perder el bus por llegar tarde, alguien dice: “¡Qué puntualidad la mía!”. ¿Qué recurso usa?",
+      "options": [
+        "Comparación literal",
+        "Onomatopeya",
+        "Enumeración",
+        "Ironía"
+      ],
+      "correctAnswer": "Ironía",
+      "explanation": "La expresión comunica lo contrario de lo literal para señalar, con humor, que la persona no fue puntual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-015",
+      "number": 15,
+      "topic": "Evaluación de argumentos",
+      "concept": "registros_comparables_sustentan_afirmacion_sobre_residuos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fortalece más una afirmación sobre el aumento de residuos en un barrio?",
+      "options": [
+        "Una anécdota sin fecha",
+        "Una frase compartida muchas veces",
+        "Una fotografía de otro municipio",
+        "Registros comparables de recolección en varios meses"
+      ],
+      "correctAnswer": "Registros comparables de recolección en varios meses",
+      "explanation": "Datos comparables a lo largo del tiempo ofrecen evidencia más pertinente para valorar la afirmación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-016",
+      "number": 16,
+      "topic": "Polisemia",
+      "concept": "contexto_distingue_significados_de_palabra_polisemica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “La llave del grifo gotea” y “Perdí la llave de la puerta”, ¿qué ocurre con la palabra “llave”?",
+      "options": [
+        "Tiene significados distintos según el contexto",
+        "Siempre funciona como verbo",
+        "Cambia de idioma",
+        "No guarda relación con las oraciones"
+      ],
+      "correctAnswer": "Tiene significados distintos según el contexto",
+      "explanation": "“Llave” puede nombrar objetos distintos; el contexto permite interpretar cuál significado corresponde.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-017",
+      "number": 17,
+      "topic": "Voz pasiva · Verdadero o falso",
+      "concept": "sujeto_pasivo_recibe_accion_verbal",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "En “La novela fue escrita por una autora colombiana”, el sujeto recibe la acción expresada por el verbo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En una construcción pasiva, el sujeto gramatical recibe la acción; quien la realiza aparece en el complemento agente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-018",
+      "number": 18,
+      "topic": "Comprensión de información",
+      "concept": "evaluar_periodos_y_metodo_de_datos_comparados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un texto afirma que una campaña redujo el desperdicio de agua y presenta cifras antes y después. ¿Qué conviene revisar para evaluar la conclusión?",
+      "options": [
+        "El color de los gráficos",
+        "Si las cifras corresponden a periodos comparables y cómo se midieron",
+        "Si el titular tiene una pregunta",
+        "La cantidad de adjetivos del texto"
+      ],
+      "correctAnswer": "Si las cifras corresponden a periodos comparables y cómo se midieron",
+      "explanation": "Periodos y métodos comparables ayudan a interpretar si el cambio respalda la conclusión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-019",
+      "number": 19,
+      "topic": "Parónimos",
+      "concept": "absorber_liquido_se_distingue_de_absolver",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué oración usa correctamente “absorber”?",
+      "options": [
+        "El juez decidió absorber el caso en voz alta",
+        "El suelo puede absolver agua tras la lluvia",
+        "La esponja puede absorber parte del líquido",
+        "La pared absorbió a la estudiante en el debate"
+      ],
+      "correctAnswer": "La esponja puede absorber parte del líquido",
+      "explanation": "“Absorber” significa atraer o retener un líquido; “absolver” significa declarar libre de una acusación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-020",
+      "number": 20,
+      "topic": "Conversación · Verdadero o falso",
+      "concept": "parafrasear_y_confirmar_mejora_dialogo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Parafrasear la idea de otra persona y preguntarle si se entendió bien puede ayudar a resolver un desacuerdo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Reformular con respeto permite comprobar la comprensión antes de responder o buscar acuerdos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-021",
+      "number": 21,
+      "topic": "Lectura crítica",
+      "concept": "promesa_comercial_se_contrasta_con_evidencia_independiente",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una publicación dice: “Este suplemento mejora la memoria en todos los estudiantes”, pero solo enlaza una página de venta. ¿Qué paso ayuda más a evaluar la afirmación?",
+      "options": [
+        "Revisar si hay estudios independientes y evidencia verificable",
+        "Compartirla porque promete un beneficio",
+        "Concluir que es cierta por tener muchas visitas",
+        "Fijarse únicamente en el diseño del anuncio"
+      ],
+      "correctAnswer": "Revisar si hay estudios independientes y evidencia verificable",
+      "explanation": "Una promesa comercial requiere contrastarse con evidencia independiente y fuentes confiables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-022",
+      "number": 22,
+      "topic": "Edición y público",
+      "concept": "aviso_escolar_claro_indica_hora_lugar_y_accion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo redacta para estudiantes de séptimo un aviso sobre una actividad. ¿Qué versión resulta más clara?",
+      "options": [
+        "“La concurrencia queda supeditada a las disposiciones…”",
+        "“Ven el viernes a las 3:00 p. m. al patio central; trae tu cuaderno.”",
+        "“Actividad, horario y sitio serán considerados eventualmente.”",
+        "“Se comunica lo anterior a quien corresponda en virtud de ello.”"
+      ],
+      "correctAnswer": "“Ven el viernes a las 3:00 p. m. al patio central; trae tu cuaderno.”",
+      "explanation": "La versión indica destinatarios, hora, lugar y acción con palabras directas y datos concretos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-023",
+      "number": 23,
+      "topic": "Interpretación de personajes",
+      "concept": "inferir_reserva_del_personaje_sin_asumir_motivo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“Marina guardó el dibujo en su mochila cuando oyó que se acercaban sus compañeros.” ¿Qué puede inferirse con más respaldo?",
+      "options": [
+        "Marina quiere mostrar el dibujo a todos",
+        "El dibujo es una tarea de matemáticas",
+        "Marina quizá desea mantenerlo privado por ahora",
+        "Sus compañeros ya habían visto el dibujo"
+      ],
+      "correctAnswer": "Marina quizá desea mantenerlo privado por ahora",
+      "explanation": "Guardarlo al oír que se acercaban sugiere que Marina no quería mostrarlo en ese momento, aunque no confirma su motivo exacto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-024",
+      "number": 24,
+      "topic": "Evidencia y conclusión",
+      "concept": "medir_comprension_con_criterio_comun_apoya_conclusion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante sostiene que leer en voz alta mejora la comprensión. ¿Qué evidencia apoya mejor esa conclusión?",
+      "options": [
+        "Un afiche que dice “leer es bueno”",
+        "Una opinión sin ejemplos",
+        "Un video popular sobre lectura",
+        "Resultados de comprensión comparados antes y después con el mismo criterio"
+      ],
+      "correctAnswer": "Resultados de comprensión comparados antes y después con el mismo criterio",
+      "explanation": "Comparar resultados con un criterio común ofrece evidencia más directa, aunque también deben considerarse otras variables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-025",
+      "number": 25,
+      "topic": "Representación y sesgo · Verdadero o falso",
+      "concept": "personaje_ficticio_no_demuestra_rasgos_de_grupo_social",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un personaje de una historia representa a todo un grupo social de forma negativa; esa historia por sí sola demuestra que el grupo es así.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Una representación literaria refleja decisiones de autoría y no constituye evidencia suficiente sobre todas las personas de un grupo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-026",
+      "number": 26,
+      "topic": "Pronombres",
+      "concept": "pronombre_reemplaza_o_se_refiere_a_sustantivo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple un pronombre en una oración?",
+      "options": [
+        "Puede reemplazar o señalar un sustantivo",
+        "Siempre expresa una acción",
+        "Indica exclusivamente el tiempo verbal",
+        "Une dos párrafos"
+      ],
+      "correctAnswer": "Puede reemplazar o señalar un sustantivo",
+      "explanation": "Pronombres como “ella”, “eso” o “quienes” pueden reemplazar o referirse a nombres ya conocidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-027",
+      "number": 27,
+      "topic": "Conectores",
+      "concept": "porque_introduce_una_causa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“No pudimos salir ___ comenzó a llover.” ¿Qué conector expresa causa?",
+      "options": [
+        "Aunque",
+        "Porque",
+        "Sin embargo",
+        "Después"
+      ],
+      "correctAnswer": "Porque",
+      "explanation": "“Porque” introduce la razón por la que no pudieron salir.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-028",
+      "number": 28,
+      "topic": "Debate",
+      "concept": "debate_respetuoso_escucha_y_responde_ideas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué práctica ayuda a que un debate sea respetuoso?",
+      "options": [
+        "Interrumpir cada intervención",
+        "Burlarse de quien discrepa",
+        "Escuchar el turno y responder a las ideas",
+        "Cambiar el tema cuando surge evidencia"
+      ],
+      "correctAnswer": "Escuchar el turno y responder a las ideas",
+      "explanation": "Escuchar y responder a los argumentos, sin atacar a las personas, permite intercambiar razones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-029",
+      "number": 29,
+      "topic": "Narrativa",
+      "concept": "retrospeccion_narra_hecho_anterior",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso interrumpe la secuencia principal para narrar un hecho anterior?",
+      "options": [
+        "Desenlace",
+        "Diálogo",
+        "Descripción física",
+        "Retrospección"
+      ],
+      "correctAnswer": "Retrospección",
+      "explanation": "La retrospección o analepsis vuelve a un momento anterior de la historia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-030",
+      "number": 30,
+      "topic": "Puntuación · Verdadero o falso",
+      "concept": "comillas_pueden_marcar_cita_directa",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las comillas pueden señalar palabras reproducidas literalmente de otra persona.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las comillas pueden marcar citas directas, aunque el estilo editorial puede usar también otros recursos tipográficos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-031",
+      "number": 31,
+      "topic": "Formación de palabras",
+      "concept": "prefijo_re_aporta_repeticion_en_releer",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “releer”, ¿qué aporta el prefijo “re-”?",
+      "options": [
+        "Indica que se vuelve a realizar la acción",
+        "Señala quién lee",
+        "Convierte el verbo en un sustantivo",
+        "Niega por completo la acción"
+      ],
+      "correctAnswer": "Indica que se vuelve a realizar la acción",
+      "explanation": "En “releer”, el prefijo “re-” aporta la idea de repetir la lectura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-032",
+      "number": 32,
+      "topic": "Significado figurado",
+      "concept": "corazon_de_oro_significa_bondad",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “Tiene un corazón de oro”, ¿qué significa la expresión?",
+      "options": [
+        "Su corazón está hecho de metal",
+        "Es una persona muy bondadosa",
+        "Le duele el pecho",
+        "Trabaja como joyera"
+      ],
+      "correctAnswer": "Es una persona muy bondadosa",
+      "explanation": "La expresión se usa de manera figurada para describir a alguien generoso o amable.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-033",
+      "number": 33,
+      "topic": "Párrafos",
+      "concept": "parrafo_desarrolla_ideas_relacionadas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele reunir un párrafo bien organizado?",
+      "options": [
+        "Ideas sin relación entre sí",
+        "Solo una lista de títulos",
+        "Oraciones que desarrollan una idea relacionada",
+        "Palabras sin formar enunciados"
+      ],
+      "correctAnswer": "Oraciones que desarrollan una idea relacionada",
+      "explanation": "Las oraciones de un párrafo desarrollan o apoyan una idea central y mantienen relación entre sí.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-034",
+      "number": 34,
+      "topic": "Información y opinión",
+      "concept": "valoracion_de_conveniencia_es_opinion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál enunciado presenta principalmente una opinión?",
+      "options": [
+        "El tren salió a las 7:15 según el registro",
+        "El informe contiene cuatro tablas",
+        "La reunión tuvo lugar el martes",
+        "El nuevo horario es mucho más conveniente"
+      ],
+      "correctAnswer": "El nuevo horario es mucho más conveniente",
+      "explanation": "“Más conveniente” expresa una valoración que puede variar entre personas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-035",
+      "number": 35,
+      "topic": "Titulares",
+      "concept": "titular_exagerado_distorsiona_importancia_de_hecho",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un titular dice: “¡La noticia que cambiará todo para siempre!”, pero el artículo describe un ajuste menor. ¿Qué problema tiene?",
+      "options": [
+        "Presenta el contenido de forma exagerada",
+        "Indica con exactitud un resultado medido",
+        "Cita a una fuente identificada",
+        "Resume con neutralidad el hecho"
+      ],
+      "correctAnswer": "Presenta el contenido de forma exagerada",
+      "explanation": "El titular exagera la importancia del hecho y puede crear una expectativa que el texto no respalda.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-036",
+      "number": 36,
+      "topic": "Comas",
+      "concept": "comas_delimitan_aclaracion_inserta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirven las comas que encierran una aclaración dentro de una oración?",
+      "options": [
+        "Para separar siempre sujeto y verbo",
+        "Para delimitar una información explicativa adicional",
+        "Para reemplazar el punto final",
+        "Para convertir una afirmación en pregunta"
+      ],
+      "correctAnswer": "Para delimitar una información explicativa adicional",
+      "explanation": "Las comas pueden delimitar una aclaración que amplía información sin formar el núcleo principal de la oración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-037",
+      "number": 37,
+      "topic": "Géneros literarios",
+      "concept": "memorias_reconstruyen_experiencias_desde_mirada_personal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué rasgo caracteriza principalmente a una memoria literaria?",
+      "options": [
+        "Presenta instrucciones para reparar un objeto",
+        "Expone datos sin perspectiva personal",
+        "Relata experiencias recordadas desde la perspectiva de quien las vivió",
+        "Es una lista de palabras ordenadas alfabéticamente"
+      ],
+      "correctAnswer": "Relata experiencias recordadas desde la perspectiva de quien las vivió",
+      "explanation": "Las memorias narran experiencias pasadas desde una mirada personal y selectiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-038",
+      "number": 38,
+      "topic": "Contexto y citas · Verdadero o falso",
+      "concept": "recortar_cita_puede_alterar_sentido_original",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una cita puede dar una impresión distinta si se elimina el contexto que explica a qué respondía la persona.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Recortar una cita puede cambiar el sentido o la intención que tenía dentro de la conversación original.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-039",
+      "number": 39,
+      "topic": "Sátira",
+      "concept": "satira_usa_humor_para_criticar_conductas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una historieta exagera las excusas de un personaje poderoso para criticar su conducta. ¿Qué recurso puede estar usando?",
+      "options": [
+        "Instrucción técnica",
+        "Definición literal",
+        "Descripción científica",
+        "Sátira"
+      ],
+      "correctAnswer": "Sátira",
+      "explanation": "La sátira usa humor o exageración para criticar conductas, ideas o instituciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-040",
+      "number": 40,
+      "topic": "Cohesión referencial",
+      "concept": "pronombre_la_retoma_sustantivo_femenino_singular",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “Valeria encontró una novela. La llevó a casa y la empezó esa noche”, ¿a qué se refiere “la”?",
+      "options": [
+        "A la noche",
+        "A la novela",
+        "A la casa",
+        "A Valeria"
+      ],
+      "correctAnswer": "A la novela",
+      "explanation": "El pronombre “la” retoma el sustantivo femenino singular “novela”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-041",
+      "number": 41,
+      "topic": "Paráfrasis y fuentes",
+      "concept": "parafrasis_de_idea_ajena_requiere_atribucion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante explica con sus propias palabras una idea tomada de un artículo. ¿Qué debe hacer?",
+      "options": [
+        "Presentarla como descubrimiento propio",
+        "Cambiar algunas palabras y ocultar el enlace",
+        "Atribuir la idea a la fuente consultada",
+        "Evitar mencionar la fuente si entendió el texto"
+      ],
+      "correctAnswer": "Atribuir la idea a la fuente consultada",
+      "explanation": "Parafrasear cambia la redacción, pero la idea ajena sigue requiriendo atribución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-042",
+      "number": 42,
+      "topic": "Perspectiva narrativa",
+      "concept": "focalizacion_interna_limita_info_a_personaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una historia cuenta solo lo que piensa y percibe una protagonista, aunque está narrada en tercera persona. ¿Qué perspectiva predomina?",
+      "options": [
+        "Narrador que conoce el futuro de todos",
+        "Narración sin acceso a ningún personaje",
+        "Voz directa de un autor real",
+        "Focalización interna en la protagonista"
+      ],
+      "correctAnswer": "Focalización interna en la protagonista",
+      "explanation": "La focalización interna limita la información a lo que sabe, piensa o percibe un personaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-043",
+      "number": 43,
+      "topic": "Preguntas · Verdadero o falso",
+      "concept": "pregunta_abierta_permite_respuesta_desarrollada",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una pregunta abierta suele permitir respuestas desarrolladas, mientras que una cerrada puede limitar las opciones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las preguntas abiertas invitan a elaborar; las cerradas suelen orientar a opciones delimitadas, como sí/no.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-044",
+      "number": 44,
+      "topic": "Falacias",
+      "concept": "acuerdo_de_mayoria_no_prueba_validez_de_idea",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“Mi propuesta debe ser correcta porque todos mis amigos están de acuerdo.” ¿Qué debilidad tiene el argumento?",
+      "options": [
+        "Usa el acuerdo de un grupo como prueba suficiente",
+        "Presenta datos verificables",
+        "Explica una relación de causa",
+        "Reconoce una objeción y la responde"
+      ],
+      "correctAnswer": "Usa el acuerdo de un grupo como prueba suficiente",
+      "explanation": "Que varias personas estén de acuerdo no demuestra por sí mismo que una afirmación sea correcta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-045",
+      "number": 45,
+      "topic": "Referencias · Verdadero o falso",
+      "concept": "bibliografia_identifica_fuentes_consultadas",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una bibliografía permite reconocer las fuentes utilizadas en un trabajo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La bibliografía reúne información para identificar y localizar fuentes consultadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-046",
+      "number": 46,
+      "topic": "Edición de ambigüedad",
+      "concept": "repetir_referente_resuelve_posesivo_ambiguo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“Camila le dijo a Laura que su presentación estaba incompleta.” ¿Qué cambio aclara de quién es la presentación?",
+      "options": [
+        "“Camila le dijo a Laura sobre la presentación.”",
+        "“Camila le dijo a Laura que la presentación de Laura estaba incompleta.”",
+        "“Camila habló y la presentación incompleta.”",
+        "“Su presentación estaba incompleta, le dijo.”"
+      ],
+      "correctAnswer": "“Camila le dijo a Laura que la presentación de Laura estaba incompleta.”",
+      "explanation": "Nombrar a Laura elimina la duda sobre el referente del posesivo “su”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-047",
+      "number": 47,
+      "topic": "Verificación de información",
+      "concept": "verificar_norma_consulta_fuente_oficial_y_fecha",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un video afirma que una norma escolar cambió, pero no muestra fecha ni documento. ¿Qué conviene hacer antes de compartirlo?",
+      "options": [
+        "Buscar la norma vigente en una fuente oficial y revisar la fecha",
+        "Compartirlo porque tiene muchos comentarios",
+        "Aceptarlo si lo publicó una cuenta popular",
+        "Reenviarlo para que otros decidan sin contexto"
+      ],
+      "correctAnswer": "Buscar la norma vigente en una fuente oficial y revisar la fecha",
+      "explanation": "Comprobar el documento, la fecha y la entidad responsable ayuda a verificar si la información sigue vigente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-048",
+      "number": 48,
+      "topic": "Interpretación literaria",
+      "concept": "interpretacion_literaria_se_sustenta_en_indicios_textuales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos lectores interpretan de modo distinto el final de un cuento. ¿Qué ayuda más a sostener cada interpretación?",
+      "options": [
+        "Decir que su lectura es la única posible",
+        "Elegir la opinión de quien habló más fuerte",
+        "Relacionar la interpretación con indicios del texto",
+        "Ignorar el final y describir la portada"
+      ],
+      "correctAnswer": "Relacionar la interpretación con indicios del texto",
+      "explanation": "Una interpretación puede diferir, pero debe apoyarse en palabras, acciones o detalles presentes en el relato.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-049",
+      "number": 49,
+      "topic": "Comunicación multimodal",
+      "concept": "subtitulos_facilitan_acceso_a_video_sin_audio",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un grupo comparte un video informativo en una plataforma donde muchos estudiantes lo ven sin sonido. ¿Qué mejora facilita el acceso al contenido?",
+      "options": [
+        "Aumentar solo el volumen",
+        "Quitar las imágenes",
+        "Reducir el tamaño de la letra",
+        "Usar subtítulos sincronizados"
+      ],
+      "correctAnswer": "Usar subtítulos sincronizados",
+      "explanation": "Los subtítulos permiten seguir el contenido hablado cuando el audio está apagado y apoyan a distintos espectadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-050",
+      "number": 50,
+      "topic": "Síntesis · Verdadero o falso",
+      "concept": "resumen_conserva_ideas_centrales_y_omite_detalles_secundarios",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un resumen eficaz conserva las ideas centrales y puede omitir ejemplos secundarios.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Resumir implica seleccionar lo esencial y reducir detalles que no son necesarios para comprender el contenido principal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-051",
+      "number": 51,
+      "topic": "Acentuación",
+      "concept": "reloj_es_palabra_aguda",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En cuál palabra la sílaba tónica está al final?",
+      "options": [
+        "Reloj",
+        "Árbol",
+        "Música",
+        "Lápices"
+      ],
+      "correctAnswer": "Reloj",
+      "explanation": "“Reloj” es aguda: su sílaba tónica es la última.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-052",
+      "number": 52,
+      "topic": "Teatro",
+      "concept": "acotaciones_orientan_acciones_y_escena_teatral",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suelen indicar las acotaciones en un guion teatral?",
+      "options": [
+        "La biografía de quien lo escribió",
+        "Movimientos, gestos o elementos de escena",
+        "La lista de lectores del libro",
+        "La opinión del público al final"
+      ],
+      "correctAnswer": "Movimientos, gestos o elementos de escena",
+      "explanation": "Las acotaciones orientan la representación con información sobre acciones, tono o escenario.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-053",
+      "number": 53,
+      "topic": "Glosarios",
+      "concept": "glosario_explica_terminos_del_texto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve principalmente el glosario de un libro?",
+      "options": [
+        "Para narrar el final",
+        "Para enumerar los personajes",
+        "Para explicar términos usados en el texto",
+        "Para indicar la opinión del ilustrador"
+      ],
+      "correctAnswer": "Para explicar términos usados en el texto",
+      "explanation": "Un glosario reúne palabras o términos y ofrece sus significados en el contexto de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-054",
+      "number": 54,
+      "topic": "Sujeto y predicado",
+      "concept": "las_nubes_es_sujeto_de_oracion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “Las nubes cubrieron el cielo”, ¿qué grupo de palabras es el sujeto?",
+      "options": [
+        "Cubrieron el cielo",
+        "El cielo",
+        "Cubrieron",
+        "Las nubes"
+      ],
+      "correctAnswer": "Las nubes",
+      "explanation": "“Las nubes” es aquello de lo que se dice que realizó la acción de cubrir.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-055",
+      "number": 55,
+      "topic": "Guion teatral · Verdadero o falso",
+      "concept": "acotacion_se_distingue_del_dialogo_teatral",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las acotaciones teatrales suelen distinguirse del diálogo de los personajes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En muchos guiones las acotaciones se escriben entre paréntesis, en cursiva o con otro formato para separarlas de lo hablado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-056",
+      "number": 56,
+      "topic": "Prefijos",
+      "concept": "prefijo_im_niega_posibilidad",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa “imposible” en comparación con “posible”?",
+      "options": [
+        "Que no es posible",
+        "Que vuelve a ser posible",
+        "Que ocurrió antes",
+        "Que es muy posible"
+      ],
+      "correctAnswer": "Que no es posible",
+      "explanation": "El prefijo “im-” expresa negación en “imposible”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-057",
+      "number": 57,
+      "topic": "Estrofas",
+      "concept": "estrofa_agrupa_versos_en_poema",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama un conjunto de versos que forma una unidad en un poema?",
+      "options": [
+        "Capítulo",
+        "Estrofa",
+        "Escena",
+        "Párrafo"
+      ],
+      "correctAnswer": "Estrofa",
+      "explanation": "Una estrofa agrupa versos dentro de la estructura de un poema.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-058",
+      "number": 58,
+      "topic": "Títulos",
+      "concept": "titulo_anticipa_tema_o_enfoque",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué aspecto de un texto suele anticipar su título?",
+      "options": [
+        "La identidad de cada lector",
+        "El número exacto de párrafos",
+        "El tema o enfoque principal",
+        "La fuente de todas sus imágenes"
+      ],
+      "correctAnswer": "El tema o enfoque principal",
+      "explanation": "El título suele ofrecer una pista sobre el tema o la perspectiva del texto, sin resumir necesariamente todo su contenido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-059",
+      "number": 59,
+      "topic": "Voz poética",
+      "concept": "voz_poetica_no_equivale_necesariamente_al_autor",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Quién habla dentro de un poema?",
+      "options": [
+        "Siempre la persona que lo lee",
+        "El editor de la antología",
+        "El personaje de la portada",
+        "La voz poética"
+      ],
+      "correctAnswer": "La voz poética",
+      "explanation": "La voz poética es quien expresa ideas y emociones dentro del poema; no tiene que ser el autor real.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-060",
+      "number": 60,
+      "topic": "Contraargumento",
+      "concept": "contraargumento_responde_a_razon_opuesta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es un contraargumento en una discusión?",
+      "options": [
+        "Una idea que responde a una razón contraria a la postura",
+        "Un ejemplo que repite la tesis sin explicarla",
+        "Un título que resume el texto",
+        "Una lista de palabras difíciles"
+      ],
+      "correctAnswer": "Una idea que responde a una razón contraria a la postura",
+      "explanation": "Un contraargumento considera una postura opuesta y ofrece una respuesta razonada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-061",
+      "number": 61,
+      "topic": "Recursos poéticos",
+      "concept": "anafora_repite_inicio_para_enfasis_y_ritmo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto puede producir la repetición de una palabra al inicio de varios versos?",
+      "options": [
+        "Cambiar el género del poema",
+        "Crear énfasis y ritmo",
+        "Eliminar la voz poética",
+        "Convertirlo en una noticia"
+      ],
+      "correctAnswer": "Crear énfasis y ritmo",
+      "explanation": "La repetición inicial puede destacar una idea y crear ritmo; este recurso se conoce como anáfora.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-062",
+      "number": 62,
+      "topic": "Evidencia",
+      "concept": "cifras_sin_fuente_no_permiten_evaluar_origen",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una opinión incluye cifras, pero no indica de dónde provienen. ¿Qué falta para valorar mejor esa evidencia?",
+      "options": [
+        "Un dibujo decorativo",
+        "Más signos de exclamación",
+        "Identificar la fuente y cómo obtuvo los datos",
+        "Cambiar las cifras por adjetivos"
+      ],
+      "correctAnswer": "Identificar la fuente y cómo obtuvo los datos",
+      "explanation": "La fuente y el método permiten revisar la pertinencia y confiabilidad de las cifras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-063",
+      "number": 63,
+      "topic": "Preguntas indirectas",
+      "concept": "pregunta_indirecta_no_separa_subordinada_con_signos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál opción escribe correctamente una pregunta indirecta dentro de una afirmación?",
+      "options": [
+        "No sé ¿dónde queda la biblioteca?",
+        "No sé donde queda la biblioteca.",
+        "No sé: dónde queda la biblioteca?",
+        "No sé dónde queda la biblioteca."
+      ],
+      "correctAnswer": "No sé dónde queda la biblioteca.",
+      "explanation": "La pregunta indirecta no lleva signos propios, pero “dónde” conserva la tilde por ser interrogativo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-064",
+      "number": 64,
+      "topic": "Autor y narrador · Verdadero o falso",
+      "concept": "narrador_ficticio_puede_diferir_del_autor",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El narrador de una novela siempre es la misma persona que la escribió.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El narrador es una voz construida dentro de la obra y puede ser distinto del autor real.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-065",
+      "number": 65,
+      "topic": "Conectores",
+      "concept": "aunque_introduce_relacion_de_concesion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “Aunque llovía, el partido continuó”, ¿qué relación expresa “aunque”?",
+      "options": [
+        "Causa",
+        "Tiempo",
+        "Condición",
+        "Concesión"
+      ],
+      "correctAnswer": "Concesión",
+      "explanation": "“Aunque” introduce una dificultad que no impide que ocurra la acción principal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-066",
+      "number": 66,
+      "topic": "Símbolos literarios",
+      "concept": "objeto_recurrente_puede_adquirir_sentido_simbolico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un relato, una puerta cerrada aparece cada vez que el personaje teme tomar una decisión. ¿Qué podría representar?",
+      "options": [
+        "Un obstáculo o una oportunidad que no se atreve a enfrentar",
+        "La hora exacta de la escena",
+        "Una lista de objetos del cuarto",
+        "Una definición literal de carpintería"
+      ],
+      "correctAnswer": "Un obstáculo o una oportunidad que no se atreve a enfrentar",
+      "explanation": "Un objeto recurrente puede adquirir un sentido simbólico por la forma en que se relaciona con el personaje y la historia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-067",
+      "number": 67,
+      "topic": "Comunicación oral · Verdadero o falso",
+      "concept": "ritmo_volumen_y_pausas_modifican_interpretacion_oral",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El ritmo, el volumen y las pausas pueden influir en cómo se interpreta un mensaje oral.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Además de las palabras, la entonación, el volumen y las pausas aportan información sobre énfasis o intención.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-068",
+      "number": 68,
+      "topic": "Contraste de testimonios",
+      "concept": "posicion_del_testigo_influye_en_detalles_observados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos personas describen de forma distinta un mismo accidente porque observaron lugares diferentes. ¿Qué ayuda a entender la diferencia?",
+      "options": [
+        "Elegir la versión con más adjetivos",
+        "Comparar dónde estaba cada testigo y qué pudo observar",
+        "Suponer que una persona miente",
+        "Ignorar ambas versiones"
+      ],
+      "correctAnswer": "Comparar dónde estaba cada testigo y qué pudo observar",
+      "explanation": "La posición y el campo de visión pueden hacer que dos testimonios registren detalles distintos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-069",
+      "number": 69,
+      "topic": "Propósito textual",
+      "concept": "folleto_de_emergencia_orienta_acciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué propósito predomina en un folleto que explica pasos para actuar durante un sismo?",
+      "options": [
+        "Narrar una aventura ficticia",
+        "Describir sentimientos de un personaje",
+        "Orientar al lector con instrucciones",
+        "Convencerlo de comprar una novela"
+      ],
+      "correctAnswer": "Orientar al lector con instrucciones",
+      "explanation": "El folleto busca orientar acciones mediante información e instrucciones prácticas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-070",
+      "number": 70,
+      "topic": "Caracterización · Verdadero o falso",
+      "concept": "dialogo_aporta_pistas_sobre_personaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La forma de hablar de un personaje puede dar pistas sobre su estado de ánimo o sus relaciones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Vocabulario, tono y maneras de dirigirse a otros contribuyen a caracterizar a un personaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-071",
+      "number": 71,
+      "topic": "Lectura de evidencia",
+      "concept": "muestra_local_pequena_no_sustenta_generalizacion_amplia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artículo afirma que “todos los jóvenes prefieren estudiar de noche”, pero solo presenta respuestas de diez estudiantes de un salón. ¿Qué objeción es más sólida?",
+      "options": [
+        "La muestra pequeña y localizada no representa necesariamente a todos los jóvenes",
+        "El título no tiene signos de exclamación",
+        "El artículo tiene más de tres párrafos",
+        "La pregunta se hizo en una escuela"
+      ],
+      "correctAnswer": "La muestra pequeña y localizada no representa necesariamente a todos los jóvenes",
+      "explanation": "Una muestra pequeña de un solo grupo no basta para generalizar a una población amplia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-072",
+      "number": 72,
+      "topic": "Narrador no confiable",
+      "concept": "contradicciones_invitan_a_cuestionar_narrador",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un narrador asegura que nunca se equivoca, pero el relato muestra varias contradicciones en sus recuerdos. ¿Qué conviene hacer como lector?",
+      "options": [
+        "Aceptar todo lo que afirma literalmente",
+        "Comparar sus palabras con los hechos narrados",
+        "Ignorar las contradicciones",
+        "Suponer que el autor olvidó corregir el texto"
+      ],
+      "correctAnswer": "Comparar sus palabras con los hechos narrados",
+      "explanation": "Las contradicciones invitan a contrastar la versión del narrador con otros indicios del relato.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-073",
+      "number": 73,
+      "topic": "Revisión de oraciones",
+      "concept": "precisar_referente_aclara_oracion_ambigua",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio mejora “El grupo entregó el informe tarde y esto molestó al profesor porque no estaba listo”?",
+      "options": [
+        "Reemplazar todos los verbos por sustantivos",
+        "Quitar el sujeto y dejar la frase incompleta",
+        "Aclarar qué “no estaba listo” y revisar la secuencia",
+        "Añadir más adjetivos sin precisar el referente"
+      ],
+      "correctAnswer": "Aclarar qué “no estaba listo” y revisar la secuencia",
+      "explanation": "“No estaba listo” puede referirse al grupo o al informe; precisar el referente elimina una ambigüedad importante.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-074",
+      "number": 74,
+      "topic": "Respuesta a una objeción",
+      "concept": "propuesta_responde_objecion_con_alternativas_evidenciables",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una estudiante propone ampliar la biblioteca. Alguien objeta que hay poco espacio. ¿Qué respuesta fortalece mejor su propuesta?",
+      "options": [
+        "“Tu objeción no importa.”",
+        "“Todos saben que tengo razón.”",
+        "“No voy a escuchar otras ideas.”",
+        "Proponer reorganizar el espacio y comparar alternativas con datos"
+      ],
+      "correctAnswer": "Proponer reorganizar el espacio y comparar alternativas con datos",
+      "explanation": "Reconocer la objeción y responder con alternativas evaluables mejora la argumentación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-075",
+      "number": 75,
+      "topic": "Revisión de textos · Verdadero o falso",
+      "concept": "edicion_elimina_redundancia_sin_cambiar_idea_central",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Quitar una repetición innecesaria puede mejorar la claridad sin cambiar la idea central de un texto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La edición puede eliminar redundancias para que las ideas se lean mejor, siempre que conserve el sentido necesario.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-076",
+      "number": 76,
+      "topic": "Diálogos escritos",
+      "concept": "raya_introduce_intervencion_en_dialogo_narrativo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué signo se usa con frecuencia al inicio de la intervención de un personaje en un diálogo narrativo en español?",
+      "options": [
+        "Raya",
+        "Barra inclinada",
+        "Corchete",
+        "Asterisco"
+      ],
+      "correctAnswer": "Raya",
+      "explanation": "La raya puede introducir la intervención de un personaje en los diálogos narrativos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-077",
+      "number": 77,
+      "topic": "Crónica",
+      "concept": "cronica_relatos_de_hechos_con_contexto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele hacer una crónica periodística?",
+      "options": [
+        "Presenta una lista de definiciones",
+        "Relata hechos en una secuencia con contexto",
+        "Expone únicamente instrucciones",
+        "Reúne versos con rima fija"
+      ],
+      "correctAnswer": "Relata hechos en una secuencia con contexto",
+      "explanation": "La crónica relata acontecimientos y puede incluir contexto y observaciones del cronista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-078",
+      "number": 78,
+      "topic": "Homófonas",
+      "concept": "votar_y_botar_suenan_igual_con_significado_distinto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tienen en común las palabras “votar” y “botar” en la mayoría de variedades del español?",
+      "options": [
+        "Se escriben igual y tienen el mismo significado",
+        "Son sustantivos colectivos",
+        "Suenan igual, pero tienen escritura y significado distintos",
+        "Siempre se usan como adjetivos"
+      ],
+      "correctAnswer": "Suenan igual, pero tienen escritura y significado distintos",
+      "explanation": "“Votar” es elegir mediante un voto; “botar” puede significar arrojar o desechar. Suenan igual en la mayoría de dialectos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-079",
+      "number": 79,
+      "topic": "Sufijos",
+      "concept": "sufijo_mente_forma_adverbio_de_modo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué palabra se forma al añadir “-mente” al adjetivo “cuidadosa”?",
+      "options": [
+        "Cuidadoso",
+        "Cuidadosa",
+        "Cuidado",
+        "Cuidadosamente"
+      ],
+      "correctAnswer": "Cuidadosamente",
+      "explanation": "El sufijo “-mente” suele formar adverbios de modo a partir de adjetivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-080",
+      "number": 80,
+      "topic": "Paratextos",
+      "concept": "portada_identifica_titulo_y_autoria",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué información aparece normalmente en la portada interior de un libro?",
+      "options": [
+        "Título y autoría",
+        "Todas las opiniones de los lectores",
+        "El final completo de la obra",
+        "Una lista de preguntas del examen"
+      ],
+      "correctAnswer": "Título y autoría",
+      "explanation": "La portada suele identificar la obra y a quien la escribió; puede incluir editorial u otros datos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-081",
+      "number": 81,
+      "topic": "Notas al pie",
+      "concept": "nota_al_pie_aporta_aclaracion_o_referencia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué puede servir una nota al pie en un texto?",
+      "options": [
+        "Para reemplazar el título",
+        "Para añadir una aclaración o referencia breve",
+        "Para cambiar el final del relato",
+        "Para eliminar la fuente consultada"
+      ],
+      "correctAnswer": "Para añadir una aclaración o referencia breve",
+      "explanation": "Una nota al pie aporta información complementaria o una referencia sin interrumpir el cuerpo principal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-082",
+      "number": 82,
+      "topic": "Narrativa · Verdadero o falso",
+      "concept": "narracion_puede_alternar_voces_o_perspectivas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una narración puede incluir más de una voz o perspectiva narrativa.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Algunas obras alternan narradores o perspectivas para mostrar diferentes experiencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-083",
+      "number": 83,
+      "topic": "Versificación",
+      "concept": "rima_repite_sonidos_al_final_de_versos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama la repetición de sonidos al final de dos o más versos?",
+      "options": [
+        "Métrica",
+        "Estrofa",
+        "Rima",
+        "Acotación"
+      ],
+      "correctAnswer": "Rima",
+      "explanation": "La rima es la coincidencia total o parcial de sonidos al final de los versos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-084",
+      "number": 84,
+      "topic": "Coherencia",
+      "concept": "agrupar_ideas_y_conectores_mejora_coherencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio ayuda más a que un párrafo sobre varias causas mantenga un orden claro?",
+      "options": [
+        "Mezclar causas y consecuencias sin conectores",
+        "Repetir la misma oración",
+        "Cambiar de tema en cada frase",
+        "Agrupar las causas y enlazarlas con conectores adecuados"
+      ],
+      "correctAnswer": "Agrupar las causas y enlazarlas con conectores adecuados",
+      "explanation": "Agrupar ideas relacionadas y señalar sus vínculos facilita seguir el razonamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-085",
+      "number": 85,
+      "topic": "Inferencia y evidencia",
+      "concept": "algunos_indica_parte_sin_cantidad_exacta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe dice que “algunos” estudiantes usaron la biblioteca, pero no indica cuántos. ¿Qué conclusión está respaldada?",
+      "options": [
+        "Al menos una parte del grupo la utilizó",
+        "Todos los estudiantes fueron",
+        "Nadie la visitó",
+        "La biblioteca tuvo exactamente cien visitantes"
+      ],
+      "correctAnswer": "Al menos una parte del grupo la utilizó",
+      "explanation": "“Algunos” permite concluir que hubo usuarios, pero no establece una cantidad exacta ni que fueran todos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-086",
+      "number": 86,
+      "topic": "Paráfrasis · Verdadero o falso",
+      "concept": "parafrasis_conserva_sentido_y_reconoce_fuente",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una paráfrasis puede cambiar palabras y estructura, pero debe conservar la idea de la fuente y reconocerla.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Parafrasear expresa una idea ajena con redacción propia, sin cambiar su sentido y atribuyéndola correctamente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-087",
+      "number": 87,
+      "topic": "Fábula",
+      "concept": "fabula_suele_personificar_animales_y_presentar_ensenanza",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué rasgo es común en muchas fábulas?",
+      "options": [
+        "Presentan instrucciones de seguridad",
+        "Sus personajes pueden ser animales con conductas humanas",
+        "Incluyen resultados de laboratorio",
+        "Siempre narran un hecho periodístico real"
+      ],
+      "correctAnswer": "Sus personajes pueden ser animales con conductas humanas",
+      "explanation": "Muchas fábulas usan animales personificados para desarrollar una historia y una enseñanza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-088",
+      "number": 88,
+      "topic": "Textos de opinión",
+      "concept": "resena_critica_anade_valoracion_razonada",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué distingue principalmente una reseña crítica de un resumen neutral?",
+      "options": [
+        "La reseña siempre cuenta el final",
+        "El resumen necesariamente usa rima",
+        "La reseña incorpora una valoración sustentada",
+        "El resumen incluye diálogos inventados"
+      ],
+      "correctAnswer": "La reseña incorpora una valoración sustentada",
+      "explanation": "La reseña crítica puede resumir una obra y además evaluarla con razones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-089",
+      "number": 89,
+      "topic": "Textos históricos",
+      "concept": "ficcion_historica_combina_invencion_y_contexto_pasado",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué rasgo puede tener una novela histórica?",
+      "options": [
+        "Presentar solo documentos sin narración",
+        "Evitar cualquier referencia a un periodo real",
+        "Ser siempre una autobiografía",
+        "Combinar una narración ficticia con un contexto del pasado"
+      ],
+      "correctAnswer": "Combinar una narración ficticia con un contexto del pasado",
+      "explanation": "La ficción histórica sitúa una narración en un periodo pasado, pero sus elementos no son todos registros documentales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-090",
+      "number": 90,
+      "topic": "Publicidad",
+      "concept": "terminos_y_excepciones_aclaran_alcance_de_anuncio",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un anuncio destaca beneficios, pero omite condiciones importantes del producto. ¿Qué debe revisar el lector?",
+      "options": [
+        "Si la imagen combina con el fondo",
+        "El número de colores usados",
+        "El tamaño del logotipo solamente",
+        "La letra pequeña y los términos de la oferta"
+      ],
+      "correctAnswer": "La letra pequeña y los términos de la oferta",
+      "explanation": "Condiciones, límites y excepciones ayudan a comprender el alcance real de una oferta publicitaria.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-091",
+      "number": 91,
+      "topic": "Conectores de contraste",
+      "concept": "sin_embargo_introduce_contraste_entre_ideas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“El plan era económico; ___, necesitaba más tiempo.” ¿Qué conector expresa contraste?",
+      "options": [
+        "Porque",
+        "Por eso",
+        "Sin embargo",
+        "Luego"
+      ],
+      "correctAnswer": "Sin embargo",
+      "explanation": "“Sin embargo” introduce una idea que contrasta con la anterior.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-092",
+      "number": 92,
+      "topic": "Citas · Verdadero o falso",
+      "concept": "cita_breve_tambien_requiere_identificar_fuente",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una cita textual breve queda automáticamente atribuida a su autor aunque no se indique la fuente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La extensión no elimina la necesidad de señalar la fuente de las palabras citadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-093",
+      "number": 93,
+      "topic": "Tesis y argumentos",
+      "concept": "argumentos_relevantes_sostienen_tesis",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación debe existir entre la tesis y las razones de un texto argumentativo?",
+      "options": [
+        "Las razones deben contradecirla sin explicación",
+        "Las razones deben apoyarla con lógica o evidencia",
+        "La tesis debe aparecer solo en el título",
+        "Las razones deben tratar un tema diferente"
+      ],
+      "correctAnswer": "Las razones deben apoyarla con lógica o evidencia",
+      "explanation": "Los argumentos deben guardar relación con la postura y aportar razones para sostenerla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-094",
+      "number": 94,
+      "topic": "Signos de puntuación",
+      "concept": "dos_puntos_pueden_introducir_enumeracion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué uso de los dos puntos es correcto?",
+      "options": [
+        "Para introducir una enumeración anunciada",
+        "Para separar siempre sujeto y verbo",
+        "Para sustituir todos los signos de interrogación",
+        "Para indicar que la oración no termina"
+      ],
+      "correctAnswer": "Para introducir una enumeración anunciada",
+      "explanation": "Los dos puntos pueden anunciar elementos que desarrollan o especifican lo dicho antes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-095",
+      "number": 95,
+      "topic": "Revisión · Verdadero o falso",
+      "concept": "reorganizar_parrafos_puede_mejorar_orden_sin_cambiar_postura",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una revisión puede reorganizar párrafos para mejorar el orden sin cambiar la postura principal.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Editar puede cambiar la organización para facilitar la lectura mientras se conserva la idea central.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-096",
+      "number": 96,
+      "topic": "Instrucciones",
+      "concept": "instrucciones_deben_ordenar_pasos_segun_secuencia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un instructivo enumera: 1) hornear la mezcla; 2) precalentar el horno; 3) preparar la mezcla. ¿Qué problema presenta?",
+      "options": [
+        "La secuencia debe reorganizarse antes de realizar los pasos",
+        "La oración no tiene ningún verbo",
+        "Los ingredientes no pueden mezclarse",
+        "El texto está escrito en primera persona"
+      ],
+      "correctAnswer": "La secuencia debe reorganizarse antes de realizar los pasos",
+      "explanation": "Conviene preparar la mezcla y precalentar el horno antes de hornear.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-097",
+      "number": 97,
+      "topic": "Discusión de ideas",
+      "concept": "refutar_argumento_responde_a_razones_no_a_persona",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un debate, alguien responde: “Tu argumento es falso porque no sabes nada del tema.” ¿Qué mejora la respuesta?",
+      "options": [
+        "Repetir el ataque con más fuerza",
+        "Señalar qué premisa o evidencia considera equivocada y explicar por qué",
+        "Cambiar de tema",
+        "Burlarse de quien habló"
+      ],
+      "correctAnswer": "Señalar qué premisa o evidencia considera equivocada y explicar por qué",
+      "explanation": "Responder al contenido con razones permite discutir la idea en vez de atacar a la persona.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-098",
+      "number": 98,
+      "topic": "Lectura multimodal",
+      "concept": "etiquetas_y_fuente_aclaran_relacion_en_infografia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una infografía usa una flecha roja entre dos cifras, pero no incluye leyenda ni explica la relación. ¿Qué debería hacer el lector?",
+      "options": [
+        "Suponer que la flecha prueba causalidad",
+        "Ignorar todas las cifras",
+        "Buscar título, etiquetas y fuente antes de interpretar la relación",
+        "Concluir que la cifra roja es más exacta"
+      ],
+      "correctAnswer": "Buscar título, etiquetas y fuente antes de interpretar la relación",
+      "explanation": "Título, etiquetas y fuente aclaran qué comparan las cifras y qué significa el símbolo; una flecha sola no demuestra causalidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-099",
+      "number": 99,
+      "topic": "Encuadre y medios",
+      "concept": "encuadre_fotografico_influye_en_impresion_del_publico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una fotografía de una protesta muestra solo un grupo pequeño, aunque había más personas fuera del encuadre. ¿Qué efecto puede tener esa selección?",
+      "options": [
+        "Garantiza que la imagen sea falsa",
+        "Cambia la resolución original",
+        "Convierte la foto en una grabación sonora",
+        "Influye en la impresión que recibe quien la observa"
+      ],
+      "correctAnswer": "Influye en la impresión que recibe quien la observa",
+      "explanation": "El encuadre selecciona qué aparece y puede influir en la interpretación sin alterar necesariamente los elementos fotografiados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-100",
+      "number": 100,
+      "topic": "Relación titular y contenido · Verdadero o falso",
+      "concept": "omitir_contexto_en_titular_puede_inducir_a_error",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un titular puede ser literalmente verdadero y aun así dar una impresión engañosa si omite información clave del artículo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La selección de datos y el contexto que se omite pueden distorsionar la interpretación aunque las palabras citadas sean ciertas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-101",
+      "number": 101,
+      "topic": "Modo verbal",
+      "concept": "subjuntivo_expresa_deseo_en_ojala_lleguemos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál oración expresa una posibilidad o deseo?",
+      "options": [
+        "Ojalá lleguemos temprano",
+        "Llegamos temprano ayer",
+        "Llegaremos temprano mañana",
+        "Llegad temprano al salón"
+      ],
+      "correctAnswer": "Ojalá lleguemos temprano",
+      "explanation": "“Ojalá lleguemos” expresa un deseo; “lleguemos” aparece en modo subjuntivo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-102",
+      "number": 102,
+      "topic": "Formas verbales",
+      "concept": "escribir_es_verbo_en_infinitivo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál forma está en infinitivo?",
+      "options": [
+        "Cantaba",
+        "Escribir",
+        "Salieron",
+        "Comemos"
+      ],
+      "correctAnswer": "Escribir",
+      "explanation": "“Escribir” es el infinitivo del verbo y termina en “-ir”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-103",
+      "number": 103,
+      "topic": "Referencias culturales",
+      "concept": "caballo_de_troya_funciona_como_alusion_cultural",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un relato menciona “el caballo de Troya” para aludir a un engaño que oculta un peligro. ¿Qué recurso usa?",
+      "options": [
+        "Cita textual",
+        "Abreviatura",
+        "Alusión cultural",
+        "Nota al pie"
+      ],
+      "correctAnswer": "Alusión cultural",
+      "explanation": "La expresión remite indirectamente a una historia conocida para añadir un sentido al texto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-104",
+      "number": 104,
+      "topic": "Sufijos",
+      "concept": "sufijo_isimo_forma_superlativo_de_adjetivo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma expresa “muy rápido” con el sufijo superlativo?",
+      "options": [
+        "Rapidito",
+        "Rapidez",
+        "Rápidamente",
+        "Rapidísimo"
+      ],
+      "correctAnswer": "Rapidísimo",
+      "explanation": "El sufijo “-ísimo” forma el superlativo de muchos adjetivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-105",
+      "number": 105,
+      "topic": "Tradición oral · Verdadero o falso",
+      "concept": "leyenda_oral_puede_presentar_variantes",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una leyenda puede transmitirse oralmente y cambiar en sus distintas versiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La transmisión oral puede dar lugar a variantes según las comunidades y los momentos en que se cuenta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-106",
+      "number": 106,
+      "topic": "Figuras literarias",
+      "concept": "comparacion_con_como_es_simil",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué figura aparece en “Tus manos son suaves como la seda”?",
+      "options": [
+        "Símil",
+        "Hipérbole",
+        "Ironía",
+        "Aliteración"
+      ],
+      "correctAnswer": "Símil",
+      "explanation": "El símil compara dos elementos de manera explícita con una expresión como “como”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-107",
+      "number": 107,
+      "topic": "Idea principal",
+      "concept": "oracion_tematica_presenta_idea_organizadora",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué expresa la oración temática de un párrafo?",
+      "options": [
+        "Una nota sobre la edición",
+        "La idea que organiza el párrafo",
+        "Una opinión del lector",
+        "El significado de todas las palabras"
+      ],
+      "correctAnswer": "La idea que organiza el párrafo",
+      "explanation": "La oración temática presenta la idea principal que las demás oraciones desarrollan o apoyan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-108",
+      "number": 108,
+      "topic": "Siglas y acrónimos",
+      "concept": "acronimo_se_forma_con_partes_y_se_pronuncia_como_palabra",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracteriza a un acrónimo como “Unesco”?",
+      "options": [
+        "Es una palabra que imita un sonido",
+        "Es el nombre de una estrofa",
+        "Se forma con partes de un nombre compuesto y puede leerse como palabra",
+        "Es siempre una cita textual"
+      ],
+      "correctAnswer": "Se forma con partes de un nombre compuesto y puede leerse como palabra",
+      "explanation": "Algunos acrónimos combinan elementos de varias palabras y se pronuncian como una palabra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-109",
+      "number": 109,
+      "topic": "Denotación y connotación",
+      "concept": "balde_de_agua_fria_connota_sorpresa_desagradable",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “La noticia cayó como un balde de agua fría”, ¿qué aporta la expresión destacada?",
+      "options": [
+        "Una medida exacta de temperatura",
+        "Una instrucción para usar agua",
+        "Una descripción literal de un balde",
+        "La idea de sorpresa o impacto desagradable"
+      ],
+      "correctAnswer": "La idea de sorpresa o impacto desagradable",
+      "explanation": "La expresión se usa con sentido figurado para transmitir una reacción de sorpresa o desagrado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-110",
+      "number": 110,
+      "topic": "Evidencia",
+      "concept": "argumento_se_sustenta_con_razones_pertinentes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento convierte mejor una afirmación en un argumento sustentado?",
+      "options": [
+        "Razones o evidencias pertinentes",
+        "Repetir la afirmación varias veces",
+        "Aumentar el tamaño de letra",
+        "Usar una palabra más difícil"
+      ],
+      "correctAnswer": "Razones o evidencias pertinentes",
+      "explanation": "Las razones y evidencias pertinentes explican por qué la postura merece ser considerada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-111",
+      "number": 111,
+      "topic": "Causa y coincidencia",
+      "concept": "coincidencia_temporal_no_demuestra_causalidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“Me puse mi camiseta favorita y ganamos; por eso la camiseta causó la victoria.” ¿Qué error presenta?",
+      "options": [
+        "Usa un conector temporal",
+        "Confunde coincidencia con causalidad",
+        "Cita una fuente primaria",
+        "Formula una pregunta abierta"
+      ],
+      "correctAnswer": "Confunde coincidencia con causalidad",
+      "explanation": "Que dos hechos ocurran juntos no demuestra que uno haya causado el otro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-112",
+      "number": 112,
+      "topic": "Adaptación",
+      "concept": "adaptacion_teatral_selecciona_elementos_del_relato",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué decisión suele ser necesaria al convertir una novela extensa en una obra teatral breve?",
+      "options": [
+        "Representar cada oración de la novela",
+        "Eliminar toda acción",
+        "Seleccionar escenas y diálogos que conserven el conflicto central",
+        "Cambiar todos los personajes por el narrador"
+      ],
+      "correctAnswer": "Seleccionar escenas y diálogos que conserven el conflicto central",
+      "explanation": "Una adaptación selecciona elementos y los ajusta al formato y duración de la representación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-113",
+      "number": 113,
+      "topic": "Adaptaciones · Verdadero o falso",
+      "concept": "adaptacion_cambia_formato_y_conserva_conflicto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una adaptación puede cambiar el formato o algunos elementos de una obra y conservar parte de su conflicto central.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Adaptar implica tomar decisiones para trasladar una obra a otro medio o contexto, no copiarla palabra por palabra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-114",
+      "number": 114,
+      "topic": "Caracterización",
+      "concept": "devolver_objeto_encontrado_sugiere_honestidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“Sin que nadie se lo pidiera, Julián devolvió la billetera que encontró.” ¿Qué rasgo se sugiere mediante su acción?",
+      "options": [
+        "Descuido",
+        "Impaciencia",
+        "Timidez",
+        "Honestidad"
+      ],
+      "correctAnswer": "Honestidad",
+      "explanation": "Devolver un objeto encontrado permite inferir honestidad a partir de la conducta del personaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-115",
+      "number": 115,
+      "topic": "Fuentes primarias",
+      "concept": "diario_contemporaneo_es_fuente_primaria_personal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál fuente es primaria para estudiar cómo vivió una persona un acontecimiento?",
+      "options": [
+        "Su diario escrito durante ese periodo",
+        "Un resumen escolar publicado décadas después",
+        "Una enciclopedia general actual",
+        "Una reseña de una película inspirada en el hecho"
+      ],
+      "correctAnswer": "Su diario escrito durante ese periodo",
+      "explanation": "Un diario contemporáneo registra la experiencia de quien vivió el periodo, aunque refleja su perspectiva personal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-116",
+      "number": 116,
+      "topic": "Voz pasiva",
+      "concept": "propuesta_es_sujeto_paciente_en_voz_pasiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “La propuesta fue aprobada por el consejo”, ¿qué elemento recibe la acción?",
+      "options": [
+        "El consejo",
+        "La propuesta",
+        "La aprobación",
+        "La reunión"
+      ],
+      "correctAnswer": "La propuesta",
+      "explanation": "“La propuesta” es el sujeto paciente: recibe la acción de ser aprobada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-117",
+      "number": 117,
+      "topic": "Generalizaciones · Verdadero o falso",
+      "concept": "testimonio_individual_no_representa_toda_comunidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un único testimonio personal basta para describir lo que piensa toda una comunidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Una persona puede ofrecer una experiencia valiosa, pero no representa automáticamente las opiniones de un grupo entero.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-118",
+      "number": 118,
+      "topic": "Variedades lingüísticas",
+      "concept": "palabras_regionales_reflejan_variedad_linguistica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un personaje usa palabras propias de su región. ¿Qué conclusión es más adecuada?",
+      "options": [
+        "Está hablando incorrectamente en todos los contextos",
+        "No conoce ninguna otra palabra",
+        "Usa una variedad lingüística vinculada a su comunidad",
+        "El texto dejó de estar escrito en español"
+      ],
+      "correctAnswer": "Usa una variedad lingüística vinculada a su comunidad",
+      "explanation": "El español presenta variedades regionales; sus formas no son errores por el solo hecho de ser locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-119",
+      "number": 119,
+      "topic": "Falacias",
+      "concept": "falso_dilema_reduce_opciones_posibles_a_dos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "“O apoyas mi propuesta o no te importa la escuela.” ¿Qué debilidad presenta este argumento?",
+      "options": [
+        "Resume dos datos del informe",
+        "Distingue varias alternativas razonables",
+        "Sustenta la tesis con evidencia",
+        "Reduce la discusión a dos opciones excluyentes"
+      ],
+      "correctAnswer": "Reduce la discusión a dos opciones excluyentes",
+      "explanation": "El falso dilema presenta solo dos opciones cuando pueden existir otras posturas o razones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-120",
+      "number": 120,
+      "topic": "Identificación bibliográfica · Verdadero o falso",
+      "concept": "isbn_identifica_edicion_o_formato_de_publicacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El ISBN ayuda a identificar una edición o formato específico de una publicación.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El ISBN identifica una publicación comercial concreta; distintas ediciones o formatos pueden tener números diferentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-121",
+      "number": 121,
+      "topic": "Conclusión",
+      "concept": "conclusion_conecta_evidencia_con_propuesta_con_cautela",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un texto defiende ampliar el horario de la biblioteca con datos de asistencia. ¿Qué conclusión mantiene mejor el vínculo entre evidencia y propuesta?",
+      "options": [
+        "“La asistencia aumenta después de clases; ampliar el horario podría responder a esa demanda.”",
+        "“La biblioteca tiene paredes azules, por eso debe abrir más.”",
+        "“Todos deben apoyar la propuesta sin preguntas.”",
+        "“Los datos no importan si la idea parece atractiva.”"
+      ],
+      "correctAnswer": "“La asistencia aumenta después de clases; ampliar el horario podría responder a esa demanda.”",
+      "explanation": "La conclusión relaciona el dato de asistencia con la propuesta, sin presentar más certeza de la que aporta la evidencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-122",
+      "number": 122,
+      "topic": "Revisión argumentativa",
+      "concept": "evidencia_debe_corresponder_a_afirmacion_sobre_rendimiento",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un borrador sostiene que “el uniforme mejora el rendimiento”, pero solo presenta opiniones sobre comodidad. ¿Qué ajuste lo fortalece?",
+      "options": [
+        "Repetir la tesis al final",
+        "Conseguir datos pertinentes sobre rendimiento y reconocer límites de la evidencia",
+        "Eliminar todas las razones",
+        "Añadir una anécdota sobre otro colegio como prueba definitiva"
+      ],
+      "correctAnswer": "Conseguir datos pertinentes sobre rendimiento y reconocer límites de la evidencia",
+      "explanation": "La evidencia debe corresponder a la afirmación; opiniones de comodidad no demuestran por sí solas un efecto académico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-123",
+      "number": 123,
+      "topic": "Entrevistas",
+      "concept": "pregunta_abierta_indaga_cambios_y_participantes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un reportaje usa una entrevista para explicar por qué cambió una tradición del barrio. ¿Qué pregunta aporta más detalle sobre el proceso?",
+      "options": [
+        "¿Te gusta el barrio?",
+        "¿Sí o no?",
+        "¿Qué cambió, cuándo empezó y quiénes participaron?",
+        "¿Cuál es tu color favorito?"
+      ],
+      "correctAnswer": "¿Qué cambió, cuándo empezó y quiénes participaron?",
+      "explanation": "Una pregunta abierta y específica invita a explicar cambios, momentos y participantes relacionados con el tema.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-124",
+      "number": 124,
+      "topic": "Fiabilidad narrativa",
+      "concept": "narrador_basado_en_rumores_requiere_lectura_cautelosa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un narrador describe un hecho con seguridad, pero más tarde reconoce que no estuvo presente y que lo supo por rumores. ¿Cómo conviene leer su versión?",
+      "options": [
+        "Como registro directo e infalible",
+        "Como dato confirmado por la historia",
+        "Como una explicación científica",
+        "Con cautela, distinguiendo lo que sabe de lo que supone"
+      ],
+      "correctAnswer": "Con cautela, distinguiendo lo que sabe de lo que supone",
+      "explanation": "Admitir que conoce los hechos por rumores limita la fiabilidad de su relato y exige contrastar sus afirmaciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-125",
+      "number": 125,
+      "topic": "Verificación de contenido · Verdadero o falso",
+      "concept": "correccion_ortografica_no_garantiza_veracidad_de_datos",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Que una publicación tenga buena ortografía no garantiza que los datos que presenta sean verdaderos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La corrección formal y la veracidad son aspectos distintos; los datos también requieren verificación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-126",
+      "number": 126,
+      "topic": "Modo imperativo",
+      "concept": "cierra_expresa_instruccion_directa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál oración da una instrucción directa?",
+      "options": [
+        "Cierra la ventana, por favor",
+        "Tal vez cierre la ventana",
+        "Cerró la ventana ayer",
+        "La ventana estaba cerrada"
+      ],
+      "correctAnswer": "Cierra la ventana, por favor",
+      "explanation": "“Cierra” se usa para pedir o indicar directamente una acción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-127",
+      "number": 127,
+      "topic": "Comparación",
+      "concept": "mas_que_expresa_comparacion_de_superioridad",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “El río es más ancho que el arroyo”, ¿qué relación expresa “más ancho que”?",
+      "options": [
+        "Igualdad",
+        "Comparación de superioridad",
+        "Negación",
+        "Duda"
+      ],
+      "correctAnswer": "Comparación de superioridad",
+      "explanation": "La estructura “más… que” compara dos elementos y señala mayor grado en una característica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-128",
+      "number": 128,
+      "topic": "Onomatopeya",
+      "concept": "tic_tac_imita_sonido_de_reloj",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál palabra imita un sonido?",
+      "options": [
+        "Brillante",
+        "Silencioso",
+        "Tic-tac",
+        "Distante"
+      ],
+      "correctAnswer": "Tic-tac",
+      "explanation": "“Tic-tac” representa mediante sonidos escritos el ruido regular de un reloj.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-129",
+      "number": 129,
+      "topic": "Mayúsculas",
+      "concept": "nombre_propio_medellin_lleva_mayuscula_y_tilde",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál opción escribe correctamente el nombre de una ciudad colombiana?",
+      "options": [
+        "medellín",
+        "MEDELLÍN?",
+        "MedelliN",
+        "Medellín"
+      ],
+      "correctAnswer": "Medellín",
+      "explanation": "Los nombres propios llevan mayúscula inicial y conservan las tildes que corresponden.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-130",
+      "number": 130,
+      "topic": "Comunicación oral · Verdadero o falso",
+      "concept": "gestos_y_rostro_complementan_mensaje_oral",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los gestos y la expresión del rostro pueden complementar lo que una persona dice oralmente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La comunicación oral suele incluir elementos no verbales que aportan información sobre intención o emoción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-131",
+      "number": 131,
+      "topic": "Nombres propios",
+      "concept": "nosotros_incluye_hablante_y_otras_personas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué pronombre incluye a quien habla y a otras personas?",
+      "options": [
+        "Nosotros",
+        "Ustedes",
+        "Ellos",
+        "Él"
+      ],
+      "correctAnswer": "Nosotros",
+      "explanation": "“Nosotros” incluye a la persona que habla y a una o más personas con ella.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-132",
+      "number": 132,
+      "topic": "Complemento directo",
+      "concept": "el_proyecto_es_complemento_directo_de_presento",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “El equipo presentó el proyecto”, ¿qué recibió directamente la acción de presentar?",
+      "options": [
+        "El equipo",
+        "El proyecto",
+        "Presentó",
+        "La tarde"
+      ],
+      "correctAnswer": "El proyecto",
+      "explanation": "“El proyecto” es el complemento directo: aquello que el equipo presentó.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-133",
+      "number": 133,
+      "topic": "Puntuación",
+      "concept": "puntos_suspensivos_pueden_indicar_interrupcion_o_duda",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué indican normalmente los puntos suspensivos en un diálogo?",
+      "options": [
+        "El comienzo obligatorio de un párrafo",
+        "Una cita de autor conocido",
+        "Una interrupción, duda o expresión que queda abierta",
+        "El final de una pregunta directa"
+      ],
+      "correctAnswer": "Una interrupción, duda o expresión que queda abierta",
+      "explanation": "Los puntos suspensivos pueden señalar vacilación, interrupción o una expresión que no se completa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-134",
+      "number": 134,
+      "topic": "Narración en primera persona",
+      "concept": "verbo_en_primera_persona_muestra_narrador_participante",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué expresión muestra que quien narra participa en los hechos?",
+      "options": [
+        "Ella cruzó la plaza",
+        "El viajero cruzó la plaza",
+        "Alguien cruzó la plaza",
+        "Crucé la plaza antes del anochecer"
+      ],
+      "correctAnswer": "Crucé la plaza antes del anochecer",
+      "explanation": "“Crucé” está en primera persona y presenta al narrador como participante de la acción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-135",
+      "number": 135,
+      "topic": "Concordancia",
+      "concept": "aves_plural_concuerda_con_verbo_migran",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué oración mantiene la concordancia entre sujeto y verbo?",
+      "options": [
+        "Las aves migran en ciertas temporadas",
+        "Las aves migra en ciertas temporadas",
+        "El grupo de aves migran en ciertas temporadas siempre",
+        "Las aves migración en ciertas temporadas"
+      ],
+      "correctAnswer": "Las aves migran en ciertas temporadas",
+      "explanation": "El sujeto plural “las aves” concuerda con el verbo plural “migran”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-136",
+      "number": 136,
+      "topic": "Campos semánticos",
+      "concept": "campo_semantico_de_orientacion_agrupa_terminos_relacionados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo reúne palabras de un mismo campo semántico relacionado con la orientación?",
+      "options": [
+        "Estrofa, verso, rima, poema",
+        "Brújula, mapa, ruta, coordenada",
+        "Metáfora, símil, ironía, hipérbole",
+        "Adjetivo, verbo, sustantivo, adverbio"
+      ],
+      "correctAnswer": "Brújula, mapa, ruta, coordenada",
+      "explanation": "Las cuatro palabras se relacionan con formas de ubicarse o representar direcciones y lugares.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-137",
+      "number": 137,
+      "topic": "Pregunta retórica",
+      "concept": "pregunta_retorica_involucra_audiencia_sin_respuesta_literal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un discurso, “¿Quién no quiere un barrio más seguro?” no busca necesariamente una respuesta literal. ¿Qué función puede cumplir?",
+      "options": [
+        "Solicitar un dato censal",
+        "Abrir una entrevista",
+        "Invitar al público a compartir una postura",
+        "Corregir una tilde"
+      ],
+      "correctAnswer": "Invitar al público a compartir una postura",
+      "explanation": "Una pregunta retórica puede enfatizar una idea o involucrar al público sin esperar una respuesta informativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-138",
+      "number": 138,
+      "topic": "Lengua y sociedad · Verdadero o falso",
+      "concept": "lengua_incorpora_vocabulario_para_nuevas_realidades",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El vocabulario de una lengua puede incorporar palabras nuevas cuando aparecen objetos o prácticas nuevas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las lenguas cambian y pueden crear o adoptar palabras para nombrar nuevas realidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-139",
+      "number": 139,
+      "topic": "Editoriales y noticias",
+      "concept": "noticia_informa_y_editorial_expresa_postura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia suele haber entre una noticia y un editorial?",
+      "options": [
+        "La noticia siempre es ficción y el editorial siempre poesía",
+        "El editorial solo presenta mapas",
+        "No puede haber ninguna diferencia",
+        "La noticia informa hechos; el editorial expresa una postura institucional"
+      ],
+      "correctAnswer": "La noticia informa hechos; el editorial expresa una postura institucional",
+      "explanation": "La noticia prioriza informar acontecimientos; el editorial presenta la posición de un medio o institución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-140",
+      "number": 140,
+      "topic": "Ejemplos y explicaciones",
+      "concept": "ejemplo_concreto_ilustra_idea_general",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple un ejemplo concreto después de una explicación general?",
+      "options": [
+        "Reemplazar todas las ideas del texto",
+        "Ocultar la tesis",
+        "Ilustrar cómo se aplica la idea",
+        "Cambiar el tema sin aviso"
+      ],
+      "correctAnswer": "Ilustrar cómo se aplica la idea",
+      "explanation": "Un ejemplo puede ayudar a comprender una idea al mostrarla en una situación particular.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-141",
+      "number": 141,
+      "topic": "Estructura narrativa",
+      "concept": "climax_concentra_tension_antes_de_resolucion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una narración, ¿qué momento suele concentrar la tensión principal antes de la resolución?",
+      "options": [
+        "Introducción",
+        "Clímax",
+        "Epílogo",
+        "Acotación"
+      ],
+      "correctAnswer": "Clímax",
+      "explanation": "El clímax es el punto de mayor tensión o el momento decisivo antes de que la historia avance hacia su resolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-142",
+      "number": 142,
+      "topic": "Biografía · Verdadero o falso",
+      "concept": "biografia_y_autobiografia_difieren_en_autoria",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una biografía y una autobiografía siempre son relatos escritos por la misma persona sobre su propia vida.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Una autobiografía narra la vida de quien la escribe; una biografía puede ser escrita por otra persona.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-143",
+      "number": 143,
+      "topic": "Raya explicativa",
+      "concept": "rayas_delimitan_aclaracion_en_oracion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En “El teatro —cerrado por reparaciones— reabrió ayer”, ¿qué función cumplen las rayas?",
+      "options": [
+        "Introducen una pregunta directa",
+        "Marcan la intervención de otro personaje",
+        "Separan sílabas de una palabra",
+        "Encierran una aclaración dentro de la oración"
+      ],
+      "correctAnswer": "Encierran una aclaración dentro de la oración",
+      "explanation": "Las rayas delimitan un comentario explicativo que puede retirarse sin romper la oración principal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-144",
+      "number": 144,
+      "topic": "Preguntas de encuesta",
+      "concept": "pregunta_sugerente_puede_influir_respuesta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una encuesta pregunta: “¿No te parece que el nuevo horario es mucho mejor?”. ¿Qué problema puede influir en las respuestas?",
+      "options": [
+        "La redacción sugiere una respuesta favorable",
+        "La pregunta tiene signos de interrogación",
+        "El enunciado usa la palabra “horario”",
+        "La respuesta podría escribirse en una hoja"
+      ],
+      "correctAnswer": "La redacción sugiere una respuesta favorable",
+      "explanation": "La formulación conduce al encuestado hacia una valoración positiva y puede sesgar el resultado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-145",
+      "number": 145,
+      "topic": "Argumentos · Verdadero o falso",
+      "concept": "extension_del_argumento_no_garantiza_fuerza",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un argumento más largo es necesariamente más convincente que uno breve.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La solidez depende de la relevancia y el respaldo de las razones, no solo de la cantidad de palabras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-146",
+      "number": 146,
+      "topic": "Titulares",
+      "concept": "titular_refleja_variacion_sin_generalizar_resultados",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artículo explica que una medida tuvo resultados distintos según el barrio. ¿Qué titular representa mejor esa información?",
+      "options": [
+        "“La medida tuvo efectos variados entre barrios, según el informe”",
+        "“La medida cambió todo para siempre”",
+        "“Nadie sabe qué ocurrió”",
+        "“Un barrio demuestra lo que pasa en toda la ciudad”"
+      ],
+      "correctAnswer": "“La medida tuvo efectos variados entre barrios, según el informe”",
+      "explanation": "El titular presenta la variación reportada sin exagerar ni generalizar más allá de los datos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-147",
+      "number": 147,
+      "topic": "Adaptación narrativa",
+      "concept": "alternar_voces_muestra_perspectivas_de_conflicto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra breve debe mostrar el mismo conflicto desde dos perspectivas. ¿Qué recurso puede ayudar?",
+      "options": [
+        "Borrar el conflicto principal",
+        "Alternar escenas o voces de los personajes",
+        "Quitar todas las acciones",
+        "Usar solo la descripción del escenario"
+      ],
+      "correctAnswer": "Alternar escenas o voces de los personajes",
+      "explanation": "Alternar escenas o voces permite mostrar cómo distintos personajes experimentan el mismo conflicto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-148",
+      "number": 148,
+      "topic": "Citas y atribución",
+      "concept": "atribucion_de_cita_se_verifica_en_fuente_confiable",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una persona comparte una frase entre comillas atribuida a una escritora, pero no encuentra el libro original. ¿Qué paso es más responsable?",
+      "options": [
+        "Repetirla como auténtica porque aparece en muchas imágenes",
+        "Añadir el nombre de otro autor conocido",
+        "Buscar una fuente primaria o confiable antes de atribuirla",
+        "Quitar las comillas y presentarla como propia"
+      ],
+      "correctAnswer": "Buscar una fuente primaria o confiable antes de atribuirla",
+      "explanation": "La repetición en redes no confirma la autoría; conviene localizar una fuente fiable antes de atribuir la frase.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-149",
+      "number": 149,
+      "topic": "Síntesis de datos",
+      "concept": "conteos_12_y_16_difieren_por_cuatro_visitas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un registro muestra 12 visitas a una biblioteca el lunes y 16 el viernes. ¿Qué afirmación está respaldada?",
+      "options": [
+        "Todos los estudiantes fueron el viernes",
+        "El horario del viernes causó la diferencia",
+        "La biblioteca duplicó sus visitas",
+        "El viernes hubo cuatro visitas más que el lunes"
+      ],
+      "correctAnswer": "El viernes hubo cuatro visitas más que el lunes",
+      "explanation": "La comparación permite describir una diferencia de cuatro visitas, pero no explica su causa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "LEN7-150",
+      "number": 150,
+      "topic": "Traducción · Verdadero o falso",
+      "concept": "traduccion_literal_puede_perder_modismo_y_tono",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una traducción literal puede conservar palabras, pero perder un modismo o el tono del texto original.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Para traducir con sentido es necesario considerar contexto, expresiones idiomáticas y tono, no solo sustituir palabra por palabra.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}

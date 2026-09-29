@@ -81,8 +81,8 @@ export function arenaBadges(stats: ArenaStats): ArenaBadge[] {
       { target: 5, name: 'Impecable', description: 'Consigue 5 duelos perfectos.' },
     ], stats.perfects),
     ...ladder('gesta', 'UPSET', '🔥', [
-      { target: 1, name: 'Sorpresa', description: 'Gánale a alguien que iba por delante de ti.' },
-      { target: 10, name: 'Cazagigantes', description: 'Hazlo 10 veces.' },
+      { target: 1, name: 'Sorpresa', description: 'Gánale a alguien que iba por delante en el ranking general del año.' },
+      { target: 10, name: 'Cazagigantes', description: 'Hazlo 10 veces en el ranking general del año.' },
     ], stats.upsets),
     ...ladder('gesta', 'STREAK', '⚡', [
       { target: 3, name: 'En racha', description: 'Gana 3 duelos seguidos.' },

@@ -1,0 +1,2830 @@
+{
+  "catalogId": "edusyn-deportes-grade-7-v1",
+  "title": "Deportes · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Deportes",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://olympics.com/ioc/olympic-games",
+    "https://worldathletics.org/about-iaaf/documents/book-of-rules",
+    "https://www.fiba.basketball/documents/official-basketball-rules",
+    "https://www.fivb.com/volleyball/the-game/official-volleyball-rules/",
+    "https://www.mineducacion.gov.co/1621/articles-89869_archivo_pdf3.pdf",
+    "https://www.paralympic.org/classification",
+    "https://www.theifab.com/laws/latest/",
+    "https://www.wada-ama.org/en/athletes-support-personnel"
+  ],
+  "questions": [
+    {
+      "id": "DEP7-001",
+      "number": 1,
+      "topic": "Fútbol",
+      "concept": "futbol_once_jugadores_por_equipo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos jugadores por equipo inician un partido de fútbol?",
+      "options": [
+        "Once",
+        "Nueve",
+        "Diez",
+        "Doce"
+      ],
+      "correctAnswer": "Once",
+      "explanation": "En el fútbol de asociación, cada equipo comienza con once jugadores en la cancha.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-002",
+      "number": 2,
+      "topic": "Voleibol",
+      "concept": "voleibol_tres_golpes_sin_bloqueo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos contactos puede hacer un equipo antes de devolver el balón, sin contar el bloqueo?",
+      "options": [
+        "Dos",
+        "Tres",
+        "Cuatro",
+        "Cinco"
+      ],
+      "correctAnswer": "Tres",
+      "explanation": "El equipo dispone de hasta tres golpes para devolver el balón por encima de la red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-003",
+      "number": 3,
+      "topic": "Atletismo",
+      "concept": "atletismo_prueba_de_velocidad_100_metros",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué prueba consiste en correr una distancia recta de cien metros?",
+      "options": [
+        "Maratón",
+        "Salto largo",
+        "100 metros planos",
+        "Relevo 4 × 400"
+      ],
+      "correctAnswer": "100 metros planos",
+      "explanation": "Los 100 metros planos son una prueba de velocidad disputada en una recta de pista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-004",
+      "number": 4,
+      "topic": "Baloncesto",
+      "concept": "baloncesto_cinco_jugadores_en_cancha",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos jugadores por equipo están en cancha durante el juego de baloncesto?",
+      "options": [
+        "Cuatro",
+        "Seis",
+        "Siete",
+        "Cinco"
+      ],
+      "correctAnswer": "Cinco",
+      "explanation": "En las reglas habituales del baloncesto, cada equipo juega con cinco deportistas en cancha.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-005",
+      "number": 5,
+      "topic": "Ciclismo",
+      "concept": "ciclismo_grupo_principal_peloton",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una carrera de ruta, ¿cómo se llama el grupo principal de ciclistas?",
+      "options": [
+        "Pelotón",
+        "Escalera",
+        "Carril",
+        "Grada"
+      ],
+      "correctAnswer": "Pelotón",
+      "explanation": "El pelotón es el conjunto compacto de ciclistas que avanza en una carrera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-006",
+      "number": 6,
+      "topic": "Balonmano",
+      "concept": "balonmano_tres_pasos_con_balón",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos pasos puede dar normalmente un jugador con el balón sin botarlo?",
+      "options": [
+        "Uno",
+        "Tres",
+        "Cinco",
+        "Seis"
+      ],
+      "correctAnswer": "Tres",
+      "explanation": "Las reglas de balonmano permiten avanzar hasta tres pasos con el balón antes de pasarlo o botarlo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-007",
+      "number": 7,
+      "topic": "Verdadero o falso · Calentamiento",
+      "concept": "calentamiento_gradual_prepara_el_cuerpo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un calentamiento gradual prepara el cuerpo para la actividad física.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Aumentar poco a poco la actividad ayuda a preparar músculos y sistema cardiovascular para el esfuerzo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Juego limpio",
+      "concept": "juego_limpio_respeta_reglas_y_rivales",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Respetar las reglas y a los rivales forma parte del juego limpio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El juego limpio implica competir con respeto, seguir las reglas y cuidar a quienes participan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-009",
+      "number": 9,
+      "topic": "Fútbol y táctica",
+      "concept": "ocupacion_espacios_crea_lineas_de_pase",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja táctica puede generar un equipo que ocupa bien los espacios?",
+      "options": [
+        "Evitar todos los pases rivales",
+        "Ofrecer líneas de pase y opciones de avance",
+        "Hacer innecesaria la defensa",
+        "Garantizar la victoria antes del partido"
+      ],
+      "correctAnswer": "Ofrecer líneas de pase y opciones de avance",
+      "explanation": "La ubicación coordinada facilita apoyar al poseedor del balón y avanzar con pases.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-010",
+      "number": 10,
+      "topic": "Voleibol y rotación",
+      "concept": "voleibol_rotacion_al_recuperar_saque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuándo rota un equipo de voleibol en el sistema habitual?",
+      "options": [
+        "Después de cada saque propio",
+        "Cuando pide tiempo",
+        "Al recuperar el derecho a sacar",
+        "Cada vez que cambia el balón"
+      ],
+      "correctAnswer": "Al recuperar el derecho a sacar",
+      "explanation": "Cuando el equipo receptor gana la jugada y obtiene el saque, sus jugadores rotan una posición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-011",
+      "number": 11,
+      "topic": "Baloncesto y táctica",
+      "concept": "pantalla_legal_libera_companero",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve principalmente una pantalla legal en baloncesto?",
+      "options": [
+        "Crear espacio para un compañero",
+        "Detener el cronómetro por completo",
+        "Cambiar el valor de una canasta",
+        "Evitar que el balón salga de la cancha"
+      ],
+      "correctAnswer": "Crear espacio para un compañero",
+      "explanation": "Una pantalla bien realizada dificulta el seguimiento defensivo y puede liberar a un compañero.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-012",
+      "number": 12,
+      "topic": "Atletismo y ritmo",
+      "concept": "ritmo_planificado_distribuye_esfuerzo_en_fondo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué estrategia ayuda a completar una carrera larga sin agotarse demasiado pronto?",
+      "options": [
+        "Correr al máximo desde el inicio",
+        "Mantener un ritmo planificado",
+        "Cambiar de dirección repetidamente",
+        "Evitar tomar agua en toda circunstancia"
+      ],
+      "correctAnswer": "Mantener un ritmo planificado",
+      "explanation": "Distribuir el esfuerzo de acuerdo con la distancia ayuda a sostener el ritmo de carrera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-013",
+      "number": 13,
+      "topic": "Ciclismo y aerodinámica",
+      "concept": "ciclismo_a_rueda_reduce_resistencia_aerodinamica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto puede obtener un ciclista al ubicarse detrás de otro en una ruta?",
+      "options": [
+        "Aumentar la resistencia del aire",
+        "Acortar la distancia oficial",
+        "Eliminar el esfuerzo de pedalear",
+        "Reducir parte de la resistencia del aire"
+      ],
+      "correctAnswer": "Reducir parte de la resistencia del aire",
+      "explanation": "Ir a rueda puede reducir la resistencia aerodinámica, aunque el ciclista aún debe pedalear y mantener control.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-014",
+      "number": 14,
+      "topic": "Bádminton",
+      "concept": "badminton_saque_al_cuadro_diagonal_opuesto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Hacia qué zona debe dirigirse el saque en diagonal en bádminton?",
+      "options": [
+        "A cualquier lugar fuera de la cancha",
+        "Al mismo lado de la red",
+        "Al cuadro de servicio opuesto",
+        "Directamente al cuerpo del juez"
+      ],
+      "correctAnswer": "Al cuadro de servicio opuesto",
+      "explanation": "El saque debe cruzar hacia el cuadro de servicio diagonalmente opuesto al servidor.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-015",
+      "number": 15,
+      "topic": "Nutrición y deporte",
+      "concept": "hidratacion_repone_liquidos_perdidos_en_esfuerzo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué conviene hidratarse durante una actividad física prolongada?",
+      "options": [
+        "Para reemplazar toda la alimentación",
+        "Para aumentar de inmediato la fuerza muscular",
+        "Para evitar cualquier cansancio",
+        "Para ayudar a reponer líquidos perdidos"
+      ],
+      "correctAnswer": "Para ayudar a reponer líquidos perdidos",
+      "explanation": "La hidratación contribuye a reponer líquidos, aunque no elimina por completo la fatiga.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-016",
+      "number": 16,
+      "topic": "Deportes adaptados",
+      "concept": "adaptaciones_facilitan_competencia_inclusiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué principio ayuda a que una competencia adaptada sea justa?",
+      "options": [
+        "Ajustar reglas y recursos a las necesidades de participación",
+        "Usar siempre el mismo equipo para todos",
+        "Excluir a quien necesita una adaptación",
+        "Cambiar el resultado después del juego"
+      ],
+      "correctAnswer": "Ajustar reglas y recursos a las necesidades de participación",
+      "explanation": "Adaptaciones apropiadas facilitan participar y competir con reglas comprensibles para las personas involucradas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-017",
+      "number": 17,
+      "topic": "Verdadero o falso · Estrategia",
+      "concept": "estrategia_se_ajusta_a_la_situacion_de_juego",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una estrategia deportiva puede modificarse según el rival y lo que ocurre durante el partido.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Leer el juego permite ajustar la táctica ante cambios de ritmo, espacio o comportamiento rival.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Entrenamiento",
+      "concept": "intensidad_maxima_constante_no_previene_lesiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Entrenar siempre con la máxima intensidad es la mejor forma de prevenir lesiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La carga debe progresar y alternarse con recuperación para reducir riesgos de sobreesfuerzo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-019",
+      "number": 19,
+      "topic": "Arbitraje",
+      "concept": "arbitro_aplica_reglas_y_sanciona_infracciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple un árbitro durante una competencia?",
+      "options": [
+        "Diseñar el uniforme de los equipos",
+        "Elegir quién debe ganar",
+        "Aplicar las reglas y resolver infracciones",
+        "Reemplazar a los entrenadores"
+      ],
+      "correctAnswer": "Aplicar las reglas y resolver infracciones",
+      "explanation": "El árbitro interpreta y aplica el reglamento para conducir el encuentro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-020",
+      "number": 20,
+      "topic": "Estadística deportiva",
+      "concept": "tasa_de_acierto_es_proporcion_de_lanzamientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede mostrar la tasa de acierto de lanzamientos de un jugador?",
+      "options": [
+        "El tiempo exacto de cada jugada",
+        "La calidad de todos sus pases",
+        "Cuántos espectadores asistieron",
+        "La proporción de lanzamientos exitosos"
+      ],
+      "correctAnswer": "La proporción de lanzamientos exitosos",
+      "explanation": "La tasa expresa cuántos intentos resultaron en acierto dentro del total realizado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-021",
+      "number": 21,
+      "topic": "Decisión táctica",
+      "concept": "cambio_de_frente_aprovecha_banda_libre",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En fútbol, el equipo rival presiona a quien tiene el balón y deja libre una banda. ¿Qué opción puede aprovechar el espacio?",
+      "options": [
+        "Cambiar el juego hacia la banda libre",
+        "Mantener el balón quieto hasta perderlo",
+        "Reunir a todos los jugadores junto al balón",
+        "Lanzar el balón fuera sin mirar"
+      ],
+      "correctAnswer": "Cambiar el juego hacia la banda libre",
+      "explanation": "Cambiar el lado de ataque puede aprovechar un espacio que la presión rival dejó abierto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-022",
+      "number": 22,
+      "topic": "Inclusión deportiva",
+      "concept": "adaptar_juego_de_pases_para_participacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante tiene movilidad reducida y quiere participar en un juego de pases. ¿Qué ajuste favorece su participación?",
+      "options": [
+        "Excluirlo para mantener la velocidad",
+        "Adaptar espacio, desplazamientos o reglas con el grupo",
+        "Darle un resultado distinto sin jugar",
+        "Asignarle siempre el papel de árbitro"
+      ],
+      "correctAnswer": "Adaptar espacio, desplazamientos o reglas con el grupo",
+      "explanation": "Ajustar la actividad de manera acordada permite que participe junto con sus compañeros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-023",
+      "number": 23,
+      "topic": "Análisis de datos",
+      "concept": "comparar_tiempos_en_condiciones_similares",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una corredora mejora su tiempo en tres entrenamientos seguidos. ¿Qué comparación permite evaluar mejor el progreso?",
+      "options": [
+        "Compararlo con el color de sus zapatillas",
+        "Compararlo con el resultado de otra disciplina",
+        "Revisar tiempos medidos en condiciones similares",
+        "Compararlo solo con el número de espectadores"
+      ],
+      "correctAnswer": "Revisar tiempos medidos en condiciones similares",
+      "explanation": "Medir en condiciones semejantes ayuda a distinguir una mejora real de diferencias en recorrido o registro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-024",
+      "number": 24,
+      "topic": "Resolución de conflictos",
+      "concept": "resolver_disputa_deportiva_con_procedimiento_y_respeto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos equipos discuten si el balón salió antes de una anotación y no hay video. ¿Qué acuerdo es más deportivo?",
+      "options": [
+        "Amenazar al árbitro hasta que cambie la decisión",
+        "Abandonar el partido sin escuchar",
+        "Repetir siempre toda la competencia",
+        "Aceptar el procedimiento acordado y continuar con respeto"
+      ],
+      "correctAnswer": "Aceptar el procedimiento acordado y continuar con respeto",
+      "explanation": "Respetar el procedimiento y mantener el diálogo permite resolver el desacuerdo sin escalar el conflicto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Rendimiento",
+      "concept": "estadistica_unica_no_mide_aporte_deportivo_completo",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una sola estadística de un partido basta para evaluar por completo el aporte de un deportista.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El rendimiento también incluye decisiones, defensa, colaboración y el papel que cumple en el equipo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-026",
+      "number": 26,
+      "topic": "Fútbol",
+      "concept": "futbol_tarjeta_roja_expulsa_jugador",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarjeta usa el árbitro para expulsar a un jugador?",
+      "options": [
+        "Roja",
+        "Amarilla",
+        "Verde",
+        "Azul"
+      ],
+      "correctAnswer": "Roja",
+      "explanation": "La tarjeta roja indica expulsión del jugador del partido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-027",
+      "number": 27,
+      "topic": "Baloncesto",
+      "concept": "baloncesto_lanzamiento_de_tres_puntos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama una anotación de tres puntos en baloncesto?",
+      "options": [
+        "Tiro libre",
+        "Triple",
+        "Doble falta",
+        "Saque de banda"
+      ],
+      "correctAnswer": "Triple",
+      "explanation": "Un lanzamiento convertido desde detrás de la línea de tres puntos vale tres unidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-028",
+      "number": 28,
+      "topic": "Gimnasia",
+      "concept": "gimnasia_artistica_mesa_de_salto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué aparato se utiliza en gimnasia artística femenina para realizar saltos?",
+      "options": [
+        "Anillas",
+        "Caballo con arzones",
+        "Mesa de salto",
+        "Barra fija"
+      ],
+      "correctAnswer": "Mesa de salto",
+      "explanation": "La mesa de salto es uno de los aparatos de la gimnasia artística femenina.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-029",
+      "number": 29,
+      "topic": "Tenis",
+      "concept": "tenis_cero_se_anuncia_love",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se denomina el resultado cero en la puntuación del tenis?",
+      "options": [
+        "Iguales",
+        "Deuce",
+        "Ventaja",
+        "Love"
+      ],
+      "correctAnswer": "Love",
+      "explanation": "En la terminología tradicional del tenis, cero se anuncia como “love”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-030",
+      "number": 30,
+      "topic": "Verdadero o falso · Natación",
+      "concept": "natacion_estilo_libre_permite_elegir_tecnica",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En natación, las competencias de estilo libre permiten al nadador elegir el estilo que utiliza.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En estilo libre se puede nadar con cualquier técnica, aunque el crol suele ser la más rápida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-031",
+      "number": 31,
+      "topic": "Ciclismo",
+      "concept": "quintana_gana_giro_italia_2014",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ciclista colombiano ganó el Giro de Italia en 2014?",
+      "options": [
+        "Nairo Quintana",
+        "Egan Bernal",
+        "Rigoberto Urán",
+        "Lucho Herrera"
+      ],
+      "correctAnswer": "Nairo Quintana",
+      "explanation": "Nairo Quintana ganó la clasificación general del Giro de Italia en 2014.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-032",
+      "number": 32,
+      "topic": "Verdadero o falso · Olimpismo",
+      "concept": "primeros_juegos_olimpicos_modernos_atenas_1896",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los Juegos Olímpicos modernos se celebraron por primera vez en Atenas en 1896.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Atenas fue sede de la primera edición de los Juegos Olímpicos modernos en 1896.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-033",
+      "number": 33,
+      "topic": "Fútbol colombiano",
+      "concept": "atletico_nacional_sede_medellin",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué ciudad juega como local el equipo Atlético Nacional?",
+      "options": [
+        "Cali",
+        "Medellín",
+        "Barranquilla",
+        "Bogotá"
+      ],
+      "correctAnswer": "Medellín",
+      "explanation": "Atlético Nacional es un club de Medellín, Antioquia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-034",
+      "number": 34,
+      "topic": "Fútbol y defensa",
+      "concept": "defensa_zonal_protege_espacios_asignados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué busca principalmente una defensa zonal?",
+      "options": [
+        "Seguir a un rival por toda la cancha",
+        "Dejar libre el centro del área",
+        "Proteger espacios asignados",
+        "Evitar que el equipo salga jugando"
+      ],
+      "correctAnswer": "Proteger espacios asignados",
+      "explanation": "En la defensa zonal, cada jugador protege un área y responde a los movimientos que ocurren en ella.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-035",
+      "number": 35,
+      "topic": "Baloncesto y rebote",
+      "concept": "bloqueo_de_rebote_gana_posicion_defensiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acción ayuda a conseguir un rebote defensivo?",
+      "options": [
+        "Saltar antes del lanzamiento",
+        "Seguir el balón sin tomar posición",
+        "Esperar a que el rival capture el balón",
+        "Bloquear al rival con posición legal"
+      ],
+      "correctAnswer": "Bloquear al rival con posición legal",
+      "explanation": "Ocupar legalmente el espacio entre el rival y el aro ayuda a asegurar el rebote.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-036",
+      "number": 36,
+      "topic": "Voleibol y recepción",
+      "concept": "recepcion_controlada_habilita_armado_de_ataque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué suele dirigirse la recepción hacia el colocador?",
+      "options": [
+        "Para facilitar la preparación del ataque",
+        "Para detener el juego",
+        "Para cambiar el equipo que saca",
+        "Para que el balón toque el suelo"
+      ],
+      "correctAnswer": "Para facilitar la preparación del ataque",
+      "explanation": "Una recepción controlada permite que el colocador organice el siguiente golpe ofensivo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-037",
+      "number": 37,
+      "topic": "Atletismo",
+      "concept": "distancia_determina_ritmo_y_distribucion_del_esfuerzo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia principal existe entre una carrera de velocidad y una de fondo?",
+      "options": [
+        "El uso de zapatos",
+        "La distancia y la distribución del esfuerzo",
+        "La presencia de espectadores",
+        "El sentido de circulación en la pista"
+      ],
+      "correctAnswer": "La distancia y la distribución del esfuerzo",
+      "explanation": "La distancia modifica cómo se distribuye el esfuerzo y qué ritmo puede sostener el atleta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-038",
+      "number": 38,
+      "topic": "Ciclismo de ruta",
+      "concept": "gregario_apoya_tacticamente_al_lider",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarea cumple un gregario dentro de un equipo ciclista?",
+      "options": [
+        "Arbitrar la carrera",
+        "Marcar el tiempo oficial",
+        "Apoyar tácticamente al líder",
+        "Cambiar el recorrido de la etapa"
+      ],
+      "correctAnswer": "Apoyar tácticamente al líder",
+      "explanation": "Un gregario ayuda al líder con tareas como protegerlo del viento o colaborar en la persecución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-039",
+      "number": 39,
+      "topic": "Deportes de combate",
+      "concept": "boxeo_nocaut_detiene_combate_por_incapacidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa ganar por nocaut en boxeo?",
+      "options": [
+        "Acumular más faltas",
+        "Terminar la pelea por decisión del público",
+        "Repetir el último asalto",
+        "Que el rival no pueda continuar tras una caída"
+      ],
+      "correctAnswer": "Que el rival no pueda continuar tras una caída",
+      "explanation": "El árbitro detiene el combate cuando un boxeador no puede continuar de manera segura tras una caída.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-040",
+      "number": 40,
+      "topic": "Verdadero o falso · Técnica deportiva",
+      "concept": "tecnica_deportiva_se_adapta_a_tarea_y_contexto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una técnica eficaz debe adaptarse a la tarea y a las condiciones de la actividad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La ejecución útil depende del objetivo, el entorno y las capacidades de quien practica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-041",
+      "number": 41,
+      "topic": "Fútbol y táctica",
+      "concept": "pase_atras_reorganiza_salida_ante_presion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede lograr un pase hacia atrás cuando el rival presiona adelante?",
+      "options": [
+        "Reiniciar la jugada y cambiar el ángulo de salida",
+        "Anular automáticamente la presión",
+        "Convertir el saque en gol",
+        "Impedir cualquier ataque posterior"
+      ],
+      "correctAnswer": "Reiniciar la jugada y cambiar el ángulo de salida",
+      "explanation": "Circular el balón hacia atrás puede dar tiempo para reorganizarse y encontrar otra ruta de avance.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-042",
+      "number": 42,
+      "topic": "Arbitraje en baloncesto",
+      "concept": "baloncesto_contacto_ilegal_se_sanciona_como_falta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sanción corresponde normalmente a un contacto ilegal que afecta al rival?",
+      "options": [
+        "Gol de campo",
+        "Falta personal",
+        "Fuera de juego",
+        "Saque neutral"
+      ],
+      "correctAnswer": "Falta personal",
+      "explanation": "El contacto ilegal se sanciona como falta personal según las circunstancias y las reglas aplicables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-043",
+      "number": 43,
+      "topic": "Verdadero o falso · Deporte y género",
+      "concept": "categorias_deportivas_organizan_enfrentamientos_comparables",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las reglas de una competencia pueden organizarse en categorías para favorecer enfrentamientos comparables.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Categorías como edad, peso o modalidad pueden ayudar a organizar competencias; deben aplicarse con criterios claros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-044",
+      "number": 44,
+      "topic": "Preparación física",
+      "concept": "recuperacion_permite_adaptacion_a_carga",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve un periodo de recuperación dentro de un plan de entrenamiento?",
+      "options": [
+        "Evitar toda adaptación física",
+        "Reemplazar la práctica deportiva",
+        "Favorecer la recuperación del organismo",
+        "Garantizar que nunca haya lesiones"
+      ],
+      "correctAnswer": "Favorecer la recuperación del organismo",
+      "explanation": "La recuperación permite que el cuerpo se adapte al esfuerzo y ayuda a manejar la carga de entrenamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-045",
+      "number": 45,
+      "topic": "Estadística de equipo",
+      "concept": "puntos_recibidos_complementan_analisis_de_marcador",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo anota mucho, pero también recibe muchos puntos. ¿Qué indicador complementa el puntaje a favor?",
+      "options": [
+        "Cantidad de uniformes",
+        "Tiempo de viaje",
+        "Número de espectadores",
+        "Puntos recibidos"
+      ],
+      "correctAnswer": "Puntos recibidos",
+      "explanation": "Los puntos recibidos ayudan a analizar el desempeño defensivo y a contextualizar el marcador anotado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-046",
+      "number": 46,
+      "topic": "Lectura de juego",
+      "concept": "pase_al_perimetro_libre_ataca_defensa_congestionada",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En baloncesto, la defensa se reúne cerca del aro y deja libre a un compañero en el perímetro. ¿Qué decisión puede aprovecharlo?",
+      "options": [
+        "Pasar al compañero libre para un lanzamiento",
+        "Botar hacia la zona más congestionada",
+        "Entregar el balón al árbitro",
+        "Lanzar desde detrás de la propia cancha"
+      ],
+      "correctAnswer": "Pasar al compañero libre para un lanzamiento",
+      "explanation": "Pasar al jugador desmarcado puede aprovechar el espacio que dejó la defensa concentrada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-047",
+      "number": 47,
+      "topic": "Seguridad y entrenamiento",
+      "concept": "dolor_agudo_requiere_detenerse_y_comunicar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una deportista siente dolor agudo durante un ejercicio. ¿Qué respuesta es más segura?",
+      "options": [
+        "Aumentar la intensidad para terminar pronto",
+        "Detenerse y avisar al responsable",
+        "Ocultar el dolor al entrenador",
+        "Continuar sin modificar el movimiento"
+      ],
+      "correctAnswer": "Detenerse y avisar al responsable",
+      "explanation": "Detener la actividad y comunicar el dolor permite valorar la situación antes de agravar una posible lesión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-048",
+      "number": 48,
+      "topic": "Juego limpio",
+      "concept": "reconocer_contacto_no_observado_demuestra_honestidad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un jugador reconoce que tocó el balón antes de que saliera, aunque el árbitro no lo vio. ¿Qué acción refleja juego limpio?",
+      "options": [
+        "Negarlo para conservar la ventaja",
+        "Culpar al rival",
+        "Informarlo con respeto",
+        "Abandonar el encuentro"
+      ],
+      "correctAnswer": "Informarlo con respeto",
+      "explanation": "Reconocer una acción propia y comunicarla honestamente demuestra respeto por el juego y sus participantes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-049",
+      "number": 49,
+      "topic": "Estrategia de carrera",
+      "concept": "ritmo_inicial_controlado_sostiene_velocidad_final",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una carrera, una atleta acelera demasiado al inicio y pierde velocidad al final. ¿Qué ajuste puede probar?",
+      "options": [
+        "Comenzar aún más rápido",
+        "Evitar entrenar el ritmo",
+        "Cambiar de carril cada vuelta",
+        "Distribuir mejor el esfuerzo"
+      ],
+      "correctAnswer": "Distribuir mejor el esfuerzo",
+      "explanation": "Ajustar el ritmo inicial puede ayudar a sostener la velocidad durante toda la distancia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Análisis deportivo",
+      "concept": "victoria_no_demuestra_correccion_de_toda_tactica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un equipo gana, todas sus decisiones tácticas necesariamente fueron correctas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El resultado depende de muchos factores; revisar decisiones requiere analizar acciones y contexto, no solo el marcador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-051",
+      "number": 51,
+      "topic": "Fútbol",
+      "concept": "futbol_fuera_de_juego_sanciona_intervencion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué infracción señala normalmente el árbitro cuando un jugador atacante está en posición adelantada y participa en la jugada?",
+      "options": [
+        "Fuera de juego",
+        "Mano del portero",
+        "Saque de esquina",
+        "Tiro penal"
+      ],
+      "correctAnswer": "Fuera de juego",
+      "explanation": "El fuera de juego se sanciona cuando un jugador en posición adelantada interviene en la acción, según la regla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-052",
+      "number": 52,
+      "topic": "Rugby",
+      "concept": "rugby_union_pase_con_las_manos_hacia_atras",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué parte del cuerpo se lleva y pasa principalmente el balón en rugby?",
+      "options": [
+        "Solo con los pies",
+        "Con las manos para correr y pasar hacia atrás",
+        "Con la cabeza",
+        "Con un bastón"
+      ],
+      "correctAnswer": "Con las manos para correr y pasar hacia atrás",
+      "explanation": "En el rugby union se puede correr con el balón y pasarlo con las manos hacia atrás o lateralmente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-053",
+      "number": 53,
+      "topic": "Golf",
+      "concept": "golf_utiliza_palos_para_golpear_bola",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento utiliza un golfista para golpear la pelota?",
+      "options": [
+        "Raqueta",
+        "Bate",
+        "Palo de golf",
+        "Stick de hockey"
+      ],
+      "correctAnswer": "Palo de golf",
+      "explanation": "Los palos de golf se diseñan para ejecutar distintos tipos de golpes en el recorrido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-054",
+      "number": 54,
+      "topic": "Verdadero o falso · Tenis",
+      "concept": "tenis_individual_un_jugador_por_lado",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En tenis individual, cada lado de la cancha tiene un jugador.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El partido individual enfrenta a una persona contra otra; el dobles enfrenta parejas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-055",
+      "number": 55,
+      "topic": "Levantamiento de pesas",
+      "concept": "halterofilia_dos_tiempos_tiron_y_envion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué levantamiento olímpico combina un primer tirón y luego un envión?",
+      "options": [
+        "Dos tiempos",
+        "Salto alto",
+        "Lanzamiento de disco",
+        "Carrera de relevos"
+      ],
+      "correctAnswer": "Dos tiempos",
+      "explanation": "En el dos tiempos, la barra se lleva primero al hombro y luego sobre la cabeza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-056",
+      "number": 56,
+      "topic": "Deporte colombiano",
+      "concept": "urrutia_oro_olimpico_halterofilia_2000",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué deporte ganó María Isabel Urrutia una medalla de oro olímpica en 2000?",
+      "options": [
+        "Atletismo",
+        "Levantamiento de pesas",
+        "Ciclismo de pista",
+        "Judo"
+      ],
+      "correctAnswer": "Levantamiento de pesas",
+      "explanation": "Urrutia obtuvo el oro en levantamiento de pesas en los Juegos Olímpicos de Sídney 2000.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-057",
+      "number": 57,
+      "topic": "Verdadero o falso · Natación",
+      "concept": "relevo_natacion_distribuye_distancia_entre_nadadores",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En una carrera de relevos de natación, cada integrante cubre una parte de la distancia total.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los relevos distribuyen la distancia entre nadadores que se turnan en la misma prueba.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-058",
+      "number": 58,
+      "topic": "Deporte paralímpico",
+      "concept": "goalball_usa_balon_con_cascabeles",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objeto sonoro ayuda a localizar el balón en goalball?",
+      "options": [
+        "Silbato dentro de la red",
+        "Cascabeles en el uniforme",
+        "Campana en la portería",
+        "Balón con cascabeles"
+      ],
+      "correctAnswer": "Balón con cascabeles",
+      "explanation": "El balón de goalball tiene cascabeles internos para que los jugadores sigan su trayectoria mediante el sonido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-059",
+      "number": 59,
+      "topic": "Fútbol y reanudaciones",
+      "concept": "falta_directa_defensiva_en_area_penal_concede_penal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una falta directa sancionable ocurre dentro del área penal del equipo defensor. ¿Qué reanudación corresponde normalmente?",
+      "options": [
+        "Saque de banda",
+        "Saque de meta",
+        "Tiro penal",
+        "Tiro de esquina"
+      ],
+      "correctAnswer": "Tiro penal",
+      "explanation": "Una falta directa cometida por la defensa dentro de su área penal se sanciona con tiro penal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-060",
+      "number": 60,
+      "topic": "Rugby y espacio",
+      "concept": "rugby_mueve_defensa_y_abre_anchura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto táctico puede tener mover el balón hacia los lados en rugby?",
+      "options": [
+        "Detener el cronómetro del partido",
+        "Anular la necesidad de apoyar al portador",
+        "Convertir cualquier pase en anotación",
+        "Crear espacio lejos de la concentración defensiva"
+      ],
+      "correctAnswer": "Crear espacio lejos de la concentración defensiva",
+      "explanation": "Desplazar el ataque puede obligar a la defensa a cubrir más anchura y abrir espacios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-061",
+      "number": 61,
+      "topic": "Reglas del tenis",
+      "concept": "tenis_40_40_requiere_dos_puntos_consecutivos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurre cuando el marcador llega a 40–40 en un juego con ventaja?",
+      "options": [
+        "Se llama iguales o deuce",
+        "El juego termina automáticamente",
+        "Se cambia de cancha de inmediato",
+        "El sacador pierde un punto"
+      ],
+      "correctAnswer": "Se llama iguales o deuce",
+      "explanation": "Con 40–40, un jugador necesita ganar dos puntos consecutivos para cerrar el juego con ventaja.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-062",
+      "number": 62,
+      "topic": "Ajedrez y deporte",
+      "concept": "ajedrez_jaque_mate_sin_respuesta_legal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa hacer jaque mate en ajedrez?",
+      "options": [
+        "Capturar cualquier pieza rival",
+        "Atacar al rey sin posibilidad legal de escapar",
+        "Repetir tres veces una jugada",
+        "Cambiar una torre por un peón"
+      ],
+      "correctAnswer": "Atacar al rey sin posibilidad legal de escapar",
+      "explanation": "Hay jaque mate cuando el rey está amenazado y no existe una respuesta legal que lo salve.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-063",
+      "number": 63,
+      "topic": "Deporte paralímpico",
+      "concept": "goalball_antifaces_igualan_condicion_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué se utilizan antifaces opacos en goalball?",
+      "options": [
+        "Para distinguir equipos por color",
+        "Para proteger del sol exterior",
+        "Para igualar la visión de los participantes",
+        "Para indicar el turno de saque"
+      ],
+      "correctAnswer": "Para igualar la visión de los participantes",
+      "explanation": "Los antifaces permiten que atletas con distintos niveles de visión compitan en condiciones visuales equivalentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-064",
+      "number": 64,
+      "topic": "Gimnasia artística",
+      "concept": "gimnasia_juzga_ejecucion_y_dificultad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué evalúa principalmente un juez al calificar una rutina de gimnasia?",
+      "options": [
+        "El precio del equipo",
+        "La cantidad de público",
+        "El tiempo de viaje del equipo",
+        "La ejecución y dificultad de los elementos"
+      ],
+      "correctAnswer": "La ejecución y dificultad de los elementos",
+      "explanation": "La calificación considera aspectos técnicos de ejecución y dificultad de la rutina según el código vigente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-065",
+      "number": 65,
+      "topic": "Verdadero o falso · Entrenamiento",
+      "concept": "practica_con_retroalimentacion_mejora_tecnica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La repetición de una habilidad con retroalimentación puede ayudar a mejorar la técnica deportiva.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Practicar y recibir información sobre la ejecución permite corregir movimientos y consolidar habilidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-066",
+      "number": 66,
+      "topic": "Ciclismo y estrategia",
+      "concept": "persecucion_por_equipos_alterna_liderazgo_y_esfuerzo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una persecución por equipos, ¿por qué los ciclistas alternan quién va al frente?",
+      "options": [
+        "Para dejar que solo uno complete la prueba",
+        "Para distribuir el esfuerzo y sostener el ritmo del equipo",
+        "Para evitar que el equipo use una estrategia",
+        "Para cambiar las reglas de la competencia"
+      ],
+      "correctAnswer": "Para distribuir el esfuerzo y sostener el ritmo del equipo",
+      "explanation": "Quien va al frente enfrenta mayor resistencia del aire; alternar posiciones reparte parte del esfuerzo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-067",
+      "number": 67,
+      "topic": "Deporte y descanso",
+      "concept": "falta_de_recuperacion_acumula_fatiga",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué riesgo puede aumentar si una persona entrena intensamente sin recuperación suficiente?",
+      "options": [
+        "Acumular cansancio y elevar el riesgo de lesión",
+        "Eliminar toda fatiga",
+        "Mejorar automáticamente la técnica",
+        "Evitar cualquier adaptación física"
+      ],
+      "correctAnswer": "Acumular cansancio y elevar el riesgo de lesión",
+      "explanation": "La carga excesiva sin descanso puede acumular fatiga y dificultar la recuperación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-068",
+      "number": 68,
+      "topic": "Verdadero o falso · Datos y rendimiento",
+      "concept": "estadisticas_deportes_distintos_no_son_directamente_comparables",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Comparar estadísticas entre deportes distintos siempre permite concluir quién es mejor deportista.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cada deporte mide tareas diferentes; las estadísticas deben interpretarse en su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-069",
+      "number": 69,
+      "topic": "Fútbol y ventaja",
+      "concept": "ley_de_ventaja_conserva_oportunidad_favorable",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué busca el árbitro al aplicar la ley de ventaja?",
+      "options": [
+        "Detener el juego ante toda infracción",
+        "Conceder siempre un penalti",
+        "Permitir seguir si el equipo afectado conserva una oportunidad favorable",
+        "Repetir el partido desde el inicio"
+      ],
+      "correctAnswer": "Permitir seguir si el equipo afectado conserva una oportunidad favorable",
+      "explanation": "Si detener el juego perjudicaría al equipo que recibió la falta, el árbitro puede permitir que continúe la acción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-070",
+      "number": 70,
+      "topic": "Deporte y convivencia",
+      "concept": "comunicacion_respetuosa_coordina_equipo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué práctica ayuda a reducir conflictos entre compañeros durante una competencia?",
+      "options": [
+        "Culpar a quien comete un error",
+        "Ignorar todas las decisiones del árbitro",
+        "Ocultar desacuerdos hasta el final",
+        "Comunicarse con respeto y acordar funciones"
+      ],
+      "correctAnswer": "Comunicarse con respeto y acordar funciones",
+      "explanation": "La comunicación respetuosa y la claridad de roles ayudan a coordinar al equipo y resolver desacuerdos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-071",
+      "number": 71,
+      "topic": "Goalball",
+      "concept": "goalball_usa_sonido_para_anticipar_direccion_del_balon",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "El balón rueda hacia el lado izquierdo de la portería. ¿Qué respuesta defensiva aprovecha mejor la información disponible?",
+      "options": [
+        "Orientarse por el sonido y cubrir la trayectoria",
+        "Quitarse el antifaz para mirar",
+        "Abandonar la portería",
+        "Esperar a que el balón se detenga"
+      ],
+      "correctAnswer": "Orientarse por el sonido y cubrir la trayectoria",
+      "explanation": "El sonido del balón ayuda a anticipar su dirección y cubrir el sector correspondiente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-072",
+      "number": 72,
+      "topic": "Lanzamientos de atletismo",
+      "concept": "lanzamiento_es_nulo_si_atleta_sale_por_frente",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una prueba de lanzamientos, un atleta pisa fuera del círculo por delante antes de que el implemento aterrice. ¿Qué ocurre con el intento?",
+      "options": [
+        "Se repite automáticamente con el mismo resultado",
+        "Se considera nulo",
+        "Se mide desde el borde del círculo",
+        "Se suma una distancia de penalización"
+      ],
+      "correctAnswer": "Se considera nulo",
+      "explanation": "Salir por delante del círculo antes de que el implemento caiga constituye una falta y anula el intento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-073",
+      "number": 73,
+      "topic": "Inclusión",
+      "concept": "senal_visual_facilita_participacion_auditiva",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una clase, una estudiante con discapacidad auditiva participa en un juego de reacción. ¿Qué adaptación favorece que reciba la señal de inicio?",
+      "options": [
+        "Excluirla del juego",
+        "Darle la señal solo cuando ya empezó",
+        "Añadir una señal visual acordada",
+        "Cambiar el resultado antes de jugar"
+      ],
+      "correctAnswer": "Añadir una señal visual acordada",
+      "explanation": "Una señal visual equivalente permite responder al mismo inicio de la actividad que el resto del grupo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-074",
+      "number": 74,
+      "topic": "Bádminton y posicionamiento",
+      "concept": "badminton_retorna_a_posicion_base_tras_golpear",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una rival alterna golpes cortos cerca de la red y golpes largos al fondo. ¿Qué ajuste puede ayudar a responder?",
+      "options": [
+        "Esperar siempre junto a la línea de fondo",
+        "Mirar hacia otro lado entre golpes",
+        "Permanecer inmóvil en la mitad de la cancha",
+        "Recuperar una posición equilibrada tras cada golpe"
+      ],
+      "correctAnswer": "Recuperar una posición equilibrada tras cada golpe",
+      "explanation": "Volver a una base equilibrada después de golpear facilita cubrir distintas zonas de la cancha.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-075",
+      "number": 75,
+      "topic": "Verdadero o falso · Juego limpio",
+      "concept": "enganar_arbitro_contradice_juego_limpio",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una victoria obtenida al engañar deliberadamente al árbitro demuestra buen juego limpio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El juego limpio exige honestidad y respeto por las reglas, incluso cuando una infracción podría pasar inadvertida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-076",
+      "number": 76,
+      "topic": "Hidratación",
+      "concept": "sudor_pierde_agua_y_sales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sustancia pierde principalmente el cuerpo al sudar durante el ejercicio?",
+      "options": [
+        "Agua",
+        "Calcio de los huesos",
+        "Oxígeno de la sangre",
+        "Proteína muscular"
+      ],
+      "correctAnswer": "Agua",
+      "explanation": "El sudor contiene principalmente agua y sales; la pérdida depende de la duración y las condiciones del ejercicio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-077",
+      "number": 77,
+      "topic": "Calentamiento",
+      "concept": "calentamiento_inicia_con_movimiento_suave",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál actividad es apropiada para iniciar un calentamiento gradual?",
+      "options": [
+        "Un sprint máximo sin preparación",
+        "Trote suave y movimientos dinámicos",
+        "Levantar la carga más pesada",
+        "Permanecer inmóvil varios minutos"
+      ],
+      "correctAnswer": "Trote suave y movimientos dinámicos",
+      "explanation": "Empezar con movimientos suaves y aumentar la intensidad prepara progresivamente para la actividad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-078",
+      "number": 78,
+      "topic": "Fútbol de salón",
+      "concept": "futbol_sala_objetivo_anotar_con_balon",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objeto se intenta introducir en la portería durante un partido de fútbol sala?",
+      "options": [
+        "Disco",
+        "Pelota ovalada",
+        "Balón",
+        "Volante"
+      ],
+      "correctAnswer": "Balón",
+      "explanation": "El fútbol sala se juega con un balón y el objetivo es anotar en la portería rival.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-079",
+      "number": 79,
+      "topic": "Natación",
+      "concept": "estilo_espalda_se_nada_boca_arriba",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué estilo de natación suele realizarse sobre la espalda?",
+      "options": [
+        "Pecho",
+        "Mariposa",
+        "Libre",
+        "Espalda"
+      ],
+      "correctAnswer": "Espalda",
+      "explanation": "En el estilo espalda, el nadador avanza boca arriba durante la prueba.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-080",
+      "number": 80,
+      "topic": "Verdadero o falso · Hidratación",
+      "concept": "hidratacion_depende_de_esfuerzo_y_ambiente",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La necesidad de hidratarse puede variar según el calor, la duración y la intensidad del ejercicio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las condiciones ambientales y el esfuerzo influyen en la cantidad de líquido que pierde el cuerpo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-081",
+      "number": 81,
+      "topic": "Juegos Olímpicos",
+      "concept": "juegos_olimpicos_verano_ciclo_cuatrienal",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cada cuántos años se celebran normalmente los Juegos Olímpicos de verano?",
+      "options": [
+        "Cada cuatro años",
+        "Cada dos años",
+        "Cada cinco años",
+        "Cada seis años"
+      ],
+      "correctAnswer": "Cada cuatro años",
+      "explanation": "Los Juegos Olímpicos de verano se realizan en un ciclo de cuatro años.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-082",
+      "number": 82,
+      "topic": "Seguridad deportiva",
+      "concept": "revisar_estado_y_estabilidad_de_equipo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Antes de usar un aparato de entrenamiento, ¿qué conviene revisar?",
+      "options": [
+        "El color de la marca",
+        "Su estabilidad y estado",
+        "El precio original",
+        "El lugar donde fue fabricado"
+      ],
+      "correctAnswer": "Su estabilidad y estado",
+      "explanation": "Comprobar estabilidad y posibles daños ayuda a reducir riesgos durante el uso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Descanso",
+      "concept": "descanso_es_parte_de_recuperacion_deportiva",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Dormir y descansar forman parte de la recuperación de una persona que entrena.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El descanso ayuda al organismo a recuperarse del esfuerzo y sostener la práctica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-084",
+      "number": 84,
+      "topic": "Deportes de equipo",
+      "concept": "futbol_salida_lateral_se_reanuda_con_saque_de_banda",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acción permite reanudar un partido de fútbol después de que el balón sale por la línea lateral?",
+      "options": [
+        "Tiro de esquina",
+        "Saque de meta",
+        "Saque de banda",
+        "Tiro penal"
+      ],
+      "correctAnswer": "Saque de banda",
+      "explanation": "El juego se reanuda con un saque de banda para el equipo que no tocó último el balón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-085",
+      "number": 85,
+      "topic": "Entrenamiento",
+      "concept": "progresion_de_carga_se_ajusta_a_adaptacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica hace progresiva una carga de entrenamiento?",
+      "options": [
+        "Mantenerla igual aunque mejore el rendimiento",
+        "Eliminar los periodos de recuperación",
+        "Aumentarla al máximo cada día",
+        "Incrementarla poco a poco según la adaptación"
+      ],
+      "correctAnswer": "Incrementarla poco a poco según la adaptación",
+      "explanation": "La progresión gradual permite ajustar la exigencia a la respuesta de quien entrena.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-086",
+      "number": 86,
+      "topic": "Nutrición deportiva",
+      "concept": "alimentacion_considera_demanda_y_recuperacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la alimentación de una deportista debe considerar el tipo y la duración de su actividad?",
+      "options": [
+        "Las demandas de energía y recuperación pueden variar",
+        "Todos los deportes requieren exactamente lo mismo",
+        "La actividad física elimina la necesidad de comer",
+        "El horario reemplaza el valor de los alimentos"
+      ],
+      "correctAnswer": "Las demandas de energía y recuperación pueden variar",
+      "explanation": "Las necesidades pueden cambiar según la actividad, el esfuerzo y las características individuales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-087",
+      "number": 87,
+      "topic": "Deporte adaptado",
+      "concept": "adaptacion_escolar_facilita_participacion_segura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué describe mejor una adaptación razonable de una actividad deportiva escolar?",
+      "options": [
+        "Cambiar el objetivo para que nadie participe",
+        "Ajustar elementos para permitir participación segura",
+        "Asignar el mismo rol pasivo a quien lo solicite",
+        "Eliminar todas las reglas del juego"
+      ],
+      "correctAnswer": "Ajustar elementos para permitir participación segura",
+      "explanation": "Ajustar materiales, espacio o reglas puede facilitar la participación y conservar el propósito de la actividad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-088",
+      "number": 88,
+      "topic": "Psicología del deporte",
+      "concept": "meta_especifica_orienta_practica_y_seguimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué puede servir fijar una meta específica de entrenamiento?",
+      "options": [
+        "Sustituir toda retroalimentación",
+        "Evitar medir el progreso",
+        "Orientar la práctica hacia un objetivo observable",
+        "Garantizar un resultado competitivo"
+      ],
+      "correctAnswer": "Orientar la práctica hacia un objetivo observable",
+      "explanation": "Una meta concreta permite enfocar la práctica y revisar si hubo avances.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-089",
+      "number": 89,
+      "topic": "Reglamentos",
+      "concept": "reglas_comunicadas_crean_expectativas_compartidas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las reglas de una competencia deben comunicarse antes de iniciar?",
+      "options": [
+        "Para impedir que alguien haga preguntas",
+        "Para cambiar el resultado previsto",
+        "Para que cada equipo use su propio reglamento",
+        "Para que todos conozcan cómo se juega y se sanciona"
+      ],
+      "correctAnswer": "Para que todos conozcan cómo se juega y se sanciona",
+      "explanation": "Conocer las reglas ayuda a jugar con expectativas compartidas y entender las decisiones arbitrales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-090",
+      "number": 90,
+      "topic": "Tecnología deportiva",
+      "concept": "video_revisa_accion_visible_no_intencion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede aportar una repetición en video al análisis de una jugada?",
+      "options": [
+        "Permitir observar acciones que pasaron rápido",
+        "Demostrar por sí sola la intención del deportista",
+        "Reemplazar todos los criterios arbitrales",
+        "Cambiar retrospectivamente el reglamento"
+      ],
+      "correctAnswer": "Permitir observar acciones que pasaron rápido",
+      "explanation": "El video ayuda a revisar movimientos visibles, aunque no demuestra automáticamente la intención de una persona.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-091",
+      "number": 91,
+      "topic": "Deporte y estrategia",
+      "concept": "observar_patrones_orienta_ajuste_tactico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja tiene observar cómo responde un rival a una jugada repetida?",
+      "options": [
+        "Permite adivinar todo el partido",
+        "Ayuda a ajustar la siguiente decisión",
+        "Elimina la necesidad de entrenar",
+        "Garantiza que la jugada vuelva a funcionar"
+      ],
+      "correctAnswer": "Ayuda a ajustar la siguiente decisión",
+      "explanation": "Reconocer patrones puede orientar ajustes tácticos, pero no garantiza el resultado de una acción futura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-092",
+      "number": 92,
+      "topic": "Verdadero o falso · Igualdad deportiva",
+      "concept": "igualdad_de_material_no_siempre_garantiza_inclusion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Ofrecer exactamente el mismo material a todos siempre garantiza que una actividad sea inclusiva.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La inclusión puede requerir materiales o apoyos distintos para que todas las personas participen en condiciones adecuadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-093",
+      "number": 93,
+      "topic": "Estadística y contexto",
+      "concept": "minutos_jugados_contextualizan_puntos_totales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué se debe considerar el tiempo de juego al comparar puntos anotados por dos jugadores?",
+      "options": [
+        "Porque los puntos no se pueden contar",
+        "Porque el marcador cambia de deporte",
+        "Porque uno pudo jugar más minutos que el otro",
+        "Porque el tiempo elimina todas las diferencias"
+      ],
+      "correctAnswer": "Porque uno pudo jugar más minutos que el otro",
+      "explanation": "Comparar promedios por minuto o considerar el tiempo jugado da contexto a la cantidad total anotada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-094",
+      "number": 94,
+      "topic": "Verdadero o falso · Equipamiento",
+      "concept": "equipo_protector_reduce_pero_no_elimina_riesgo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El equipo de protección adecuado puede reducir ciertos riesgos, pero no elimina por completo la posibilidad de lesión.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El equipo puede proteger, aunque la técnica, el entorno y otros factores también influyen en la seguridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-095",
+      "number": 95,
+      "topic": "Competencia y aprendizaje",
+      "concept": "derrota_se_analiza_con_acciones_y_decisiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué análisis ayuda más a aprender después de una derrota?",
+      "options": [
+        "Culpar a una sola persona",
+        "Ignorar las decisiones tomadas",
+        "Revisar solo el resultado final",
+        "Examinar decisiones y acciones concretas del equipo"
+      ],
+      "correctAnswer": "Examinar decisiones y acciones concretas del equipo",
+      "explanation": "Revisar situaciones específicas ayuda a identificar qué funcionó y qué se puede mejorar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-096",
+      "number": 96,
+      "topic": "Entrenamiento y datos",
+      "concept": "estandarizar_distancia_mejora_comparacion_de_tiempos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo registra tiempos, pero cambia de distancia en cada práctica. ¿Qué ajuste permite comparar mejor su progreso?",
+      "options": [
+        "Medir la misma distancia en condiciones semejantes",
+        "Registrar únicamente quién llegó primero",
+        "Dejar de anotar los resultados",
+        "Cambiar la distancia sin identificarla"
+      ],
+      "correctAnswer": "Medir la misma distancia en condiciones semejantes",
+      "explanation": "Usar condiciones comparables ayuda a interpretar si el rendimiento cambió realmente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-097",
+      "number": 97,
+      "topic": "Inclusión y reglas",
+      "concept": "revisar_regla_que_impide_participacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un juego escolar, una regla impide que una estudiante use su apoyo de movilidad. ¿Qué debe hacer el grupo?",
+      "options": [
+        "Mantenerla aunque excluya a la estudiante",
+        "Revisarla y acordar un ajuste seguro",
+        "Cancelar toda actividad para siempre",
+        "Pedirle que observe sin participar"
+      ],
+      "correctAnswer": "Revisarla y acordar un ajuste seguro",
+      "explanation": "Revisar la regla con la estudiante y el grupo puede preservar la seguridad y abrir una forma real de participar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-098",
+      "number": 98,
+      "topic": "Decisión táctica",
+      "concept": "apoyos_y_espacios_conservan_posesion_ante_presion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo va ganando y el rival comienza a presionar más arriba. ¿Qué opción puede ayudar a conservar la posesión?",
+      "options": [
+        "Entregar el balón deliberadamente",
+        "Reunir a todos alrededor del portador",
+        "Usar pases de apoyo y buscar espacios libres",
+        "Renunciar a moverse sin balón"
+      ],
+      "correctAnswer": "Usar pases de apoyo y buscar espacios libres",
+      "explanation": "Ofrecer apoyos y moverse a espacios disponibles ayuda a mantener opciones de pase ante la presión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-099",
+      "number": 99,
+      "topic": "Cuidado corporal",
+      "concept": "mareo_en_calor_requiere_detenerse_y_pedir_ayuda",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un compañero se marea durante una práctica en un día caluroso. ¿Cuál es la respuesta más prudente?",
+      "options": [
+        "Pedirle que corra más para acostumbrarse",
+        "Dejarlo solo para no interrumpir",
+        "Ocultar el síntoma al responsable",
+        "Detener la actividad y avisar al adulto responsable"
+      ],
+      "correctAnswer": "Detener la actividad y avisar al adulto responsable",
+      "explanation": "Detenerse y pedir ayuda permite que una persona responsable valore los síntomas y decida qué atención requiere.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-100",
+      "number": 100,
+      "topic": "Verdadero o falso · Evaluación",
+      "concept": "resultado_aislado_no_predice_rendimiento_futuro",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una persona mejora su marca una vez, se puede asegurar que su entrenamiento futuro siempre tendrá el mismo resultado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El rendimiento cambia por práctica, descanso, salud y condiciones; un resultado aislado no garantiza resultados futuros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-101",
+      "number": 101,
+      "topic": "Maratón",
+      "concept": "maraton_distancia_oficial_42195_metros",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es la distancia oficial de una maratón?",
+      "options": [
+        "42,195 kilómetros",
+        "21,097 kilómetros",
+        "10 kilómetros",
+        "50 kilómetros"
+      ],
+      "correctAnswer": "42,195 kilómetros",
+      "explanation": "La distancia de maratón es de 42 kilómetros y 195 metros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-102",
+      "number": 102,
+      "topic": "Deportes de invierno",
+      "concept": "patinaje_artistico_se_realiza_sobre_hielo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué superficie se practica principalmente el patinaje artístico sobre hielo?",
+      "options": [
+        "Césped",
+        "Hielo",
+        "Arena",
+        "Madera"
+      ],
+      "correctAnswer": "Hielo",
+      "explanation": "El patinaje artístico se realiza sobre una pista de hielo usando patines con cuchillas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-103",
+      "number": 103,
+      "topic": "Bádminton",
+      "concept": "badminton_utiliza_volante",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objeto golpean los jugadores en bádminton?",
+      "options": [
+        "Balón de cuero",
+        "Disco de plástico",
+        "Volante",
+        "Pelota con bote alto"
+      ],
+      "correctAnswer": "Volante",
+      "explanation": "En bádminton se golpea un volante o pluma por encima de la red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-104",
+      "number": 104,
+      "topic": "Taekwondo",
+      "concept": "taekwondo_combate_con_patadas_y_punos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tipo de acciones caracteriza al taekwondo deportivo?",
+      "options": [
+        "Lanzamientos de disco",
+        "Remates con raqueta",
+        "Patadas y golpes controlados",
+        "Carreras de obstáculos"
+      ],
+      "correctAnswer": "Carreras de obstáculos",
+      "explanation": "El taekwondo es un arte marcial y deporte de combate que utiliza patadas y técnicas de puño controladas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-105",
+      "number": 105,
+      "topic": "Deportes de rueda",
+      "concept": "neumatico_bicicleta_contacta_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento mantiene el contacto de una bicicleta con el suelo?",
+      "options": [
+        "Neumático",
+        "Manubrio",
+        "Cadena",
+        "Pedal"
+      ],
+      "correctAnswer": "Neumático",
+      "explanation": "Las llantas y sus neumáticos ruedan sobre la superficie y permiten el desplazamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-106",
+      "number": 106,
+      "topic": "Verdadero o falso · Arbitraje",
+      "concept": "arbitro_no_modifica_reglas_para_favorecer_local",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un árbitro puede cambiar una regla oficial solo para favorecer al equipo local.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las reglas deben aplicarse de forma imparcial; un árbitro no puede modificarlas para favorecer a un equipo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-107",
+      "number": 107,
+      "topic": "Tenis de mesa",
+      "concept": "tenis_mesa_implemento_paleta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué implemento usa un jugador para golpear la pelota en tenis de mesa?",
+      "options": [
+        "Bate",
+        "Paleta",
+        "Guante",
+        "Stick"
+      ],
+      "correctAnswer": "Paleta",
+      "explanation": "La paleta se utiliza para golpear la pelota y enviarla sobre la red de la mesa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-108",
+      "number": 108,
+      "topic": "Verdadero o falso · Relevos de natación",
+      "concept": "relevo_combinado_nado_asigna_un_estilo_a_cada_integrante",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En un relevo combinado de natación, cada integrante compite con un estilo distinto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En esta prueba, los nadadores cubren espalda, pecho, mariposa y libre, en ese orden.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-109",
+      "number": 109,
+      "topic": "Baloncesto",
+      "concept": "salto_inicial_define_primera_posesion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objetivo tiene el salto entre dos al comienzo de un partido de baloncesto?",
+      "options": [
+        "Otorgar una canasta de dos puntos",
+        "Elegir quién será el árbitro",
+        "Decidir qué equipo obtiene primero la posesión",
+        "Detener el juego durante un minuto"
+      ],
+      "correctAnswer": "Decidir qué equipo obtiene primero la posesión",
+      "explanation": "El salto inicial determina qué equipo obtiene la primera posesión, según las reglas de la competencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-110",
+      "number": 110,
+      "topic": "Balonmano",
+      "concept": "balonmano_portero_defiende_con_todo_el_cuerpo_en_area",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja tiene el portero de balonmano dentro de su propia área?",
+      "options": [
+        "Puede anotar con las manos desde cualquier lugar",
+        "Puede abandonar el área con el balón en las manos",
+        "Puede detener el juego sin autorización",
+        "Puede tocar el balón con el cuerpo al defender en su área"
+      ],
+      "correctAnswer": "Puede tocar el balón con el cuerpo al defender en su área",
+      "explanation": "Dentro de su área, el portero tiene permisos especiales para defender, sujeto a las reglas del juego.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-111",
+      "number": 111,
+      "topic": "Relevos de atletismo",
+      "concept": "relevo_transfiere_testigo_en_zona",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué deben transferirse los corredores durante un relevo con testigo?",
+      "options": [
+        "El testigo dentro de la zona permitida",
+        "El número de carril",
+        "Los zapatos de competencia",
+        "La clasificación del equipo"
+      ],
+      "correctAnswer": "El testigo dentro de la zona permitida",
+      "explanation": "El testigo debe pasarse correctamente en la zona de transferencia establecida por el reglamento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-112",
+      "number": 112,
+      "topic": "Hockey sobre césped",
+      "concept": "hockey_sobre_cesped_usa_stick",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué implemento se juega hockey sobre césped?",
+      "options": [
+        "Raqueta encordada",
+        "Stick curvo",
+        "Bate redondo",
+        "Palo de golf"
+      ],
+      "correctAnswer": "Stick curvo",
+      "explanation": "Los jugadores usan un stick para conducir y golpear la bola.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-113",
+      "number": 113,
+      "topic": "Juegos Paralímpicos",
+      "concept": "clasificacion_paralimpica_considera_impacto_funcional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple la clasificación en el deporte paralímpico?",
+      "options": [
+        "Determinar el precio de las entradas",
+        "Ordenar atletas según sus capacidades funcionales para la prueba",
+        "Reemplazar las reglas deportivas",
+        "Elegir el país anfitrión"
+      ],
+      "correctAnswer": "Reemplazar las reglas deportivas",
+      "explanation": "La clasificación busca agrupar a los atletas de acuerdo con el impacto de su discapacidad en una disciplina.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-114",
+      "number": 114,
+      "topic": "Verdadero o falso · Fuerza",
+      "concept": "fuerza_se_entrena_con_varios_recursos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los ejercicios de fuerza solo pueden practicarse con máquinas de gimnasio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La fuerza también puede entrenarse con el peso corporal, bandas u otros recursos adecuados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-115",
+      "number": 115,
+      "topic": "Escalada deportiva",
+      "concept": "escalada_arnes_conecta_al_sistema_de_seguridad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento de seguridad conecta al escalador con la cuerda durante muchas rutas?",
+      "options": [
+        "Aro de natación",
+        "Cinturón de levantamiento",
+        "Canillera",
+        "Arnés"
+      ],
+      "correctAnswer": "Arnés",
+      "explanation": "El arnés permite conectar al escalador de manera segura al sistema de cuerda y aseguramiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-116",
+      "number": 116,
+      "topic": "Deportes de equipo",
+      "concept": "movimiento_coordinado_crea_opciones_de_ataque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja ofrece cambiar de posición de forma coordinada durante un juego?",
+      "options": [
+        "Puede crear nuevas opciones de pase y ataque",
+        "Elimina la necesidad de defender",
+        "Impide que el rival se mueva",
+        "Garantiza anotar en la siguiente jugada"
+      ],
+      "correctAnswer": "Puede crear nuevas opciones de pase y ataque",
+      "explanation": "Los movimientos coordinados pueden abrir espacios y ofrecer apoyos distintos al equipo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-117",
+      "number": 117,
+      "topic": "Skateboarding",
+      "concept": "skateboarding_juzga_ejecucion_y_dificultad_de_trucos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una competencia de skateboarding centrada en trucos, ¿qué se evalúa principalmente?",
+      "options": [
+        "El número de espectadores",
+        "La ejecución y dificultad de las maniobras",
+        "La distancia recorrida en línea recta",
+        "El peso de la tabla"
+      ],
+      "correctAnswer": "La ejecución y dificultad de las maniobras",
+      "explanation": "Los jueces consideran características de los trucos, como su ejecución y dificultad, de acuerdo con el formato.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-118",
+      "number": 118,
+      "topic": "Verdadero o falso · Equipo deportivo",
+      "concept": "equipo_adecuado_influye_en_seguridad_y_desempeno",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El tamaño y las características del equipo pueden influir en la seguridad y el desempeño.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un equipo adecuado a la persona y a la actividad ayuda a realizar los movimientos y reduce algunos riesgos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-119",
+      "number": 119,
+      "topic": "Preparación física",
+      "concept": "tecnica_controlada_mejora_eficiencia_de_movimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué resultado puede tener practicar una técnica con atención a la postura y el control?",
+      "options": [
+        "Eliminar la necesidad de calentar",
+        "Evitar toda fatiga",
+        "Mejorar la eficiencia del movimiento",
+        "Garantizar ganar cualquier competencia"
+      ],
+      "correctAnswer": "Mejorar la eficiencia del movimiento",
+      "explanation": "Una ejecución controlada puede hacer el movimiento más eficiente, aunque el resultado depende de varios factores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-120",
+      "number": 120,
+      "topic": "Reglas y equidad",
+      "concept": "aplicacion_consistente_de_reglas_sostiene_equidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una regla debe aplicarse de manera consistente a ambos equipos?",
+      "options": [
+        "Para favorecer al que va perdiendo",
+        "Para reducir el tiempo de juego",
+        "Para evitar que exista un marcador",
+        "Para mantener condiciones justas de competencia"
+      ],
+      "correctAnswer": "Para mantener condiciones justas de competencia",
+      "explanation": "Aplicar el mismo criterio sostiene la equidad y la confianza en la competencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-121",
+      "number": 121,
+      "topic": "Baloncesto",
+      "concept": "baloncesto_mover_ilegalmente_pie_de_pivote_es_pasos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una jugadora recibe el balón y mueve ilegalmente el pie de pivote antes de pasarlo. ¿Qué infracción debe valorar el árbitro?",
+      "options": [
+        "Pasos",
+        "Fuera de juego",
+        "Saque de esquina",
+        "Doble toque de saque"
+      ],
+      "correctAnswer": "Pasos",
+      "explanation": "Desplazar ilegalmente el pie de pivote mientras se sostiene el balón constituye una violación de pasos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-122",
+      "number": 122,
+      "topic": "Competencia adaptada",
+      "concept": "acordar_modalidad_accesible_para_carrera_escolar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una carrera escolar incluye a un estudiante que usa silla de ruedas. ¿Qué decisión ayuda a organizar una competencia justa?",
+      "options": [
+        "Excluirlo para evitar ajustes",
+        "Acordar una modalidad y reglas seguras que permitan participar",
+        "Cambiar el resultado antes de competir",
+        "Pedirle que observe desde la meta"
+      ],
+      "correctAnswer": "Acordar una modalidad y reglas seguras que permitan participar",
+      "explanation": "Dialogar sobre una modalidad accesible y segura hace posible participar con criterios claros para todos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-123",
+      "number": 123,
+      "topic": "Interpretación de estadísticas",
+      "concept": "comparar_rendimiento_requiere_metricas_y_roles",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una jugadora anotó más puntos, pero también perdió más balones que otra. ¿Qué conclusión es más rigurosa?",
+      "options": [
+        "La primera fue mejor en todos los aspectos",
+        "La segunda no contribuyó al equipo",
+        "Hay que considerar varias métricas y el rol de cada una",
+        "Las estadísticas no sirven nunca"
+      ],
+      "correctAnswer": "Hay que considerar varias métricas y el rol de cada una",
+      "explanation": "Una sola cifra no resume el rendimiento; conviene analizar varias acciones y las funciones de cada jugadora.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-124",
+      "number": 124,
+      "topic": "Táctica de equipo",
+      "concept": "reorganizar_recepcion_contra_saque_corto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En voleibol, el rival envía saques cortos repetidos cerca de la red. ¿Qué ajuste puede ayudar a recibirlos?",
+      "options": [
+        "Alejar a todos los receptores de la red",
+        "Dejar el balón sin intentar jugarlo",
+        "Colocar a todos en la línea de fondo",
+        "Acercar o reorganizar la posición de recepción"
+      ],
+      "correctAnswer": "Acercar o reorganizar la posición de recepción",
+      "explanation": "Ajustar la formación hacia la zona de caída puede mejorar la cobertura de saques cortos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Lesiones",
+      "concept": "dolor_creciente_no_debe_ignorarse_en_ejercicio",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si el dolor aumenta al continuar un ejercicio, ignorarlo y mantener la misma carga es una estrategia segura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Aumentar el dolor es una señal para detenerse y comunicarlo a una persona responsable antes de continuar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-126",
+      "number": 126,
+      "topic": "Tenis de mesa",
+      "concept": "tenis_mesa_juego_a_once_con_diferencia_de_dos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿A cuántos puntos se juega normalmente un juego de tenis de mesa?",
+      "options": [
+        "Once, con diferencia de dos",
+        "Diez exactos",
+        "Quince, sin excepción",
+        "Veintiuno, siempre"
+      ],
+      "correctAnswer": "Once, con diferencia de dos",
+      "explanation": "Un juego suele ganarse al llegar a 11 puntos con una ventaja de al menos dos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-127",
+      "number": 127,
+      "topic": "Relevo de la antorcha",
+      "concept": "relevo_olimpico_transporta_llama",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué se transporta tradicionalmente en el relevo previo a los Juegos Olímpicos?",
+      "options": [
+        "Una medalla de cada deporte",
+        "La llama olímpica",
+        "El balón del partido inaugural",
+        "El cronómetro oficial"
+      ],
+      "correctAnswer": "La llama olímpica",
+      "explanation": "La llama se traslada en un relevo hasta la sede de los Juegos y se enciende en la ceremonia inaugural.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-128",
+      "number": 128,
+      "topic": "Béisbol",
+      "concept": "beisbol_recorrer_tres_bases_y_regresar_al_plato",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántas bases debe recorrer un bateador para anotar una carrera completa?",
+      "options": [
+        "Dos",
+        "Tres",
+        "Cuatro",
+        "Cinco"
+      ],
+      "correctAnswer": "Cuatro",
+      "explanation": "El corredor debe tocar primera, segunda, tercera y regresar al plato para anotar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-129",
+      "number": 129,
+      "topic": "Deportes de invierno",
+      "concept": "biatlon_combina_esqui_y_tiro",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué disciplina combina esquí de fondo y tiro con rifle?",
+      "options": [
+        "Curling",
+        "Patinaje de velocidad",
+        "Snowboard",
+        "Biatlón"
+      ],
+      "correctAnswer": "Biatlón",
+      "explanation": "El biatlón combina segmentos de esquí de fondo con rondas de tiro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-130",
+      "number": 130,
+      "topic": "Verdadero o falso · Reglas deportivas",
+      "concept": "reglas_deportivas_varian_segun_disciplina",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las reglas de todos los deportes son idénticas porque cualquier deporte usa un balón.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cada deporte establece reglas propias para sus objetivos, participantes y materiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-131",
+      "number": 131,
+      "topic": "Ciclismo de pista",
+      "concept": "ciclismo_de_pista_se_compite_en_velodromo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué lugar se disputan normalmente las pruebas de ciclismo de pista?",
+      "options": [
+        "Velódromo",
+        "Cancha de tenis",
+        "Campo de golf",
+        "Piscina olímpica"
+      ],
+      "correctAnswer": "Velódromo",
+      "explanation": "El velódromo es una pista ovalada diseñada para las carreras de ciclismo de pista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-132",
+      "number": 132,
+      "topic": "Verdadero o falso · Pentatlón moderno",
+      "concept": "pentatlon_moderno_integra_varias_disciplinas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El pentatlón moderno reúne varias disciplinas en una misma competencia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El formato integra más de una habilidad deportiva y ha cambiado con el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-133",
+      "number": 133,
+      "topic": "Ajedrez",
+      "concept": "reloj_de_ajedrez_controla_tiempo_de_reflexion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve el reloj en una partida de ajedrez con límite de tiempo?",
+      "options": [
+        "Registrar el valor de las piezas",
+        "Limitar el tiempo disponible para pensar",
+        "Determinar quién mueve primero",
+        "Indicar el color de cada casilla"
+      ],
+      "correctAnswer": "Limitar el tiempo disponible para pensar",
+      "explanation": "El reloj controla el tiempo de reflexión asignado a cada jugador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-134",
+      "number": 134,
+      "topic": "Atletismo",
+      "concept": "impulso_de_bala_empuja_esfera_metalica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué prueba consiste en lanzar una esfera metálica desde un círculo?",
+      "options": [
+        "Lanzamiento de jabalina",
+        "Salto con pértiga",
+        "Impulso de bala",
+        "Lanzamiento de disco"
+      ],
+      "correctAnswer": "Impulso de bala",
+      "explanation": "En el impulso de bala, el atleta empuja una esfera metálica desde un círculo de lanzamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-135",
+      "number": 135,
+      "topic": "Relevos",
+      "concept": "orden_de_relevo_considera_fortalezas_y_ritmo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el orden de los corredores puede importar en una carrera de relevos?",
+      "options": [
+        "El testigo cambia de peso según el turno",
+        "El último corredor no necesita recibirlo",
+        "Todos deben recorrer distancias distintas en toda modalidad",
+        "El equipo puede asignar tramos según fortalezas y ritmo"
+      ],
+      "correctAnswer": "El equipo puede asignar tramos según fortalezas y ritmo",
+      "explanation": "La estrategia de equipo considera la distancia, el ritmo y las fortalezas de sus integrantes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-136",
+      "number": 136,
+      "topic": "Baloncesto 3 × 3",
+      "concept": "baloncesto_3x3_usa_medio_campo_y_un_aro",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distingue al baloncesto 3 × 3 del formato tradicional de cinco jugadores?",
+      "options": [
+        "Se juega con un aro y equipos de tres en cancha",
+        "Se juega sin balón",
+        "No se anotan puntos",
+        "Se usan dos canchas simultáneas"
+      ],
+      "correctAnswer": "Se juega con un aro y equipos de tres en cancha",
+      "explanation": "El formato 3 × 3 enfrenta equipos de tres jugadores en media cancha y un solo aro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-137",
+      "number": 137,
+      "topic": "Salto largo",
+      "concept": "salto_largo_mide_distancia_de_batida_a_caida",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué intenta maximizar un atleta en el salto largo?",
+      "options": [
+        "El tiempo suspendido sin despegar",
+        "La distancia desde la tabla de batida hasta el aterrizaje",
+        "La altura de la pista",
+        "El número de pasos después del salto"
+      ],
+      "correctAnswer": "La distancia desde la tabla de batida hasta el aterrizaje",
+      "explanation": "La medición considera la distancia desde la línea de batida hasta la marca más cercana dejada al caer.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-138",
+      "number": 138,
+      "topic": "Verdadero o falso · Accesibilidad",
+      "concept": "adaptacion_preserva_objetivo_y_cambia_forma",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una adaptación puede cambiar la forma de realizar una actividad sin eliminar su objetivo principal.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Ajustar materiales o reglas puede mantener el propósito y facilitar que más personas participen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-139",
+      "number": 139,
+      "topic": "Hockey",
+      "concept": "stick_conduce_bola_en_hockey",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento se usa para conducir la bola en hockey sobre césped?",
+      "options": [
+        "Raqueta",
+        "Pie descalzo",
+        "Stick",
+        "Guante de béisbol"
+      ],
+      "correctAnswer": "Stick",
+      "explanation": "Los jugadores conducen y golpean la bola con un stick, respetando las reglas de uso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-140",
+      "number": 140,
+      "topic": "Verdadero o falso · Estrategia",
+      "concept": "eficacia_tactica_depende_de_rival_y_contexto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una táctica que funcionó en un partido necesariamente funcionará igual contra cualquier rival.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las tácticas se deben evaluar según el rival, los recursos disponibles y las condiciones del juego.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-141",
+      "number": 141,
+      "topic": "Escalada deportiva",
+      "concept": "asegurador_controla_cuerda_y_protege_escalador",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué responsabilidad cumple quien asegura a un escalador con cuerda?",
+      "options": [
+        "Controlar la cuerda y responder al movimiento del compañero",
+        "Elegir el color de la ruta",
+        "Subir primero sin revisar el sistema",
+        "Soltar la cuerda para ganar velocidad"
+      ],
+      "correctAnswer": "Controlar la cuerda y responder al movimiento del compañero",
+      "explanation": "La persona que asegura controla el sistema de cuerda para proteger al escalador durante la ruta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-142",
+      "number": 142,
+      "topic": "Deporte y salud mental",
+      "concept": "actividad_fisica_apoya_bienestar_sin_garantizarlo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede aportar la actividad física regular al bienestar?",
+      "options": [
+        "Garantizar que nadie sienta estrés",
+        "Contribuir al bienestar físico y emocional",
+        "Reemplazar toda atención de salud",
+        "Eliminar la necesidad de descansar"
+      ],
+      "correctAnswer": "Contribuir al bienestar físico y emocional",
+      "explanation": "La actividad física puede apoyar el bienestar, aunque no sustituye otras formas de cuidado cuando se necesitan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-143",
+      "number": 143,
+      "topic": "Arbitraje",
+      "concept": "explicacion_arbitral_aclara_criterio_y_continuidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué puede ser útil que un árbitro explique brevemente una decisión a los capitanes?",
+      "options": [
+        "Para cambiar el marcador a petición",
+        "Para permitir que un equipo ignore el reglamento",
+        "Para aclarar el criterio aplicado y facilitar la continuidad",
+        "Para reemplazar a los entrenadores"
+      ],
+      "correctAnswer": "Para aclarar el criterio aplicado y facilitar la continuidad",
+      "explanation": "Una explicación breve puede aclarar el criterio sin detener innecesariamente el desarrollo del juego.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-144",
+      "number": 144,
+      "topic": "Competencia",
+      "concept": "deporte_valora_cooperacion_y_respeto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede valorar una competencia además del resultado?",
+      "options": [
+        "Aceptar cualquier infracción del equipo",
+        "Evitar colaborar con los compañeros",
+        "Priorizar el marcador por encima de las reglas",
+        "Competir con respeto y cooperar"
+      ],
+      "correctAnswer": "Competir con respeto y cooperar",
+      "explanation": "El deporte también promueve convivencia, responsabilidad y colaboración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-145",
+      "number": 145,
+      "topic": "Juegos Paralímpicos",
+      "concept": "guia_orienta_atleta_con_senales_acordadas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es una función de los guías en algunas pruebas de atletismo para atletas con discapacidad visual?",
+      "options": [
+        "Correr en lugar del atleta",
+        "Elegir cuándo se detiene la competencia",
+        "Recibir la medalla del participante",
+        "Orientar al atleta mediante señales acordadas"
+      ],
+      "correctAnswer": "Orientar al atleta mediante señales acordadas",
+      "explanation": "El guía usa métodos acordados para orientar al atleta y mantener la coordinación durante la prueba.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-146",
+      "number": 146,
+      "topic": "Seguridad en instalaciones",
+      "concept": "superficie_mojada_se_reporta_antes_de_jugar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Antes de una competencia, el equipo detecta una zona mojada en la cancha. ¿Qué debe hacer?",
+      "options": [
+        "Informar al responsable y evitar usar la zona hasta revisarla",
+        "Cubrirla con una camiseta y continuar",
+        "Pedir a los jugadores que corran más rápido",
+        "Ignorarla si el partido ya está programado"
+      ],
+      "correctAnswer": "Informar al responsable y evitar usar la zona hasta revisarla",
+      "explanation": "Avisar y revisar el peligro permite corregirlo antes de que alguien resbale o se lesione.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-147",
+      "number": 147,
+      "topic": "Equidad en competencia",
+      "concept": "categorias_y_apoyos_equilibran_competencia_formativa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos grupos tienen niveles distintos de experiencia y participarán en un torneo escolar. ¿Qué decisión favorece una competencia formativa?",
+      "options": [
+        "Excluir al grupo con menos experiencia",
+        "Organizar categorías o apoyos con criterios transparentes",
+        "Cambiar los resultados al final",
+        "Ocultar las reglas hasta la final"
+      ],
+      "correctAnswer": "Organizar categorías o apoyos con criterios transparentes",
+      "explanation": "Categorías y apoyos claros pueden equilibrar la participación y mantener metas apropiadas para cada grupo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-148",
+      "number": 148,
+      "topic": "Trabajo en equipo",
+      "concept": "apoyo_y_opcion_sencilla_restaura_comunicacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una compañera falla varios pases y deja de pedir el balón. ¿Qué respuesta fortalece al equipo?",
+      "options": [
+        "Evitar hablarle por el resto del partido",
+        "Culparla públicamente por cada error",
+        "Darle apoyo y acordar una opción sencilla de pase",
+        "Apartarla sin conversar"
+      ],
+      "correctAnswer": "Darle apoyo y acordar una opción sencilla de pase",
+      "explanation": "El apoyo respetuoso y una opción concreta pueden recuperar la comunicación y la confianza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-149",
+      "number": 149,
+      "topic": "Organización de torneo",
+      "concept": "torneo_caluroso_requiere_pausas_y_agua",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo debe jugar varios partidos en una jornada calurosa. ¿Qué aspecto debe incluir la planificación?",
+      "options": [
+        "Eliminar todas las pausas",
+        "Aumentar la duración de cada partido",
+        "Jugar siempre al mediodía",
+        "Programar descansos y acceso al agua"
+      ],
+      "correctAnswer": "Programar descansos y acceso al agua",
+      "explanation": "Pausas y acceso al agua ayudan a manejar el esfuerzo y las condiciones ambientales durante la jornada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Seguridad deportiva",
+      "concept": "explicar_regla_de_seguridad_antes_de_jugar",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un deporte cambia una regla de seguridad, debe explicar el cambio a quienes participan antes de jugar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Comunicar las reglas con anticipación ayuda a que los participantes comprendan los límites y puedan jugar con seguridad.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}

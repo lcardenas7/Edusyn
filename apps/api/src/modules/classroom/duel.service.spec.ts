@@ -9,12 +9,12 @@ const baseDuel = {
   questions: [{ id: 'q1', text: '¿Cuánto es 2 + 2?', options: ['3', '4'], correctAnswer: '4', explanation: 'Dos y dos son cuatro.' }],
 };
 
-function setup(duel = baseDuel, answers: Array<{ enrollmentId: string; ordinal: number; isCorrect: boolean }> = [], powerUse: { ordinal: number; options: unknown } | null = null) {
+function setup(duel: any = baseDuel, answers: Array<{ enrollmentId: string; ordinal: number; isCorrect: boolean }> = [], powerUse: { ordinal: number; options: unknown } | null = null) {
   const prisma = {
-    classroomDuel: { findFirst: jest.fn().mockResolvedValue(duel), updateMany: jest.fn(), count: jest.fn().mockResolvedValue(0), create: jest.fn().mockResolvedValue({ id: 'new-duel', category: 'Fracciones', selectionMode: 'CHOSEN' }) },
+    classroomDuel: { findFirst: jest.fn().mockResolvedValue(duel), findMany: jest.fn(), updateMany: jest.fn(), count: jest.fn().mockResolvedValue(0), create: jest.fn().mockResolvedValue({ id: 'new-duel', category: 'Fracciones', selectionMode: 'CHOSEN' }) },
     classroomDuelAnswer: { findMany: jest.fn().mockResolvedValue(answers) },
     classroomDuelPowerUse: { findUnique: jest.fn().mockResolvedValue(powerUse) },
-    studentEnrollment: { findFirst: jest.fn().mockResolvedValue({ id: 'enroll-2' }) },
+    studentEnrollment: { findFirst: jest.fn().mockResolvedValue({ id: 'enroll-2' }), findMany: jest.fn() },
   };
   const access = {
     classroomInScope: jest.fn().mockResolvedValue({ teacherAssignment: { teacherId: 'teacher-1', groupId: 'group-1', academicYearId: 'year-1' } }),
@@ -232,6 +232,17 @@ describe('DuelService ranking', () => {
     expect(table.rows.find((row) => row.name === 'Ana G.')).toMatchObject({ wins: 1, upsets: 0, points: 3 });
   });
 
+  it('awards the upset when the opponent leads on a tie-break, not only on points', async () => {
+    const { service } = rankingSetup([
+      completed('enroll-1', 'enroll-3', student('Ana', 'Gómez'), student('Dani', 'Peña'), 6, 0),
+      completed('enroll-2', 'enroll-4', student('Beto', 'Ruiz'), student('Eva', 'Lara'), 4, 0),
+      // Both begin the third duel with 3 points; Ana is ahead on correct answers.
+      completed('enroll-2', 'enroll-1', student('Beto', 'Ruiz'), student('Ana', 'Gómez'), 5, 2),
+    ]);
+    const table = await service.ranking(actor, 'class-1', 'group');
+    expect(table.rows.find((row) => row.name === 'Beto R.')).toMatchObject({ points: 7, upsets: 1 });
+  });
+
   it('breaks ties by correct answers, then matches played, then name', async () => {
     const { service } = rankingSetup([
       // Ana y Beto ganan uno cada uno: 3 puntos. Ana acierta más → va primero.
@@ -308,7 +319,11 @@ function jugado(categorias: string[], mine: boolean[], theirScore: number) {
 }
 
 function perfilSetup(duels: object[]) {
-  const prisma = { classroomDuel: { findMany: jest.fn().mockResolvedValue(duels) } };
+  const prisma = {
+    classroomDuel: { findMany: jest.fn().mockImplementation(({ select }: any) => Promise.resolve(select?.questions ? duels : [])) },
+    classroom: { findMany: jest.fn().mockResolvedValue([{ id: 'class-1' }]) },
+    group: { findFirst: jest.fn().mockResolvedValue({ name: '6A', gradeId: 'grade-6', grade: { name: '6.º' } }) },
+  };
   const access = {
     classroomInScope: jest.fn().mockResolvedValue({ title: 'Artes', teacherAssignment: { teacherId: 'teacher-1', groupId: 'group-1', academicYearId: 'year-1' } }),
     studentEnrollmentInClassroom: jest.fn().mockResolvedValue('enroll-1'),
@@ -319,6 +334,15 @@ function perfilSetup(duels: object[]) {
 const SIETE = (tema: string) => Array.from({ length: 7 }, () => tema);
 
 describe('DuelService arena profile', () => {
+  it('shows current-season points and unlocks upset badges from the general ranking', async () => {
+    const { service } = perfilSetup([]);
+    jest.spyOn(service, 'ranking').mockResolvedValue({ rows: [{ isMe: true, upsets: 2, points: 8 }] } as any);
+    const profile = await service.profile(actor, 'class-1');
+    expect(profile.points).toBe(8);
+    expect(profile.badges.find((badge) => badge.code === 'UPSET_1')).toMatchObject({ current: 1, earned: true });
+    expect(profile.badges.find((badge) => badge.code === 'UPSET_10')).toMatchObject({ current: 2, earned: false });
+  });
+
   it('counts wins, accuracy and the best streak', async () => {
     const { service } = perfilSetup([
       jugado(SIETE('Ciencias'), [true, true, true, true, true, false, false], 3),

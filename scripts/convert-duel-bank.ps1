@@ -13,6 +13,11 @@ $idPrefix = switch -Exact ($Category) {
   'Lengua y literatura' { 'LEN' }
   'Matemáticas y lógica' { 'MAT' }
   'Tecnología' { 'TEC' }
+  'Arte y cultura' { 'ART' }
+  'Historia' { 'HIS' }
+  'Deportes' { 'DEP' }
+  'Ciencia y naturaleza' { 'SCI' }
+  'Geografía' { 'GEO' }
   default { throw "No hay un prefijo de identificador configurado para la categoría: $Category" }
 }
 

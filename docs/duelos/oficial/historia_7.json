@@ -1,0 +1,2838 @@
+{
+  "catalogId": "edusyn-historia-grade-7-v1",
+  "title": "Historia · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Historia",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll10/id/2804/download",
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll23/id/524/download",
+    "https://enciclopedia.banrepcultural.org/El_voto_femenino",
+    "https://enciclopedia.banrepcultural.org/Lucas_Caballero_Barrera",
+    "https://enciclopedia.banrepcultural.org/Poblaci%C3%B3n_de_Colombia%3A_esclavos_y_cimarrones",
+    "https://enciclopedia.banrepcultural.org/Progreso_a_todo_vapor%3A_los_ferrocarriles_colombianos_del_siglo_XIX",
+    "https://ich.unesco.org/es/RL/el-espacio-cultural-de-palenque-de-san-basilio-00102",
+    "https://pancanal.com/culminacion-de-la-construccion/",
+    "https://publicaciones.banrepcultural.org/index.php/banrep/article/view/17508",
+    "https://publicaciones.banrepcultural.org/index.php/boletin_cultural/article/view/1815",
+    "https://publicaciones.banrepcultural.org/index.php/boletin_cultural/article/view/239/",
+    "https://www.mineducacion.gov.co/1621/articles-116042_archivo_pdf3.pdf",
+    "https://www.museonacional.gov.co/colecciones/Pieza_del_mes/pieza-del-mes-2010/Paginas/489_2010-01-19.aspx",
+    "https://www.museonacional.gov.co/noticias/Paginas/Batalla_en_el_puente_de_boyaca.aspx",
+    "https://www.un.org/en/about-us/history-of-the-un",
+    "https://www.unesco.org/en/silkroads"
+  ],
+  "questions": [
+    {
+      "id": "HIS7-001",
+      "number": 1,
+      "topic": "Primeras sociedades agrícolas",
+      "concept": "agricultura_favorece_sedentarismo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio favoreció el desarrollo de asentamientos permanentes?",
+      "options": [
+        "Cazar y recolectar por temporadas",
+        "Intercambiar productos entre aldeas",
+        "Cultivar plantas y criar animales",
+        "Trabajar metales para fabricar herramientas"
+      ],
+      "correctAnswer": "Cultivar plantas y criar animales",
+      "explanation": "La agricultura y la domesticación de animales permitieron producir alimentos en un mismo territorio y sostener poblaciones sedentarias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-002",
+      "number": 2,
+      "topic": "Mesopotamia",
+      "concept": "tablillas_arcilla_soporte_cuneiforme",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué soporte utilizaron muchas sociedades mesopotámicas para escribir con signos cuneiformes?",
+      "options": [
+        "Papiro enrollado",
+        "Tablillas de arcilla",
+        "Placas de piedra",
+        "Tablillas enceradas"
+      ],
+      "correctAnswer": "Tablillas de arcilla",
+      "explanation": "Los escribas presionaban signos sobre tablillas de arcilla húmeda, que luego podían secarse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-003",
+      "number": 3,
+      "topic": "Antiguo Egipto",
+      "concept": "nilo_sostiene_agricultura_y_transporte_egipcio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué río fue central para la agricultura y el transporte del antiguo Egipto?",
+      "options": [
+        "Tigris",
+        "Nilo",
+        "Éufrates",
+        "Jordán"
+      ],
+      "correctAnswer": "Nilo",
+      "explanation": "Las crecidas del Nilo depositaban suelos fértiles y el río también servía como vía de comunicación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-004",
+      "number": 4,
+      "topic": "Grecia antigua",
+      "concept": "atenas_democracia_directa_con_participacion_restringida",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En cuál ciudad antigua se desarrolló una forma temprana de democracia directa?",
+      "options": [
+        "Esparta",
+        "Corinto",
+        "Tebas",
+        "Atenas"
+      ],
+      "correctAnswer": "Atenas",
+      "explanation": "En Atenas, algunos ciudadanos varones participaban directamente en decisiones políticas; mujeres, personas esclavizadas y extranjeros quedaban excluidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-005",
+      "number": 5,
+      "topic": "Roma",
+      "concept": "senado_influencia_politica_republica_romana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En la República romana, ¿qué institución reunía representantes de familias influyentes y asesoraba sobre asuntos públicos?",
+      "options": [
+        "Asamblea popular",
+        "Tribunado de la plebe",
+        "Senado",
+        "Consulado"
+      ],
+      "correctAnswer": "Senado",
+      "explanation": "El Senado tuvo gran influencia política en la República romana, aunque sus funciones cambiaron con el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-006",
+      "number": 6,
+      "topic": "Rutas comerciales",
+      "concept": "ruta_seda_conecta_redes_asiaticas_y_europeas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué conectaba principalmente la Ruta de la Seda en la Antigüedad y la Edad Media?",
+      "options": [
+        "Ciudades del norte de África",
+        "Puertos del océano Índico",
+        "Territorios de América",
+        "Regiones de Asia y Europa"
+      ],
+      "correctAnswer": "Regiones de Asia y Europa",
+      "explanation": "La Ruta de la Seda enlazaba redes de intercambio entre regiones asiáticas y europeas, con distintos trayectos terrestres y marítimos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-007",
+      "number": 7,
+      "topic": "Verdadero o falso · Sociedad feudal",
+      "concept": "vasallaje_implica_obligaciones_reciprocas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En el vasallaje feudal podían existir obligaciones recíprocas entre un señor y un vasallo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El vínculo podía incluir lealtad y servicio a cambio de protección o tierras, aunque variaba según el lugar y la época.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Fuentes históricas",
+      "concept": "carta_contemporanea_como_fuente_primaria",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una carta escrita en el pasado puede ser una fuente primaria para estudiar su época.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una fuente primaria fue creada durante el periodo o por alguien relacionado directamente con el asunto estudiado; requiere contexto y análisis.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-009",
+      "number": 9,
+      "topic": "Civilizaciones fluviales",
+      "concept": "rios_apoyan_agricultura_y_organizacion_social",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué necesidad podía impulsar la organización colectiva en sociedades junto a ríos?",
+      "options": [
+        "Abrir rutas de navegación oceánica",
+        "Mantener canales y coordinar el uso del agua",
+        "Extraer metales de las zonas inundadas",
+        "Construir puertos para comerciar con América"
+      ],
+      "correctAnswer": "Mantener canales y coordinar el uso del agua",
+      "explanation": "El agua facilitaba el riego y el transporte, mientras algunos ríos dejaban sedimentos fértiles; también hacía falta gestionar riesgos y obras comunes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-010",
+      "number": 10,
+      "topic": "Democracia ateniense",
+      "concept": "ciudadania_ateniense_excluye_a_gran_parte_de_poblacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo quedaba excluido de la ciudadanía política en la Atenas antigua?",
+      "options": [
+        "Mujeres y personas esclavizadas",
+        "Hombres ciudadanos adultos",
+        "Magistrados elegidos por sorteo",
+        "Soldados ciudadanos"
+      ],
+      "correctAnswer": "Mujeres y personas esclavizadas",
+      "explanation": "La participación política se reservaba a una parte de los habitantes, principalmente hombres libres reconocidos como ciudadanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-011",
+      "number": 11,
+      "topic": "República romana",
+      "concept": "concentracion_de_poder_en_transicion_republica_imperio",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio describe mejor el paso de la República romana al Imperio?",
+      "options": [
+        "Las asambleas asumieron el mando de los ejércitos",
+        "Los cónsules elegidos por las provincias",
+        "Los territorios conquistados obtuvieron autonomía inmediata",
+        "El poder se concentró progresivamente en un emperador"
+      ],
+      "correctAnswer": "El poder se concentró progresivamente en un emperador",
+      "explanation": "Tras conflictos políticos y guerras civiles, el poder se concentró en gobernantes imperiales, aunque algunas instituciones republicanas continuaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-012",
+      "number": 12,
+      "topic": "Intercambios culturales",
+      "concept": "rutas_comerciales_transmiten_ideas_y_tecnicas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué podía difundirse entre regiones conectadas por la Ruta de la Seda?",
+      "options": [
+        "Telas y objetos manufacturados",
+        "Especias y metales intercambiados",
+        "Monedas usadas en los mercados",
+        "Ideas y técnicas de otras regiones"
+      ],
+      "correctAnswer": "Ideas y técnicas de otras regiones",
+      "explanation": "El contacto entre viajeros y comunidades facilitaba intercambios de ideas, tecnologías, religiones y prácticas, además de bienes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-013",
+      "number": 13,
+      "topic": "Sociedad feudal",
+      "concept": "tenencia_de_tierra_sostiene_poder_señorial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación ayuda a explicar el poder local de muchos señores feudales?",
+      "options": [
+        "El control de tierras y obligaciones campesinas",
+        "La elección de autoridades en asambleas urbanas",
+        "La propiedad de fábricas y máquinas",
+        "La administración de rutas oceánicas"
+      ],
+      "correctAnswer": "El control de tierras y obligaciones campesinas",
+      "explanation": "El control de tierras y de derechos sobre quienes las trabajaban daba recursos y autoridad a muchos señores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-014",
+      "number": 14,
+      "topic": "Peste negra",
+      "concept": "peste_negra_mortalidad_y_cambios_laborales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto laboral se relaciona con la gran mortalidad causada por la peste negra?",
+      "options": [
+        "Cambió la mano de obra y sus relaciones",
+        "Disminuyó la necesidad de mano de obra",
+        "Mantuvo intactas las condiciones laborales en todas partes",
+        "Eliminó las disputas entre trabajadores y señores"
+      ],
+      "correctAnswer": "Cambió la mano de obra y sus relaciones",
+      "explanation": "La epidemia causó una gran mortalidad y contribuyó a cambios económicos y sociales, entre ellos tensiones por la falta de trabajadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-015",
+      "number": 15,
+      "topic": "Renacimiento",
+      "concept": "humanismo_renacentista_valora_estudio_humano",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué enfoque distinguió al humanismo renacentista?",
+      "options": [
+        "Interés por las capacidades y experiencias humanas",
+        "Defensa de las obligaciones feudales como ideal político",
+        "Rechazo de textos y lenguas de la Antigüedad",
+        "Prohibición de estudiar disciplinas no religiosas"
+      ],
+      "correctAnswer": "Interés por las capacidades y experiencias humanas",
+      "explanation": "El humanismo impulsó el estudio de las lenguas, los textos y las capacidades humanas, dialogando con la herencia clásica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-016",
+      "number": 16,
+      "topic": "Imprenta",
+      "concept": "imprenta_aumenta_reproduccion_de_textos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué podía hacer un taller gracias a los tipos móviles?",
+      "options": [
+        "Reutilizar tipos para componer e imprimir nuevas páginas",
+        "Copiar cada ejemplar a mano con mayor rapidez",
+        "Imprimir un libro completo sin preparar páginas",
+        "Tallar cada letra directamente en todas las hojas"
+      ],
+      "correctAnswer": "Reutilizar tipos para componer e imprimir nuevas páginas",
+      "explanation": "La impresión multiplicó ejemplares con más rapidez que la copia manual, aunque el acceso a libros siguió siendo desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-017",
+      "number": 17,
+      "topic": "Conquista de América",
+      "concept": "conquista_involucra_alianzas_y_conflictos_diversos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué papel tuvieron algunas alianzas indígenas durante las conquistas?",
+      "options": [
+        "Ayudaron a algunos conquistadores a enfrentar pueblos rivales",
+        "Unificaron a pueblos indígenas bajo un mando",
+        "Impidieron que ocurrieran epidemias en las ciudades",
+        "Evitaron los conflictos políticos entre los pueblos aliados"
+      ],
+      "correctAnswer": "Ayudaron a algunos conquistadores a enfrentar pueblos rivales",
+      "explanation": "Las conquistas involucraron intereses europeos, rivalidades locales, alianzas indígenas, violencia, epidemias y transformaciones políticas diversas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Interpretación histórica",
+      "concept": "mapa_historico_refleja_conocimiento_y_proposito",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un mapa antiguo representa el territorio tal como era, sin reflejar las ideas de quien lo elaboró.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los mapas dependen de conocimientos, propósitos y convenciones de su época; sirven como fuentes, pero no son reflejos neutrales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-019",
+      "number": 19,
+      "topic": "Independencias americanas",
+      "concept": "circulacion_de_ideas_influye_en_independencias_hispanoamericanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué crisis debilitó la autoridad de la monarquía española a comienzos del siglo XIX?",
+      "options": [
+        "Invasión napoleónica y crisis monárquica",
+        "La expansión del Imperio romano por América",
+        "La caída de Constantinopla ante los otomanos",
+        "La disolución de las ciudades-estado griegas"
+      ],
+      "correctAnswer": "Invasión napoleónica y crisis monárquica",
+      "explanation": "Las noticias, los textos y las ideas ilustradas circularon por redes comerciales y políticas, aunque cada proceso tuvo causas locales propias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-020",
+      "number": 20,
+      "topic": "Verdadero o falso · Historia de Colombia",
+      "concept": "independencia_nueva_granada_como_proceso",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La independencia de la Nueva Granada fue un proceso con varios acontecimientos y conflictos, no un único hecho aislado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Hubo juntas, campañas militares, disputas políticas y cambios de gobierno a lo largo de varios años.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-021",
+      "number": 21,
+      "topic": "Análisis de fuentes",
+      "concept": "contrastar_autoria_proposito_fecha_y_evidencia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos crónicas describen de forma opuesta una misma protesta. ¿Qué paso ayuda más a evaluarlas?",
+      "options": [
+        "Elegir la que tenga más páginas",
+        "Comparar autoría, propósito, fecha y evidencias",
+        "Preferir la narración con más testigos citados",
+        "Descartar ambas porque sus versiones difieren"
+      ],
+      "correctAnswer": "Comparar autoría, propósito, fecha y evidencias",
+      "explanation": "Contrastar quién escribió, cuándo, para qué y con qué evidencias permite valorar perspectiva y confiabilidad sin asumir que una fuente es neutral.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-022",
+      "number": 22,
+      "topic": "Causalidad histórica",
+      "concept": "decision_defensiva_produce_costos_comerciales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad construye murallas después de varios ataques, pero el comercio disminuye porque hay menos puertas. ¿Qué relación se observa?",
+      "options": [
+        "La defensa puede limitar rutas y encarecer intercambios",
+        "Menos puertas siempre aumentan el comercio local",
+        "Seguridad y comercio no guardan relación",
+        "Menos comercio demuestra que cesaron ataques"
+      ],
+      "correctAnswer": "La defensa puede limitar rutas y encarecer intercambios",
+      "explanation": "Una decisión puede responder a una amenaza y producir efectos secundarios; analizar ambos ayuda a explicar el proceso histórico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-023",
+      "number": 23,
+      "topic": "Historia y memoria",
+      "concept": "monumento_revela_seleccion_de_memoria_publica",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un monumento honra a un gobernante, pero omite a grupos afectados por sus decisiones. ¿Qué pregunta ayuda a identificar voces ausentes?",
+      "options": [
+        "¿Qué comunidades afectadas no aparecen representadas?",
+        "¿Qué relatos presenta como importantes?",
+        "¿Qué grupos participaron en su creación?",
+        "¿Cómo cambió su interpretación con el tiempo?"
+      ],
+      "correctAnswer": "¿Qué comunidades afectadas no aparecen representadas?",
+      "explanation": "Preguntar quién construyó el monumento, a quién representa y qué perspectivas excluye permite relacionar memoria pública y poder.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-024",
+      "number": 24,
+      "topic": "Verdadero o falso · Cambio histórico",
+      "concept": "continuidad_historica_puede_incluir_transformacion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una práctica aparece en distintas épocas, necesariamente se mantiene igual y conserva el mismo significado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las prácticas pueden persistir y a la vez cambiar según las comunidades, las condiciones y los significados de cada periodo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-025",
+      "number": 25,
+      "topic": "Historia y territorio",
+      "concept": "infraestructura_cambia_conectividad_y_distribuye_costos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un archivo muestra que una vía nueva conectó pueblos antes aislados, pero también desplazó viviendas. ¿Qué interpretación considera mejor sus efectos?",
+      "options": [
+        "Amplió intercambios y desplazó algunas familias",
+        "Mejoró el transporte y repartió beneficios por igual",
+        "Cambió la movilidad y afectó de forma desigual",
+        "Alteró viviendas, pero no la economía local"
+      ],
+      "correctAnswer": "Cambió la movilidad y afectó de forma desigual",
+      "explanation": "Las transformaciones territoriales pueden facilitar intercambios y, al mismo tiempo, generar costos distintos para diversos grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-026",
+      "number": 26,
+      "topic": "Pueblos mesoamericanos",
+      "concept": "tenochtitlan_capital_mexica_en_lago_texcoco",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál fue la capital del Imperio mexica, construida en el lago de Texcoco?",
+      "options": [
+        "Tenochtitlan",
+        "Cusco",
+        "Tikal",
+        "Chichén Itzá"
+      ],
+      "correctAnswer": "Tenochtitlan",
+      "explanation": "Tenochtitlan fue la capital mexica y se desarrolló en una isla del lago de Texcoco.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-027",
+      "number": 27,
+      "topic": "Imperio inca",
+      "concept": "qhapaq_nan_red_vial_inca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibe la extensa red de caminos del Imperio inca?",
+      "options": [
+        "Chinampas",
+        "Qhapaq Ñan",
+        "Calzadas mayas",
+        "Camino Real español"
+      ],
+      "correctAnswer": "Qhapaq Ñan",
+      "explanation": "El Qhapaq Ñan conectaba distintas regiones andinas y facilitaba la administración, el transporte y la comunicación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-028",
+      "number": 28,
+      "topic": "Escritura mesoamericana",
+      "concept": "escritura_maya_usa_signos_jeroglificos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sistema utilizaron los mayas para registrar palabras e ideas?",
+      "options": [
+        "Quipu",
+        "Escritura cuneiforme",
+        "Escritura jeroglífica",
+        "Alfabeto fenicio"
+      ],
+      "correctAnswer": "Escritura jeroglífica",
+      "explanation": "Los mayas desarrollaron un sistema de escritura con signos que podían representar palabras y sonidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-029",
+      "number": 29,
+      "topic": "Revolución haitiana",
+      "concept": "independencia_haitiana_1804",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué país surgió de la revolución que puso fin al dominio francés en Saint-Domingue?",
+      "options": [
+        "Brasil",
+        "México",
+        "Cuba",
+        "Haití"
+      ],
+      "correctAnswer": "Haití",
+      "explanation": "La revolución culminó con la independencia de Haití en 1804.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-030",
+      "number": 30,
+      "topic": "Administración colonial",
+      "concept": "virrey_gobierna_en_nombre_de_la_corona",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál era una función principal de un virrey en la América española?",
+      "options": [
+        "Gobernar un territorio en nombre del monarca",
+        "Dirigir únicamente los tribunales locales",
+        "Representar a los cabildos ante comerciantes",
+        "Administrar las órdenes religiosas"
+      ],
+      "correctAnswer": "Gobernar un territorio en nombre del monarca",
+      "explanation": "El virrey era el representante principal de la Corona en un virreinato y ejercía funciones de gobierno.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-031",
+      "number": 31,
+      "topic": "Verdadero o falso · Gobierno colonial",
+      "concept": "virrey_como_representante_del_monarca",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un virrey representaba al monarca español en el territorio que gobernaba.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La autoridad virreinal actuaba en nombre de la Corona, aunque compartía funciones con otras instituciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-032",
+      "number": 32,
+      "topic": "Comercio colonial",
+      "concept": "casa_contratacion_supervisa_comercio_atlantico",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué institución española supervisó durante siglos el comercio entre la Corona y sus territorios americanos?",
+      "options": [
+        "El cabildo",
+        "La Casa de Contratación",
+        "La Real Audiencia",
+        "El consulado local"
+      ],
+      "correctAnswer": "La Casa de Contratación",
+      "explanation": "La Casa de Contratación, fundada en Sevilla, reguló aspectos del comercio y la navegación con América, aunque sus atribuciones cambiaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Imperio bizantino",
+      "concept": "conquista_constantinopla_termina_imperio_bizantino",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La conquista otomana de Constantinopla en 1453 puso fin al Imperio bizantino.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La caída de Constantinopla ante los otomanos marcó el fin del Imperio bizantino.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-034",
+      "number": 34,
+      "topic": "Encomienda",
+      "concept": "encomienda_asigna_tributo_o_trabajo_indigena",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué obligación se asociaba con la encomienda en la América española?",
+      "options": [
+        "Elegir al monarca de España",
+        "Entregar tierras comunales a cada familia",
+        "Recibir tributo o trabajo indígena bajo autoridad colonial",
+        "Administrar las rutas comerciales entre Europa y Asia"
+      ],
+      "correctAnswer": "Recibir tributo o trabajo indígena bajo autoridad colonial",
+      "explanation": "La encomienda asignaba a un encomendero tributos o trabajo de comunidades indígenas; no equivalía a ser dueño legal de esas personas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-035",
+      "number": 35,
+      "topic": "Minería colonial",
+      "concept": "plata_potosi_circula_en_redes_intercontinentales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo conectó la plata de Potosí a los Andes con redes económicas más amplias?",
+      "options": [
+        "Circuló solo dentro de las minas",
+        "Reemplazó todos los cultivos en los Andes",
+        "Circuló únicamente entre comunidades cercanas",
+        "Entró en circuitos comerciales de varios continentes"
+      ],
+      "correctAnswer": "Entró en circuitos comerciales de varios continentes",
+      "explanation": "La plata americana circuló por redes imperiales y comerciales que enlazaban América, Europa y Asia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-036",
+      "number": 36,
+      "topic": "Intercambio colombino",
+      "concept": "intercambio_colombino_conecta_ecologias_y_sociedades",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso describe el intercambio colombino?",
+      "options": [
+        "Trasladó especies, personas y enfermedades entre continentes",
+        "Creó un gobierno común para América y Europa",
+        "Intercambió metales solo entre ciudades españolas",
+        "Impuso una lengua única en todos los territorios"
+      ],
+      "correctAnswer": "Trasladó especies, personas y enfermedades entre continentes",
+      "explanation": "El contacto sostenido entre América, Europa y África provocó intercambios biológicos y transformaciones demográficas y culturales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-037",
+      "number": 37,
+      "topic": "Trata transatlántica",
+      "concept": "demanda_colonial_impulsa_trata_transatlantica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué necesidad económica impulsó la esclavización y el traslado forzado de millones de africanos?",
+      "options": [
+        "Buscar nuevos territorios para ciudades autónomas",
+        "Obtener trabajo forzado para plantaciones y otras actividades",
+        "Extender la educación en las colonias",
+        "Reemplazar la navegación por rutas terrestres"
+      ],
+      "correctAnswer": "Obtener trabajo forzado para plantaciones y otras actividades",
+      "explanation": "La demanda colonial de mano de obra en plantaciones, minas y otros trabajos impulsó la trata; fue un sistema de violencia y deshumanización.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-038",
+      "number": 38,
+      "topic": "Reformas borbónicas",
+      "concept": "reformas_borbonicas_refuerzan_control_e_ingresos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban principalmente las reformas borbónicas en las colonias españolas?",
+      "options": [
+        "Dar independencia inmediata a los virreinatos",
+        "Eliminar la autoridad de la Corona",
+        "Reforzar el control imperial y aumentar los ingresos",
+        "Sustituir todas las ciudades por comunidades rurales"
+      ],
+      "correctAnswer": "Reforzar el control imperial y aumentar los ingresos",
+      "explanation": "Las reformas reorganizaron la administración, el comercio y la recaudación para fortalecer el control de la monarquía.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-039",
+      "number": 39,
+      "topic": "Crisis monárquica",
+      "concept": "invasion_napoleonica_abre_crisis_de_soberania",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hecho desencadenó una crisis de autoridad en la monarquía española en 1808?",
+      "options": [
+        "La independencia de Brasil",
+        "La revolución industrial inglesa",
+        "La caída del Imperio mexica",
+        "La invasión napoleónica de la península ibérica"
+      ],
+      "correctAnswer": "La invasión napoleónica de la península ibérica",
+      "explanation": "La invasión y las abdicaciones reales abrieron disputas sobre quién tenía autoridad para gobernar los territorios españoles.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-040",
+      "number": 40,
+      "topic": "Sociedades republicanas",
+      "concept": "independencia_no_elimina_exclusiones_ciudadanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la independencia política no garantizó de inmediato igualdad ciudadana?",
+      "options": [
+        "Persistieron exclusiones por género, origen y condición social",
+        "Desaparecieron todas las leyes coloniales al día siguiente",
+        "Cada habitante obtuvo los mismos derechos y recursos",
+        "Las nuevas repúblicas renunciaron a crear instituciones"
+      ],
+      "correctAnswer": "Persistieron exclusiones por género, origen y condición social",
+      "explanation": "Las repúblicas conservaron jerarquías y restricciones que limitaron la participación y los derechos de distintos grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-041",
+      "number": 41,
+      "topic": "Revolución haitiana",
+      "concept": "revolucion_haitiana_desafia_esclavitud_y_colonialismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué idea hizo de la revolución haitiana un desafío al orden colonial de su época?",
+      "options": [
+        "Que las colonias debían depender más de Europa",
+        "Que personas esclavizadas podían luchar por su libertad",
+        "Que solo los propietarios podían gobernar",
+        "Que la esclavitud debía extenderse a nuevos territorios"
+      ],
+      "correctAnswer": "Que personas esclavizadas podían luchar por su libertad",
+      "explanation": "La revolución culminó en una república independiente fundada por personas que habían sido esclavizadas y sus aliados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-042",
+      "number": 42,
+      "topic": "Verdadero o falso · Sociedad colonial",
+      "concept": "jerarquias_coloniales_varian_por_region_y_epoca",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las categorías sociales coloniales se aplicaron de manera idéntica en todas las regiones y épocas de América.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las clasificaciones y jerarquías variaron según el territorio, el periodo y las relaciones sociales concretas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-043",
+      "number": 43,
+      "topic": "Cabildos",
+      "concept": "cabildo_administra_asuntos_municipales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué asunto atendía habitualmente un cabildo en una ciudad colonial?",
+      "options": [
+        "Elegir al rey de España",
+        "Dirigir la Iglesia en todos los virreinatos",
+        "Gestionar asuntos locales como mercados y obras públicas",
+        "Negociar tratados entre monarquías europeas"
+      ],
+      "correctAnswer": "Gestionar asuntos locales como mercados y obras públicas",
+      "explanation": "Los cabildos atendían el gobierno municipal, incluidos asuntos de abasto, orden urbano y obras locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-044",
+      "number": 44,
+      "topic": "Criollos y peninsulares",
+      "concept": "distincion_criollo_peninsular_por_lugar_de_nacimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia se usaba comúnmente para distinguir a criollos de peninsulares?",
+      "options": [
+        "La lengua que hablaban en público",
+        "La religión que profesaban",
+        "El oficio que desempeñaban",
+        "Nacer en América o en la península ibérica"
+      ],
+      "correctAnswer": "Nacer en América o en la península ibérica",
+      "explanation": "En el uso colonial, criollo solía referirse a una persona descendiente de españoles nacida en América; peninsular, a quien había nacido en la península ibérica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-045",
+      "number": 45,
+      "topic": "Verdadero o falso · Independencias",
+      "concept": "participacion_diversa_en_guerras_de_independencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las guerras de independencia fueron protagonizadas únicamente por hombres criollos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Participaron personas de diversos orígenes y condiciones; también hubo mujeres y comunidades indígenas y afrodescendientes, con experiencias distintas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-046",
+      "number": 46,
+      "topic": "Fuentes del periodo colonial",
+      "concept": "analizar_proposito_y_categorias_en_registro_tributario",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un registro de tributos enumera productos y comunidades, pero no explica cómo se fijaron las cuotas. ¿Qué conviene investigar?",
+      "options": [
+        "Autor, propósito y categorías del registro",
+        "Cantidad de páginas y tipo de tinta",
+        "Si otros registros tienen la misma letra",
+        "El edificio que conserva el documento"
+      ],
+      "correctAnswer": "Autor, propósito y categorías del registro",
+      "explanation": "La autoría, el propósito y las categorías permiten interpretar qué medía el registro y qué relaciones de poder no hace explícitas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-047",
+      "number": 47,
+      "topic": "Lectura de prensa histórica",
+      "concept": "contrastar_prensa_politica_con_otras_fuentes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un periódico de una nueva república elogia a un dirigente y omite derrotas de su ejército. ¿Qué lectura es más cuidadosa?",
+      "options": [
+        "Tomar la nota como relato neutral",
+        "Considerar su postura y contrastarla con otras fuentes",
+        "Descartarla sin analizarla porque es parcial",
+        "Usarla como prueba de que no hubo derrotas"
+      ],
+      "correctAnswer": "Considerar su postura y contrastarla con otras fuentes",
+      "explanation": "La parcialidad no vuelve inútil una fuente; puede revelar una postura si se contrasta con otros registros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-048",
+      "number": 48,
+      "topic": "Cambios tras la independencia",
+      "concept": "igualdad_formal_puede_coexistir_con_barreras_reales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un decreto declara igualdad legal, pero un censo posterior registra que ciertos grupos siguen sin acceso a cargos. ¿Qué conclusión está mejor sustentada?",
+      "options": [
+        "El decreto no tuvo ningún efecto legal",
+        "El censo necesariamente fue falsificado",
+        "La igualdad legal coexistió con barreras de participación",
+        "Las diferencias sociales desaparecieron por completo"
+      ],
+      "correctAnswer": "La igualdad legal coexistió con barreras de participación",
+      "explanation": "Una norma puede cambiar derechos formales mientras persisten obstáculos sociales o institucionales; ambas evidencias deben leerse en contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-049",
+      "number": 49,
+      "topic": "Memoria histórica",
+      "concept": "ampliar_memoria_publica_con_experiencias_omitidas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una placa de una plaza nombra a quienes firmaron la independencia, pero no a quienes lucharon sin ocupar cargos. ¿Qué acción amplía el relato público?",
+      "options": [
+        "Reemplazar la placa por una lista de fechas",
+        "Mantener únicamente los nombres ya inscritos",
+        "Quitar la placa y evitar hablar del proceso",
+        "Investigar otras experiencias y explicar las ausencias"
+      ],
+      "correctAnswer": "Investigar otras experiencias y explicar las ausencias",
+      "explanation": "Investigar distintas experiencias permite ampliar la memoria pública y explicar cómo se seleccionaron los homenajes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Transformaciones políticas",
+      "concept": "independencia_politica_no_resuelve_jerarquias_ni_tierras",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La independencia política eliminó inmediatamente las jerarquías sociales y los conflictos por la tierra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La ruptura política no resolvió automáticamente desigualdades ni disputas sociales heredadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-051",
+      "number": 51,
+      "topic": "Pueblos muiscas",
+      "concept": "sal_recurso_de_intercambio_muisca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso de los Andes nororientales fue importante para el intercambio muisca?",
+      "options": [
+        "La sal",
+        "El cacao amazónico",
+        "El cobre del desierto",
+        "El caucho de la costa"
+      ],
+      "correctAnswer": "La sal",
+      "explanation": "La producción y el intercambio de sal fueron actividades relevantes para comunidades muiscas del altiplano.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-052",
+      "number": 52,
+      "topic": "Pueblos tairona",
+      "concept": "terrazas_y_caminos_tairona_adaptan_laderas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué obra ayudó a los tairona a construir asentamientos en las laderas de la Sierra Nevada?",
+      "options": [
+        "Canales subterráneos de navegación",
+        "Terrazas y caminos de piedra",
+        "Murallas de ladrillo cocido",
+        "Calzadas sobre el mar"
+      ],
+      "correctAnswer": "Terrazas y caminos de piedra",
+      "explanation": "Los tairona adaptaron espacios de montaña mediante terrazas, caminos y obras de piedra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-053",
+      "number": 53,
+      "topic": "Cartagena colonial",
+      "concept": "fortificaciones_cartagena_defienden_puerto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué se construyeron principalmente las fortificaciones de Cartagena durante la Colonia?",
+      "options": [
+        "Para separar barrios por oficio",
+        "Para desviar el río Magdalena",
+        "Para defender el puerto de ataques",
+        "Para almacenar cultivos de montaña"
+      ],
+      "correctAnswer": "Para defender el puerto de ataques",
+      "explanation": "Las murallas y fortificaciones protegían un puerto estratégico expuesto a ataques y disputas imperiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-054",
+      "number": 54,
+      "topic": "Insurrección de los Comuneros",
+      "concept": "cargas_fiscales_impulsan_insurreccion_comunera",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué medida de la Corona alimentó el descontento durante la insurrección comunera de 1781?",
+      "options": [
+        "La eliminación de todos los tributos",
+        "La entrega de autonomía a las ciudades",
+        "La prohibición de cultivar alimentos",
+        "El aumento de impuestos y controles comerciales"
+      ],
+      "correctAnswer": "El aumento de impuestos y controles comerciales",
+      "explanation": "Nuevas cargas fiscales y medidas de control impulsaron el levantamiento en la Nueva Granada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-055",
+      "number": 55,
+      "topic": "Campaña libertadora",
+      "concept": "fecha_batalla_puente_boyaca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué fecha ocurrió la batalla del Puente de Boyacá?",
+      "options": [
+        "7 de agosto de 1819",
+        "20 de julio de 1810",
+        "11 de noviembre de 1811",
+        "9 de abril de 1948"
+      ],
+      "correctAnswer": "7 de agosto de 1819",
+      "explanation": "El enfrentamiento del 7 de agosto de 1819 fue un momento decisivo de la campaña de la Nueva Granada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-056",
+      "number": 56,
+      "topic": "Verdadero o falso · Palenques",
+      "concept": "palenques_comunidades_de_refugio_y_autonomia",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los palenques fueron comunidades fundadas como refugio por personas africanas que escapaban de la esclavización.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los palenques ofrecieron refugio y autonomía a personas esclavizadas que huían; San Basilio conserva una historia y cultura vivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-057",
+      "number": 57,
+      "topic": "Gran Colombia",
+      "concept": "congreso_angostura_crea_republica_de_colombia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proyecto político se aprobó en el Congreso de Angostura en 1819?",
+      "options": [
+        "Restaurar el virreinato español",
+        "Crear la República de Colombia uniendo territorios liberados",
+        "Formar una alianza con Portugal",
+        "Dividir la Nueva Granada en colonias francesas"
+      ],
+      "correctAnswer": "Crear la República de Colombia uniendo territorios liberados",
+      "explanation": "El Congreso aprobó la creación de la República de Colombia, conocida después como Gran Colombia, que reunió territorios de la actual Colombia, Venezuela, Ecuador y Panamá.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Policarpa Salavarrieta",
+      "concept": "policarpa_salavarrieta_apoya_causa_patriota",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Policarpa Salavarrieta colaboró con las fuerzas patriotas durante la Reconquista española.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Salavarrieta apoyó la causa patriota mediante tareas de información y contacto durante la Reconquista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-059",
+      "number": 59,
+      "topic": "Insurrección de los Comuneros",
+      "concept": "capitulaciones_zipaquira_no_resuelven_insurreccion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurrió con las Capitulaciones de Zipaquirá firmadas durante la insurrección comunera?",
+      "options": [
+        "Declararon la independencia de la Nueva Granada",
+        "Establecieron una república federal",
+        "Hubo acuerdos sobre reclamos, pero el conflicto siguió",
+        "Entregaron el gobierno a los líderes comuneros"
+      ],
+      "correctAnswer": "Hubo acuerdos sobre reclamos, pero el conflicto siguió",
+      "explanation": "Las capitulaciones incluyeron concesiones a los comuneros, pero la Corona las desconoció después y el levantamiento continuó en algunas regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-060",
+      "number": 60,
+      "topic": "José Antonio Galán",
+      "concept": "galan_prolonga_resistencia_comunera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación tuvo José Antonio Galán con la insurrección comunera?",
+      "options": [
+        "Fue virrey durante el levantamiento",
+        "Negoció la independencia con España",
+        "Dirigió la defensa de Cartagena",
+        "Mantuvo la rebelión después de las capitulaciones"
+      ],
+      "correctAnswer": "Mantuvo la rebelión después de las capitulaciones",
+      "explanation": "Galán y otros comuneros continuaron la resistencia en los Llanos; las autoridades lo capturaron y ejecutaron en 1782.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-061",
+      "number": 61,
+      "topic": "Geografía de la insurrección",
+      "concept": "origen_regional_insurreccion_comunera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué región comenzó la principal movilización comunera de 1781?",
+      "options": [
+        "Provincia del Socorro",
+        "Costa del Darién",
+        "Valle del Cauca",
+        "Llanura amazónica"
+      ],
+      "correctAnswer": "Provincia del Socorro",
+      "explanation": "La protesta comenzó en la región del Socorro, en la actual Santander, y se extendió hacia otros territorios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-062",
+      "number": 62,
+      "topic": "Juntas de 1810",
+      "concept": "juntas_de_1810_reclaman_autoridad_en_crisis",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político representó la formación de juntas en ciudades de la Nueva Granada en 1810?",
+      "options": [
+        "La restauración inmediata del dominio francés",
+        "La disputa local por la autoridad",
+        "La desaparición de todos los cabildos",
+        "La independencia simultánea de toda América"
+      ],
+      "correctAnswer": "La disputa local por la autoridad",
+      "explanation": "La crisis de la monarquía abrió disputas sobre la soberanía; algunas juntas afirmaron gobernar mientras el rey estaba ausente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-063",
+      "number": 63,
+      "topic": "Oro muisca",
+      "concept": "orfebreria_muisca_vinculada_a_ofrendas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué uso tuvo parte importante de los objetos de oro muiscas?",
+      "options": [
+        "Acuñar monedas para pagos cotidianos",
+        "Fabricar herramientas para arar campos",
+        "Realizar ofrendas y ceremonias",
+        "Construir muros para fortificar poblados"
+      ],
+      "correctAnswer": "Realizar ofrendas y ceremonias",
+      "explanation": "Muchos objetos orfebres se vincularon con prácticas rituales y ofrendas; su valor no se reducía al metal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-064",
+      "number": 64,
+      "topic": "Verdadero o falso · Soberanía",
+      "concept": "juntas_americanas_apelan_a_soberania_durante_cautiverio_real",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Algunas juntas americanas de 1810 justificaron su autoridad en nombre del rey cautivo, en vez de declarar de inmediato la independencia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las respuestas variaron entre ciudades, pero varias juntas apelaron a la soberanía del pueblo ante la ausencia del monarca.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-065",
+      "number": 65,
+      "topic": "Campaña de 1819",
+      "concept": "cruce_de_andes_como_maniobra_sorpresiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja estratégica buscaba la campaña libertadora al cruzar los Andes hacia la Nueva Granada?",
+      "options": [
+        "Evitar todo contacto con las poblaciones",
+        "Trasladar la capital a la costa",
+        "Abandonar las rutas del interior",
+        "Sorprender a realistas por una ruta difícil"
+      ],
+      "correctAnswer": "Sorprender a realistas por una ruta difícil",
+      "explanation": "El cruce de los Andes fue una maniobra arriesgada que permitió atacar posiciones realistas desde una dirección inesperada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-066",
+      "number": 66,
+      "topic": "Batalla de Boyacá",
+      "concept": "victoria_boyaca_abre_camino_hacia_bogota",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto estratégico tuvo la victoria patriota en Boyacá en agosto de 1819?",
+      "options": [
+        "Abrió el camino hacia Bogotá",
+        "Terminó todas las guerras de independencia americanas",
+        "Restableció el virreinato con un nuevo monarca",
+        "Separó la Nueva Granada de Venezuela"
+      ],
+      "correctAnswer": "Abrió el camino hacia Bogotá",
+      "explanation": "La victoria abrió el camino hacia Bogotá y debilitó decisivamente el poder realista en la Nueva Granada, aunque otras campañas continuaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-067",
+      "number": 67,
+      "topic": "Disolución de la Gran Colombia",
+      "concept": "tensiones_regionales_debilitan_gran_colombia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema contribuyó a la disolución de la Gran Colombia?",
+      "options": [
+        "La falta de costas en todos sus territorios",
+        "Tensiones regionales y desacuerdos políticos",
+        "La inexistencia de líderes políticos",
+        "La conquista portuguesa de Bogotá"
+      ],
+      "correctAnswer": "Tensiones regionales y desacuerdos políticos",
+      "explanation": "Las tensiones regionales y las diferencias sobre la organización política debilitaron la unión y favorecieron su disolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-068",
+      "number": 68,
+      "topic": "Participación política",
+      "concept": "exclusion_femenina_de_ciudadania_politica_republicana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué limitación enfrentaban muchas mujeres en las nuevas repúblicas del siglo XIX?",
+      "options": [
+        "No podían participar en actividades económicas",
+        "No podían leer ningún texto político",
+        "Estaban excluidas de la ciudadanía política formal",
+        "No podían vivir en ciudades"
+      ],
+      "correctAnswer": "Estaban excluidas de la ciudadanía política formal",
+      "explanation": "Las constituciones republicanas de la época generalmente restringían los derechos políticos a los hombres, aunque las mujeres participaron de otros modos en la vida pública.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-069",
+      "number": 69,
+      "topic": "Patrimonio palenquero",
+      "concept": "lengua_y_practicas_vivas_del_palenque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento muestra la continuidad cultural de San Basilio de Palenque?",
+      "options": [
+        "El uso exclusivo del castellano",
+        "Conservar todas las prácticas del siglo XVII",
+        "La desaparición de la tradición oral",
+        "La lengua palenquera y otras prácticas comunitarias vivas"
+      ],
+      "correctAnswer": "La lengua palenquera y otras prácticas comunitarias vivas",
+      "explanation": "La lengua palenquera, la música y las tradiciones orales son expresiones vivas de una historia comunitaria propia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-070",
+      "number": 70,
+      "topic": "Verdadero o falso · Conmemoración",
+      "concept": "conmemoraciones_seleccionan_memoria_publica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una fecha conmemorativa puede destacar ciertos sucesos y dejar otros fuera del relato público.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las conmemoraciones seleccionan hechos y protagonistas; comparar relatos permite reconocer cómo se construye la memoria pública.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-071",
+      "number": 71,
+      "topic": "Cronología",
+      "concept": "junta_de_1810_no_equivale_a_independencia_completa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un libro afirma que la Nueva Granada obtuvo independencia completa el 20 de julio de 1810. ¿Qué evidencia cuestiona mejor esa afirmación?",
+      "options": [
+        "La fecha aparece en muchos calendarios",
+        "La junta fue seguida por años de guerra",
+        "En Bogotá se celebran actos cada año",
+        "Algunos edificios de la época aún se conservan"
+      ],
+      "correctAnswer": "La junta fue seguida por años de guerra",
+      "explanation": "El 20 de julio se formó una junta en Santa Fe, pero la ruptura y la guerra fueron procesos posteriores y prolongados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-072",
+      "number": 72,
+      "topic": "Logística militar",
+      "concept": "altitud_y_abastecimiento_condicionan_avance_militar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una fuerza cruza un páramo con poca comida y pierde contacto entre columnas. ¿Qué factor geográfico afecta directamente su avance?",
+      "options": [
+        "La falta de puertos marítimos",
+        "La distancia hasta el océano Atlántico",
+        "La altitud y las dificultades de abastecimiento",
+        "La ausencia de caminos en las llanuras costeras"
+      ],
+      "correctAnswer": "La altitud y las dificultades de abastecimiento",
+      "explanation": "La altitud, el clima y las rutas difíciles complican el transporte de alimentos y la coordinación de tropas en zonas montañosas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-073",
+      "number": 73,
+      "topic": "Arqueología y territorio",
+      "concept": "terrazas_y_caminos_evidencian_adaptacion_a_ladera",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un plano de un asentamiento tairona muestra terrazas conectadas por caminos empinados. ¿Qué interpretación se apoya mejor en esa evidencia?",
+      "options": [
+        "El asentamiento evitaba cualquier contacto regional",
+        "Las terrazas se construyeron para navegar entre poblados",
+        "Los caminos servían únicamente como límites ceremoniales",
+        "Adaptaron el asentamiento a una ladera"
+      ],
+      "correctAnswer": "Adaptaron el asentamiento a una ladera",
+      "explanation": "La forma de terrazas y caminos responde a un relieve inclinado y organizaba el tránsito entre partes del asentamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-074",
+      "number": 74,
+      "topic": "Verdadero o falso · Interpretación de monumentos",
+      "concept": "monumento_no_prueba_consenso_historico",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Que una estatua represente a un prócer demuestra por sí solo que toda la población de su época apoyaba sus decisiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Un monumento expresa una selección de memoria; no prueba que todas las personas compartieran la misma opinión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-075",
+      "number": 75,
+      "topic": "Evaluación de explicaciones",
+      "concept": "contrastar_evidencia_y_perspectiva_en_explicaciones_historicas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos relatos atribuyen la victoria patriota de 1819 a factores distintos: uno destaca la estrategia y otro la cooperación de pobladores. ¿Qué enfoque permite compararlos mejor?",
+      "options": [
+        "Elegir el relato que tenga más ilustraciones",
+        "Combinar ambas causas sin revisar sus pruebas",
+        "Comparar pruebas y perspectivas de ambos relatos",
+        "Descartar los relatos por ofrecer explicaciones diferentes"
+      ],
+      "correctAnswer": "Comparar pruebas y perspectivas de ambos relatos",
+      "explanation": "Las explicaciones pueden enfatizar causas distintas; contrastar evidencias, contexto y perspectiva permite valorar su alcance.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-076",
+      "number": 76,
+      "topic": "Renacimiento europeo",
+      "concept": "ciudades_italianas_como_origen_del_renacimiento",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué región de Europa surgió el Renacimiento?",
+      "options": [
+        "Ciudades de la península itálica",
+        "Reinos escandinavos",
+        "Islas del Atlántico norte",
+        "Llanuras de Europa oriental"
+      ],
+      "correctAnswer": "Ciudades de la península itálica",
+      "explanation": "El Renacimiento se desarrolló primero en ciudades italianas y luego tomó formas diversas en otras regiones europeas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-077",
+      "number": 77,
+      "topic": "Reforma protestante",
+      "concept": "reforma_protestante_cuestiona_practicas_y_autoridad_eclesial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué movimiento cuestionó la autoridad y algunas prácticas de la Iglesia católica en el siglo XVI?",
+      "options": [
+        "Humanismo cívico",
+        "Reforma protestante",
+        "Mercantilismo",
+        "Feudalismo"
+      ],
+      "correctAnswer": "Reforma protestante",
+      "explanation": "La Reforma protestante impulsó cambios religiosos y políticos y dio origen a distintas iglesias cristianas en Europa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-078",
+      "number": 78,
+      "topic": "Tratado de Tordesillas",
+      "concept": "tratado_tordesillas_delimita_zonas_de_expansion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acordaron Portugal y Castilla en el Tratado de Tordesillas de 1494?",
+      "options": [
+        "Repartir los territorios italianos",
+        "Unir sus coronas en un solo reino",
+        "Delimitar zonas de expansión ultramarina",
+        "Terminar todas las guerras europeas"
+      ],
+      "correctAnswer": "Delimitar zonas de expansión ultramarina",
+      "explanation": "El tratado fijó una línea para dividir las zonas de expansión que reclamaban ambas coronas, sin incluir a otros pueblos ni potencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-079",
+      "number": 79,
+      "topic": "Nueva Granada",
+      "concept": "territorio_colombiano_en_virreinato_nueva_granada",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿A qué virreinato pertenecía gran parte del actual territorio colombiano antes de las independencias?",
+      "options": [
+        "Virreinato del Perú",
+        "Virreinato del Río de la Plata",
+        "Virreinato de Nueva España",
+        "Virreinato de la Nueva Granada"
+      ],
+      "correctAnswer": "Virreinato de la Nueva Granada",
+      "explanation": "La Nueva Granada fue una unidad administrativa de la monarquía española que comprendió territorios del norte de Suramérica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-080",
+      "number": 80,
+      "topic": "Verdadero o falso · Renacimiento",
+      "concept": "renacimiento_se_expande_con_ritmos_y_formas_distintas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El Renacimiento apareció en todas las regiones europeas al mismo tiempo y de la misma manera.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Sus ideas circularon de forma desigual y se adaptaron a condiciones locales, por lo que no hubo una única experiencia renacentista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-081",
+      "number": 81,
+      "topic": "Brasil colonial",
+      "concept": "portugal_coloniza_brasil",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reino europeo estableció el dominio colonial sobre Brasil?",
+      "options": [
+        "Portugal",
+        "España",
+        "Inglaterra",
+        "Francia"
+      ],
+      "correctAnswer": "Portugal",
+      "explanation": "Portugal estableció y administró la colonia que más tarde se convirtió en Brasil.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-082",
+      "number": 82,
+      "topic": "Economía colombiana",
+      "concept": "crecimiento_del_cafe_como_exportacion_colombiana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué producto agrícola se convirtió gradualmente en una exportación importante de Colombia durante el siglo XIX?",
+      "options": [
+        "Trigo",
+        "Café",
+        "Arroz",
+        "Papa"
+      ],
+      "correctAnswer": "Café",
+      "explanation": "El cultivo y la exportación del café crecieron durante el siglo XIX y transformaron regiones y redes comerciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Colonialismo",
+      "concept": "colonias_amplian_poder_y_recursos_imperiales",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los imperios europeos organizaron colonias para ampliar su poder y obtener recursos y comercio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La expansión colonial respondió a intereses políticos y económicos, aunque sus formas y consecuencias variaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-084",
+      "number": 84,
+      "topic": "Centralismo y federalismo",
+      "concept": "distribucion_de_autoridad_en_modelos_centralistas_y_federales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia principal existe entre centralismo y federalismo?",
+      "options": [
+        "Cómo se recaudan los impuestos",
+        "Qué autoridad nombra a los jueces",
+        "Reparto de autoridad entre nación y regiones",
+        "Si las ciudades pueden comerciar"
+      ],
+      "correctAnswer": "Reparto de autoridad entre nación y regiones",
+      "explanation": "El debate trata sobre cuánto poder concentra el gobierno central y cuánto conservan las entidades regionales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-085",
+      "number": 85,
+      "topic": "Constitución de Cúcuta",
+      "concept": "constitucion_cucuta_organiza_instituciones_republicanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscó organizar la Constitución de Cúcuta de 1821?",
+      "options": [
+        "El retorno del dominio español",
+        "La división de América en virreinatos",
+        "El gobierno de una monarquía portuguesa",
+        "Las instituciones de la República de Colombia"
+      ],
+      "correctAnswer": "Las instituciones de la República de Colombia",
+      "explanation": "La Constitución organizó instituciones y autoridades de la República de Colombia, surgida tras las guerras de independencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-086",
+      "number": 86,
+      "topic": "Abolición de la esclavitud",
+      "concept": "ley_1851_abole_esclavitud_desde_1852",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dispuso la ley colombiana de 1851 sobre las personas esclavizadas?",
+      "options": [
+        "Libertad desde el 1 de enero de 1852",
+        "Amplió la esclavitud a las zonas mineras",
+        "Trasladó a todas las personas esclavizadas a Panamá",
+        "Pospuso la decisión hasta el siglo XX"
+      ],
+      "correctAnswer": "Libertad desde el 1 de enero de 1852",
+      "explanation": "La ley del 21 de mayo de 1851 dispuso que las personas esclavizadas fueran libres desde el 1 de enero de 1852.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-087",
+      "number": 87,
+      "topic": "Verdadero o falso · Apartheid",
+      "concept": "apartheid_segrega_espacios_y_servicios",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Durante el apartheid sudafricano, el acceso a servicios y espacios públicos se organizó según categorías raciales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El régimen impuso leyes de segregación que restringían derechos y separaban espacios según la clasificación racial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-088",
+      "number": 88,
+      "topic": "Separación de Panamá",
+      "concept": "separacion_panama_colombia_1903",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se separó Panamá de Colombia?",
+      "options": [
+        "1819",
+        "1903",
+        "1886",
+        "1930"
+      ],
+      "correctAnswer": "1903",
+      "explanation": "Panamá declaró su separación de Colombia el 3 de noviembre de 1903, en medio de tensiones internas e intereses internacionales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-089",
+      "number": 89,
+      "topic": "Constitución de 1886",
+      "concept": "constitucion_1886_refuerza_estado_centralizado",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político introdujo la Constitución colombiana de 1886?",
+      "options": [
+        "Creó una unión de provincias autónomas",
+        "Reinstaló el virreinato español",
+        "Reforzó un Estado centralizado",
+        "Dividió el país en colonias extranjeras"
+      ],
+      "correctAnswer": "Reforzó un Estado centralizado",
+      "explanation": "La Constitución reemplazó el modelo federal por un Estado más centralizado y cambió la relación entre el gobierno nacional y las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-090",
+      "number": 90,
+      "topic": "Guerra de los Mil Días",
+      "concept": "cronologia_guerra_de_los_mil_dias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué años ocurrió la Guerra de los Mil Días en Colombia?",
+      "options": [
+        "1810–1819",
+        "1851–1852",
+        "1886–1887",
+        "1899–1902"
+      ],
+      "correctAnswer": "1899–1902",
+      "explanation": "La guerra civil enfrentó a liberales y conservadores entre 1899 y 1902 y tuvo graves consecuencias humanas y económicas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-091",
+      "number": 91,
+      "topic": "Ferrocarriles y café",
+      "concept": "ferrocarriles_facilitan_movilidad_interregional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio facilitaron los ferrocarriles en la movilidad colombiana?",
+      "options": [
+        "Trasladar pasajeros y mercancías entre regiones",
+        "Reemplazar el transporte fluvial en todo el país",
+        "Evitar la construcción de caminos locales",
+        "Detener el comercio entre ciudades"
+      ],
+      "correctAnswer": "Trasladar pasajeros y mercancías entre regiones",
+      "explanation": "Las vías férreas facilitaron el transporte de productos, incluido el café, hacia los mercados y puertos; su alcance fue desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-092",
+      "number": 92,
+      "topic": "Verdadero o falso · Canal de Panamá",
+      "concept": "canal_panama_se_concluye_despues_de_separacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El canal interoceánico de Panamá ya estaba terminado cuando Panamá se separó de Colombia en 1903.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La construcción del canal se completó después, y se inauguró en 1914.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-093",
+      "number": 93,
+      "topic": "Voto femenino en Colombia",
+      "concept": "acto_legislativo_1954_reconoce_sufragio_femenino",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué logro político se reconoció a las mujeres colombianas mediante el acto legislativo de 1954?",
+      "options": [
+        "El derecho exclusivo a ocupar ministerios",
+        "El derecho a votar y ser elegidas",
+        "La obligación de votar por primera vez",
+        "La eliminación de todos los partidos"
+      ],
+      "correctAnswer": "El derecho a votar y ser elegidas",
+      "explanation": "En 1954 se reconoció el sufragio femenino; las mujeres ejercieron el voto por primera vez en el plebiscito de 1957.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-094",
+      "number": 94,
+      "topic": "Economía cafetera",
+      "concept": "exportacion_cafetera_impulsa_conectividad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el aumento de exportaciones de café favoreció la construcción de vías de transporte?",
+      "options": [
+        "Las vías impedían llegar a las zonas cafeteras",
+        "El café solo podía venderse en su región",
+        "Mover cosechas hacia mercados y puertos",
+        "La exportación eliminaba el comercio interior"
+      ],
+      "correctAnswer": "Mover cosechas hacia mercados y puertos",
+      "explanation": "El crecimiento de la producción exportable aumentó la necesidad de conectar fincas, centros de acopio y puertos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-095",
+      "number": 95,
+      "topic": "Consecuencias de la guerra",
+      "concept": "guerra_mil_dias_afecta_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto tuvo la Guerra de los Mil Días en la población civil?",
+      "options": [
+        "Solo afectó a los ejércitos",
+        "Produjo prosperidad igual en todas las regiones",
+        "Eliminó de inmediato las divisiones políticas",
+        "Causó muertes, desplazamientos y daños económicos"
+      ],
+      "correctAnswer": "Causó muertes, desplazamientos y daños económicos",
+      "explanation": "La guerra afectó a combatientes y civiles, desorganizó economías locales y dejó daños que continuaron tras el armisticio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-096",
+      "number": 96,
+      "topic": "Fuentes y trabajo forzado",
+      "concept": "reconocer_trabajo_omitido_en_informe_economico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe colonial contabiliza producción minera, pero no menciona a quienes trabajaron en ella. ¿Qué pregunta amplía mejor el análisis?",
+      "options": [
+        "¿Quién trabajó y bajo qué condiciones?",
+        "¿Cuántas páginas tiene el informe?",
+        "¿Qué color tenía la cubierta?",
+        "¿En qué estante se conserva hoy?"
+      ],
+      "correctAnswer": "¿Quién trabajó y bajo qué condiciones?",
+      "explanation": "Indagar quién trabajó y bajo qué condiciones revela relaciones sociales que una fuente centrada solo en la producción puede omitir.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-097",
+      "number": 97,
+      "topic": "Reformas legales",
+      "concept": "abolir_estatus_legal_no_elimina_coercion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Tras una ley de abolición, un documento muestra que antiguos esclavizados siguieron trabajando con deudas impuestas. ¿Qué interpretación es más sólida?",
+      "options": [
+        "La ley nunca fue aprobada",
+        "Persistieron formas de coerción tras la ley",
+        "Las deudas prueban que la esclavitud no existió",
+        "La libertad transformó todas las relaciones por igual"
+      ],
+      "correctAnswer": "Persistieron formas de coerción tras la ley",
+      "explanation": "La abolición cambió el estatus legal, pero no suprimió automáticamente la desigualdad ni las prácticas coercitivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-098",
+      "number": 98,
+      "topic": "Cambios políticos y regionales",
+      "concept": "rechazo_regional_indica_tension_sobre_modelo_de_gobierno",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa muestra que varias provincias rechazaron una nueva constitución centralista. ¿Qué conclusión permite sustentar?",
+      "options": [
+        "Todas las regiones compartían la misma opinión",
+        "La constitución fue aceptada sin debate",
+        "El proyecto de gobierno generó tensiones regionales",
+        "Las provincias dejaron de tener población"
+      ],
+      "correctAnswer": "El proyecto de gobierno generó tensiones regionales",
+      "explanation": "El mapa permite observar desacuerdos territoriales, aunque se requieren otras fuentes para conocer motivos y actores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-099",
+      "number": 99,
+      "topic": "Verdadero o falso · Cambio económico",
+      "concept": "crecimiento_exportador_es_un_factor_entre_varios",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una exportación que crece puede influir en el transporte y el trabajo, pero por sí sola no explica todos los cambios sociales de una época.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los cambios económicos interactúan con decisiones políticas, tecnología, condiciones regionales y relaciones sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-100",
+      "number": 100,
+      "topic": "Separación de Panamá",
+      "concept": "separar_causas_internas_y_externas_en_panama",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos textos explican la separación de Panamá: uno destaca el conflicto político interno y otro los intereses extranjeros. ¿Cómo se comparan mejor?",
+      "options": [
+        "Elegir el título más llamativo",
+        "Se acepta el texto escrito primero",
+        "Se descarta el que mencione intereses externos",
+        "Se contrastan evidencias, autores y contexto de ambos"
+      ],
+      "correctAnswer": "Se contrastan evidencias, autores y contexto de ambos",
+      "explanation": "Un proceso complejo puede tener causas internas y externas; contrastar las fuentes ayuda a valorar sus pruebas y perspectivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-101",
+      "number": 101,
+      "topic": "Primera Guerra Mundial",
+      "concept": "cronologia_primera_guerra_mundial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué años se libró la Primera Guerra Mundial?",
+      "options": [
+        "1914–1918",
+        "1900–1904",
+        "1939–1945",
+        "1947–1951"
+      ],
+      "correctAnswer": "1914–1918",
+      "explanation": "La guerra comenzó en 1914 y terminó en 1918, tras extenderse por varios frentes y continentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-102",
+      "number": 102,
+      "topic": "Tratado de Versalles",
+      "concept": "tratado_versalles_regula_posguerra_alemana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tratado estableció las condiciones de paz para Alemania después de la Primera Guerra Mundial?",
+      "options": [
+        "Tratado de Utrecht",
+        "Tratado de Versalles",
+        "Tratado de Tordesillas",
+        "Tratado de París de 1763"
+      ],
+      "correctAnswer": "Tratado de Versalles",
+      "explanation": "El Tratado de Versalles de 1919 fue uno de los acuerdos que formalizaron la paz después de la guerra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-103",
+      "number": 103,
+      "topic": "Revolución rusa",
+      "concept": "revolucion_rusa_derroca_al_zar",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurrió con el zar durante la revolución rusa de 1917?",
+      "options": [
+        "Amplió su poder sobre Europa",
+        "Dirigió la creación de la ONU",
+        "Perdió el poder durante la revolución",
+        "Se convirtió en presidente electo"
+      ],
+      "correctAnswer": "Perdió el poder durante la revolución",
+      "explanation": "La revolución de febrero de 1917 derrocó al zar; más tarde, los bolcheviques tomaron el poder en la revolución de octubre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-104",
+      "number": 104,
+      "topic": "Naciones Unidas",
+      "concept": "fundacion_naciones_unidas_1945",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se fundó la Organización de las Naciones Unidas?",
+      "options": [
+        "1919",
+        "1939",
+        "1941",
+        "1945"
+      ],
+      "correctAnswer": "1945",
+      "explanation": "La ONU se fundó en 1945, al finalizar la Segunda Guerra Mundial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-105",
+      "number": 105,
+      "topic": "Verdadero o falso · Segunda Guerra Mundial",
+      "concept": "fin_segunda_guerra_mundial_1945",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Segunda Guerra Mundial terminó en 1945.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La guerra terminó en 1945 tras la rendición de Alemania y Japón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-106",
+      "number": 106,
+      "topic": "Descolonización",
+      "concept": "descolonizacion_conduce_a_independencia_politica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa descolonización en la historia del siglo XX?",
+      "options": [
+        "La expansión de imperios sobre nuevas colonias",
+        "Independencia política de territorios coloniales",
+        "El traslado de capitales a zonas rurales",
+        "Unir todas las colonias en un Estado"
+      ],
+      "correctAnswer": "Independencia política de territorios coloniales",
+      "explanation": "La descolonización incluyó distintos procesos por los cuales pueblos y territorios terminaron el dominio colonial y formaron Estados independientes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-107",
+      "number": 107,
+      "topic": "Sudáfrica",
+      "concept": "apartheid_sistema_de_segregacion_racial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sistema de segregación racial rigió en Sudáfrica durante gran parte del siglo XX?",
+      "options": [
+        "Feudalismo",
+        "Apartheid",
+        "Mercantilismo",
+        "Vasallaje"
+      ],
+      "correctAnswer": "Apartheid",
+      "explanation": "El apartheid impuso leyes que separaban y discriminaban a la población según categorías raciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-108",
+      "number": 108,
+      "topic": "Fin de la Guerra Fría",
+      "concept": "caida_muro_berlin_1989",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué símbolo de división europea cayó en 1989?",
+      "options": [
+        "Muro de Adriano",
+        "Muralla de Ávila",
+        "Muro de Berlín",
+        "Muralla de Cartagena"
+      ],
+      "correctAnswer": "Muro de Berlín",
+      "explanation": "La caída del Muro de Berlín en 1989 simbolizó la apertura de fronteras y el debilitamiento de la división de la Guerra Fría en Europa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-109",
+      "number": 109,
+      "topic": "Verdadero o falso · Descolonización",
+      "concept": "descolonizacion_tuvo_procesos_diversos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los procesos de independencia en Asia y África ocurrieron al mismo tiempo y de la misma manera.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La descolonización tuvo ritmos, actores y conflictos diferentes en cada territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-110",
+      "number": 110,
+      "topic": "Constitución colombiana de 1991",
+      "concept": "constitucion_1991_reconoce_diversidad_etnica_y_cultural",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reconoció la Constitución colombiana de 1991 sobre la composición cultural del país?",
+      "options": [
+        "Una sola cultura regional",
+        "La desaparición de los pueblos indígenas",
+        "La separación de las comunidades del Estado",
+        "El carácter pluriétnico y multicultural de la nación"
+      ],
+      "correctAnswer": "El carácter pluriétnico y multicultural de la nación",
+      "explanation": "La Constitución reconoce la diversidad étnica y cultural de Colombia y establece derechos para los pueblos indígenas y otros grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-111",
+      "number": 111,
+      "topic": "Urbanización",
+      "concept": "empleo_y_servicios_impulsan_migracion_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación favoreció el crecimiento de muchas ciudades durante el siglo XX?",
+      "options": [
+        "La desaparición de las actividades industriales",
+        "Buscar empleo y servicios en ciudades",
+        "La prohibición de migrar entre regiones",
+        "El abandono de todas las redes de transporte"
+      ],
+      "correctAnswer": "Buscar empleo y servicios en ciudades",
+      "explanation": "La industrialización y la concentración de servicios atrajeron población rural a ciudades, junto con otros factores económicos y sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-112",
+      "number": 112,
+      "topic": "Gran Depresión",
+      "concept": "gran_depresion_reduce_produccion_y_comercio",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto internacional se asocia con la Gran Depresión iniciada en 1929?",
+      "options": [
+        "Expansión inmediata del comercio mundial",
+        "Desaparición de las crisis bancarias",
+        "Contracción de la producción y el comercio",
+        "Fin de la desigualdad económica"
+      ],
+      "correctAnswer": "Contracción de la producción y el comercio",
+      "explanation": "La crisis se extendió a varios países y redujo producción, empleo y comercio, aunque sus efectos variaron según cada economía.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-113",
+      "number": 113,
+      "topic": "Industrialización",
+      "concept": "sustitucion_importaciones_promueve_produccion_local",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaba la industrialización por sustitución de importaciones en varios países latinoamericanos?",
+      "options": [
+        "Impedir el uso de tecnología industrial",
+        "Eliminar toda actividad manufacturera local",
+        "Reemplazar los mercados internos por colonias",
+        "Producir localmente bienes antes importados"
+      ],
+      "correctAnswer": "Producir localmente bienes antes importados",
+      "explanation": "La estrategia buscaba desarrollar industrias nacionales para fabricar ciertos bienes importados y reducir la dependencia externa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-114",
+      "number": 114,
+      "topic": "La Violencia en Colombia",
+      "concept": "asesinato_gaitan_intensifica_la_violencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso de conflicto partidista se intensificó en Colombia tras el asesinato de Jorge Eliécer Gaitán en 1948?",
+      "options": [
+        "La Guerra de los Mil Días",
+        "La insurrección de los Comuneros",
+        "La Violencia",
+        "La campaña libertadora"
+      ],
+      "correctAnswer": "La Violencia",
+      "explanation": "El asesinato de Gaitán intensificó la violencia política en un periodo ya marcado por fuertes tensiones entre liberales y conservadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-115",
+      "number": 115,
+      "topic": "Bogotazo",
+      "concept": "bogotazo_disturbios_del_9_de_abril_de_1948",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre reciben los disturbios ocurridos en Bogotá después del asesinato de Gaitán?",
+      "options": [
+        "El Grito de Dolores",
+        "El Bogotazo",
+        "La Semana Trágica",
+        "La Comuna de París"
+      ],
+      "correctAnswer": "El Bogotazo",
+      "explanation": "El Bogotazo fue una serie de protestas y disturbios en Bogotá el 9 de abril de 1948; sus efectos se extendieron más allá de ese día.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-116",
+      "number": 116,
+      "topic": "Frente Nacional",
+      "concept": "frente_nacional_alterna_poder_entre_partidos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acuerdo político definió el Frente Nacional en Colombia?",
+      "options": [
+        "Gobierno permanente de un solo partido",
+        "Autonomía total para cada municipio",
+        "Restauración de la monarquía",
+        "Alternancia y reparto entre liberales y conservadores"
+      ],
+      "correctAnswer": "Alternancia y reparto entre liberales y conservadores",
+      "explanation": "El pacto estableció alternancia presidencial y reparto de cargos entre los dos partidos tradicionales, con exclusiones políticas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-117",
+      "number": 117,
+      "topic": "Asamblea Constituyente",
+      "concept": "asamblea_constituyente_elabora_constitucion_1991",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué vía política permitió elaborar la Constitución colombiana de 1991?",
+      "options": [
+        "Una orden de la Corona española",
+        "Un acuerdo entre virreyes",
+        "Una Asamblea Nacional Constituyente",
+        "Una decisión de las Naciones Unidas"
+      ],
+      "correctAnswer": "Una Asamblea Nacional Constituyente",
+      "explanation": "Una Asamblea Nacional Constituyente elegida por voto popular elaboró la Constitución de 1991.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-118",
+      "number": 118,
+      "topic": "Fin del apartheid",
+      "concept": "elecciones_multirraciales_terminan_apartheid",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político puso fin al apartheid en Sudáfrica?",
+      "options": [
+        "La reinstauración de la monarquía británica",
+        "La división permanente del país en zonas raciales",
+        "La expulsión de todos los partidos políticos",
+        "Elecciones democráticas con participación multirracial"
+      ],
+      "correctAnswer": "Elecciones democráticas con participación multirracial",
+      "explanation": "Las elecciones de 1994 permitieron participar a la población sin la exclusión racial del sistema del apartheid.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-119",
+      "number": 119,
+      "topic": "Verdadero o falso · Guerra Fría",
+      "concept": "caida_muro_precede_disolucion_union_sovietica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La caída del Muro de Berlín disolvió inmediatamente la Unión Soviética.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El muro cayó en 1989; la Unión Soviética se disolvió en 1991, después de otros cambios políticos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-120",
+      "number": 120,
+      "topic": "Verdadero o falso · Constitución colombiana",
+      "concept": "constitucion_1991_amplia_mecanismos_participativos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Constitución de 1991 creó en Colombia mecanismos de participación ciudadana además del voto electoral.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La Constitución incorporó mecanismos como el referendo, la consulta popular y la iniciativa legislativa, con requisitos propios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-121",
+      "number": 121,
+      "topic": "Migración y ciudad",
+      "concept": "migracion_y_planificacion_modelan_crecimiento_urbano",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad crece rápido y sus nuevos barrios quedan lejos del empleo y los servicios. ¿Qué pregunta ayuda a explicar esa transformación?",
+      "options": [
+        "¿Cómo se relacionan migración, empleo y planificación urbana?",
+        "¿Qué color tenían los primeros edificios?",
+        "¿Quién diseñó cada calle?",
+        "¿Cuántos avisos había en el centro?"
+      ],
+      "correctAnswer": "¿Cómo se relacionan migración, empleo y planificación urbana?",
+      "explanation": "Relacionar migración, empleo y decisiones de planificación permite explicar quién llegó, dónde se instaló y cómo accedía a servicios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-122",
+      "number": 122,
+      "topic": "Memoria de La Violencia",
+      "concept": "contrastar_memorias_orales_con_fuentes_contextuales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos familias recuerdan de modo distinto una masacre ocurrida en su municipio. ¿Qué método respeta mejor esas memorias y permite investigar el hecho?",
+      "options": [
+        "Elegir el relato más breve",
+        "Escuchar testimonios, contrastarlos y contextualizarlos",
+        "Publicar un solo testimonio como verdad completa",
+        "Evitar consultar archivos y registros locales"
+      ],
+      "correctAnswer": "Escuchar testimonios, contrastarlos y contextualizarlos",
+      "explanation": "Escuchar diversas voces y contrastar documentos ayuda a comprender las experiencias sin suponer que un testimonio representa a todas las personas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-123",
+      "number": 123,
+      "topic": "Cambios constitucionales",
+      "concept": "evaluar_distancia_entre_norma_y_aplicacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un periódico de 1991 afirma que la nueva Constitución resolverá de inmediato toda desigualdad social. ¿Qué evaluación es más sólida?",
+      "options": [
+        "Una constitución transforma toda práctica social",
+        "Las leyes no influyen en la sociedad",
+        "Estudiar aplicación y resultados",
+        "Es imposible analizar cambios constitucionales"
+      ],
+      "correctAnswer": "Estudiar aplicación y resultados",
+      "explanation": "Una constitución establece normas e instituciones, pero sus efectos dependen de la aplicación, las decisiones posteriores y las condiciones sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-124",
+      "number": 124,
+      "topic": "Descolonización",
+      "concept": "soberania_politica_coexiste_con_dependencia_economica",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un país logra independencia, pero su economía aún depende de vender una sola materia prima al antiguo poder colonial. ¿Qué conclusión es más cuidadosa?",
+      "options": [
+        "No obtuvo ninguna independencia política",
+        "La economía ya es completamente autónoma",
+        "Las relaciones coloniales nunca cambiaron",
+        "La independencia política puede coexistir con dependencias económicas"
+      ],
+      "correctAnswer": "La independencia política puede coexistir con dependencias económicas",
+      "explanation": "La soberanía política no elimina automáticamente las dependencias comerciales o económicas formadas durante el colonialismo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Fuentes históricas",
+      "concept": "encuadre_fotografico_limita_inferencias_historicas",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una fotografía histórica muestra parte de un acontecimiento, pero el encuadre y el momento elegido limitan lo que puede concluirse de ella.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La fotografía es una fuente valiosa, pero su selección, encuadre y contexto deben considerarse al interpretarla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-126",
+      "number": 126,
+      "topic": "Revolución industrial",
+      "concept": "inicio_revolucion_industrial_en_gran_bretana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué país comenzó la Revolución industrial?",
+      "options": [
+        "Gran Bretaña",
+        "Rusia",
+        "Japón",
+        "México"
+      ],
+      "correctAnswer": "Gran Bretaña",
+      "explanation": "La industrialización mecanizada comenzó en Gran Bretaña en el siglo XVIII y luego se extendió de manera desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-127",
+      "number": 127,
+      "topic": "Revolución francesa",
+      "concept": "toma_bastilla_simboliza_inicio_revolucion_francesa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hecho de 1789 se convirtió en símbolo del inicio de la Revolución francesa?",
+      "options": [
+        "La batalla de Waterloo",
+        "La toma de la Bastilla",
+        "La caída del Muro de Berlín",
+        "La firma del Tratado de Versalles"
+      ],
+      "correctAnswer": "La toma de la Bastilla",
+      "explanation": "La toma de la Bastilla el 14 de julio de 1789 se convirtió en un símbolo de la revolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-128",
+      "number": 128,
+      "topic": "Derechos y ciudadanía",
+      "concept": "declaracion_derechos_hombre_ciudadano_1789",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué documento francés de 1789 proclamó principios sobre derechos y ciudadanía?",
+      "options": [
+        "Código de Hammurabi",
+        "Carta Magna",
+        "Declaración francesa de derechos de 1789",
+        "Acta de Independencia de Estados Unidos"
+      ],
+      "correctAnswer": "Declaración francesa de derechos de 1789",
+      "explanation": "La declaración formuló principios de derechos y ciudadanía durante la Revolución francesa, aunque su aplicación excluyó a muchos grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-129",
+      "number": 129,
+      "topic": "Verdadero o falso · Ilustración",
+      "concept": "ilustracion_promueve_razon_y_critica_del_poder",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Ilustración promovió el uso de la razón para examinar la sociedad y el poder.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Pensadores ilustrados defendieron el análisis racional y debatieron ideas sobre derechos, gobierno y conocimiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-130",
+      "number": 130,
+      "topic": "Independencia estadounidense",
+      "concept": "declaracion_independencia_estados_unidos_1776",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se aprobó la Declaración de Independencia de Estados Unidos?",
+      "options": [
+        "1492",
+        "1648",
+        "1789",
+        "1776"
+      ],
+      "correctAnswer": "1776",
+      "explanation": "Las Trece Colonias aprobaron la Declaración de Independencia el 4 de julio de 1776.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-131",
+      "number": 131,
+      "topic": "Independencias sudamericanas",
+      "concept": "bolivar_lidera_campanas_en_norte_suramericano",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué líder participó en campañas independentistas en el norte de Suramérica?",
+      "options": [
+        "Simón Bolívar",
+        "Miguel Hidalgo",
+        "José de San Martín",
+        "Bernardo O’Higgins"
+      ],
+      "correctAnswer": "Simón Bolívar",
+      "explanation": "Bolívar lideró campañas en territorios de la actual Venezuela, Colombia, Ecuador, Perú y Bolivia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-132",
+      "number": 132,
+      "topic": "Verdadero o falso · Independencia de Brasil",
+      "concept": "independencia_brasil_1822_inicia_monarquia",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Brasil declaró su independencia de Portugal en 1822 y se convirtió en una monarquía.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Brasil se independizó en 1822 bajo Pedro I y mantuvo una monarquía durante parte del siglo XIX.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-133",
+      "number": 133,
+      "topic": "Primera Guerra Mundial",
+      "concept": "asesinato_francisco_fernando_precipita_crisis_de_1914",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué asesinato desencadenó la crisis inmediata que llevó a la Primera Guerra Mundial?",
+      "options": [
+        "El del zar Nicolás II",
+        "El de Napoleón Bonaparte",
+        "El del archiduque Francisco Fernando",
+        "El del presidente Abraham Lincoln"
+      ],
+      "correctAnswer": "El del archiduque Francisco Fernando",
+      "explanation": "El asesinato del archiduque austrohúngaro Francisco Fernando en Sarajevo en 1914 precipitó una crisis; las causas de la guerra fueron más amplias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-134",
+      "number": 134,
+      "topic": "Industrialización y trabajo",
+      "concept": "fabrica_concentra_maquinas_y_trabajadores",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio acompañó el paso de la producción artesanal a la fabril?",
+      "options": [
+        "Desapareció el trabajo asalariado",
+        "Las familias dejaron de producir bienes",
+        "La producción volvió a los talleres rurales",
+        "Máquinas y trabajadores se concentraron en fábricas"
+      ],
+      "correctAnswer": "Máquinas y trabajadores se concentraron en fábricas",
+      "explanation": "La fábrica reunió máquinas y trabajadores y reorganizó horarios y procesos productivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-135",
+      "number": 135,
+      "topic": "Revolución francesa",
+      "concept": "tercer_estado_reclama_representacion_y_fin_de_privilegios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reclamo expresó el Tercer Estado al exigir cambios políticos en Francia?",
+      "options": [
+        "Mantener sus impuestos sin representación",
+        "Entregar el poder político a la nobleza",
+        "Obtener mayor representación y terminar privilegios estamentales",
+        "Restablecer el sistema feudal"
+      ],
+      "correctAnswer": "Obtener mayor representación y terminar privilegios estamentales",
+      "explanation": "El Tercer Estado reclamó una participación política más amplia y cuestionó los privilegios de la nobleza y el clero.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-136",
+      "number": 136,
+      "topic": "Nacionalismo europeo",
+      "concept": "nacionalismo_apoya_proyectos_de_unificacion_europea",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación tuvo el nacionalismo con la unificación de Italia y Alemania?",
+      "options": [
+        "Ayudó a movilizar proyectos de unidad política",
+        "Eliminó todos los conflictos entre reinos",
+        "Restauró los imperios coloniales de América",
+        "Impidió que se formaran Estados nacionales"
+      ],
+      "correctAnswer": "Ayudó a movilizar proyectos de unidad política",
+      "explanation": "Movimientos nacionalistas defendieron reunir territorios y poblaciones bajo Estados nacionales, junto con otros factores políticos y militares.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-137",
+      "number": 137,
+      "topic": "Imperialismo",
+      "concept": "imperialismo_busca_recursos_rutas_y_mercados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué interés impulsó a potencias industriales a expandir su control colonial?",
+      "options": [
+        "Renunciar a materias primas y mercados",
+        "Asegurar recursos, rutas y mercados",
+        "Eliminar la competencia entre imperios",
+        "Sustituir todo comercio por agricultura local"
+      ],
+      "correctAnswer": "Asegurar recursos, rutas y mercados",
+      "explanation": "Los proyectos imperiales buscaron controlar recursos, rutas comerciales y mercados, además de extender poder político.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-138",
+      "number": 138,
+      "topic": "Primera Guerra Mundial",
+      "concept": "guerra_total_moviliza_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracterizó a la guerra total durante la Primera Guerra Mundial?",
+      "options": [
+        "Solo participaron ejércitos profesionales",
+        "La población civil quedó fuera de sus efectos",
+        "La producción industrial dejó de importar",
+        "Los Estados movilizaron población y recursos para guerrear"
+      ],
+      "correctAnswer": "Los Estados movilizaron población y recursos para guerrear",
+      "explanation": "Los gobiernos organizaron industrias, recursos y población para sostener el esfuerzo bélico, con efectos sobre civiles y combatientes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-139",
+      "number": 139,
+      "topic": "Tratado de Versalles",
+      "concept": "reparaciones_y_restricciones_de_versalles_alimentan_resentimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué medida impuesta a Alemania tras la Primera Guerra Mundial generó resentimiento?",
+      "options": [
+        "La incorporación a una unión política europea",
+        "La devolución de todas sus colonias a Alemania",
+        "Reparaciones económicas y restricciones militares",
+        "El control alemán de territorios aliados"
+      ],
+      "correctAnswer": "Reparaciones económicas y restricciones militares",
+      "explanation": "El tratado impuso reparaciones y limitaciones; sus efectos políticos alimentaron resentimientos, aunque no explican por sí solos la Segunda Guerra Mundial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-140",
+      "number": 140,
+      "topic": "Sociedad de Naciones",
+      "concept": "sociedad_naciones_busca_resolver_disputas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objetivo tuvo la Sociedad de Naciones después de la Primera Guerra Mundial?",
+      "options": [
+        "Resolver disputas entre países mediante cooperación",
+        "Administrar todas las colonias europeas",
+        "Reemplazar los gobiernos nacionales",
+        "Organizar ejércitos para conquistar territorios"
+      ],
+      "correctAnswer": "Resolver disputas entre países mediante cooperación",
+      "explanation": "La organización buscó promover cooperación y resolver conflictos, pero careció de medios suficientes para impedir nuevas guerras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-141",
+      "number": 141,
+      "topic": "Segunda Guerra Mundial",
+      "concept": "redes_de_resistencia_en_territorios_ocupados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma de resistencia apareció en algunos territorios ocupados por la Alemania nazi?",
+      "options": [
+        "Apoyo unánime a la ocupación",
+        "Redes clandestinas de sabotaje e información",
+        "Disolución de todos los gobiernos aliados",
+        "Renuncia de la población a toda organización"
+      ],
+      "correctAnswer": "Redes clandestinas de sabotaje e información",
+      "explanation": "Diversos grupos organizaron redes clandestinas para compartir información, apoyar fugas o sabotear operaciones de ocupación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-142",
+      "number": 142,
+      "topic": "Verdadero o falso · Guerra Fría",
+      "concept": "guerra_fria_compite_sin_enfrentamiento_directo_continuo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Guerra Fría fue un enfrentamiento militar directo y continuo entre Estados Unidos y la Unión Soviética.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las dos potencias evitaron una guerra directa entre sí, pero compitieron mediante alianzas, carrera armamentista y conflictos indirectos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-143",
+      "number": 143,
+      "topic": "Posguerra",
+      "concept": "ocupacion_de_posguerra_divide_alemania_en_zonas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio de fronteras ocurrió en Europa después de la Segunda Guerra Mundial?",
+      "options": [
+        "Las fronteras europeas de 1939 no cambiaron",
+        "Alemania quedó dividida en zonas de ocupación",
+        "Europa se unificó inmediatamente bajo un solo gobierno",
+        "La Unión Soviética dejó de existir en 1945"
+      ],
+      "correctAnswer": "Alemania quedó dividida en zonas de ocupación",
+      "explanation": "Las potencias aliadas dividieron Alemania en zonas de ocupación, una situación que contribuyó a la posterior división del país.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-144",
+      "number": 144,
+      "topic": "Carrera espacial",
+      "concept": "carrera_espacial_como_competencia_de_guerra_fria",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué expresó la carrera espacial entre Estados Unidos y la Unión Soviética?",
+      "options": [
+        "Cooperar para disolver la ONU",
+        "El fin inmediato de la competencia política",
+        "La sustitución de toda investigación militar",
+        "La competencia tecnológica propia de la Guerra Fría"
+      ],
+      "correctAnswer": "La competencia tecnológica propia de la Guerra Fría",
+      "explanation": "La exploración espacial fue un campo de competencia científica, tecnológica y simbólica entre las dos potencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-145",
+      "number": 145,
+      "topic": "Verdadero o falso · Conflictos posteriores a 1945",
+      "concept": "conflictos_armados_persisten_tras_1945",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Después de la Segunda Guerra Mundial desaparecieron todos los conflictos armados.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Continuaron guerras y conflictos regionales, incluso mientras surgían instituciones destinadas a promover cooperación internacional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-146",
+      "number": 146,
+      "topic": "Revolución industrial",
+      "concept": "productividad_industrial_coexiste_con_costos_laborales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un registro muestra que una fábrica produjo más telas, pero también aumentaron accidentes y jornadas extensas. ¿Qué interpretación considera ambas evidencias?",
+      "options": [
+        "La producción creció junto con costos laborales",
+        "La mecanización benefició a todos por igual",
+        "El registro no permite analizar cambios laborales",
+        "Los accidentes demuestran que cayó la producción"
+      ],
+      "correctAnswer": "La producción creció junto con costos laborales",
+      "explanation": "El aumento de producción puede coexistir con condiciones laborales difíciles; analizar ambas dimensiones evita una explicación unilateral.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-147",
+      "number": 147,
+      "topic": "Fronteras de posguerra",
+      "concept": "mapas_de_posguerra_muestran_reorganizacion_territorial",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa de Europa de 1920 muestra nuevas fronteras respecto a uno de 1914. ¿Qué conclusión debe acompañarse de otras fuentes?",
+      "options": [
+        "Los cambios afectaron únicamente a los océanos",
+        "Guerra y acuerdos de paz cambiaron territorios",
+        "Todas las nuevas fronteras fueron aceptadas sin conflicto",
+        "Los mapas prueban por sí solos las causas"
+      ],
+      "correctAnswer": "Guerra y acuerdos de paz cambiaron territorios",
+      "explanation": "El mapa muestra transformaciones territoriales, pero se necesitan documentos y contexto para explicar por qué ocurrieron y cómo se vivieron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-148",
+      "number": 148,
+      "topic": "Expansión colonial",
+      "concept": "mapa_colonial_omite_diversidad_local",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa colonial identifica fronteras trazadas sin registrar lenguas o pueblos locales. ¿Qué limitación tiene?",
+      "options": [
+        "Permite conocer todas las identidades de la región",
+        "Demuestra que no vivía población en esos territorios",
+        "Muestra límites sin toda la diversidad local",
+        "Las comunidades acordaron todas las fronteras"
+      ],
+      "correctAnswer": "Muestra límites sin toda la diversidad local",
+      "explanation": "Un mapa puede mostrar límites administrativos y omitir identidades, lenguas y relaciones sociales de quienes habitaban el territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-149",
+      "number": 149,
+      "topic": "Verdadero o falso · Causalidad",
+      "concept": "secuencia_temporal_no_demuestra_causalidad",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una línea de tiempo muestra qué ocurrió primero, pero por sí sola no demuestra que un hecho causara el siguiente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La secuencia temporal ayuda a ordenar acontecimientos; demostrar causalidad requiere evidencia y análisis de relaciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-150",
+      "number": 150,
+      "topic": "Explicaciones históricas",
+      "concept": "explicar_revolucion_con_causas_y_evidencias_multiples",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un texto atribuye una revolución a un solo líder, mientras otros registros muestran crisis económica, protestas y disputas políticas. ¿Qué explicación es más sólida?",
+      "options": [
+        "Elegir al líder más mencionado",
+        "La que descarta testimonios de la población",
+        "La que evita relacionar causas",
+        "La que integra causas y contrasta la evidencia"
+      ],
+      "correctAnswer": "La que integra causas y contrasta la evidencia",
+      "explanation": "Los procesos históricos suelen tener causas múltiples; relacionar evidencias y perspectivas produce una explicación más completa.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}

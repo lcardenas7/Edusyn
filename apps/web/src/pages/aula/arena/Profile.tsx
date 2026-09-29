@@ -45,7 +45,7 @@ export default function Profile({ profile, loading }: { profile: ArenaProfile | 
     <div className="space-y-6 pb-4">
       <section className="grid grid-cols-3 gap-2">
         {[
-          { label: 'Puntos', value: profile.points, tone: 'text-amber-300' },
+          { label: 'Puntos del año', value: profile.points, tone: 'text-amber-300' },
           { label: 'Duelos ganados', value: `${profile.wins}/${profile.played}`, tone: 'text-white' },
           { label: 'Acierto', value: `${profile.accuracy}%`, tone: 'text-teal-300' },
         ].map((item) => (

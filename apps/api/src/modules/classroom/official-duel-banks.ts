@@ -22304,4 +22304,19803 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
       }
     ]
   }
+,
+  {
+  "catalogId": "edusyn-arte-cultura-grade-7-v1",
+  "title": "Arte y cultura · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Arte y cultura",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [],
+  "questions": [
+    {
+      "id": "ART7-001",
+      "number": 1,
+      "topic": "Elementos visuales",
+      "concept": "linea_delimita_contorno_visual",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento visual puede delimitar el contorno de una figura?",
+      "options": [
+        "Línea",
+        "Ritmo",
+        "Sonido",
+        "Equilibrio"
+      ],
+      "correctAnswer": "Línea",
+      "explanation": "Una línea puede marcar bordes, separar formas y guiar la mirada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-002",
+      "number": 2,
+      "topic": "Color",
+      "concept": "pareja_complementaria_rojo_verde",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué pareja está formada por colores complementarios en el círculo cromático tradicional?",
+      "options": [
+        "Azul y verde",
+        "Rojo y verde",
+        "Amarillo y naranja",
+        "Violeta y azul"
+      ],
+      "correctAnswer": "Rojo y verde",
+      "explanation": "Rojo y verde se ubican en posiciones opuestas del círculo cromático tradicional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-003",
+      "number": 3,
+      "topic": "Música",
+      "concept": "timbre_distingue_fuentes_sonoras",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cualidad permite distinguir un mismo sonido producido por una flauta y una guitarra?",
+      "options": [
+        "Pulso",
+        "Intensidad",
+        "Timbre",
+        "Silencio"
+      ],
+      "correctAnswer": "Timbre",
+      "explanation": "El timbre permite reconocer la fuente sonora aunque dos sonidos tengan altura e intensidad similares.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-004",
+      "number": 4,
+      "topic": "Teatro",
+      "concept": "guion_teatral_contiene_dialogos_e_indicaciones",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el texto que contiene diálogos e indicaciones para representar una obra?",
+      "options": [
+        "Reseña",
+        "Catálogo",
+        "Partitura",
+        "Guion teatral"
+      ],
+      "correctAnswer": "Guion teatral",
+      "explanation": "El guion teatral organiza parlamentos y orientaciones para la representación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-005",
+      "number": 5,
+      "topic": "Patrimonio",
+      "concept": "tradicion_oral_como_patrimonio_inmaterial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál ejemplo corresponde a patrimonio cultural inmaterial?",
+      "options": [
+        "Una tradición oral transmitida entre generaciones",
+        "Una vasija conservada en una vitrina",
+        "Un edificio histórico",
+        "Una pintura expuesta en un museo"
+      ],
+      "correctAnswer": "Una tradición oral transmitida entre generaciones",
+      "explanation": "Las prácticas, expresiones y saberes transmitidos por comunidades forman parte del patrimonio inmaterial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-006",
+      "number": 6,
+      "topic": "Fotografía",
+      "concept": "encuadre_selecciona_contenido_fotografico",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué decisión determina qué elementos quedan dentro de una fotografía?",
+      "options": [
+        "El vestuario",
+        "El encuadre",
+        "La melodía",
+        "La textura del papel"
+      ],
+      "correctAnswer": "El encuadre",
+      "explanation": "El encuadre selecciona qué aparece y qué queda fuera de la imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-007",
+      "number": 7,
+      "topic": "Danza",
+      "concept": "coreografia_organiza_movimientos_espacio_tiempo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una danza, ¿qué coordina principalmente una coreografía?",
+      "options": [
+        "Los colores de la escenografía",
+        "El orden de las escenas de una película",
+        "Los movimientos y desplazamientos",
+        "La mezcla de pigmentos"
+      ],
+      "correctAnswer": "Los movimientos y desplazamientos",
+      "explanation": "La coreografía organiza movimientos en el espacio y en el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Artes integradas",
+      "concept": "obra_escenica_integra_lenguajes_artisticos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una obra escénica puede combinar actuación, música, movimiento y elementos visuales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las artes escénicas pueden integrar distintos lenguajes en una misma presentación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-009",
+      "number": 9,
+      "topic": "Composición",
+      "concept": "espacio_negativo_crea_tension_compositiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una composición ubica el objeto principal en un extremo y deja un espacio amplio al otro lado. ¿Qué puede generar esa decisión?",
+      "options": [
+        "Simetría exacta",
+        "Repetición sonora",
+        "Perspectiva lineal",
+        "Tensión o desequilibrio intencional"
+      ],
+      "correctAnswer": "Tensión o desequilibrio intencional",
+      "explanation": "La distribución desigual puede crear tensión visual o dirigir la atención de manera deliberada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-010",
+      "number": 10,
+      "topic": "Color y emoción",
+      "concept": "contraste_cromatico_aumenta_visibilidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un afiche de prevención usa amarillo sobre negro para llamar la atención desde lejos. ¿Qué propiedad aprovecha principalmente?",
+      "options": [
+        "Alto contraste",
+        "Perspectiva aérea",
+        "Simetría radial",
+        "Textura táctil"
+      ],
+      "correctAnswer": "Alto contraste",
+      "explanation": "La diferencia marcada de luminosidad y color hace que los elementos destaquen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-011",
+      "number": 11,
+      "topic": "Música",
+      "concept": "patron_ritmico_puede_permanecer_con_melodia_cambiante",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una canción repite el mismo patrón rítmico mientras cambia la melodía. ¿Qué aspecto permanece constante?",
+      "options": [
+        "La letra",
+        "El ritmo",
+        "La altura de cada nota",
+        "El timbre de todos los instrumentos"
+      ],
+      "correctAnswer": "El ritmo",
+      "explanation": "El patrón rítmico repetido conserva la organización de pulsos y duraciones aunque cambien otros elementos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-012",
+      "number": 12,
+      "topic": "Arte y contexto",
+      "concept": "comparar_estilos_por_intencion_y_contexto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos artistas representan una misma plaza con estilos distintos. ¿Qué comparación permite comprender mejor sus decisiones?",
+      "options": [
+        "Comparar personajes y objetos",
+        "Revisar solo el precio",
+        "Relacionar recursos, intención y contexto",
+        "Contar los colores usados"
+      ],
+      "correctAnswer": "Relacionar recursos, intención y contexto",
+      "explanation": "El estilo se interpreta mejor al relacionar las decisiones formales con lo que el artista busca comunicar y su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-013",
+      "number": 13,
+      "topic": "Cine",
+      "concept": "montaje_relaciona_planos_cinematograficos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una película alterna planos de un personaje con imágenes de una puerta cerrándose. ¿Qué recurso organiza esa relación?",
+      "options": [
+        "Montaje",
+        "Modelado",
+        "Perspectiva",
+        "Contrapunto musical"
+      ],
+      "correctAnswer": "Montaje",
+      "explanation": "El montaje ordena y relaciona planos para construir ritmo, continuidad o significado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-014",
+      "number": 14,
+      "topic": "Patrimonio colombiano",
+      "concept": "carnaval_barranquilla_tradicion_cultural_viva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "El Carnaval de Barranquilla reúne música, danzas, disfraces y saberes transmitidos por comunidades. ¿Qué aspecto patrimonial destaca?",
+      "options": [
+        "Solo su arquitectura",
+        "Únicamente sus objetos antiguos",
+        "Su tradición cultural viva",
+        "Su ubicación geográfica"
+      ],
+      "correctAnswer": "Su tradición cultural viva",
+      "explanation": "La celebración reúne prácticas y conocimientos colectivos que se mantienen y transforman con el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-015",
+      "number": 15,
+      "topic": "Escultura",
+      "concept": "punto_de_vista_modifica_lectura_de_escultura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura cambia notablemente al observarla desde distintos lados. ¿Qué característica aprovecha?",
+      "options": [
+        "La rima",
+        "El volumen y la tridimensionalidad",
+        "La duración de una escena",
+        "La intensidad sonora"
+      ],
+      "correctAnswer": "El volumen y la tridimensionalidad",
+      "explanation": "Una escultura ocupa volumen y su lectura puede variar según el punto de vista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-016",
+      "number": 16,
+      "topic": "Literatura y oralidad",
+      "concept": "entonacion_diferencia_personajes_en_narracion_oral",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una narración oral, cambiar la entonación al representar a dos personajes ayuda a:",
+      "options": [
+        "Eliminar el conflicto",
+        "Convertir el relato en una pintura",
+        "Diferenciar sus voces e intenciones",
+        "Cambiar el lugar real donde ocurrió"
+      ],
+      "correctAnswer": "Diferenciar sus voces e intenciones",
+      "explanation": "La voz y la entonación aportan rasgos a los personajes y aclaran quién habla o cómo se siente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-017",
+      "number": 17,
+      "topic": "Diseño gráfico",
+      "concept": "legibilidad_tipografica_en_mensaje_urgente",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cartel usa una letra decorativa difícil de leer para una instrucción urgente. ¿Qué criterio debería priorizarse?",
+      "options": [
+        "Legibilidad",
+        "Simetría del margen",
+        "Variedad de estilos",
+        "Cantidad de adornos"
+      ],
+      "correctAnswer": "Legibilidad",
+      "explanation": "En una instrucción urgente, la tipografía debe permitir reconocer el mensaje rápidamente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-018",
+      "number": 18,
+      "topic": "Arte digital",
+      "concept": "collage_digital_combina_recursos_visuales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ilustración digital combina fotografías recortadas, dibujos y texto para crear una escena nueva. ¿Qué técnica describe mejor el proceso?",
+      "options": [
+        "Fresco",
+        "Grabado en relieve",
+        "Mosaico cerámico",
+        "Collage digital"
+      ],
+      "correctAnswer": "Collage digital",
+      "explanation": "El collage combina materiales o imágenes diferentes en una composición nueva; también puede realizarse con herramientas digitales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-019",
+      "number": 19,
+      "topic": "Verdadero o falso · Interpretación",
+      "concept": "interpretaciones_varian_y_se_sustentan_en_evidencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una misma obra puede producir interpretaciones distintas sin que todas las lecturas sean necesariamente correctas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las interpretaciones pueden variar, pero deben apoyarse en elementos de la obra y su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-020",
+      "number": 20,
+      "topic": "Verdadero o falso · Cultura",
+      "concept": "adaptacion_no_elimina_continuidad_de_tradicion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Cuando una comunidad adapta una tradición a nuevas circunstancias, necesariamente deja de ser la misma tradición.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las tradiciones pueden transformarse y conservar elementos compartidos que mantienen su continuidad cultural.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-021",
+      "number": 21,
+      "topic": "Lectura de imágenes",
+      "concept": "comparacion_visual_con_encuadres_equivalentes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una campaña muestra un río limpio junto a otro lleno de residuos y usa el mismo punto de vista en ambas fotos. ¿Qué facilita esa comparación?",
+      "options": [
+        "Saber la fecha exacta sin otros datos",
+        "Percibir visualmente el cambio entre condiciones",
+        "Medir la velocidad del agua",
+        "Identificar el autor por su firma"
+      ],
+      "correctAnswer": "Percibir visualmente el cambio entre condiciones",
+      "explanation": "Mantener un encuadre parecido ayuda a comparar las diferencias visibles, aunque no demuestra por sí solo cuándo ocurrieron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-022",
+      "number": 22,
+      "topic": "Teatro",
+      "concept": "recursos_escenicos_comunican_emocion_sin_dialogo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un ensayo, el público no comprende por qué un personaje teme entrar a una habitación. ¿Qué cambio escénico podría comunicar mejor esa emoción sin explicarla con un discurso?",
+      "options": [
+        "Añadir personajes a la habitación",
+        "Cambiar el título de la obra",
+        "Mantener iguales luz y actuación",
+        "Usar luz, postura y sonido de alerta"
+      ],
+      "correctAnswer": "Usar luz, postura y sonido de alerta",
+      "explanation": "La iluminación, el cuerpo y el sonido pueden sugerir una emoción y orientar la interpretación del público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-023",
+      "number": 23,
+      "topic": "Creación artística",
+      "concept": "mural_comunitario_construido_con_memoria_local",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un grupo quiere representar la memoria de su barrio y entrevista a sus habitantes antes de diseñar un mural. ¿Qué decisión aporta más al proyecto?",
+      "options": [
+        "Imitar un mural conocido",
+        "Elegir una paleta al azar",
+        "Diseñar sin consultar al barrio",
+        "Usar relatos y símbolos locales acordados"
+      ],
+      "correctAnswer": "Usar relatos y símbolos locales acordados",
+      "explanation": "Incorporar voces y símbolos locales fortalece la relación entre la obra, su propósito y la comunidad representada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-024",
+      "number": 24,
+      "topic": "Verdadero o falso · Publicidad visual",
+      "concept": "escala_visual_publicitaria_no_prueba_tamano_real",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una imagen publicitaria muestra un producto más grande que los demás elementos, eso prueba que el producto tiene realmente ese tamaño.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El encuadre y la escala dentro de una imagen pueden exagerar un objeto para atraer la atención.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Patrimonio",
+      "concept": "documentar_practica_y_comunidad_en_patrimonio",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Registrar quiénes participan en una tradición y cómo la practican puede ayudar a documentar su significado comunitario.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La documentación de participantes, prácticas y contextos aporta información para comprender una manifestación cultural viva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-026",
+      "number": 26,
+      "topic": "Composición",
+      "concept": "equilibrio_simetrico_alrededor_de_eje",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tipo de equilibrio distribuye elementos similares a ambos lados de un eje central?",
+      "options": [
+        "Aleatorio",
+        "Sonoro",
+        "Narrativo",
+        "Simétrico"
+      ],
+      "correctAnswer": "Simétrico",
+      "explanation": "La simetría organiza elementos semejantes a cada lado de un eje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-027",
+      "number": 27,
+      "topic": "Color",
+      "concept": "reconocer_familia_de_colores_calidos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una pintura, ¿qué grupo suele asociarse con colores cálidos?",
+      "options": [
+        "Azul, verde y violeta",
+        "Rojo, naranja y amarillo",
+        "Turquesa, azul y gris",
+        "Verde, violeta y azul"
+      ],
+      "correctAnswer": "Rojo, naranja y amarillo",
+      "explanation": "Rojo, naranja y amarillo suelen clasificarse como colores cálidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-028",
+      "number": 28,
+      "topic": "Arte público",
+      "concept": "mural_interviene_superficie_de_espacio_compartido",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué espacio suele intervenir un mural realizado para un barrio?",
+      "options": [
+        "Una pantalla privada",
+        "Una página de un libro",
+        "Una superficie visible de un espacio compartido",
+        "Una partitura musical"
+      ],
+      "correctAnswer": "Una superficie visible de un espacio compartido",
+      "explanation": "El mural se realiza sobre una superficie amplia, a menudo integrada a un lugar público o comunitario.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-029",
+      "number": 29,
+      "topic": "Escultura",
+      "concept": "arcilla_modelable_para_escultura",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué material es común para modelar una figura que luego puede endurecerse?",
+      "options": [
+        "Acetato",
+        "Tinta líquida",
+        "Tela delgada",
+        "Arcilla"
+      ],
+      "correctAnswer": "Arcilla",
+      "explanation": "La arcilla puede modelarse con las manos o herramientas y endurecerse mediante secado o cocción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-030",
+      "number": 30,
+      "topic": "Cine",
+      "concept": "banda_sonora_contiene_voces_musica_y_efectos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué componente de una película permite escuchar diálogos y sonidos del ambiente?",
+      "options": [
+        "Banda sonora",
+        "Guion impreso",
+        "Vestuario",
+        "Escenografía"
+      ],
+      "correctAnswer": "Banda sonora",
+      "explanation": "La banda sonora reúne los elementos auditivos de una película, como voces, música y sonidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-031",
+      "number": 31,
+      "topic": "Animación",
+      "concept": "animacion_cuadro_a_cuadro_crea_movimiento",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En la animación cuadro a cuadro, ¿qué produce la sensación de movimiento?",
+      "options": [
+        "Una fotografía inmóvil",
+        "Imágenes sucesivas con pequeños cambios",
+        "Una voz narradora",
+        "Un fondo de un solo color"
+      ],
+      "correctAnswer": "Imágenes sucesivas con pequeños cambios",
+      "explanation": "Al presentar rápidamente imágenes con cambios graduales, se percibe movimiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-032",
+      "number": 32,
+      "topic": "Artes visuales",
+      "concept": "fondo_visual_detras_de_figura_principal",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una imagen, ¿qué nombre recibe la zona que aparece detrás del motivo principal?",
+      "options": [
+        "Primer plano",
+        "Contorno",
+        "Fondo",
+        "Volumen"
+      ],
+      "correctAnswer": "Fondo",
+      "explanation": "El fondo es el espacio visual que se percibe detrás de las figuras principales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Danza",
+      "concept": "danza_comunica_con_movimiento_y_espacio",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La danza puede comunicar ideas y emociones mediante movimientos, gestos y relaciones espaciales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El cuerpo y su movimiento funcionan como recursos expresivos en la danza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-034",
+      "number": 34,
+      "topic": "Perspectiva",
+      "concept": "convergencia_de_lineas_sugiere_profundidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un dibujo de una calle, las fachadas parecen acercarse hacia un mismo punto distante. ¿Qué recurso crea esa profundidad?",
+      "options": [
+        "Textura visual",
+        "Rima",
+        "Contraste de timbres",
+        "Perspectiva lineal"
+      ],
+      "correctAnswer": "Perspectiva lineal",
+      "explanation": "La perspectiva lineal organiza líneas que convergen para sugerir profundidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-035",
+      "number": 35,
+      "topic": "Materiales artísticos",
+      "concept": "material_y_superficie_cambian_textura_percibida",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos esculturas tienen la misma forma, pero una es de metal pulido y otra de madera rugosa. ¿Qué cambia de manera más directa?",
+      "options": [
+        "La textura percibida",
+        "El tema representado",
+        "La duración de la obra",
+        "La ubicación del espectador"
+      ],
+      "correctAnswer": "La textura percibida",
+      "explanation": "La superficie y el material producen texturas visuales o táctiles diferentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-036",
+      "number": 36,
+      "topic": "Música y escena",
+      "concept": "pausa_escenica_crea_expectativa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pausa breve antes de una entrada musical inesperada puede:",
+      "options": [
+        "Cambiar el material del vestuario",
+        "Crear expectativa",
+        "Borrar el ritmo de toda la obra",
+        "Convertir la escena en escultura"
+      ],
+      "correctAnswer": "Crear expectativa",
+      "explanation": "El silencio o la pausa puede preparar al público y aumentar la expectativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-037",
+      "number": 37,
+      "topic": "Composición visual",
+      "concept": "diagonales_dirigen_mirada_hacia_foco",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Varias líneas diagonales apuntan hacia el rostro de una persona en un afiche. ¿Qué función cumplen principalmente?",
+      "options": [
+        "Representar sonido",
+        "Indicar el material de impresión",
+        "Guiar la mirada hacia un foco",
+        "Marcar la duración de la escena"
+      ],
+      "correctAnswer": "Guiar la mirada hacia un foco",
+      "explanation": "Las direcciones visuales pueden conducir la mirada hacia un elemento destacado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-038",
+      "number": 38,
+      "topic": "Artesanía y comunidad",
+      "concept": "interpretar_artesania_con_tecnica_uso_y_significado",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Para comprender una artesanía local, ¿qué información complementa mejor la observación de su forma?",
+      "options": [
+        "Su precio de venta",
+        "Cuántas tiendas la ofrecen",
+        "El gusto del observador",
+        "Quién la hace, su uso y significado"
+      ],
+      "correctAnswer": "Quién la hace, su uso y significado",
+      "explanation": "Las técnicas, los usos y los significados comunitarios permiten comprender mejor el objeto y su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-039",
+      "number": 39,
+      "topic": "Pintura",
+      "concept": "gesto_de_pincelada_aporta_expresion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una pintura, pinceladas visibles y repetidas hacen que la superficie parezca activa. ¿Qué aspecto formal destaca?",
+      "options": [
+        "El gesto y la dirección de la pincelada",
+        "El peso real del lienzo",
+        "La secuencia de diálogos",
+        "La ubicación del museo"
+      ],
+      "correctAnswer": "El gesto y la dirección de la pincelada",
+      "explanation": "El gesto y la dirección de la pincelada forman parte del lenguaje expresivo de la pintura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-040",
+      "number": 40,
+      "topic": "Cine",
+      "concept": "plano_cerrado_destaca_detalle_de_accion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un plano muestra solo las manos de un personaje mientras oculta su rostro. ¿Qué efecto puede favorecer?",
+      "options": [
+        "Confirmar quién dirigió la película",
+        "Concentrar la atención en una acción o detalle",
+        "Indicar la duración completa del filme",
+        "Mostrar el mapa del lugar"
+      ],
+      "correctAnswer": "Concentrar la atención en una acción o detalle",
+      "explanation": "El encuadre cerrado puede destacar una acción y limitar la información que recibe el público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-041",
+      "number": 41,
+      "topic": "Canción",
+      "concept": "relacionar_letra_y_ritmo_en_cancion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al analizar una canción, relacionar la letra con el ritmo ayuda a:",
+      "options": [
+        "Determinar el costo de los instrumentos",
+        "Saber dónde se grabó sin más datos",
+        "Comprender cómo música y palabras construyen el carácter",
+        "Medir el tamaño del escenario"
+      ],
+      "correctAnswer": "Comprender cómo música y palabras construyen el carácter",
+      "explanation": "Las palabras y su organización rítmica se combinan para construir el carácter y el sentido de una canción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-042",
+      "number": 42,
+      "topic": "Cultura digital",
+      "concept": "acreditar_autoria_al_reutilizar_imagen",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una persona transforma una imagen existente y acredita a su creador al compartir la nueva versión. ¿Qué práctica responsable mantiene?",
+      "options": [
+        "Ocultar que modificó la imagen",
+        "Quitar toda referencia al origen",
+        "Presentar la imagen como propia",
+        "Reconocer la autoría de la fuente"
+      ],
+      "correctAnswer": "Reconocer la autoría de la fuente",
+      "explanation": "Reconocer la autoría permite identificar el origen del material que se reutiliza o transforma.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-043",
+      "number": 43,
+      "topic": "Símbolos",
+      "concept": "balanza_como_simbolo_de_justicia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un afiche, una balanza representa justicia. ¿Qué relación establece la imagen?",
+      "options": [
+        "Un objeto funciona como símbolo de una idea",
+        "Una textura reemplaza el color",
+        "Una escala muestra profundidad",
+        "Un ritmo describe una melodía"
+      ],
+      "correctAnswer": "Un objeto funciona como símbolo de una idea",
+      "explanation": "La balanza se utiliza como símbolo visual asociado con la justicia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-044",
+      "number": 44,
+      "topic": "Verdadero o falso · Fotografía",
+      "concept": "encuadre_condiciona_informacion_fotografica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El encuadre de una fotografía influye en la información que el espectador puede observar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El encuadre selecciona qué aparece en la imagen y qué queda fuera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-045",
+      "number": 45,
+      "topic": "Verdadero o falso · Patrimonio",
+      "concept": "cambio_generacional_no_anula_valor_patrimonial",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una práctica cultural deja de tener valor patrimonial si las nuevas generaciones introducen cambios en su forma de realizarla.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las comunidades pueden adaptar sus prácticas y mantener su valor cultural y sentido de continuidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-046",
+      "number": 46,
+      "topic": "Producción audiovisual",
+      "concept": "equilibrar_capas_de_audio_para_comprender_dialogos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un video escolar mezcla música, voces y efectos, pero los diálogos casi no se entienden. ¿Qué ajuste conviene probar primero?",
+      "options": [
+        "Aumentar el número de imágenes",
+        "Equilibrar los niveles de voz, música y efectos",
+        "Cambiar el título",
+        "Usar más transiciones"
+      ],
+      "correctAnswer": "Equilibrar los niveles de voz, música y efectos",
+      "explanation": "Ajustar los niveles de audio puede hacer comprensibles las voces sin eliminar los demás sonidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-047",
+      "number": 47,
+      "topic": "Diseño de afiches",
+      "concept": "establecer_jerarquia_visual_en_afiche",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una feria escolar tiene tres actividades, pero el afiche hace que todas parezcan igual de importantes. ¿Qué decisión mejora la jerarquía visual?",
+      "options": [
+        "Igualar tamaño y color",
+        "Adornar cada esquina",
+        "Destacar el nombre y ordenar lo demás",
+        "Reducir demasiado los textos"
+      ],
+      "correctAnswer": "Destacar el nombre y ordenar lo demás",
+      "explanation": "El tamaño, la posición y el contraste pueden establecer un orden de lectura claro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-048",
+      "number": 48,
+      "topic": "Exposición artística",
+      "concept": "contextualizar_piezas_con_procedencia_y_comunidad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una exposición mezcla objetos de distintas comunidades, pero sus etiquetas no explican de dónde vienen. ¿Qué mejora ayuda a evitar interpretaciones descontextualizadas?",
+      "options": [
+        "Añadir origen, uso y voces de la comunidad",
+        "Juntarlas en una vitrina",
+        "Quitar sus nombres",
+        "Cambiar solo la iluminación"
+      ],
+      "correctAnswer": "Añadir origen, uso y voces de la comunidad",
+      "explanation": "La iluminación influye en la observación, pero la contextualización requiere información sobre procedencia, uso y comunidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-049",
+      "number": 49,
+      "topic": "Verdadero o falso · Reutilización digital",
+      "concept": "disponibilidad_en_linea_no_equivale_a_permiso_de_uso",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una imagen está disponible en internet, siempre se puede reutilizar sin revisar quién la creó o bajo qué condiciones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La disponibilidad en línea no elimina la autoría ni las condiciones de uso del material.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Análisis de una obra",
+      "concept": "justificar_interpretacion_con_evidencia_de_obra",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Para justificar una interpretación artística, conviene señalar elementos observables de la obra y relacionarlos con la lectura propuesta.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Usar evidencias visuales o sonoras hace que una interpretación pueda explicarse y discutirse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-051",
+      "number": 51,
+      "topic": "Grabado",
+      "concept": "relieve_imprime_zonas_elevadas_de_matriz",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En el grabado en relieve, ¿qué zonas suelen recibir la tinta?",
+      "options": [
+        "Las partes elevadas de la matriz",
+        "Las hendiduras más profundas",
+        "El papel después de imprimir",
+        "El reverso de la obra"
+      ],
+      "correctAnswer": "Las partes elevadas de la matriz",
+      "explanation": "En el grabado en relieve, la tinta se aplica sobre las superficies elevadas de la matriz.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-052",
+      "number": 52,
+      "topic": "Composición visual",
+      "concept": "espacio_negativo_rodea_o_separa_formas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué se llama espacio negativo en una composición?",
+      "options": [
+        "El tema triste de una obra",
+        "El espacio alrededor o entre las formas principales",
+        "Una sombra proyectada",
+        "Un error de perspectiva"
+      ],
+      "correctAnswer": "El espacio alrededor o entre las formas principales",
+      "explanation": "El espacio negativo es el área que rodea o separa las formas y también participa en el equilibrio visual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-053",
+      "number": 53,
+      "topic": "Color",
+      "concept": "paleta_reune_colores_de_una_obra",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele incluir la paleta de un artista?",
+      "options": [
+        "Los nombres de los personajes",
+        "La secuencia de movimientos",
+        "Los colores elegidos para una obra",
+        "Los planos de una película"
+      ],
+      "correctAnswer": "Los colores elegidos para una obra",
+      "explanation": "La paleta reúne los colores que se seleccionan o utilizan en una creación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-054",
+      "number": 54,
+      "topic": "Teatro",
+      "concept": "utileria_objetos_usados_en_escena",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama un objeto que un actor usa durante una escena?",
+      "options": [
+        "Telón",
+        "Libreto",
+        "Escenario",
+        "Utilería"
+      ],
+      "correctAnswer": "Utilería",
+      "explanation": "La utilería incluye objetos que se usan o aparecen durante la representación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-055",
+      "number": 55,
+      "topic": "Música",
+      "concept": "tempo_indica_velocidad_del_pulso",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué indica principalmente el tempo de una pieza musical?",
+      "options": [
+        "La velocidad del pulso",
+        "El material del instrumento",
+        "El lugar donde se escucha",
+        "El número de intérpretes"
+      ],
+      "correctAnswer": "La velocidad del pulso",
+      "explanation": "El tempo indica qué tan rápido o lento se percibe el pulso musical.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-056",
+      "number": 56,
+      "topic": "Danza",
+      "concept": "ensayo_coordina_movimientos_y_entradas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué permite practicar un ensayo antes de una presentación?",
+      "options": [
+        "Cambiar el público de lugar",
+        "Coordinar movimientos y entradas",
+        "Evitar conocer la música",
+        "Eliminar toda planificación"
+      ],
+      "correctAnswer": "Coordinar movimientos y entradas",
+      "explanation": "El ensayo ayuda a coordinar secuencias, desplazamientos y momentos de entrada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-057",
+      "number": 57,
+      "topic": "Teatro",
+      "concept": "acotacion_orienta_puesta_en_escena",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué indica una acotación en un guion teatral?",
+      "options": [
+        "El precio de una entrada",
+        "La biografía del público",
+        "Una indicación para la representación",
+        "La lista de materiales de pintura"
+      ],
+      "correctAnswer": "Una indicación para la representación",
+      "explanation": "Las acotaciones orientan acciones, gestos, movimientos o aspectos de la escena.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Paleta",
+      "concept": "paleta_limitada_aporta_unidad_visual",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una paleta limitada puede ayudar a dar unidad visual a una obra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Repetir una selección reducida de colores puede conectar visualmente las partes de una composición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-059",
+      "number": 59,
+      "topic": "Diseño visual",
+      "concept": "repeticion_de_forma_con_variacion_de_tamano",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una página repite círculos pequeños alrededor de un círculo grande. ¿Qué relación visual crea principalmente?",
+      "options": [
+        "Una secuencia de sonidos",
+        "Una perspectiva de dos puntos",
+        "Un cambio de escala temporal",
+        "Repetición con variación de tamaño"
+      ],
+      "correctAnswer": "Repetición con variación de tamaño",
+      "explanation": "Repetir una forma y cambiar su tamaño produce ritmo visual y permite destacar un elemento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-060",
+      "number": 60,
+      "topic": "Iluminación escénica",
+      "concept": "iluminacion_distingue_ambiente_o_tiempo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una escena cambia la luz de blanca a azul cuando el personaje recuerda el pasado. ¿Qué función puede cumplir ese cambio?",
+      "options": [
+        "Sugerir un cambio de ambiente o tiempo",
+        "Indicar qué material tiene el vestuario",
+        "Reemplazar todas las acciones",
+        "Mostrar el costo de producción"
+      ],
+      "correctAnswer": "Sugerir un cambio de ambiente o tiempo",
+      "explanation": "La iluminación puede diferenciar ambientes y ayudar a señalar cambios de tiempo o estado emocional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-061",
+      "number": 61,
+      "topic": "Música",
+      "concept": "altura_distingue_sonidos_agudos_y_graves",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos notas tienen la misma duración, pero una suena más aguda que la otra. ¿Qué cambia principalmente?",
+      "options": [
+        "La intensidad",
+        "La altura del sonido",
+        "El número de compases",
+        "La fuente visual"
+      ],
+      "correctAnswer": "La altura del sonido",
+      "explanation": "La altura permite distinguir sonidos más agudos o más graves.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-062",
+      "number": 62,
+      "topic": "Expresión corporal",
+      "concept": "orientacion_corporal_expresa_relaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos personajes permanecen en silencio; uno se inclina hacia el otro y el otro retrocede. ¿Qué puede comunicar esa relación corporal?",
+      "options": [
+        "El material de la escenografía",
+        "La duración del guion",
+        "Acercamiento y rechazo",
+        "El origen del vestuario"
+      ],
+      "correctAnswer": "Acercamiento y rechazo",
+      "explanation": "La orientación y la distancia entre cuerpos pueden expresar relaciones sin palabras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-063",
+      "number": 63,
+      "topic": "Arte contemporáneo",
+      "concept": "contexto_de_exhibicion_cambia_lectura_de_objeto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Cambiar el contexto en que se exhibe un objeto cotidiano puede alterar cómo se interpreta.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La ubicación y la relación con otros elementos pueden dar nuevos sentidos al objeto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-064",
+      "number": 64,
+      "topic": "Fotografía",
+      "concept": "punto_de_vista_alto_modifica_relacion_de_escala",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una foto tomada desde arriba hace que una persona parezca pequeña frente a una plaza. ¿Qué recurso influye en esa lectura?",
+      "options": [
+        "El punto de vista",
+        "La partitura",
+        "El tipo de arcilla",
+        "La rima"
+      ],
+      "correctAnswer": "El punto de vista",
+      "explanation": "El punto de vista cambia las relaciones de tamaño y posición que percibe quien observa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-065",
+      "number": 65,
+      "topic": "Conservación",
+      "concept": "limitar_luz_para_conservar_obras_en_papel",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra en papel se exhibe bajo luz intensa durante meses. ¿Qué riesgo conviene controlar?",
+      "options": [
+        "Que cambie la melodía",
+        "Que la luz deteriore o decolore el material",
+        "Que aumente el tamaño del marco",
+        "Que se modifique la perspectiva"
+      ],
+      "correctAnswer": "Que la luz deteriore o decolore el material",
+      "explanation": "La exposición prolongada a la luz puede afectar pigmentos y soportes sensibles.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-066",
+      "number": 66,
+      "topic": "Memoria cultural",
+      "concept": "cambio_de_tempo_modifica_energia_percibida",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Cambiar el tempo de una pieza puede modificar su energía percibida aunque se mantenga la secuencia de notas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La velocidad del pulso influye en el carácter de la música sin exigir que cambie la melodía.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-067",
+      "number": 67,
+      "topic": "Textiles",
+      "concept": "cruce_de_trama_y_urdimbre_en_tejido",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un tejido, los hilos se cruzan repetidamente en dos direcciones. ¿Qué genera ese procedimiento?",
+      "options": [
+        "Una banda sonora",
+        "Un plano cinematográfico",
+        "Un gesto teatral",
+        "Una estructura de trama y urdimbre"
+      ],
+      "correctAnswer": "Una estructura de trama y urdimbre",
+      "explanation": "El entrecruzamiento de trama y urdimbre forma la estructura básica de muchos tejidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-068",
+      "number": 68,
+      "topic": "Diseño de patrones",
+      "concept": "repeticion_ordenada_produce_ritmo_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una forma aparece repetida en una baldosa decorativa. ¿Qué principio organiza esa repetición?",
+      "options": [
+        "Ritmo visual",
+        "Perspectiva aérea",
+        "Montaje de planos",
+        "Resonancia acústica"
+      ],
+      "correctAnswer": "Ritmo visual",
+      "explanation": "La repetición ordenada de formas produce ritmo y continuidad visual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-069",
+      "number": 69,
+      "topic": "Arte público",
+      "concept": "contexto_del_lugar_influye_en_lectura_de_mural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué conviene considerar el lugar antes de diseñar un mural para una pared comunitaria?",
+      "options": [
+        "El lugar fija un único significado",
+        "Arquitectura y uso influyen en su lectura",
+        "Conviene evitar temas locales",
+        "Todo mural significa lo mismo"
+      ],
+      "correctAnswer": "Arquitectura y uso influyen en su lectura",
+      "explanation": "La ubicación, la arquitectura y la comunidad modifican cómo se observa e interpreta el mural.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-070",
+      "number": 70,
+      "topic": "Recepción artística",
+      "concept": "experiencia_del_publico_influye_en_recepcion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Algunas personas se ríen de una obra que a otras les parece incómoda. ¿Qué explica mejor la diferencia?",
+      "options": [
+        "La obra necesariamente tiene dos autores",
+        "El color determina una reacción idéntica",
+        "Las experiencias y expectativas influyen en la recepción",
+        "Una de las reacciones siempre es incorrecta"
+      ],
+      "correctAnswer": "Las experiencias y expectativas influyen en la recepción",
+      "explanation": "Las experiencias y expectativas del público pueden influir en la respuesta ante una obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-071",
+      "number": 71,
+      "topic": "Movimiento y espacio",
+      "concept": "contraste_de_niveles_espaciales_en_danza",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una coreografía, una bailarina se mantiene cerca del suelo mientras otra eleva los brazos y salta. ¿Qué recurso espacial contrastan?",
+      "options": [
+        "El tamaño de la audiencia",
+        "El material del escenario",
+        "Niveles bajo y alto",
+        "El tono de la iluminación"
+      ],
+      "correctAnswer": "Niveles bajo y alto",
+      "explanation": "Los niveles bajo y alto describen distintas alturas del movimiento en el espacio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-072",
+      "number": 72,
+      "topic": "Contexto cultural",
+      "concept": "explicar_procedencia_y_contexto_de_pieza_cultural",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pieza tradicional se exhibe fuera de su comunidad sin explicar su uso. ¿Qué información ayudaría más a comprenderla?",
+      "options": [
+        "El tono de las paredes",
+        "Las dimensiones de la sala",
+        "El modelo de vitrina",
+        "La historia y el contexto de sus creadores"
+      ],
+      "correctAnswer": "La historia y el contexto de sus creadores",
+      "explanation": "La procedencia y las perspectivas comunitarias ayudan a evitar lecturas incompletas de una pieza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-073",
+      "number": 73,
+      "topic": "Imagen digital",
+      "concept": "combinar_imagen_historica_y_dibujo_actual",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una secuencia combina una fotografía antigua con dibujos actuales para narrar un recuerdo. ¿Qué relación crea principalmente?",
+      "options": [
+        "Repetir una forma para crear ritmo",
+        "Cambiar el tamaño para sugerir profundidad",
+        "Usar un solo lenguaje sin contrastes",
+        "Relacionar memoria y presente con imágenes distintas"
+      ],
+      "correctAnswer": "Relacionar memoria y presente con imágenes distintas",
+      "explanation": "Combinar recursos visuales de distintas épocas puede relacionar memoria y presente dentro de una narración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-074",
+      "number": 74,
+      "topic": "Verdadero o falso · Creación colectiva",
+      "concept": "dialogo_y_reconocimiento_en_creacion_colectiva",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "En una obra colectiva, conversar sobre decisiones y reconocer aportes puede ayudar a construir un resultado compartido.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La comunicación y el reconocimiento de contribuciones ayudan a coordinar el trabajo colectivo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-075",
+      "number": 75,
+      "topic": "Verdadero o falso · Música",
+      "concept": "silencio_como_recurso_expresivo_musical",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "El silencio dentro de una pieza musical puede tener una función expresiva y formar parte de su organización.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las pausas organizan el tiempo musical y pueden producir énfasis, contraste o expectativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-076",
+      "number": 76,
+      "topic": "Historieta",
+      "concept": "viñeta_organiza_momento_de_historieta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama cada cuadro que presenta un momento de una historieta?",
+      "options": [
+        "Viñeta",
+        "Estrofa",
+        "Escena",
+        "Compás"
+      ],
+      "correctAnswer": "Viñeta",
+      "explanation": "La viñeta organiza una escena o momento dentro de la secuencia de una historieta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-077",
+      "number": 77,
+      "topic": "Pintura",
+      "concept": "acuarela_permite_capas_translucidas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica es propia de muchas acuarelas?",
+      "options": [
+        "Se construyen con piedra tallada",
+        "Permiten capas de color translúcidas",
+        "Se forman solo con hilos",
+        "Requieren modelar volumen sólido"
+      ],
+      "correctAnswer": "Permiten capas de color translúcidas",
+      "explanation": "La acuarela utiliza pigmentos diluidos en agua y suele permitir capas translúcidas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-078",
+      "number": 78,
+      "topic": "Dibujo",
+      "concept": "luz_y_sombra_sugieren_volumen_en_dibujo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación de valores ayuda a representar volumen en un objeto dibujado?",
+      "options": [
+        "La repetición de letras",
+        "La duración de una nota",
+        "Las zonas de luz y sombra",
+        "La lista de materiales"
+      ],
+      "correctAnswer": "Las zonas de luz y sombra",
+      "explanation": "Los cambios de luz y sombra pueden sugerir volumen sobre una superficie plana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-079",
+      "number": 79,
+      "topic": "Música",
+      "concept": "direccion_coordina_entradas_del_conjunto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele hacer quien dirige un conjunto musical?",
+      "options": [
+        "Diseñar la sala de conciertos",
+        "Vender los instrumentos",
+        "Escribir cada letra mientras suena",
+        "Coordinar entradas y ritmo del conjunto"
+      ],
+      "correctAnswer": "Coordinar entradas y ritmo del conjunto",
+      "explanation": "Quien dirige ayuda a coordinar el pulso, las entradas y la interpretación colectiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-080",
+      "number": 80,
+      "topic": "Escultura",
+      "concept": "relieve_escultorico_sobresale_de_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué distingue principalmente una escultura en relieve?",
+      "options": [
+        "Las formas sobresalen parcialmente de un fondo",
+        "La obra se escucha desde lejos",
+        "Los personajes hablan directamente al público",
+        "La imagen se compone de planos de cine"
+      ],
+      "correctAnswer": "Las formas sobresalen parcialmente de un fondo",
+      "explanation": "En el relieve, las formas sobresalen de una superficie de soporte sin separarse completamente de ella.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-081",
+      "number": 81,
+      "topic": "Música",
+      "concept": "marcas_p_y_f_indican_dinamica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una partitura, ¿qué suelen indicar las marcas “p” y “f”?",
+      "options": [
+        "El orden de los instrumentos",
+        "La intensidad suave o fuerte",
+        "La forma del escenario",
+        "La duración de la obra completa"
+      ],
+      "correctAnswer": "La intensidad suave o fuerte",
+      "explanation": "“p” y “f” son indicaciones dinámicas que señalan intensidad suave y fuerte.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-082",
+      "number": 82,
+      "topic": "Danza",
+      "concept": "trayectoria_coreografica_recorrido_en_espacio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué describe mejor una trayectoria en una coreografía?",
+      "options": [
+        "La edad del elenco",
+        "Los tonos de luz",
+        "La trayectoria del cuerpo en el espacio",
+        "El número de canciones"
+      ],
+      "correctAnswer": "La trayectoria del cuerpo en el espacio",
+      "explanation": "La trayectoria describe el recorrido de un bailarín o grupo dentro del espacio escénico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Planificación",
+      "concept": "boceto_explora_idea_antes_de_obra_final",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un boceto permite explorar una idea antes de realizar una obra con materiales definitivos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El boceto ayuda a ensayar formas y decisiones antes de la realización final.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-084",
+      "number": 84,
+      "topic": "Muralismo",
+      "concept": "interpretar_mural_en_relacion_con_lugar_y_publico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mural ocupa una pared junto a una cancha donde se reúne la comunidad. ¿Qué aspecto conviene considerar al interpretarlo?",
+      "options": [
+        "Solo el color de la pintura",
+        "El número de ventanas de la pared",
+        "El precio de cada brocha",
+        "La relación entre imágenes, lugar y público"
+      ],
+      "correctAnswer": "La relación entre imágenes, lugar y público",
+      "explanation": "El lugar y las personas que lo utilizan pueden influir en el sentido y la recepción del mural.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-085",
+      "number": 85,
+      "topic": "Cine",
+      "concept": "plano_amplio_muestra_relacion_con_entorno",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una toma amplia muestra al personaje y gran parte del paisaje. ¿Qué información aporta principalmente?",
+      "options": [
+        "La relación del personaje con su entorno",
+        "La textura exacta del vestuario",
+        "Solo los movimientos de los ojos",
+        "La altura de cada nota musical"
+      ],
+      "correctAnswer": "La relación del personaje con su entorno",
+      "explanation": "Un plano amplio sitúa a los personajes en relación con el espacio que los rodea.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-086",
+      "number": 86,
+      "topic": "Color",
+      "concept": "contraste_de_valor_separa_figura_y_fondo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una figura debe separarse claramente de un fondo gris. ¿Qué elección puede aumentar su contraste de luminosidad?",
+      "options": [
+        "Usar otro gris muy parecido",
+        "Elegir un tono mucho más claro u oscuro",
+        "Quitar todo borde y contorno",
+        "Reducir la figura al mínimo"
+      ],
+      "correctAnswer": "Elegir un tono mucho más claro u oscuro",
+      "explanation": "Una diferencia marcada entre valores claros y oscuros facilita distinguir figura y fondo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-087",
+      "number": 87,
+      "topic": "Teatro",
+      "concept": "monologo_revela_pensamientos_de_personaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un personaje habla solo en escena y expresa en voz alta sus pensamientos. ¿Qué forma dramática puede estar utilizando?",
+      "options": [
+        "Coro",
+        "Acotación",
+        "Monólogo",
+        "Cambio de escenografía"
+      ],
+      "correctAnswer": "Monólogo",
+      "explanation": "Un monólogo es un parlamento extenso de un personaje, que puede revelar pensamientos o emociones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-088",
+      "number": 88,
+      "topic": "Vestuario y cultura",
+      "concept": "relacionar_formas_de_vestuario_con_celebracion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un vestuario incorpora formas usadas en una celebración regional. ¿Qué pregunta ayuda a comprender mejor esa elección?",
+      "options": [
+        "¿Cuánto pesaba el telón?",
+        "¿Cuál fue la primera fila ocupada?",
+        "¿Qué marca de hilo se usó?",
+        "¿Qué relación tienen esas formas con la celebración?"
+      ],
+      "correctAnswer": "¿Qué relación tienen esas formas con la celebración?",
+      "explanation": "Relacionar el diseño con la celebración permite comprender las referencias culturales del vestuario.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-089",
+      "number": 89,
+      "topic": "Materiales y ambiente",
+      "concept": "seleccionar_material_exterior_por_resistencia_climatica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura se instalará al aire libre bajo lluvias frecuentes. ¿Qué criterio material es más pertinente?",
+      "options": [
+        "Resistencia a la humedad y al clima",
+        "Que el material solo exista en interiores",
+        "Que absorba agua rápidamente",
+        "Que se deshaga al contacto con el aire"
+      ],
+      "correctAnswer": "Resistencia a la humedad y al clima",
+      "explanation": "La exposición al clima hace importante evaluar la durabilidad y el mantenimiento del material.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-090",
+      "number": 90,
+      "topic": "Diseño gráfico",
+      "concept": "legibilidad_tipografica_a_distancia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un aviso debe leerse desde el otro lado de un pasillo. ¿Qué decisión tipográfica ayuda más?",
+      "options": [
+        "Reducir el grosor de letra",
+        "Usar letras claras y suficientemente grandes",
+        "Elegir una tipografía recargada",
+        "Reducir el contraste del fondo"
+      ],
+      "correctAnswer": "Usar letras claras y suficientemente grandes",
+      "explanation": "El tamaño y la legibilidad permiten reconocer el mensaje a la distancia prevista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-091",
+      "number": 91,
+      "topic": "Ensamble musical",
+      "concept": "distinguir_acompanamiento_de_melodia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una canción, un instrumento mantiene un patrón repetido mientras otro interpreta la melodía. ¿Qué relación cumplen?",
+      "options": [
+        "Son dos escenas teatrales",
+        "Son dos soportes de impresión",
+        "Acompañamiento y melodía",
+        "Primer plano y fondo visual"
+      ],
+      "correctAnswer": "Acompañamiento y melodía",
+      "explanation": "Un instrumento puede sostener un acompañamiento mientras otro desarrolla la melodía.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-092",
+      "number": 92,
+      "topic": "Símbolos culturales",
+      "concept": "consultar_contexto_de_simbolo_cultural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al encontrar un símbolo visual de otra cultura, ¿qué actitud ayuda a interpretarlo responsablemente?",
+      "options": [
+        "Suponer que significa lo mismo en todas partes",
+        "Juzgarlo únicamente por su forma",
+        "Reemplazarlo por un símbolo propio",
+        "Consultar su contexto y a quienes lo reconocen"
+      ],
+      "correctAnswer": "Consultar su contexto y a quienes lo reconocen",
+      "explanation": "El significado de un símbolo depende de convenciones y contextos culturales; es mejor consultar fuentes pertinentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-093",
+      "number": 93,
+      "topic": "Escultura y espacio",
+      "concept": "diseno_de_escultura_para_observacion_multilateral",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura alta se instala en una plaza abierta y se observa desde varios lados. ¿Qué debe prever su diseño?",
+      "options": [
+        "Cómo se percibe desde distintos puntos de vista",
+        "Qué letra inicia el título",
+        "La velocidad de una canción",
+        "El orden de los diálogos"
+      ],
+      "correctAnswer": "Cómo se percibe desde distintos puntos de vista",
+      "explanation": "En un espacio abierto, el público puede rodear la escultura y verla desde ángulos diversos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-094",
+      "number": 94,
+      "topic": "Verdadero o falso · Puesta en escena",
+      "concept": "distancia_entre_actores_modifica_relacion_percibida",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Cambiar la distancia entre dos actores puede modificar cómo se percibe su relación en escena.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La distancia y la orientación corporal aportan información sobre cercanía, tensión o separación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-095",
+      "number": 95,
+      "topic": "Verdadero o falso · Sonido",
+      "concept": "sonido_fuera_de_campo_amplia_espacio_narrativo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los sonidos fuera de campo pueden aportar información sobre un lugar o una acción que el espectador no ve.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un sonido puede ampliar el espacio narrativo y sugerir sucesos fuera de la imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-096",
+      "number": 96,
+      "topic": "Accesibilidad en exposiciones",
+      "concept": "recorrido_y_textos_accesibles_en_exposicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un museo quiere que visitantes con diferentes necesidades puedan recorrer una exposición. ¿Qué decisión contribuye más?",
+      "options": [
+        "Colocar todos los textos en letra pequeña",
+        "Mantener rutas estrechas entre vitrinas",
+        "Ofrecer circulación accesible y textos legibles",
+        "Quitar toda señalización"
+      ],
+      "correctAnswer": "Ofrecer circulación accesible y textos legibles",
+      "explanation": "Un recorrido accesible y textos fáciles de leer permiten que más personas participen de la exposición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-097",
+      "number": 97,
+      "topic": "Arte público",
+      "concept": "planear_mural_segun_soporte_clima_y_publico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pared recibe sol directo, lluvia y mucho tránsito peatonal. ¿Qué decisión conviene tomar antes de pintar un mural?",
+      "options": [
+        "Escoger colores antes de revisar la pared",
+        "Pintar sin preparar la superficie",
+        "Elegir materiales sin considerar el clima",
+        "Revisar soporte, exposición y relación con quienes pasan"
+      ],
+      "correctAnswer": "Revisar soporte, exposición y relación con quienes pasan",
+      "explanation": "Evaluar soporte, exposición y público ayuda a elegir materiales y diseñar una obra adecuada al lugar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-098",
+      "number": 98,
+      "topic": "Lectura comparativa",
+      "concept": "evaluar_diseno_segun_mensaje_y_publico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos carteles promueven la misma actividad. Uno usa texto grande y pocos colores; el otro, texto pequeño y muchos elementos. ¿Qué comparación es más útil?",
+      "options": [
+        "Decidir cuál costó más",
+        "Analizar cuál comunica mejor al público previsto",
+        "Contar los materiales usados",
+        "Elegir automáticamente el de más colores"
+      ],
+      "correctAnswer": "Analizar cuál comunica mejor al público previsto",
+      "explanation": "La eficacia se evalúa según si la jerarquía y legibilidad ayudan al público previsto a comprender el mensaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-099",
+      "number": 99,
+      "topic": "Verdadero o falso · Materiales",
+      "concept": "elegir_material_por_apariencia_durabilidad_y_cuidado",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La elección de materiales para una obra puede considerar tanto el efecto visual como su durabilidad y mantenimiento.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las decisiones materiales afectan la apariencia, la conservación y las necesidades de cuidado de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-100",
+      "number": 100,
+      "topic": "Verdadero o falso · Interpretación",
+      "concept": "interpretacion_conecta_evidencia_formal_y_contexto",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una interpretación de una obra es más sólida cuando conecta una idea con detalles observables y con su contexto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Relacionar evidencia formal y contexto ayuda a justificar una lectura en lugar de presentarla como una suposición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-101",
+      "number": 101,
+      "topic": "Mosaico",
+      "concept": "mosaico_compone_imagen_con_piezas_pequenas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica crea una imagen al disponer pequeñas piezas de colores sobre una superficie?",
+      "options": [
+        "Mosaico",
+        "Monólogo",
+        "Acuarela",
+        "Coreografía"
+      ],
+      "correctAnswer": "Mosaico",
+      "explanation": "El mosaico forma imágenes o patrones al combinar piezas pequeñas como teselas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-102",
+      "number": 102,
+      "topic": "Ilustración",
+      "concept": "ilustracion_complementa_informacion_escrita",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hace principalmente una ilustración dentro de un libro informativo?",
+      "options": [
+        "Cambia el idioma del texto",
+        "Acompaña o comunica información mediante imágenes",
+        "Reemplaza siempre todas las palabras",
+        "Indica el precio de impresión"
+      ],
+      "correctAnswer": "Acompaña o comunica información mediante imágenes",
+      "explanation": "Una ilustración puede acompañar, explicar o ampliar visualmente la información escrita.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-103",
+      "number": 103,
+      "topic": "Vestuario escénico",
+      "concept": "vestuario_aporta_pistas_de_personaje_y_epoca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede comunicar el vestuario de un personaje?",
+      "options": [
+        "La cantidad de público",
+        "La acústica de la sala",
+        "Rasgos del personaje o de la época representada",
+        "El orden de las luces"
+      ],
+      "correctAnswer": "Rasgos del personaje o de la época representada",
+      "explanation": "Ropa, accesorios y colores pueden aportar pistas sobre el personaje y el contexto de la escena.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-104",
+      "number": 104,
+      "topic": "Música",
+      "concept": "escala_musical_organiza_alturas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es una escala musical?",
+      "options": [
+        "Una lista de instrumentos de una orquesta",
+        "Un plano de escenario",
+        "Una serie de movimientos de danza",
+        "Una secuencia ordenada de alturas sonoras"
+      ],
+      "correctAnswer": "Una secuencia ordenada de alturas sonoras",
+      "explanation": "Una escala organiza sonidos de distintas alturas siguiendo un orden.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-105",
+      "number": 105,
+      "topic": "Cine",
+      "concept": "edicion_selecciona_y_organiza_tomas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarea realiza principalmente quien edita una película?",
+      "options": [
+        "Selecciona y organiza tomas",
+        "Construye cada edificio real del lugar",
+        "Decide quién compra las entradas",
+        "Cambia el idioma de todos los espectadores"
+      ],
+      "correctAnswer": "Selecciona y organiza tomas",
+      "explanation": "La edición selecciona y ordena imágenes y sonidos para construir continuidad, ritmo y sentido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-106",
+      "number": 106,
+      "topic": "Arquitectura",
+      "concept": "ventana_conecta_luz_interior_y_exterior",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple principalmente una ventana en una construcción?",
+      "options": [
+        "Acompañar la melodía",
+        "Dar luz y conexión visual con el exterior",
+        "Definir el género de la obra",
+        "Marcar los pasos de una danza"
+      ],
+      "correctAnswer": "Dar luz y conexión visual con el exterior",
+      "explanation": "Una ventana puede iluminar el interior y conectar visualmente con el exterior.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-107",
+      "number": 107,
+      "topic": "Títeres",
+      "concept": "manipulacion_anima_titere_en_escena",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso anima un títere durante una representación?",
+      "options": [
+        "Una etiqueta de museo",
+        "Una rima escrita",
+        "El movimiento que realiza quien lo manipula",
+        "El color de la entrada"
+      ],
+      "correctAnswer": "El movimiento que realiza quien lo manipula",
+      "explanation": "La manipulación da movimiento al títere y permite construir acciones y personajes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-108",
+      "number": 108,
+      "topic": "Verdadero o falso · Fotografía",
+      "concept": "direccion_de_luz_modifica_sombras_fotograficas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La dirección de la luz puede cambiar las sombras y el aspecto de una fotografía.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La dirección de la luz modifica dónde aparecen sombras y qué rasgos quedan destacados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-109",
+      "number": 109,
+      "topic": "Diseño",
+      "concept": "alineacion_y_agrupacion_organizan_diseno",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un afiche, varios elementos parecen desordenados aunque tengan colores relacionados. ¿Qué decisión puede mejorar su organización?",
+      "options": [
+        "Añadir más adornos sin orden",
+        "Reducir todos los elementos al mismo tamaño",
+        "Quitar el mensaje principal",
+        "Alinear elementos relacionados y separar grupos distintos"
+      ],
+      "correctAnswer": "Alinear elementos relacionados y separar grupos distintos",
+      "explanation": "Alinear y agrupar elementos relacionados ayuda a mostrar jerarquías y relaciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-110",
+      "number": 110,
+      "topic": "Escultura",
+      "concept": "vacio_escultorico_conecta_obra_y_entorno",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura tiene un hueco por el que se ve parte del paisaje. ¿Qué aporta ese vacío?",
+      "options": [
+        "Una relación entre forma, espacio y entorno",
+        "Una melodía adicional",
+        "Una instrucción del guion",
+        "Una textura de papel"
+      ],
+      "correctAnswer": "Una relación entre forma, espacio y entorno",
+      "explanation": "El vacío también puede formar parte de la obra y conectar sus formas con el espacio exterior.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-111",
+      "number": 111,
+      "topic": "Música",
+      "concept": "coro_refuerza_o_responde_a_voz_principal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una canción, la voz principal interpreta la melodía mientras un coro repite algunas frases. ¿Qué función cumple el coro?",
+      "options": [
+        "Sustituye al público",
+        "Refuerza o responde a la voz principal",
+        "Elimina el pulso",
+        "Cambia los instrumentos en objetos visuales"
+      ],
+      "correctAnswer": "Refuerza o responde a la voz principal",
+      "explanation": "Un coro puede apoyar, responder o reforzar frases de la voz principal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-112",
+      "number": 112,
+      "topic": "Improvisación",
+      "concept": "escucha_activa_construye_improvisacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una improvisación teatral, ¿qué práctica ayuda a que una propuesta del compañero pueda continuar?",
+      "options": [
+        "Ignorarla y repetir el texto propio",
+        "Parar para corregir cada acción",
+        "Escuchar y continuar desde lo ocurrido",
+        "Mantener la escena sin cambios"
+      ],
+      "correctAnswer": "Escuchar y continuar desde lo ocurrido",
+      "explanation": "Escuchar y aceptar la situación permite responder y construir una escena de forma colaborativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-113",
+      "number": 113,
+      "topic": "Cartel cultural",
+      "concept": "ensamble_de_fragmentos_en_composicion_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cartel anuncia una obra con personajes y objetos recortados de distintas imágenes. ¿Qué recurso compositivo utiliza?",
+      "options": [
+        "Talla directa",
+        "Perspectiva acústica",
+        "Acompañamiento coral",
+        "Ensamble de fragmentos visuales"
+      ],
+      "correctAnswer": "Ensamble de fragmentos visuales",
+      "explanation": "Combinar fragmentos de imágenes permite construir una nueva composición visual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-114",
+      "number": 114,
+      "topic": "Edición de video",
+      "concept": "continuidad_de_accion_entre_cortes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un editor corta entre dos tomas del mismo personaje mientras realiza una acción continua. ¿Qué debe cuidar para que la secuencia se entienda?",
+      "options": [
+        "La continuidad de acción y posición",
+        "Que todas las tomas tengan diferente personaje",
+        "Que la música no tenga ritmo",
+        "Que el fondo cambie sin motivo"
+      ],
+      "correctAnswer": "La continuidad de acción y posición",
+      "explanation": "Mantener continuidad entre acciones y posiciones evita que los cortes confundan al espectador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-115",
+      "number": 115,
+      "topic": "Danza en grupo",
+      "concept": "sincronizar_movimientos_en_danza",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos bailarines repiten el mismo movimiento al mismo tiempo. ¿Qué relación se observa?",
+      "options": [
+        "Contraste de materiales",
+        "Sincronía",
+        "Perspectiva",
+        "Cambio de encuadre"
+      ],
+      "correctAnswer": "Sincronía",
+      "explanation": "La sincronía ocurre cuando los movimientos se realizan coordinadamente en el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-116",
+      "number": 116,
+      "topic": "Diseño textil",
+      "concept": "patron_textil_con_forma_repetida_y_color_variable",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un diseño textil usa una figura geométrica que se repite con variaciones de color. ¿Qué aspecto se modifica?",
+      "options": [
+        "El soporte se convierte en sonido",
+        "La secuencia se vuelve una escena teatral",
+        "La forma se mantiene y varía el color",
+        "El tejido deja de tener patrón"
+      ],
+      "correctAnswer": "La forma se mantiene y varía el color",
+      "explanation": "Mantener la forma y cambiar el color produce variación dentro de un patrón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-117",
+      "number": 117,
+      "topic": "Arquitectura y sonido",
+      "concept": "reverberacion_dificulta_comprension_en_salon",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un salón, las voces rebotan mucho y cuesta entenderlas. ¿Qué fenómeno se percibe?",
+      "options": [
+        "Perspectiva lineal",
+        "Saturación de color",
+        "Simetría radial",
+        "Reverberación excesiva"
+      ],
+      "correctAnswer": "Reverberación excesiva",
+      "explanation": "La reverberación prolonga las reflexiones del sonido y puede dificultar la comprensión del habla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-118",
+      "number": 118,
+      "topic": "Museografía",
+      "concept": "etiqueta_museo_aporta_autoria_fecha_y_funcion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una etiqueta de museo indica quién elaboró una pieza, cuándo y para qué se usaba. ¿Qué aporta principalmente?",
+      "options": [
+        "Contexto para interpretar el objeto",
+        "Una melodía para la vitrina",
+        "El tamaño de quienes lo observan",
+        "La cantidad de entradas vendidas"
+      ],
+      "correctAnswer": "Contexto para interpretar el objeto",
+      "explanation": "La autoría, fecha y función ayudan a situar el objeto en un contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-119",
+      "number": 119,
+      "topic": "Verdadero o falso · Artesanía",
+      "concept": "tecnica_compartida_admite_variacion_entre_piezas",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una técnica artesanal puede compartir procedimientos y, al mismo tiempo, permitir diferencias entre las piezas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un procedimiento común no obliga a que cada pieza sea idéntica; las decisiones de quien la realiza pueden variar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-120",
+      "number": 120,
+      "topic": "Verdadero o falso · Teatro",
+      "concept": "ritmo_escenico_incluye_mas_que_velocidad_de_dialogo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El ritmo de una escena depende únicamente de qué tan rápido hablan los actores.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "También influyen pausas, movimientos, cambios y duración de las acciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-121",
+      "number": 121,
+      "topic": "Arte y memoria",
+      "concept": "construir_representacion_comunitaria_con_multiples_memorias",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad discrepa sobre cómo representar un acontecimiento de su historia en un mural. ¿Qué proceso favorece una representación más cuidadosa?",
+      "options": [
+        "Elegir una versión sin consultar",
+        "Escuchar, contrastar recuerdos y acordar la presentación",
+        "Eliminar toda referencia al hecho",
+        "Copiar una imagen sin verificar su vínculo"
+      ],
+      "correctAnswer": "Escuchar, contrastar recuerdos y acordar la presentación",
+      "explanation": "Escuchar perspectivas y contrastar recuerdos ayuda a representar una memoria compartida sin ocultar diferencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-122",
+      "number": 122,
+      "topic": "Escena y público",
+      "concept": "orientar_actuacion_para_publico_alrededor",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escena se representa en una sala donde el público rodea a los actores. ¿Qué conviene planear para que la acción se comprenda?",
+      "options": [
+        "Actuar siempre de espaldas",
+        "Concentrar la acción en una esquina",
+        "Variar orientaciones y repartir la acción",
+        "Apagar todas las luces"
+      ],
+      "correctAnswer": "Variar orientaciones y repartir la acción",
+      "explanation": "Al considerar varios lados de observación, la puesta en escena puede distribuir la acción para mantenerla visible.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-123",
+      "number": 123,
+      "topic": "Presentación cultural",
+      "concept": "describir_audio_y_contexto_en_video_de_danza",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un video de una danza se compartirá con personas que no pueden escuchar el audio. ¿Qué recurso amplía mejor su comprensión?",
+      "options": [
+        "Reducir el tamaño del video",
+        "Omitir danza e intérpretes",
+        "Quitar la descripción",
+        "Añadir subtítulos y contexto de la danza"
+      ],
+      "correctAnswer": "Añadir subtítulos y contexto de la danza",
+      "explanation": "La descripción y los subtítulos pueden comunicar información sonora y contextual que no se percibe solo con la imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-124",
+      "number": 124,
+      "topic": "Verdadero o falso · Representación",
+      "concept": "consultar_comunidad_para_evitar_estereotipos",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Al crear una obra sobre una comunidad, preguntar cómo desea ser representada puede ayudar a evitar estereotipos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Incluir perspectivas de la comunidad permite cuestionar generalizaciones y representar mejor su diversidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Artes temporales",
+      "concept": "obra_temporal_requiere_experiencia_secuencial",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "En una obra basada en movimiento o sonido, observar una sola imagen fija puede no mostrar toda la experiencia artística.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Algunas obras se desarrollan en el tiempo y requieren observar o escuchar su secuencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-126",
+      "number": 126,
+      "topic": "Cerámica",
+      "concept": "esmalte_aporta_color_y_acabado_a_ceramica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple el esmalte aplicado a muchas piezas cerámicas?",
+      "options": [
+        "Dar color o acabado a la superficie",
+        "Escribir el guion de una escena",
+        "Organizar una melodía",
+        "Recortar fotogramas"
+      ],
+      "correctAnswer": "Dar color o acabado a la superficie",
+      "explanation": "El esmalte puede aportar color, brillo y una superficie protectora a una pieza cerámica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-127",
+      "number": 127,
+      "topic": "Expresión escénica",
+      "concept": "gesto_escenico_comunica_intencion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una escena sin diálogo, ¿qué puede comunicar el gesto de un actor?",
+      "options": [
+        "La escala del edificio",
+        "Una emoción o intención",
+        "El número de páginas del guion",
+        "El material del telón"
+      ],
+      "correctAnswer": "Una emoción o intención",
+      "explanation": "La postura y los gestos permiten expresar emociones e intenciones sin palabras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-128",
+      "number": 128,
+      "topic": "Música",
+      "concept": "melodia_secuencia_sonora_percibida_como_linea",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele ser una melodía?",
+      "options": [
+        "El borde de una pintura",
+        "La ubicación de luces en una sala",
+        "Una sucesión de sonidos con sentido musical",
+        "El movimiento de una escultura"
+      ],
+      "correctAnswer": "Una sucesión de sonidos con sentido musical",
+      "explanation": "La melodía organiza sonidos sucesivos que se perciben como una línea musical.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-129",
+      "number": 129,
+      "topic": "Artes gráficas",
+      "concept": "matriz_transfiere_imagen_a_soporte",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué permite hacer una matriz de impresión?",
+      "options": [
+        "Coordinar actores en una escena",
+        "Conservar una danza en el espacio",
+        "Proyectar sombras naturales",
+        "Transferir una imagen al soporte"
+      ],
+      "correctAnswer": "Transferir una imagen al soporte",
+      "explanation": "Una matriz preparada permite transferir o imprimir una imagen sobre papel u otro soporte.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-130",
+      "number": 130,
+      "topic": "Arquitectura",
+      "concept": "fachada_como_cara_exterior_de_edificio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es una fachada?",
+      "options": [
+        "La cara exterior visible de una construcción",
+        "La banda sonora de una película",
+        "Una secuencia de pasos",
+        "Una pieza pequeña de mosaico"
+      ],
+      "correctAnswer": "La cara exterior visible de una construcción",
+      "explanation": "La fachada es una cara exterior de un edificio, especialmente la principal o visible hacia un espacio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-131",
+      "number": 131,
+      "topic": "Teatro",
+      "concept": "telon_separa_visualmente_escenario_y_sala",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un teatro con escenario a la italiana, ¿qué separa normalmente el telón?",
+      "options": [
+        "El vestuario del maquillaje",
+        "El escenario de la sala del público",
+        "La melodía del acompañamiento",
+        "La escultura del pedestal"
+      ],
+      "correctAnswer": "El escenario de la sala del público",
+      "explanation": "El telón puede ocultar o revelar el escenario frente a la sala donde se encuentra el público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-132",
+      "number": 132,
+      "topic": "Diseño",
+      "concept": "logotipo_identifica_marca_o_institucion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibe una imagen creada para representar visualmente una marca o institución?",
+      "options": [
+        "Montaje",
+        "Coreografía",
+        "Logotipo",
+        "Monólogo"
+      ],
+      "correctAnswer": "Logotipo",
+      "explanation": "Un logotipo identifica una marca o institución mediante una forma gráfica o tipográfica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-133",
+      "number": 133,
+      "topic": "Verdadero o falso · Retrato",
+      "concept": "retrato_representa_una_o_mas_personas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un retrato puede representar a una persona o a un grupo de personas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El retrato puede centrarse en una persona o incluir a varias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-134",
+      "number": 134,
+      "topic": "Color",
+      "concept": "saturacion_distingue_color_vivo_y_apagado",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cualidad del color describe qué tan vivo o apagado se percibe?",
+      "options": [
+        "El matiz",
+        "El valor",
+        "La temperatura",
+        "La saturación"
+      ],
+      "correctAnswer": "La saturación",
+      "explanation": "La saturación describe la intensidad o viveza de un color.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-135",
+      "number": 135,
+      "topic": "Ritmo musical",
+      "concept": "sincopa_desplaza_acentos_ritmicos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso desplaza o enfatiza acentos respecto de los pulsos esperados?",
+      "options": [
+        "Tempo",
+        "Síncopa",
+        "Timbre",
+        "Melodía"
+      ],
+      "correctAnswer": "Síncopa",
+      "explanation": "La síncopa desplaza o enfatiza acentos respecto de los pulsos esperados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-136",
+      "number": 136,
+      "topic": "Dramaturgia",
+      "concept": "conflicto_impulsa_accion_dramatica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple el conflicto en muchas historias teatrales?",
+      "options": [
+        "Establece la marca de los objetos",
+        "Define el costo de las entradas",
+        "Impulsa acciones y decisiones de los personajes",
+        "Sustituye la relación con el público"
+      ],
+      "correctAnswer": "Impulsa acciones y decisiones de los personajes",
+      "explanation": "Un conflicto crea una tensión o problema que impulsa decisiones y acciones en la historia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-137",
+      "number": 137,
+      "topic": "Arte público",
+      "concept": "emplazamiento_relaciona_obra_y_circulacion_publica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura se instala junto a un río en una plaza muy visitada. ¿Qué relación conviene analizar además de su forma?",
+      "options": [
+        "Relación con el sitio y el paso público",
+        "Los colores del aviso cercano",
+        "La música que escucha cada persona",
+        "La marca del calzado del montajista"
+      ],
+      "correctAnswer": "Relación con el sitio y el paso público",
+      "explanation": "El emplazamiento y los recorridos de las personas influyen en la experiencia de una obra pública.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-138",
+      "number": 138,
+      "topic": "Formas y escala",
+      "concept": "cambio_de_escala_sugiere_distancia_o_importancia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una composición, la misma figura aparece primero pequeña y luego grande. ¿Qué puede sugerir ese cambio?",
+      "options": [
+        "El nombre de quien la imprimió",
+        "Una variación de escala o distancia",
+        "La intensidad de un sonido",
+        "El tipo de arcilla"
+      ],
+      "correctAnswer": "Una variación de escala o distancia",
+      "explanation": "Cambiar el tamaño de una forma puede sugerir distancia, importancia o variación compositiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-139",
+      "number": 139,
+      "topic": "Contraste visual",
+      "concept": "aumentar_contraste_para_separar_figura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una figura oscura se pierde sobre un fondo también oscuro. ¿Qué ajuste puede hacerla más visible?",
+      "options": [
+        "Reducir aún más la diferencia de valor",
+        "Eliminar todos los bordes",
+        "Aumentar el contraste entre figura y fondo",
+        "Hacer ambos tonos iguales"
+      ],
+      "correctAnswer": "Aumentar el contraste entre figura y fondo",
+      "explanation": "Una diferencia mayor de valor o color ayuda a separar los elementos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-140",
+      "number": 140,
+      "topic": "Grabado",
+      "concept": "matriz_preparada_permite_repetir_impresion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja permite una matriz de grabado al producir una serie de impresiones?",
+      "options": [
+        "Cambiar el público de cada función",
+        "Crear copias con imágenes distintas",
+        "Imprimir sin preparar una matriz",
+        "Repetir una imagen desde una matriz"
+      ],
+      "correctAnswer": "Repetir una imagen desde una matriz",
+      "explanation": "Una misma matriz permite producir varias impresiones relacionadas con una imagen base.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-141",
+      "number": 141,
+      "topic": "Lenguaje corporal",
+      "concept": "combinar_mirada_y_retroceso_en_lenguaje_corporal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un personaje retrocede mientras mantiene la mirada fija en otro. ¿Qué puede sugerir esa combinación?",
+      "options": [
+        "Atención junto con distancia o cautela",
+        "Que el personaje dejó de ver",
+        "El material del vestuario",
+        "El número de escenas de la obra"
+      ],
+      "correctAnswer": "Atención junto con distancia o cautela",
+      "explanation": "La mirada y el desplazamiento pueden comunicar actitudes distintas que el público interpreta en conjunto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-142",
+      "number": 142,
+      "topic": "Diseño sonoro",
+      "concept": "efecto_sonoro_refuerza_accion_en_pantalla",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una película, se graban pasos sobre grava para acompañar una imagen. ¿Qué tarea realiza ese sonido añadido?",
+      "options": [
+        "Construye la escenografía real",
+        "Refuerza la sensación de la acción",
+        "Sustituye toda la imagen",
+        "Cambia el tamaño del plano"
+      ],
+      "correctAnswer": "Refuerza la sensación de la acción",
+      "explanation": "Los efectos sonoros sincronizados pueden hacer más perceptible una acción mostrada en pantalla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-143",
+      "number": 143,
+      "topic": "Arte escénico",
+      "concept": "accion_y_tiempo_como_elementos_de_performance",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una acción performática, el público presencia cómo se realiza una tarea cotidiana de forma inusual. ¿Qué aspecto puede volverse central?",
+      "options": [
+        "La cantidad de páginas impresas",
+        "La biografía completa del público",
+        "La acción y el tiempo de su realización",
+        "El costo de cada asiento"
+      ],
+      "correctAnswer": "La acción y el tiempo de su realización",
+      "explanation": "En una acción performática, el proceso, el tiempo y la presencia pueden formar parte de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-144",
+      "number": 144,
+      "topic": "Verdadero o falso · Composición",
+      "concept": "escala_relativa_influye_en_jerarquia_o_distancia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El tamaño relativo de dos figuras puede influir en cuál parece más cercana o importante.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La escala relativa puede sugerir distancia o jerarquía visual, según la composición y el contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-145",
+      "number": 145,
+      "topic": "Verdadero o falso · Cultura",
+      "concept": "celebracion_cambia_y_conserva_elementos_reconocibles",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una misma celebración puede incorporar cambios y conservar prácticas que las personas reconocen como parte de su continuidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las celebraciones pueden transformarse y mantener elementos reconocibles para quienes las practican.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-146",
+      "number": 146,
+      "topic": "Archivo cultural",
+      "concept": "documentar_danza_con_participantes_y_contexto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un grupo registra una danza local para un archivo educativo. ¿Qué documentación hace el registro más útil y respetuoso?",
+      "options": [
+        "Registrar participantes, contexto, permiso y práctica",
+        "Añadir solo música de fondo",
+        "Omitir quiénes participan",
+        "Quitar del video el lugar"
+      ],
+      "correctAnswer": "Registrar participantes, contexto, permiso y práctica",
+      "explanation": "Incluir contexto y reconocer a quienes participan permite comprender la práctica y su procedencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-147",
+      "number": 147,
+      "topic": "Conservación de colección",
+      "concept": "rotar_textiles_y_controlar_exposicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un museo tiene textiles delicados y debe rotar las piezas expuestas. ¿Qué plan equilibra mejor acceso y cuidado?",
+      "options": [
+        "Exponerlas siempre bajo luz intensa",
+        "Guardarlas sin registro",
+        "Permitir manipulación libre",
+        "Rotarlas y controlar luz, tiempo y contacto"
+      ],
+      "correctAnswer": "Rotarlas y controlar luz, tiempo y contacto",
+      "explanation": "Rotar piezas y controlar las condiciones de exhibición reduce la exposición acumulada y facilita su cuidado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-148",
+      "number": 148,
+      "topic": "Escena inclusiva",
+      "concept": "acceso_y_visibilidad_para_publico_con_movilidad_diversa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un elenco presenta una historia para público con distintas formas de movilidad. ¿Qué decisión integra mejor a más espectadores?",
+      "options": [
+        "Dar acceso solo por escaleras",
+        "Ocultar las señales de ruta",
+        "Poner obstáculos entre las filas",
+        "Facilitar rutas y buena visibilidad de escena"
+      ],
+      "correctAnswer": "Facilitar rutas y buena visibilidad de escena",
+      "explanation": "Acceso sin barreras y visibilidad desde distintos espacios favorecen la participación del público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-149",
+      "number": 149,
+      "topic": "Verdadero o falso · Edición digital",
+      "concept": "identificar_coloreado_digital_de_imagen_historica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una imagen histórica se colorea digitalmente, conviene indicar que esos colores fueron añadidos y no estaban en la copia original.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Aclarar una modificación ayuda a distinguir el documento original de una intervención posterior.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART7-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Curaduría",
+      "concept": "seleccion_y_orden_curatorial_influyen_en_lectura",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La selección y el orden de las obras en una exposición pueden influir en cómo el público entiende una colección.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La curaduría establece relaciones entre piezas y propone un recorrido o lectura para el público.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}
+,
+{
+  "catalogId": "edusyn-historia-grade-7-v1",
+  "title": "Historia · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Historia",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll10/id/2804/download",
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll23/id/524/download",
+    "https://enciclopedia.banrepcultural.org/El_voto_femenino",
+    "https://enciclopedia.banrepcultural.org/Lucas_Caballero_Barrera",
+    "https://enciclopedia.banrepcultural.org/Poblaci%C3%B3n_de_Colombia%3A_esclavos_y_cimarrones",
+    "https://enciclopedia.banrepcultural.org/Progreso_a_todo_vapor%3A_los_ferrocarriles_colombianos_del_siglo_XIX",
+    "https://ich.unesco.org/es/RL/el-espacio-cultural-de-palenque-de-san-basilio-00102",
+    "https://pancanal.com/culminacion-de-la-construccion/",
+    "https://publicaciones.banrepcultural.org/index.php/banrep/article/view/17508",
+    "https://publicaciones.banrepcultural.org/index.php/boletin_cultural/article/view/1815",
+    "https://publicaciones.banrepcultural.org/index.php/boletin_cultural/article/view/239/",
+    "https://www.mineducacion.gov.co/1621/articles-116042_archivo_pdf3.pdf",
+    "https://www.museonacional.gov.co/colecciones/Pieza_del_mes/pieza-del-mes-2010/Paginas/489_2010-01-19.aspx",
+    "https://www.museonacional.gov.co/noticias/Paginas/Batalla_en_el_puente_de_boyaca.aspx",
+    "https://www.un.org/en/about-us/history-of-the-un",
+    "https://www.unesco.org/en/silkroads"
+  ],
+  "questions": [
+    {
+      "id": "HIS7-001",
+      "number": 1,
+      "topic": "Primeras sociedades agrícolas",
+      "concept": "agricultura_favorece_sedentarismo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio favoreció el desarrollo de asentamientos permanentes?",
+      "options": [
+        "Cazar y recolectar por temporadas",
+        "Intercambiar productos entre aldeas",
+        "Cultivar plantas y criar animales",
+        "Trabajar metales para fabricar herramientas"
+      ],
+      "correctAnswer": "Cultivar plantas y criar animales",
+      "explanation": "La agricultura y la domesticación de animales permitieron producir alimentos en un mismo territorio y sostener poblaciones sedentarias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-002",
+      "number": 2,
+      "topic": "Mesopotamia",
+      "concept": "tablillas_arcilla_soporte_cuneiforme",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué soporte utilizaron muchas sociedades mesopotámicas para escribir con signos cuneiformes?",
+      "options": [
+        "Papiro enrollado",
+        "Tablillas de arcilla",
+        "Placas de piedra",
+        "Tablillas enceradas"
+      ],
+      "correctAnswer": "Tablillas de arcilla",
+      "explanation": "Los escribas presionaban signos sobre tablillas de arcilla húmeda, que luego podían secarse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-003",
+      "number": 3,
+      "topic": "Antiguo Egipto",
+      "concept": "nilo_sostiene_agricultura_y_transporte_egipcio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué río fue central para la agricultura y el transporte del antiguo Egipto?",
+      "options": [
+        "Tigris",
+        "Nilo",
+        "Éufrates",
+        "Jordán"
+      ],
+      "correctAnswer": "Nilo",
+      "explanation": "Las crecidas del Nilo depositaban suelos fértiles y el río también servía como vía de comunicación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-004",
+      "number": 4,
+      "topic": "Grecia antigua",
+      "concept": "atenas_democracia_directa_con_participacion_restringida",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En cuál ciudad antigua se desarrolló una forma temprana de democracia directa?",
+      "options": [
+        "Esparta",
+        "Corinto",
+        "Tebas",
+        "Atenas"
+      ],
+      "correctAnswer": "Atenas",
+      "explanation": "En Atenas, algunos ciudadanos varones participaban directamente en decisiones políticas; mujeres, personas esclavizadas y extranjeros quedaban excluidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-005",
+      "number": 5,
+      "topic": "Roma",
+      "concept": "senado_influencia_politica_republica_romana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En la República romana, ¿qué institución reunía representantes de familias influyentes y asesoraba sobre asuntos públicos?",
+      "options": [
+        "Asamblea popular",
+        "Tribunado de la plebe",
+        "Senado",
+        "Consulado"
+      ],
+      "correctAnswer": "Senado",
+      "explanation": "El Senado tuvo gran influencia política en la República romana, aunque sus funciones cambiaron con el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-006",
+      "number": 6,
+      "topic": "Rutas comerciales",
+      "concept": "ruta_seda_conecta_redes_asiaticas_y_europeas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué conectaba principalmente la Ruta de la Seda en la Antigüedad y la Edad Media?",
+      "options": [
+        "Ciudades del norte de África",
+        "Puertos del océano Índico",
+        "Territorios de América",
+        "Regiones de Asia y Europa"
+      ],
+      "correctAnswer": "Regiones de Asia y Europa",
+      "explanation": "La Ruta de la Seda enlazaba redes de intercambio entre regiones asiáticas y europeas, con distintos trayectos terrestres y marítimos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-007",
+      "number": 7,
+      "topic": "Verdadero o falso · Sociedad feudal",
+      "concept": "vasallaje_implica_obligaciones_reciprocas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En el vasallaje feudal podían existir obligaciones recíprocas entre un señor y un vasallo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El vínculo podía incluir lealtad y servicio a cambio de protección o tierras, aunque variaba según el lugar y la época.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Fuentes históricas",
+      "concept": "carta_contemporanea_como_fuente_primaria",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una carta escrita en el pasado puede ser una fuente primaria para estudiar su época.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una fuente primaria fue creada durante el periodo o por alguien relacionado directamente con el asunto estudiado; requiere contexto y análisis.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-009",
+      "number": 9,
+      "topic": "Civilizaciones fluviales",
+      "concept": "rios_apoyan_agricultura_y_organizacion_social",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué necesidad podía impulsar la organización colectiva en sociedades junto a ríos?",
+      "options": [
+        "Abrir rutas de navegación oceánica",
+        "Mantener canales y coordinar el uso del agua",
+        "Extraer metales de las zonas inundadas",
+        "Construir puertos para comerciar con América"
+      ],
+      "correctAnswer": "Mantener canales y coordinar el uso del agua",
+      "explanation": "El agua facilitaba el riego y el transporte, mientras algunos ríos dejaban sedimentos fértiles; también hacía falta gestionar riesgos y obras comunes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-010",
+      "number": 10,
+      "topic": "Democracia ateniense",
+      "concept": "ciudadania_ateniense_excluye_a_gran_parte_de_poblacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo quedaba excluido de la ciudadanía política en la Atenas antigua?",
+      "options": [
+        "Mujeres y personas esclavizadas",
+        "Hombres ciudadanos adultos",
+        "Magistrados elegidos por sorteo",
+        "Soldados ciudadanos"
+      ],
+      "correctAnswer": "Mujeres y personas esclavizadas",
+      "explanation": "La participación política se reservaba a una parte de los habitantes, principalmente hombres libres reconocidos como ciudadanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-011",
+      "number": 11,
+      "topic": "República romana",
+      "concept": "concentracion_de_poder_en_transicion_republica_imperio",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio describe mejor el paso de la República romana al Imperio?",
+      "options": [
+        "Las asambleas asumieron el mando de los ejércitos",
+        "Los cónsules elegidos por las provincias",
+        "Los territorios conquistados obtuvieron autonomía inmediata",
+        "El poder se concentró progresivamente en un emperador"
+      ],
+      "correctAnswer": "El poder se concentró progresivamente en un emperador",
+      "explanation": "Tras conflictos políticos y guerras civiles, el poder se concentró en gobernantes imperiales, aunque algunas instituciones republicanas continuaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-012",
+      "number": 12,
+      "topic": "Intercambios culturales",
+      "concept": "rutas_comerciales_transmiten_ideas_y_tecnicas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué podía difundirse entre regiones conectadas por la Ruta de la Seda?",
+      "options": [
+        "Telas y objetos manufacturados",
+        "Especias y metales intercambiados",
+        "Monedas usadas en los mercados",
+        "Ideas y técnicas de otras regiones"
+      ],
+      "correctAnswer": "Ideas y técnicas de otras regiones",
+      "explanation": "El contacto entre viajeros y comunidades facilitaba intercambios de ideas, tecnologías, religiones y prácticas, además de bienes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-013",
+      "number": 13,
+      "topic": "Sociedad feudal",
+      "concept": "tenencia_de_tierra_sostiene_poder_señorial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación ayuda a explicar el poder local de muchos señores feudales?",
+      "options": [
+        "El control de tierras y obligaciones campesinas",
+        "La elección de autoridades en asambleas urbanas",
+        "La propiedad de fábricas y máquinas",
+        "La administración de rutas oceánicas"
+      ],
+      "correctAnswer": "El control de tierras y obligaciones campesinas",
+      "explanation": "El control de tierras y de derechos sobre quienes las trabajaban daba recursos y autoridad a muchos señores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-014",
+      "number": 14,
+      "topic": "Peste negra",
+      "concept": "peste_negra_mortalidad_y_cambios_laborales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto laboral se relaciona con la gran mortalidad causada por la peste negra?",
+      "options": [
+        "Cambió la mano de obra y sus relaciones",
+        "Disminuyó la necesidad de mano de obra",
+        "Mantuvo intactas las condiciones laborales en todas partes",
+        "Eliminó las disputas entre trabajadores y señores"
+      ],
+      "correctAnswer": "Cambió la mano de obra y sus relaciones",
+      "explanation": "La epidemia causó una gran mortalidad y contribuyó a cambios económicos y sociales, entre ellos tensiones por la falta de trabajadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-015",
+      "number": 15,
+      "topic": "Renacimiento",
+      "concept": "humanismo_renacentista_valora_estudio_humano",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué enfoque distinguió al humanismo renacentista?",
+      "options": [
+        "Interés por las capacidades y experiencias humanas",
+        "Defensa de las obligaciones feudales como ideal político",
+        "Rechazo de textos y lenguas de la Antigüedad",
+        "Prohibición de estudiar disciplinas no religiosas"
+      ],
+      "correctAnswer": "Interés por las capacidades y experiencias humanas",
+      "explanation": "El humanismo impulsó el estudio de las lenguas, los textos y las capacidades humanas, dialogando con la herencia clásica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-016",
+      "number": 16,
+      "topic": "Imprenta",
+      "concept": "imprenta_aumenta_reproduccion_de_textos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué podía hacer un taller gracias a los tipos móviles?",
+      "options": [
+        "Reutilizar tipos para componer e imprimir nuevas páginas",
+        "Copiar cada ejemplar a mano con mayor rapidez",
+        "Imprimir un libro completo sin preparar páginas",
+        "Tallar cada letra directamente en todas las hojas"
+      ],
+      "correctAnswer": "Reutilizar tipos para componer e imprimir nuevas páginas",
+      "explanation": "La impresión multiplicó ejemplares con más rapidez que la copia manual, aunque el acceso a libros siguió siendo desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-017",
+      "number": 17,
+      "topic": "Conquista de América",
+      "concept": "conquista_involucra_alianzas_y_conflictos_diversos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué papel tuvieron algunas alianzas indígenas durante las conquistas?",
+      "options": [
+        "Ayudaron a algunos conquistadores a enfrentar pueblos rivales",
+        "Unificaron a pueblos indígenas bajo un mando",
+        "Impidieron que ocurrieran epidemias en las ciudades",
+        "Evitaron los conflictos políticos entre los pueblos aliados"
+      ],
+      "correctAnswer": "Ayudaron a algunos conquistadores a enfrentar pueblos rivales",
+      "explanation": "Las conquistas involucraron intereses europeos, rivalidades locales, alianzas indígenas, violencia, epidemias y transformaciones políticas diversas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Interpretación histórica",
+      "concept": "mapa_historico_refleja_conocimiento_y_proposito",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un mapa antiguo representa el territorio tal como era, sin reflejar las ideas de quien lo elaboró.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los mapas dependen de conocimientos, propósitos y convenciones de su época; sirven como fuentes, pero no son reflejos neutrales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-019",
+      "number": 19,
+      "topic": "Independencias americanas",
+      "concept": "circulacion_de_ideas_influye_en_independencias_hispanoamericanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué crisis debilitó la autoridad de la monarquía española a comienzos del siglo XIX?",
+      "options": [
+        "Invasión napoleónica y crisis monárquica",
+        "La expansión del Imperio romano por América",
+        "La caída de Constantinopla ante los otomanos",
+        "La disolución de las ciudades-estado griegas"
+      ],
+      "correctAnswer": "Invasión napoleónica y crisis monárquica",
+      "explanation": "Las noticias, los textos y las ideas ilustradas circularon por redes comerciales y políticas, aunque cada proceso tuvo causas locales propias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-020",
+      "number": 20,
+      "topic": "Verdadero o falso · Historia de Colombia",
+      "concept": "independencia_nueva_granada_como_proceso",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La independencia de la Nueva Granada fue un proceso con varios acontecimientos y conflictos, no un único hecho aislado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Hubo juntas, campañas militares, disputas políticas y cambios de gobierno a lo largo de varios años.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-021",
+      "number": 21,
+      "topic": "Análisis de fuentes",
+      "concept": "contrastar_autoria_proposito_fecha_y_evidencia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos crónicas describen de forma opuesta una misma protesta. ¿Qué paso ayuda más a evaluarlas?",
+      "options": [
+        "Elegir la que tenga más páginas",
+        "Comparar autoría, propósito, fecha y evidencias",
+        "Preferir la narración con más testigos citados",
+        "Descartar ambas porque sus versiones difieren"
+      ],
+      "correctAnswer": "Comparar autoría, propósito, fecha y evidencias",
+      "explanation": "Contrastar quién escribió, cuándo, para qué y con qué evidencias permite valorar perspectiva y confiabilidad sin asumir que una fuente es neutral.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-022",
+      "number": 22,
+      "topic": "Causalidad histórica",
+      "concept": "decision_defensiva_produce_costos_comerciales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad construye murallas después de varios ataques, pero el comercio disminuye porque hay menos puertas. ¿Qué relación se observa?",
+      "options": [
+        "La defensa puede limitar rutas y encarecer intercambios",
+        "Menos puertas siempre aumentan el comercio local",
+        "Seguridad y comercio no guardan relación",
+        "Menos comercio demuestra que cesaron ataques"
+      ],
+      "correctAnswer": "La defensa puede limitar rutas y encarecer intercambios",
+      "explanation": "Una decisión puede responder a una amenaza y producir efectos secundarios; analizar ambos ayuda a explicar el proceso histórico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-023",
+      "number": 23,
+      "topic": "Historia y memoria",
+      "concept": "monumento_revela_seleccion_de_memoria_publica",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un monumento honra a un gobernante, pero omite a grupos afectados por sus decisiones. ¿Qué pregunta ayuda a identificar voces ausentes?",
+      "options": [
+        "¿Qué comunidades afectadas no aparecen representadas?",
+        "¿Qué relatos presenta como importantes?",
+        "¿Qué grupos participaron en su creación?",
+        "¿Cómo cambió su interpretación con el tiempo?"
+      ],
+      "correctAnswer": "¿Qué comunidades afectadas no aparecen representadas?",
+      "explanation": "Preguntar quién construyó el monumento, a quién representa y qué perspectivas excluye permite relacionar memoria pública y poder.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-024",
+      "number": 24,
+      "topic": "Verdadero o falso · Cambio histórico",
+      "concept": "continuidad_historica_puede_incluir_transformacion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una práctica aparece en distintas épocas, necesariamente se mantiene igual y conserva el mismo significado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las prácticas pueden persistir y a la vez cambiar según las comunidades, las condiciones y los significados de cada periodo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-025",
+      "number": 25,
+      "topic": "Historia y territorio",
+      "concept": "infraestructura_cambia_conectividad_y_distribuye_costos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un archivo muestra que una vía nueva conectó pueblos antes aislados, pero también desplazó viviendas. ¿Qué interpretación considera mejor sus efectos?",
+      "options": [
+        "Amplió intercambios y desplazó algunas familias",
+        "Mejoró el transporte y repartió beneficios por igual",
+        "Cambió la movilidad y afectó de forma desigual",
+        "Alteró viviendas, pero no la economía local"
+      ],
+      "correctAnswer": "Cambió la movilidad y afectó de forma desigual",
+      "explanation": "Las transformaciones territoriales pueden facilitar intercambios y, al mismo tiempo, generar costos distintos para diversos grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-026",
+      "number": 26,
+      "topic": "Pueblos mesoamericanos",
+      "concept": "tenochtitlan_capital_mexica_en_lago_texcoco",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál fue la capital del Imperio mexica, construida en el lago de Texcoco?",
+      "options": [
+        "Tenochtitlan",
+        "Cusco",
+        "Tikal",
+        "Chichén Itzá"
+      ],
+      "correctAnswer": "Tenochtitlan",
+      "explanation": "Tenochtitlan fue la capital mexica y se desarrolló en una isla del lago de Texcoco.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-027",
+      "number": 27,
+      "topic": "Imperio inca",
+      "concept": "qhapaq_nan_red_vial_inca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibe la extensa red de caminos del Imperio inca?",
+      "options": [
+        "Chinampas",
+        "Qhapaq Ñan",
+        "Calzadas mayas",
+        "Camino Real español"
+      ],
+      "correctAnswer": "Qhapaq Ñan",
+      "explanation": "El Qhapaq Ñan conectaba distintas regiones andinas y facilitaba la administración, el transporte y la comunicación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-028",
+      "number": 28,
+      "topic": "Escritura mesoamericana",
+      "concept": "escritura_maya_usa_signos_jeroglificos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sistema utilizaron los mayas para registrar palabras e ideas?",
+      "options": [
+        "Quipu",
+        "Escritura cuneiforme",
+        "Escritura jeroglífica",
+        "Alfabeto fenicio"
+      ],
+      "correctAnswer": "Escritura jeroglífica",
+      "explanation": "Los mayas desarrollaron un sistema de escritura con signos que podían representar palabras y sonidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-029",
+      "number": 29,
+      "topic": "Revolución haitiana",
+      "concept": "independencia_haitiana_1804",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué país surgió de la revolución que puso fin al dominio francés en Saint-Domingue?",
+      "options": [
+        "Brasil",
+        "México",
+        "Cuba",
+        "Haití"
+      ],
+      "correctAnswer": "Haití",
+      "explanation": "La revolución culminó con la independencia de Haití en 1804.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-030",
+      "number": 30,
+      "topic": "Administración colonial",
+      "concept": "virrey_gobierna_en_nombre_de_la_corona",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál era una función principal de un virrey en la América española?",
+      "options": [
+        "Gobernar un territorio en nombre del monarca",
+        "Dirigir únicamente los tribunales locales",
+        "Representar a los cabildos ante comerciantes",
+        "Administrar las órdenes religiosas"
+      ],
+      "correctAnswer": "Gobernar un territorio en nombre del monarca",
+      "explanation": "El virrey era el representante principal de la Corona en un virreinato y ejercía funciones de gobierno.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-031",
+      "number": 31,
+      "topic": "Verdadero o falso · Gobierno colonial",
+      "concept": "virrey_como_representante_del_monarca",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un virrey representaba al monarca español en el territorio que gobernaba.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La autoridad virreinal actuaba en nombre de la Corona, aunque compartía funciones con otras instituciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-032",
+      "number": 32,
+      "topic": "Comercio colonial",
+      "concept": "casa_contratacion_supervisa_comercio_atlantico",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué institución española supervisó durante siglos el comercio entre la Corona y sus territorios americanos?",
+      "options": [
+        "El cabildo",
+        "La Casa de Contratación",
+        "La Real Audiencia",
+        "El consulado local"
+      ],
+      "correctAnswer": "La Casa de Contratación",
+      "explanation": "La Casa de Contratación, fundada en Sevilla, reguló aspectos del comercio y la navegación con América, aunque sus atribuciones cambiaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Imperio bizantino",
+      "concept": "conquista_constantinopla_termina_imperio_bizantino",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La conquista otomana de Constantinopla en 1453 puso fin al Imperio bizantino.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La caída de Constantinopla ante los otomanos marcó el fin del Imperio bizantino.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-034",
+      "number": 34,
+      "topic": "Encomienda",
+      "concept": "encomienda_asigna_tributo_o_trabajo_indigena",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué obligación se asociaba con la encomienda en la América española?",
+      "options": [
+        "Elegir al monarca de España",
+        "Entregar tierras comunales a cada familia",
+        "Recibir tributo o trabajo indígena bajo autoridad colonial",
+        "Administrar las rutas comerciales entre Europa y Asia"
+      ],
+      "correctAnswer": "Recibir tributo o trabajo indígena bajo autoridad colonial",
+      "explanation": "La encomienda asignaba a un encomendero tributos o trabajo de comunidades indígenas; no equivalía a ser dueño legal de esas personas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-035",
+      "number": 35,
+      "topic": "Minería colonial",
+      "concept": "plata_potosi_circula_en_redes_intercontinentales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo conectó la plata de Potosí a los Andes con redes económicas más amplias?",
+      "options": [
+        "Circuló solo dentro de las minas",
+        "Reemplazó todos los cultivos en los Andes",
+        "Circuló únicamente entre comunidades cercanas",
+        "Entró en circuitos comerciales de varios continentes"
+      ],
+      "correctAnswer": "Entró en circuitos comerciales de varios continentes",
+      "explanation": "La plata americana circuló por redes imperiales y comerciales que enlazaban América, Europa y Asia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-036",
+      "number": 36,
+      "topic": "Intercambio colombino",
+      "concept": "intercambio_colombino_conecta_ecologias_y_sociedades",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso describe el intercambio colombino?",
+      "options": [
+        "Trasladó especies, personas y enfermedades entre continentes",
+        "Creó un gobierno común para América y Europa",
+        "Intercambió metales solo entre ciudades españolas",
+        "Impuso una lengua única en todos los territorios"
+      ],
+      "correctAnswer": "Trasladó especies, personas y enfermedades entre continentes",
+      "explanation": "El contacto sostenido entre América, Europa y África provocó intercambios biológicos y transformaciones demográficas y culturales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-037",
+      "number": 37,
+      "topic": "Trata transatlántica",
+      "concept": "demanda_colonial_impulsa_trata_transatlantica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué necesidad económica impulsó la esclavización y el traslado forzado de millones de africanos?",
+      "options": [
+        "Buscar nuevos territorios para ciudades autónomas",
+        "Obtener trabajo forzado para plantaciones y otras actividades",
+        "Extender la educación en las colonias",
+        "Reemplazar la navegación por rutas terrestres"
+      ],
+      "correctAnswer": "Obtener trabajo forzado para plantaciones y otras actividades",
+      "explanation": "La demanda colonial de mano de obra en plantaciones, minas y otros trabajos impulsó la trata; fue un sistema de violencia y deshumanización.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-038",
+      "number": 38,
+      "topic": "Reformas borbónicas",
+      "concept": "reformas_borbonicas_refuerzan_control_e_ingresos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban principalmente las reformas borbónicas en las colonias españolas?",
+      "options": [
+        "Dar independencia inmediata a los virreinatos",
+        "Eliminar la autoridad de la Corona",
+        "Reforzar el control imperial y aumentar los ingresos",
+        "Sustituir todas las ciudades por comunidades rurales"
+      ],
+      "correctAnswer": "Reforzar el control imperial y aumentar los ingresos",
+      "explanation": "Las reformas reorganizaron la administración, el comercio y la recaudación para fortalecer el control de la monarquía.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-039",
+      "number": 39,
+      "topic": "Crisis monárquica",
+      "concept": "invasion_napoleonica_abre_crisis_de_soberania",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hecho desencadenó una crisis de autoridad en la monarquía española en 1808?",
+      "options": [
+        "La independencia de Brasil",
+        "La revolución industrial inglesa",
+        "La caída del Imperio mexica",
+        "La invasión napoleónica de la península ibérica"
+      ],
+      "correctAnswer": "La invasión napoleónica de la península ibérica",
+      "explanation": "La invasión y las abdicaciones reales abrieron disputas sobre quién tenía autoridad para gobernar los territorios españoles.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-040",
+      "number": 40,
+      "topic": "Sociedades republicanas",
+      "concept": "independencia_no_elimina_exclusiones_ciudadanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la independencia política no garantizó de inmediato igualdad ciudadana?",
+      "options": [
+        "Persistieron exclusiones por género, origen y condición social",
+        "Desaparecieron todas las leyes coloniales al día siguiente",
+        "Cada habitante obtuvo los mismos derechos y recursos",
+        "Las nuevas repúblicas renunciaron a crear instituciones"
+      ],
+      "correctAnswer": "Persistieron exclusiones por género, origen y condición social",
+      "explanation": "Las repúblicas conservaron jerarquías y restricciones que limitaron la participación y los derechos de distintos grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-041",
+      "number": 41,
+      "topic": "Revolución haitiana",
+      "concept": "revolucion_haitiana_desafia_esclavitud_y_colonialismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué idea hizo de la revolución haitiana un desafío al orden colonial de su época?",
+      "options": [
+        "Que las colonias debían depender más de Europa",
+        "Que personas esclavizadas podían luchar por su libertad",
+        "Que solo los propietarios podían gobernar",
+        "Que la esclavitud debía extenderse a nuevos territorios"
+      ],
+      "correctAnswer": "Que personas esclavizadas podían luchar por su libertad",
+      "explanation": "La revolución culminó en una república independiente fundada por personas que habían sido esclavizadas y sus aliados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-042",
+      "number": 42,
+      "topic": "Verdadero o falso · Sociedad colonial",
+      "concept": "jerarquias_coloniales_varian_por_region_y_epoca",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las categorías sociales coloniales se aplicaron de manera idéntica en todas las regiones y épocas de América.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las clasificaciones y jerarquías variaron según el territorio, el periodo y las relaciones sociales concretas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-043",
+      "number": 43,
+      "topic": "Cabildos",
+      "concept": "cabildo_administra_asuntos_municipales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué asunto atendía habitualmente un cabildo en una ciudad colonial?",
+      "options": [
+        "Elegir al rey de España",
+        "Dirigir la Iglesia en todos los virreinatos",
+        "Gestionar asuntos locales como mercados y obras públicas",
+        "Negociar tratados entre monarquías europeas"
+      ],
+      "correctAnswer": "Gestionar asuntos locales como mercados y obras públicas",
+      "explanation": "Los cabildos atendían el gobierno municipal, incluidos asuntos de abasto, orden urbano y obras locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-044",
+      "number": 44,
+      "topic": "Criollos y peninsulares",
+      "concept": "distincion_criollo_peninsular_por_lugar_de_nacimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia se usaba comúnmente para distinguir a criollos de peninsulares?",
+      "options": [
+        "La lengua que hablaban en público",
+        "La religión que profesaban",
+        "El oficio que desempeñaban",
+        "Nacer en América o en la península ibérica"
+      ],
+      "correctAnswer": "Nacer en América o en la península ibérica",
+      "explanation": "En el uso colonial, criollo solía referirse a una persona descendiente de españoles nacida en América; peninsular, a quien había nacido en la península ibérica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-045",
+      "number": 45,
+      "topic": "Verdadero o falso · Independencias",
+      "concept": "participacion_diversa_en_guerras_de_independencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las guerras de independencia fueron protagonizadas únicamente por hombres criollos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Participaron personas de diversos orígenes y condiciones; también hubo mujeres y comunidades indígenas y afrodescendientes, con experiencias distintas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-046",
+      "number": 46,
+      "topic": "Fuentes del periodo colonial",
+      "concept": "analizar_proposito_y_categorias_en_registro_tributario",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un registro de tributos enumera productos y comunidades, pero no explica cómo se fijaron las cuotas. ¿Qué conviene investigar?",
+      "options": [
+        "Autor, propósito y categorías del registro",
+        "Cantidad de páginas y tipo de tinta",
+        "Si otros registros tienen la misma letra",
+        "El edificio que conserva el documento"
+      ],
+      "correctAnswer": "Autor, propósito y categorías del registro",
+      "explanation": "La autoría, el propósito y las categorías permiten interpretar qué medía el registro y qué relaciones de poder no hace explícitas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-047",
+      "number": 47,
+      "topic": "Lectura de prensa histórica",
+      "concept": "contrastar_prensa_politica_con_otras_fuentes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un periódico de una nueva república elogia a un dirigente y omite derrotas de su ejército. ¿Qué lectura es más cuidadosa?",
+      "options": [
+        "Tomar la nota como relato neutral",
+        "Considerar su postura y contrastarla con otras fuentes",
+        "Descartarla sin analizarla porque es parcial",
+        "Usarla como prueba de que no hubo derrotas"
+      ],
+      "correctAnswer": "Considerar su postura y contrastarla con otras fuentes",
+      "explanation": "La parcialidad no vuelve inútil una fuente; puede revelar una postura si se contrasta con otros registros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-048",
+      "number": 48,
+      "topic": "Cambios tras la independencia",
+      "concept": "igualdad_formal_puede_coexistir_con_barreras_reales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un decreto declara igualdad legal, pero un censo posterior registra que ciertos grupos siguen sin acceso a cargos. ¿Qué conclusión está mejor sustentada?",
+      "options": [
+        "El decreto no tuvo ningún efecto legal",
+        "El censo necesariamente fue falsificado",
+        "La igualdad legal coexistió con barreras de participación",
+        "Las diferencias sociales desaparecieron por completo"
+      ],
+      "correctAnswer": "La igualdad legal coexistió con barreras de participación",
+      "explanation": "Una norma puede cambiar derechos formales mientras persisten obstáculos sociales o institucionales; ambas evidencias deben leerse en contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-049",
+      "number": 49,
+      "topic": "Memoria histórica",
+      "concept": "ampliar_memoria_publica_con_experiencias_omitidas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una placa de una plaza nombra a quienes firmaron la independencia, pero no a quienes lucharon sin ocupar cargos. ¿Qué acción amplía el relato público?",
+      "options": [
+        "Reemplazar la placa por una lista de fechas",
+        "Mantener únicamente los nombres ya inscritos",
+        "Quitar la placa y evitar hablar del proceso",
+        "Investigar otras experiencias y explicar las ausencias"
+      ],
+      "correctAnswer": "Investigar otras experiencias y explicar las ausencias",
+      "explanation": "Investigar distintas experiencias permite ampliar la memoria pública y explicar cómo se seleccionaron los homenajes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Transformaciones políticas",
+      "concept": "independencia_politica_no_resuelve_jerarquias_ni_tierras",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La independencia política eliminó inmediatamente las jerarquías sociales y los conflictos por la tierra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La ruptura política no resolvió automáticamente desigualdades ni disputas sociales heredadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-051",
+      "number": 51,
+      "topic": "Pueblos muiscas",
+      "concept": "sal_recurso_de_intercambio_muisca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso de los Andes nororientales fue importante para el intercambio muisca?",
+      "options": [
+        "La sal",
+        "El cacao amazónico",
+        "El cobre del desierto",
+        "El caucho de la costa"
+      ],
+      "correctAnswer": "La sal",
+      "explanation": "La producción y el intercambio de sal fueron actividades relevantes para comunidades muiscas del altiplano.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-052",
+      "number": 52,
+      "topic": "Pueblos tairona",
+      "concept": "terrazas_y_caminos_tairona_adaptan_laderas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué obra ayudó a los tairona a construir asentamientos en las laderas de la Sierra Nevada?",
+      "options": [
+        "Canales subterráneos de navegación",
+        "Terrazas y caminos de piedra",
+        "Murallas de ladrillo cocido",
+        "Calzadas sobre el mar"
+      ],
+      "correctAnswer": "Terrazas y caminos de piedra",
+      "explanation": "Los tairona adaptaron espacios de montaña mediante terrazas, caminos y obras de piedra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-053",
+      "number": 53,
+      "topic": "Cartagena colonial",
+      "concept": "fortificaciones_cartagena_defienden_puerto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué se construyeron principalmente las fortificaciones de Cartagena durante la Colonia?",
+      "options": [
+        "Para separar barrios por oficio",
+        "Para desviar el río Magdalena",
+        "Para defender el puerto de ataques",
+        "Para almacenar cultivos de montaña"
+      ],
+      "correctAnswer": "Para defender el puerto de ataques",
+      "explanation": "Las murallas y fortificaciones protegían un puerto estratégico expuesto a ataques y disputas imperiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-054",
+      "number": 54,
+      "topic": "Insurrección de los Comuneros",
+      "concept": "cargas_fiscales_impulsan_insurreccion_comunera",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué medida de la Corona alimentó el descontento durante la insurrección comunera de 1781?",
+      "options": [
+        "La eliminación de todos los tributos",
+        "La entrega de autonomía a las ciudades",
+        "La prohibición de cultivar alimentos",
+        "El aumento de impuestos y controles comerciales"
+      ],
+      "correctAnswer": "El aumento de impuestos y controles comerciales",
+      "explanation": "Nuevas cargas fiscales y medidas de control impulsaron el levantamiento en la Nueva Granada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-055",
+      "number": 55,
+      "topic": "Campaña libertadora",
+      "concept": "fecha_batalla_puente_boyaca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué fecha ocurrió la batalla del Puente de Boyacá?",
+      "options": [
+        "7 de agosto de 1819",
+        "20 de julio de 1810",
+        "11 de noviembre de 1811",
+        "9 de abril de 1948"
+      ],
+      "correctAnswer": "7 de agosto de 1819",
+      "explanation": "El enfrentamiento del 7 de agosto de 1819 fue un momento decisivo de la campaña de la Nueva Granada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-056",
+      "number": 56,
+      "topic": "Verdadero o falso · Palenques",
+      "concept": "palenques_comunidades_de_refugio_y_autonomia",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los palenques fueron comunidades fundadas como refugio por personas africanas que escapaban de la esclavización.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los palenques ofrecieron refugio y autonomía a personas esclavizadas que huían; San Basilio conserva una historia y cultura vivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-057",
+      "number": 57,
+      "topic": "Gran Colombia",
+      "concept": "congreso_angostura_crea_republica_de_colombia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proyecto político se aprobó en el Congreso de Angostura en 1819?",
+      "options": [
+        "Restaurar el virreinato español",
+        "Crear la República de Colombia uniendo territorios liberados",
+        "Formar una alianza con Portugal",
+        "Dividir la Nueva Granada en colonias francesas"
+      ],
+      "correctAnswer": "Crear la República de Colombia uniendo territorios liberados",
+      "explanation": "El Congreso aprobó la creación de la República de Colombia, conocida después como Gran Colombia, que reunió territorios de la actual Colombia, Venezuela, Ecuador y Panamá.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Policarpa Salavarrieta",
+      "concept": "policarpa_salavarrieta_apoya_causa_patriota",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Policarpa Salavarrieta colaboró con las fuerzas patriotas durante la Reconquista española.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Salavarrieta apoyó la causa patriota mediante tareas de información y contacto durante la Reconquista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-059",
+      "number": 59,
+      "topic": "Insurrección de los Comuneros",
+      "concept": "capitulaciones_zipaquira_no_resuelven_insurreccion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurrió con las Capitulaciones de Zipaquirá firmadas durante la insurrección comunera?",
+      "options": [
+        "Declararon la independencia de la Nueva Granada",
+        "Establecieron una república federal",
+        "Hubo acuerdos sobre reclamos, pero el conflicto siguió",
+        "Entregaron el gobierno a los líderes comuneros"
+      ],
+      "correctAnswer": "Hubo acuerdos sobre reclamos, pero el conflicto siguió",
+      "explanation": "Las capitulaciones incluyeron concesiones a los comuneros, pero la Corona las desconoció después y el levantamiento continuó en algunas regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-060",
+      "number": 60,
+      "topic": "José Antonio Galán",
+      "concept": "galan_prolonga_resistencia_comunera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación tuvo José Antonio Galán con la insurrección comunera?",
+      "options": [
+        "Fue virrey durante el levantamiento",
+        "Negoció la independencia con España",
+        "Dirigió la defensa de Cartagena",
+        "Mantuvo la rebelión después de las capitulaciones"
+      ],
+      "correctAnswer": "Mantuvo la rebelión después de las capitulaciones",
+      "explanation": "Galán y otros comuneros continuaron la resistencia en los Llanos; las autoridades lo capturaron y ejecutaron en 1782.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-061",
+      "number": 61,
+      "topic": "Geografía de la insurrección",
+      "concept": "origen_regional_insurreccion_comunera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué región comenzó la principal movilización comunera de 1781?",
+      "options": [
+        "Provincia del Socorro",
+        "Costa del Darién",
+        "Valle del Cauca",
+        "Llanura amazónica"
+      ],
+      "correctAnswer": "Provincia del Socorro",
+      "explanation": "La protesta comenzó en la región del Socorro, en la actual Santander, y se extendió hacia otros territorios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-062",
+      "number": 62,
+      "topic": "Juntas de 1810",
+      "concept": "juntas_de_1810_reclaman_autoridad_en_crisis",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político representó la formación de juntas en ciudades de la Nueva Granada en 1810?",
+      "options": [
+        "La restauración inmediata del dominio francés",
+        "La disputa local por la autoridad",
+        "La desaparición de todos los cabildos",
+        "La independencia simultánea de toda América"
+      ],
+      "correctAnswer": "La disputa local por la autoridad",
+      "explanation": "La crisis de la monarquía abrió disputas sobre la soberanía; algunas juntas afirmaron gobernar mientras el rey estaba ausente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-063",
+      "number": 63,
+      "topic": "Oro muisca",
+      "concept": "orfebreria_muisca_vinculada_a_ofrendas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué uso tuvo parte importante de los objetos de oro muiscas?",
+      "options": [
+        "Acuñar monedas para pagos cotidianos",
+        "Fabricar herramientas para arar campos",
+        "Realizar ofrendas y ceremonias",
+        "Construir muros para fortificar poblados"
+      ],
+      "correctAnswer": "Realizar ofrendas y ceremonias",
+      "explanation": "Muchos objetos orfebres se vincularon con prácticas rituales y ofrendas; su valor no se reducía al metal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-064",
+      "number": 64,
+      "topic": "Verdadero o falso · Soberanía",
+      "concept": "juntas_americanas_apelan_a_soberania_durante_cautiverio_real",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Algunas juntas americanas de 1810 justificaron su autoridad en nombre del rey cautivo, en vez de declarar de inmediato la independencia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las respuestas variaron entre ciudades, pero varias juntas apelaron a la soberanía del pueblo ante la ausencia del monarca.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-065",
+      "number": 65,
+      "topic": "Campaña de 1819",
+      "concept": "cruce_de_andes_como_maniobra_sorpresiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja estratégica buscaba la campaña libertadora al cruzar los Andes hacia la Nueva Granada?",
+      "options": [
+        "Evitar todo contacto con las poblaciones",
+        "Trasladar la capital a la costa",
+        "Abandonar las rutas del interior",
+        "Sorprender a realistas por una ruta difícil"
+      ],
+      "correctAnswer": "Sorprender a realistas por una ruta difícil",
+      "explanation": "El cruce de los Andes fue una maniobra arriesgada que permitió atacar posiciones realistas desde una dirección inesperada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-066",
+      "number": 66,
+      "topic": "Batalla de Boyacá",
+      "concept": "victoria_boyaca_abre_camino_hacia_bogota",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto estratégico tuvo la victoria patriota en Boyacá en agosto de 1819?",
+      "options": [
+        "Abrió el camino hacia Bogotá",
+        "Terminó todas las guerras de independencia americanas",
+        "Restableció el virreinato con un nuevo monarca",
+        "Separó la Nueva Granada de Venezuela"
+      ],
+      "correctAnswer": "Abrió el camino hacia Bogotá",
+      "explanation": "La victoria abrió el camino hacia Bogotá y debilitó decisivamente el poder realista en la Nueva Granada, aunque otras campañas continuaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-067",
+      "number": 67,
+      "topic": "Disolución de la Gran Colombia",
+      "concept": "tensiones_regionales_debilitan_gran_colombia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema contribuyó a la disolución de la Gran Colombia?",
+      "options": [
+        "La falta de costas en todos sus territorios",
+        "Tensiones regionales y desacuerdos políticos",
+        "La inexistencia de líderes políticos",
+        "La conquista portuguesa de Bogotá"
+      ],
+      "correctAnswer": "Tensiones regionales y desacuerdos políticos",
+      "explanation": "Las tensiones regionales y las diferencias sobre la organización política debilitaron la unión y favorecieron su disolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-068",
+      "number": 68,
+      "topic": "Participación política",
+      "concept": "exclusion_femenina_de_ciudadania_politica_republicana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué limitación enfrentaban muchas mujeres en las nuevas repúblicas del siglo XIX?",
+      "options": [
+        "No podían participar en actividades económicas",
+        "No podían leer ningún texto político",
+        "Estaban excluidas de la ciudadanía política formal",
+        "No podían vivir en ciudades"
+      ],
+      "correctAnswer": "Estaban excluidas de la ciudadanía política formal",
+      "explanation": "Las constituciones republicanas de la época generalmente restringían los derechos políticos a los hombres, aunque las mujeres participaron de otros modos en la vida pública.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-069",
+      "number": 69,
+      "topic": "Patrimonio palenquero",
+      "concept": "lengua_y_practicas_vivas_del_palenque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento muestra la continuidad cultural de San Basilio de Palenque?",
+      "options": [
+        "El uso exclusivo del castellano",
+        "Conservar todas las prácticas del siglo XVII",
+        "La desaparición de la tradición oral",
+        "La lengua palenquera y otras prácticas comunitarias vivas"
+      ],
+      "correctAnswer": "La lengua palenquera y otras prácticas comunitarias vivas",
+      "explanation": "La lengua palenquera, la música y las tradiciones orales son expresiones vivas de una historia comunitaria propia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-070",
+      "number": 70,
+      "topic": "Verdadero o falso · Conmemoración",
+      "concept": "conmemoraciones_seleccionan_memoria_publica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una fecha conmemorativa puede destacar ciertos sucesos y dejar otros fuera del relato público.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las conmemoraciones seleccionan hechos y protagonistas; comparar relatos permite reconocer cómo se construye la memoria pública.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-071",
+      "number": 71,
+      "topic": "Cronología",
+      "concept": "junta_de_1810_no_equivale_a_independencia_completa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un libro afirma que la Nueva Granada obtuvo independencia completa el 20 de julio de 1810. ¿Qué evidencia cuestiona mejor esa afirmación?",
+      "options": [
+        "La fecha aparece en muchos calendarios",
+        "La junta fue seguida por años de guerra",
+        "En Bogotá se celebran actos cada año",
+        "Algunos edificios de la época aún se conservan"
+      ],
+      "correctAnswer": "La junta fue seguida por años de guerra",
+      "explanation": "El 20 de julio se formó una junta en Santa Fe, pero la ruptura y la guerra fueron procesos posteriores y prolongados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-072",
+      "number": 72,
+      "topic": "Logística militar",
+      "concept": "altitud_y_abastecimiento_condicionan_avance_militar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una fuerza cruza un páramo con poca comida y pierde contacto entre columnas. ¿Qué factor geográfico afecta directamente su avance?",
+      "options": [
+        "La falta de puertos marítimos",
+        "La distancia hasta el océano Atlántico",
+        "La altitud y las dificultades de abastecimiento",
+        "La ausencia de caminos en las llanuras costeras"
+      ],
+      "correctAnswer": "La altitud y las dificultades de abastecimiento",
+      "explanation": "La altitud, el clima y las rutas difíciles complican el transporte de alimentos y la coordinación de tropas en zonas montañosas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-073",
+      "number": 73,
+      "topic": "Arqueología y territorio",
+      "concept": "terrazas_y_caminos_evidencian_adaptacion_a_ladera",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un plano de un asentamiento tairona muestra terrazas conectadas por caminos empinados. ¿Qué interpretación se apoya mejor en esa evidencia?",
+      "options": [
+        "El asentamiento evitaba cualquier contacto regional",
+        "Las terrazas se construyeron para navegar entre poblados",
+        "Los caminos servían únicamente como límites ceremoniales",
+        "Adaptaron el asentamiento a una ladera"
+      ],
+      "correctAnswer": "Adaptaron el asentamiento a una ladera",
+      "explanation": "La forma de terrazas y caminos responde a un relieve inclinado y organizaba el tránsito entre partes del asentamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-074",
+      "number": 74,
+      "topic": "Verdadero o falso · Interpretación de monumentos",
+      "concept": "monumento_no_prueba_consenso_historico",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Que una estatua represente a un prócer demuestra por sí solo que toda la población de su época apoyaba sus decisiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Un monumento expresa una selección de memoria; no prueba que todas las personas compartieran la misma opinión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-075",
+      "number": 75,
+      "topic": "Evaluación de explicaciones",
+      "concept": "contrastar_evidencia_y_perspectiva_en_explicaciones_historicas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos relatos atribuyen la victoria patriota de 1819 a factores distintos: uno destaca la estrategia y otro la cooperación de pobladores. ¿Qué enfoque permite compararlos mejor?",
+      "options": [
+        "Elegir el relato que tenga más ilustraciones",
+        "Combinar ambas causas sin revisar sus pruebas",
+        "Comparar pruebas y perspectivas de ambos relatos",
+        "Descartar los relatos por ofrecer explicaciones diferentes"
+      ],
+      "correctAnswer": "Comparar pruebas y perspectivas de ambos relatos",
+      "explanation": "Las explicaciones pueden enfatizar causas distintas; contrastar evidencias, contexto y perspectiva permite valorar su alcance.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-076",
+      "number": 76,
+      "topic": "Renacimiento europeo",
+      "concept": "ciudades_italianas_como_origen_del_renacimiento",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué región de Europa surgió el Renacimiento?",
+      "options": [
+        "Ciudades de la península itálica",
+        "Reinos escandinavos",
+        "Islas del Atlántico norte",
+        "Llanuras de Europa oriental"
+      ],
+      "correctAnswer": "Ciudades de la península itálica",
+      "explanation": "El Renacimiento se desarrolló primero en ciudades italianas y luego tomó formas diversas en otras regiones europeas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-077",
+      "number": 77,
+      "topic": "Reforma protestante",
+      "concept": "reforma_protestante_cuestiona_practicas_y_autoridad_eclesial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué movimiento cuestionó la autoridad y algunas prácticas de la Iglesia católica en el siglo XVI?",
+      "options": [
+        "Humanismo cívico",
+        "Reforma protestante",
+        "Mercantilismo",
+        "Feudalismo"
+      ],
+      "correctAnswer": "Reforma protestante",
+      "explanation": "La Reforma protestante impulsó cambios religiosos y políticos y dio origen a distintas iglesias cristianas en Europa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-078",
+      "number": 78,
+      "topic": "Tratado de Tordesillas",
+      "concept": "tratado_tordesillas_delimita_zonas_de_expansion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acordaron Portugal y Castilla en el Tratado de Tordesillas de 1494?",
+      "options": [
+        "Repartir los territorios italianos",
+        "Unir sus coronas en un solo reino",
+        "Delimitar zonas de expansión ultramarina",
+        "Terminar todas las guerras europeas"
+      ],
+      "correctAnswer": "Delimitar zonas de expansión ultramarina",
+      "explanation": "El tratado fijó una línea para dividir las zonas de expansión que reclamaban ambas coronas, sin incluir a otros pueblos ni potencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-079",
+      "number": 79,
+      "topic": "Nueva Granada",
+      "concept": "territorio_colombiano_en_virreinato_nueva_granada",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿A qué virreinato pertenecía gran parte del actual territorio colombiano antes de las independencias?",
+      "options": [
+        "Virreinato del Perú",
+        "Virreinato del Río de la Plata",
+        "Virreinato de Nueva España",
+        "Virreinato de la Nueva Granada"
+      ],
+      "correctAnswer": "Virreinato de la Nueva Granada",
+      "explanation": "La Nueva Granada fue una unidad administrativa de la monarquía española que comprendió territorios del norte de Suramérica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-080",
+      "number": 80,
+      "topic": "Verdadero o falso · Renacimiento",
+      "concept": "renacimiento_se_expande_con_ritmos_y_formas_distintas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El Renacimiento apareció en todas las regiones europeas al mismo tiempo y de la misma manera.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Sus ideas circularon de forma desigual y se adaptaron a condiciones locales, por lo que no hubo una única experiencia renacentista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-081",
+      "number": 81,
+      "topic": "Brasil colonial",
+      "concept": "portugal_coloniza_brasil",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reino europeo estableció el dominio colonial sobre Brasil?",
+      "options": [
+        "Portugal",
+        "España",
+        "Inglaterra",
+        "Francia"
+      ],
+      "correctAnswer": "Portugal",
+      "explanation": "Portugal estableció y administró la colonia que más tarde se convirtió en Brasil.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-082",
+      "number": 82,
+      "topic": "Economía colombiana",
+      "concept": "crecimiento_del_cafe_como_exportacion_colombiana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué producto agrícola se convirtió gradualmente en una exportación importante de Colombia durante el siglo XIX?",
+      "options": [
+        "Trigo",
+        "Café",
+        "Arroz",
+        "Papa"
+      ],
+      "correctAnswer": "Café",
+      "explanation": "El cultivo y la exportación del café crecieron durante el siglo XIX y transformaron regiones y redes comerciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Colonialismo",
+      "concept": "colonias_amplian_poder_y_recursos_imperiales",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los imperios europeos organizaron colonias para ampliar su poder y obtener recursos y comercio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La expansión colonial respondió a intereses políticos y económicos, aunque sus formas y consecuencias variaron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-084",
+      "number": 84,
+      "topic": "Centralismo y federalismo",
+      "concept": "distribucion_de_autoridad_en_modelos_centralistas_y_federales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia principal existe entre centralismo y federalismo?",
+      "options": [
+        "Cómo se recaudan los impuestos",
+        "Qué autoridad nombra a los jueces",
+        "Reparto de autoridad entre nación y regiones",
+        "Si las ciudades pueden comerciar"
+      ],
+      "correctAnswer": "Reparto de autoridad entre nación y regiones",
+      "explanation": "El debate trata sobre cuánto poder concentra el gobierno central y cuánto conservan las entidades regionales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-085",
+      "number": 85,
+      "topic": "Constitución de Cúcuta",
+      "concept": "constitucion_cucuta_organiza_instituciones_republicanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscó organizar la Constitución de Cúcuta de 1821?",
+      "options": [
+        "El retorno del dominio español",
+        "La división de América en virreinatos",
+        "El gobierno de una monarquía portuguesa",
+        "Las instituciones de la República de Colombia"
+      ],
+      "correctAnswer": "Las instituciones de la República de Colombia",
+      "explanation": "La Constitución organizó instituciones y autoridades de la República de Colombia, surgida tras las guerras de independencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-086",
+      "number": 86,
+      "topic": "Abolición de la esclavitud",
+      "concept": "ley_1851_abole_esclavitud_desde_1852",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dispuso la ley colombiana de 1851 sobre las personas esclavizadas?",
+      "options": [
+        "Libertad desde el 1 de enero de 1852",
+        "Amplió la esclavitud a las zonas mineras",
+        "Trasladó a todas las personas esclavizadas a Panamá",
+        "Pospuso la decisión hasta el siglo XX"
+      ],
+      "correctAnswer": "Libertad desde el 1 de enero de 1852",
+      "explanation": "La ley del 21 de mayo de 1851 dispuso que las personas esclavizadas fueran libres desde el 1 de enero de 1852.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-087",
+      "number": 87,
+      "topic": "Verdadero o falso · Apartheid",
+      "concept": "apartheid_segrega_espacios_y_servicios",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Durante el apartheid sudafricano, el acceso a servicios y espacios públicos se organizó según categorías raciales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El régimen impuso leyes de segregación que restringían derechos y separaban espacios según la clasificación racial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-088",
+      "number": 88,
+      "topic": "Separación de Panamá",
+      "concept": "separacion_panama_colombia_1903",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se separó Panamá de Colombia?",
+      "options": [
+        "1819",
+        "1903",
+        "1886",
+        "1930"
+      ],
+      "correctAnswer": "1903",
+      "explanation": "Panamá declaró su separación de Colombia el 3 de noviembre de 1903, en medio de tensiones internas e intereses internacionales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-089",
+      "number": 89,
+      "topic": "Constitución de 1886",
+      "concept": "constitucion_1886_refuerza_estado_centralizado",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político introdujo la Constitución colombiana de 1886?",
+      "options": [
+        "Creó una unión de provincias autónomas",
+        "Reinstaló el virreinato español",
+        "Reforzó un Estado centralizado",
+        "Dividió el país en colonias extranjeras"
+      ],
+      "correctAnswer": "Reforzó un Estado centralizado",
+      "explanation": "La Constitución reemplazó el modelo federal por un Estado más centralizado y cambió la relación entre el gobierno nacional y las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-090",
+      "number": 90,
+      "topic": "Guerra de los Mil Días",
+      "concept": "cronologia_guerra_de_los_mil_dias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué años ocurrió la Guerra de los Mil Días en Colombia?",
+      "options": [
+        "1810–1819",
+        "1851–1852",
+        "1886–1887",
+        "1899–1902"
+      ],
+      "correctAnswer": "1899–1902",
+      "explanation": "La guerra civil enfrentó a liberales y conservadores entre 1899 y 1902 y tuvo graves consecuencias humanas y económicas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-091",
+      "number": 91,
+      "topic": "Ferrocarriles y café",
+      "concept": "ferrocarriles_facilitan_movilidad_interregional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio facilitaron los ferrocarriles en la movilidad colombiana?",
+      "options": [
+        "Trasladar pasajeros y mercancías entre regiones",
+        "Reemplazar el transporte fluvial en todo el país",
+        "Evitar la construcción de caminos locales",
+        "Detener el comercio entre ciudades"
+      ],
+      "correctAnswer": "Trasladar pasajeros y mercancías entre regiones",
+      "explanation": "Las vías férreas facilitaron el transporte de productos, incluido el café, hacia los mercados y puertos; su alcance fue desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-092",
+      "number": 92,
+      "topic": "Verdadero o falso · Canal de Panamá",
+      "concept": "canal_panama_se_concluye_despues_de_separacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El canal interoceánico de Panamá ya estaba terminado cuando Panamá se separó de Colombia en 1903.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La construcción del canal se completó después, y se inauguró en 1914.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-093",
+      "number": 93,
+      "topic": "Voto femenino en Colombia",
+      "concept": "acto_legislativo_1954_reconoce_sufragio_femenino",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué logro político se reconoció a las mujeres colombianas mediante el acto legislativo de 1954?",
+      "options": [
+        "El derecho exclusivo a ocupar ministerios",
+        "El derecho a votar y ser elegidas",
+        "La obligación de votar por primera vez",
+        "La eliminación de todos los partidos"
+      ],
+      "correctAnswer": "El derecho a votar y ser elegidas",
+      "explanation": "En 1954 se reconoció el sufragio femenino; las mujeres ejercieron el voto por primera vez en el plebiscito de 1957.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-094",
+      "number": 94,
+      "topic": "Economía cafetera",
+      "concept": "exportacion_cafetera_impulsa_conectividad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el aumento de exportaciones de café favoreció la construcción de vías de transporte?",
+      "options": [
+        "Las vías impedían llegar a las zonas cafeteras",
+        "El café solo podía venderse en su región",
+        "Mover cosechas hacia mercados y puertos",
+        "La exportación eliminaba el comercio interior"
+      ],
+      "correctAnswer": "Mover cosechas hacia mercados y puertos",
+      "explanation": "El crecimiento de la producción exportable aumentó la necesidad de conectar fincas, centros de acopio y puertos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-095",
+      "number": 95,
+      "topic": "Consecuencias de la guerra",
+      "concept": "guerra_mil_dias_afecta_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto tuvo la Guerra de los Mil Días en la población civil?",
+      "options": [
+        "Solo afectó a los ejércitos",
+        "Produjo prosperidad igual en todas las regiones",
+        "Eliminó de inmediato las divisiones políticas",
+        "Causó muertes, desplazamientos y daños económicos"
+      ],
+      "correctAnswer": "Causó muertes, desplazamientos y daños económicos",
+      "explanation": "La guerra afectó a combatientes y civiles, desorganizó economías locales y dejó daños que continuaron tras el armisticio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-096",
+      "number": 96,
+      "topic": "Fuentes y trabajo forzado",
+      "concept": "reconocer_trabajo_omitido_en_informe_economico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe colonial contabiliza producción minera, pero no menciona a quienes trabajaron en ella. ¿Qué pregunta amplía mejor el análisis?",
+      "options": [
+        "¿Quién trabajó y bajo qué condiciones?",
+        "¿Cuántas páginas tiene el informe?",
+        "¿Qué color tenía la cubierta?",
+        "¿En qué estante se conserva hoy?"
+      ],
+      "correctAnswer": "¿Quién trabajó y bajo qué condiciones?",
+      "explanation": "Indagar quién trabajó y bajo qué condiciones revela relaciones sociales que una fuente centrada solo en la producción puede omitir.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-097",
+      "number": 97,
+      "topic": "Reformas legales",
+      "concept": "abolir_estatus_legal_no_elimina_coercion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Tras una ley de abolición, un documento muestra que antiguos esclavizados siguieron trabajando con deudas impuestas. ¿Qué interpretación es más sólida?",
+      "options": [
+        "La ley nunca fue aprobada",
+        "Persistieron formas de coerción tras la ley",
+        "Las deudas prueban que la esclavitud no existió",
+        "La libertad transformó todas las relaciones por igual"
+      ],
+      "correctAnswer": "Persistieron formas de coerción tras la ley",
+      "explanation": "La abolición cambió el estatus legal, pero no suprimió automáticamente la desigualdad ni las prácticas coercitivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-098",
+      "number": 98,
+      "topic": "Cambios políticos y regionales",
+      "concept": "rechazo_regional_indica_tension_sobre_modelo_de_gobierno",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa muestra que varias provincias rechazaron una nueva constitución centralista. ¿Qué conclusión permite sustentar?",
+      "options": [
+        "Todas las regiones compartían la misma opinión",
+        "La constitución fue aceptada sin debate",
+        "El proyecto de gobierno generó tensiones regionales",
+        "Las provincias dejaron de tener población"
+      ],
+      "correctAnswer": "El proyecto de gobierno generó tensiones regionales",
+      "explanation": "El mapa permite observar desacuerdos territoriales, aunque se requieren otras fuentes para conocer motivos y actores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-099",
+      "number": 99,
+      "topic": "Verdadero o falso · Cambio económico",
+      "concept": "crecimiento_exportador_es_un_factor_entre_varios",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una exportación que crece puede influir en el transporte y el trabajo, pero por sí sola no explica todos los cambios sociales de una época.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los cambios económicos interactúan con decisiones políticas, tecnología, condiciones regionales y relaciones sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-100",
+      "number": 100,
+      "topic": "Separación de Panamá",
+      "concept": "separar_causas_internas_y_externas_en_panama",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos textos explican la separación de Panamá: uno destaca el conflicto político interno y otro los intereses extranjeros. ¿Cómo se comparan mejor?",
+      "options": [
+        "Elegir el título más llamativo",
+        "Se acepta el texto escrito primero",
+        "Se descarta el que mencione intereses externos",
+        "Se contrastan evidencias, autores y contexto de ambos"
+      ],
+      "correctAnswer": "Se contrastan evidencias, autores y contexto de ambos",
+      "explanation": "Un proceso complejo puede tener causas internas y externas; contrastar las fuentes ayuda a valorar sus pruebas y perspectivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-101",
+      "number": 101,
+      "topic": "Primera Guerra Mundial",
+      "concept": "cronologia_primera_guerra_mundial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué años se libró la Primera Guerra Mundial?",
+      "options": [
+        "1914–1918",
+        "1900–1904",
+        "1939–1945",
+        "1947–1951"
+      ],
+      "correctAnswer": "1914–1918",
+      "explanation": "La guerra comenzó en 1914 y terminó en 1918, tras extenderse por varios frentes y continentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-102",
+      "number": 102,
+      "topic": "Tratado de Versalles",
+      "concept": "tratado_versalles_regula_posguerra_alemana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tratado estableció las condiciones de paz para Alemania después de la Primera Guerra Mundial?",
+      "options": [
+        "Tratado de Utrecht",
+        "Tratado de Versalles",
+        "Tratado de Tordesillas",
+        "Tratado de París de 1763"
+      ],
+      "correctAnswer": "Tratado de Versalles",
+      "explanation": "El Tratado de Versalles de 1919 fue uno de los acuerdos que formalizaron la paz después de la guerra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-103",
+      "number": 103,
+      "topic": "Revolución rusa",
+      "concept": "revolucion_rusa_derroca_al_zar",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurrió con el zar durante la revolución rusa de 1917?",
+      "options": [
+        "Amplió su poder sobre Europa",
+        "Dirigió la creación de la ONU",
+        "Perdió el poder durante la revolución",
+        "Se convirtió en presidente electo"
+      ],
+      "correctAnswer": "Perdió el poder durante la revolución",
+      "explanation": "La revolución de febrero de 1917 derrocó al zar; más tarde, los bolcheviques tomaron el poder en la revolución de octubre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-104",
+      "number": 104,
+      "topic": "Naciones Unidas",
+      "concept": "fundacion_naciones_unidas_1945",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se fundó la Organización de las Naciones Unidas?",
+      "options": [
+        "1919",
+        "1939",
+        "1941",
+        "1945"
+      ],
+      "correctAnswer": "1945",
+      "explanation": "La ONU se fundó en 1945, al finalizar la Segunda Guerra Mundial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-105",
+      "number": 105,
+      "topic": "Verdadero o falso · Segunda Guerra Mundial",
+      "concept": "fin_segunda_guerra_mundial_1945",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Segunda Guerra Mundial terminó en 1945.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La guerra terminó en 1945 tras la rendición de Alemania y Japón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-106",
+      "number": 106,
+      "topic": "Descolonización",
+      "concept": "descolonizacion_conduce_a_independencia_politica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa descolonización en la historia del siglo XX?",
+      "options": [
+        "La expansión de imperios sobre nuevas colonias",
+        "Independencia política de territorios coloniales",
+        "El traslado de capitales a zonas rurales",
+        "Unir todas las colonias en un Estado"
+      ],
+      "correctAnswer": "Independencia política de territorios coloniales",
+      "explanation": "La descolonización incluyó distintos procesos por los cuales pueblos y territorios terminaron el dominio colonial y formaron Estados independientes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-107",
+      "number": 107,
+      "topic": "Sudáfrica",
+      "concept": "apartheid_sistema_de_segregacion_racial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sistema de segregación racial rigió en Sudáfrica durante gran parte del siglo XX?",
+      "options": [
+        "Feudalismo",
+        "Apartheid",
+        "Mercantilismo",
+        "Vasallaje"
+      ],
+      "correctAnswer": "Apartheid",
+      "explanation": "El apartheid impuso leyes que separaban y discriminaban a la población según categorías raciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-108",
+      "number": 108,
+      "topic": "Fin de la Guerra Fría",
+      "concept": "caida_muro_berlin_1989",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué símbolo de división europea cayó en 1989?",
+      "options": [
+        "Muro de Adriano",
+        "Muralla de Ávila",
+        "Muro de Berlín",
+        "Muralla de Cartagena"
+      ],
+      "correctAnswer": "Muro de Berlín",
+      "explanation": "La caída del Muro de Berlín en 1989 simbolizó la apertura de fronteras y el debilitamiento de la división de la Guerra Fría en Europa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-109",
+      "number": 109,
+      "topic": "Verdadero o falso · Descolonización",
+      "concept": "descolonizacion_tuvo_procesos_diversos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los procesos de independencia en Asia y África ocurrieron al mismo tiempo y de la misma manera.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La descolonización tuvo ritmos, actores y conflictos diferentes en cada territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-110",
+      "number": 110,
+      "topic": "Constitución colombiana de 1991",
+      "concept": "constitucion_1991_reconoce_diversidad_etnica_y_cultural",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reconoció la Constitución colombiana de 1991 sobre la composición cultural del país?",
+      "options": [
+        "Una sola cultura regional",
+        "La desaparición de los pueblos indígenas",
+        "La separación de las comunidades del Estado",
+        "El carácter pluriétnico y multicultural de la nación"
+      ],
+      "correctAnswer": "El carácter pluriétnico y multicultural de la nación",
+      "explanation": "La Constitución reconoce la diversidad étnica y cultural de Colombia y establece derechos para los pueblos indígenas y otros grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-111",
+      "number": 111,
+      "topic": "Urbanización",
+      "concept": "empleo_y_servicios_impulsan_migracion_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación favoreció el crecimiento de muchas ciudades durante el siglo XX?",
+      "options": [
+        "La desaparición de las actividades industriales",
+        "Buscar empleo y servicios en ciudades",
+        "La prohibición de migrar entre regiones",
+        "El abandono de todas las redes de transporte"
+      ],
+      "correctAnswer": "Buscar empleo y servicios en ciudades",
+      "explanation": "La industrialización y la concentración de servicios atrajeron población rural a ciudades, junto con otros factores económicos y sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-112",
+      "number": 112,
+      "topic": "Gran Depresión",
+      "concept": "gran_depresion_reduce_produccion_y_comercio",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto internacional se asocia con la Gran Depresión iniciada en 1929?",
+      "options": [
+        "Expansión inmediata del comercio mundial",
+        "Desaparición de las crisis bancarias",
+        "Contracción de la producción y el comercio",
+        "Fin de la desigualdad económica"
+      ],
+      "correctAnswer": "Contracción de la producción y el comercio",
+      "explanation": "La crisis se extendió a varios países y redujo producción, empleo y comercio, aunque sus efectos variaron según cada economía.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-113",
+      "number": 113,
+      "topic": "Industrialización",
+      "concept": "sustitucion_importaciones_promueve_produccion_local",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaba la industrialización por sustitución de importaciones en varios países latinoamericanos?",
+      "options": [
+        "Impedir el uso de tecnología industrial",
+        "Eliminar toda actividad manufacturera local",
+        "Reemplazar los mercados internos por colonias",
+        "Producir localmente bienes antes importados"
+      ],
+      "correctAnswer": "Producir localmente bienes antes importados",
+      "explanation": "La estrategia buscaba desarrollar industrias nacionales para fabricar ciertos bienes importados y reducir la dependencia externa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-114",
+      "number": 114,
+      "topic": "La Violencia en Colombia",
+      "concept": "asesinato_gaitan_intensifica_la_violencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso de conflicto partidista se intensificó en Colombia tras el asesinato de Jorge Eliécer Gaitán en 1948?",
+      "options": [
+        "La Guerra de los Mil Días",
+        "La insurrección de los Comuneros",
+        "La Violencia",
+        "La campaña libertadora"
+      ],
+      "correctAnswer": "La Violencia",
+      "explanation": "El asesinato de Gaitán intensificó la violencia política en un periodo ya marcado por fuertes tensiones entre liberales y conservadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-115",
+      "number": 115,
+      "topic": "Bogotazo",
+      "concept": "bogotazo_disturbios_del_9_de_abril_de_1948",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre reciben los disturbios ocurridos en Bogotá después del asesinato de Gaitán?",
+      "options": [
+        "El Grito de Dolores",
+        "El Bogotazo",
+        "La Semana Trágica",
+        "La Comuna de París"
+      ],
+      "correctAnswer": "El Bogotazo",
+      "explanation": "El Bogotazo fue una serie de protestas y disturbios en Bogotá el 9 de abril de 1948; sus efectos se extendieron más allá de ese día.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-116",
+      "number": 116,
+      "topic": "Frente Nacional",
+      "concept": "frente_nacional_alterna_poder_entre_partidos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acuerdo político definió el Frente Nacional en Colombia?",
+      "options": [
+        "Gobierno permanente de un solo partido",
+        "Autonomía total para cada municipio",
+        "Restauración de la monarquía",
+        "Alternancia y reparto entre liberales y conservadores"
+      ],
+      "correctAnswer": "Alternancia y reparto entre liberales y conservadores",
+      "explanation": "El pacto estableció alternancia presidencial y reparto de cargos entre los dos partidos tradicionales, con exclusiones políticas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-117",
+      "number": 117,
+      "topic": "Asamblea Constituyente",
+      "concept": "asamblea_constituyente_elabora_constitucion_1991",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué vía política permitió elaborar la Constitución colombiana de 1991?",
+      "options": [
+        "Una orden de la Corona española",
+        "Un acuerdo entre virreyes",
+        "Una Asamblea Nacional Constituyente",
+        "Una decisión de las Naciones Unidas"
+      ],
+      "correctAnswer": "Una Asamblea Nacional Constituyente",
+      "explanation": "Una Asamblea Nacional Constituyente elegida por voto popular elaboró la Constitución de 1991.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-118",
+      "number": 118,
+      "topic": "Fin del apartheid",
+      "concept": "elecciones_multirraciales_terminan_apartheid",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político puso fin al apartheid en Sudáfrica?",
+      "options": [
+        "La reinstauración de la monarquía británica",
+        "La división permanente del país en zonas raciales",
+        "La expulsión de todos los partidos políticos",
+        "Elecciones democráticas con participación multirracial"
+      ],
+      "correctAnswer": "Elecciones democráticas con participación multirracial",
+      "explanation": "Las elecciones de 1994 permitieron participar a la población sin la exclusión racial del sistema del apartheid.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-119",
+      "number": 119,
+      "topic": "Verdadero o falso · Guerra Fría",
+      "concept": "caida_muro_precede_disolucion_union_sovietica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La caída del Muro de Berlín disolvió inmediatamente la Unión Soviética.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El muro cayó en 1989; la Unión Soviética se disolvió en 1991, después de otros cambios políticos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-120",
+      "number": 120,
+      "topic": "Verdadero o falso · Constitución colombiana",
+      "concept": "constitucion_1991_amplia_mecanismos_participativos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Constitución de 1991 creó en Colombia mecanismos de participación ciudadana además del voto electoral.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La Constitución incorporó mecanismos como el referendo, la consulta popular y la iniciativa legislativa, con requisitos propios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-121",
+      "number": 121,
+      "topic": "Migración y ciudad",
+      "concept": "migracion_y_planificacion_modelan_crecimiento_urbano",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad crece rápido y sus nuevos barrios quedan lejos del empleo y los servicios. ¿Qué pregunta ayuda a explicar esa transformación?",
+      "options": [
+        "¿Cómo se relacionan migración, empleo y planificación urbana?",
+        "¿Qué color tenían los primeros edificios?",
+        "¿Quién diseñó cada calle?",
+        "¿Cuántos avisos había en el centro?"
+      ],
+      "correctAnswer": "¿Cómo se relacionan migración, empleo y planificación urbana?",
+      "explanation": "Relacionar migración, empleo y decisiones de planificación permite explicar quién llegó, dónde se instaló y cómo accedía a servicios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-122",
+      "number": 122,
+      "topic": "Memoria de La Violencia",
+      "concept": "contrastar_memorias_orales_con_fuentes_contextuales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos familias recuerdan de modo distinto una masacre ocurrida en su municipio. ¿Qué método respeta mejor esas memorias y permite investigar el hecho?",
+      "options": [
+        "Elegir el relato más breve",
+        "Escuchar testimonios, contrastarlos y contextualizarlos",
+        "Publicar un solo testimonio como verdad completa",
+        "Evitar consultar archivos y registros locales"
+      ],
+      "correctAnswer": "Escuchar testimonios, contrastarlos y contextualizarlos",
+      "explanation": "Escuchar diversas voces y contrastar documentos ayuda a comprender las experiencias sin suponer que un testimonio representa a todas las personas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-123",
+      "number": 123,
+      "topic": "Cambios constitucionales",
+      "concept": "evaluar_distancia_entre_norma_y_aplicacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un periódico de 1991 afirma que la nueva Constitución resolverá de inmediato toda desigualdad social. ¿Qué evaluación es más sólida?",
+      "options": [
+        "Una constitución transforma toda práctica social",
+        "Las leyes no influyen en la sociedad",
+        "Estudiar aplicación y resultados",
+        "Es imposible analizar cambios constitucionales"
+      ],
+      "correctAnswer": "Estudiar aplicación y resultados",
+      "explanation": "Una constitución establece normas e instituciones, pero sus efectos dependen de la aplicación, las decisiones posteriores y las condiciones sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-124",
+      "number": 124,
+      "topic": "Descolonización",
+      "concept": "soberania_politica_coexiste_con_dependencia_economica",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un país logra independencia, pero su economía aún depende de vender una sola materia prima al antiguo poder colonial. ¿Qué conclusión es más cuidadosa?",
+      "options": [
+        "No obtuvo ninguna independencia política",
+        "La economía ya es completamente autónoma",
+        "Las relaciones coloniales nunca cambiaron",
+        "La independencia política puede coexistir con dependencias económicas"
+      ],
+      "correctAnswer": "La independencia política puede coexistir con dependencias económicas",
+      "explanation": "La soberanía política no elimina automáticamente las dependencias comerciales o económicas formadas durante el colonialismo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Fuentes históricas",
+      "concept": "encuadre_fotografico_limita_inferencias_historicas",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una fotografía histórica muestra parte de un acontecimiento, pero el encuadre y el momento elegido limitan lo que puede concluirse de ella.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La fotografía es una fuente valiosa, pero su selección, encuadre y contexto deben considerarse al interpretarla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-126",
+      "number": 126,
+      "topic": "Revolución industrial",
+      "concept": "inicio_revolucion_industrial_en_gran_bretana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué país comenzó la Revolución industrial?",
+      "options": [
+        "Gran Bretaña",
+        "Rusia",
+        "Japón",
+        "México"
+      ],
+      "correctAnswer": "Gran Bretaña",
+      "explanation": "La industrialización mecanizada comenzó en Gran Bretaña en el siglo XVIII y luego se extendió de manera desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-127",
+      "number": 127,
+      "topic": "Revolución francesa",
+      "concept": "toma_bastilla_simboliza_inicio_revolucion_francesa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hecho de 1789 se convirtió en símbolo del inicio de la Revolución francesa?",
+      "options": [
+        "La batalla de Waterloo",
+        "La toma de la Bastilla",
+        "La caída del Muro de Berlín",
+        "La firma del Tratado de Versalles"
+      ],
+      "correctAnswer": "La toma de la Bastilla",
+      "explanation": "La toma de la Bastilla el 14 de julio de 1789 se convirtió en un símbolo de la revolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-128",
+      "number": 128,
+      "topic": "Derechos y ciudadanía",
+      "concept": "declaracion_derechos_hombre_ciudadano_1789",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué documento francés de 1789 proclamó principios sobre derechos y ciudadanía?",
+      "options": [
+        "Código de Hammurabi",
+        "Carta Magna",
+        "Declaración francesa de derechos de 1789",
+        "Acta de Independencia de Estados Unidos"
+      ],
+      "correctAnswer": "Declaración francesa de derechos de 1789",
+      "explanation": "La declaración formuló principios de derechos y ciudadanía durante la Revolución francesa, aunque su aplicación excluyó a muchos grupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-129",
+      "number": 129,
+      "topic": "Verdadero o falso · Ilustración",
+      "concept": "ilustracion_promueve_razon_y_critica_del_poder",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Ilustración promovió el uso de la razón para examinar la sociedad y el poder.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Pensadores ilustrados defendieron el análisis racional y debatieron ideas sobre derechos, gobierno y conocimiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-130",
+      "number": 130,
+      "topic": "Independencia estadounidense",
+      "concept": "declaracion_independencia_estados_unidos_1776",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se aprobó la Declaración de Independencia de Estados Unidos?",
+      "options": [
+        "1492",
+        "1648",
+        "1789",
+        "1776"
+      ],
+      "correctAnswer": "1776",
+      "explanation": "Las Trece Colonias aprobaron la Declaración de Independencia el 4 de julio de 1776.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-131",
+      "number": 131,
+      "topic": "Independencias sudamericanas",
+      "concept": "bolivar_lidera_campanas_en_norte_suramericano",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué líder participó en campañas independentistas en el norte de Suramérica?",
+      "options": [
+        "Simón Bolívar",
+        "Miguel Hidalgo",
+        "José de San Martín",
+        "Bernardo O’Higgins"
+      ],
+      "correctAnswer": "Simón Bolívar",
+      "explanation": "Bolívar lideró campañas en territorios de la actual Venezuela, Colombia, Ecuador, Perú y Bolivia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-132",
+      "number": 132,
+      "topic": "Verdadero o falso · Independencia de Brasil",
+      "concept": "independencia_brasil_1822_inicia_monarquia",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Brasil declaró su independencia de Portugal en 1822 y se convirtió en una monarquía.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Brasil se independizó en 1822 bajo Pedro I y mantuvo una monarquía durante parte del siglo XIX.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-133",
+      "number": 133,
+      "topic": "Primera Guerra Mundial",
+      "concept": "asesinato_francisco_fernando_precipita_crisis_de_1914",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué asesinato desencadenó la crisis inmediata que llevó a la Primera Guerra Mundial?",
+      "options": [
+        "El del zar Nicolás II",
+        "El de Napoleón Bonaparte",
+        "El del archiduque Francisco Fernando",
+        "El del presidente Abraham Lincoln"
+      ],
+      "correctAnswer": "El del archiduque Francisco Fernando",
+      "explanation": "El asesinato del archiduque austrohúngaro Francisco Fernando en Sarajevo en 1914 precipitó una crisis; las causas de la guerra fueron más amplias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-134",
+      "number": 134,
+      "topic": "Industrialización y trabajo",
+      "concept": "fabrica_concentra_maquinas_y_trabajadores",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio acompañó el paso de la producción artesanal a la fabril?",
+      "options": [
+        "Desapareció el trabajo asalariado",
+        "Las familias dejaron de producir bienes",
+        "La producción volvió a los talleres rurales",
+        "Máquinas y trabajadores se concentraron en fábricas"
+      ],
+      "correctAnswer": "Máquinas y trabajadores se concentraron en fábricas",
+      "explanation": "La fábrica reunió máquinas y trabajadores y reorganizó horarios y procesos productivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-135",
+      "number": 135,
+      "topic": "Revolución francesa",
+      "concept": "tercer_estado_reclama_representacion_y_fin_de_privilegios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reclamo expresó el Tercer Estado al exigir cambios políticos en Francia?",
+      "options": [
+        "Mantener sus impuestos sin representación",
+        "Entregar el poder político a la nobleza",
+        "Obtener mayor representación y terminar privilegios estamentales",
+        "Restablecer el sistema feudal"
+      ],
+      "correctAnswer": "Obtener mayor representación y terminar privilegios estamentales",
+      "explanation": "El Tercer Estado reclamó una participación política más amplia y cuestionó los privilegios de la nobleza y el clero.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-136",
+      "number": 136,
+      "topic": "Nacionalismo europeo",
+      "concept": "nacionalismo_apoya_proyectos_de_unificacion_europea",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación tuvo el nacionalismo con la unificación de Italia y Alemania?",
+      "options": [
+        "Ayudó a movilizar proyectos de unidad política",
+        "Eliminó todos los conflictos entre reinos",
+        "Restauró los imperios coloniales de América",
+        "Impidió que se formaran Estados nacionales"
+      ],
+      "correctAnswer": "Ayudó a movilizar proyectos de unidad política",
+      "explanation": "Movimientos nacionalistas defendieron reunir territorios y poblaciones bajo Estados nacionales, junto con otros factores políticos y militares.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-137",
+      "number": 137,
+      "topic": "Imperialismo",
+      "concept": "imperialismo_busca_recursos_rutas_y_mercados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué interés impulsó a potencias industriales a expandir su control colonial?",
+      "options": [
+        "Renunciar a materias primas y mercados",
+        "Asegurar recursos, rutas y mercados",
+        "Eliminar la competencia entre imperios",
+        "Sustituir todo comercio por agricultura local"
+      ],
+      "correctAnswer": "Asegurar recursos, rutas y mercados",
+      "explanation": "Los proyectos imperiales buscaron controlar recursos, rutas comerciales y mercados, además de extender poder político.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-138",
+      "number": 138,
+      "topic": "Primera Guerra Mundial",
+      "concept": "guerra_total_moviliza_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracterizó a la guerra total durante la Primera Guerra Mundial?",
+      "options": [
+        "Solo participaron ejércitos profesionales",
+        "La población civil quedó fuera de sus efectos",
+        "La producción industrial dejó de importar",
+        "Los Estados movilizaron población y recursos para guerrear"
+      ],
+      "correctAnswer": "Los Estados movilizaron población y recursos para guerrear",
+      "explanation": "Los gobiernos organizaron industrias, recursos y población para sostener el esfuerzo bélico, con efectos sobre civiles y combatientes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-139",
+      "number": 139,
+      "topic": "Tratado de Versalles",
+      "concept": "reparaciones_y_restricciones_de_versalles_alimentan_resentimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué medida impuesta a Alemania tras la Primera Guerra Mundial generó resentimiento?",
+      "options": [
+        "La incorporación a una unión política europea",
+        "La devolución de todas sus colonias a Alemania",
+        "Reparaciones económicas y restricciones militares",
+        "El control alemán de territorios aliados"
+      ],
+      "correctAnswer": "Reparaciones económicas y restricciones militares",
+      "explanation": "El tratado impuso reparaciones y limitaciones; sus efectos políticos alimentaron resentimientos, aunque no explican por sí solos la Segunda Guerra Mundial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-140",
+      "number": 140,
+      "topic": "Sociedad de Naciones",
+      "concept": "sociedad_naciones_busca_resolver_disputas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objetivo tuvo la Sociedad de Naciones después de la Primera Guerra Mundial?",
+      "options": [
+        "Resolver disputas entre países mediante cooperación",
+        "Administrar todas las colonias europeas",
+        "Reemplazar los gobiernos nacionales",
+        "Organizar ejércitos para conquistar territorios"
+      ],
+      "correctAnswer": "Resolver disputas entre países mediante cooperación",
+      "explanation": "La organización buscó promover cooperación y resolver conflictos, pero careció de medios suficientes para impedir nuevas guerras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-141",
+      "number": 141,
+      "topic": "Segunda Guerra Mundial",
+      "concept": "redes_de_resistencia_en_territorios_ocupados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma de resistencia apareció en algunos territorios ocupados por la Alemania nazi?",
+      "options": [
+        "Apoyo unánime a la ocupación",
+        "Redes clandestinas de sabotaje e información",
+        "Disolución de todos los gobiernos aliados",
+        "Renuncia de la población a toda organización"
+      ],
+      "correctAnswer": "Redes clandestinas de sabotaje e información",
+      "explanation": "Diversos grupos organizaron redes clandestinas para compartir información, apoyar fugas o sabotear operaciones de ocupación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-142",
+      "number": 142,
+      "topic": "Verdadero o falso · Guerra Fría",
+      "concept": "guerra_fria_compite_sin_enfrentamiento_directo_continuo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Guerra Fría fue un enfrentamiento militar directo y continuo entre Estados Unidos y la Unión Soviética.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las dos potencias evitaron una guerra directa entre sí, pero compitieron mediante alianzas, carrera armamentista y conflictos indirectos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-143",
+      "number": 143,
+      "topic": "Posguerra",
+      "concept": "ocupacion_de_posguerra_divide_alemania_en_zonas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio de fronteras ocurrió en Europa después de la Segunda Guerra Mundial?",
+      "options": [
+        "Las fronteras europeas de 1939 no cambiaron",
+        "Alemania quedó dividida en zonas de ocupación",
+        "Europa se unificó inmediatamente bajo un solo gobierno",
+        "La Unión Soviética dejó de existir en 1945"
+      ],
+      "correctAnswer": "Alemania quedó dividida en zonas de ocupación",
+      "explanation": "Las potencias aliadas dividieron Alemania en zonas de ocupación, una situación que contribuyó a la posterior división del país.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-144",
+      "number": 144,
+      "topic": "Carrera espacial",
+      "concept": "carrera_espacial_como_competencia_de_guerra_fria",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué expresó la carrera espacial entre Estados Unidos y la Unión Soviética?",
+      "options": [
+        "Cooperar para disolver la ONU",
+        "El fin inmediato de la competencia política",
+        "La sustitución de toda investigación militar",
+        "La competencia tecnológica propia de la Guerra Fría"
+      ],
+      "correctAnswer": "La competencia tecnológica propia de la Guerra Fría",
+      "explanation": "La exploración espacial fue un campo de competencia científica, tecnológica y simbólica entre las dos potencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-145",
+      "number": 145,
+      "topic": "Verdadero o falso · Conflictos posteriores a 1945",
+      "concept": "conflictos_armados_persisten_tras_1945",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Después de la Segunda Guerra Mundial desaparecieron todos los conflictos armados.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Continuaron guerras y conflictos regionales, incluso mientras surgían instituciones destinadas a promover cooperación internacional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-146",
+      "number": 146,
+      "topic": "Revolución industrial",
+      "concept": "productividad_industrial_coexiste_con_costos_laborales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un registro muestra que una fábrica produjo más telas, pero también aumentaron accidentes y jornadas extensas. ¿Qué interpretación considera ambas evidencias?",
+      "options": [
+        "La producción creció junto con costos laborales",
+        "La mecanización benefició a todos por igual",
+        "El registro no permite analizar cambios laborales",
+        "Los accidentes demuestran que cayó la producción"
+      ],
+      "correctAnswer": "La producción creció junto con costos laborales",
+      "explanation": "El aumento de producción puede coexistir con condiciones laborales difíciles; analizar ambas dimensiones evita una explicación unilateral.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-147",
+      "number": 147,
+      "topic": "Fronteras de posguerra",
+      "concept": "mapas_de_posguerra_muestran_reorganizacion_territorial",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa de Europa de 1920 muestra nuevas fronteras respecto a uno de 1914. ¿Qué conclusión debe acompañarse de otras fuentes?",
+      "options": [
+        "Los cambios afectaron únicamente a los océanos",
+        "Guerra y acuerdos de paz cambiaron territorios",
+        "Todas las nuevas fronteras fueron aceptadas sin conflicto",
+        "Los mapas prueban por sí solos las causas"
+      ],
+      "correctAnswer": "Guerra y acuerdos de paz cambiaron territorios",
+      "explanation": "El mapa muestra transformaciones territoriales, pero se necesitan documentos y contexto para explicar por qué ocurrieron y cómo se vivieron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-148",
+      "number": 148,
+      "topic": "Expansión colonial",
+      "concept": "mapa_colonial_omite_diversidad_local",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa colonial identifica fronteras trazadas sin registrar lenguas o pueblos locales. ¿Qué limitación tiene?",
+      "options": [
+        "Permite conocer todas las identidades de la región",
+        "Demuestra que no vivía población en esos territorios",
+        "Muestra límites sin toda la diversidad local",
+        "Las comunidades acordaron todas las fronteras"
+      ],
+      "correctAnswer": "Muestra límites sin toda la diversidad local",
+      "explanation": "Un mapa puede mostrar límites administrativos y omitir identidades, lenguas y relaciones sociales de quienes habitaban el territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-149",
+      "number": 149,
+      "topic": "Verdadero o falso · Causalidad",
+      "concept": "secuencia_temporal_no_demuestra_causalidad",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una línea de tiempo muestra qué ocurrió primero, pero por sí sola no demuestra que un hecho causara el siguiente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La secuencia temporal ayuda a ordenar acontecimientos; demostrar causalidad requiere evidencia y análisis de relaciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS7-150",
+      "number": 150,
+      "topic": "Explicaciones históricas",
+      "concept": "explicar_revolucion_con_causas_y_evidencias_multiples",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un texto atribuye una revolución a un solo líder, mientras otros registros muestran crisis económica, protestas y disputas políticas. ¿Qué explicación es más sólida?",
+      "options": [
+        "Elegir al líder más mencionado",
+        "La que descarta testimonios de la población",
+        "La que evita relacionar causas",
+        "La que integra causas y contrasta la evidencia"
+      ],
+      "correctAnswer": "La que integra causas y contrasta la evidencia",
+      "explanation": "Los procesos históricos suelen tener causas múltiples; relacionar evidencias y perspectivas produce una explicación más completa.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}
+,
+{
+  "catalogId": "edusyn-historia-grade-8-v1",
+  "title": "Historia · 8.º",
+  "grade": 8,
+  "subjectArea": "Duelos",
+  "category": "Historia",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll10/id/2804/download",
+    "https://babel.banrepcultural.org/digital/api/collection/p17054coll23/id/524/download",
+    "https://enciclopedia.banrepcultural.org/Lucas_Caballero_Barrera",
+    "https://pancanal.com/culminacion-de-la-construccion/",
+    "https://www.archives.gov/milestone-documents/declaration-of-independence",
+    "https://www.britannica.com/topic/Haitian-Revolution",
+    "https://www.iwm.org.uk/history/first-world-war",
+    "https://www.mineducacion.gov.co/1621/articles-116042_archivo_pdf3.pdf",
+    "https://www.museonacional.gov.co/colecciones/Pieza_del_mes/pieza-del-mes-2010/Paginas/489_2010-01-19.aspx",
+    "https://www.un.org/en/about-us/history-of-the-un"
+  ],
+  "questions": [
+    {
+      "id": "HIS8-001",
+      "number": 1,
+      "topic": "Revolución industrial",
+      "concept": "vapor_impulsa_primera_industrializacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fuente de energía impulsó muchas fábricas británicas del siglo XVIII?",
+      "options": [
+        "Gas natural",
+        "Energía solar",
+        "Vapor de agua",
+        "Petróleo refinado"
+      ],
+      "correctAnswer": "Vapor de agua",
+      "explanation": "Las máquinas de vapor transformaron la producción y el transporte durante la industrialización.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-002",
+      "number": 2,
+      "topic": "Revolución francesa",
+      "concept": "lema_revolucion_francesa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué lema se asocia con la Revolución francesa?",
+      "options": [
+        "Orden, patria y rey",
+        "Tierra, paz y trabajo",
+        "Fe, corona y conquista",
+        "Libertad, igualdad y fraternidad"
+      ],
+      "correctAnswer": "Libertad, igualdad y fraternidad",
+      "explanation": "El lema expresó ideales de ciudadanía y cambio político vinculados con la revolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-003",
+      "number": 3,
+      "topic": "Independencia de Estados Unidos",
+      "concept": "declaracion_independencia_estados_unidos_1776",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año se aprobó la Declaración de Independencia de Estados Unidos?",
+      "options": [
+        "1492",
+        "1776",
+        "1789",
+        "1810"
+      ],
+      "correctAnswer": "1776",
+      "explanation": "Las trece colonias aprobaron la declaración el 4 de julio de 1776.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-004",
+      "number": 4,
+      "topic": "Industrialización y ciudades",
+      "concept": "migracion_fabril_acelera_urbanizacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fenómeno creció cuando muchas personas dejaron el campo para trabajar en fábricas?",
+      "options": [
+        "Urbanización",
+        "Nomadismo",
+        "Feudalismo",
+        "Colonización"
+      ],
+      "correctAnswer": "Urbanización",
+      "explanation": "La migración hacia centros industriales amplió las ciudades y modificó su población.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-005",
+      "number": 5,
+      "topic": "Independencias latinoamericanas",
+      "concept": "imperios_ibericos_en_america",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué imperios europeos gobernaban gran parte de América antes de las independencias?",
+      "options": [
+        "Portugués y español",
+        "Ruso y otomano",
+        "Alemán e italiano",
+        "Japonés y chino"
+      ],
+      "correctAnswer": "Portugués y español",
+      "explanation": "España y Portugal controlaban extensos territorios americanos antes de los movimientos independentistas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-006",
+      "number": 6,
+      "topic": "Derechos políticos",
+      "concept": "sectores_populares_reclaman_representacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo reclamó derechos políticos durante varias revoluciones modernas?",
+      "options": [
+        "Gremios medievales",
+        "Ciudadanos y sectores populares",
+        "Cortes reales únicamente",
+        "Compañías mercantiles extranjeras"
+      ],
+      "correctAnswer": "Ciudadanos y sectores populares",
+      "explanation": "Distintos sectores exigieron representación y límites al poder, aunque la participación se amplió de manera desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-007",
+      "number": 7,
+      "topic": "Verdadero o falso · Producción industrial",
+      "concept": "mecanizacion_aumenta_volumen_productivo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La mecanización permitió fabricar algunos productos en mayor cantidad y en menos tiempo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las máquinas aceleraron tareas que antes dependían principalmente del trabajo manual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Revoluciones modernas",
+      "concept": "derechos_revolucionarios_tuvieron_exclusiones",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las declaraciones de derechos del siglo XVIII reconocieron desde el comienzo igualdad política plena para todas las personas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Aunque formularon principios de igualdad, mujeres, personas esclavizadas y otros grupos quedaron excluidos de muchos derechos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-009",
+      "number": 9,
+      "topic": "Revolución industrial",
+      "concept": "fabrica_concentra_y_divide_produccion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio distinguió principalmente el sistema fabril del taller artesanal?",
+      "options": [
+        "Trabajo individual sin herramientas",
+        "Intercambio limitado al trueque",
+        "Producción concentrada y mecanizada",
+        "Fabricación doméstica sin división"
+      ],
+      "correctAnswer": "Producción concentrada y mecanizada",
+      "explanation": "La fábrica reunió trabajadores y máquinas, organizando tareas para producir a mayor escala.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-010",
+      "number": 10,
+      "topic": "Revolución francesa",
+      "concept": "revolucion_francesa_cuestiona_absolutismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio político cuestionó la Revolución francesa?",
+      "options": [
+        "La existencia de asambleas locales",
+        "El poder absoluto de la monarquía",
+        "El comercio entre ciudades",
+        "La publicación de periódicos"
+      ],
+      "correctAnswer": "El poder absoluto de la monarquía",
+      "explanation": "La revolución disputó la autoridad absoluta y propuso nuevas formas de soberanía política.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-011",
+      "number": 11,
+      "topic": "Revoluciones atlánticas",
+      "concept": "soberania_nacional_en_revoluciones_atlanticas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué idea compartieron algunos movimientos revolucionarios de fines del siglo XVIII?",
+      "options": [
+        "La soberanía reside en la nación",
+        "El poder pertenece solo al clero",
+        "La sociedad no debe tener leyes",
+        "Las colonias deben carecer de gobierno"
+      ],
+      "correctAnswer": "La soberanía reside en la nación",
+      "explanation": "La soberanía nacional cuestionó que el poder político proviniera exclusivamente de una monarquía hereditaria.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-012",
+      "number": 12,
+      "topic": "Haití",
+      "concept": "revolucion_haitiana_derrota_esclavitud",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hizo singular a la Revolución haitiana en el mundo atlántico?",
+      "options": [
+        "Abolió la esclavitud y creó una república",
+        "Restauró el dominio francés",
+        "Unió Haití con las colonias británicas",
+        "Prohibió la participación de antiguos esclavizados"
+      ],
+      "correctAnswer": "Abolió la esclavitud y creó una república",
+      "explanation": "La revolución derrotó el régimen esclavista y condujo a la independencia haitiana en 1804.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-013",
+      "number": 13,
+      "topic": "Independencias americanas",
+      "concept": "invasion_napoleonica_abre_crisis_de_soberania",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las guerras napoleónicas debilitaron el control español sobre América?",
+      "options": [
+        "América dejó de comerciar por completo",
+        "Portugal ocupó todas las colonias",
+        "Las ciudades americanas desaparecieron",
+        "España perdió estabilidad y autoridad"
+      ],
+      "correctAnswer": "España perdió estabilidad y autoridad",
+      "explanation": "La crisis de la monarquía española abrió disputas sobre quién debía gobernar los territorios americanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-014",
+      "number": 14,
+      "topic": "Trabajo industrial",
+      "concept": "fabrica_organiza_tiempo_laboral",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación surgió entre la fábrica y la jornada laboral?",
+      "options": [
+        "El horario se organizó según la producción",
+        "La jornada dependía solo de la cosecha",
+        "Los turnos desaparecieron de inmediato",
+        "El trabajo volvió exclusivamente artesanal"
+      ],
+      "correctAnswer": "El horario se organizó según la producción",
+      "explanation": "El ritmo de las máquinas y la organización fabril impusieron horarios regulares y disciplinados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-015",
+      "number": 15,
+      "topic": "Liberalismo",
+      "concept": "constituciones_liberales_limites_al_poder",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban limitar muchas constituciones liberales del siglo XIX?",
+      "options": [
+        "La educación de la población",
+        "La circulación de periódicos",
+        "El poder concentrado del gobierno",
+        "La existencia de elecciones"
+      ],
+      "correctAnswer": "El poder concentrado del gobierno",
+      "explanation": "Las constituciones liberales establecieron reglas e instituciones para distribuir o limitar el poder estatal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-016",
+      "number": 16,
+      "topic": "Transporte industrial",
+      "concept": "ferrocarril_conecta_mercados_regionales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto tuvo el ferrocarril en muchas economías industrializadas?",
+      "options": [
+        "Redujo el movimiento de mercancías",
+        "Conectó mercados y aceleró viajes",
+        "Eliminó la necesidad de puertos",
+        "Sustituyó todas las rutas marítimas"
+      ],
+      "correctAnswer": "Conectó mercados y aceleró viajes",
+      "explanation": "El tren facilitó transportar personas y productos con mayor rapidez entre regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-017",
+      "number": 17,
+      "topic": "Independencia de Brasil",
+      "concept": "independencia_brasil_conserva_monarquia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distinguió el proceso independentista brasileño del de varias repúblicas hispanoamericanas?",
+      "options": [
+        "Brasil se convirtió en colonia francesa",
+        "Brasil abolió toda forma de gobierno",
+        "Brasil se dividió en virreinatos españoles",
+        "Brasil mantuvo una monarquía tras independizarse"
+      ],
+      "correctAnswer": "Brasil mantuvo una monarquía tras independizarse",
+      "explanation": "Tras separarse de Portugal en 1822, Brasil fue un imperio gobernado por Pedro I.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Industrialización",
+      "concept": "ferrocarril_crea_beneficios_y_desplazamientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La expansión ferroviaria pudo beneficiar el comercio y también desplazar actividades económicas anteriores.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La nueva infraestructura abrió mercados, pero alteró rutas y oficios ligados a transportes previos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-019",
+      "number": 19,
+      "topic": "Verdadero o falso · Ciudadanía",
+      "concept": "constituciones_restringen_ciudadania",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La ciudadanía definida por una constitución siempre incluyó a todas las personas adultas por igual.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los requisitos de propiedad, género, origen o condición social restringieron el voto en distintos países.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-020",
+      "number": 20,
+      "topic": "Economía y sociedad",
+      "concept": "industrializacion_amplia_burguesia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo social creció con la expansión de fábricas y negocios urbanos?",
+      "options": [
+        "Nobleza feudal exclusivamente rural",
+        "Burguesía industrial y comercial",
+        "Sacerdocio imperial hereditario",
+        "Servidumbre ligada a feudos"
+      ],
+      "correctAnswer": "Burguesía industrial y comercial",
+      "explanation": "Propietarios de fábricas, comerciantes y empresarios ganaron peso económico en las sociedades industriales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-021",
+      "number": 21,
+      "topic": "Cambios en el trabajo",
+      "concept": "division_laboral_aumenta_produccion_repetitiva",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una fábrica produce más tela, pero sus obreros realizan tareas repetidas durante largas jornadas. ¿Qué cambio describe mejor la situación?",
+      "options": [
+        "Aumentó la producción y se dividió el trabajo",
+        "Desapareció la disciplina de horarios",
+        "Se restauró la producción feudal",
+        "Cada obrero controló todo el proceso"
+      ],
+      "correctAnswer": "Aumentó la producción y se dividió el trabajo",
+      "explanation": "La producción mecanizada elevó el volumen y organizó el trabajo en tareas especializadas y repetitivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-022",
+      "number": 22,
+      "topic": "Lectura de fuentes",
+      "concept": "comparar_fuentes_revela_efectos_desiguales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un periódico de 1840 celebra el ferrocarril; una carta de un arriero describe la pérdida de clientes. ¿Qué conclusión compara mejor ambas fuentes?",
+      "options": [
+        "Una fuente debe ser necesariamente falsa",
+        "Una innovación puede generar efectos distintos",
+        "El tren no tuvo consecuencias económicas",
+        "Las experiencias individuales no son evidencia"
+      ],
+      "correctAnswer": "Una innovación puede generar efectos distintos",
+      "explanation": "Las fuentes reflejan posiciones distintas y ayudan a reconocer que un cambio puede crear ganadores y afectados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-023",
+      "number": 23,
+      "topic": "Revolución y derechos",
+      "concept": "igualdad_declarada_contrasta_con_voto_restringido",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una constitución proclama igualdad, pero reserva el voto a propietarios varones. ¿Qué tensión muestra?",
+      "options": [
+        "Ausencia total de ideas políticas",
+        "Principios universales y ciudadanía restringida",
+        "Igualdad económica ya alcanzada",
+        "Rechazo de toda forma de constitución"
+      ],
+      "correctAnswer": "Principios universales y ciudadanía restringida",
+      "explanation": "La proclamación de igualdad convivió con reglas que excluían a amplios sectores de la participación política.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-024",
+      "number": 24,
+      "topic": "Economía mundial",
+      "concept": "division_internacional_del_trabajo_algodon_textiles",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una región produce algodón para fábricas extranjeras y compra textiles manufacturados. ¿Qué relación económica refleja?",
+      "options": [
+        "Independencia completa de los mercados",
+        "Especialización desigual entre regiones",
+        "Intercambio sin producción industrial",
+        "Fin de las relaciones comerciales"
+      ],
+      "correctAnswer": "Especialización desigual entre regiones",
+      "explanation": "La división internacional del trabajo asignó funciones diferentes a las regiones y pudo mantener relaciones desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Interpretación histórica",
+      "concept": "cambio_legal_no_elimina_inmediatamente_practicas_sociales",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una ley abolió una institución, sus efectos sociales desaparecieron inmediatamente en todos los lugares.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los cambios legales pueden tardar en transformar prácticas, condiciones materiales y relaciones de poder.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-026",
+      "number": 26,
+      "topic": "Revolución haitiana",
+      "concept": "saint_domingue_se_convierte_en_haiti",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué país declaró su independencia tras la revolución iniciada en Saint-Domingue?",
+      "options": [
+        "Cuba",
+        "Jamaica",
+        "Puerto Rico",
+        "Haití"
+      ],
+      "correctAnswer": "Haití",
+      "explanation": "La antigua colonia francesa se convirtió en Haití independiente en 1804.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-027",
+      "number": 27,
+      "topic": "Simón Bolívar",
+      "concept": "gran_colombia_reune_territorios_liberados",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proyecto político buscó unir varios territorios liberados del dominio español?",
+      "options": [
+        "Provincias Unidas del Río de la Plata",
+        "Imperio del Brasil",
+        "Confederación Germánica",
+        "Gran Colombia"
+      ],
+      "correctAnswer": "Gran Colombia",
+      "explanation": "La Gran Colombia reunió territorios que hoy corresponden a Colombia, Venezuela, Ecuador y Panamá.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-028",
+      "number": 28,
+      "topic": "Independencia de México",
+      "concept": "miguel_hidalgo_inicia_insurreccion_mexicana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sacerdote inició en 1810 un levantamiento independentista en México?",
+      "options": [
+        "Miguel Hidalgo",
+        "José María Morelos",
+        "Agustín de Iturbide",
+        "Vicente Guerrero"
+      ],
+      "correctAnswer": "Miguel Hidalgo",
+      "explanation": "Miguel Hidalgo llamó a levantarse contra el dominio español en septiembre de 1810.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-029",
+      "number": 29,
+      "topic": "Congreso de Viena",
+      "concept": "congreso_viena_reorganiza_europa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban principalmente las potencias reunidas en el Congreso de Viena de 1814–1815?",
+      "options": [
+        "Crear una república continental",
+        "Abolir las fronteras nacionales",
+        "Restaurar el equilibrio monárquico europeo",
+        "Unificar los imperios americanos"
+      ],
+      "correctAnswer": "Restaurar el equilibrio monárquico europeo",
+      "explanation": "Tras las guerras napoleónicas, los gobiernos intentaron reorganizar Europa y contener nuevas revoluciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-030",
+      "number": 30,
+      "topic": "Verdadero o falso · Independencias",
+      "concept": "independencias_no_eliminan_desigualdad_social",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las independencias americanas terminaron de inmediato con todas las desigualdades sociales heredadas de la colonia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cambió la autoridad política, pero muchas jerarquías y desigualdades persistieron.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-031",
+      "number": 31,
+      "topic": "Abolicionismo",
+      "concept": "movimiento_abolicionista_busca_fin_esclavitud",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué defendía el movimiento abolicionista?",
+      "options": [
+        "La expansión del trabajo esclavizado",
+        "El regreso del poder monárquico",
+        "La prohibición de la industria",
+        "La eliminación legal de la esclavitud"
+      ],
+      "correctAnswer": "La eliminación legal de la esclavitud",
+      "explanation": "Los abolicionistas promovieron terminar jurídicamente con la esclavitud y la trata.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-032",
+      "number": 32,
+      "topic": "Nacionalismo",
+      "concept": "nacionalismo_vincula_identidad_y_autogobierno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué idea ganó fuerza con varios movimientos nacionalistas del siglo XIX?",
+      "options": [
+        "Las fronteras nunca deben modificarse",
+        "Toda comunidad debe obedecer un imperio",
+        "Los idiomas deben desaparecer",
+        "Un pueblo puede reclamar autogobierno"
+      ],
+      "correctAnswer": "Un pueblo puede reclamar autogobierno",
+      "explanation": "El nacionalismo vinculó identidad colectiva con la aspiración a formar o controlar un Estado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Ciudadanía",
+      "concept": "voto_republicano_mantuvo_restricciones",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En el siglo XIX, el derecho al voto fue igual para todas las personas adultas en las nuevas repúblicas americanas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Diversas repúblicas impusieron requisitos de sexo, propiedad, alfabetización o condición jurídica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-034",
+      "number": 34,
+      "topic": "Independencias latinoamericanas",
+      "concept": "crisis_monarquica_promueve_juntas_americanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto tuvo la invasión napoleónica de la península ibérica en las colonias españolas?",
+      "options": [
+        "Unificó todas las colonias con Francia",
+        "Abrió debates sobre la autoridad legítima",
+        "Eliminó las juntas locales americanas",
+        "Restableció el comercio sin restricciones"
+      ],
+      "correctAnswer": "Abrió debates sobre la autoridad legítima",
+      "explanation": "La ausencia del monarca reconocido impulsó discusiones sobre quién podía gobernar en su nombre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-035",
+      "number": 35,
+      "topic": "Gran Colombia",
+      "concept": "tensiones_regionales_debilitan_gran_colombia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué factor contribuyó a la disolución de la Gran Colombia?",
+      "options": [
+        "Tensiones regionales y desacuerdos sobre el gobierno",
+        "Una invasión portuguesa de Bogotá",
+        "La desaparición de las rutas comerciales",
+        "Una decisión del Congreso de Viena"
+      ],
+      "correctAnswer": "Tensiones regionales y desacuerdos sobre el gobierno",
+      "explanation": "Diferencias políticas y regionales dificultaron mantener unido el territorio y sus instituciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-036",
+      "number": 36,
+      "topic": "México independiente",
+      "concept": "mexico_discute_federalismo_y_centralismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué disputa política marcó buena parte del México del siglo XIX?",
+      "options": [
+        "Monjes y comerciantes fenicios",
+        "Federalistas y centralistas",
+        "Navegantes y pueblos vikingos",
+        "Republicanos y faraones"
+      ],
+      "correctAnswer": "Federalistas y centralistas",
+      "explanation": "Los grupos debatían cuánto poder debían tener el gobierno nacional y las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-037",
+      "number": 37,
+      "topic": "Verdadero o falso · Abolición",
+      "concept": "libertad_juridica_no_garantiza_igualdad_economica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una ley abolicionista podía cambiar el estatus jurídico sin garantizar por sí sola igualdad económica.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La libertad legal no eliminó automáticamente la pobreza, la discriminación ni la falta de acceso a tierras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-038",
+      "number": 38,
+      "topic": "Revoluciones de 1848",
+      "concept": "revoluciones_1848_reclaman_constitucion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué demandas aparecieron en varias revoluciones europeas de 1848?",
+      "options": [
+        "Restauración de servidumbre feudal",
+        "Prohibición de asambleas nacionales",
+        "Constitución y participación política",
+        "Expansión del absolutismo real"
+      ],
+      "correctAnswer": "Constitución y participación política",
+      "explanation": "Diversos movimientos reclamaron constituciones, libertades y mayor participación política.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-039",
+      "number": 39,
+      "topic": "Unificación italiana",
+      "concept": "unificacion_italiana_forma_estado",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué resultado político tuvo el proceso de unificación italiana?",
+      "options": [
+        "Formación de un Estado italiano",
+        "División de Italia entre colonias americanas",
+        "Restauración del Imperio romano",
+        "Incorporación a la Gran Colombia"
+      ],
+      "correctAnswer": "Formación de un Estado italiano",
+      "explanation": "Durante el siglo XIX, distintos territorios quedaron reunidos bajo el Reino de Italia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-040",
+      "number": 40,
+      "topic": "Unificación alemana",
+      "concept": "prusia_lidera_unificacion_alemana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué Estado lideró la unificación alemana del siglo XIX?",
+      "options": [
+        "Prusia",
+        "Baviera",
+        "Sajonia",
+        "Austria-Hungría"
+      ],
+      "correctAnswer": "Prusia",
+      "explanation": "Prusia dirigió el proceso que culminó con la creación del Imperio alemán en 1871.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-041",
+      "number": 41,
+      "topic": "Industrialización global",
+      "concept": "industria_europea_aumenta_demanda_materias_primas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se relacionó la industrialización europea con la economía de otras regiones?",
+      "options": [
+        "Cerró todos los puertos europeos",
+        "Eliminó el comercio intercontinental",
+        "Sustituyó los cultivos por fábricas en todo lugar",
+        "Aumentó la demanda de materias primas"
+      ],
+      "correctAnswer": "Aumentó la demanda de materias primas",
+      "explanation": "Las industrias requirieron materias primas y mercados, ampliando la integración desigual de la economía mundial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-042",
+      "number": 42,
+      "topic": "Verdadero o falso · Nacionalismo",
+      "concept": "nacionalismo_puede_excluir_minorías",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los movimientos nacionalistas del siglo XIX siempre defendieron la igualdad de derechos para todas las minorías.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Algunos proyectos nacionales excluyeron o discriminaron a comunidades con otras lenguas, religiones o identidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-043",
+      "number": 43,
+      "topic": "Constitución y poder",
+      "concept": "federalismo_distribuye_poder_territorial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia expresa mejor el federalismo frente al centralismo?",
+      "options": [
+        "Reemplazo de leyes por costumbres",
+        "Ausencia de gobiernos locales",
+        "Prohibición de elecciones nacionales",
+        "Distribución territorial del poder político"
+      ],
+      "correctAnswer": "Distribución territorial del poder político",
+      "explanation": "El federalismo reparte competencias entre autoridades nacionales y entidades regionales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-044",
+      "number": 44,
+      "topic": "Revoluciones",
+      "concept": "revolucion_cambia_gobierno_pero_conserva_estructuras",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué interpretación reconoce mejor los límites de una revolución política?",
+      "options": [
+        "Puede cambiar el gobierno y conservar jerarquías sociales",
+        "Siempre transforma toda relación económica",
+        "Impide cualquier cambio institucional",
+        "Elimina de inmediato todos los conflictos"
+      ],
+      "correctAnswer": "Puede cambiar el gobierno y conservar jerarquías sociales",
+      "explanation": "Los cambios políticos no transforman automáticamente todas las relaciones económicas y sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-045",
+      "number": 45,
+      "topic": "Economía y transporte",
+      "concept": "vapor_regulariza_rutas_marítimas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la navegación a vapor favoreció el comercio del siglo XIX?",
+      "options": [
+        "Eliminó la necesidad de combustible",
+        "Impidió transportar cargas pesadas",
+        "Hizo más regulares ciertos trayectos",
+        "Volvió innecesarios los puertos"
+      ],
+      "correctAnswer": "Hizo más regulares ciertos trayectos",
+      "explanation": "Los barcos de vapor dependían menos del viento y facilitaron planear algunos recorridos comerciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-046",
+      "number": 46,
+      "topic": "Construcción de repúblicas",
+      "concept": "disputa_autonomia_regional_y_poder_central",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una provincia rechaza las decisiones de la capital y pide controlar impuestos y milicias locales. ¿Qué debate refleja?",
+      "options": [
+        "Monarquía frente a industrialización",
+        "Centralismo frente a autonomía regional",
+        "Abolicionismo frente a navegación",
+        "Nacionalismo frente a alfabetización"
+      ],
+      "correctAnswer": "Centralismo frente a autonomía regional",
+      "explanation": "La disputa trata sobre dónde debe concentrarse el poder y qué atribuciones conservan las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-047",
+      "number": 47,
+      "topic": "Interpretación de estadísticas",
+      "concept": "leer_comercio_creciente_sin_inferir_beneficio_igual",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un gráfico muestra que las exportaciones crecen, pero también aumentan las importaciones de productos manufacturados. ¿Qué inferencia es más prudente?",
+      "options": [
+        "La población dejó de producir alimentos",
+        "El comercio exterior se volvió innecesario",
+        "Todos los grupos recibieron beneficios iguales",
+        "La economía se integró más al comercio externo"
+      ],
+      "correctAnswer": "La economía se integró más al comercio externo",
+      "explanation": "El crecimiento de ambos flujos indica mayor intercambio, pero no basta para concluir cómo se repartieron sus beneficios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-048",
+      "number": 48,
+      "topic": "Abolición y sociedad",
+      "concept": "falta_de_recursos_perpetua_desigualdad_tras_abolicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Después de abolir la esclavitud, un gobierno no entrega tierras ni facilita empleo. ¿Qué problema puede persistir?",
+      "options": [
+        "Regreso automático al régimen colonial",
+        "Desaparición de toda discriminación",
+        "Fin de los conflictos laborales",
+        "Dependencia económica y desigualdad"
+      ],
+      "correctAnswer": "Dependencia económica y desigualdad",
+      "explanation": "Sin recursos ni oportunidades, la libertad legal puede coexistir con relaciones económicas desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-049",
+      "number": 49,
+      "topic": "Fuentes históricas",
+      "concept": "contrastar_proposito_y_contexto_de_fuentes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un discurso oficial llama “unidad” a una anexión; una carta local la describe como imposición. ¿Qué debe hacer quien estudia el caso?",
+      "options": [
+        "Elegir el documento con más páginas",
+        "Comparar propósito, autoría y contexto",
+        "Suponer que solo una fuente es auténtica",
+        "Ignorar las diferencias entre testimonios"
+      ],
+      "correctAnswer": "Comparar propósito, autoría y contexto",
+      "explanation": "La procedencia y el propósito ayudan a interpretar por qué las fuentes describen el mismo proceso de maneras distintas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Historia económica",
+      "concept": "exportaciones_no_demuestran_bienestar_general",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si las exportaciones de un país aumentan, se puede concluir sin más datos que toda su población mejoró económicamente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El volumen exportado no indica por sí solo quién recibió los ingresos ni cómo cambiaron las condiciones de vida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-051",
+      "number": 51,
+      "topic": "Imperialismo del siglo XIX",
+      "concept": "imperialismo_busca_recursos_y_posiciones_estrategicas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban varias potencias europeas al expandir sus imperios en África y Asia?",
+      "options": [
+        "Abandonar todos sus mercados",
+        "Evitar cualquier contacto marítimo",
+        "Materias primas y control estratégico",
+        "Disolver sus gobiernos nacionales"
+      ],
+      "correctAnswer": "Materias primas y control estratégico",
+      "explanation": "La expansión imperial respondió a intereses económicos, políticos y estratégicos diversos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-052",
+      "number": 52,
+      "topic": "Canal de Suez",
+      "concept": "canal_suez_conecta_mediterraneo_y_mar_rojo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué conecta el canal de Suez?",
+      "options": [
+        "Mar Negro y mar Caspio",
+        "Océano Pacífico y mar Caribe",
+        "Mar Mediterráneo y mar Rojo",
+        "río Nilo y río Congo"
+      ],
+      "correctAnswer": "Mar Mediterráneo y mar Rojo",
+      "explanation": "El canal une el Mediterráneo con el mar Rojo y acorta rutas entre Europa y Asia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-053",
+      "number": 53,
+      "topic": "Abolicionismo en Estados Unidos",
+      "concept": "guerra_secesion_y_abolición_estados_unidos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué conflicto terminó con la esclavitud en Estados Unidos?",
+      "options": [
+        "Guerra de los Siete Años",
+        "Guerra de Secesión",
+        "Guerra de Crimea",
+        "Guerra de los Cien Años"
+      ],
+      "correctAnswer": "Guerra de Secesión",
+      "explanation": "La Guerra de Secesión concluyó en 1865; la Decimotercera Enmienda abolió la esclavitud ese año.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-054",
+      "number": 54,
+      "topic": "Verdadero o falso · Imperialismo",
+      "concept": "dominio_colonial_limita_autonomia_politica",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La expansión imperial del siglo XIX afectó las decisiones políticas de sociedades colonizadas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El dominio colonial transfirió poder y control territorial a las potencias imperiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-055",
+      "number": 55,
+      "topic": "Revolución industrial",
+      "concept": "carbon_alimenta_maquinas_vapor_industriales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué combustible alimentó muchas máquinas de vapor y hornos industriales?",
+      "options": [
+        "Turba",
+        "Uranio",
+        "Gasolina",
+        "Carbón"
+      ],
+      "correctAnswer": "Carbón",
+      "explanation": "El carbón fue una fuente de energía central para la industrialización del siglo XIX.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-056",
+      "number": 56,
+      "topic": "Migración europea",
+      "concept": "migracion_europea_del_siglo_xix_hacia_america",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Hacia qué continente emigraron millones de europeos durante el siglo XIX?",
+      "options": [
+        "América",
+        "Antártida",
+        "Oceanía únicamente",
+        "Asia central"
+      ],
+      "correctAnswer": "América",
+      "explanation": "Muchas personas buscaron tierras, empleo u oportunidades en distintos países americanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-057",
+      "number": 57,
+      "topic": "Japón moderno",
+      "concept": "restauracion_meiji_moderniza_japon",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio inició la Restauración Meiji en Japón desde 1868?",
+      "options": [
+        "Restauración del dominio portugués",
+        "División permanente en feudos europeos",
+        "Abandono de toda tecnología extranjera",
+        "Reformas para fortalecer un Estado moderno"
+      ],
+      "correctAnswer": "Reformas para fortalecer un Estado moderno",
+      "explanation": "El nuevo gobierno impulsó reformas políticas, militares y económicas para transformar Japón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Industrialización",
+      "concept": "industrializacion_avanza_con_ritmos_desiguales",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La industrialización ocurrió al mismo tiempo y con igual intensidad en todas las regiones del mundo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los procesos industriales avanzaron en distintos momentos y con ritmos desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-059",
+      "number": 59,
+      "topic": "Imperialismo y economía",
+      "concept": "colonia_dependiente_exporta_materias_primas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo podía una colonia quedar subordinada económicamente a una potencia?",
+      "options": [
+        "Prohibiendo toda actividad agrícola",
+        "Controlando por igual todos los mercados mundiales",
+        "Eliminando el uso de puertos",
+        "Exportando materias primas e importando manufacturas"
+      ],
+      "correctAnswer": "Exportando materias primas e importando manufacturas",
+      "explanation": "Algunas economías coloniales se organizaron para proveer recursos y comprar productos manufacturados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-060",
+      "number": 60,
+      "topic": "Imperialismo en África",
+      "concept": "fronteras_coloniales_reordenan_comunidades_africanas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema generaron varias fronteras coloniales trazadas en África?",
+      "options": [
+        "Coincidieron siempre con límites culturales",
+        "Eliminaron todas las disputas territoriales",
+        "Separaron comunidades o reunieron grupos diversos",
+        "Restituyeron cada reino precolonial"
+      ],
+      "correctAnswer": "Separaron comunidades o reunieron grupos diversos",
+      "explanation": "Las fronteras impuestas atendieron a intereses coloniales y no siempre consideraron las comunidades locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-061",
+      "number": 61,
+      "topic": "Reforma Meiji",
+      "concept": "reformas_meiji_fortalecen_capacidad_estatal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el gobierno Meiji impulsó la educación y la industria?",
+      "options": [
+        "Para restaurar el sistema feudal sin cambios",
+        "Para depender militarmente de Europa",
+        "Para fortalecer la capacidad del Estado",
+        "Para cerrar las ciudades japonesas"
+      ],
+      "correctAnswer": "Para fortalecer la capacidad del Estado",
+      "explanation": "Las reformas buscaron construir instituciones y capacidades económicas y militares modernas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-062",
+      "number": 62,
+      "topic": "Abolición y reconstrucción",
+      "concept": "reconstruccion_debate_ciudadania_afroamericana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurrió en Estados Unidos durante la Reconstrucción posterior a la Guerra de Secesión?",
+      "options": [
+        "Se restauró la independencia de las colonias",
+        "Se disolvieron todos los gobiernos estatales",
+        "Se debatió la ciudadanía de las personas liberadas",
+        "Se trasladó la capital a México"
+      ],
+      "correctAnswer": "Se debatió la ciudadanía de las personas liberadas",
+      "explanation": "La posguerra abrió disputas sobre ciudadanía, derechos y participación de la población afroamericana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-063",
+      "number": 63,
+      "topic": "Verdadero o falso · Fronteras coloniales",
+      "concept": "fronteras_coloniales_afectan_comunidades_previas",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las fronteras coloniales podían alterar la vida de comunidades que ya existían antes de la conquista.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La demarcación de territorios podía dividir comunidades o someterlas a autoridades nuevas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-064",
+      "number": 64,
+      "topic": "Economía extractiva",
+      "concept": "demanda_global_impulsa_extraccion_de_caucho",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio produjo la demanda industrial de caucho en algunas regiones tropicales?",
+      "options": [
+        "Desapareció la navegación fluvial",
+        "Se prohibió todo intercambio internacional",
+        "La producción se limitó al consumo familiar",
+        "Creció la extracción para mercados externos"
+      ],
+      "correctAnswer": "Creció la extracción para mercados externos",
+      "explanation": "La demanda global de caucho impulsó su extracción, con efectos sociales y ambientales en regiones productoras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-065",
+      "number": 65,
+      "topic": "Movimiento obrero",
+      "concept": "sindicatos_reclaman_mejoras_laborales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué buscaban muchos sindicatos surgidos durante la industrialización?",
+      "options": [
+        "Mejorar salarios y condiciones laborales",
+        "Restablecer la servidumbre feudal",
+        "Prohibir toda asociación de trabajadores",
+        "Entregar fábricas a monarquías extranjeras"
+      ],
+      "correctAnswer": "Mejorar salarios y condiciones laborales",
+      "explanation": "La organización colectiva permitió reclamar jornadas, salarios y condiciones de trabajo más seguras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-066",
+      "number": 66,
+      "topic": "Ciencia y sociedad",
+      "concept": "educacion_publica_amplia_alfabetizacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia social pudo tener la expansión de la educación pública en el siglo XIX?",
+      "options": [
+        "Todas las diferencias sociales desaparecieron",
+        "Más personas accedieron a la lectura",
+        "La prensa dejó de circular",
+        "Las escuelas sustituyeron a los parlamentos"
+      ],
+      "correctAnswer": "Más personas accedieron a la lectura",
+      "explanation": "La ampliación escolar favoreció la alfabetización, aunque su cobertura y acceso siguieron siendo desiguales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-067",
+      "number": 67,
+      "topic": "Verdadero o falso · Trabajo",
+      "concept": "problemas_compartidos_impulsan_organizacion_sindical",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La organización sindical surgió, entre otros motivos, porque los trabajadores compartían problemas laborales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La acción colectiva permitió negociar demandas que cada trabajador tenía menos capacidad de plantear por separado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-068",
+      "number": 68,
+      "topic": "Imperialismo y resistencia",
+      "concept": "sociedades_colonizadas_resisten_de_varias_formas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué respuesta adoptaron algunas sociedades frente al dominio colonial?",
+      "options": [
+        "Resistencia armada o política",
+        "Aceptación unánime sin oposición",
+        "Renuncia permanente a sus lenguas",
+        "Desaparición de toda autoridad local"
+      ],
+      "correctAnswer": "Resistencia armada o política",
+      "explanation": "Hubo distintas formas de resistencia, desde rebeliones hasta negociación y defensa de prácticas culturales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-069",
+      "number": 69,
+      "topic": "Transporte global",
+      "concept": "suez_acorta_ruta_europa_Asia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hizo el canal de Suez para las rutas marítimas entre Europa y Asia?",
+      "options": [
+        "Cerró el acceso al océano Índico",
+        "Evitó rodear África en muchos viajes",
+        "Sustituyó todos los puertos asiáticos",
+        "Conectó el Mediterráneo con el Pacífico"
+      ],
+      "correctAnswer": "Evitó rodear África en muchos viajes",
+      "explanation": "El canal redujo la distancia de muchas rutas al evitar rodear el extremo sur de África.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-070",
+      "number": 70,
+      "topic": "Nacionalismo y minorías",
+      "concept": "identidad_nacional_dominante_presiona_minorías_lingüísticas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué un proyecto nacional podía entrar en conflicto con una minoría lingüística?",
+      "options": [
+        "Toda minoría rechazaba cualquier educación",
+        "Podía imponer una lengua e identidad oficiales",
+        "Las lenguas no se relacionan con identidad",
+        "Las fronteras impedían hablar"
+      ],
+      "correctAnswer": "Podía imponer una lengua e identidad oficiales",
+      "explanation": "Un Estado que favorece una identidad dominante puede limitar el reconocimiento de otras comunidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-071",
+      "number": 71,
+      "topic": "Trabajo y reforma",
+      "concept": "asociacion_laboral_promueve_regulacion_de_seguridad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe registra accidentes frecuentes en una fábrica; los obreros crean una asociación y reclaman inspecciones. ¿Qué proceso refleja?",
+      "options": [
+        "Restauración de privilegios feudales",
+        "Rechazo de toda regulación estatal",
+        "Organización laboral para exigir reformas",
+        "Fin de la producción industrial"
+      ],
+      "correctAnswer": "Organización laboral para exigir reformas",
+      "explanation": "La asociación colectiva convierte problemas compartidos en demandas de protección y cambio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-072",
+      "number": 72,
+      "topic": "Interpretación de mapas",
+      "concept": "investigar_efectos_de_frontera_sobre_comunidad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un mapa colonial muestra una frontera recta que divide un territorio habitado por una misma comunidad. ¿Qué pregunta de investigación resulta más útil?",
+      "options": [
+        "¿Qué técnica cartográfica se utilizó?",
+        "¿Qué autoridad negoció el límite?",
+        "¿Cómo cambió la movilidad comunitaria?",
+        "¿En qué fecha se imprimió el mapa?"
+      ],
+      "correctAnswer": "¿Cómo cambió la movilidad comunitaria?",
+      "explanation": "Indagar por la movilidad conecta la frontera dibujada con la vida de quienes habitaban el territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-073",
+      "number": 73,
+      "topic": "Evidencia económica",
+      "concept": "evaluar_beneficio_minero_con_evidencias_distributivas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una empresa afirma que una mina benefició a toda la región. ¿Qué evidencia permitiría evaluar mejor esa afirmación?",
+      "options": [
+        "Salarios, propiedad y efectos locales",
+        "Anuncios de la empresa",
+        "Planos del edificio administrativo",
+        "Fecha de apertura"
+      ],
+      "correctAnswer": "Salarios, propiedad y efectos locales",
+      "explanation": "Distribución de ingresos y efectos locales permiten contrastar quiénes obtuvieron beneficios y quiénes asumieron costos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-074",
+      "number": 74,
+      "topic": "Imperios y tecnología",
+      "concept": "infraestructura_colonial_orientada_a_exportacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un ferrocarril colonial conecta una mina con un puerto, pero no une las poblaciones cercanas entre sí. ¿Qué propósito parece priorizar?",
+      "options": [
+        "Exportar recursos al mercado exterior",
+        "Facilitar viajes cotidianos de todas las comunidades",
+        "Eliminar el comercio con la metrópoli",
+        "Crear rutas para la agricultura local únicamente"
+      ],
+      "correctAnswer": "Exportar recursos al mercado exterior",
+      "explanation": "La ruta entre zona extractiva y puerto sugiere una infraestructura organizada para sacar recursos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-075",
+      "number": 75,
+      "topic": "Verdadero o falso · Explicaciones históricas",
+      "concept": "correlacion_temporal_no_prueba_causa_unica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "La coincidencia temporal entre la apertura de una fábrica y el crecimiento de una ciudad basta para demostrar que la fábrica fue su única causa.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La coincidencia temporal no prueba causalidad; también deben estudiarse migración, políticas y otras actividades económicas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-076",
+      "number": 76,
+      "topic": "Colombia federal",
+      "concept": "constitucion_1863_estados_unidos_colombia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibió Colombia bajo la Constitución federal de 1863?",
+      "options": [
+        "Virreinato de la Nueva Granada",
+        "República de la Gran Colombia",
+        "Estados Unidos de Colombia",
+        "Confederación del Caribe"
+      ],
+      "correctAnswer": "Estados Unidos de Colombia",
+      "explanation": "La Constitución de Rionegro organizó el país como una federación llamada Estados Unidos de Colombia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-077",
+      "number": 77,
+      "topic": "Constitución de 1886",
+      "concept": "constitucion_1886_refuerza_centralismo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma de organización política estableció la Constitución colombiana de 1886?",
+      "options": [
+        "Confederación de provincias independientes",
+        "República centralista",
+        "Monarquía parlamentaria",
+        "Protectorado extranjero"
+      ],
+      "correctAnswer": "República centralista",
+      "explanation": "La Constitución fortaleció el gobierno central y reemplazó el modelo federal anterior.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-078",
+      "number": 78,
+      "topic": "Guerra de los Mil Días",
+      "concept": "guerra_mil_dias_fechas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué años ocurrió la Guerra de los Mil Días en Colombia?",
+      "options": [
+        "1899–1902",
+        "1810–1819",
+        "1851–1854",
+        "1903–1910"
+      ],
+      "correctAnswer": "1899–1902",
+      "explanation": "El conflicto enfrentó a liberales y conservadores entre 1899 y 1902.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-079",
+      "number": 79,
+      "topic": "Verdadero o falso · Federalismo",
+      "concept": "federalismo_colombiano_amplia_autonomia_estatal",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El federalismo colombiano del siglo XIX otorgó mayor autonomía política a los estados regionales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El modelo federal distribuyó competencias entre el gobierno nacional y los estados soberanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-080",
+      "number": 80,
+      "topic": "Separación de Panamá",
+      "concept": "separacion_panama_1903",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué año Panamá se separó de Colombia?",
+      "options": [
+        "1903",
+        "1886",
+        "1899",
+        "1914"
+      ],
+      "correctAnswer": "1903",
+      "explanation": "Panamá se separó de Colombia en 1903, en medio de una crisis política y de intereses estratégicos sobre el canal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-081",
+      "number": 81,
+      "topic": "Economía colombiana",
+      "concept": "cafe_gana_peso_exportador_colombiano",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué producto ganó importancia en las exportaciones colombianas durante el siglo XIX?",
+      "options": [
+        "Automóviles",
+        "Petróleo refinado",
+        "Algodón industrial",
+        "Café"
+      ],
+      "correctAnswer": "Café",
+      "explanation": "El café se convirtió en un producto central de exportación y vinculó regiones colombianas a mercados externos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-082",
+      "number": 82,
+      "topic": "Verdadero o falso · Transporte",
+      "concept": "ferrocarriles_colombianos_redes_regionales_fragmentadas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los ferrocarriles colombianos del siglo XIX se construyeron todos como una red nacional conectada.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Muchas líneas se desarrollaron de forma regional y no siempre quedaron conectadas entre sí.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-083",
+      "number": 83,
+      "topic": "Transformación urbana",
+      "concept": "registro_civil_documenta_eventos_personales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué institución suele registrar nacimientos, matrimonios y defunciones en un Estado moderno?",
+      "options": [
+        "Aduana portuaria",
+        "Registro civil",
+        "Casa de moneda",
+        "Archivo militar"
+      ],
+      "correctAnswer": "Registro civil",
+      "explanation": "El registro civil documenta eventos de la vida de las personas para fines legales y administrativos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-084",
+      "number": 84,
+      "topic": "Federalismo y centralismo",
+      "concept": "conflicto_colombiano_por_distribucion_territorial_del_poder",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la disputa entre federalistas y centralistas generó conflictos en Colombia?",
+      "options": [
+        "Querían abolir todas las instituciones",
+        "Rechazaban la existencia de regiones",
+        "Discutían únicamente sobre rutas marítimas",
+        "Diferían sobre cómo distribuir el poder territorial"
+      ],
+      "correctAnswer": "Diferían sobre cómo distribuir el poder territorial",
+      "explanation": "La disputa definía qué decisiones correspondían al gobierno nacional y cuáles a las regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-085",
+      "number": 85,
+      "topic": "Guerra de los Mil Días",
+      "concept": "guerra_mil_dias_impacta_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia tuvo la Guerra de los Mil Días para la población civil?",
+      "options": [
+        "Desplazamiento y pérdidas económicas",
+        "Universalización inmediata de la educación",
+        "Desaparición de las diferencias partidistas",
+        "Industrialización completa del país"
+      ],
+      "correctAnswer": "Desplazamiento y pérdidas económicas",
+      "explanation": "La guerra produjo muertes, desplazamientos y daños que afectaron la economía y la vida cotidiana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-086",
+      "number": 86,
+      "topic": "Canal de Panamá",
+      "concept": "canal_panama_acorta_conexion_interoceanica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la ruta del canal de Panamá tenía importancia estratégica internacional?",
+      "options": [
+        "Conectaba directamente todos los ríos colombianos",
+        "Permitía evitar la larga ruta alrededor de Sudamérica",
+        "Eliminaba los viajes entre océanos",
+        "Separaba las rutas comerciales de Asia y Europa"
+      ],
+      "correctAnswer": "Permitía evitar la larga ruta alrededor de Sudamérica",
+      "explanation": "El canal acortó la conexión marítima entre los océanos Atlántico y Pacífico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-087",
+      "number": 87,
+      "topic": "Economía cafetera",
+      "concept": "economia_cafetera_impulsa_conexiones_regionales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo influyó el cultivo del café en varias regiones colombianas?",
+      "options": [
+        "Eliminó la agricultura de subsistencia",
+        "Impulsó caminos, comercio y poblados",
+        "Sustituyó todos los cultivos nacionales",
+        "Cerró las conexiones con puertos"
+      ],
+      "correctAnswer": "Impulsó caminos, comercio y poblados",
+      "explanation": "La expansión cafetera estimuló transporte y comercio, aunque sus beneficios y cambios variaron entre regiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-088",
+      "number": 88,
+      "topic": "Constitución y religión",
+      "concept": "constitucion_1886_amplia_influencia_catolica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio en la relación entre Iglesia y Estado se asocia con la Constitución colombiana de 1886?",
+      "options": [
+        "Mayor influencia institucional de la Iglesia católica",
+        "Separación completa de toda religión en la vida pública",
+        "Prohibición de la educación religiosa",
+        "Gobierno oficial de varias iglesias"
+      ],
+      "correctAnswer": "Mayor influencia institucional de la Iglesia católica",
+      "explanation": "El nuevo orden constitucional reconoció un papel importante a la Iglesia católica en la sociedad y la educación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-089",
+      "number": 89,
+      "topic": "Verdadero o falso · Panamá",
+      "concept": "rechazo_tratado_precede_separacion_panama",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La separación de Panamá ocurrió después de que Colombia rechazara un tratado relacionado con la construcción del canal.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El rechazo del tratado Hay–Herrán en el Congreso colombiano precedió a la separación de 1903, aunque también influyeron otros intereses y procesos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-090",
+      "number": 90,
+      "topic": "Economía y territorio",
+      "concept": "exportaciones_requieren_conexion_productores_puertos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una economía exportadora podía depender de caminos y puertos?",
+      "options": [
+        "Debía impedir el movimiento de mercancías",
+        "Necesitaba llevar productos a mercados externos",
+        "Solo comerciaba dentro de cada finca",
+        "No requería conectar zonas productoras"
+      ],
+      "correctAnswer": "Necesitaba llevar productos a mercados externos",
+      "explanation": "La infraestructura conectaba las zonas productoras con puertos y compradores de otros países.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-091",
+      "number": 91,
+      "topic": "Participación política",
+      "concept": "sufragio_censitario_concentra_participacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema puede surgir cuando el acceso al voto depende de tener propiedades?",
+      "options": [
+        "Todas las personas votan con más frecuencia",
+        "Desaparecen las diferencias de riqueza",
+        "La participación política se concentra en ciertos grupos",
+        "Los gobiernos locales dejan de existir"
+      ],
+      "correctAnswer": "La participación política se concentra en ciertos grupos",
+      "explanation": "Los requisitos de propiedad excluyen a personas con menos recursos y limitan la representación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-092",
+      "number": 92,
+      "topic": "Fuentes sobre conflictos",
+      "concept": "fuentes_locales_revelan_experiencias_de_guerra",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué fuente ayudaría más a estudiar el efecto de una guerra en la vida cotidiana?",
+      "options": [
+        "Un mapa físico sin fechas",
+        "Una lista de gobernantes de otro siglo",
+        "Un anuncio comercial sin contexto",
+        "Cartas personales y registros locales"
+      ],
+      "correctAnswer": "Cartas personales y registros locales",
+      "explanation": "Cartas y registros locales pueden mostrar experiencias, necesidades y cambios vividos por la población.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-093",
+      "number": 93,
+      "topic": "Verdadero o falso · Café",
+      "concept": "exportaciones_cafeteras_generan_beneficios_desiguales",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El crecimiento de las exportaciones cafeteras benefició de manera idéntica a todos los trabajadores y regiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Los resultados dependieron de la propiedad, el acceso al transporte, los precios y las condiciones laborales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-094",
+      "number": 94,
+      "topic": "Construcción estatal",
+      "concept": "constitucion_organiza_instituciones_y_limites",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple una constitución en una república?",
+      "options": [
+        "Define instituciones y reglas para ejercer el poder",
+        "Reemplaza todas las decisiones judiciales",
+        "Evita cualquier desacuerdo político",
+        "Garantiza por sí sola igualdad material"
+      ],
+      "correctAnswer": "Define instituciones y reglas para ejercer el poder",
+      "explanation": "Una constitución organiza el Estado y establece principios y límites para sus autoridades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-095",
+      "number": 95,
+      "topic": "Historia regional",
+      "concept": "autonomias_regionales_defienden_recursos_y_decisiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las regiones podían oponerse a un gobierno central fuerte?",
+      "options": [
+        "Querían eliminar sus propias actividades económicas",
+        "Rechazaban toda forma de comercio",
+        "Buscaban trasladar todas las ciudades al litoral",
+        "Temían perder control de recursos y decisiones locales"
+      ],
+      "correctAnswer": "Temían perder control de recursos y decisiones locales",
+      "explanation": "Las élites y poblaciones regionales podían defender autonomía fiscal, política o administrativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-096",
+      "number": 96,
+      "topic": "Lectura de datos históricos",
+      "concept": "volumen_exportado_no_determina_ingreso_por_precios",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un gráfico muestra que el café exportado crece mientras los precios internacionales fluctúan. ¿Qué conclusión está mejor sustentada?",
+      "options": [
+        "Cada familia cafetera obtuvo el mismo ingreso",
+        "Aumentó el volumen exportado, pero el ingreso pudo variar",
+        "El crecimiento eliminó los riesgos comerciales",
+        "La producción dejó de depender de los mercados"
+      ],
+      "correctAnswer": "Aumentó el volumen exportado, pero el ingreso pudo variar",
+      "explanation": "Las cantidades exportadas no bastan para conocer ingresos: también importan precios y distribución de ganancias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-097",
+      "number": 97,
+      "topic": "Comparación constitucional",
+      "concept": "comparar_autonomia_provincial_y_poder_central",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una constitución entrega amplias competencias a las provincias; otra concentra impuestos y decisiones en la capital. ¿Qué eje se compara?",
+      "options": [
+        "Organización federal o centralista",
+        "Monarquía o sistema colonial",
+        "Economía agrícola o minera",
+        "Educación pública o privada"
+      ],
+      "correctAnswer": "Organización federal o centralista",
+      "explanation": "La comparación se centra en dónde se ubica la autoridad política y fiscal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-098",
+      "number": 98,
+      "topic": "Panamá y causalidad",
+      "concept": "separacion_panama_requiere_explicacion_multicausal",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante afirma que el rechazo de un tratado fue la única causa de la separación de Panamá. ¿Qué respuesta mejora su explicación?",
+      "options": [
+        "Repetir la afirmación porque una causa basta",
+        "Considerar también intereses estratégicos y tensiones previas",
+        "Ignorar la intervención de otros gobiernos",
+        "Explicar el proceso solo con una fecha"
+      ],
+      "correctAnswer": "Considerar también intereses estratégicos y tensiones previas",
+      "explanation": "Los procesos históricos suelen combinar factores internos y externos; un hecho aislado no explica por completo la separación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-099",
+      "number": 99,
+      "topic": "Memoria y guerra",
+      "concept": "memoria_de_guerra_incluye_experiencias_civiles",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una placa recuerda a soldados de una guerra, pero no menciona a civiles desplazados. ¿Qué complemento amplía la memoria histórica?",
+      "options": [
+        "Borrar la placa sin investigar",
+        "Reemplazar relatos por una lista de fechas",
+        "Recoger testimonios de comunidades afectadas",
+        "Excluir fuentes personales del archivo"
+      ],
+      "correctAnswer": "Recoger testimonios de comunidades afectadas",
+      "explanation": "Incorporar voces civiles permite reconocer experiencias que un homenaje militar puede dejar fuera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-100",
+      "number": 100,
+      "topic": "Verdadero o falso · Interpretación política",
+      "concept": "centralismo_no_suprime_toda_gestion_local",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una constitución es centralista, todas las decisiones locales desaparecen necesariamente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El centralismo concentra atribuciones nacionales, pero pueden mantenerse gobiernos y funciones locales con competencias menores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-101",
+      "number": 101,
+      "topic": "Restauración Meiji",
+      "concept": "japon_inicia_reformas_meiji",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué país inició una rápida modernización estatal con la Restauración Meiji?",
+      "options": [
+        "Japón",
+        "Corea",
+        "China",
+        "Siam"
+      ],
+      "correctAnswer": "Japón",
+      "explanation": "Desde 1868, el gobierno japonés impulsó cambios para fortalecer sus instituciones y capacidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-102",
+      "number": 102,
+      "topic": "Imperialismo en Asia",
+      "concept": "comercio_opio_en_guerras_del_opio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué producto fue central en el comercio colonial británico con China durante las guerras del Opio?",
+      "options": [
+        "Café",
+        "Caucho",
+        "Algodón egipcio",
+        "Opio"
+      ],
+      "correctAnswer": "Opio",
+      "explanation": "El comercio de opio y las restricciones chinas al mismo fueron parte del conflicto con Gran Bretaña.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-103",
+      "number": 103,
+      "topic": "Verdadero o falso · Colonialismo",
+      "concept": "imperialismo_se_justifica_con_discursos_diversos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las potencias coloniales justificaron su expansión únicamente con razones económicas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "También invocaron motivos estratégicos, políticos y culturales, a menudo para legitimar el dominio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-104",
+      "number": 104,
+      "topic": "Movimiento obrero",
+      "concept": "sindicato_representa_intereses_laborales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué organización podía negociar colectivamente en nombre de trabajadores?",
+      "options": [
+        "Sindicato",
+        "Virreinato",
+        "Monasterio",
+        "Casa real"
+      ],
+      "correctAnswer": "Sindicato",
+      "explanation": "Los sindicatos representan intereses laborales y pueden negociar condiciones con empleadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-105",
+      "number": 105,
+      "topic": "Abolición en Brasil",
+      "concept": "ley_aurea_abolio_esclavitud_brasil",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ley abolió la esclavitud en Brasil en 1888?",
+      "options": [
+        "Ley Sáenz Peña",
+        "Ley de Reforma",
+        "Ley Áurea",
+        "Ley de Vientres"
+      ],
+      "correctAnswer": "Ley Áurea",
+      "explanation": "La Ley Áurea, promulgada en 1888, abolió legalmente la esclavitud en Brasil.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-106",
+      "number": 106,
+      "topic": "Nacionalismo italiano",
+      "concept": "roma_se_incorpora_a_italia_en_1870",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ciudad fue incorporada al Reino de Italia en 1870 y se convirtió en su capital?",
+      "options": [
+        "Nápoles",
+        "Roma",
+        "Turín",
+        "Venecia"
+      ],
+      "correctAnswer": "Roma",
+      "explanation": "La incorporación de Roma completó una etapa decisiva de la unificación italiana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-107",
+      "number": 107,
+      "topic": "Verdadero o falso · Ferrocarriles",
+      "concept": "ferrocarriles_conectan_produccion_y_puertos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los ferrocarriles podían facilitar el transporte de mercancías hacia puertos de exportación.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las líneas ferroviarias conectaban centros de producción con puertos y mercados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-108",
+      "number": 108,
+      "topic": "Educación y Estado",
+      "concept": "escuela_primaria_extiende_alfabetizacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué habilidad promovió la expansión de la escuela primaria en el siglo XIX?",
+      "options": [
+        "Navegación astronómica",
+        "Equitación militar",
+        "Lectura y escritura",
+        "Minería subterránea"
+      ],
+      "correctAnswer": "Lectura y escritura",
+      "explanation": "La escolarización elemental buscó ampliar capacidades básicas, aunque el acceso fue desigual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-109",
+      "number": 109,
+      "topic": "Guerras del Opio",
+      "concept": "tratados_desiguales_reducen_soberania_china",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia tuvieron los tratados impuestos a China tras las guerras del Opio?",
+      "options": [
+        "Cerraron China a todo comercio",
+        "Convirtieron a Gran Bretaña en provincia china",
+        "Abolieron los imperios europeos",
+        "Abrieron puertos y otorgaron privilegios a potencias extranjeras"
+      ],
+      "correctAnswer": "Abrieron puertos y otorgaron privilegios a potencias extranjeras",
+      "explanation": "Los acuerdos ampliaron el acceso extranjero y limitaron la soberanía china en varios asuntos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-110",
+      "number": 110,
+      "topic": "Imperialismo africano",
+      "concept": "competencia_europea_acelera_reparto_de_africa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso impulsó la ocupación europea de gran parte de África en el siglo XIX?",
+      "options": [
+        "Retiro simultáneo de todos los imperios",
+        "Un acuerdo para crear estados africanos soberanos",
+        "Competencia por territorios y recursos",
+        "Fin de la extracción de materias primas"
+      ],
+      "correctAnswer": "Competencia por territorios y recursos",
+      "explanation": "La rivalidad entre potencias aceleró la ocupación y el reparto colonial de territorios africanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-111",
+      "number": 111,
+      "topic": "Derechos de las mujeres",
+      "concept": "sufragismo_reclama_voto_femenino",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué reclamaban los movimientos sufragistas del siglo XIX?",
+      "options": [
+        "Restablecimiento de las monarquías absolutas",
+        "Prohibición de la educación femenina",
+        "Supresión de las constituciones",
+        "Derecho de las mujeres a votar"
+      ],
+      "correctAnswer": "Derecho de las mujeres a votar",
+      "explanation": "Las sufragistas organizaron campañas para ampliar los derechos políticos de las mujeres.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-112",
+      "number": 112,
+      "topic": "Migración y ciudades",
+      "concept": "empleo_fabril_atrae_migracion_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué combinación explica el crecimiento de algunas ciudades industriales?",
+      "options": [
+        "Descenso de empleos y cierre de talleres",
+        "Regreso general al trabajo feudal",
+        "Prohibición de construir viviendas",
+        "Migración laboral y expansión de fábricas"
+      ],
+      "correctAnswer": "Migración laboral y expansión de fábricas",
+      "explanation": "La concentración de empleos industriales atrajo población y amplió los asentamientos urbanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-113",
+      "number": 113,
+      "topic": "Japón y expansión imperial",
+      "concept": "modernizacion_japonesa_precede_expansion_regional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación hubo entre la modernización japonesa y su expansión imperial posterior?",
+      "options": [
+        "Las reformas eliminaron toda capacidad militar",
+        "Japón se convirtió en colonia portuguesa",
+        "La modernización impidió cualquier actividad industrial",
+        "El fortalecimiento estatal facilitó ampliar su poder regional"
+      ],
+      "correctAnswer": "El fortalecimiento estatal facilitó ampliar su poder regional",
+      "explanation": "Las reformas fortalecieron las capacidades del Estado; posteriormente Japón también adoptó políticas imperiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-114",
+      "number": 114,
+      "topic": "Verdadero o falso · Urbanización",
+      "concept": "urbanizacion_rapida_no_garantiza_vivienda_saludable",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El crecimiento urbano industrial garantizó desde el inicio viviendas saludables para todos los trabajadores.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La expansión rápida de las ciudades produjo hacinamiento y problemas sanitarios en muchos barrios obreros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-115",
+      "number": 115,
+      "topic": "Producción y consumo",
+      "concept": "produccion_mecanizada_amplia_acceso_a_bienes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio permitió que ciertos bienes llegaran a más consumidores durante la industrialización?",
+      "options": [
+        "Producción en serie y reducción de costos",
+        "Prohibición de máquinas fabriles",
+        "Regreso a la manufactura individual",
+        "Desaparición del transporte de carga"
+      ],
+      "correctAnswer": "Producción en serie y reducción de costos",
+      "explanation": "La mecanización y la producción a mayor escala abarataron algunos productos, aunque el acceso siguió dependiendo de los ingresos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-116",
+      "number": 116,
+      "topic": "Verdadero o falso · Sufragio",
+      "concept": "sufragio_femenino_reconocido_en_distintos_momentos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La conquista del voto femenino ocurrió al mismo tiempo en todos los países.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El sufragio femenino se reconoció en momentos distintos según cada país y sus luchas políticas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-117",
+      "number": 117,
+      "topic": "Imperios y puertos",
+      "concept": "puertos_estrategicos_sostienen_redes_imperiales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las potencias imperiales buscaban controlar puertos estratégicos?",
+      "options": [
+        "Impedían el acceso a rutas oceánicas",
+        "Eliminaban la necesidad de barcos",
+        "Aislaban por completo las colonias",
+        "Facilitaban el comercio y el movimiento naval"
+      ],
+      "correctAnswer": "Facilitaban el comercio y el movimiento naval",
+      "explanation": "Los puertos apoyaban redes de comercio, abastecimiento y presencia naval.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-118",
+      "number": 118,
+      "topic": "Economía colombiana",
+      "concept": "relieve_y_caminos_limitan_integracion_colombiana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dificultad limitaba el transporte de productos entre regiones colombianas montañosas?",
+      "options": [
+        "Relieve complejo y caminos escasos",
+        "Exceso de canales navegables",
+        "Ausencia total de población rural",
+        "Prohibición de usar animales de carga"
+      ],
+      "correctAnswer": "Relieve complejo y caminos escasos",
+      "explanation": "La geografía y la infraestructura limitada encarecían los desplazamientos y dificultaban integrar mercados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-119",
+      "number": 119,
+      "topic": "Historia social",
+      "concept": "abolicion_legal_no_elimina_racismo_estructural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las leyes de abolición no eliminaron automáticamente el racismo?",
+      "options": [
+        "La esclavitud continuó siendo legal en todos los países",
+        "Las personas liberadas dejaron de vivir en sociedad",
+        "Los gobiernos suprimieron toda forma de educación",
+        "Las normas no transforman de inmediato prejuicios y desigualdades"
+      ],
+      "correctAnswer": "Las normas no transforman de inmediato prejuicios y desigualdades",
+      "explanation": "Las prácticas discriminatorias y desigualdades pueden persistir después de un cambio legal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-120",
+      "number": 120,
+      "topic": "Imperialismo cultural",
+      "concept": "imposicion_linguistica_presiona_lenguas_locales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto podía tener la imposición de una lengua colonial en una comunidad?",
+      "options": [
+        "Crear igualdad inmediata entre grupos",
+        "Hacer innecesaria la educación",
+        "Eliminar toda comunicación oral",
+        "Debilitar la transmisión de lenguas locales"
+      ],
+      "correctAnswer": "Debilitar la transmisión de lenguas locales",
+      "explanation": "La presión institucional por usar una lengua dominante podía reducir espacios para las lenguas locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-121",
+      "number": 121,
+      "topic": "Fuentes y trabajo",
+      "concept": "contrastar_fuentes_empresariales_y_testimoniales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un informe empresarial afirma que una fábrica mejoró la vida obrera; entrevistas describen jornadas extensas. ¿Qué estrategia permite evaluar ambas afirmaciones?",
+      "options": [
+        "Aceptar el informe por ser oficial",
+        "Descartar las entrevistas personales",
+        "Contar cuántas páginas tiene cada fuente",
+        "Contrastar testimonios con registros laborales"
+      ],
+      "correctAnswer": "Contrastar testimonios con registros laborales",
+      "explanation": "Comparar fuentes de distinto origen permite revisar sus perspectivas y comprobar afirmaciones con evidencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-122",
+      "number": 122,
+      "topic": "Colonialismo y recursos",
+      "concept": "distribucion_de_ganancias_y_servicios_en_economia_extractiva",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un territorio exporta minerales, mientras la mayoría de sus habitantes tiene poco acceso a escuelas y servicios. ¿Qué pregunta analiza mejor la relación?",
+      "options": [
+        "¿Qué color tenían los vagones mineros?",
+        "¿Cuántos barcos cabían en un puerto?",
+        "¿Quién controlaba las ganancias y los servicios?",
+        "¿Qué título usaba el gobernador?"
+      ],
+      "correctAnswer": "¿Quién controlaba las ganancias y los servicios?",
+      "explanation": "Analizar la distribución de ingresos y recursos permite investigar quiénes se beneficiaron de la actividad extractiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-123",
+      "number": 123,
+      "topic": "Ciudad industrial",
+      "concept": "crecimiento_urbano_supera_servicios_basicos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad fabril crece más rápido que sus redes de agua y vivienda. ¿Qué problema es más probable?",
+      "options": [
+        "Reducción automática de la población",
+        "Desaparición de los empleos fabriles",
+        "Hacinamiento y riesgos sanitarios",
+        "Aislamiento completo de los mercados"
+      ],
+      "correctAnswer": "Hacinamiento y riesgos sanitarios",
+      "explanation": "Si los servicios no acompañan el crecimiento, la densidad y las condiciones insalubres pueden empeorar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-124",
+      "number": 124,
+      "topic": "Cambios sociales",
+      "concept": "expansion_escolar_puede_conservar_brechas_territoriales_y_de_genero",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un país amplía la educación primaria, pero las niñas de zonas rurales siguen asistiendo menos. ¿Qué conclusión es más adecuada?",
+      "options": [
+        "La matrícula prueba igualdad educativa completa",
+        "La distancia no influye en la asistencia",
+        "La educación rural desapareció por ley",
+        "La expansión educativa puede mantener brechas de acceso"
+      ],
+      "correctAnswer": "La expansión educativa puede mantener brechas de acceso",
+      "explanation": "Una política general puede ampliar la oferta sin resolver desigualdades relacionadas con género y territorio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Interpretación de progreso",
+      "concept": "infraestructura_no_mide_bienestar_de_toda_la_poblacion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Que un país construya fábricas y ferrocarriles demuestra por sí solo que toda su población vivía mejor.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La infraestructura indica cambios productivos, pero evaluar bienestar requiere estudiar salarios, acceso a servicios y distribución de beneficios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-126",
+      "number": 126,
+      "topic": "Primera Guerra Mundial",
+      "concept": "asesinato_francisco_fernando_desencadena_crisis",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué asesinato desencadenó la crisis inmediata que precedió a la Primera Guerra Mundial?",
+      "options": [
+        "Del archiduque Francisco Fernando",
+        "Del zar Nicolás II",
+        "Del káiser Guillermo II",
+        "Del presidente Woodrow Wilson"
+      ],
+      "correctAnswer": "Del archiduque Francisco Fernando",
+      "explanation": "El asesinato del archiduque austrohúngaro en Sarajevo precipitó una crisis entre potencias europeas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-127",
+      "number": 127,
+      "topic": "Primera Guerra Mundial",
+      "concept": "triple_entente_antes_de_1914",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué alianza integró a Francia, Rusia y el Reino Unido antes de la guerra?",
+      "options": [
+        "Triple Alianza",
+        "Pacto de Varsovia",
+        "Liga Hanseática",
+        "Triple Entente"
+      ],
+      "correctAnswer": "Triple Entente",
+      "explanation": "La Triple Entente agrupó a Francia, Rusia y el Reino Unido antes de 1914.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-128",
+      "number": 128,
+      "topic": "Verdadero o falso · Guerra mundial",
+      "concept": "primera_guerra_mundial_comienza_1914",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Primera Guerra Mundial comenzó en 1914.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El conflicto se inició en Europa en 1914 y terminó en 1918.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-129",
+      "number": 129,
+      "topic": "Revolución rusa",
+      "concept": "bolcheviques_toman_poder_octubre_1917",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué grupo tomó el poder durante la Revolución de Octubre de 1917?",
+      "options": [
+        "Jacobinos",
+        "Bolcheviques",
+        "Girondinos",
+        "Mencheviques blancos"
+      ],
+      "correctAnswer": "Bolcheviques",
+      "explanation": "Los bolcheviques dirigidos por Lenin asumieron el poder en Petrogrado en octubre de 1917, según el calendario juliano.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-130",
+      "number": 130,
+      "topic": "Tratado de Versalles",
+      "concept": "versalles_paz_con_alemania_1919",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tratado formalizó la paz entre Alemania y los Aliados tras la Primera Guerra Mundial?",
+      "options": [
+        "Tratado de Tordesillas",
+        "Tratado de Utrecht",
+        "Tratado de Versalles",
+        "Tratado de Guadalupe Hidalgo"
+      ],
+      "correctAnswer": "Tratado de Versalles",
+      "explanation": "El Tratado de Versalles fue firmado en 1919 y estableció condiciones de paz para Alemania.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-131",
+      "number": 131,
+      "topic": "Verdadero o falso · Sociedad de Naciones",
+      "concept": "sociedad_naciones_busca_cooperacion_posguerra",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La Sociedad de Naciones se creó después de la Primera Guerra Mundial para promover la cooperación internacional.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La organización buscó prevenir conflictos mediante cooperación y mecanismos colectivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-132",
+      "number": 132,
+      "topic": "Revolución mexicana",
+      "concept": "zapata_defiende_restitucion_de_tierras",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consigna se asocia con las demandas agrarias de Emiliano Zapata?",
+      "options": [
+        "Tierra y libertad",
+        "Orden y progreso",
+        "Paz y neutralidad",
+        "Dios y monarquía"
+      ],
+      "correctAnswer": "Tierra y libertad",
+      "explanation": "Zapata defendió la restitución de tierras y los derechos de comunidades campesinas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-133",
+      "number": 133,
+      "topic": "Derechos laborales",
+      "concept": "movimiento_obrero_reclama_limites_de_jornada",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio buscó limitar la jornada de trabajo en muchas luchas obreras?",
+      "options": [
+        "Prohibición de descansos",
+        "Eliminación de todo salario",
+        "Reconocimiento de horas máximas",
+        "Regreso al trabajo servil"
+      ],
+      "correctAnswer": "Reconocimiento de horas máximas",
+      "explanation": "Los movimientos obreros impulsaron límites de jornada y otras protecciones laborales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-134",
+      "number": 134,
+      "topic": "Primera Guerra Mundial",
+      "concept": "alianzas_amplian_crisis_a_guerra_general",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el sistema de alianzas amplió una crisis entre dos países?",
+      "options": [
+        "Comprometió a otros Estados a intervenir",
+        "Eliminó las rivalidades imperiales",
+        "Impidió la movilización de ejércitos",
+        "Sustituyó los tratados por acuerdos comerciales"
+      ],
+      "correctAnswer": "Comprometió a otros Estados a intervenir",
+      "explanation": "Los compromisos entre potencias extendieron la confrontación más allá de sus protagonistas iniciales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-135",
+      "number": 135,
+      "topic": "Guerra de trincheras",
+      "concept": "trincheras_prolongan_guerra_de_desgaste",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué condición caracterizó muchos frentes de la Primera Guerra Mundial?",
+      "options": [
+        "Combate prolongado desde trincheras",
+        "Batallas exclusivamente navales",
+        "Ausencia de armas industriales",
+        "Retorno a ejércitos medievales"
+      ],
+      "correctAnswer": "Combate prolongado desde trincheras",
+      "explanation": "En el frente occidental, las trincheras sostuvieron una guerra de desgaste con avances limitados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-136",
+      "number": 136,
+      "topic": "Revolución rusa",
+      "concept": "guerra_y_crisis_debilitan_zarismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué factor contribuyó a la caída del zarismo en Rusia en 1917?",
+      "options": [
+        "Prosperidad general en todas las regiones",
+        "Abolición de las ciudades industriales",
+        "Descontento por guerra, escasez y desigualdad",
+        "Apoyo unánime a la monarquía"
+      ],
+      "correctAnswer": "Descontento por guerra, escasez y desigualdad",
+      "explanation": "La guerra y las crisis económicas y sociales debilitaron el régimen y aumentaron las protestas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-137",
+      "number": 137,
+      "topic": "Verdadero o falso · Tratados de paz",
+      "concept": "versalles_impone_reparaciones_y_restricciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El Tratado de Versalles impuso a Alemania reparaciones y restricciones después de la guerra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El tratado fijó reparaciones y limitaciones militares, además de otras condiciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-138",
+      "number": 138,
+      "topic": "Revolución mexicana",
+      "concept": "concentracion_de_tierra_alimenta_revolucion_mexicana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué problema rural alimentó demandas de la Revolución mexicana?",
+      "options": [
+        "Exceso de tierras comunales disponibles",
+        "Prohibición de cultivar en todo el país",
+        "Concentración de tierras y despojo campesino",
+        "Ausencia de comunidades rurales"
+      ],
+      "correctAnswer": "Concentración de tierras y despojo campesino",
+      "explanation": "La desigual distribución de la tierra y el reclamo de comunidades campesinas fueron centrales en el conflicto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-139",
+      "number": 139,
+      "topic": "Nacionalismos y guerra",
+      "concept": "nacionalismos_intensifican_tensiones_europeas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo contribuyeron los nacionalismos a las tensiones europeas antes de 1914?",
+      "options": [
+        "Eliminaron disputas territoriales",
+        "Alimentaron rivalidades entre pueblos y Estados",
+        "Impidieron la formación de alianzas",
+        "Disolvieron los imperios existentes"
+      ],
+      "correctAnswer": "Alimentaron rivalidades entre pueblos y Estados",
+      "explanation": "Las identidades y aspiraciones nacionales podían intensificar rivalidades y demandas territoriales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-140",
+      "number": 140,
+      "topic": "Imperialismo y guerra",
+      "concept": "competencia_imperial_aumenta_desconfianza_entre_potencias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación existía entre competencia imperial y rivalidad entre potencias?",
+      "options": [
+        "Los imperios eliminaron las fuerzas armadas",
+        "La disputa por colonias podía aumentar tensiones",
+        "Las colonias decidían la política europea",
+        "La rivalidad cesó antes de 1900"
+      ],
+      "correctAnswer": "La disputa por colonias podía aumentar tensiones",
+      "explanation": "La competencia por territorios y recursos contribuyó a la desconfianza entre potencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-141",
+      "number": 141,
+      "topic": "Verdadero o falso · Revolución rusa",
+      "concept": "revolucion_rusa_en_contexto_de_guerra_y_crisis",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La Revolución rusa de 1917 ocurrió en un contexto de guerra y crisis política.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las derrotas, la escasez y el descontento contribuyeron al colapso del gobierno zarista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-142",
+      "number": 142,
+      "topic": "Sociedad de Naciones",
+      "concept": "sociedad_naciones_tiene_capacidad_coercitiva_limitada",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál fue una limitación importante de la Sociedad de Naciones?",
+      "options": [
+        "Prohibía cualquier reunión diplomática",
+        "Gobernaba directamente todos los países",
+        "Carecía de medios eficaces para obligar a cumplir sus decisiones",
+        "Eliminó los conflictos internacionales"
+      ],
+      "correctAnswer": "Carecía de medios eficaces para obligar a cumplir sus decisiones",
+      "explanation": "La organización tenía capacidad limitada para hacer cumplir acuerdos y frenar agresiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-143",
+      "number": 143,
+      "topic": "Guerra y población",
+      "concept": "guerra_total_moviliza_poblacion_y_economia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracteriza a una guerra total?",
+      "options": [
+        "Excluye a la economía del conflicto",
+        "Moviliza recursos y población civil",
+        "Limita la lucha a fuerzas navales",
+        "Impide que cambie la vida cotidiana"
+      ],
+      "correctAnswer": "Moviliza recursos y población civil",
+      "explanation": "La producción, el trabajo y la vida cotidiana se movilizaron para sostener el esfuerzo bélico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-144",
+      "number": 144,
+      "topic": "Cambios sociales",
+      "concept": "guerra_amplia_empleo_femenino_en_industrias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio laboral ocurrió para muchas mujeres durante la Primera Guerra Mundial?",
+      "options": [
+        "Dejaron de participar en toda actividad económica",
+        "Fueron excluidas de todos los empleos urbanos",
+        "Ocuparon trabajos que antes realizaban muchos hombres",
+        "Sustituyeron a los parlamentos nacionales"
+      ],
+      "correctAnswer": "Ocuparon trabajos que antes realizaban muchos hombres",
+      "explanation": "La movilización militar de hombres abrió empleos a mujeres en industrias y servicios, aunque persistieron desigualdades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-145",
+      "number": 145,
+      "topic": "Consecuencias de la guerra",
+      "concept": "colapso_imperios_reconfigura_fronteras_europeas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué cambio territorial ocurrió tras la disolución de imperios después de la Primera Guerra Mundial?",
+      "options": [
+        "Todas las fronteras regresaron a 1500",
+        "Aparecieron nuevos Estados en Europa",
+        "Europa quedó bajo un solo gobierno",
+        "Desaparecieron las naciones europeas"
+      ],
+      "correctAnswer": "Aparecieron nuevos Estados en Europa",
+      "explanation": "La caída de imperios contribuyó a crear nuevos Estados y a redibujar fronteras.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-146",
+      "number": 146,
+      "topic": "Causas de la guerra",
+      "concept": "detonante_no_equivale_a_causa_estructural",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un análisis atribuye la guerra de 1914 solo al asesinato de Sarajevo. ¿Qué corrección mejora la explicación?",
+      "options": [
+        "Eliminar toda causa anterior a 1914",
+        "Relacionar el atentado con alianzas y rivalidades previas",
+        "Afirmar que ningún Estado intervino",
+        "Reemplazar causas por una lista de batallas"
+      ],
+      "correctAnswer": "Relacionar el atentado con alianzas y rivalidades previas",
+      "explanation": "El atentado fue el detonante, pero alianzas, militarismo e intereses imperiales ayudan a explicar la expansión de la guerra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-147",
+      "number": 147,
+      "topic": "Lectura de propaganda",
+      "concept": "propaganda_selecciona_imagenes_para_persuadir",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un afiche de guerra presenta al enemigo como una amenaza sin mostrar daños propios. ¿Qué debe considerar el historiador?",
+      "options": [
+        "Que toda imagen es neutral",
+        "Que el afiche muestra la guerra completa",
+        "Propósito persuasivo y selección de imágenes",
+        "Solo el precio de impresión"
+      ],
+      "correctAnswer": "Propósito persuasivo y selección de imágenes",
+      "explanation": "La propaganda selecciona elementos para persuadir y debe contrastarse con otras fuentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-148",
+      "number": 148,
+      "topic": "Revolución y reformas",
+      "concept": "reformas_agrarias_generan_resultados_desiguales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un gobierno concede tierras a algunas comunidades, pero mantiene grandes propiedades en otras regiones. ¿Qué conclusión es más cuidadosa?",
+      "options": [
+        "Se eliminó toda desigualdad agraria",
+        "Ninguna comunidad obtuvo cambios",
+        "Hubo reformas parciales y resultados desiguales",
+        "La propiedad privada desapareció por completo"
+      ],
+      "correctAnswer": "Hubo reformas parciales y resultados desiguales",
+      "explanation": "Las reformas pueden beneficiar a ciertos grupos sin resolver de forma uniforme un problema nacional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-149",
+      "number": 149,
+      "topic": "Evidencia y causalidad",
+      "concept": "evaluar_influencia_de_huelgas_con_evidencia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Tras una revolución aumentan las huelgas y también cambian las leyes laborales. ¿Qué evidencia ayudaría a evaluar si las huelgas influyeron?",
+      "options": [
+        "El número de edificios del parlamento",
+        "Una lista de presidentes sin fechas",
+        "Fechas, demandas y debates legislativos relacionados",
+        "Un mapa físico sin información política"
+      ],
+      "correctAnswer": "Fechas, demandas y debates legislativos relacionados",
+      "explanation": "Comparar cronología, demandas y decisiones permite evaluar vínculos causales sin asumirlos automáticamente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "HIS8-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Explicación histórica",
+      "concept": "armisticio_difiere_de_tratado_de_paz",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un armisticio y un tratado de paz son necesariamente el mismo acto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Un armisticio suspende los combates; un tratado establece condiciones políticas de paz.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}
+,
+{
+  "catalogId": "edusyn-deportes-grade-7-v1",
+  "title": "Deportes · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Deportes",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://olympics.com/ioc/olympic-games",
+    "https://worldathletics.org/about-iaaf/documents/book-of-rules",
+    "https://www.fiba.basketball/documents/official-basketball-rules",
+    "https://www.fivb.com/volleyball/the-game/official-volleyball-rules/",
+    "https://www.mineducacion.gov.co/1621/articles-89869_archivo_pdf3.pdf",
+    "https://www.paralympic.org/classification",
+    "https://www.theifab.com/laws/latest/",
+    "https://www.wada-ama.org/en/athletes-support-personnel"
+  ],
+  "questions": [
+    {
+      "id": "DEP7-001",
+      "number": 1,
+      "topic": "Fútbol",
+      "concept": "futbol_once_jugadores_por_equipo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos jugadores por equipo inician un partido de fútbol?",
+      "options": [
+        "Once",
+        "Nueve",
+        "Diez",
+        "Doce"
+      ],
+      "correctAnswer": "Once",
+      "explanation": "En el fútbol de asociación, cada equipo comienza con once jugadores en la cancha.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-002",
+      "number": 2,
+      "topic": "Voleibol",
+      "concept": "voleibol_tres_golpes_sin_bloqueo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos contactos puede hacer un equipo antes de devolver el balón, sin contar el bloqueo?",
+      "options": [
+        "Dos",
+        "Tres",
+        "Cuatro",
+        "Cinco"
+      ],
+      "correctAnswer": "Tres",
+      "explanation": "El equipo dispone de hasta tres golpes para devolver el balón por encima de la red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-003",
+      "number": 3,
+      "topic": "Atletismo",
+      "concept": "atletismo_prueba_de_velocidad_100_metros",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué prueba consiste en correr una distancia recta de cien metros?",
+      "options": [
+        "Maratón",
+        "Salto largo",
+        "100 metros planos",
+        "Relevo 4 × 400"
+      ],
+      "correctAnswer": "100 metros planos",
+      "explanation": "Los 100 metros planos son una prueba de velocidad disputada en una recta de pista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-004",
+      "number": 4,
+      "topic": "Baloncesto",
+      "concept": "baloncesto_cinco_jugadores_en_cancha",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos jugadores por equipo están en cancha durante el juego de baloncesto?",
+      "options": [
+        "Cuatro",
+        "Seis",
+        "Siete",
+        "Cinco"
+      ],
+      "correctAnswer": "Cinco",
+      "explanation": "En las reglas habituales del baloncesto, cada equipo juega con cinco deportistas en cancha.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-005",
+      "number": 5,
+      "topic": "Ciclismo",
+      "concept": "ciclismo_grupo_principal_peloton",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una carrera de ruta, ¿cómo se llama el grupo principal de ciclistas?",
+      "options": [
+        "Pelotón",
+        "Escalera",
+        "Carril",
+        "Grada"
+      ],
+      "correctAnswer": "Pelotón",
+      "explanation": "El pelotón es el conjunto compacto de ciclistas que avanza en una carrera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-006",
+      "number": 6,
+      "topic": "Balonmano",
+      "concept": "balonmano_tres_pasos_con_balón",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántos pasos puede dar normalmente un jugador con el balón sin botarlo?",
+      "options": [
+        "Uno",
+        "Tres",
+        "Cinco",
+        "Seis"
+      ],
+      "correctAnswer": "Tres",
+      "explanation": "Las reglas de balonmano permiten avanzar hasta tres pasos con el balón antes de pasarlo o botarlo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-007",
+      "number": 7,
+      "topic": "Verdadero o falso · Calentamiento",
+      "concept": "calentamiento_gradual_prepara_el_cuerpo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un calentamiento gradual prepara el cuerpo para la actividad física.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Aumentar poco a poco la actividad ayuda a preparar músculos y sistema cardiovascular para el esfuerzo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Juego limpio",
+      "concept": "juego_limpio_respeta_reglas_y_rivales",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Respetar las reglas y a los rivales forma parte del juego limpio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El juego limpio implica competir con respeto, seguir las reglas y cuidar a quienes participan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-009",
+      "number": 9,
+      "topic": "Fútbol y táctica",
+      "concept": "ocupacion_espacios_crea_lineas_de_pase",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja táctica puede generar un equipo que ocupa bien los espacios?",
+      "options": [
+        "Evitar todos los pases rivales",
+        "Ofrecer líneas de pase y opciones de avance",
+        "Hacer innecesaria la defensa",
+        "Garantizar la victoria antes del partido"
+      ],
+      "correctAnswer": "Ofrecer líneas de pase y opciones de avance",
+      "explanation": "La ubicación coordinada facilita apoyar al poseedor del balón y avanzar con pases.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-010",
+      "number": 10,
+      "topic": "Voleibol y rotación",
+      "concept": "voleibol_rotacion_al_recuperar_saque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuándo rota un equipo de voleibol en el sistema habitual?",
+      "options": [
+        "Después de cada saque propio",
+        "Cuando pide tiempo",
+        "Al recuperar el derecho a sacar",
+        "Cada vez que cambia el balón"
+      ],
+      "correctAnswer": "Al recuperar el derecho a sacar",
+      "explanation": "Cuando el equipo receptor gana la jugada y obtiene el saque, sus jugadores rotan una posición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-011",
+      "number": 11,
+      "topic": "Baloncesto y táctica",
+      "concept": "pantalla_legal_libera_companero",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve principalmente una pantalla legal en baloncesto?",
+      "options": [
+        "Crear espacio para un compañero",
+        "Detener el cronómetro por completo",
+        "Cambiar el valor de una canasta",
+        "Evitar que el balón salga de la cancha"
+      ],
+      "correctAnswer": "Crear espacio para un compañero",
+      "explanation": "Una pantalla bien realizada dificulta el seguimiento defensivo y puede liberar a un compañero.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-012",
+      "number": 12,
+      "topic": "Atletismo y ritmo",
+      "concept": "ritmo_planificado_distribuye_esfuerzo_en_fondo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué estrategia ayuda a completar una carrera larga sin agotarse demasiado pronto?",
+      "options": [
+        "Correr al máximo desde el inicio",
+        "Mantener un ritmo planificado",
+        "Cambiar de dirección repetidamente",
+        "Evitar tomar agua en toda circunstancia"
+      ],
+      "correctAnswer": "Mantener un ritmo planificado",
+      "explanation": "Distribuir el esfuerzo de acuerdo con la distancia ayuda a sostener el ritmo de carrera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-013",
+      "number": 13,
+      "topic": "Ciclismo y aerodinámica",
+      "concept": "ciclismo_a_rueda_reduce_resistencia_aerodinamica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto puede obtener un ciclista al ubicarse detrás de otro en una ruta?",
+      "options": [
+        "Aumentar la resistencia del aire",
+        "Acortar la distancia oficial",
+        "Eliminar el esfuerzo de pedalear",
+        "Reducir parte de la resistencia del aire"
+      ],
+      "correctAnswer": "Reducir parte de la resistencia del aire",
+      "explanation": "Ir a rueda puede reducir la resistencia aerodinámica, aunque el ciclista aún debe pedalear y mantener control.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-014",
+      "number": 14,
+      "topic": "Bádminton",
+      "concept": "badminton_saque_al_cuadro_diagonal_opuesto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Hacia qué zona debe dirigirse el saque en diagonal en bádminton?",
+      "options": [
+        "A cualquier lugar fuera de la cancha",
+        "Al mismo lado de la red",
+        "Al cuadro de servicio opuesto",
+        "Directamente al cuerpo del juez"
+      ],
+      "correctAnswer": "Al cuadro de servicio opuesto",
+      "explanation": "El saque debe cruzar hacia el cuadro de servicio diagonalmente opuesto al servidor.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-015",
+      "number": 15,
+      "topic": "Nutrición y deporte",
+      "concept": "hidratacion_repone_liquidos_perdidos_en_esfuerzo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué conviene hidratarse durante una actividad física prolongada?",
+      "options": [
+        "Para reemplazar toda la alimentación",
+        "Para aumentar de inmediato la fuerza muscular",
+        "Para evitar cualquier cansancio",
+        "Para ayudar a reponer líquidos perdidos"
+      ],
+      "correctAnswer": "Para ayudar a reponer líquidos perdidos",
+      "explanation": "La hidratación contribuye a reponer líquidos, aunque no elimina por completo la fatiga.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-016",
+      "number": 16,
+      "topic": "Deportes adaptados",
+      "concept": "adaptaciones_facilitan_competencia_inclusiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué principio ayuda a que una competencia adaptada sea justa?",
+      "options": [
+        "Ajustar reglas y recursos a las necesidades de participación",
+        "Usar siempre el mismo equipo para todos",
+        "Excluir a quien necesita una adaptación",
+        "Cambiar el resultado después del juego"
+      ],
+      "correctAnswer": "Ajustar reglas y recursos a las necesidades de participación",
+      "explanation": "Adaptaciones apropiadas facilitan participar y competir con reglas comprensibles para las personas involucradas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-017",
+      "number": 17,
+      "topic": "Verdadero o falso · Estrategia",
+      "concept": "estrategia_se_ajusta_a_la_situacion_de_juego",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una estrategia deportiva puede modificarse según el rival y lo que ocurre durante el partido.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Leer el juego permite ajustar la táctica ante cambios de ritmo, espacio o comportamiento rival.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Entrenamiento",
+      "concept": "intensidad_maxima_constante_no_previene_lesiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Entrenar siempre con la máxima intensidad es la mejor forma de prevenir lesiones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La carga debe progresar y alternarse con recuperación para reducir riesgos de sobreesfuerzo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-019",
+      "number": 19,
+      "topic": "Arbitraje",
+      "concept": "arbitro_aplica_reglas_y_sanciona_infracciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple un árbitro durante una competencia?",
+      "options": [
+        "Diseñar el uniforme de los equipos",
+        "Elegir quién debe ganar",
+        "Aplicar las reglas y resolver infracciones",
+        "Reemplazar a los entrenadores"
+      ],
+      "correctAnswer": "Aplicar las reglas y resolver infracciones",
+      "explanation": "El árbitro interpreta y aplica el reglamento para conducir el encuentro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-020",
+      "number": 20,
+      "topic": "Estadística deportiva",
+      "concept": "tasa_de_acierto_es_proporcion_de_lanzamientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede mostrar la tasa de acierto de lanzamientos de un jugador?",
+      "options": [
+        "El tiempo exacto de cada jugada",
+        "La calidad de todos sus pases",
+        "Cuántos espectadores asistieron",
+        "La proporción de lanzamientos exitosos"
+      ],
+      "correctAnswer": "La proporción de lanzamientos exitosos",
+      "explanation": "La tasa expresa cuántos intentos resultaron en acierto dentro del total realizado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-021",
+      "number": 21,
+      "topic": "Decisión táctica",
+      "concept": "cambio_de_frente_aprovecha_banda_libre",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En fútbol, el equipo rival presiona a quien tiene el balón y deja libre una banda. ¿Qué opción puede aprovechar el espacio?",
+      "options": [
+        "Cambiar el juego hacia la banda libre",
+        "Mantener el balón quieto hasta perderlo",
+        "Reunir a todos los jugadores junto al balón",
+        "Lanzar el balón fuera sin mirar"
+      ],
+      "correctAnswer": "Cambiar el juego hacia la banda libre",
+      "explanation": "Cambiar el lado de ataque puede aprovechar un espacio que la presión rival dejó abierto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-022",
+      "number": 22,
+      "topic": "Inclusión deportiva",
+      "concept": "adaptar_juego_de_pases_para_participacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante tiene movilidad reducida y quiere participar en un juego de pases. ¿Qué ajuste favorece su participación?",
+      "options": [
+        "Excluirlo para mantener la velocidad",
+        "Adaptar espacio, desplazamientos o reglas con el grupo",
+        "Darle un resultado distinto sin jugar",
+        "Asignarle siempre el papel de árbitro"
+      ],
+      "correctAnswer": "Adaptar espacio, desplazamientos o reglas con el grupo",
+      "explanation": "Ajustar la actividad de manera acordada permite que participe junto con sus compañeros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-023",
+      "number": 23,
+      "topic": "Análisis de datos",
+      "concept": "comparar_tiempos_en_condiciones_similares",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una corredora mejora su tiempo en tres entrenamientos seguidos. ¿Qué comparación permite evaluar mejor el progreso?",
+      "options": [
+        "Compararlo con el color de sus zapatillas",
+        "Compararlo con el resultado de otra disciplina",
+        "Revisar tiempos medidos en condiciones similares",
+        "Compararlo solo con el número de espectadores"
+      ],
+      "correctAnswer": "Revisar tiempos medidos en condiciones similares",
+      "explanation": "Medir en condiciones semejantes ayuda a distinguir una mejora real de diferencias en recorrido o registro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-024",
+      "number": 24,
+      "topic": "Resolución de conflictos",
+      "concept": "resolver_disputa_deportiva_con_procedimiento_y_respeto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos equipos discuten si el balón salió antes de una anotación y no hay video. ¿Qué acuerdo es más deportivo?",
+      "options": [
+        "Amenazar al árbitro hasta que cambie la decisión",
+        "Abandonar el partido sin escuchar",
+        "Repetir siempre toda la competencia",
+        "Aceptar el procedimiento acordado y continuar con respeto"
+      ],
+      "correctAnswer": "Aceptar el procedimiento acordado y continuar con respeto",
+      "explanation": "Respetar el procedimiento y mantener el diálogo permite resolver el desacuerdo sin escalar el conflicto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Rendimiento",
+      "concept": "estadistica_unica_no_mide_aporte_deportivo_completo",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una sola estadística de un partido basta para evaluar por completo el aporte de un deportista.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El rendimiento también incluye decisiones, defensa, colaboración y el papel que cumple en el equipo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-026",
+      "number": 26,
+      "topic": "Fútbol",
+      "concept": "futbol_tarjeta_roja_expulsa_jugador",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarjeta usa el árbitro para expulsar a un jugador?",
+      "options": [
+        "Roja",
+        "Amarilla",
+        "Verde",
+        "Azul"
+      ],
+      "correctAnswer": "Roja",
+      "explanation": "La tarjeta roja indica expulsión del jugador del partido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-027",
+      "number": 27,
+      "topic": "Baloncesto",
+      "concept": "baloncesto_lanzamiento_de_tres_puntos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama una anotación de tres puntos en baloncesto?",
+      "options": [
+        "Tiro libre",
+        "Triple",
+        "Doble falta",
+        "Saque de banda"
+      ],
+      "correctAnswer": "Triple",
+      "explanation": "Un lanzamiento convertido desde detrás de la línea de tres puntos vale tres unidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-028",
+      "number": 28,
+      "topic": "Gimnasia",
+      "concept": "gimnasia_artistica_mesa_de_salto",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué aparato se utiliza en gimnasia artística femenina para realizar saltos?",
+      "options": [
+        "Anillas",
+        "Caballo con arzones",
+        "Mesa de salto",
+        "Barra fija"
+      ],
+      "correctAnswer": "Mesa de salto",
+      "explanation": "La mesa de salto es uno de los aparatos de la gimnasia artística femenina.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-029",
+      "number": 29,
+      "topic": "Tenis",
+      "concept": "tenis_cero_se_anuncia_love",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se denomina el resultado cero en la puntuación del tenis?",
+      "options": [
+        "Iguales",
+        "Deuce",
+        "Ventaja",
+        "Love"
+      ],
+      "correctAnswer": "Love",
+      "explanation": "En la terminología tradicional del tenis, cero se anuncia como “love”.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-030",
+      "number": 30,
+      "topic": "Verdadero o falso · Natación",
+      "concept": "natacion_estilo_libre_permite_elegir_tecnica",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En natación, las competencias de estilo libre permiten al nadador elegir el estilo que utiliza.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En estilo libre se puede nadar con cualquier técnica, aunque el crol suele ser la más rápida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-031",
+      "number": 31,
+      "topic": "Ciclismo",
+      "concept": "quintana_gana_giro_italia_2014",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ciclista colombiano ganó el Giro de Italia en 2014?",
+      "options": [
+        "Nairo Quintana",
+        "Egan Bernal",
+        "Rigoberto Urán",
+        "Lucho Herrera"
+      ],
+      "correctAnswer": "Nairo Quintana",
+      "explanation": "Nairo Quintana ganó la clasificación general del Giro de Italia en 2014.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-032",
+      "number": 32,
+      "topic": "Verdadero o falso · Olimpismo",
+      "concept": "primeros_juegos_olimpicos_modernos_atenas_1896",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los Juegos Olímpicos modernos se celebraron por primera vez en Atenas en 1896.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Atenas fue sede de la primera edición de los Juegos Olímpicos modernos en 1896.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-033",
+      "number": 33,
+      "topic": "Fútbol colombiano",
+      "concept": "atletico_nacional_sede_medellin",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué ciudad juega como local el equipo Atlético Nacional?",
+      "options": [
+        "Cali",
+        "Medellín",
+        "Barranquilla",
+        "Bogotá"
+      ],
+      "correctAnswer": "Medellín",
+      "explanation": "Atlético Nacional es un club de Medellín, Antioquia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-034",
+      "number": 34,
+      "topic": "Fútbol y defensa",
+      "concept": "defensa_zonal_protege_espacios_asignados",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué busca principalmente una defensa zonal?",
+      "options": [
+        "Seguir a un rival por toda la cancha",
+        "Dejar libre el centro del área",
+        "Proteger espacios asignados",
+        "Evitar que el equipo salga jugando"
+      ],
+      "correctAnswer": "Proteger espacios asignados",
+      "explanation": "En la defensa zonal, cada jugador protege un área y responde a los movimientos que ocurren en ella.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-035",
+      "number": 35,
+      "topic": "Baloncesto y rebote",
+      "concept": "bloqueo_de_rebote_gana_posicion_defensiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acción ayuda a conseguir un rebote defensivo?",
+      "options": [
+        "Saltar antes del lanzamiento",
+        "Seguir el balón sin tomar posición",
+        "Esperar a que el rival capture el balón",
+        "Bloquear al rival con posición legal"
+      ],
+      "correctAnswer": "Bloquear al rival con posición legal",
+      "explanation": "Ocupar legalmente el espacio entre el rival y el aro ayuda a asegurar el rebote.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-036",
+      "number": 36,
+      "topic": "Voleibol y recepción",
+      "concept": "recepcion_controlada_habilita_armado_de_ataque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué suele dirigirse la recepción hacia el colocador?",
+      "options": [
+        "Para facilitar la preparación del ataque",
+        "Para detener el juego",
+        "Para cambiar el equipo que saca",
+        "Para que el balón toque el suelo"
+      ],
+      "correctAnswer": "Para facilitar la preparación del ataque",
+      "explanation": "Una recepción controlada permite que el colocador organice el siguiente golpe ofensivo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-037",
+      "number": 37,
+      "topic": "Atletismo",
+      "concept": "distancia_determina_ritmo_y_distribucion_del_esfuerzo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia principal existe entre una carrera de velocidad y una de fondo?",
+      "options": [
+        "El uso de zapatos",
+        "La distancia y la distribución del esfuerzo",
+        "La presencia de espectadores",
+        "El sentido de circulación en la pista"
+      ],
+      "correctAnswer": "La distancia y la distribución del esfuerzo",
+      "explanation": "La distancia modifica cómo se distribuye el esfuerzo y qué ritmo puede sostener el atleta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-038",
+      "number": 38,
+      "topic": "Ciclismo de ruta",
+      "concept": "gregario_apoya_tacticamente_al_lider",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarea cumple un gregario dentro de un equipo ciclista?",
+      "options": [
+        "Arbitrar la carrera",
+        "Marcar el tiempo oficial",
+        "Apoyar tácticamente al líder",
+        "Cambiar el recorrido de la etapa"
+      ],
+      "correctAnswer": "Apoyar tácticamente al líder",
+      "explanation": "Un gregario ayuda al líder con tareas como protegerlo del viento o colaborar en la persecución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-039",
+      "number": 39,
+      "topic": "Deportes de combate",
+      "concept": "boxeo_nocaut_detiene_combate_por_incapacidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa ganar por nocaut en boxeo?",
+      "options": [
+        "Acumular más faltas",
+        "Terminar la pelea por decisión del público",
+        "Repetir el último asalto",
+        "Que el rival no pueda continuar tras una caída"
+      ],
+      "correctAnswer": "Que el rival no pueda continuar tras una caída",
+      "explanation": "El árbitro detiene el combate cuando un boxeador no puede continuar de manera segura tras una caída.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-040",
+      "number": 40,
+      "topic": "Verdadero o falso · Técnica deportiva",
+      "concept": "tecnica_deportiva_se_adapta_a_tarea_y_contexto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una técnica eficaz debe adaptarse a la tarea y a las condiciones de la actividad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La ejecución útil depende del objetivo, el entorno y las capacidades de quien practica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-041",
+      "number": 41,
+      "topic": "Fútbol y táctica",
+      "concept": "pase_atras_reorganiza_salida_ante_presion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede lograr un pase hacia atrás cuando el rival presiona adelante?",
+      "options": [
+        "Reiniciar la jugada y cambiar el ángulo de salida",
+        "Anular automáticamente la presión",
+        "Convertir el saque en gol",
+        "Impedir cualquier ataque posterior"
+      ],
+      "correctAnswer": "Reiniciar la jugada y cambiar el ángulo de salida",
+      "explanation": "Circular el balón hacia atrás puede dar tiempo para reorganizarse y encontrar otra ruta de avance.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-042",
+      "number": 42,
+      "topic": "Arbitraje en baloncesto",
+      "concept": "baloncesto_contacto_ilegal_se_sanciona_como_falta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sanción corresponde normalmente a un contacto ilegal que afecta al rival?",
+      "options": [
+        "Gol de campo",
+        "Falta personal",
+        "Fuera de juego",
+        "Saque neutral"
+      ],
+      "correctAnswer": "Falta personal",
+      "explanation": "El contacto ilegal se sanciona como falta personal según las circunstancias y las reglas aplicables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-043",
+      "number": 43,
+      "topic": "Verdadero o falso · Deporte y género",
+      "concept": "categorias_deportivas_organizan_enfrentamientos_comparables",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las reglas de una competencia pueden organizarse en categorías para favorecer enfrentamientos comparables.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Categorías como edad, peso o modalidad pueden ayudar a organizar competencias; deben aplicarse con criterios claros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-044",
+      "number": 44,
+      "topic": "Preparación física",
+      "concept": "recuperacion_permite_adaptacion_a_carga",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve un periodo de recuperación dentro de un plan de entrenamiento?",
+      "options": [
+        "Evitar toda adaptación física",
+        "Reemplazar la práctica deportiva",
+        "Favorecer la recuperación del organismo",
+        "Garantizar que nunca haya lesiones"
+      ],
+      "correctAnswer": "Favorecer la recuperación del organismo",
+      "explanation": "La recuperación permite que el cuerpo se adapte al esfuerzo y ayuda a manejar la carga de entrenamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-045",
+      "number": 45,
+      "topic": "Estadística de equipo",
+      "concept": "puntos_recibidos_complementan_analisis_de_marcador",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo anota mucho, pero también recibe muchos puntos. ¿Qué indicador complementa el puntaje a favor?",
+      "options": [
+        "Cantidad de uniformes",
+        "Tiempo de viaje",
+        "Número de espectadores",
+        "Puntos recibidos"
+      ],
+      "correctAnswer": "Puntos recibidos",
+      "explanation": "Los puntos recibidos ayudan a analizar el desempeño defensivo y a contextualizar el marcador anotado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-046",
+      "number": 46,
+      "topic": "Lectura de juego",
+      "concept": "pase_al_perimetro_libre_ataca_defensa_congestionada",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En baloncesto, la defensa se reúne cerca del aro y deja libre a un compañero en el perímetro. ¿Qué decisión puede aprovecharlo?",
+      "options": [
+        "Pasar al compañero libre para un lanzamiento",
+        "Botar hacia la zona más congestionada",
+        "Entregar el balón al árbitro",
+        "Lanzar desde detrás de la propia cancha"
+      ],
+      "correctAnswer": "Pasar al compañero libre para un lanzamiento",
+      "explanation": "Pasar al jugador desmarcado puede aprovechar el espacio que dejó la defensa concentrada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-047",
+      "number": 47,
+      "topic": "Seguridad y entrenamiento",
+      "concept": "dolor_agudo_requiere_detenerse_y_comunicar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una deportista siente dolor agudo durante un ejercicio. ¿Qué respuesta es más segura?",
+      "options": [
+        "Aumentar la intensidad para terminar pronto",
+        "Detenerse y avisar al responsable",
+        "Ocultar el dolor al entrenador",
+        "Continuar sin modificar el movimiento"
+      ],
+      "correctAnswer": "Detenerse y avisar al responsable",
+      "explanation": "Detener la actividad y comunicar el dolor permite valorar la situación antes de agravar una posible lesión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-048",
+      "number": 48,
+      "topic": "Juego limpio",
+      "concept": "reconocer_contacto_no_observado_demuestra_honestidad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un jugador reconoce que tocó el balón antes de que saliera, aunque el árbitro no lo vio. ¿Qué acción refleja juego limpio?",
+      "options": [
+        "Negarlo para conservar la ventaja",
+        "Culpar al rival",
+        "Informarlo con respeto",
+        "Abandonar el encuentro"
+      ],
+      "correctAnswer": "Informarlo con respeto",
+      "explanation": "Reconocer una acción propia y comunicarla honestamente demuestra respeto por el juego y sus participantes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-049",
+      "number": 49,
+      "topic": "Estrategia de carrera",
+      "concept": "ritmo_inicial_controlado_sostiene_velocidad_final",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una carrera, una atleta acelera demasiado al inicio y pierde velocidad al final. ¿Qué ajuste puede probar?",
+      "options": [
+        "Comenzar aún más rápido",
+        "Evitar entrenar el ritmo",
+        "Cambiar de carril cada vuelta",
+        "Distribuir mejor el esfuerzo"
+      ],
+      "correctAnswer": "Distribuir mejor el esfuerzo",
+      "explanation": "Ajustar el ritmo inicial puede ayudar a sostener la velocidad durante toda la distancia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Análisis deportivo",
+      "concept": "victoria_no_demuestra_correccion_de_toda_tactica",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un equipo gana, todas sus decisiones tácticas necesariamente fueron correctas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El resultado depende de muchos factores; revisar decisiones requiere analizar acciones y contexto, no solo el marcador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-051",
+      "number": 51,
+      "topic": "Fútbol",
+      "concept": "futbol_fuera_de_juego_sanciona_intervencion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué infracción señala normalmente el árbitro cuando un jugador atacante está en posición adelantada y participa en la jugada?",
+      "options": [
+        "Fuera de juego",
+        "Mano del portero",
+        "Saque de esquina",
+        "Tiro penal"
+      ],
+      "correctAnswer": "Fuera de juego",
+      "explanation": "El fuera de juego se sanciona cuando un jugador en posición adelantada interviene en la acción, según la regla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-052",
+      "number": 52,
+      "topic": "Rugby",
+      "concept": "rugby_union_pase_con_las_manos_hacia_atras",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué parte del cuerpo se lleva y pasa principalmente el balón en rugby?",
+      "options": [
+        "Solo con los pies",
+        "Con las manos para correr y pasar hacia atrás",
+        "Con la cabeza",
+        "Con un bastón"
+      ],
+      "correctAnswer": "Con las manos para correr y pasar hacia atrás",
+      "explanation": "En el rugby union se puede correr con el balón y pasarlo con las manos hacia atrás o lateralmente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-053",
+      "number": 53,
+      "topic": "Golf",
+      "concept": "golf_utiliza_palos_para_golpear_bola",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento utiliza un golfista para golpear la pelota?",
+      "options": [
+        "Raqueta",
+        "Bate",
+        "Palo de golf",
+        "Stick de hockey"
+      ],
+      "correctAnswer": "Palo de golf",
+      "explanation": "Los palos de golf se diseñan para ejecutar distintos tipos de golpes en el recorrido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-054",
+      "number": 54,
+      "topic": "Verdadero o falso · Tenis",
+      "concept": "tenis_individual_un_jugador_por_lado",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En tenis individual, cada lado de la cancha tiene un jugador.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El partido individual enfrenta a una persona contra otra; el dobles enfrenta parejas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-055",
+      "number": 55,
+      "topic": "Levantamiento de pesas",
+      "concept": "halterofilia_dos_tiempos_tiron_y_envion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué levantamiento olímpico combina un primer tirón y luego un envión?",
+      "options": [
+        "Dos tiempos",
+        "Salto alto",
+        "Lanzamiento de disco",
+        "Carrera de relevos"
+      ],
+      "correctAnswer": "Dos tiempos",
+      "explanation": "En el dos tiempos, la barra se lleva primero al hombro y luego sobre la cabeza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-056",
+      "number": 56,
+      "topic": "Deporte colombiano",
+      "concept": "urrutia_oro_olimpico_halterofilia_2000",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué deporte ganó María Isabel Urrutia una medalla de oro olímpica en 2000?",
+      "options": [
+        "Atletismo",
+        "Levantamiento de pesas",
+        "Ciclismo de pista",
+        "Judo"
+      ],
+      "correctAnswer": "Levantamiento de pesas",
+      "explanation": "Urrutia obtuvo el oro en levantamiento de pesas en los Juegos Olímpicos de Sídney 2000.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-057",
+      "number": 57,
+      "topic": "Verdadero o falso · Natación",
+      "concept": "relevo_natacion_distribuye_distancia_entre_nadadores",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En una carrera de relevos de natación, cada integrante cubre una parte de la distancia total.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los relevos distribuyen la distancia entre nadadores que se turnan en la misma prueba.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-058",
+      "number": 58,
+      "topic": "Deporte paralímpico",
+      "concept": "goalball_usa_balon_con_cascabeles",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objeto sonoro ayuda a localizar el balón en goalball?",
+      "options": [
+        "Silbato dentro de la red",
+        "Cascabeles en el uniforme",
+        "Campana en la portería",
+        "Balón con cascabeles"
+      ],
+      "correctAnswer": "Balón con cascabeles",
+      "explanation": "El balón de goalball tiene cascabeles internos para que los jugadores sigan su trayectoria mediante el sonido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-059",
+      "number": 59,
+      "topic": "Fútbol y reanudaciones",
+      "concept": "falta_directa_defensiva_en_area_penal_concede_penal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una falta directa sancionable ocurre dentro del área penal del equipo defensor. ¿Qué reanudación corresponde normalmente?",
+      "options": [
+        "Saque de banda",
+        "Saque de meta",
+        "Tiro penal",
+        "Tiro de esquina"
+      ],
+      "correctAnswer": "Tiro penal",
+      "explanation": "Una falta directa cometida por la defensa dentro de su área penal se sanciona con tiro penal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-060",
+      "number": 60,
+      "topic": "Rugby y espacio",
+      "concept": "rugby_mueve_defensa_y_abre_anchura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto táctico puede tener mover el balón hacia los lados en rugby?",
+      "options": [
+        "Detener el cronómetro del partido",
+        "Anular la necesidad de apoyar al portador",
+        "Convertir cualquier pase en anotación",
+        "Crear espacio lejos de la concentración defensiva"
+      ],
+      "correctAnswer": "Crear espacio lejos de la concentración defensiva",
+      "explanation": "Desplazar el ataque puede obligar a la defensa a cubrir más anchura y abrir espacios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-061",
+      "number": 61,
+      "topic": "Reglas del tenis",
+      "concept": "tenis_40_40_requiere_dos_puntos_consecutivos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ocurre cuando el marcador llega a 40–40 en un juego con ventaja?",
+      "options": [
+        "Se llama iguales o deuce",
+        "El juego termina automáticamente",
+        "Se cambia de cancha de inmediato",
+        "El sacador pierde un punto"
+      ],
+      "correctAnswer": "Se llama iguales o deuce",
+      "explanation": "Con 40–40, un jugador necesita ganar dos puntos consecutivos para cerrar el juego con ventaja.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-062",
+      "number": 62,
+      "topic": "Ajedrez y deporte",
+      "concept": "ajedrez_jaque_mate_sin_respuesta_legal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa hacer jaque mate en ajedrez?",
+      "options": [
+        "Capturar cualquier pieza rival",
+        "Atacar al rey sin posibilidad legal de escapar",
+        "Repetir tres veces una jugada",
+        "Cambiar una torre por un peón"
+      ],
+      "correctAnswer": "Atacar al rey sin posibilidad legal de escapar",
+      "explanation": "Hay jaque mate cuando el rey está amenazado y no existe una respuesta legal que lo salve.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-063",
+      "number": 63,
+      "topic": "Deporte paralímpico",
+      "concept": "goalball_antifaces_igualan_condicion_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué se utilizan antifaces opacos en goalball?",
+      "options": [
+        "Para distinguir equipos por color",
+        "Para proteger del sol exterior",
+        "Para igualar la visión de los participantes",
+        "Para indicar el turno de saque"
+      ],
+      "correctAnswer": "Para igualar la visión de los participantes",
+      "explanation": "Los antifaces permiten que atletas con distintos niveles de visión compitan en condiciones visuales equivalentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-064",
+      "number": 64,
+      "topic": "Gimnasia artística",
+      "concept": "gimnasia_juzga_ejecucion_y_dificultad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué evalúa principalmente un juez al calificar una rutina de gimnasia?",
+      "options": [
+        "El precio del equipo",
+        "La cantidad de público",
+        "El tiempo de viaje del equipo",
+        "La ejecución y dificultad de los elementos"
+      ],
+      "correctAnswer": "La ejecución y dificultad de los elementos",
+      "explanation": "La calificación considera aspectos técnicos de ejecución y dificultad de la rutina según el código vigente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-065",
+      "number": 65,
+      "topic": "Verdadero o falso · Entrenamiento",
+      "concept": "practica_con_retroalimentacion_mejora_tecnica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La repetición de una habilidad con retroalimentación puede ayudar a mejorar la técnica deportiva.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Practicar y recibir información sobre la ejecución permite corregir movimientos y consolidar habilidades.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-066",
+      "number": 66,
+      "topic": "Ciclismo y estrategia",
+      "concept": "persecucion_por_equipos_alterna_liderazgo_y_esfuerzo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una persecución por equipos, ¿por qué los ciclistas alternan quién va al frente?",
+      "options": [
+        "Para dejar que solo uno complete la prueba",
+        "Para distribuir el esfuerzo y sostener el ritmo del equipo",
+        "Para evitar que el equipo use una estrategia",
+        "Para cambiar las reglas de la competencia"
+      ],
+      "correctAnswer": "Para distribuir el esfuerzo y sostener el ritmo del equipo",
+      "explanation": "Quien va al frente enfrenta mayor resistencia del aire; alternar posiciones reparte parte del esfuerzo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-067",
+      "number": 67,
+      "topic": "Deporte y descanso",
+      "concept": "falta_de_recuperacion_acumula_fatiga",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué riesgo puede aumentar si una persona entrena intensamente sin recuperación suficiente?",
+      "options": [
+        "Acumular cansancio y elevar el riesgo de lesión",
+        "Eliminar toda fatiga",
+        "Mejorar automáticamente la técnica",
+        "Evitar cualquier adaptación física"
+      ],
+      "correctAnswer": "Acumular cansancio y elevar el riesgo de lesión",
+      "explanation": "La carga excesiva sin descanso puede acumular fatiga y dificultar la recuperación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-068",
+      "number": 68,
+      "topic": "Verdadero o falso · Datos y rendimiento",
+      "concept": "estadisticas_deportes_distintos_no_son_directamente_comparables",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Comparar estadísticas entre deportes distintos siempre permite concluir quién es mejor deportista.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cada deporte mide tareas diferentes; las estadísticas deben interpretarse en su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-069",
+      "number": 69,
+      "topic": "Fútbol y ventaja",
+      "concept": "ley_de_ventaja_conserva_oportunidad_favorable",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué busca el árbitro al aplicar la ley de ventaja?",
+      "options": [
+        "Detener el juego ante toda infracción",
+        "Conceder siempre un penalti",
+        "Permitir seguir si el equipo afectado conserva una oportunidad favorable",
+        "Repetir el partido desde el inicio"
+      ],
+      "correctAnswer": "Permitir seguir si el equipo afectado conserva una oportunidad favorable",
+      "explanation": "Si detener el juego perjudicaría al equipo que recibió la falta, el árbitro puede permitir que continúe la acción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-070",
+      "number": 70,
+      "topic": "Deporte y convivencia",
+      "concept": "comunicacion_respetuosa_coordina_equipo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué práctica ayuda a reducir conflictos entre compañeros durante una competencia?",
+      "options": [
+        "Culpar a quien comete un error",
+        "Ignorar todas las decisiones del árbitro",
+        "Ocultar desacuerdos hasta el final",
+        "Comunicarse con respeto y acordar funciones"
+      ],
+      "correctAnswer": "Comunicarse con respeto y acordar funciones",
+      "explanation": "La comunicación respetuosa y la claridad de roles ayudan a coordinar al equipo y resolver desacuerdos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-071",
+      "number": 71,
+      "topic": "Goalball",
+      "concept": "goalball_usa_sonido_para_anticipar_direccion_del_balon",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "El balón rueda hacia el lado izquierdo de la portería. ¿Qué respuesta defensiva aprovecha mejor la información disponible?",
+      "options": [
+        "Orientarse por el sonido y cubrir la trayectoria",
+        "Quitarse el antifaz para mirar",
+        "Abandonar la portería",
+        "Esperar a que el balón se detenga"
+      ],
+      "correctAnswer": "Orientarse por el sonido y cubrir la trayectoria",
+      "explanation": "El sonido del balón ayuda a anticipar su dirección y cubrir el sector correspondiente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-072",
+      "number": 72,
+      "topic": "Lanzamientos de atletismo",
+      "concept": "lanzamiento_es_nulo_si_atleta_sale_por_frente",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una prueba de lanzamientos, un atleta pisa fuera del círculo por delante antes de que el implemento aterrice. ¿Qué ocurre con el intento?",
+      "options": [
+        "Se repite automáticamente con el mismo resultado",
+        "Se considera nulo",
+        "Se mide desde el borde del círculo",
+        "Se suma una distancia de penalización"
+      ],
+      "correctAnswer": "Se considera nulo",
+      "explanation": "Salir por delante del círculo antes de que el implemento caiga constituye una falta y anula el intento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-073",
+      "number": 73,
+      "topic": "Inclusión",
+      "concept": "senal_visual_facilita_participacion_auditiva",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una clase, una estudiante con discapacidad auditiva participa en un juego de reacción. ¿Qué adaptación favorece que reciba la señal de inicio?",
+      "options": [
+        "Excluirla del juego",
+        "Darle la señal solo cuando ya empezó",
+        "Añadir una señal visual acordada",
+        "Cambiar el resultado antes de jugar"
+      ],
+      "correctAnswer": "Añadir una señal visual acordada",
+      "explanation": "Una señal visual equivalente permite responder al mismo inicio de la actividad que el resto del grupo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-074",
+      "number": 74,
+      "topic": "Bádminton y posicionamiento",
+      "concept": "badminton_retorna_a_posicion_base_tras_golpear",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una rival alterna golpes cortos cerca de la red y golpes largos al fondo. ¿Qué ajuste puede ayudar a responder?",
+      "options": [
+        "Esperar siempre junto a la línea de fondo",
+        "Mirar hacia otro lado entre golpes",
+        "Permanecer inmóvil en la mitad de la cancha",
+        "Recuperar una posición equilibrada tras cada golpe"
+      ],
+      "correctAnswer": "Recuperar una posición equilibrada tras cada golpe",
+      "explanation": "Volver a una base equilibrada después de golpear facilita cubrir distintas zonas de la cancha.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-075",
+      "number": 75,
+      "topic": "Verdadero o falso · Juego limpio",
+      "concept": "enganar_arbitro_contradice_juego_limpio",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una victoria obtenida al engañar deliberadamente al árbitro demuestra buen juego limpio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El juego limpio exige honestidad y respeto por las reglas, incluso cuando una infracción podría pasar inadvertida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-076",
+      "number": 76,
+      "topic": "Hidratación",
+      "concept": "sudor_pierde_agua_y_sales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sustancia pierde principalmente el cuerpo al sudar durante el ejercicio?",
+      "options": [
+        "Agua",
+        "Calcio de los huesos",
+        "Oxígeno de la sangre",
+        "Proteína muscular"
+      ],
+      "correctAnswer": "Agua",
+      "explanation": "El sudor contiene principalmente agua y sales; la pérdida depende de la duración y las condiciones del ejercicio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-077",
+      "number": 77,
+      "topic": "Calentamiento",
+      "concept": "calentamiento_inicia_con_movimiento_suave",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál actividad es apropiada para iniciar un calentamiento gradual?",
+      "options": [
+        "Un sprint máximo sin preparación",
+        "Trote suave y movimientos dinámicos",
+        "Levantar la carga más pesada",
+        "Permanecer inmóvil varios minutos"
+      ],
+      "correctAnswer": "Trote suave y movimientos dinámicos",
+      "explanation": "Empezar con movimientos suaves y aumentar la intensidad prepara progresivamente para la actividad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-078",
+      "number": 78,
+      "topic": "Fútbol de salón",
+      "concept": "futbol_sala_objetivo_anotar_con_balon",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objeto se intenta introducir en la portería durante un partido de fútbol sala?",
+      "options": [
+        "Disco",
+        "Pelota ovalada",
+        "Balón",
+        "Volante"
+      ],
+      "correctAnswer": "Balón",
+      "explanation": "El fútbol sala se juega con un balón y el objetivo es anotar en la portería rival.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-079",
+      "number": 79,
+      "topic": "Natación",
+      "concept": "estilo_espalda_se_nada_boca_arriba",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué estilo de natación suele realizarse sobre la espalda?",
+      "options": [
+        "Pecho",
+        "Mariposa",
+        "Libre",
+        "Espalda"
+      ],
+      "correctAnswer": "Espalda",
+      "explanation": "En el estilo espalda, el nadador avanza boca arriba durante la prueba.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-080",
+      "number": 80,
+      "topic": "Verdadero o falso · Hidratación",
+      "concept": "hidratacion_depende_de_esfuerzo_y_ambiente",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La necesidad de hidratarse puede variar según el calor, la duración y la intensidad del ejercicio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las condiciones ambientales y el esfuerzo influyen en la cantidad de líquido que pierde el cuerpo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-081",
+      "number": 81,
+      "topic": "Juegos Olímpicos",
+      "concept": "juegos_olimpicos_verano_ciclo_cuatrienal",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cada cuántos años se celebran normalmente los Juegos Olímpicos de verano?",
+      "options": [
+        "Cada cuatro años",
+        "Cada dos años",
+        "Cada cinco años",
+        "Cada seis años"
+      ],
+      "correctAnswer": "Cada cuatro años",
+      "explanation": "Los Juegos Olímpicos de verano se realizan en un ciclo de cuatro años.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-082",
+      "number": 82,
+      "topic": "Seguridad deportiva",
+      "concept": "revisar_estado_y_estabilidad_de_equipo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Antes de usar un aparato de entrenamiento, ¿qué conviene revisar?",
+      "options": [
+        "El color de la marca",
+        "Su estabilidad y estado",
+        "El precio original",
+        "El lugar donde fue fabricado"
+      ],
+      "correctAnswer": "Su estabilidad y estado",
+      "explanation": "Comprobar estabilidad y posibles daños ayuda a reducir riesgos durante el uso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Descanso",
+      "concept": "descanso_es_parte_de_recuperacion_deportiva",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Dormir y descansar forman parte de la recuperación de una persona que entrena.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El descanso ayuda al organismo a recuperarse del esfuerzo y sostener la práctica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-084",
+      "number": 84,
+      "topic": "Deportes de equipo",
+      "concept": "futbol_salida_lateral_se_reanuda_con_saque_de_banda",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué acción permite reanudar un partido de fútbol después de que el balón sale por la línea lateral?",
+      "options": [
+        "Tiro de esquina",
+        "Saque de meta",
+        "Saque de banda",
+        "Tiro penal"
+      ],
+      "correctAnswer": "Saque de banda",
+      "explanation": "El juego se reanuda con un saque de banda para el equipo que no tocó último el balón.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-085",
+      "number": 85,
+      "topic": "Entrenamiento",
+      "concept": "progresion_de_carga_se_ajusta_a_adaptacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica hace progresiva una carga de entrenamiento?",
+      "options": [
+        "Mantenerla igual aunque mejore el rendimiento",
+        "Eliminar los periodos de recuperación",
+        "Aumentarla al máximo cada día",
+        "Incrementarla poco a poco según la adaptación"
+      ],
+      "correctAnswer": "Incrementarla poco a poco según la adaptación",
+      "explanation": "La progresión gradual permite ajustar la exigencia a la respuesta de quien entrena.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-086",
+      "number": 86,
+      "topic": "Nutrición deportiva",
+      "concept": "alimentacion_considera_demanda_y_recuperacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué la alimentación de una deportista debe considerar el tipo y la duración de su actividad?",
+      "options": [
+        "Las demandas de energía y recuperación pueden variar",
+        "Todos los deportes requieren exactamente lo mismo",
+        "La actividad física elimina la necesidad de comer",
+        "El horario reemplaza el valor de los alimentos"
+      ],
+      "correctAnswer": "Las demandas de energía y recuperación pueden variar",
+      "explanation": "Las necesidades pueden cambiar según la actividad, el esfuerzo y las características individuales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-087",
+      "number": 87,
+      "topic": "Deporte adaptado",
+      "concept": "adaptacion_escolar_facilita_participacion_segura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué describe mejor una adaptación razonable de una actividad deportiva escolar?",
+      "options": [
+        "Cambiar el objetivo para que nadie participe",
+        "Ajustar elementos para permitir participación segura",
+        "Asignar el mismo rol pasivo a quien lo solicite",
+        "Eliminar todas las reglas del juego"
+      ],
+      "correctAnswer": "Ajustar elementos para permitir participación segura",
+      "explanation": "Ajustar materiales, espacio o reglas puede facilitar la participación y conservar el propósito de la actividad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-088",
+      "number": 88,
+      "topic": "Psicología del deporte",
+      "concept": "meta_especifica_orienta_practica_y_seguimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué puede servir fijar una meta específica de entrenamiento?",
+      "options": [
+        "Sustituir toda retroalimentación",
+        "Evitar medir el progreso",
+        "Orientar la práctica hacia un objetivo observable",
+        "Garantizar un resultado competitivo"
+      ],
+      "correctAnswer": "Orientar la práctica hacia un objetivo observable",
+      "explanation": "Una meta concreta permite enfocar la práctica y revisar si hubo avances.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-089",
+      "number": 89,
+      "topic": "Reglamentos",
+      "concept": "reglas_comunicadas_crean_expectativas_compartidas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las reglas de una competencia deben comunicarse antes de iniciar?",
+      "options": [
+        "Para impedir que alguien haga preguntas",
+        "Para cambiar el resultado previsto",
+        "Para que cada equipo use su propio reglamento",
+        "Para que todos conozcan cómo se juega y se sanciona"
+      ],
+      "correctAnswer": "Para que todos conozcan cómo se juega y se sanciona",
+      "explanation": "Conocer las reglas ayuda a jugar con expectativas compartidas y entender las decisiones arbitrales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-090",
+      "number": 90,
+      "topic": "Tecnología deportiva",
+      "concept": "video_revisa_accion_visible_no_intencion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede aportar una repetición en video al análisis de una jugada?",
+      "options": [
+        "Permitir observar acciones que pasaron rápido",
+        "Demostrar por sí sola la intención del deportista",
+        "Reemplazar todos los criterios arbitrales",
+        "Cambiar retrospectivamente el reglamento"
+      ],
+      "correctAnswer": "Permitir observar acciones que pasaron rápido",
+      "explanation": "El video ayuda a revisar movimientos visibles, aunque no demuestra automáticamente la intención de una persona.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-091",
+      "number": 91,
+      "topic": "Deporte y estrategia",
+      "concept": "observar_patrones_orienta_ajuste_tactico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja tiene observar cómo responde un rival a una jugada repetida?",
+      "options": [
+        "Permite adivinar todo el partido",
+        "Ayuda a ajustar la siguiente decisión",
+        "Elimina la necesidad de entrenar",
+        "Garantiza que la jugada vuelva a funcionar"
+      ],
+      "correctAnswer": "Ayuda a ajustar la siguiente decisión",
+      "explanation": "Reconocer patrones puede orientar ajustes tácticos, pero no garantiza el resultado de una acción futura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-092",
+      "number": 92,
+      "topic": "Verdadero o falso · Igualdad deportiva",
+      "concept": "igualdad_de_material_no_siempre_garantiza_inclusion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Ofrecer exactamente el mismo material a todos siempre garantiza que una actividad sea inclusiva.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La inclusión puede requerir materiales o apoyos distintos para que todas las personas participen en condiciones adecuadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-093",
+      "number": 93,
+      "topic": "Estadística y contexto",
+      "concept": "minutos_jugados_contextualizan_puntos_totales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué se debe considerar el tiempo de juego al comparar puntos anotados por dos jugadores?",
+      "options": [
+        "Porque los puntos no se pueden contar",
+        "Porque el marcador cambia de deporte",
+        "Porque uno pudo jugar más minutos que el otro",
+        "Porque el tiempo elimina todas las diferencias"
+      ],
+      "correctAnswer": "Porque uno pudo jugar más minutos que el otro",
+      "explanation": "Comparar promedios por minuto o considerar el tiempo jugado da contexto a la cantidad total anotada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-094",
+      "number": 94,
+      "topic": "Verdadero o falso · Equipamiento",
+      "concept": "equipo_protector_reduce_pero_no_elimina_riesgo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El equipo de protección adecuado puede reducir ciertos riesgos, pero no elimina por completo la posibilidad de lesión.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El equipo puede proteger, aunque la técnica, el entorno y otros factores también influyen en la seguridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-095",
+      "number": 95,
+      "topic": "Competencia y aprendizaje",
+      "concept": "derrota_se_analiza_con_acciones_y_decisiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué análisis ayuda más a aprender después de una derrota?",
+      "options": [
+        "Culpar a una sola persona",
+        "Ignorar las decisiones tomadas",
+        "Revisar solo el resultado final",
+        "Examinar decisiones y acciones concretas del equipo"
+      ],
+      "correctAnswer": "Examinar decisiones y acciones concretas del equipo",
+      "explanation": "Revisar situaciones específicas ayuda a identificar qué funcionó y qué se puede mejorar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-096",
+      "number": 96,
+      "topic": "Entrenamiento y datos",
+      "concept": "estandarizar_distancia_mejora_comparacion_de_tiempos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo registra tiempos, pero cambia de distancia en cada práctica. ¿Qué ajuste permite comparar mejor su progreso?",
+      "options": [
+        "Medir la misma distancia en condiciones semejantes",
+        "Registrar únicamente quién llegó primero",
+        "Dejar de anotar los resultados",
+        "Cambiar la distancia sin identificarla"
+      ],
+      "correctAnswer": "Medir la misma distancia en condiciones semejantes",
+      "explanation": "Usar condiciones comparables ayuda a interpretar si el rendimiento cambió realmente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-097",
+      "number": 97,
+      "topic": "Inclusión y reglas",
+      "concept": "revisar_regla_que_impide_participacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un juego escolar, una regla impide que una estudiante use su apoyo de movilidad. ¿Qué debe hacer el grupo?",
+      "options": [
+        "Mantenerla aunque excluya a la estudiante",
+        "Revisarla y acordar un ajuste seguro",
+        "Cancelar toda actividad para siempre",
+        "Pedirle que observe sin participar"
+      ],
+      "correctAnswer": "Revisarla y acordar un ajuste seguro",
+      "explanation": "Revisar la regla con la estudiante y el grupo puede preservar la seguridad y abrir una forma real de participar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-098",
+      "number": 98,
+      "topic": "Decisión táctica",
+      "concept": "apoyos_y_espacios_conservan_posesion_ante_presion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo va ganando y el rival comienza a presionar más arriba. ¿Qué opción puede ayudar a conservar la posesión?",
+      "options": [
+        "Entregar el balón deliberadamente",
+        "Reunir a todos alrededor del portador",
+        "Usar pases de apoyo y buscar espacios libres",
+        "Renunciar a moverse sin balón"
+      ],
+      "correctAnswer": "Usar pases de apoyo y buscar espacios libres",
+      "explanation": "Ofrecer apoyos y moverse a espacios disponibles ayuda a mantener opciones de pase ante la presión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-099",
+      "number": 99,
+      "topic": "Cuidado corporal",
+      "concept": "mareo_en_calor_requiere_detenerse_y_pedir_ayuda",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un compañero se marea durante una práctica en un día caluroso. ¿Cuál es la respuesta más prudente?",
+      "options": [
+        "Pedirle que corra más para acostumbrarse",
+        "Dejarlo solo para no interrumpir",
+        "Ocultar el síntoma al responsable",
+        "Detener la actividad y avisar al adulto responsable"
+      ],
+      "correctAnswer": "Detener la actividad y avisar al adulto responsable",
+      "explanation": "Detenerse y pedir ayuda permite que una persona responsable valore los síntomas y decida qué atención requiere.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-100",
+      "number": 100,
+      "topic": "Verdadero o falso · Evaluación",
+      "concept": "resultado_aislado_no_predice_rendimiento_futuro",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una persona mejora su marca una vez, se puede asegurar que su entrenamiento futuro siempre tendrá el mismo resultado.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El rendimiento cambia por práctica, descanso, salud y condiciones; un resultado aislado no garantiza resultados futuros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-101",
+      "number": 101,
+      "topic": "Maratón",
+      "concept": "maraton_distancia_oficial_42195_metros",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es la distancia oficial de una maratón?",
+      "options": [
+        "42,195 kilómetros",
+        "21,097 kilómetros",
+        "10 kilómetros",
+        "50 kilómetros"
+      ],
+      "correctAnswer": "42,195 kilómetros",
+      "explanation": "La distancia de maratón es de 42 kilómetros y 195 metros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-102",
+      "number": 102,
+      "topic": "Deportes de invierno",
+      "concept": "patinaje_artistico_se_realiza_sobre_hielo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué superficie se practica principalmente el patinaje artístico sobre hielo?",
+      "options": [
+        "Césped",
+        "Hielo",
+        "Arena",
+        "Madera"
+      ],
+      "correctAnswer": "Hielo",
+      "explanation": "El patinaje artístico se realiza sobre una pista de hielo usando patines con cuchillas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-103",
+      "number": 103,
+      "topic": "Bádminton",
+      "concept": "badminton_utiliza_volante",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objeto golpean los jugadores en bádminton?",
+      "options": [
+        "Balón de cuero",
+        "Disco de plástico",
+        "Volante",
+        "Pelota con bote alto"
+      ],
+      "correctAnswer": "Volante",
+      "explanation": "En bádminton se golpea un volante o pluma por encima de la red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-104",
+      "number": 104,
+      "topic": "Taekwondo",
+      "concept": "taekwondo_combate_con_patadas_y_punos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tipo de acciones caracteriza al taekwondo deportivo?",
+      "options": [
+        "Lanzamientos de disco",
+        "Remates con raqueta",
+        "Patadas y golpes controlados",
+        "Carreras de obstáculos"
+      ],
+      "correctAnswer": "Carreras de obstáculos",
+      "explanation": "El taekwondo es un arte marcial y deporte de combate que utiliza patadas y técnicas de puño controladas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-105",
+      "number": 105,
+      "topic": "Deportes de rueda",
+      "concept": "neumatico_bicicleta_contacta_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento mantiene el contacto de una bicicleta con el suelo?",
+      "options": [
+        "Neumático",
+        "Manubrio",
+        "Cadena",
+        "Pedal"
+      ],
+      "correctAnswer": "Neumático",
+      "explanation": "Las llantas y sus neumáticos ruedan sobre la superficie y permiten el desplazamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-106",
+      "number": 106,
+      "topic": "Verdadero o falso · Arbitraje",
+      "concept": "arbitro_no_modifica_reglas_para_favorecer_local",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un árbitro puede cambiar una regla oficial solo para favorecer al equipo local.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las reglas deben aplicarse de forma imparcial; un árbitro no puede modificarlas para favorecer a un equipo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-107",
+      "number": 107,
+      "topic": "Tenis de mesa",
+      "concept": "tenis_mesa_implemento_paleta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué implemento usa un jugador para golpear la pelota en tenis de mesa?",
+      "options": [
+        "Bate",
+        "Paleta",
+        "Guante",
+        "Stick"
+      ],
+      "correctAnswer": "Paleta",
+      "explanation": "La paleta se utiliza para golpear la pelota y enviarla sobre la red de la mesa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-108",
+      "number": 108,
+      "topic": "Verdadero o falso · Relevos de natación",
+      "concept": "relevo_combinado_nado_asigna_un_estilo_a_cada_integrante",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En un relevo combinado de natación, cada integrante compite con un estilo distinto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En esta prueba, los nadadores cubren espalda, pecho, mariposa y libre, en ese orden.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-109",
+      "number": 109,
+      "topic": "Baloncesto",
+      "concept": "salto_inicial_define_primera_posesion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué objetivo tiene el salto entre dos al comienzo de un partido de baloncesto?",
+      "options": [
+        "Otorgar una canasta de dos puntos",
+        "Elegir quién será el árbitro",
+        "Decidir qué equipo obtiene primero la posesión",
+        "Detener el juego durante un minuto"
+      ],
+      "correctAnswer": "Decidir qué equipo obtiene primero la posesión",
+      "explanation": "El salto inicial determina qué equipo obtiene la primera posesión, según las reglas de la competencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-110",
+      "number": 110,
+      "topic": "Balonmano",
+      "concept": "balonmano_portero_defiende_con_todo_el_cuerpo_en_area",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja tiene el portero de balonmano dentro de su propia área?",
+      "options": [
+        "Puede anotar con las manos desde cualquier lugar",
+        "Puede abandonar el área con el balón en las manos",
+        "Puede detener el juego sin autorización",
+        "Puede tocar el balón con el cuerpo al defender en su área"
+      ],
+      "correctAnswer": "Puede tocar el balón con el cuerpo al defender en su área",
+      "explanation": "Dentro de su área, el portero tiene permisos especiales para defender, sujeto a las reglas del juego.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-111",
+      "number": 111,
+      "topic": "Relevos de atletismo",
+      "concept": "relevo_transfiere_testigo_en_zona",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué deben transferirse los corredores durante un relevo con testigo?",
+      "options": [
+        "El testigo dentro de la zona permitida",
+        "El número de carril",
+        "Los zapatos de competencia",
+        "La clasificación del equipo"
+      ],
+      "correctAnswer": "El testigo dentro de la zona permitida",
+      "explanation": "El testigo debe pasarse correctamente en la zona de transferencia establecida por el reglamento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-112",
+      "number": 112,
+      "topic": "Hockey sobre césped",
+      "concept": "hockey_sobre_cesped_usa_stick",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué implemento se juega hockey sobre césped?",
+      "options": [
+        "Raqueta encordada",
+        "Stick curvo",
+        "Bate redondo",
+        "Palo de golf"
+      ],
+      "correctAnswer": "Stick curvo",
+      "explanation": "Los jugadores usan un stick para conducir y golpear la bola.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-113",
+      "number": 113,
+      "topic": "Juegos Paralímpicos",
+      "concept": "clasificacion_paralimpica_considera_impacto_funcional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple la clasificación en el deporte paralímpico?",
+      "options": [
+        "Determinar el precio de las entradas",
+        "Ordenar atletas según sus capacidades funcionales para la prueba",
+        "Reemplazar las reglas deportivas",
+        "Elegir el país anfitrión"
+      ],
+      "correctAnswer": "Reemplazar las reglas deportivas",
+      "explanation": "La clasificación busca agrupar a los atletas de acuerdo con el impacto de su discapacidad en una disciplina.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-114",
+      "number": 114,
+      "topic": "Verdadero o falso · Fuerza",
+      "concept": "fuerza_se_entrena_con_varios_recursos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los ejercicios de fuerza solo pueden practicarse con máquinas de gimnasio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La fuerza también puede entrenarse con el peso corporal, bandas u otros recursos adecuados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-115",
+      "number": 115,
+      "topic": "Escalada deportiva",
+      "concept": "escalada_arnes_conecta_al_sistema_de_seguridad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento de seguridad conecta al escalador con la cuerda durante muchas rutas?",
+      "options": [
+        "Aro de natación",
+        "Cinturón de levantamiento",
+        "Canillera",
+        "Arnés"
+      ],
+      "correctAnswer": "Arnés",
+      "explanation": "El arnés permite conectar al escalador de manera segura al sistema de cuerda y aseguramiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-116",
+      "number": 116,
+      "topic": "Deportes de equipo",
+      "concept": "movimiento_coordinado_crea_opciones_de_ataque",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja ofrece cambiar de posición de forma coordinada durante un juego?",
+      "options": [
+        "Puede crear nuevas opciones de pase y ataque",
+        "Elimina la necesidad de defender",
+        "Impide que el rival se mueva",
+        "Garantiza anotar en la siguiente jugada"
+      ],
+      "correctAnswer": "Puede crear nuevas opciones de pase y ataque",
+      "explanation": "Los movimientos coordinados pueden abrir espacios y ofrecer apoyos distintos al equipo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-117",
+      "number": 117,
+      "topic": "Skateboarding",
+      "concept": "skateboarding_juzga_ejecucion_y_dificultad_de_trucos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una competencia de skateboarding centrada en trucos, ¿qué se evalúa principalmente?",
+      "options": [
+        "El número de espectadores",
+        "La ejecución y dificultad de las maniobras",
+        "La distancia recorrida en línea recta",
+        "El peso de la tabla"
+      ],
+      "correctAnswer": "La ejecución y dificultad de las maniobras",
+      "explanation": "Los jueces consideran características de los trucos, como su ejecución y dificultad, de acuerdo con el formato.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-118",
+      "number": 118,
+      "topic": "Verdadero o falso · Equipo deportivo",
+      "concept": "equipo_adecuado_influye_en_seguridad_y_desempeno",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El tamaño y las características del equipo pueden influir en la seguridad y el desempeño.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un equipo adecuado a la persona y a la actividad ayuda a realizar los movimientos y reduce algunos riesgos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-119",
+      "number": 119,
+      "topic": "Preparación física",
+      "concept": "tecnica_controlada_mejora_eficiencia_de_movimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué resultado puede tener practicar una técnica con atención a la postura y el control?",
+      "options": [
+        "Eliminar la necesidad de calentar",
+        "Evitar toda fatiga",
+        "Mejorar la eficiencia del movimiento",
+        "Garantizar ganar cualquier competencia"
+      ],
+      "correctAnswer": "Mejorar la eficiencia del movimiento",
+      "explanation": "Una ejecución controlada puede hacer el movimiento más eficiente, aunque el resultado depende de varios factores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-120",
+      "number": 120,
+      "topic": "Reglas y equidad",
+      "concept": "aplicacion_consistente_de_reglas_sostiene_equidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una regla debe aplicarse de manera consistente a ambos equipos?",
+      "options": [
+        "Para favorecer al que va perdiendo",
+        "Para reducir el tiempo de juego",
+        "Para evitar que exista un marcador",
+        "Para mantener condiciones justas de competencia"
+      ],
+      "correctAnswer": "Para mantener condiciones justas de competencia",
+      "explanation": "Aplicar el mismo criterio sostiene la equidad y la confianza en la competencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-121",
+      "number": 121,
+      "topic": "Baloncesto",
+      "concept": "baloncesto_mover_ilegalmente_pie_de_pivote_es_pasos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una jugadora recibe el balón y mueve ilegalmente el pie de pivote antes de pasarlo. ¿Qué infracción debe valorar el árbitro?",
+      "options": [
+        "Pasos",
+        "Fuera de juego",
+        "Saque de esquina",
+        "Doble toque de saque"
+      ],
+      "correctAnswer": "Pasos",
+      "explanation": "Desplazar ilegalmente el pie de pivote mientras se sostiene el balón constituye una violación de pasos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-122",
+      "number": 122,
+      "topic": "Competencia adaptada",
+      "concept": "acordar_modalidad_accesible_para_carrera_escolar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una carrera escolar incluye a un estudiante que usa silla de ruedas. ¿Qué decisión ayuda a organizar una competencia justa?",
+      "options": [
+        "Excluirlo para evitar ajustes",
+        "Acordar una modalidad y reglas seguras que permitan participar",
+        "Cambiar el resultado antes de competir",
+        "Pedirle que observe desde la meta"
+      ],
+      "correctAnswer": "Acordar una modalidad y reglas seguras que permitan participar",
+      "explanation": "Dialogar sobre una modalidad accesible y segura hace posible participar con criterios claros para todos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-123",
+      "number": 123,
+      "topic": "Interpretación de estadísticas",
+      "concept": "comparar_rendimiento_requiere_metricas_y_roles",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una jugadora anotó más puntos, pero también perdió más balones que otra. ¿Qué conclusión es más rigurosa?",
+      "options": [
+        "La primera fue mejor en todos los aspectos",
+        "La segunda no contribuyó al equipo",
+        "Hay que considerar varias métricas y el rol de cada una",
+        "Las estadísticas no sirven nunca"
+      ],
+      "correctAnswer": "Hay que considerar varias métricas y el rol de cada una",
+      "explanation": "Una sola cifra no resume el rendimiento; conviene analizar varias acciones y las funciones de cada jugadora.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-124",
+      "number": 124,
+      "topic": "Táctica de equipo",
+      "concept": "reorganizar_recepcion_contra_saque_corto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En voleibol, el rival envía saques cortos repetidos cerca de la red. ¿Qué ajuste puede ayudar a recibirlos?",
+      "options": [
+        "Alejar a todos los receptores de la red",
+        "Dejar el balón sin intentar jugarlo",
+        "Colocar a todos en la línea de fondo",
+        "Acercar o reorganizar la posición de recepción"
+      ],
+      "correctAnswer": "Acercar o reorganizar la posición de recepción",
+      "explanation": "Ajustar la formación hacia la zona de caída puede mejorar la cobertura de saques cortos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Lesiones",
+      "concept": "dolor_creciente_no_debe_ignorarse_en_ejercicio",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si el dolor aumenta al continuar un ejercicio, ignorarlo y mantener la misma carga es una estrategia segura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Aumentar el dolor es una señal para detenerse y comunicarlo a una persona responsable antes de continuar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-126",
+      "number": 126,
+      "topic": "Tenis de mesa",
+      "concept": "tenis_mesa_juego_a_once_con_diferencia_de_dos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿A cuántos puntos se juega normalmente un juego de tenis de mesa?",
+      "options": [
+        "Once, con diferencia de dos",
+        "Diez exactos",
+        "Quince, sin excepción",
+        "Veintiuno, siempre"
+      ],
+      "correctAnswer": "Once, con diferencia de dos",
+      "explanation": "Un juego suele ganarse al llegar a 11 puntos con una ventaja de al menos dos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-127",
+      "number": 127,
+      "topic": "Relevo de la antorcha",
+      "concept": "relevo_olimpico_transporta_llama",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué se transporta tradicionalmente en el relevo previo a los Juegos Olímpicos?",
+      "options": [
+        "Una medalla de cada deporte",
+        "La llama olímpica",
+        "El balón del partido inaugural",
+        "El cronómetro oficial"
+      ],
+      "correctAnswer": "La llama olímpica",
+      "explanation": "La llama se traslada en un relevo hasta la sede de los Juegos y se enciende en la ceremonia inaugural.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-128",
+      "number": 128,
+      "topic": "Béisbol",
+      "concept": "beisbol_recorrer_tres_bases_y_regresar_al_plato",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuántas bases debe recorrer un bateador para anotar una carrera completa?",
+      "options": [
+        "Dos",
+        "Tres",
+        "Cuatro",
+        "Cinco"
+      ],
+      "correctAnswer": "Cuatro",
+      "explanation": "El corredor debe tocar primera, segunda, tercera y regresar al plato para anotar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-129",
+      "number": 129,
+      "topic": "Deportes de invierno",
+      "concept": "biatlon_combina_esqui_y_tiro",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué disciplina combina esquí de fondo y tiro con rifle?",
+      "options": [
+        "Curling",
+        "Patinaje de velocidad",
+        "Snowboard",
+        "Biatlón"
+      ],
+      "correctAnswer": "Biatlón",
+      "explanation": "El biatlón combina segmentos de esquí de fondo con rondas de tiro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-130",
+      "number": 130,
+      "topic": "Verdadero o falso · Reglas deportivas",
+      "concept": "reglas_deportivas_varian_segun_disciplina",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Las reglas de todos los deportes son idénticas porque cualquier deporte usa un balón.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cada deporte establece reglas propias para sus objetivos, participantes y materiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-131",
+      "number": 131,
+      "topic": "Ciclismo de pista",
+      "concept": "ciclismo_de_pista_se_compite_en_velodromo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿En qué lugar se disputan normalmente las pruebas de ciclismo de pista?",
+      "options": [
+        "Velódromo",
+        "Cancha de tenis",
+        "Campo de golf",
+        "Piscina olímpica"
+      ],
+      "correctAnswer": "Velódromo",
+      "explanation": "El velódromo es una pista ovalada diseñada para las carreras de ciclismo de pista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-132",
+      "number": 132,
+      "topic": "Verdadero o falso · Pentatlón moderno",
+      "concept": "pentatlon_moderno_integra_varias_disciplinas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El pentatlón moderno reúne varias disciplinas en una misma competencia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El formato integra más de una habilidad deportiva y ha cambiado con el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-133",
+      "number": 133,
+      "topic": "Ajedrez",
+      "concept": "reloj_de_ajedrez_controla_tiempo_de_reflexion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve el reloj en una partida de ajedrez con límite de tiempo?",
+      "options": [
+        "Registrar el valor de las piezas",
+        "Limitar el tiempo disponible para pensar",
+        "Determinar quién mueve primero",
+        "Indicar el color de cada casilla"
+      ],
+      "correctAnswer": "Limitar el tiempo disponible para pensar",
+      "explanation": "El reloj controla el tiempo de reflexión asignado a cada jugador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-134",
+      "number": 134,
+      "topic": "Atletismo",
+      "concept": "impulso_de_bala_empuja_esfera_metalica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué prueba consiste en lanzar una esfera metálica desde un círculo?",
+      "options": [
+        "Lanzamiento de jabalina",
+        "Salto con pértiga",
+        "Impulso de bala",
+        "Lanzamiento de disco"
+      ],
+      "correctAnswer": "Impulso de bala",
+      "explanation": "En el impulso de bala, el atleta empuja una esfera metálica desde un círculo de lanzamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-135",
+      "number": 135,
+      "topic": "Relevos",
+      "concept": "orden_de_relevo_considera_fortalezas_y_ritmo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué el orden de los corredores puede importar en una carrera de relevos?",
+      "options": [
+        "El testigo cambia de peso según el turno",
+        "El último corredor no necesita recibirlo",
+        "Todos deben recorrer distancias distintas en toda modalidad",
+        "El equipo puede asignar tramos según fortalezas y ritmo"
+      ],
+      "correctAnswer": "El equipo puede asignar tramos según fortalezas y ritmo",
+      "explanation": "La estrategia de equipo considera la distancia, el ritmo y las fortalezas de sus integrantes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-136",
+      "number": 136,
+      "topic": "Baloncesto 3 × 3",
+      "concept": "baloncesto_3x3_usa_medio_campo_y_un_aro",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distingue al baloncesto 3 × 3 del formato tradicional de cinco jugadores?",
+      "options": [
+        "Se juega con un aro y equipos de tres en cancha",
+        "Se juega sin balón",
+        "No se anotan puntos",
+        "Se usan dos canchas simultáneas"
+      ],
+      "correctAnswer": "Se juega con un aro y equipos de tres en cancha",
+      "explanation": "El formato 3 × 3 enfrenta equipos de tres jugadores en media cancha y un solo aro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-137",
+      "number": 137,
+      "topic": "Salto largo",
+      "concept": "salto_largo_mide_distancia_de_batida_a_caida",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué intenta maximizar un atleta en el salto largo?",
+      "options": [
+        "El tiempo suspendido sin despegar",
+        "La distancia desde la tabla de batida hasta el aterrizaje",
+        "La altura de la pista",
+        "El número de pasos después del salto"
+      ],
+      "correctAnswer": "La distancia desde la tabla de batida hasta el aterrizaje",
+      "explanation": "La medición considera la distancia desde la línea de batida hasta la marca más cercana dejada al caer.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-138",
+      "number": 138,
+      "topic": "Verdadero o falso · Accesibilidad",
+      "concept": "adaptacion_preserva_objetivo_y_cambia_forma",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una adaptación puede cambiar la forma de realizar una actividad sin eliminar su objetivo principal.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Ajustar materiales o reglas puede mantener el propósito y facilitar que más personas participen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-139",
+      "number": 139,
+      "topic": "Hockey",
+      "concept": "stick_conduce_bola_en_hockey",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento se usa para conducir la bola en hockey sobre césped?",
+      "options": [
+        "Raqueta",
+        "Pie descalzo",
+        "Stick",
+        "Guante de béisbol"
+      ],
+      "correctAnswer": "Stick",
+      "explanation": "Los jugadores conducen y golpean la bola con un stick, respetando las reglas de uso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-140",
+      "number": 140,
+      "topic": "Verdadero o falso · Estrategia",
+      "concept": "eficacia_tactica_depende_de_rival_y_contexto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una táctica que funcionó en un partido necesariamente funcionará igual contra cualquier rival.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las tácticas se deben evaluar según el rival, los recursos disponibles y las condiciones del juego.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-141",
+      "number": 141,
+      "topic": "Escalada deportiva",
+      "concept": "asegurador_controla_cuerda_y_protege_escalador",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué responsabilidad cumple quien asegura a un escalador con cuerda?",
+      "options": [
+        "Controlar la cuerda y responder al movimiento del compañero",
+        "Elegir el color de la ruta",
+        "Subir primero sin revisar el sistema",
+        "Soltar la cuerda para ganar velocidad"
+      ],
+      "correctAnswer": "Controlar la cuerda y responder al movimiento del compañero",
+      "explanation": "La persona que asegura controla el sistema de cuerda para proteger al escalador durante la ruta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-142",
+      "number": 142,
+      "topic": "Deporte y salud mental",
+      "concept": "actividad_fisica_apoya_bienestar_sin_garantizarlo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede aportar la actividad física regular al bienestar?",
+      "options": [
+        "Garantizar que nadie sienta estrés",
+        "Contribuir al bienestar físico y emocional",
+        "Reemplazar toda atención de salud",
+        "Eliminar la necesidad de descansar"
+      ],
+      "correctAnswer": "Contribuir al bienestar físico y emocional",
+      "explanation": "La actividad física puede apoyar el bienestar, aunque no sustituye otras formas de cuidado cuando se necesitan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-143",
+      "number": 143,
+      "topic": "Arbitraje",
+      "concept": "explicacion_arbitral_aclara_criterio_y_continuidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué puede ser útil que un árbitro explique brevemente una decisión a los capitanes?",
+      "options": [
+        "Para cambiar el marcador a petición",
+        "Para permitir que un equipo ignore el reglamento",
+        "Para aclarar el criterio aplicado y facilitar la continuidad",
+        "Para reemplazar a los entrenadores"
+      ],
+      "correctAnswer": "Para aclarar el criterio aplicado y facilitar la continuidad",
+      "explanation": "Una explicación breve puede aclarar el criterio sin detener innecesariamente el desarrollo del juego.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-144",
+      "number": 144,
+      "topic": "Competencia",
+      "concept": "deporte_valora_cooperacion_y_respeto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede valorar una competencia además del resultado?",
+      "options": [
+        "Aceptar cualquier infracción del equipo",
+        "Evitar colaborar con los compañeros",
+        "Priorizar el marcador por encima de las reglas",
+        "Competir con respeto y cooperar"
+      ],
+      "correctAnswer": "Competir con respeto y cooperar",
+      "explanation": "El deporte también promueve convivencia, responsabilidad y colaboración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-145",
+      "number": 145,
+      "topic": "Juegos Paralímpicos",
+      "concept": "guia_orienta_atleta_con_senales_acordadas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es una función de los guías en algunas pruebas de atletismo para atletas con discapacidad visual?",
+      "options": [
+        "Correr en lugar del atleta",
+        "Elegir cuándo se detiene la competencia",
+        "Recibir la medalla del participante",
+        "Orientar al atleta mediante señales acordadas"
+      ],
+      "correctAnswer": "Orientar al atleta mediante señales acordadas",
+      "explanation": "El guía usa métodos acordados para orientar al atleta y mantener la coordinación durante la prueba.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-146",
+      "number": 146,
+      "topic": "Seguridad en instalaciones",
+      "concept": "superficie_mojada_se_reporta_antes_de_jugar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Antes de una competencia, el equipo detecta una zona mojada en la cancha. ¿Qué debe hacer?",
+      "options": [
+        "Informar al responsable y evitar usar la zona hasta revisarla",
+        "Cubrirla con una camiseta y continuar",
+        "Pedir a los jugadores que corran más rápido",
+        "Ignorarla si el partido ya está programado"
+      ],
+      "correctAnswer": "Informar al responsable y evitar usar la zona hasta revisarla",
+      "explanation": "Avisar y revisar el peligro permite corregirlo antes de que alguien resbale o se lesione.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-147",
+      "number": 147,
+      "topic": "Equidad en competencia",
+      "concept": "categorias_y_apoyos_equilibran_competencia_formativa",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos grupos tienen niveles distintos de experiencia y participarán en un torneo escolar. ¿Qué decisión favorece una competencia formativa?",
+      "options": [
+        "Excluir al grupo con menos experiencia",
+        "Organizar categorías o apoyos con criterios transparentes",
+        "Cambiar los resultados al final",
+        "Ocultar las reglas hasta la final"
+      ],
+      "correctAnswer": "Organizar categorías o apoyos con criterios transparentes",
+      "explanation": "Categorías y apoyos claros pueden equilibrar la participación y mantener metas apropiadas para cada grupo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-148",
+      "number": 148,
+      "topic": "Trabajo en equipo",
+      "concept": "apoyo_y_opcion_sencilla_restaura_comunicacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una compañera falla varios pases y deja de pedir el balón. ¿Qué respuesta fortalece al equipo?",
+      "options": [
+        "Evitar hablarle por el resto del partido",
+        "Culparla públicamente por cada error",
+        "Darle apoyo y acordar una opción sencilla de pase",
+        "Apartarla sin conversar"
+      ],
+      "correctAnswer": "Darle apoyo y acordar una opción sencilla de pase",
+      "explanation": "El apoyo respetuoso y una opción concreta pueden recuperar la comunicación y la confianza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-149",
+      "number": 149,
+      "topic": "Organización de torneo",
+      "concept": "torneo_caluroso_requiere_pausas_y_agua",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo debe jugar varios partidos en una jornada calurosa. ¿Qué aspecto debe incluir la planificación?",
+      "options": [
+        "Eliminar todas las pausas",
+        "Aumentar la duración de cada partido",
+        "Jugar siempre al mediodía",
+        "Programar descansos y acceso al agua"
+      ],
+      "correctAnswer": "Programar descansos y acceso al agua",
+      "explanation": "Pausas y acceso al agua ayudan a manejar el esfuerzo y las condiciones ambientales durante la jornada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "DEP7-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Seguridad deportiva",
+      "concept": "explicar_regla_de_seguridad_antes_de_jugar",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un deporte cambia una regla de seguridad, debe explicar el cambio a quienes participan antes de jugar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Comunicar las reglas con anticipación ayuda a que los participantes comprendan los límites y puedan jugar con seguridad.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+},
+  {
+    "catalogId": "edusyn-ciencia-naturaleza-grade-7-v1",
+    "title": "Ciencia y naturaleza · 7.º",
+    "grade": 7,
+    "subjectArea": "Duelos",
+    "category": "Ciencia y naturaleza",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [],
+    "questions": [
+      {
+        "id": "SCI7-001",
+        "number": 1,
+        "topic": "Células",
+        "concept": "nucleo_contiene_mayor_parte_del_adn_eucariota",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura contiene la mayor parte del material genético de una célula eucariota?",
+        "options": [
+          "Núcleo",
+          "Membrana",
+          "Mitocondria",
+          "Citoplasma"
+        ],
+        "correctAnswer": "Núcleo",
+        "explanation": "En las células eucariotas, la mayor parte del ADN se encuentra en el núcleo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-002",
+        "number": 2,
+        "topic": "Energía y seres vivos",
+        "concept": "fotosintesis_convierte_energia_luminosa_en_quimica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso permite a muchas plantas usar energía luminosa para producir azúcares?",
+        "options": [
+          "Respiración",
+          "Fotosíntesis",
+          "Digestión",
+          "Fermentación"
+        ],
+        "correctAnswer": "Fotosíntesis",
+        "explanation": "En la fotosíntesis, la energía de la luz participa en la producción de compuestos orgánicos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-003",
+        "number": 3,
+        "topic": "Materia",
+        "concept": "fusion_transforma_solido_en_liquido",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué cambio de estado ocurre cuando el hielo se convierte en agua líquida?",
+        "options": [
+          "Condensación",
+          "Evaporación",
+          "Fusión",
+          "Sublimación"
+        ],
+        "correctAnswer": "Fusión",
+        "explanation": "La fusión ocurre cuando un sólido pasa al estado líquido.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-004",
+        "number": 4,
+        "topic": "Tierra y espacio",
+        "concept": "rotacion_terrestre_produce_dia_y_noche",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué movimiento de la Tierra produce la alternancia entre día y noche?",
+        "options": [
+          "Traslación alrededor del Sol",
+          "Inclinación del eje",
+          "Desplazamiento de las placas",
+          "Rotación sobre su eje"
+        ],
+        "correctAnswer": "Rotación sobre su eje",
+        "explanation": "La rotación hace que distintas regiones de la Tierra queden orientadas hacia el Sol y luego se alejen de él.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-005",
+        "number": 5,
+        "topic": "Plantas",
+        "concept": "raiz_absorbe_agua_y_fija_planta",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple principalmente la raíz en muchas plantas?",
+        "options": [
+          "Absorber agua y fijar la planta",
+          "Producir semillas con luz",
+          "Intercambiar gases con polinizadores",
+          "Transportar polen entre flores"
+        ],
+        "correctAnswer": "Absorber agua y fijar la planta",
+        "explanation": "Las raíces absorben agua y minerales y ayudan a sujetar la planta al suelo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-006",
+        "number": 6,
+        "topic": "Sustancias y elementos",
+        "concept": "elemento_quimico_un_tipo_de_atomo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe mejor a un elemento químico?",
+        "options": [
+          "Mezcla de varios materiales",
+          "Sustancia formada por un tipo de átomo",
+          "Compuesto separado por filtración",
+          "Solución con partes visibles"
+        ],
+        "correctAnswer": "Sustancia formada por un tipo de átomo",
+        "explanation": "Un elemento está compuesto por átomos del mismo tipo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-007",
+        "number": 7,
+        "topic": "Verdadero o falso · Ecosistemas",
+        "concept": "ecosistema_incluye_factores_vivos_y_no_vivos",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un ecosistema incluye organismos y componentes no vivos que interactúan en un lugar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La luz, el agua, el suelo y los seres vivos se relacionan dentro de los ecosistemas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-008",
+        "number": 8,
+        "topic": "Verdadero o falso · Conservación de la materia",
+        "concept": "combustion_transformacion_no_desaparicion_de_materia",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Cuando se quema madera, toda su materia desaparece por completo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Parte de la materia se transforma y pasa al aire como gases y partículas, además de quedar ceniza.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-009",
+        "number": 9,
+        "topic": "Investigación científica",
+        "concept": "grupo_control_compara_efecto_de_variable",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué sirve principalmente un grupo de control en un experimento?",
+        "options": [
+          "Cambiar varias condiciones al tiempo",
+          "Garantizar que la hipótesis sea correcta",
+          "Comparar resultados con una condición de referencia",
+          "Reemplazar todas las mediciones"
+        ],
+        "correctAnswer": "Comparar resultados con una condición de referencia",
+        "explanation": "La comparación con una condición de referencia ayuda a evaluar el efecto de la variable que se modifica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-010",
+        "number": 10,
+        "topic": "Densidad",
+        "concept": "igual_volumen_mayor_masa_mayor_densidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos objetos tienen el mismo volumen, pero uno tiene mayor masa. ¿Cuál afirmación es correcta?",
+        "options": [
+          "El de mayor masa tiene menor densidad",
+          "Ambos tienen necesariamente la misma densidad",
+          "La densidad no depende de la masa",
+          "El de mayor masa tiene mayor densidad"
+        ],
+        "correctAnswer": "El de mayor masa tiene mayor densidad",
+        "explanation": "Si el volumen es igual, una masa mayor corresponde a una densidad mayor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-011",
+        "number": 11,
+        "topic": "Cadenas alimentarias",
+        "concept": "flecha_cadena_alimentaria_indica_transferencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un diagrama de cadena alimentaria, ¿qué indica normalmente una flecha?",
+        "options": [
+          "Hacia dónde se transfiere materia y energía",
+          "Qué organismo tiene mayor tamaño",
+          "Qué especie aparecerá primero",
+          "La dirección en que sopla el viento"
+        ],
+        "correctAnswer": "Hacia dónde se transfiere materia y energía",
+        "explanation": "La flecha suele ir desde el organismo consumido hacia quien lo consume y representa transferencia de materia y energía.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-012",
+        "number": 12,
+        "topic": "Transferencia de calor",
+        "concept": "conduccion_transfiere_calor_por_contacto",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una cuchara metálica puede calentarse al dejarla dentro de una bebida caliente?",
+        "options": [
+          "El metal crea calor de la nada",
+          "El calor se conduce desde la bebida por el metal",
+          "El frío de la cuchara entra a la bebida",
+          "La cuchara produce energía luminosa"
+        ],
+        "correctAnswer": "El calor se conduce desde la bebida por el metal",
+        "explanation": "La conducción transfiere energía térmica a través de materiales en contacto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-013",
+        "number": 13,
+        "topic": "Cambios químicos",
+        "concept": "reaccion_quimica_forma_sustancias_nuevas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué observación da una evidencia más clara de que ocurrió una reacción química?",
+        "options": [
+          "Un cubo de hielo se derrite",
+          "Una hoja se corta en pedazos",
+          "Se forman sustancias con propiedades nuevas",
+          "El agua cambia de recipiente"
+        ],
+        "correctAnswer": "Se forman sustancias con propiedades nuevas",
+        "explanation": "Una reacción química reorganiza partículas y puede formar sustancias distintas de las iniciales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-014",
+        "number": 14,
+        "topic": "Acidez",
+        "concept": "ph_menor_siete_indica_acidez",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una escala de pH acuosa, ¿qué indica un valor menor que 7?",
+        "options": [
+          "Una sustancia neutra",
+          "Una sustancia necesariamente sólida",
+          "La ausencia de partículas",
+          "Una solución ácida"
+        ],
+        "correctAnswer": "Una solución ácida",
+        "explanation": "En la escala usual, un pH menor que 7 corresponde a una solución ácida.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-015",
+        "number": 15,
+        "topic": "Calor y fluidos",
+        "concept": "conveccion_transfiere_calor_con_movimiento_de_fluido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué proceso el movimiento de un fluido ayuda a transferir calor?",
+        "options": [
+          "Convección",
+          "Reflexión",
+          "Fusión",
+          "Evaporación"
+        ],
+        "correctAnswer": "Convección",
+        "explanation": "En la convección, el movimiento de líquidos o gases distribuye energía térmica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-016",
+        "number": 16,
+        "topic": "Adaptación",
+        "concept": "adaptacion_es_rasgo_heredable_favorecido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué afirmación describe mejor una adaptación biológica?",
+        "options": [
+          "Un cambio que un animal decide hacer durante un día",
+          "Un rasgo heredable que favorece sobrevivir o reproducirse",
+          "Una habilidad aprendida que siempre pasa a la descendencia",
+          "Una característica que aparece porque un organismo la necesita"
+        ],
+        "correctAnswer": "Un rasgo heredable que favorece sobrevivir o reproducirse",
+        "explanation": "Las adaptaciones son rasgos heredables que pueden volverse comunes en una población si favorecen su reproducción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-017",
+        "number": 17,
+        "topic": "Verdadero o falso · Ecosistemas",
+        "concept": "energia_fluye_materia_circula_en_ecosistema",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La energía puede fluir por una cadena alimentaria, mientras la materia circula entre organismos y ambiente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La energía se transfiere y parte se disipa como calor; elementos de la materia pueden reciclarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-018",
+        "number": 18,
+        "topic": "Verdadero o falso · Estaciones",
+        "concept": "estaciones_se_deben_a_inclinacion_del_eje",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las estaciones del año se deben principalmente a que la Tierra se acerca mucho al Sol en verano.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Las estaciones se relacionan con la inclinación del eje terrestre y la distribución cambiante de la luz solar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-019",
+        "number": 19,
+        "topic": "Tectónica de placas",
+        "concept": "convergencia_de_placas_puede_generar_subduccion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso puede formarse donde dos placas tectónicas convergen?",
+        "options": [
+          "Desaparición de toda actividad geológica",
+          "Detención de la rotación terrestre",
+          "Subducción de una placa bajo otra",
+          "Transformación inmediata de roca en agua"
+        ],
+        "correctAnswer": "Subducción de una placa bajo otra",
+        "explanation": "En algunas zonas convergentes, una placa se hunde bajo otra y puede originar sismos y volcanismo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-020",
+        "number": 20,
+        "topic": "Poblaciones",
+        "concept": "poblacion_ecologica_misma_especie_en_area",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En ecología, ¿qué conjunto se considera una población?",
+        "options": [
+          "Un ecosistema con organismos y factores no vivos",
+          "Una comunidad de varias especies en un área",
+          "Especies que habitan distintos continentes",
+          "Individuos de una especie que viven en un área"
+        ],
+        "correctAnswer": "Individuos de una especie que viven en un área",
+        "explanation": "Una población reúne individuos de la misma especie que habitan un lugar y periodo determinados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-021",
+        "number": 21,
+        "topic": "Diseño experimental",
+        "concept": "experimento_de_luz_controla_otras_condiciones",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo quiere saber si la luz influye en el crecimiento de una planta. ¿Qué diseño permite comparar mejor?",
+        "options": [
+          "Mantener iguales las demás condiciones y variar la luz",
+          "Cambiar luz, agua y suelo a la vez",
+          "Usar una planta distinta para cada medida",
+          "Observar una planta sin registrar resultados"
+        ],
+        "correctAnswer": "Mantener iguales las demás condiciones y variar la luz",
+        "explanation": "Cambiar una variable y mantener las demás semejantes facilita atribuir diferencias al factor estudiado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-022",
+        "number": 22,
+        "topic": "Ecosistemas",
+        "concept": "sequia_reduce_productores_y_alimento_de_herbivoros",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Tras una sequía, disminuyen las plantas de un pastizal. ¿Qué efecto podría ocurrir después en herbívoros que dependen de ellas?",
+        "options": [
+          "Aumentar su alimento disponible",
+          "Disminuir su alimento y cambiar su población",
+          "Dejar de necesitar agua",
+          "Convertirse de inmediato en productores"
+        ],
+        "correctAnswer": "Disminuir su alimento y cambiar su población",
+        "explanation": "Menos plantas pueden reducir el alimento disponible y afectar la supervivencia o distribución de herbívoros.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-023",
+        "number": 23,
+        "topic": "Densidad y flotación",
+        "concept": "flotacion_depende_de_densidades_relativas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un objeto se hunde en agua, pero flota en un líquido más denso. ¿Qué explicación es más adecuada?",
+        "options": [
+          "Su masa desaparece en el segundo líquido",
+          "El objeto cambia de elemento químico",
+          "Su densidad queda entre las densidades de ambos líquidos",
+          "Todo líquido ejerce la misma fuerza hacia arriba"
+        ],
+        "correctAnswer": "Su densidad queda entre las densidades de ambos líquidos",
+        "explanation": "Un objeto puede hundirse en un fluido menos denso y flotar en otro más denso, según sus densidades relativas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-024",
+        "number": 24,
+        "topic": "Redes alimentarias",
+        "concept": "presas_alternativas_modulan_impacto_en_aves",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Si disminuyen los insectos que comen ciertas aves, ¿qué dato ayudaría a predecir mejor el efecto sobre esas aves?",
+        "options": [
+          "El color de las plumas",
+          "La altura de los árboles solamente",
+          "La distancia a otra ciudad",
+          "Si tienen otras fuentes de alimento"
+        ],
+        "correctAnswer": "Si tienen otras fuentes de alimento",
+        "explanation": "La disponibilidad de presas alternativas influye en cómo responde una población ante la reducción de un alimento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-025",
+        "number": 25,
+        "topic": "Verdadero o falso · Evidencia",
+        "concept": "simultaneidad_no_prueba_causalidad",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si dos fenómenos ocurren al mismo tiempo, uno necesariamente causó el otro.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La coincidencia temporal puede sugerir una relación, pero se necesita evidencia adicional para establecer causalidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-026",
+        "number": 26,
+        "topic": "Sustancias",
+        "concept": "compuesto_une_quimicamente_distintos_elementos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe mejor a un compuesto químico?",
+        "options": [
+          "Sustancia formada por elementos unidos químicamente",
+          "Un solo tipo de átomo sin combinar",
+          "Mezcla que siempre puede filtrarse",
+          "Material formado por capas visibles"
+        ],
+        "correctAnswer": "Sustancia formada por elementos unidos químicamente",
+        "explanation": "Un compuesto contiene átomos de distintos elementos unidos en proporciones definidas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-027",
+        "number": 27,
+        "topic": "Electricidad",
+        "concept": "corriente_circula_por_camino_cerrado",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición permite que la corriente circule por un circuito sencillo?",
+        "options": [
+          "Que el interruptor permanezca abierto",
+          "Que el circuito forme un camino cerrado",
+          "Que los cables no se conecten a la pila",
+          "Que el foco esté aislado del circuito"
+        ],
+        "correctAnswer": "Que el circuito forme un camino cerrado",
+        "explanation": "La corriente puede circular cuando existe un camino conductor cerrado entre los componentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-028",
+        "number": 28,
+        "topic": "Recursos energéticos",
+        "concept": "energia_solar_es_recurso_renovable",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es una fuente de energía renovable?",
+        "options": [
+          "Carbón",
+          "Gas natural",
+          "Luz solar",
+          "Petróleo"
+        ],
+        "correctAnswer": "Luz solar",
+        "explanation": "La energía solar proviene de una fuente que se renueva continuamente a escala humana.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-029",
+        "number": 29,
+        "topic": "Tiempo atmosférico y clima",
+        "concept": "clima_resume_patrones_de_largo_plazo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe el clima de una región?",
+        "options": [
+          "El estado del cielo durante una hora",
+          "La lluvia de una tarde",
+          "La temperatura de un día particular",
+          "Patrones atmosféricos observados durante muchos años"
+        ],
+        "correctAnswer": "Patrones atmosféricos observados durante muchos años",
+        "explanation": "El clima resume patrones de temperatura, precipitación y otras condiciones en periodos prolongados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-030",
+        "number": 30,
+        "topic": "Verdadero o falso · Células",
+        "concept": "organismos_vivos_estan_formados_por_celulas",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Todos los organismos vivos están formados por una o más células.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La teoría celular establece que los seres vivos están constituidos por células.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-031",
+        "number": 31,
+        "topic": "Magnetismo",
+        "concept": "polos_magneticos_iguales_se_repelen",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre cuando se acercan dos polos iguales de imanes?",
+        "options": [
+          "Se repelen",
+          "Se atraen siempre",
+          "Se convierten en polos eléctricos",
+          "Pierden toda propiedad magnética"
+        ],
+        "correctAnswer": "Se repelen",
+        "explanation": "Los polos magnéticos iguales se repelen; los polos opuestos se atraen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-032",
+        "number": 32,
+        "topic": "Instrumentos meteorológicos",
+        "concept": "barometro_mide_presion_atmosferica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento mide la presión atmosférica?",
+        "options": [
+          "Termómetro",
+          "Barómetro",
+          "Pluviómetro",
+          "Anemómetro"
+        ],
+        "correctAnswer": "Barómetro",
+        "explanation": "El barómetro mide la presión del aire.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-033",
+        "number": 33,
+        "topic": "Verdadero o falso · Masa y gravedad",
+        "concept": "masa_se_mantiene_aunque_cambie_gravedad",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La masa de un objeto cambia cuando se lleva desde la Tierra hasta la Luna.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La masa mide la cantidad de materia y se mantiene; el peso cambia según la gravedad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-034",
+        "number": 34,
+        "topic": "Diseño experimental",
+        "concept": "experimento_de_disolucion_controla_masa_y_volumen",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una clase compara cuánto tarda en disolverse azúcar en agua caliente y fría. ¿Qué conviene mantener igual?",
+        "options": [
+          "La temperatura del agua",
+          "El tiempo de observación solamente",
+          "La cantidad de azúcar y el volumen de agua",
+          "El resultado que espera obtener el grupo"
+        ],
+        "correctAnswer": "La cantidad de azúcar y el volumen de agua",
+        "explanation": "Mantener constantes la cantidad de azúcar y el volumen permite comparar mejor el efecto de la temperatura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-035",
+        "number": 35,
+        "topic": "Circuitos eléctricos",
+        "concept": "circuito_serie_se_interrumpe_al_desconectar_componente",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un circuito en serie con dos focos, uno se desconecta. ¿Qué suele ocurrir con el otro?",
+        "options": [
+          "Brilla con más energía por recibir dos pilas",
+          "Mantiene siempre el mismo brillo",
+          "Se convierte en interruptor",
+          "Se apaga porque se interrumpe el camino"
+        ],
+        "correctAnswer": "Se apaga porque se interrumpe el camino",
+        "explanation": "En un circuito en serie, desconectar un componente puede abrir el único camino de la corriente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-036",
+        "number": 36,
+        "topic": "Conductores y aislantes",
+        "concept": "aislante_ofrece_resistencia_al_movimiento_de_carga",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propiedad caracteriza a un material aislante eléctrico?",
+        "options": [
+          "Dificulta el movimiento de carga eléctrica",
+          "Produce corriente sin fuente de energía",
+          "Aumenta siempre el voltaje de una pila",
+          "Permite el paso de carga mejor que un metal"
+        ],
+        "correctAnswer": "Dificulta el movimiento de carga eléctrica",
+        "explanation": "Los aislantes ofrecen mucha oposición al movimiento de carga en comparación con los conductores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-037",
+        "number": 37,
+        "topic": "Fósiles",
+        "concept": "fosiles_aportan_evidencia_de_vida_y_ambientes_pasados",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué información puede aportar un fósil sobre el pasado?",
+        "options": [
+          "La temperatura exacta de cada día",
+          "Organismos y ambientes de épocas anteriores",
+          "El nombre de cada individuo que vivió",
+          "Todos los cambios futuros de una especie"
+        ],
+        "correctAnswer": "Organismos y ambientes de épocas anteriores",
+        "explanation": "Los fósiles ofrecen evidencias sobre formas de vida y ambientes antiguos, aunque no registran cada detalle.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-038",
+        "number": 38,
+        "topic": "Ciclo del agua",
+        "concept": "condensacion_forma_gotas_desde_vapor",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué cambio ocurre cuando el vapor de agua forma pequeñas gotas en una nube?",
+        "options": [
+          "Fusión",
+          "Sublimación",
+          "Condensación",
+          "Combustión"
+        ],
+        "correctAnswer": "Condensación",
+        "explanation": "La condensación transforma vapor de agua en gotas líquidas cuando se enfría.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-039",
+        "number": 39,
+        "topic": "Suelo y relieve",
+        "concept": "erosion_desgasta_y_transporta_materiales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso transporta suelo o fragmentos de roca mediante agua, viento o hielo?",
+        "options": [
+          "Cristalización",
+          "Fusión",
+          "Condensación",
+          "Erosión"
+        ],
+        "correctAnswer": "Erosión",
+        "explanation": "La erosión desgasta y transporta materiales de la superficie terrestre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-040",
+        "number": 40,
+        "topic": "Verdadero o falso · Gases",
+        "concept": "particulas_gaseosas_se_mueven_por_recipiente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un gas, las partículas se mueven y ocupan el espacio disponible del recipiente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las partículas gaseosas se encuentran separadas y se mueven por el recipiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-041",
+        "number": 41,
+        "topic": "Transformación de energía",
+        "concept": "ventilador_transforma_electricidad_en_movimiento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué forma se transforma principalmente la energía eléctrica de un ventilador en funcionamiento?",
+        "options": [
+          "Movimiento de sus aspas",
+          "Energía química de los alimentos",
+          "Energía nuclear del aire",
+          "Energía potencial de las nubes"
+        ],
+        "correctAnswer": "Movimiento de sus aspas",
+        "explanation": "El motor convierte energía eléctrica en movimiento y también produce algo de sonido y calor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-042",
+        "number": 42,
+        "topic": "Ecosistemas y productores",
+        "concept": "plantas_son_productores_en_ecosistemas_terrestres",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué organismo suele ser productor en un ecosistema terrestre?",
+        "options": [
+          "Hongo que descompone hojas",
+          "Planta que fabrica compuestos orgánicos",
+          "Zorro que consume roedores",
+          "Lombriz que come materia en descomposición"
+        ],
+        "correctAnswer": "Planta que fabrica compuestos orgánicos",
+        "explanation": "Los productores, como las plantas, elaboran compuestos orgánicos usando una fuente de energía.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-043",
+        "number": 43,
+        "topic": "Membrana celular",
+        "concept": "membrana_regula_intercambio_celular",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple la membrana de una célula?",
+        "options": [
+          "Almacenar toda la información hereditaria",
+          "Producir luz para el organismo",
+          "Regular el intercambio con el entorno",
+          "Convertir cada sustancia en oxígeno"
+        ],
+        "correctAnswer": "Regular el intercambio con el entorno",
+        "explanation": "La membrana delimita la célula y regula el paso de sustancias entre el interior y el exterior.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-044",
+        "number": 44,
+        "topic": "Verdadero o falso · Respiración celular",
+        "concept": "plantas_realizan_fotosintesis_y_respiracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las plantas realizan respiración celular, aunque también hagan fotosíntesis.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La respiración celular ocurre en plantas y animales; no es exclusiva de la noche ni de los animales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-045",
+        "number": 45,
+        "topic": "Luz",
+        "concept": "refraccion_desvia_luz_al_cambiar_de_medio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué fenómeno ocurre cuando la luz cambia de dirección al pasar del aire al agua?",
+        "options": [
+          "Conducción",
+          "Evaporación",
+          "Reflexión total en todos los casos",
+          "Refracción"
+        ],
+        "correctAnswer": "Refracción",
+        "explanation": "La refracción es el cambio de dirección de la luz al pasar entre materiales distintos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-046",
+        "number": 46,
+        "topic": "Germinación",
+        "concept": "germinacion_compara_agua_controlando_otras_variables",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo quiere saber si la cantidad de agua afecta la germinación. ¿Qué comparación sería más útil?",
+        "options": [
+          "Usar semillas iguales y variar solo el agua",
+          "Cambiar agua, luz y temperatura a la vez",
+          "Usar una semilla para cada condición y no repetir",
+          "Elegir las semillas después de ver los resultados"
+        ],
+        "correctAnswer": "Usar semillas iguales y variar solo el agua",
+        "explanation": "Variar el agua y mantener semejantes las otras condiciones ayuda a evaluar su efecto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-047",
+        "number": 47,
+        "topic": "Tiempo atmosférico",
+        "concept": "registros_breves_no_caracterizan_clima_anual",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una estación registra lluvia intensa esta tarde y una semana seca después. ¿Qué puede concluirse sobre el clima anual?",
+        "options": [
+          "Que cambió para siempre",
+          "Que esos datos breves no bastan para describirlo",
+          "Que no volverá a llover",
+          "Que el promedio anual es exactamente cero"
+        ],
+        "correctAnswer": "Que esos datos breves no bastan para describirlo",
+        "explanation": "Unos pocos días describen tiempo atmosférico; caracterizar clima requiere registros prolongados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-048",
+        "number": 48,
+        "topic": "Red alimentaria",
+        "concept": "menos_depredadores_puede_aumentar_presas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una laguna disminuyen los peces pequeños que comen larvas de insectos. ¿Qué cambio podría ocurrir con esas larvas?",
+        "options": [
+          "Desaparecer necesariamente el mismo día",
+          "Convertirse en plantas",
+          "Aumentar si baja la depredación",
+          "Dejar de necesitar alimento"
+        ],
+        "correctAnswer": "Aumentar si baja la depredación",
+        "explanation": "Si las demás condiciones se mantienen, menos depredadores pueden permitir que aumente una presa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-049",
+        "number": 49,
+        "topic": "Lluvia ácida",
+        "concept": "evaluar_acidez_de_lago_con_ph_y_respuesta_biologica",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un lago cercano a una zona industrial se vuelve más ácido y algunas especies disminuyen. ¿Qué medición ayudaría a examinar la relación?",
+        "options": [
+          "El color de los edificios",
+          "La hora en que llegan los visitantes",
+          "El número de carreteras de la región",
+          "El pH del agua y cambios en sus organismos"
+        ],
+        "correctAnswer": "El pH del agua y cambios en sus organismos",
+        "explanation": "Medir pH junto con cambios biológicos permite evaluar si varían de manera relacionada; se requieren más datos para establecer causas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-050",
+        "number": 50,
+        "topic": "Verdadero o falso · Medición",
+        "concept": "mediciones_repetidas_evalua_consistencia",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Repetir una medición en condiciones semejantes ayuda a evaluar si el resultado es consistente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Repeticiones permiten observar variación y confiabilidad, aunque no prueban por sí solas una explicación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-051",
+        "number": 51,
+        "topic": "Sistema circulatorio",
+        "concept": "corazon_impulsa_sangre_por_vasos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué órgano impulsa la sangre por los vasos sanguíneos?",
+        "options": [
+          "Corazón",
+          "Pulmón",
+          "Estómago",
+          "Riñón"
+        ],
+        "correctAnswer": "Corazón",
+        "explanation": "El corazón se contrae y ayuda a mantener la circulación de la sangre por el cuerpo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-052",
+        "number": 52,
+        "topic": "Sistema inmunitario",
+        "concept": "globulos_blancos_participan_en_defensa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumplen principalmente los glóbulos blancos?",
+        "options": [
+          "Transportar la mayor parte del oxígeno",
+          "Participar en la defensa del organismo",
+          "Formar los huesos largos",
+          "Producir la bilis"
+        ],
+        "correctAnswer": "Participar en la defensa del organismo",
+        "explanation": "Distintos glóbulos blancos ayudan a reconocer y combatir agentes infecciosos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-053",
+        "number": 53,
+        "topic": "Rocas",
+        "concept": "roca_ignea_se_forma_por_solidificacion_de_magma",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se forma una roca ígnea?",
+        "options": [
+          "Por acumulación de restos de hojas",
+          "Por compactación de arena húmeda",
+          "Al enfriarse y solidificarse material fundido",
+          "Por evaporación de agua salada"
+        ],
+        "correctAnswer": "Al enfriarse y solidificarse material fundido",
+        "explanation": "Las rocas ígneas se forman cuando el magma o la lava se enfrían y solidifican.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-054",
+        "number": 54,
+        "topic": "Verdadero o falso · Luna",
+        "concept": "luz_lunar_es_reflejo_de_luz_solar",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La Luna produce por sí misma la mayor parte de la luz que vemos desde la Tierra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La Luna refleja luz solar; no es una estrella que produzca su propia luz visible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-055",
+        "number": 55,
+        "topic": "Fuerzas",
+        "concept": "newton_es_unidad_si_de_fuerza",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es la unidad de fuerza en el Sistema Internacional?",
+        "options": [
+          "Metro",
+          "Litro",
+          "Gramo",
+          "Newton"
+        ],
+        "correctAnswer": "Newton",
+        "explanation": "El newton es la unidad de fuerza del Sistema Internacional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-056",
+        "number": 56,
+        "topic": "Sistema digestivo",
+        "concept": "intestino_delgado_absorbe_mayoria_de_nutrientes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué órgano se absorbe la mayor parte de los nutrientes de los alimentos?",
+        "options": [
+          "Intestino delgado",
+          "Esófago",
+          "Tráquea",
+          "Vejiga"
+        ],
+        "correctAnswer": "Intestino delgado",
+        "explanation": "El intestino delgado absorbe la mayor parte de los nutrientes durante la digestión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-057",
+        "number": 57,
+        "topic": "Clasificación de animales",
+        "concept": "vertebrados_poseen_columna_vertebral",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica comparten los animales vertebrados?",
+        "options": [
+          "Todos viven en el agua",
+          "Tienen columna vertebral",
+          "No poseen órganos internos",
+          "Producen su alimento con luz"
+        ],
+        "correctAnswer": "Tienen columna vertebral",
+        "explanation": "Los vertebrados poseen columna vertebral como parte de su esqueleto interno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-058",
+        "number": 58,
+        "topic": "Verdadero o falso · Sonido",
+        "concept": "sonido_requiere_medio_material",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "El sonido necesita un medio material para propagarse.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El sonido es una onda mecánica y no se propaga en el vacío.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-059",
+        "number": 59,
+        "topic": "Sangre y transporte",
+        "concept": "globulos_rojos_transportan_oxigeno_con_hemoglobina",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué componente de la sangre transporta la mayor parte del oxígeno?",
+        "options": [
+          "Plaquetas",
+          "Plasma solamente",
+          "Glóbulos rojos",
+          "Glóbulos blancos"
+        ],
+        "correctAnswer": "Glóbulos rojos",
+        "explanation": "La hemoglobina de los glóbulos rojos transporta gran parte del oxígeno en la sangre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-060",
+        "number": 60,
+        "topic": "Aislamiento térmico",
+        "concept": "aislante_termico_dificulta_transferencia_de_calor",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica hace que un material funcione como aislante térmico?",
+        "options": [
+          "Produce energía sin recibirla",
+          "Aumenta siempre la temperatura del entorno",
+          "Conduce el calor más rápido que los metales",
+          "Dificulta la transferencia de calor"
+        ],
+        "correctAnswer": "Dificulta la transferencia de calor",
+        "explanation": "Un aislante reduce o retrasa la transferencia de energía térmica entre regiones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-061",
+        "number": 61,
+        "topic": "Reproducción de plantas",
+        "concept": "polinizacion_lleva_polen_a_parte_receptora",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre durante la polinización en muchas plantas con flores?",
+        "options": [
+          "El polen llega a una parte reproductiva de la flor",
+          "La raíz se transforma en fruto",
+          "La semilla produce luz",
+          "El tallo deja de transportar agua"
+        ],
+        "correctAnswer": "El polen llega a una parte reproductiva de la flor",
+        "explanation": "La polinización es el traslado del polen hacia la parte femenina receptora de la flor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-062",
+        "number": 62,
+        "topic": "Selección natural",
+        "concept": "seleccion_natural_aumenta_rasgo_que_favorece_descendencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición puede hacer que un rasgo heredable aumente en una población con el tiempo?",
+        "options": [
+          "Que todos los individuos lo decidan durante su vida",
+          "Que quienes lo tienen dejen más descendencia viable",
+          "Que el ambiente nunca cambie",
+          "Que el rasgo aparezca por necesidad en cada individuo"
+        ],
+        "correctAnswer": "Que quienes lo tienen dejen más descendencia viable",
+        "explanation": "Si un rasgo heredable contribuye a dejar más descendencia, puede volverse más común a través de generaciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-063",
+        "number": 63,
+        "topic": "Atmósfera",
+        "concept": "troposfera_concentra_mayoria_de_fenomenos_meteorologicos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué capa de la atmósfera ocurren la mayoría de los fenómenos meteorológicos?",
+        "options": [
+          "Exosfera",
+          "Mesosfera",
+          "Troposfera",
+          "Termosfera"
+        ],
+        "correctAnswer": "Troposfera",
+        "explanation": "La troposfera es la capa más baja y contiene gran parte del vapor de agua y del tiempo meteorológico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-064",
+        "number": 64,
+        "topic": "Verdadero o falso · Fases lunares",
+        "concept": "fases_lunares_depende_de_porcion_iluminada_visible",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las fases de la Luna dependen de qué porción iluminada vemos desde la Tierra mientras la Luna orbita.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La geometría entre Sol, Tierra y Luna cambia la parte iluminada que observamos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-065",
+        "number": 65,
+        "topic": "Ciclo del agua",
+        "concept": "infiltracion_lleva_agua_de_lluvia_al_suelo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso permite que parte del agua de lluvia ingrese al suelo?",
+        "options": [
+          "Combustión",
+          "Sublimación",
+          "Condensación",
+          "Infiltración"
+        ],
+        "correctAnswer": "Infiltración",
+        "explanation": "La infiltración ocurre cuando el agua penetra la superficie y pasa al suelo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-066",
+        "number": 66,
+        "topic": "Separación de mezclas",
+        "concept": "filtracion_separa_solido_por_tamano_de_particula",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propiedad permite usar un filtro para separar arena del agua?",
+        "options": [
+          "Las partículas de arena quedan retenidas por su tamaño",
+          "La arena se convierte en gas",
+          "El filtro destruye las moléculas de agua",
+          "El agua se transforma en metal"
+        ],
+        "correctAnswer": "Las partículas de arena quedan retenidas por su tamaño",
+        "explanation": "La filtración separa partículas sólidas que no pasan por los poros del filtro del líquido que sí los atraviesa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-067",
+        "number": 67,
+        "topic": "Sistema respiratorio",
+        "concept": "alveolos_realizan_intercambio_de_gases",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Dónde ocurre el intercambio de gases entre el aire y la sangre en los pulmones?",
+        "options": [
+          "En la tráquea",
+          "En los alvéolos",
+          "En la laringe",
+          "En el diafragma"
+        ],
+        "correctAnswer": "En los alvéolos",
+        "explanation": "Las paredes delgadas de los alvéolos permiten intercambiar oxígeno y dióxido de carbono con la sangre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-068",
+        "number": 68,
+        "topic": "Biodiversidad",
+        "concept": "funciones_distintas_aportan_respuestas_diversas_en_comunidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una comunidad con distintas especies puede responder de varias formas a un cambio ambiental?",
+        "options": [
+          "Porque todas las especies realizan la misma función",
+          "Porque la diversidad elimina cualquier perturbación",
+          "Porque distintas especies pueden cumplir funciones diferentes",
+          "Porque ninguna especie depende de recursos"
+        ],
+        "correctAnswer": "Porque distintas especies pueden cumplir funciones diferentes",
+        "explanation": "Una comunidad diversa puede incluir especies con funciones y respuestas distintas, aunque no sea inmune a las perturbaciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-069",
+        "number": 69,
+        "topic": "Soluciones",
+        "concept": "sal_disuelta_forma_solucion_homogenea",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre cuando la sal se disuelve en agua y deja de distinguirse a simple vista?",
+        "options": [
+          "Se convierte en un elemento nuevo",
+          "Desaparece toda su materia",
+          "El agua se transforma en sal sólida",
+          "Se forma una solución homogénea"
+        ],
+        "correctAnswer": "Se forma una solución homogénea",
+        "explanation": "La sal se distribuye entre las partículas de agua y forma una mezcla homogénea; no desaparece.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-070",
+        "number": 70,
+        "topic": "Verdadero o falso · Microorganismos",
+        "concept": "no_todas_las_bacterias_son_patogenas",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Todas las bacterias causan enfermedades en los seres humanos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Muchas bacterias son inocuas o cumplen funciones útiles; solo algunas causan enfermedades.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-071",
+        "number": 71,
+        "topic": "Evidencia ambiental",
+        "concept": "muestreo_ambiental_compara_ubicaciones_con_igual_indicador",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad compara el agua antes y después de un punto de descarga. ¿Qué diseño ayudaría a interpretar mejor el cambio?",
+        "options": [
+          "Tomar muestras repetidas en ambos puntos y medir los mismos indicadores",
+          "Medir solo una vez aguas abajo",
+          "Cambiar el indicador en cada muestra",
+          "Elegir la muestra que tenga el color más llamativo"
+        ],
+        "correctAnswer": "Tomar muestras repetidas en ambos puntos y medir los mismos indicadores",
+        "explanation": "Comparaciones repetidas con los mismos indicadores reducen el efecto de variaciones casuales y permiten evaluar diferencias.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-072",
+        "number": 72,
+        "topic": "Respuesta de plantas",
+        "concept": "fototropismo_se_investiga_variando_direccion_de_luz",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Varias plántulas junto a una ventana crecen inclinándose hacia ella. ¿Qué variable conviene cambiar para investigar esa respuesta?",
+        "options": [
+          "El color de las macetas y el tipo de semilla",
+          "La dirección de la luz, manteniendo otras condiciones semejantes",
+          "La especie y la temperatura al mismo tiempo",
+          "La cantidad de resultados que se anotan"
+        ],
+        "correctAnswer": "La dirección de la luz, manteniendo otras condiciones semejantes",
+        "explanation": "Variar la dirección de la luz y controlar otras condiciones ayuda a probar su relación con el crecimiento orientado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-073",
+        "number": 73,
+        "topic": "Tiempo meteorológico",
+        "concept": "humedad_relativa_explica_diferencias_en_sensacion_del_aire",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En dos días con igual temperatura, el aire se siente distinto y uno tiene más humedad. ¿Qué dato ayuda a explicar esa diferencia?",
+        "options": [
+          "El número de edificios",
+          "La masa de una roca cercana",
+          "La humedad relativa del aire",
+          "La cantidad de planetas visibles"
+        ],
+        "correctAnswer": "La humedad relativa del aire",
+        "explanation": "La humedad relativa informa cuánta cantidad de vapor de agua hay en el aire respecto de lo que puede contener a esa temperatura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-074",
+        "number": 74,
+        "topic": "Registro geológico",
+        "concept": "superposicion_ubica_capas_inferiores_como_mas_antiguas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una secuencia de capas sedimentarias no deformadas, ¿qué capa suele ser más antigua?",
+        "options": [
+          "La que contiene hojas actuales",
+          "La que está en la superficie",
+          "La que tiene el color más claro",
+          "La que está más abajo"
+        ],
+        "correctAnswer": "La que está más abajo",
+        "explanation": "En una secuencia no perturbada, las capas inferiores suelen haberse depositado antes que las superiores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-075",
+        "number": 75,
+        "topic": "Verdadero o falso · Modelos científicos",
+        "concept": "modelo_cientifico_se_revisa_ante_nueva_evidencia",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un modelo científico puede modificarse si nueva evidencia confiable contradice sus predicciones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los modelos representan explicaciones útiles, pero pueden revisarse cuando cambian las pruebas disponibles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-076",
+        "number": 76,
+        "topic": "Estados de la materia",
+        "concept": "liquido_conserva_volumen_y_adopta_forma_recipiente",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En cuál estado una sustancia conserva su volumen, pero adopta la forma del recipiente?",
+        "options": [
+          "Sólido",
+          "Líquido",
+          "Gas",
+          "Plasma"
+        ],
+        "correctAnswer": "Líquido",
+        "explanation": "Un líquido conserva un volumen definido y fluye para tomar la forma de su recipiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-077",
+        "number": 77,
+        "topic": "Sistema solar",
+        "concept": "sol_es_estrella_del_sistema_solar",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué cuerpo celeste es una estrella?",
+        "options": [
+          "La Luna",
+          "Marte",
+          "El Sol",
+          "Júpiter"
+        ],
+        "correctAnswer": "El Sol",
+        "explanation": "El Sol produce energía mediante procesos que ocurren en su interior; los planetas y la Luna reflejan su luz.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-078",
+        "number": 78,
+        "topic": "Ecosistemas",
+        "concept": "plantas_verdes_son_productores_fotosinteticos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué organismo produce su propio alimento usando energía de la luz?",
+        "options": [
+          "Un águila",
+          "Un hongo",
+          "Un zorro",
+          "Una planta verde"
+        ],
+        "correctAnswer": "Una planta verde",
+        "explanation": "Muchas plantas producen azúcares mediante fotosíntesis y son productores en los ecosistemas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-079",
+        "number": 79,
+        "topic": "Medición",
+        "concept": "termometro_mide_temperatura",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento se usa para medir la temperatura?",
+        "options": [
+          "Balanza",
+          "Cronómetro",
+          "Regla",
+          "Termómetro"
+        ],
+        "correctAnswer": "Termómetro",
+        "explanation": "El termómetro permite medir la temperatura de un cuerpo o del ambiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-080",
+        "number": 80,
+        "topic": "Sistema digestivo",
+        "concept": "digestion_comienza_en_boca_con_masticacion_y_saliva",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué órgano comienza principalmente la digestión de los alimentos al masticarlos?",
+        "options": [
+          "Estómago",
+          "Boca",
+          "Intestino delgado",
+          "Hígado"
+        ],
+        "correctAnswer": "Boca",
+        "explanation": "En la boca, los dientes trituran los alimentos y la saliva inicia la digestión de algunos nutrientes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-081",
+        "number": 81,
+        "topic": "Fuerzas",
+        "concept": "gravedad_terrestre_atrae_objetos_hacia_suelo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué fuerza atrae los objetos hacia la Tierra?",
+        "options": [
+          "Fricción",
+          "Magnetismo",
+          "Gravedad",
+          "Electricidad"
+        ],
+        "correctAnswer": "Gravedad",
+        "explanation": "La gravedad atrae los objetos con masa; cerca de la superficie terrestre los dirige hacia el suelo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-082",
+        "number": 82,
+        "topic": "Cuidado del ambiente · Verdadero o falso",
+        "concept": "separar_papel_limpio_facilita_reciclaje",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Separar papel limpio de los residuos orgánicos facilita su aprovechamiento como material reciclable.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La separación adecuada reduce la contaminación de materiales que pueden recuperarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-083",
+        "number": 83,
+        "topic": "Germinación",
+        "concept": "germinacion_inicio_crecimiento_semilla",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el proceso por el que una semilla comienza a crecer?",
+        "options": [
+          "Germinación",
+          "Polinización",
+          "Evaporación",
+          "Digestión"
+        ],
+        "correctAnswer": "Germinación",
+        "explanation": "La germinación comienza cuando la semilla encuentra condiciones apropiadas y el embrión empieza a desarrollarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-084",
+        "number": 84,
+        "topic": "Sonido",
+        "concept": "sonido_requiere_medio_material_para_propagar_vibraciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué debe ocurrir para que un sonido se propague desde una fuente hasta quien escucha?",
+        "options": [
+          "La fuente debe estar iluminada",
+          "El sonido debe viajar por el vacío",
+          "Debe existir un medio material que transmita vibraciones",
+          "El receptor debe producir electricidad"
+        ],
+        "correctAnswer": "Debe existir un medio material que transmita vibraciones",
+        "explanation": "El sonido se propaga mediante vibraciones en un medio material, como el aire, el agua o un sólido.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-085",
+        "number": 85,
+        "topic": "Cambios de estado · Verdadero o falso",
+        "concept": "condensacion_vapor_pasa_a_liquido_al_enfriarse",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Cuando el vapor de agua se enfría y forma gotas, ocurre condensación.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La condensación es el cambio del estado gaseoso al líquido, que puede ocurrir cuando el vapor pierde energía térmica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-086",
+        "number": 86,
+        "topic": "Nutrición de plantas",
+        "concept": "raices_absorben_agua_y_minerales_para_planta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué las raíces absorben agua y sales minerales del suelo?",
+        "options": [
+          "Para transportar recursos que la planta necesita",
+          "Para producir luz durante la noche",
+          "Para convertir el suelo en alimento",
+          "Para reemplazar las hojas"
+        ],
+        "correctAnswer": "Para transportar recursos que la planta necesita",
+        "explanation": "El agua y las sales minerales ingresan por las raíces y se transportan para apoyar funciones de la planta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-087",
+        "number": 87,
+        "topic": "Electricidad",
+        "concept": "cobre_es_buen_conductor_electrico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué material suele permitir que la corriente eléctrica circule con facilidad?",
+        "options": [
+          "Caucho",
+          "Vidrio",
+          "Madera seca",
+          "Cobre"
+        ],
+        "correctAnswer": "Cobre",
+        "explanation": "El cobre es un buen conductor eléctrico y por eso se usa frecuentemente en cables.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-088",
+        "number": 88,
+        "topic": "Poblaciones",
+        "concept": "aumento_de_conejos_intensifica_competencia_por_alimento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Tras una temporada favorable, aumenta mucho una población de conejos, pero la cantidad de pasto permanece casi igual. ¿Qué relación puede intensificarse entre ellos?",
+        "options": [
+          "Cooperación entre especies distintas",
+          "Competencia por alimento",
+          "Depredación de los conejos entre sí",
+          "Polinización de plantas"
+        ],
+        "correctAnswer": "Competencia por alimento",
+        "explanation": "Cuando muchos conejos comparten un recurso limitado, puede aumentar la competencia entre individuos de la misma especie.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-089",
+        "number": 89,
+        "topic": "Tierra y Sol · Verdadero o falso",
+        "concept": "rotacion_terrestre_produce_sucesion_dia_noche",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La sucesión del día y la noche se relaciona con la rotación de la Tierra sobre su eje.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Al rotar la Tierra, distintas regiones quedan orientadas hacia el Sol o alejadas de él.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-090",
+        "number": 90,
+        "topic": "Alimentación saludable",
+        "concept": "carbohidratos_aportan_energia_al_organismo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué combinación aporta principalmente energía rápida al cuerpo?",
+        "options": [
+          "Agua y sal",
+          "Vitaminas y minerales",
+          "Oxígeno y fibra",
+          "Carbohidratos"
+        ],
+        "correctAnswer": "Carbohidratos",
+        "explanation": "El cuerpo puede obtener energía de los carbohidratos; su función depende también del tipo de alimento y del contexto nutricional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-091",
+        "number": 91,
+        "topic": "Variables de una investigación",
+        "concept": "experimento_controla_tamano_muestras_para_comparar_absorcion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo prueba qué papel absorbe más agua. ¿Qué condición debería mantener igual para comparar justamente?",
+        "options": [
+          "La cantidad de agua usada en cada prueba",
+          "El tiempo de contacto con el agua",
+          "El tamaño de cada trozo de papel",
+          "La cantidad de integrantes del grupo"
+        ],
+        "correctAnswer": "El tamaño de cada trozo de papel",
+        "explanation": "Usar trozos del mismo tamaño ayuda a que la cantidad de papel no explique las diferencias observadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-092",
+        "number": 92,
+        "topic": "Planeta Tierra",
+        "concept": "corteza_terrestre_forma_continentes_y_fondos_oceanicos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué capa sólida y externa de la Tierra incluye continentes y fondos oceánicos?",
+        "options": [
+          "Núcleo interno",
+          "Manto inferior",
+          "Núcleo externo",
+          "Corteza"
+        ],
+        "correctAnswer": "Corteza",
+        "explanation": "La corteza es la capa externa sólida de la Tierra y forma los continentes y el fondo oceánico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-093",
+        "number": 93,
+        "topic": "Adaptaciones",
+        "concept": "espinas_de_cactus_reducen_perdida_de_agua",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica ayuda especialmente a un cactus a reducir la pérdida de agua?",
+        "options": [
+          "Hojas amplias y delgadas",
+          "Hojas transformadas en espinas",
+          "Raíces que producen flores",
+          "Tallos sin tejido vivo"
+        ],
+        "correctAnswer": "Hojas transformadas en espinas",
+        "explanation": "Las espinas tienen menor superficie expuesta que hojas amplias y ayudan a reducir la pérdida de agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-094",
+        "number": 94,
+        "topic": "Sistema circulatorio",
+        "concept": "arterias_llevan_sangre_desde_corazon",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumplen principalmente las arterias?",
+        "options": [
+          "Llevar sangre desde el corazón hacia los tejidos",
+          "Producir células digestivas",
+          "Llevar aire desde los pulmones",
+          "Filtrar los alimentos"
+        ],
+        "correctAnswer": "Llevar sangre desde el corazón hacia los tejidos",
+        "explanation": "Las arterias transportan sangre desde el corazón; no todas llevan sangre rica en oxígeno, como muestra la arteria pulmonar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-095",
+        "number": 95,
+        "topic": "Astronomía · Verdadero o falso",
+        "concept": "estaciones_no_se_deben_a_cercania_uniforme_al_sol",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las estaciones del año ocurren porque la Tierra está mucho más cerca del Sol durante el verano de todos los países.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Las estaciones se relacionan principalmente con la inclinación del eje terrestre y la distribución de luz durante la órbita.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-096",
+        "number": 96,
+        "topic": "Mezclas",
+        "concept": "agua_aceite_inmiscibles_forman_capas_por_densidad",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una mezcla de agua y aceite se deja reposar. ¿Qué propiedad permite que se formen dos capas?",
+        "options": [
+          "Los líquidos no se mezclan uniformemente y tienen distinta densidad",
+          "El agua se convierte en gas",
+          "Ambos líquidos tienen igual densidad",
+          "El aceite se disuelve en el recipiente"
+        ],
+        "correctAnswer": "Los líquidos no se mezclan uniformemente y tienen distinta densidad",
+        "explanation": "Agua y aceite son inmiscibles; además, su diferencia de densidad contribuye a que el aceite quede sobre el agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-097",
+        "number": 97,
+        "topic": "Diseño experimental",
+        "concept": "ensayo_fertilizante_compara_grupos_similares_con_control",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Para saber si una planta crece más con fertilizante, ¿qué comparación ofrece evidencia más útil?",
+        "options": [
+          "Una planta fertilizada junto a una planta de otra especie",
+          "Plantas semejantes con y sin fertilizante bajo condiciones comparables",
+          "Una planta observada solo al final",
+          "Plantas con cantidades distintas de agua y fertilizante"
+        ],
+        "correctAnswer": "Plantas semejantes con y sin fertilizante bajo condiciones comparables",
+        "explanation": "Comparar grupos semejantes y mantener condiciones similares permite atribuir con más fundamento las diferencias al fertilizante.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-098",
+        "number": 98,
+        "topic": "Conservación de alimentos",
+        "concept": "refrigeracion_ralentiza_reacciones_de_deterioro",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una fruta cortada se oscurece más lentamente cuando se guarda en frío. ¿Qué explica mejor ese cambio?",
+        "options": [
+          "La baja temperatura suele ralentizar procesos químicos y biológicos",
+          "El frío transforma la fruta en un mineral",
+          "El refrigerador elimina todo el oxígeno del alimento",
+          "La fruta deja de contener agua"
+        ],
+        "correctAnswer": "La baja temperatura suele ralentizar procesos químicos y biológicos",
+        "explanation": "El frío reduce la velocidad de muchas reacciones y actividades enzimáticas, por lo que algunos cambios ocurren más despacio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-099",
+        "number": 99,
+        "topic": "Energía en el hogar",
+        "concept": "led_produce_luz_similar_con_menor_consumo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una familia cambia bombillos incandescentes por LED de brillo similar. ¿Qué resultado es más razonable esperar?",
+        "options": [
+          "Los LED convierten toda la electricidad en luz",
+          "Los LED no consumen energía",
+          "Los LED pueden usar menos electricidad para producir luz similar",
+          "Los LED aumentan la energía disponible en la casa"
+        ],
+        "correctAnswer": "Los LED pueden usar menos electricidad para producir luz similar",
+        "explanation": "Los LED suelen ser más eficientes: producen una iluminación comparable con menor consumo eléctrico que los incandescentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-100",
+        "number": 100,
+        "topic": "Clima · Verdadero o falso",
+        "concept": "semana_lluviosa_no_define_cambio_climatico_local",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una semana de lluvia en una ciudad basta por sí sola para demostrar que su clima se volvió más húmedo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "El clima describe patrones observados durante periodos largos; una semana corresponde al tiempo meteorológico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-101",
+        "number": 101,
+        "topic": "Fósiles",
+        "concept": "fosiles_aportan_evidencia_sobre_organismos_pasados",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué puede revelar un fósil sobre un organismo del pasado?",
+        "options": [
+          "Algunas características de su cuerpo",
+          "Su color exacto en vida",
+          "Todos sus comportamientos diarios",
+          "La edad de cada roca del planeta"
+        ],
+        "correctAnswer": "Algunas características de su cuerpo",
+        "explanation": "Los fósiles preservan restos o señales de organismos y ayudan a inferir aspectos de su forma y ambiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-102",
+        "number": 102,
+        "topic": "Órganos de los sentidos",
+        "concept": "oido_capta_sonidos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué órgano capta principalmente las ondas sonoras?",
+        "options": [
+          "Ojo",
+          "Oído",
+          "Nariz",
+          "Lengua"
+        ],
+        "correctAnswer": "Oído",
+        "explanation": "El oído recibe vibraciones sonoras y participa en la audición.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-103",
+        "number": 103,
+        "topic": "Recursos naturales",
+        "concept": "madera_puede_ser_recurso_renovable_con_manejo_sostenible",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es un recurso natural renovable si se maneja de forma sostenible?",
+        "options": [
+          "Carbón mineral",
+          "Petróleo",
+          "Madera de un bosque replantado",
+          "Gas natural"
+        ],
+        "correctAnswer": "Madera de un bosque replantado",
+        "explanation": "La madera puede renovarse cuando los árboles se reponen y el bosque se gestiona sin agotar sus poblaciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-104",
+        "number": 104,
+        "topic": "Células · Verdadero o falso",
+        "concept": "membrana_delimita_celula_y_regula_intercambio",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La membrana celular delimita la célula y regula el intercambio de sustancias con el entorno.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La membrana separa el interior celular del exterior y participa en el paso selectivo de materiales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-105",
+        "number": 105,
+        "topic": "Unidades de longitud",
+        "concept": "metro_es_mayor_que_unidades_submultiplo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál unidad es mayor?",
+        "options": [
+          "Milímetro",
+          "Centímetro",
+          "Decímetro",
+          "Metro"
+        ],
+        "correctAnswer": "Metro",
+        "explanation": "Un metro equivale a diez decímetros, cien centímetros o mil milímetros.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-106",
+        "number": 106,
+        "topic": "Dientes",
+        "concept": "incisivos_cortan_alimentos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tipo de diente corta principalmente los alimentos?",
+        "options": [
+          "Incisivo",
+          "Molar",
+          "Premolar",
+          "Canino"
+        ],
+        "correctAnswer": "Incisivo",
+        "explanation": "Los incisivos tienen bordes que ayudan a cortar los alimentos; otros dientes los desgarran o trituran.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-107",
+        "number": 107,
+        "topic": "Materia · Verdadero o falso",
+        "concept": "cambio_de_forma_no_elimina_materia",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una piedra puede cambiar de forma al romperse, aunque siga siendo materia.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Romper un objeto cambia su tamaño o forma, pero no elimina la materia que lo compone.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-108",
+        "number": 108,
+        "topic": "Seres vivos",
+        "concept": "seres_vivos_realizan_funciones_vitales",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál característica distingue a los seres vivos de los objetos sin vida?",
+        "options": [
+          "Tener siempre patas",
+          "Realizar funciones vitales",
+          "Desplazarse de un lugar a otro",
+          "Tener color verde"
+        ],
+        "correctAnswer": "Realizar funciones vitales",
+        "explanation": "Los seres vivos realizan funciones como nutrición, relación y reproducción, aunque no todos se desplazan visiblemente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-109",
+        "number": 109,
+        "topic": "Fuerzas y movimiento",
+        "concept": "friccion_con_superficie_reduce_movimiento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una pelota rueda por el piso y poco a poco se detiene. ¿Qué fuerza se opone principalmente a su movimiento?",
+        "options": [
+          "Gravedad",
+          "Empuje magnético",
+          "Fricción",
+          "Luz"
+        ],
+        "correctAnswer": "Fricción",
+        "explanation": "La fricción entre la pelota y el piso disipa energía y reduce su movimiento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-110",
+        "number": 110,
+        "topic": "Partes de la célula",
+        "concept": "nucleo_celula_animal_contiene_material_genetico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura contiene gran parte del material genético de una célula animal?",
+        "options": [
+          "Pared celular",
+          "Vacuola central",
+          "Cloroplasto",
+          "Núcleo"
+        ],
+        "correctAnswer": "Núcleo",
+        "explanation": "En las células animales, el núcleo alberga la mayor parte del material genético.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-111",
+        "number": 111,
+        "topic": "Fuerzas magnéticas",
+        "concept": "iman_atrae_objeto_de_hierro",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué objeto suele ser atraído por un imán común?",
+        "options": [
+          "Un clavo de hierro",
+          "Una cuchara de madera",
+          "Una botella de vidrio",
+          "Una hoja de papel"
+        ],
+        "correctAnswer": "Un clavo de hierro",
+        "explanation": "El hierro es un material ferromagnético y puede ser atraído por un imán.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-112",
+        "number": 112,
+        "topic": "Circulación del agua",
+        "concept": "precipitacion_lleva_agua_de_nubes_a_superficie",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso devuelve agua líquida desde las nubes a la superficie como lluvia?",
+        "options": [
+          "Transpiración",
+          "Precipitación",
+          "Evaporación",
+          "Infiltración"
+        ],
+        "correctAnswer": "Precipitación",
+        "explanation": "La precipitación ocurre cuando el agua cae de las nubes en forma de lluvia, nieve u otras formas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-113",
+        "number": 113,
+        "topic": "Contaminación del aire · Verdadero o falso",
+        "concept": "combustion_gasolina_emite_contaminantes_al_aire",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Quemar gasolina en un vehículo puede liberar gases y partículas al aire.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La combustión de gasolina produce emisiones que pueden incluir gases y partículas contaminantes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-114",
+        "number": 114,
+        "topic": "Adaptación animal",
+        "concept": "pelaje_espeso_ayuda_a_conservar_calor",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ventaja puede ofrecer el pelaje espeso a un mamífero de clima frío?",
+        "options": [
+          "Evitar que necesite oxígeno",
+          "Producir alimento mediante luz",
+          "Reducir la pérdida de calor",
+          "Convertir agua en sangre"
+        ],
+        "correctAnswer": "Reducir la pérdida de calor",
+        "explanation": "El pelaje puede atrapar una capa de aire y disminuir la pérdida de calor del cuerpo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-115",
+        "number": 115,
+        "topic": "Minerales",
+        "concept": "prueba_de_raya_compara_dureza_de_minerales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propiedad se observa al comparar cuál de dos minerales raya al otro?",
+        "options": [
+          "Brillo",
+          "Color",
+          "Transparencia",
+          "Dureza"
+        ],
+        "correctAnswer": "Dureza",
+        "explanation": "La dureza describe la resistencia de un mineral a ser rayado por otro material.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-116",
+        "number": 116,
+        "topic": "Energía solar",
+        "concept": "panel_fotovoltaico_convierte_luz_en_electricidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué transformación ocurre principalmente en un panel solar fotovoltaico?",
+        "options": [
+          "Luz en energía eléctrica",
+          "Sonido en energía química",
+          "Calor en energía nuclear",
+          "Movimiento en energía luminosa"
+        ],
+        "correctAnswer": "Luz en energía eléctrica",
+        "explanation": "Las celdas fotovoltaicas convierten parte de la energía luminosa en energía eléctrica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-117",
+        "number": 117,
+        "topic": "Ciclo del carbono",
+        "concept": "fotosintesis_utiliza_dioxido_de_carbono",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué gas absorben las plantas del aire durante la fotosíntesis?",
+        "options": [
+          "Oxígeno",
+          "Dióxido de carbono",
+          "Helio",
+          "Hidrógeno"
+        ],
+        "correctAnswer": "Dióxido de carbono",
+        "explanation": "Las plantas toman dióxido de carbono y agua para producir azúcares durante la fotosíntesis.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-118",
+        "number": 118,
+        "topic": "Alimentación y digestión",
+        "concept": "proteinas_apoyan_formacion_y_reparacion_de_tejidos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nutriente cumple principalmente una función de construcción y reparación de tejidos?",
+        "options": [
+          "Agua",
+          "Carbohidratos",
+          "Proteínas",
+          "Sales minerales"
+        ],
+        "correctAnswer": "Proteínas",
+        "explanation": "Las proteínas aportan materiales que el organismo utiliza, entre otras funciones, para formar y reparar tejidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-119",
+        "number": 119,
+        "topic": "Ecosistemas",
+        "concept": "energia_disponible_disminuye_en_niveles_troficos_superiores",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué suele haber menos energía disponible en un nivel trófico superior de una cadena alimentaria?",
+        "options": [
+          "Los productores dejan de captar luz",
+          "Los consumidores no necesitan alimento",
+          "Toda la energía se convierte en materia",
+          "Parte se usa en funciones vitales y se disipa"
+        ],
+        "correctAnswer": "Parte se usa en funciones vitales y se disipa",
+        "explanation": "Los organismos usan energía para vivir y parte se disipa, así que solo una fracción pasa al nivel siguiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-120",
+        "number": 120,
+        "topic": "Movimiento de placas · Verdadero o falso",
+        "concept": "terremotos_liberan_energia_acumulada_en_rocas",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Los terremotos pueden ocurrir cuando se libera energía acumulada en rocas sometidas a esfuerzos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El movimiento repentino de rocas a lo largo de fallas puede liberar energía y generar ondas sísmicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-121",
+        "number": 121,
+        "topic": "Conservación de ecosistemas",
+        "concept": "monitoreo_evalua_impacto_de_especie_invasora",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un río, una especie invasora aumenta rápidamente y consume alimento de especies nativas. ¿Qué acción inicial es más útil para evaluar el problema?",
+        "options": [
+          "Registrar cambios en las poblaciones y el uso de recursos",
+          "Soltar más animales sin estudiar el ecosistema",
+          "Retirar todas las especies del río",
+          "Concluir que toda especie nueva es dañina"
+        ],
+        "correctAnswer": "Registrar cambios en las poblaciones y el uso de recursos",
+        "explanation": "Monitorear poblaciones y recursos permite evaluar impactos antes de proponer medidas de manejo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-122",
+        "number": 122,
+        "topic": "Seguridad eléctrica",
+        "concept": "conductor_expuesto_debe_desconectarse_y_repararse",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un cable tiene el recubrimiento roto y deja ver el metal. ¿Qué decisión es más segura?",
+        "options": [
+          "Tocar el metal para comprobar si funciona",
+          "Dejar de usarlo y pedir que lo reparen",
+          "Mojarlo para enfriarlo",
+          "Cubrirlo con papel delgado y conectarlo"
+        ],
+        "correctAnswer": "Dejar de usarlo y pedir que lo reparen",
+        "explanation": "Un conductor expuesto puede causar una descarga; se debe desconectar sin tocar la parte dañada y pedir una reparación segura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-123",
+        "number": 123,
+        "topic": "Análisis de datos",
+        "concept": "comparacion_sol_y_sombra_evalua_efecto_en_temperatura",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un curso mide la temperatura de una planta cada hora y nota que sube mientras recibe sol. ¿Qué dato adicional ayudaría a evaluar si el sol influye?",
+        "options": [
+          "El color del cuaderno",
+          "La estatura de quien midió",
+          "Temperaturas de una planta similar mantenida a la sombra",
+          "El número de estudiantes del colegio"
+        ],
+        "correctAnswer": "Temperaturas de una planta similar mantenida a la sombra",
+        "explanation": "Un grupo de comparación bajo condiciones semejantes permite valorar si la exposición al sol explica parte del cambio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-124",
+        "number": 124,
+        "topic": "Desastres naturales",
+        "concept": "ladera_saturada_sin_vegetacion_aumenta_riesgo_deslizamiento",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Tras lluvias prolongadas, una ladera pierde vegetación y el suelo se satura. ¿Qué riesgo puede aumentar?",
+        "options": [
+          "Eclipse",
+          "Sequía inmediata",
+          "Erupción volcánica",
+          "Deslizamiento de tierra"
+        ],
+        "correctAnswer": "Deslizamiento de tierra",
+        "explanation": "El suelo saturado y la pérdida de raíces que lo sujetan pueden favorecer movimientos de tierra en una ladera.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-125",
+        "number": 125,
+        "topic": "Interpretación de evidencia · Verdadero o falso",
+        "concept": "correlacion_sola_no_demuestra_causalidad",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si dos variables aumentan al mismo tiempo, eso por sí solo demuestra que una causó el aumento de la otra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una asociación puede deberse a otros factores; para sostener causalidad se necesita evidencia y un diseño que descarte explicaciones alternativas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-126",
+        "number": 126,
+        "topic": "Medición de volumen",
+        "concept": "probeta_graduada_mide_volumen_de_liquidos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento permite medir el volumen de un líquido en el laboratorio?",
+        "options": [
+          "Probeta graduada",
+          "Balanza",
+          "Termómetro",
+          "Cronómetro"
+        ],
+        "correctAnswer": "Probeta graduada",
+        "explanation": "La probeta graduada tiene marcas que permiten medir el volumen de líquidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-127",
+        "number": 127,
+        "topic": "Energía",
+        "concept": "banda_estirada_almacena_energia_potencial_elastica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué energía almacena una banda elástica estirada?",
+        "options": [
+          "Sonora",
+          "Potencial elástica",
+          "Luminosa",
+          "Eléctrica"
+        ],
+        "correctAnswer": "Potencial elástica",
+        "explanation": "Al estirar la banda se almacena energía potencial elástica, que puede liberarse al soltarla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-128",
+        "number": 128,
+        "topic": "Luz y sombras",
+        "concept": "objeto_opaco_bloquea_luz_y_forma_sombra",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué objeto opaco puede formar una sombra cuando bloquea la luz?",
+        "options": [
+          "Una ventana transparente",
+          "Un rayo de luz",
+          "Una cartulina",
+          "El aire limpio"
+        ],
+        "correctAnswer": "Una cartulina",
+        "explanation": "Un objeto opaco bloquea la luz y puede producir una sombra sobre una superficie.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-129",
+        "number": 129,
+        "topic": "Alimentación animal",
+        "concept": "animales_obtienen_materia_y_energia_del_alimento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué obtiene un animal al alimentarse de plantas u otros animales?",
+        "options": [
+          "Luz solar directa para fotosíntesis",
+          "Minerales para convertirlos en rocas",
+          "Aire para formar huesos",
+          "Materia y energía"
+        ],
+        "correctAnswer": "Materia y energía",
+        "explanation": "El alimento aporta materia y energía que el organismo utiliza para crecer y realizar sus funciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-130",
+        "number": 130,
+        "topic": "Células vegetales",
+        "concept": "pared_celular_da_soporte_a_celulas_vegetales",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura rígida rodea la membrana de muchas células vegetales?",
+        "options": [
+          "Pared celular",
+          "Alvéolo",
+          "Núcleo externo",
+          "Vaso sanguíneo"
+        ],
+        "correctAnswer": "Pared celular",
+        "explanation": "La pared celular da soporte y protección a las células vegetales; las células animales no tienen esa pared.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-131",
+        "number": 131,
+        "topic": "Tiempo atmosférico",
+        "concept": "anemometro_mide_velocidad_del_viento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento mide la velocidad del viento?",
+        "options": [
+          "Pluviómetro",
+          "Anemómetro",
+          "Barómetro",
+          "Termómetro"
+        ],
+        "correctAnswer": "Anemómetro",
+        "explanation": "El anemómetro mide la velocidad del viento; el pluviómetro mide la precipitación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-132",
+        "number": 132,
+        "topic": "Organización de los seres vivos",
+        "concept": "sistema_formado_por_organos_que_cooperan",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nivel está formado por varios órganos que trabajan juntos?",
+        "options": [
+          "Célula",
+          "Tejido",
+          "Sistema",
+          "Molécula"
+        ],
+        "correctAnswer": "Sistema",
+        "explanation": "Un sistema está formado por órganos que colaboran para cumplir funciones del organismo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-133",
+        "number": 133,
+        "topic": "Nutrición animal · Verdadero o falso",
+        "concept": "animales_no_producen_alimento_por_fotosintesis",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Los animales producen su alimento mediante fotosíntesis, igual que las plantas verdes.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Los animales obtienen materia y energía al consumir otros organismos o sus productos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-134",
+        "number": 134,
+        "topic": "Magnetismo",
+        "concept": "humus_se_forma_por_descomposicion_de_materia_organica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama la materia oscura del suelo formada por restos orgánicos descompuestos?",
+        "options": [
+          "Compost",
+          "Arcilla",
+          "Arena",
+          "Humus"
+        ],
+        "correctAnswer": "Humus",
+        "explanation": "El humus es materia orgánica descompuesta que forma parte del suelo y puede aportar nutrientes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-135",
+        "number": 135,
+        "topic": "Flotación",
+        "concept": "densidad_promedio_menor_favorece_flotacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición favorece que un objeto flote en un líquido?",
+        "options": [
+          "Que su densidad promedio sea menor que la del líquido",
+          "Que su temperatura sea siempre mayor",
+          "Que esté hecho de un solo material",
+          "Que su color sea claro"
+        ],
+        "correctAnswer": "Que su densidad promedio sea menor que la del líquido",
+        "explanation": "En condiciones habituales, un objeto de densidad promedio menor que la del líquido puede flotar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-136",
+        "number": 136,
+        "topic": "Transferencia de calor",
+        "concept": "conduccion_transfiere_calor_por_material_en_contacto",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una cuchara metálica se calienta cuando un extremo queda en una bebida caliente. ¿Cómo se transfiere principalmente el calor por la cuchara?",
+        "options": [
+          "Radiación",
+          "Conducción",
+          "Evaporación",
+          "Condensación"
+        ],
+        "correctAnswer": "Conducción",
+        "explanation": "La conducción transfiere energía térmica a través del material por contacto entre sus partículas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-137",
+        "number": 137,
+        "topic": "Respuesta del cuerpo",
+        "concept": "esfuerzo_aumenta_demanda_de_oxigeno_y_eliminacion_de_co2",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Después de correr, una persona nota que respira más rápido. ¿Qué necesidad del cuerpo aumenta durante el esfuerzo?",
+        "options": [
+          "Disminuir el flujo de sangre a los músculos",
+          "Reducir la actividad de las células",
+          "Obtener oxígeno y eliminar más dióxido de carbono",
+          "Mantener igual el intercambio de gases"
+        ],
+        "correctAnswer": "Obtener oxígeno y eliminar más dióxido de carbono",
+        "explanation": "Durante el esfuerzo los músculos usan más energía, por lo que aumenta el intercambio de gases asociado a la respiración celular.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-138",
+        "number": 138,
+        "topic": "Conservación de la materia · Verdadero o falso",
+        "concept": "masa_se_conserva_en_cambio_fisico_en_sistema_cerrado",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un recipiente cerrado, la masa total se conserva durante un cambio físico como derretir hielo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El agua cambia de estado, pero en un sistema cerrado la materia no desaparece por derretirse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-139",
+        "number": 139,
+        "topic": "Erosión",
+        "concept": "escorrentia_erosiona_y_transporta_particulas_de_suelo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre cuando el agua de escorrentía arrastra partículas de suelo cuesta abajo?",
+        "options": [
+          "Fotosíntesis",
+          "Polinización",
+          "Condensación",
+          "Erosión"
+        ],
+        "correctAnswer": "Erosión",
+        "explanation": "La erosión desgasta y transporta suelo o roca mediante agentes como el agua y el viento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-140",
+        "number": 140,
+        "topic": "Protección de la piel",
+        "concept": "sombra_y_ropa_reducen_exposicion_uv",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué acción ayuda a reducir la exposición de la piel a radiación ultravioleta intensa?",
+        "options": [
+          "Broncearse para acostumbrar la piel",
+          "Usar ropa protectora y buscar sombra",
+          "Protegerse únicamente del frío",
+          "Permanecer al Sol al mediodía"
+        ],
+        "correctAnswer": "Usar ropa protectora y buscar sombra",
+        "explanation": "La sombra y la ropa que cubre la piel reducen la exposición directa a radiación ultravioleta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-141",
+        "number": 141,
+        "topic": "Descomponedores",
+        "concept": "hongos_descomponedores_reciclan_nutrientes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué papel cumplen principalmente los hongos descomponedores en un ecosistema?",
+        "options": [
+          "Reciclar nutrientes al descomponer materia orgánica",
+          "Fabricar luz para los productores",
+          "Eliminar toda competencia entre especies",
+          "Producir suelo sin transformar restos"
+        ],
+        "correctAnswer": "Reciclar nutrientes al descomponer materia orgánica",
+        "explanation": "Los descomponedores degradan restos y devuelven nutrientes al ambiente, donde pueden volver a ser utilizados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-142",
+        "number": 142,
+        "topic": "Reflexión de la luz",
+        "concept": "reflexion_de_luz_permite_ver_imagen_en_espejo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una imagen puede verse en un espejo plano?",
+        "options": [
+          "Porque el espejo produce luz propia",
+          "Porque la luz se transforma en sonido",
+          "Porque la luz rebota en su superficie",
+          "Porque el espejo absorbe toda la luz"
+        ],
+        "correctAnswer": "Porque la luz rebota en su superficie",
+        "explanation": "La reflexión ocurre cuando la luz rebota en una superficie y llega a los ojos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-143",
+        "number": 143,
+        "topic": "Circuitos eléctricos · Verdadero o falso",
+        "concept": "circuito_abierto_interrumpe_corriente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un circuito simple, una interrupción en el camino conductor puede impedir que circule corriente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La corriente necesita un camino conductor cerrado; una abertura interrumpe el circuito.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-144",
+        "number": 144,
+        "topic": "Altitud y temperatura",
+        "concept": "temperatura_suele_disminuir_con_altitud_en_troposfera",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué suele hacer más frío en una montaña alta que en una zona baja cercana?",
+        "options": [
+          "El aire contiene más oxígeno y por eso se enfría",
+          "Las montañas están siempre más lejos del Sol",
+          "La presión atmosférica aumenta mucho al ascender",
+          "La temperatura del aire suele disminuir con la altitud"
+        ],
+        "correctAnswer": "La temperatura del aire suele disminuir con la altitud",
+        "explanation": "En la troposfera, la temperatura suele disminuir al aumentar la altitud, aunque las condiciones locales pueden variar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-145",
+        "number": 145,
+        "topic": "Redes alimentarias · Verdadero o falso",
+        "concept": "energia_no_se_recicla_completamente_en_red_alimentaria",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La energía que usa un depredador vuelve completamente a los productores cuando el depredador muere.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La materia puede reciclarse mediante descomponedores, pero la energía fluye y parte se disipa como calor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-146",
+        "number": 146,
+        "topic": "Manejo de ecosistemas",
+        "concept": "paso_para_peces_reduce_barrera_de_migracion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una represa bloquea una ruta que ciertos peces usan para reproducirse. ¿Qué medida puede reducir ese obstáculo?",
+        "options": [
+          "Construir un paso para peces alrededor de la barrera",
+          "Aumentar la altura de la represa",
+          "Retirar la vegetación de las orillas",
+          "Liberar peces sin evaluar el río"
+        ],
+        "correctAnswer": "Construir un paso para peces alrededor de la barrera",
+        "explanation": "Un paso para peces puede facilitar el desplazamiento entre tramos del río; su eficacia debe evaluarse para cada especie y lugar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-147",
+        "number": 147,
+        "topic": "Salud y ambiente",
+        "concept": "agua_estancada_en_recipientes_favorece_criaderos_de_mosquitos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una familia deja agua estancada en recipientes abiertos durante semanas. ¿Qué riesgo puede aumentar en su entorno?",
+        "options": [
+          "Crecimiento de algas en cualquier recipiente",
+          "Reproducción de mosquitos",
+          "Erosión de la orilla",
+          "Aumento de evaporación"
+        ],
+        "correctAnswer": "Reproducción de mosquitos",
+        "explanation": "Algunas especies de mosquitos ponen huevos en agua acumulada, por lo que eliminar criaderos ayuda a reducir su reproducción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-148",
+        "number": 148,
+        "topic": "Redes alimentarias",
+        "concept": "disminucion_de_productores_afecta_herbivoros_directos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un humedal disminuyen mucho las plantas acuáticas. ¿Qué grupo podría verse afectado primero por falta de alimento directo?",
+        "options": [
+          "Aves que cazan peces",
+          "Hongos que descomponen restos",
+          "Herbívoros que se alimentan de ellas",
+          "Insectos que cazan otros insectos"
+        ],
+        "correctAnswer": "Herbívoros que se alimentan de ellas",
+        "explanation": "Los herbívoros que consumen esas plantas pueden perder una fuente directa de alimento; luego el efecto podría propagarse por la red.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-149",
+        "number": 149,
+        "topic": "Nutrientes y ecosistemas",
+        "concept": "oxigeno_disuelto_evalua_efecto_de_floracion_de_algas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un estanque aumentan nutrientes por escorrentía y crecen muchas algas. ¿Qué medición adicional ayuda a evaluar efectos sobre otros organismos?",
+        "options": [
+          "El pH del agua",
+          "La concentración de nutrientes",
+          "El oxígeno disuelto en distintos momentos del día",
+          "La temperatura del agua"
+        ],
+        "correctAnswer": "La temperatura del agua",
+        "explanation": "El crecimiento y descomposición de algas pueden afectar el oxígeno disuelto; medirlo en distintos momentos ayuda a observar esos cambios.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI7-150",
+        "number": 150,
+        "topic": "Polinizadores · Verdadero o falso",
+        "concept": "floraciones_escalonadas_pueden_extender_recursos_para_polinizadores",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Plantar especies nativas con distintas épocas de floración puede ofrecer alimento a polinizadores durante más meses, si las condiciones locales son adecuadas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Una secuencia de floración puede ampliar la disponibilidad de recursos para polinizadores; la selección de especies debe considerar el lugar.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
+  },
+  {
+    "catalogId": "edusyn-geografia-grade-7-v1",
+    "title": "Geografía · 7.º",
+    "grade": 7,
+    "subjectArea": "Duelos",
+    "category": "Geografía",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://portal.gestiondelriesgo.gov.co/colombiaresiliente/Paginas/glosario.aspx",
+      "https://sigi.igac.gov.co/colombia-mapas/sobre-colombia-en-mapas/",
+      "https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion/censo-nacional-de-poblacion-y-vivenda-2018/informacion-tecnica",
+      "https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion/proyecciones-de-poblacion",
+      "https://www.ideam.gov.co/sites/default/files/prensa/boletines/2024-08-16/iearnr_2021.pdf",
+      "https://www.igac.gov.co/node/5575"
+    ],
+    "questions": [
+      {
+        "id": "GEO7-001",
+        "number": 1,
+        "topic": "Formas del territorio",
+        "concept": "istmo_conecta_areas_terrestres_y_separa_aguas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama una franja estrecha de tierra que conecta dos áreas mayores y separa dos cuerpos de agua?",
+        "options": [
+          "Delta",
+          "Península",
+          "Golfo",
+          "Istmo"
+        ],
+        "correctAnswer": "Istmo",
+        "explanation": "Un istmo es una franja angosta de tierra que une dos porciones mayores y suele separar cuerpos de agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-002",
+        "number": 2,
+        "topic": "Cartografía",
+        "concept": "leyenda_explica_simbolos_de_mapa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa, ¿qué elemento explica el significado de los colores y símbolos?",
+        "options": [
+          "Escala",
+          "Leyenda",
+          "Meridiano",
+          "Coordenada"
+        ],
+        "correctAnswer": "Leyenda",
+        "explanation": "La leyenda indica cómo interpretar los signos, líneas y colores que aparecen en un mapa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-003",
+        "number": 3,
+        "topic": "Geografía de Colombia",
+        "concept": "meta_y_guaviare_drenan_llanuras_orinoquia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál región colombiana reúne gran parte de las llanuras orientales drenadas por los ríos Meta y Guaviare?",
+        "options": [
+          "Caribe",
+          "Pacífica",
+          "Orinoquía",
+          "Insular"
+        ],
+        "correctAnswer": "Orinoquía",
+        "explanation": "La Orinoquía comprende extensas llanuras del oriente colombiano, atravesadas por ríos que pertenecen a la cuenca del Orinoco.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-004",
+        "number": 4,
+        "topic": "Población",
+        "concept": "piramide_poblacional_distribuye_edades_y_sexo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué representa una pirámide de población?",
+        "options": [
+          "La altura de las montañas de un país",
+          "La cantidad de lluvia por región",
+          "Las actividades económicas de cada ciudad",
+          "La población distribuida por edad y sexo"
+        ],
+        "correctAnswer": "La población distribuida por edad y sexo",
+        "explanation": "Una pirámide poblacional organiza la cantidad o proporción de habitantes por grupos de edad y sexo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-005",
+        "number": 5,
+        "topic": "Regiones y territorios",
+        "concept": "departamento_agrupa_municipios_y_tiene_gobernacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál división territorial colombiana agrupa municipios y tiene un gobernador?",
+        "options": [
+          "Vereda",
+          "Localidad",
+          "Corregimiento",
+          "Departamento"
+        ],
+        "correctAnswer": "Departamento",
+        "explanation": "El departamento agrupa municipios y es dirigido por una gobernación; las otras opciones corresponden a divisiones o asentamientos de menor escala.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-006",
+        "number": 6,
+        "topic": "Actividad económica",
+        "concept": "agricultura_pertenece_sector_primario",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál actividad pertenece principalmente al sector primario de la economía?",
+        "options": [
+          "Cultivar café",
+          "Fabricar zapatos",
+          "Transportar pasajeros",
+          "Atender en un hotel"
+        ],
+        "correctAnswer": "Cultivar café",
+        "explanation": "El sector primario obtiene recursos directamente de la naturaleza mediante actividades como agricultura, pesca y minería.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-007",
+        "number": 7,
+        "topic": "Relieve",
+        "concept": "meseta_superficie_extensa_elevada_y_relativamente_plana",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma de relieve es una superficie extensa, relativamente plana y situada a gran altura?",
+        "options": [
+          "Valle",
+          "Meseta",
+          "Llanura costera",
+          "Depresión"
+        ],
+        "correctAnswer": "Meseta",
+        "explanation": "Una meseta es una superficie amplia y elevada, con sectores relativamente planos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-008",
+        "number": 8,
+        "topic": "Geografía física · Verdadero o falso",
+        "concept": "cuenca_reune_aguas_hacia_salida_comun",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una cuenca hidrográfica reúne el territorio cuyas aguas drenan hacia un río principal o una salida común.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los límites de una cuenca dependen del relieve que dirige la escorrentía hacia una red de drenaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-009",
+        "number": 9,
+        "topic": "Mapas y escala",
+        "concept": "escala_mayor_muestra_mas_detalle_de_area_pequena",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos mapas muestran la misma región. ¿Cuál suele permitir ver más calles y detalles de una zona pequeña?",
+        "options": [
+          "El de escala 1:1.000.000",
+          "El que no tiene escala",
+          "El de escala 1:10.000",
+          "El de escala 1:5.000.000"
+        ],
+        "correctAnswer": "El de escala 1:10.000",
+        "explanation": "Una escala cartográfica mayor representa menos territorio en más detalle; 1:10.000 es mayor que las otras escalas numéricas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-010",
+        "number": 10,
+        "topic": "Regiones naturales",
+        "concept": "altitud_genera_pisos_ambientales_en_montana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué factor ayuda a explicar que en una misma montaña existan distintos pisos de vegetación?",
+        "options": [
+          "La altitud modifica temperatura y condiciones ambientales",
+          "La longitud elimina la gravedad",
+          "Todos los suelos tienen igual humedad",
+          "Los ríos cambian de continente"
+        ],
+        "correctAnswer": "La altitud modifica temperatura y condiciones ambientales",
+        "explanation": "La altitud influye en la temperatura y otras condiciones, creando ambientes distintos a diferentes alturas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-011",
+        "number": 11,
+        "topic": "Territorio y límites",
+        "concept": "limites_municipales_se_consultan_en_cartografia_oficial",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos municipios comparten una frontera administrativa. ¿Qué fuente es más adecuada para localizarla oficialmente?",
+        "options": [
+          "Una fotografía sin ubicación",
+          "Un mapa oficial de límites territoriales",
+          "Una publicación sin autor en redes",
+          "Un dibujo turístico sin escala"
+        ],
+        "correctAnswer": "Un mapa oficial de límites territoriales",
+        "explanation": "Para consultar límites oficiales conviene usar cartografía institucional y datos territoriales autorizados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-012",
+        "number": 12,
+        "topic": "Actividad económica y territorio",
+        "concept": "puerto_conecta_transporte_maritimo_y_terrestre",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué un puerto puede favorecer el comercio de una región?",
+        "options": [
+          "Hace innecesarias las carreteras",
+          "Cambia la ubicación de las montañas",
+          "Conecta rutas terrestres con transporte marítimo",
+          "Elimina las distancias entre ciudades"
+        ],
+        "correctAnswer": "Conecta rutas terrestres con transporte marítimo",
+        "explanation": "Los puertos permiten transferir mercancías entre barcos y redes de transporte terrestre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-013",
+        "number": 13,
+        "topic": "Población · Verdadero o falso",
+        "concept": "mas_habitantes_misma_area_aumenta_densidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Si aumenta la cantidad de habitantes y la superficie permanece igual, aumenta la densidad de población.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La densidad relaciona el número de habitantes con la superficie; más personas en la misma área elevan el valor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-014",
+        "number": 14,
+        "topic": "Clima y territorio",
+        "concept": "relieve_crea_diferencia_de_lluvia_barlovento_sotavento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ladera que recibe directamente los vientos húmedos puede tener más lluvia que otra protegida detrás de una cordillera. ¿Qué lo explica?",
+        "options": [
+          "El efecto de barlovento y sotavento",
+          "El cambio de longitud de los ríos",
+          "La escala del mapa",
+          "La rotación de las ciudades"
+        ],
+        "correctAnswer": "El efecto de barlovento y sotavento",
+        "explanation": "El aire húmedo asciende en barlovento y puede enfriarse y precipitar; el sotavento suele recibir aire más seco.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-015",
+        "number": 15,
+        "topic": "Migración",
+        "concept": "traslado_del_campo_a_ciudad_es_migracion_rural_urbana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una familia se traslada del campo a una ciudad principalmente para acceder a estudios y empleo. ¿Qué tipo de movimiento describe?",
+        "options": [
+          "Migración estacional de fauna",
+          "Desplazamiento de placas",
+          "Movimiento pendular diario",
+          "Migración rural-urbana"
+        ],
+        "correctAnswer": "Migración rural-urbana",
+        "explanation": "La migración rural-urbana ocurre cuando personas se trasladan de áreas rurales a áreas urbanas por motivos como estudio o trabajo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-016",
+        "number": 16,
+        "topic": "Mapas temáticos",
+        "concept": "mapa_tematico_compara_variable_poblacional",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué mapa sería más útil para comparar la cantidad de habitantes entre departamentos?",
+        "options": [
+          "Un mapa de curvas de nivel",
+          "Un mapa temático de población",
+          "Un plano de rutas de bus",
+          "Una carta de navegación marítima"
+        ],
+        "correctAnswer": "Un mapa temático de población",
+        "explanation": "Un mapa temático representa una variable específica, como población, mediante símbolos o tonos comparables.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-017",
+        "number": 17,
+        "topic": "Cuencas y relieve",
+        "concept": "divisoria_de_aguas_separa_cuencas_en_alturas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele marcar el límite entre dos cuencas hidrográficas vecinas?",
+        "options": [
+          "Una divisoria de aguas en zonas elevadas",
+          "El centro de cada municipio",
+          "Una línea de longitud",
+          "La desembocadura del río más largo"
+        ],
+        "correctAnswer": "Una divisoria de aguas en zonas elevadas",
+        "explanation": "La divisoria de aguas sigue sectores altos del relieve desde donde la escorrentía fluye en direcciones distintas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-018",
+        "number": 18,
+        "topic": "Proyecciones cartográficas · Verdadero o falso",
+        "concept": "proyeccion_plana_no_conserva_todas_propiedades_a_la_vez",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Toda proyección plana conserva exactamente las formas, áreas y distancias de la superficie terrestre al mismo tiempo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Representar una superficie curva en un plano produce distorsiones; distintas proyecciones priorizan propiedades diferentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-019",
+        "number": 19,
+        "topic": "Riesgos naturales",
+        "concept": "pendiente_saturacion_y_deforestacion_favorecen_deslizamiento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué combinación aumenta el riesgo de deslizamiento en una ladera?",
+        "options": [
+          "Pendiente suave y vegetación densa",
+          "Suelo seco sobre terreno plano",
+          "Pendiente fuerte, suelo saturado y poca cobertura vegetal",
+          "Drenaje adecuado y monitoreo"
+        ],
+        "correctAnswer": "Pendiente fuerte, suelo saturado y poca cobertura vegetal",
+        "explanation": "La pendiente, la saturación y la pérdida de raíces estabilizadoras pueden favorecer movimientos en masa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-020",
+        "number": 20,
+        "topic": "Geografía humana · Verdadero o falso",
+        "concept": "expansion_urbana_puede_formar_conurbacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una ciudad puede crecer hacia municipios vecinos y formar una zona urbana continua con ellos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La expansión urbana puede conectar físicamente áreas construidas de municipios cercanos y formar una conurbación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-021",
+        "number": 21,
+        "topic": "Gestión del territorio",
+        "concept": "planeacion_en_planicie_consulta_amenaza_y_crecientes",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un barrio nuevo se construye sobre una planicie de inundación. ¿Qué información debería orientar primero la planeación?",
+        "options": [
+          "Mapas de amenaza, drenaje e historial de crecientes",
+          "El color de las fachadas",
+          "La distancia a otros continentes",
+          "El nombre de las calles"
+        ],
+        "correctAnswer": "Mapas de amenaza, drenaje e historial de crecientes",
+        "explanation": "La cartografía de amenazas y los registros de inundaciones ayudan a decidir dónde construir y qué medidas aplicar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-022",
+        "number": 22,
+        "topic": "Datos demográficos",
+        "concept": "explicar_cambio_poblacional_requiere_componentes_demograficos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una gráfica indica que la población de una ciudad creció, pero no muestra entradas, salidas ni nacimientos. ¿Qué dato falta para explicar el cambio completo?",
+        "options": [
+          "El número de parques",
+          "Los componentes del cambio poblacional",
+          "La altura del edificio municipal",
+          "La cantidad de vías rurales"
+        ],
+        "correctAnswer": "Los componentes del cambio poblacional",
+        "explanation": "Para explicar el cambio poblacional se consideran nacimientos, defunciones, inmigración y emigración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-023",
+        "number": 23,
+        "topic": "Conectividad ecológica",
+        "concept": "pasos_de_fauna_mejoran_conectividad_de_habitats",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una carretera divide un bosque y dificulta el movimiento de animales entre sus partes. ¿Qué medida puede ayudar a reducir esa fragmentación?",
+        "options": [
+          "Ampliar la zona pavimentada",
+          "Retirar la vegetación de los bordes",
+          "Crear pasos de fauna y corredores conectados",
+          "Iluminar toda la ruta durante la noche"
+        ],
+        "correctAnswer": "Crear pasos de fauna y corredores conectados",
+        "explanation": "Los pasos de fauna y corredores pueden facilitar el desplazamiento entre hábitats separados por infraestructura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-024",
+        "number": 24,
+        "topic": "Elección de fuentes geográficas",
+        "concept": "imagenes_satelitales_comparables_muestran_cambio_urbano",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante compara la expansión urbana de una ciudad en dos décadas. ¿Qué recurso ofrece evidencia espacial comparable?",
+        "options": [
+          "Dos opiniones sin fecha",
+          "Un relato sin indicar lugares",
+          "Fotografías de ciudades diferentes",
+          "Imágenes satelitales fechadas y de escala semejante"
+        ],
+        "correctAnswer": "Imágenes satelitales fechadas y de escala semejante",
+        "explanation": "Imágenes de fechas y escalas comparables permiten observar cambios en la cobertura urbana a través del tiempo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-025",
+        "number": 25,
+        "topic": "Cartografía · Verdadero o falso",
+        "concept": "distancia_real_requiere_aplicar_escala_de_cada_mapa",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si se comparan dos mapas con escalas distintas, medir con una regla la misma distancia en ambos basta para concluir que la distancia real es igual.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La distancia en el terreno depende de la escala de cada mapa; primero se debe convertir cada medición usando su escala.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-026",
+        "number": 26,
+        "topic": "Demografía",
+        "concept": "censo_recopila_informacion_de_poblacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento reúne información sobre las características de la población de un país?",
+        "options": [
+          "Censo",
+          "Carta náutica",
+          "Perfil topográfico",
+          "Pronóstico del tiempo"
+        ],
+        "correctAnswer": "Censo",
+        "explanation": "Un censo recoge información de la población en un territorio en un momento determinado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-027",
+        "number": 27,
+        "topic": "Geografía urbana",
+        "concept": "urbanizacion_crece_poblacion_y_area_urbana",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso describe el crecimiento de la proporción de personas que vive en ciudades?",
+        "options": [
+          "Desertificación",
+          "Urbanización",
+          "Sedimentación",
+          "Erosión"
+        ],
+        "correctAnswer": "Urbanización",
+        "explanation": "La urbanización es el crecimiento de la población urbana y de las áreas construidas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-028",
+        "number": 28,
+        "topic": "Formas del relieve",
+        "concept": "valle_es_zona_baja_entre_elevaciones",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el terreno bajo situado entre montañas o elevaciones?",
+        "options": [
+          "Meseta",
+          "Cordillera",
+          "Valle",
+          "Altiplano"
+        ],
+        "correctAnswer": "Valle",
+        "explanation": "Un valle es una zona baja alargada entre elevaciones, a menudo recorrida por un río.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-029",
+        "number": 29,
+        "topic": "Cartografía política",
+        "concept": "mapa_politico_destaca_limites_y_asentamientos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento suele distinguir principalmente un mapa político?",
+        "options": [
+          "Límites entre territorios y asentamientos",
+          "Tipos de vegetación",
+          "Profundidad de los océanos",
+          "Variación diaria de lluvia"
+        ],
+        "correctAnswer": "Límites entre territorios y asentamientos",
+        "explanation": "Los mapas políticos muestran divisiones territoriales y suelen identificar países, ciudades y límites.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-030",
+        "number": 30,
+        "topic": "Orientación cartográfica · Verdadero o falso",
+        "concept": "norte_arriba_es_convencion_no_requisito",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un mapa siempre debe colocar el norte en la parte superior para ser útil.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Muchos mapas ubican el norte arriba por convención, pero pueden orientarse de otra manera si indican su orientación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-031",
+        "number": 31,
+        "topic": "Fronteras de Colombia",
+        "concept": "panama_comparte_frontera_terrestre_noroeste_colombia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál país comparte frontera terrestre con Colombia al noroeste?",
+        "options": [
+          "Costa Rica",
+          "Panamá",
+          "Nicaragua",
+          "República Dominicana"
+        ],
+        "correctAnswer": "Panamá",
+        "explanation": "Panamá limita por tierra con Colombia en el sector noroccidental de Suramérica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-032",
+        "number": 32,
+        "topic": "Transporte y relieve",
+        "concept": "tunel_permite_transporte_a_traves_de_montana",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué infraestructura facilita el paso de una carretera a través de una montaña?",
+        "options": [
+          "Túnel",
+          "Estuario",
+          "Delta",
+          "Dunas"
+        ],
+        "correctAnswer": "Túnel",
+        "explanation": "Un túnel atraviesa una elevación y permite conectar zonas separadas por el relieve.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-033",
+        "number": 33,
+        "topic": "Ecosistemas costeros",
+        "concept": "manglar_protege_costa_y_ofrece_habitat",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ecosistema costero puede proteger las orillas y servir de criadero para peces?",
+        "options": [
+          "Sabana",
+          "Páramo",
+          "Desierto frío",
+          "Manglar"
+        ],
+        "correctAnswer": "Manglar",
+        "explanation": "Los manglares ayudan a proteger costas y ofrecen hábitat y zonas de crianza para distintas especies.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-034",
+        "number": 34,
+        "topic": "Ambiente urbano",
+        "concept": "superficies_urbanas_y_arbolado_afectan_calor_local",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una ciudad, algunos barrios con poco arbolado se calientan más que parques cercanos. ¿Qué factor contribuye a esa diferencia?",
+        "options": [
+          "La línea del ecuador atraviesa cada barrio",
+          "Las superficies construidas retienen y liberan calor",
+          "La escala del plano es diferente",
+          "Los parques cambian de hemisferio"
+        ],
+        "correctAnswer": "Las superficies construidas retienen y liberan calor",
+        "explanation": "Pavimento y edificaciones pueden almacenar calor, mientras la vegetación aporta sombra y enfriamiento por evapotranspiración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-035",
+        "number": 35,
+        "topic": "Geografía económica",
+        "concept": "accesibilidad_de_vias_favorece_intercambio_comercial",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ventaja suele tener un mercado ubicado cerca de una vía principal y del transporte público?",
+        "options": [
+          "Evita toda competencia",
+          "Cambia el clima regional",
+          "Facilita el acceso de clientes y mercancías",
+          "Elimina la necesidad de proveedores"
+        ],
+        "correctAnswer": "Facilita el acceso de clientes y mercancías",
+        "explanation": "La accesibilidad influye en los desplazamientos de compradores, trabajadores y productos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-036",
+        "number": 36,
+        "topic": "Escala cartográfica",
+        "concept": "escala_uno_a_cincuenta_mil_convierte_cuatro_cm_a_dos_km",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa a escala 1:50.000, una distancia mide 4 cm. ¿A qué distancia aproximada corresponde en el terreno?",
+        "options": [
+          "200 m",
+          "20 km",
+          "2 km",
+          "500 m"
+        ],
+        "correctAnswer": "500 m",
+        "explanation": "Cada centímetro representa 50.000 cm, es decir 500 m; cuatro centímetros representan 2 km.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-037",
+        "number": 37,
+        "topic": "Cuencas hidrográficas",
+        "concept": "deforestacion_alta_cuenca_aumenta_escorrentia_y_sedimentos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué consecuencia puede tener la deforestación en la parte alta de una cuenca?",
+        "options": [
+          "Aumentar escorrentía y sedimentos aguas abajo",
+          "Detener el ciclo del agua",
+          "Cambiar la ubicación del nacimiento del Sol",
+          "Eliminar todas las inundaciones"
+        ],
+        "correctAnswer": "Aumentar escorrentía y sedimentos aguas abajo",
+        "explanation": "La pérdida de cobertura vegetal puede reducir la infiltración y aumentar la escorrentía y el arrastre de suelo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-038",
+        "number": 38,
+        "topic": "Demografía · Verdadero o falso",
+        "concept": "estructura_envejecida_influye_en_demanda_de_servicios",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una población con mayor proporción de personas mayores puede requerir más servicios de cuidado y salud.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La estructura por edades influye en las necesidades de servicios, aunque estas también dependen de otros factores sociales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-039",
+        "number": 39,
+        "topic": "Clima y distancia al mar",
+        "concept": "capacidad_termica_del_mar_modera_variacion_costera",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué algunos lugares interiores tienen mayor variación de temperatura entre día y noche que zonas costeras cercanas?",
+        "options": [
+          "La rotación terrestre se detiene tierra adentro",
+          "El mar cambia de lugar cada noche",
+          "El agua suele calentarse y enfriarse más lentamente que el suelo",
+          "Las ciudades interiores están fuera de la atmósfera"
+        ],
+        "correctAnswer": "El agua suele calentarse y enfriarse más lentamente que el suelo",
+        "explanation": "El agua tiene alta capacidad térmica y modera los cambios de temperatura en áreas cercanas a la costa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-040",
+        "number": 40,
+        "topic": "Fuentes de información",
+        "concept": "fecha_y_productor_permiten_evaluar_dato_demografico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dato ayuda a comprobar si una cifra de población corresponde a una medición reciente?",
+        "options": [
+          "El tipo de letra del gráfico",
+          "La fecha y la entidad que produjo el dato",
+          "El color de la página",
+          "La cantidad de imágenes decorativas"
+        ],
+        "correctAnswer": "La fecha y la entidad que produjo el dato",
+        "explanation": "Fecha y entidad responsable permiten valorar la actualidad, método y confiabilidad de un dato demográfico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-041",
+        "number": 41,
+        "topic": "Expansión urbana",
+        "concept": "expansion_urbana_transformacion_de_suelo_rural",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad crece sobre suelos agrícolas cercanos. ¿Qué cambio territorial se observa?",
+        "options": [
+          "Urbanización de suelo antes rural",
+          "Formación de una nueva cordillera",
+          "Aumento automático de las lluvias",
+          "Transformación de un río en frontera marítima"
+        ],
+        "correctAnswer": "Urbanización de suelo antes rural",
+        "explanation": "La expansión de construcciones sobre áreas rurales transforma usos del suelo y puede reducir terrenos agrícolas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-042",
+        "number": 42,
+        "topic": "Regiones geográficas · Verdadero o falso",
+        "concept": "regiones_naturales_no_tienen_que_coincidir_con_departamentos",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Los límites de una región natural necesariamente coinciden con los límites de los departamentos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Regiones naturales se definen por rasgos físicos o ecológicos y pueden atravesar varias divisiones político-administrativas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-043",
+        "number": 43,
+        "topic": "Pueblos y territorio",
+        "concept": "territorio_indigena_une_espacio_cultura_y_comunidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué relación describe mejor un territorio indígena?",
+        "options": [
+          "Un espacio sin historia ni normas",
+          "Un lugar definido solo por su clima",
+          "Un espacio ligado a comunidad, cultura y formas de organización",
+          "Una zona que existe únicamente en los mapas turísticos"
+        ],
+        "correctAnswer": "Un espacio ligado a comunidad, cultura y formas de organización",
+        "explanation": "El territorio tiene dimensiones sociales, culturales, históricas y políticas para las comunidades que lo habitan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-044",
+        "number": 44,
+        "topic": "Proyecciones y áreas",
+        "concept": "proyeccion_equivalente_conserva_proporciones_de_area",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica busca conservar principalmente una proyección equivalente?",
+        "options": [
+          "La distancia exacta entre todos los puntos",
+          "La forma de todos los continentes",
+          "Los ángulos en toda la superficie",
+          "La proporción de las áreas representadas"
+        ],
+        "correctAnswer": "La proporción de las áreas representadas",
+        "explanation": "Una proyección equivalente conserva las proporciones de área, aunque puede distorsionar formas o ángulos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-045",
+        "number": 45,
+        "topic": "Clima tropical · Verdadero o falso",
+        "concept": "zona_tropical_puede_tener_estaciones_de_lluvia_y_sequia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una zona tropical puede tener estaciones lluviosas y secas aunque reciba radiación solar durante todo el año.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En regiones tropicales puede variar la precipitación por cambios estacionales en la circulación y la humedad, aun con temperaturas relativamente cálidas todo el año.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-046",
+        "number": 46,
+        "topic": "Planeación urbana",
+        "concept": "arbolado_y_sombra_reducen_exposicion_al_calor_urbano",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un barrio muy pavimentado registra calor intenso al mediodía. ¿Qué intervención puede reducir la exposición térmica en espacios públicos?",
+        "options": [
+          "Retirar los árboles de las calles",
+          "Reemplazar parques por superficies oscuras",
+          "Cubrir las aceras con más asfalto",
+          "Crear sombra con árboles y espacios públicos frescos"
+        ],
+        "correctAnswer": "Crear sombra con árboles y espacios públicos frescos",
+        "explanation": "El arbolado y los espacios sombreados reducen la radiación directa y pueden moderar el calor experimentado por peatones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-047",
+        "number": 47,
+        "topic": "Estructura de población",
+        "concept": "proyeccion_de_edades_y_ubicacion_apoya_planeacion_escolar",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un municipio espera más estudiantes de primaria en cinco años. ¿Qué información apoya mejor la planeación de cupos?",
+        "options": [
+          "Número de vehículos en las carreteras nacionales",
+          "Proyecciones por edad y ubicación de los hogares",
+          "Altura promedio de sus montañas",
+          "Caudal de ríos de otro departamento"
+        ],
+        "correctAnswer": "Proyecciones por edad y ubicación de los hogares",
+        "explanation": "Proyecciones por edad y distribución espacial ayudan a estimar dónde se necesitarán escuelas y cupos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-048",
+        "number": 48,
+        "topic": "Restauración de cuencas",
+        "concept": "restauracion_vegetacion_ribera_reduce_sedimentos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una quebrada presenta erosión y agua turbia después de lluvias. ¿Qué acción aborda una causa frecuente en sus orillas?",
+        "options": [
+          "Retirar la vegetación restante",
+          "Aumentar el tránsito de maquinaria",
+          "Restaurar cobertura vegetal ribereña y monitorear sedimentos",
+          "Cubrir el cauce con concreto sin diagnóstico"
+        ],
+        "correctAnswer": "Restaurar cobertura vegetal ribereña y monitorear sedimentos",
+        "explanation": "La vegetación ribereña puede estabilizar suelos y reducir el ingreso de sedimentos; el monitoreo permite valorar resultados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-049",
+        "number": 49,
+        "topic": "Logística agrícola",
+        "concept": "acopio_agricola_equilibra_cercania_a_productores_y_vias",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Pequeños agricultores deben enviar productos perecederos a un mercado regional. ¿Qué ubicación conviene para un centro de acopio?",
+        "options": [
+          "Lejos de los cultivos y sin conexión vial",
+          "En una zona aislada de los caminos transitables",
+          "En el centro de la ciudad, lejos de productores",
+          "Cerca de productores y de una vía segura todo el año"
+        ],
+        "correctAnswer": "Cerca de productores y de una vía segura todo el año",
+        "explanation": "La cercanía a los productores y el acceso confiable a vías ayudan a trasladar productos perecederos a tiempo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-050",
+        "number": 50,
+        "topic": "Interpretación cartográfica · Verdadero o falso",
+        "concept": "ausencia_de_datos_no_significa_ausencia_de_riesgo",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si un mapa de riesgo muestra una zona como “sin datos”, eso demuestra que allí no existe ningún peligro.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "“Sin datos” señala falta de información suficiente; no equivale a riesgo nulo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-051",
+        "number": 51,
+        "topic": "Paisaje cultural",
+        "concept": "puente_es_huella_humana_en_paisaje",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento muestra una huella humana dentro de un paisaje?",
+        "options": [
+          "Un puente construido sobre un río",
+          "Una nube de lluvia",
+          "Una montaña sin caminos",
+          "Una corriente marina"
+        ],
+        "correctAnswer": "Un puente construido sobre un río",
+        "explanation": "Puentes y otras construcciones son elementos creados por personas y modifican el paisaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-052",
+        "number": 52,
+        "topic": "Asentamientos",
+        "concept": "asentamiento_se_organiza_linealmente_junto_a_eje",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un pueblo se extiende a lo largo de una carretera y sus construcciones siguen la misma dirección. ¿Qué patrón describe?",
+        "options": [
+          "Disperso",
+          "Circular",
+          "Lineal",
+          "Concéntrico"
+        ],
+        "correctAnswer": "Lineal",
+        "explanation": "En un patrón lineal, las viviendas o actividades se organizan siguiendo un eje como una vía o un río.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-053",
+        "number": 53,
+        "topic": "Regiones funcionales",
+        "concept": "ciudad_central_se_vincula_por_flujos_y_servicios",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué relación suele conectar una ciudad central con los municipios de su entorno?",
+        "options": [
+          "Un límite entre continentes",
+          "Una divisoria de aguas",
+          "Viajes y servicios compartidos",
+          "Una corriente oceánica"
+        ],
+        "correctAnswer": "Viajes y servicios compartidos",
+        "explanation": "Los desplazamientos por trabajo, estudio, comercio y servicios pueden vincular una ciudad con su área de influencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-054",
+        "number": 54,
+        "topic": "Costas",
+        "concept": "oleaje_puede_erosionar_costa_rocosa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso puede desgastar una costa rocosa por acción repetida del oleaje?",
+        "options": [
+          "Polinización",
+          "Infiltración profunda",
+          "Sedimentación eólica",
+          "Erosión marina"
+        ],
+        "correctAnswer": "Erosión marina",
+        "explanation": "El oleaje golpea y desgasta las rocas costeras, aunque el ritmo depende de las condiciones locales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-055",
+        "number": 55,
+        "topic": "Representación del espacio · Verdadero o falso",
+        "concept": "mapa_selecciona_y_simplifica_informacion_territorial",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un mapa puede mostrar todos los objetos del territorio con el mismo detalle que se ven en el lugar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Todo mapa selecciona y simplifica información según su escala, propósito y nivel de detalle.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-056",
+        "number": 56,
+        "topic": "Movilidad cotidiana",
+        "concept": "viaje_diario_entre_hogar_y_trabajo_es_movimiento_pendular",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una persona viaja cada día de su casa al trabajo y regresa. ¿Qué desplazamiento realiza?",
+        "options": [
+          "Movimiento pendular",
+          "Migración internacional",
+          "Desplazamiento forzado",
+          "Migración estacional"
+        ],
+        "correctAnswer": "Movimiento pendular",
+        "explanation": "Los movimientos pendulares son viajes periódicos entre el lugar de residencia y actividades como trabajo o estudio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-057",
+        "number": 57,
+        "topic": "Archipiélagos",
+        "concept": "archipielago_es_conjunto_de_islas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama un conjunto de islas próximas entre sí?",
+        "options": [
+          "Istmo",
+          "Archipiélago",
+          "Delta",
+          "Cordillera"
+        ],
+        "correctAnswer": "Archipiélago",
+        "explanation": "Un archipiélago es un conjunto de islas agrupadas en una zona marítima o lacustre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-058",
+        "number": 58,
+        "topic": "Costas",
+        "concept": "olas_y_corrientes_mueven_sedimentos_de_playa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso puede desplazar arena a lo largo de una playa?",
+        "options": [
+          "La condensación del aire",
+          "La sombra de las montañas",
+          "El crecimiento de las mareas",
+          "El oleaje y las corrientes costeras"
+        ],
+        "correctAnswer": "El oleaje y las corrientes costeras",
+        "explanation": "El oleaje y las corrientes pueden transportar sedimentos a lo largo de la costa y cambiar la forma de la playa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-059",
+        "number": 59,
+        "topic": "Sectores económicos",
+        "concept": "servicios_de_salud_pertenecen_sector_terciario",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál actividad pertenece principalmente al sector terciario?",
+        "options": [
+          "Extraer carbón",
+          "Cultivar arroz",
+          "Prestar servicios de salud",
+          "Fabricar cemento"
+        ],
+        "correctAnswer": "Prestar servicios de salud",
+        "explanation": "El sector terciario comprende servicios como salud, educación, comercio y transporte.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-060",
+        "number": 60,
+        "topic": "Agricultura y clima",
+        "concept": "estacion_seca_prolongada_puede_requerir_riego_agricola",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una región con una estación seca larga puede necesitar sistemas de riego para ciertos cultivos?",
+        "options": [
+          "El viento convierte todas las plantas en rocas",
+          "Las lluvias pueden no cubrir las necesidades de agua del cultivo",
+          "La estación seca aumenta el tamaño de los ríos",
+          "El relieve impide que exista evaporación"
+        ],
+        "correctAnswer": "Las lluvias pueden no cubrir las necesidades de agua del cultivo",
+        "explanation": "Si la precipitación es insuficiente durante parte del ciclo agrícola, el riego puede aportar agua adicional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-061",
+        "number": 61,
+        "topic": "Uso del suelo",
+        "concept": "pendiente_y_estabilidad_orientan_construccion_en_ladera",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dato es clave al evaluar si una ladera es adecuada para construir viviendas?",
+        "options": [
+          "El número de idiomas del país",
+          "La distancia al ecuador solamente",
+          "El color de los techos cercanos",
+          "La pendiente y estabilidad del terreno"
+        ],
+        "correctAnswer": "La pendiente y estabilidad del terreno",
+        "explanation": "Pendiente, estabilidad, drenaje y amenazas deben considerarse antes de urbanizar una ladera.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-062",
+        "number": 62,
+        "topic": "División territorial · Verdadero o falso",
+        "concept": "jurisdiccion_municipal_incluye_areas_urbanas_y_rurales",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un municipio puede abarcar áreas urbanas y rurales dentro de su límite.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La jurisdicción municipal suele incluir una cabecera y otros asentamientos o áreas rurales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-063",
+        "number": 63,
+        "topic": "Servicios y territorio",
+        "concept": "carretera_mejora_conectividad_y_acceso_a_servicios",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué efecto puede tener una nueva carretera entre una zona rural y una ciudad cercana?",
+        "options": [
+          "Reducir tiempos de traslado y facilitar intercambios",
+          "Cambiar la latitud de ambos lugares",
+          "Eliminar la necesidad de transporte",
+          "Detener la migración en todos los casos"
+        ],
+        "correctAnswer": "Reducir tiempos de traslado y facilitar intercambios",
+        "explanation": "Una vía puede mejorar la conectividad y el acceso a mercados o servicios, aunque sus efectos dependen de su uso y planificación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-064",
+        "number": 64,
+        "topic": "Indicadores de desarrollo",
+        "concept": "cobertura_de_servicios_compara_acceso_territorial",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué comparación ayuda más a saber si dos municipios tienen acceso parecido a servicios básicos?",
+        "options": [
+          "Comparar únicamente sus nombres",
+          "Revisar cobertura de agua, saneamiento y electricidad",
+          "Contar sus montañas más altas",
+          "Medir la longitud de sus ríos sin habitantes"
+        ],
+        "correctAnswer": "Revisar cobertura de agua, saneamiento y electricidad",
+        "explanation": "La cobertura de servicios básicos permite comparar condiciones de acceso que afectan la vida cotidiana.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-065",
+        "number": 65,
+        "topic": "Actividad económica y transporte",
+        "concept": "industria_se_localiza_cerca_de_insumos_y_transporte",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué algunas industrias se ubican cerca de materias primas o vías de carga?",
+        "options": [
+          "Para modificar el huso horario",
+          "Para evitar toda regulación ambiental",
+          "Para reducir costos de traslado y abastecimiento",
+          "Para eliminar la necesidad de trabajadores"
+        ],
+        "correctAnswer": "Para reducir costos de traslado y abastecimiento",
+        "explanation": "La localización cercana a insumos y transporte puede reducir tiempos y costos logísticos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-066",
+        "number": 66,
+        "topic": "Territorio y servicios · Verdadero o falso",
+        "concept": "distancia_directa_no_equivale_a_tiempo_de_viaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La distancia en línea recta siempre equivale al tiempo real que toma llegar de un barrio a un hospital.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Rutas, tráfico, relieve y disponibilidad de transporte pueden hacer que el tiempo de viaje difiera de la distancia directa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-067",
+        "number": 67,
+        "topic": "Energía y territorio",
+        "concept": "caudal_y_desnivel_favorecen_potencial_hidroelectrico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué condición puede favorecer la generación de energía hidroeléctrica en una región?",
+        "options": [
+          "Lluvias escasas y terreno plano sin ríos",
+          "Solo una temperatura alta todo el año",
+          "Ninguna diferencia de altura en los cauces",
+          "Disponibilidad de agua y desniveles aprovechables"
+        ],
+        "correctAnswer": "Disponibilidad de agua y desniveles aprovechables",
+        "explanation": "El caudal y la diferencia de altura del agua pueden aprovecharse para mover turbinas, junto con consideraciones ambientales y sociales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-068",
+        "number": 68,
+        "topic": "Distribución de población",
+        "concept": "empleo_estudio_y_servicios_atraen_poblacion_urbana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué factor suele atraer población hacia una ciudad intermedia?",
+        "options": [
+          "Oportunidades de empleo, estudio y servicios",
+          "La ausencia de toda vía de acceso",
+          "La falta de viviendas y agua",
+          "Una frontera que impide el intercambio"
+        ],
+        "correctAnswer": "Oportunidades de empleo, estudio y servicios",
+        "explanation": "Empleo, educación, salud y comercio pueden atraer población, aunque también influyen factores familiares y ambientales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-069",
+        "number": 69,
+        "topic": "Circulación de mercancías",
+        "concept": "nodo_de_transporte_concentra_y_distribuye_flujos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa que una ciudad funcione como nodo de transporte?",
+        "options": [
+          "Que no se conecta con otras localidades",
+          "Que concentra y distribuye flujos de personas o mercancías",
+          "Que siempre está junto al mar",
+          "Que carece de actividades económicas"
+        ],
+        "correctAnswer": "Que concentra y distribuye flujos de personas o mercancías",
+        "explanation": "Un nodo articula rutas y concentra conexiones entre distintos puntos de una red.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-070",
+        "number": 70,
+        "topic": "Teledetección · Verdadero o falso",
+        "concept": "imagenes_satelitales_comparadas_detectan_cambio_de_cobertura",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una imagen satelital puede ayudar a identificar cambios en la cobertura del suelo si se compara con otra de fecha distinta.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Comparaciones temporales permiten observar cambios, siempre que se consideren resolución, fechas y condiciones de captura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-071",
+        "number": 71,
+        "topic": "Preparación ante inundaciones",
+        "concept": "alerta_volcanica_prioriza_ruta_oficial_a_refugio_seguro",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una localidad recibe una alerta oficial por actividad volcánica. ¿Qué ruta debe seguir una escuela durante la evacuación?",
+        "options": [
+          "La ruta habitual que pasa cerca del volcán",
+          "La que cruza la zona de evacuación para acortar camino",
+          "La ruta indicada hacia un albergue seguro fuera de la zona de amenaza",
+          "Cualquier camino sin consultar la alerta"
+        ],
+        "correctAnswer": "La ruta indicada hacia un albergue seguro fuera de la zona de amenaza",
+        "explanation": "Las rutas oficiales y los puntos de encuentro consideran las zonas de amenaza y las instrucciones de gestión del riesgo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-072",
+        "number": 72,
+        "topic": "Infraestructura y conservación",
+        "concept": "trazado_y_pasos_de_fauna_reducen_fragmentacion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una carretera propuesta atravesaría un corredor usado por animales entre dos fragmentos de bosque. ¿Qué ajuste reduce mejor el impacto?",
+        "options": [
+          "Eliminar todos los árboles del corredor",
+          "Aumentar el tránsito nocturno",
+          "Cerrar los pasos existentes de fauna",
+          "Rediseñar el trazado o incluir pasos de fauna en puntos adecuados"
+        ],
+        "correctAnswer": "Rediseñar el trazado o incluir pasos de fauna en puntos adecuados",
+        "explanation": "Evitar el corredor o mantener conectividad mediante pasos diseñados para las especies puede reducir la fragmentación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-073",
+        "number": 73,
+        "topic": "Planeación de servicios",
+        "concept": "sede_de_salud_prioriza_demanda_y_accesibilidad_estacional",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una zona rural tiene pocos centros de salud y vías difíciles durante lluvias. ¿Qué análisis ayuda a priorizar una nueva sede?",
+        "options": [
+          "Población atendida, tiempos de viaje y accesibilidad estacional",
+          "El número de tiendas de ropa",
+          "La distancia a países vecinos",
+          "La cantidad de edificios altos en la capital"
+        ],
+        "correctAnswer": "Población atendida, tiempos de viaje y accesibilidad estacional",
+        "explanation": "Combinar población, tiempo de viaje y condiciones de las rutas ayuda a identificar necesidades de cobertura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-074",
+        "number": 74,
+        "topic": "Turismo y territorio",
+        "concept": "manejo_de_visitantes_protege_paramo_y_limita_erosion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una zona de páramo recibe más visitantes y aparecen senderos erosionados. ¿Qué acción puede equilibrar uso y conservación?",
+        "options": [
+          "Abrir rutas nuevas sin señalización",
+          "Definir senderos, límites de visita y monitoreo ambiental",
+          "Permitir vehículos en toda la zona",
+          "Retirar toda la vegetación para ver el suelo"
+        ],
+        "correctAnswer": "Definir senderos, límites de visita y monitoreo ambiental",
+        "explanation": "El manejo de visitantes puede concentrar el tránsito en rutas adecuadas y vigilar impactos sobre un ecosistema sensible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-075",
+        "number": 75,
+        "topic": "Cartografía participativa · Verdadero o falso",
+        "concept": "cartografia_local_complementa_datos_oficiales_verificados",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un mapa elaborado con residentes puede aportar nombres de lugares y rutas locales, pero conviene contrastar datos críticos de emergencia con fuentes oficiales.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El conocimiento local complementa otras fuentes; para decisiones de emergencia se deben verificar riesgos y rutas con información validada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-076",
+        "number": 76,
+        "topic": "Mapas del clima",
+        "concept": "isoyetas_unen_lugares_de_igual_precipitacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mapa climático, ¿qué unen las líneas llamadas isoyetas?",
+        "options": [
+          "Lugares con igual precipitación",
+          "Ciudades con igual población",
+          "Puntos a igual distancia del mar",
+          "Ríos con igual longitud"
+        ],
+        "correctAnswer": "Lugares con igual precipitación",
+        "explanation": "Las isoyetas unen puntos que registran valores iguales de precipitación en un periodo indicado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-077",
+        "number": 77,
+        "topic": "Mapas de relieve",
+        "concept": "mapa_hipsometrico_representa_rangos_de_altitud",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué representan normalmente los tonos de un mapa hipsométrico?",
+        "options": [
+          "Límites de países",
+          "Rangos de altitud del terreno",
+          "Cantidad de habitantes",
+          "Rutas de transporte"
+        ],
+        "correctAnswer": "Rangos de altitud del terreno",
+        "explanation": "Los mapas hipsométricos usan colores para representar rangos de elevación sobre el nivel del mar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-078",
+        "number": 78,
+        "topic": "División político-administrativa",
+        "concept": "municipio_es_entidad_territorial_local_colombiana",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es la entidad territorial básica del Estado colombiano dentro de un departamento?",
+        "options": [
+          "Continente",
+          "Región natural",
+          "Municipio",
+          "Cuenca"
+        ],
+        "correctAnswer": "Municipio",
+        "explanation": "El municipio es una entidad territorial local con autoridades y límites propios dentro de la organización colombiana.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-079",
+        "number": 79,
+        "topic": "Agua y territorio",
+        "concept": "afluente_desemboca_en_curso_principal",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el río pequeño que desemboca en otro río mayor?",
+        "options": [
+          "Estuario",
+          "Delta",
+          "Acuífero",
+          "Afluente"
+        ],
+        "correctAnswer": "Afluente",
+        "explanation": "Un afluente aporta sus aguas a un río principal u otro curso de agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-080",
+        "number": 80,
+        "topic": "Organización urbana",
+        "concept": "cabecera_municipal_concentra_gobierno_local",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué lugar concentra normalmente autoridades y servicios principales de un municipio?",
+        "options": [
+          "Cabecera municipal",
+          "Divisoria de aguas",
+          "Zona de alta mar",
+          "Límite internacional"
+        ],
+        "correctAnswer": "Cabecera municipal",
+        "explanation": "La cabecera municipal concentra la sede de gobierno local y muchos servicios, aunque el municipio también incluye zonas rurales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-081",
+        "number": 81,
+        "topic": "Desiertos",
+        "concept": "oasis_es_zona_con_agua_en_region_arida",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica describe un oasis en un ambiente desértico?",
+        "options": [
+          "Una zona sin ninguna forma de vida",
+          "Un lugar con agua disponible entre áreas áridas",
+          "Una corriente oceánica fría",
+          "Una montaña siempre cubierta de hielo"
+        ],
+        "correctAnswer": "Un lugar con agua disponible entre áreas áridas",
+        "explanation": "Un oasis es un lugar en una región árida donde hay agua suficiente para sostener vegetación y asentamientos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-082",
+        "number": 82,
+        "topic": "Ecosistemas costeros · Verdadero o falso",
+        "concept": "manglar_puede_amortiguar_oleaje_y_tormentas",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Los manglares pueden reducir parte del impacto de oleajes y tormentas sobre algunas costas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Sus raíces y vegetación pueden disipar energía del oleaje y retener sedimentos, aunque no eliminan todo riesgo costero.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-083",
+        "number": 83,
+        "topic": "Formas costeras",
+        "concept": "viento_deposita_arena_y_forma_dunas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso forma muchas dunas costeras?",
+        "options": [
+          "Congelación de agua subterránea",
+          "Acumulación de lava",
+          "Depósito de arena transportada por el viento",
+          "Compactación de coral en alta montaña"
+        ],
+        "correctAnswer": "Depósito de arena transportada por el viento",
+        "explanation": "El viento transporta y deposita arena; la vegetación puede ayudar a estabilizar algunas dunas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-084",
+        "number": 84,
+        "topic": "Distribución de lluvias",
+        "concept": "climograma_muestra_estacionalidad_de_precipitacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un climograma muestra lluvias concentradas en ciertos meses y una estación seca marcada. ¿Qué permite inferir?",
+        "options": [
+          "La altitud exacta de cada vivienda",
+          "El tamaño de todas las cuencas",
+          "La dirección diaria de cada viento",
+          "La estacionalidad de la precipitación"
+        ],
+        "correctAnswer": "La estacionalidad de la precipitación",
+        "explanation": "Un climograma organiza variables climáticas por meses y permite observar temporadas lluviosas o secas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-085",
+        "number": 85,
+        "topic": "Cambio de uso del suelo",
+        "concept": "urbanizacion_sustituye_cobertura_boscosa_y_cambia_uso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un bosque cercano se convierte en urbanización. ¿Qué cambio geográfico ocurre directamente?",
+        "options": [
+          "Cambio de cobertura y uso del suelo",
+          "Desplazamiento del ecuador",
+          "Aumento automático de la población nacional",
+          "Cambio de órbita terrestre"
+        ],
+        "correctAnswer": "Cambio de cobertura y uso del suelo",
+        "explanation": "La conversión de bosque en zona construida modifica la cobertura física y el uso que las personas dan al terreno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-086",
+        "number": 86,
+        "topic": "Recursos y actividades económicas",
+        "concept": "conflicto_hidrico_evalua_oferta_demanda_y_usuarios",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una mina y una comunidad necesitan la misma fuente de agua durante una temporada seca. ¿Qué información ayudaría a evaluar el conflicto?",
+        "options": [
+          "Solo el número de edificios de la capital",
+          "Disponibilidad de agua, usos y necesidades de ambas partes",
+          "El color de los vehículos de la mina",
+          "La distancia a otro continente"
+        ],
+        "correctAnswer": "Disponibilidad de agua, usos y necesidades de ambas partes",
+        "explanation": "Conocer disponibilidad, demanda y usos permite analizar competencia por el recurso y considerar decisiones de gestión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-087",
+        "number": 87,
+        "topic": "Áreas protegidas",
+        "concept": "area_protegida_conserva_ecosistemas_con_manejo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propósito principal cumple un parque natural protegido?",
+        "options": [
+          "Convertir todo el territorio en zona urbana",
+          "Garantizar que ninguna especie cambie",
+          "Conservar ecosistemas y valores naturales bajo reglas de manejo",
+          "Impedir toda investigación y visita"
+        ],
+        "correctAnswer": "Conservar ecosistemas y valores naturales bajo reglas de manejo",
+        "explanation": "Las áreas protegidas buscan conservar valores naturales y culturales mediante objetivos y normas de manejo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-088",
+        "number": 88,
+        "topic": "Redes urbanas",
+        "concept": "ciudad_de_influencia_recibe_viajes_por_servicios",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele distinguir a una ciudad que presta servicios a localidades cercanas?",
+        "options": [
+          "Está aislada de todas las vías",
+          "No tiene comercio ni instituciones",
+          "Carece de población residente",
+          "Recibe desplazamientos de su área de influencia"
+        ],
+        "correctAnswer": "Recibe desplazamientos de su área de influencia",
+        "explanation": "Una ciudad puede atraer viajes por servicios, comercio, educación o empleo desde localidades cercanas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-089",
+        "number": 89,
+        "topic": "Cuencas transfronterizas · Verdadero o falso",
+        "concept": "cuenca_hidrografica_puede_cruzar_frontera_politica",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una cuenca hidrográfica puede atravesar la frontera entre dos países.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El agua sigue el relieve y las redes de drenaje; sus cuencas no se limitan necesariamente a fronteras políticas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-090",
+        "number": 90,
+        "topic": "Cartografía digital",
+        "concept": "capas_gis_combinan_variables_espaciales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un sistema de información geográfica, ¿qué ventaja tiene mantener separadas capas de vías, ríos y población?",
+        "options": [
+          "Permite combinar y comparar variables espaciales",
+          "Evita registrar dónde están los datos",
+          "Elimina la necesidad de revisar las fuentes",
+          "Convierte los mapas en fotografías sin escala"
+        ],
+        "correctAnswer": "Permite combinar y comparar variables espaciales",
+        "explanation": "Las capas permiten analizar relaciones entre distintos tipos de información que comparten una referencia espacial.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-091",
+        "number": 91,
+        "topic": "Cuencas y territorios",
+        "concept": "ciudad_depende_de_cuenca_compartida_con_municipios_aguas_arriba",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad se abastece de un río que nace en municipios montañosos aguas arriba. ¿Qué relación territorial muestra?",
+        "options": [
+          "Que los límites municipales detienen el flujo del agua",
+          "La interdependencia entre territorios aguas arriba y abajo",
+          "Que el río cambia de cuenca al cruzar una ciudad",
+          "Que las ciudades producen por sí solas toda el agua que consumen"
+        ],
+        "correctAnswer": "La interdependencia entre territorios aguas arriba y abajo",
+        "explanation": "Las actividades de una ciudad pueden depender del agua y de decisiones de gestión tomadas en municipios de la cuenca alta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-092",
+        "number": 92,
+        "topic": "Agua y clima · Verdadero o falso",
+        "concept": "lluvia_abundante_no_garantiza_acceso_a_agua_segura",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una región que recibe mucha lluvia necesariamente dispone de agua limpia y accesible para todos sus habitantes.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Cantidad de lluvia no garantiza calidad, infraestructura, distribución ni acceso equitativo al agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-093",
+        "number": 93,
+        "topic": "Orientación de laderas",
+        "concept": "orientacion_de_ladera_modifica_exposicion_solar",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos laderas tienen igual altitud y pendiente, pero reciben distinta cantidad de radiación solar directa. ¿Qué elemento puede explicar la diferencia?",
+        "options": [
+          "El nombre del municipio",
+          "El ancho del río más cercano",
+          "La orientación de cada ladera",
+          "La escala del mapa político"
+        ],
+        "correctAnswer": "La orientación de cada ladera",
+        "explanation": "La orientación hacia el Sol modifica la exposición y puede influir en temperatura, humedad y vegetación local.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-094",
+        "number": 94,
+        "topic": "Mapas de uso del suelo",
+        "concept": "mapa_de_uso_del_suelo_clasifica_actividades_territoriales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué mapa ayuda a distinguir zonas residenciales, agrícolas e industriales?",
+        "options": [
+          "Carta de corrientes oceánicas",
+          "Mapa de relieve submarino",
+          "Mapa de límites horarios",
+          "Mapa de uso del suelo"
+        ],
+        "correctAnswer": "Mapa de uso del suelo",
+        "explanation": "Un mapa de uso del suelo clasifica el territorio según las actividades o funciones asignadas a cada zona.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-095",
+        "number": 95,
+        "topic": "Proyecciones demográficas · Verdadero o falso",
+        "concept": "proyeccion_poblacional_depende_de_supuestos",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una proyección de población es una estimación condicionada por supuestos, no una certeza sobre el futuro.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las proyecciones dependen de supuestos sobre nacimientos, muertes y migración, que pueden cambiar con el tiempo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-096",
+        "number": 96,
+        "topic": "Transporte y accesibilidad",
+        "concept": "acceso_real_considera_tiempo_y_disponibilidad_estacional",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos veredas están a la misma distancia de un hospital en el mapa, pero una queda aislada durante lluvias. ¿Qué indicador refleja mejor el acceso real?",
+        "options": [
+          "Tiempo de viaje y transitabilidad de rutas durante distintas temporadas",
+          "Distancia directa medida sin considerar caminos",
+          "Número de vías departamentales en todo el país",
+          "Distancia al límite del municipio, sin revisar el recorrido"
+        ],
+        "correctAnswer": "Tiempo de viaje y transitabilidad de rutas durante distintas temporadas",
+        "explanation": "Tiempo de viaje y disponibilidad estacional de rutas reflejan mejor si las personas pueden llegar al servicio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-097",
+        "number": 97,
+        "topic": "Desigualdad territorial",
+        "concept": "distribucion_espacial_de_empleo_revela_desigualdad_interna",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos municipios tienen igual población total, pero uno concentra casi todo el empleo formal en su cabecera. ¿Qué dato permitiría comparar mejor esa desigualdad espacial?",
+        "options": [
+          "El área total de cada municipio",
+          "Distribución de empleos entre cabecera y zonas rurales",
+          "Número total de nacimientos sin ubicación",
+          "Cantidad de empresas del país, sin división territorial"
+        ],
+        "correctAnswer": "Distribución de empleos entre cabecera y zonas rurales",
+        "explanation": "Desagregar oportunidades por ubicación muestra cómo se distribuyen dentro del territorio y quiénes pueden acceder a ellas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-098",
+        "number": 98,
+        "topic": "Gestión costera",
+        "concept": "planeacion_costera_evalua_habitat_y_proteccion_del_manglar",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una obra turística se proyecta sobre un manglar que protege viviendas y sirve de hábitat. ¿Qué decisión considera mejor las funciones del lugar?",
+        "options": [
+          "Construir sin evaluar efectos",
+          "Rellenar el manglar para crear estacionamientos",
+          "Evitar o rediseñar la obra y evaluar alternativas de bajo impacto",
+          "Retirar raíces para abrir canales de navegación"
+        ],
+        "correctAnswer": "Evitar o rediseñar la obra y evaluar alternativas de bajo impacto",
+        "explanation": "Considerar protección costera y hábitat exige evaluar impactos y alternativas antes de intervenir el manglar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-099",
+        "number": 99,
+        "topic": "Cobertura del suelo",
+        "concept": "comparar_cobertura_verifica_fecha_resolucion_y_captura",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad compara imágenes de una zona boscosa y observa más suelo descubierto en la imagen reciente. ¿Qué verificación ayuda antes de concluir que hubo deforestación?",
+        "options": [
+          "Comparar escenas de épocas distintas del año",
+          "Basarse solo en el color que aparece en pantalla",
+          "Revisar una imagen sin conocer su ubicación",
+          "Confirmar fechas, resolución y condiciones de captura"
+        ],
+        "correctAnswer": "Confirmar fechas, resolución y condiciones de captura",
+        "explanation": "Diferencias de resolución, estación o condiciones de captura pueden alterar la apariencia; verificar estos datos mejora la comparación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-100",
+        "number": 100,
+        "topic": "Indicadores de población · Verdadero o falso",
+        "concept": "alta_densidad_no_implica_mayor_poblacion_total",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un municipio pequeño puede tener alta densidad de población aunque tenga menos habitantes en total que un municipio extenso.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La densidad divide población por superficie, por lo que un área pequeña puede registrar un valor alto con menos habitantes totales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-101",
+        "number": 101,
+        "topic": "Plataformas continentales",
+        "concept": "plataforma_continental_extiende_continente_bajo_el_mar",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué parte sumergida del continente se extiende desde la costa antes de un descenso más pronunciado del fondo marino?",
+        "options": [
+          "Plataforma continental",
+          "Fosa oceánica",
+          "Dorsal volcánica",
+          "Abanico aluvial"
+        ],
+        "correctAnswer": "Plataforma continental",
+        "explanation": "La plataforma continental es la prolongación submarina relativamente poco profunda del continente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-102",
+        "number": 102,
+        "topic": "Ríos",
+        "concept": "cauce_es_canal_por_donde_fluye_un_rio",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el recorrido por donde fluye el agua de un río?",
+        "options": [
+          "Delta",
+          "Cauce",
+          "Divisoria",
+          "Estuario"
+        ],
+        "correctAnswer": "Cauce",
+        "explanation": "El cauce es el lecho o canal por el que circula un río o una corriente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-103",
+        "number": 103,
+        "topic": "Economía rural",
+        "concept": "ganaderia_cria_animales_para_obtener_productos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué actividad del sector primario cría animales para obtener alimentos u otros productos?",
+        "options": [
+          "Manufactura",
+          "Comercio",
+          "Ganadería",
+          "Transporte"
+        ],
+        "correctAnswer": "Ganadería",
+        "explanation": "La ganadería consiste en criar y manejar animales para obtener productos como carne, leche o lana.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-104",
+        "number": 104,
+        "topic": "Curvas de nivel",
+        "concept": "curva_de_nivel_indica_elevacion_del_terreno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué información permite leer principalmente una curva de nivel en un mapa?",
+        "options": [
+          "Número de habitantes por barrio",
+          "Dirección de los vientos",
+          "Fronteras entre municipios",
+          "Altura del terreno respecto de un nivel de referencia"
+        ],
+        "correctAnswer": "Altura del terreno respecto de un nivel de referencia",
+        "explanation": "Las curvas de nivel unen puntos con la misma elevación y representan la forma del relieve.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-105",
+        "number": 105,
+        "topic": "Gestión del riesgo · Verdadero o falso",
+        "concept": "impacto_de_amenaza_depende_de_exposicion_y_vulnerabilidad",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "El impacto de una amenaza depende también de quiénes están expuestos y de su vulnerabilidad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La intensidad de un fenómeno importa, pero la exposición y las condiciones de vulnerabilidad influyen en sus consecuencias.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-106",
+        "number": 106,
+        "topic": "Climas áridos",
+        "concept": "clima_arido_tiene_precipitacion_baja_frente_a_evaporacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica es común en un clima árido?",
+        "options": [
+          "Precipitación escasa en relación con la evaporación",
+          "Lluvia abundante todos los días",
+          "Hielo permanente en toda superficie",
+          "Ausencia total de viento"
+        ],
+        "correctAnswer": "Precipitación escasa en relación con la evaporación",
+        "explanation": "En climas áridos la disponibilidad de agua es reducida, con precipitación baja respecto de la demanda evaporativa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-107",
+        "number": 107,
+        "topic": "Recursos hídricos",
+        "concept": "acuifero_almacena_y_transmite_agua_subterranea",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué formación subterránea puede almacenar y transmitir agua a través de sus poros o fracturas?",
+        "options": [
+          "Duna",
+          "Acuífero",
+          "Meseta",
+          "Estuario"
+        ],
+        "correctAnswer": "Acuífero",
+        "explanation": "Un acuífero es una formación geológica que puede almacenar y permitir el flujo de agua subterránea.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-108",
+        "number": 108,
+        "topic": "Cadenas productivas",
+        "concept": "manufactura_transformacion_de_materias_primas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué etapa transforma materias primas en productos elaborados?",
+        "options": [
+          "Extracción",
+          "Distribución minorista",
+          "Manufactura",
+          "Consumo final"
+        ],
+        "correctAnswer": "Manufactura",
+        "explanation": "La manufactura procesa materias primas para producir bienes con distinto grado de elaboración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-109",
+        "number": 109,
+        "topic": "Curvas de nivel y rutas",
+        "concept": "trazado_sinuoso_reduce_pendiente_de_carretera_montanosa",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una carretera de montaña suele trazar curvas en vez de subir directamente por la pendiente más empinada?",
+        "options": [
+          "Para cambiar la ubicación del valle",
+          "Para eliminar la altitud del mapa",
+          "Para evitar todos los puentes",
+          "Para reducir la inclinación de la ruta"
+        ],
+        "correctAnswer": "Para reducir la inclinación de la ruta",
+        "explanation": "Un trazado sinuoso puede reducir la pendiente efectiva y facilitar el ascenso, aunque aumenta la distancia recorrida.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-110",
+        "number": 110,
+        "topic": "Cambio territorial",
+        "concept": "fuentes_espaciales_comparables_muestran_expansion_urbana",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué evidencia permite comparar mejor la expansión de una ciudad en dos décadas?",
+        "options": [
+          "Planos o imágenes de fechas comparables y con cobertura semejante",
+          "Un mapa actual y un relato sin fecha",
+          "Fotografías de ciudades diferentes",
+          "Una lista de nombres de barrios"
+        ],
+        "correctAnswer": "Planos o imágenes de fechas comparables y con cobertura semejante",
+        "explanation": "Fuentes espaciales comparables permiten identificar dónde y cuánto cambió la cobertura urbana.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-111",
+        "number": 111,
+        "topic": "Cadena productiva",
+        "concept": "procesamiento_local_agrega_valor_a_cadena_de_cacao",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un municipio cultiva cacao, pero lo vende sin procesar. ¿Qué actividad podría agregar una etapa de transformación local?",
+        "options": [
+          "Transporte de pasajeros",
+          "Elaborar chocolate a partir del cacao",
+          "Medir la altitud de las fincas",
+          "Trazar límites administrativos"
+        ],
+        "correctAnswer": "Elaborar chocolate a partir del cacao",
+        "explanation": "Transformar cacao en chocolate agrega procesamiento antes de la comercialización del producto final.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-112",
+        "number": 112,
+        "topic": "Escala y representación",
+        "concept": "escala_y_proposito_determinan_detalle_representable",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al preparar un mapa de todo un país en una hoja, ¿por qué no se dibuja cada edificio?",
+        "options": [
+          "Porque los edificios no ocupan espacio",
+          "Porque el mapa solo puede mostrar ríos",
+          "La escala y el propósito requieren seleccionar detalles",
+          "Porque los edificios cambian de hemisferio"
+        ],
+        "correctAnswer": "La escala y el propósito requieren seleccionar detalles",
+        "explanation": "La escala pequeña y el propósito del mapa determinan qué objetos pueden representarse con claridad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-113",
+        "number": 113,
+        "topic": "Sistemas de información geográfica · Verdadero o falso",
+        "concept": "superponer_vias_y_salud_apoya_analisis_de_acceso",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Combinar una capa de carreteras con otra de centros de salud puede ayudar a estudiar su accesibilidad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Al superponer capas espaciales se pueden analizar conexiones y distancias entre infraestructura y servicios.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-114",
+        "number": 114,
+        "topic": "Geografía urbana",
+        "concept": "distancia_y_conectividad_afectan_acceso_a_equipamientos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un barrio tiene parques y viviendas, pero está lejos de escuelas, centros de salud y rutas de transporte. ¿Qué aspecto urbano presenta una dificultad?",
+        "options": [
+          "El grosor de la corteza bajo los continentes",
+          "La distancia a otros países",
+          "El color de las viviendas",
+          "El acceso a servicios y equipamientos"
+        ],
+        "correctAnswer": "El acceso a servicios y equipamientos",
+        "explanation": "La localización y conectividad de servicios influyen en la accesibilidad y calidad de vida de los residentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-115",
+        "number": 115,
+        "topic": "Pueblos y territorio · Verdadero o falso",
+        "concept": "territorio_comunitario_incluye_memoria_y_vinculos_culturales",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Para una comunidad, el territorio puede incluir vínculos culturales y de memoria además de límites físicos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las relaciones con lugares, prácticas y recuerdos forman parte de cómo las comunidades comprenden y usan sus territorios.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-116",
+        "number": 116,
+        "topic": "Inundaciones",
+        "concept": "sedimentos_enriquecen_planicie_aluvial_expuesta_a_crecidas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una planicie aluvial puede ser fértil y, a la vez, tener riesgo de inundación?",
+        "options": [
+          "El viento deposita hielo y lava",
+          "Las crecidas depositan sedimentos, pero el río puede desbordarse",
+          "El suelo impide toda infiltración",
+          "Las planicies detienen la lluvia antes del cauce"
+        ],
+        "correctAnswer": "Las crecidas depositan sedimentos, pero el río puede desbordarse",
+        "explanation": "Sedimentos fluviales pueden enriquecer suelos de planicie, que también puede quedar expuesta a desbordamientos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-117",
+        "number": 117,
+        "topic": "Transporte intermodal",
+        "concept": "puerto_intermodal_conecta_varios_modos_de_transporte",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa que un puerto sea intermodal?",
+        "options": [
+          "Que opera únicamente con aviones",
+          "Que no maneja carga",
+          "Que conecta varios modos de transporte",
+          "Que está fuera de toda red vial"
+        ],
+        "correctAnswer": "Que conecta varios modos de transporte",
+        "explanation": "Un puerto intermodal transfiere carga entre modos, por ejemplo entre transporte marítimo, carretera y ferrocarril.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-118",
+        "number": 118,
+        "topic": "Planificación urbana",
+        "concept": "zonificacion_separa_usos_y_requiere_planear_conectividad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué debe acompañar una zonificación que separa industrias de viviendas?",
+        "options": [
+          "Planes de transporte y servicios entre las zonas",
+          "Eliminar todas las vías de acceso",
+          "Impedir que trabajadores lleguen a las plantas",
+          "Omitir la evaluación de impactos"
+        ],
+        "correctAnswer": "Planes de transporte y servicios entre las zonas",
+        "explanation": "Separar algunos usos puede reducir conflictos, pero la planificación debe mantener accesibilidad y atender impactos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-119",
+        "number": 119,
+        "topic": "Externalidades ambientales",
+        "concept": "contaminacion_industrial_impone_costo_a_terceros",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una fábrica obtiene beneficios, pero sus emisiones afectan a barrios cercanos. ¿Qué concepto describe ese costo que recae también en terceros?",
+        "options": [
+          "Costo interno de producción",
+          "Subsidio público",
+          "Arancel comercial",
+          "Externalidad negativa"
+        ],
+        "correctAnswer": "Externalidad negativa",
+        "explanation": "Una externalidad negativa ocurre cuando una actividad impone costos, como contaminación, a personas ajenas a la transacción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-120",
+        "number": 120,
+        "topic": "Paisaje cultural · Verdadero o falso",
+        "concept": "paisaje_cultural_refleja_interaccion_historica_sociedad_ambiente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un paisaje cultural puede reflejar cómo una sociedad ha transformado y usado un espacio a lo largo del tiempo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Construcciones, caminos, cultivos y otros elementos muestran interacciones históricas entre sociedad y ambiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-121",
+        "number": 121,
+        "topic": "Selección de rutas",
+        "concept": "ruta_de_carga_evalua_vias_riesgos_y_tiempos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una empresa debe transportar alimentos entre dos municipios durante la temporada de lluvias. ¿Qué combinación conviene revisar al elegir la ruta?",
+        "options": [
+          "Estado de las vías, cierres por riesgo y tiempo estimado",
+          "Color de los vehículos y nombre de las veredas",
+          "Número de montañas en otros países",
+          "Distancia al ecuador sin consultar carreteras"
+        ],
+        "correctAnswer": "Estado de las vías, cierres por riesgo y tiempo estimado",
+        "explanation": "Condiciones viales, amenazas y tiempo permiten escoger una ruta más confiable para carga perecedera.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-122",
+        "number": 122,
+        "topic": "Gestión de recursos",
+        "concept": "cuenca_compartida_requiere_acuerdos_y_evaluacion_de_caudal",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En época seca, dos municipios comparten un río y uno propone captar más agua aguas arriba. ¿Qué decisión favorece una gestión territorial responsable?",
+        "options": [
+          "Ignorar a quienes viven aguas abajo",
+          "Revisar caudales, necesidades y acuerdos entre usuarios de la cuenca",
+          "Suponer que el río produce agua ilimitada",
+          "Cerrar todos los caminos del valle"
+        ],
+        "correctAnswer": "Revisar caudales, necesidades y acuerdos entre usuarios de la cuenca",
+        "explanation": "La gestión integrada considera disponibilidad, necesidades y coordinación entre usuarios conectados por la misma cuenca.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-123",
+        "number": 123,
+        "topic": "Cambio climático y costas",
+        "concept": "adaptacion_costera_integra_erosion_ecosistemas_y_exposicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un municipio costero compara opciones ante erosión creciente. ¿Qué plan ofrece una respuesta más informada?",
+        "options": [
+          "Construir sobre la playa sin estudiar corrientes",
+          "Retirar la vegetación costera restante",
+          "Combinar mapas de cambio costero, ecosistemas y exposición de viviendas",
+          "Usar solo una fotografía sin fecha"
+        ],
+        "correctAnswer": "Combinar mapas de cambio costero, ecosistemas y exposición de viviendas",
+        "explanation": "Mapas y datos de costa, hábitats y asentamientos ayudan a comparar riesgos y alternativas de adaptación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-124",
+        "number": 124,
+        "topic": "Resiliencia económica",
+        "concept": "diversificacion_economica_reduce_dependencia_de_actividad",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un municipio depende de una sola mina para la mayoría de sus empleos. Si cae la demanda del mineral, ¿qué medida puede reducir su vulnerabilidad económica a largo plazo?",
+        "options": [
+          "Aumentar todavía más la dependencia de la mina",
+          "Suspender la formación para otros oficios",
+          "Diversificar actividades y desarrollar nuevas capacidades laborales",
+          "Eliminar las conexiones de transporte"
+        ],
+        "correctAnswer": "Eliminar las conexiones de transporte",
+        "explanation": "Diversificar la economía y las habilidades laborales ayuda a enfrentar cambios en la demanda de una actividad dominante.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-125",
+        "number": 125,
+        "topic": "Riesgo y uso del suelo · Verdadero o falso",
+        "concept": "vivienda_en_amenaza_alta_aumenta_exposicion_futura",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Permitir nuevas viviendas en una zona identificada como de amenaza alta puede aumentar la exposición futura.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Si se ubican personas e infraestructura en áreas amenazadas, puede crecer la exposición y aumentar el impacto de un evento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-126",
+        "number": 126,
+        "topic": "Poblamiento",
+        "concept": "asentamiento_concentrado_agrupa_viviendas_en_un_nucleo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe un asentamiento concentrado?",
+        "options": [
+          "Viviendas agrupadas en un núcleo relativamente compacto",
+          "Casas separadas por grandes distancias sin centro",
+          "Una población que se mueve cada estación",
+          "Un grupo de islas deshabitadas"
+        ],
+        "correctAnswer": "Viviendas agrupadas en un núcleo relativamente compacto",
+        "explanation": "En un asentamiento concentrado, muchas viviendas y actividades se agrupan en una misma área.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-127",
+        "number": 127,
+        "topic": "Límites y ríos",
+        "concept": "rio_fronterizo_puede_marcar_limite_territorial",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nombre recibe un río que sirve como límite entre territorios?",
+        "options": [
+          "Río subterráneo",
+          "Río fronterizo",
+          "Afluente glacial",
+          "Canal de riego"
+        ],
+        "correctAnswer": "Río fronterizo",
+        "explanation": "Un río fronterizo puede formar parte del límite acordado entre dos entidades o países.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-128",
+        "number": 128,
+        "topic": "Conectividad terrestre",
+        "concept": "puente_conecta_vias_separadas_por_rio",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué infraestructura conecta dos márgenes separadas por un río?",
+        "options": [
+          "Un acueducto",
+          "Un canal",
+          "Un puente",
+          "Un dique"
+        ],
+        "correctAnswer": "Un puente",
+        "explanation": "Un puente permite cruzar un río y conectar vías ubicadas en sus dos márgenes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-129",
+        "number": 129,
+        "topic": "Economía regional",
+        "concept": "especializacion_economica_concentra_actividades_regionales",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué término describe que una región se destaque por producir cierto bien o servicio?",
+        "options": [
+          "Erosión",
+          "Evaporación",
+          "Conurbación",
+          "Especialización económica"
+        ],
+        "correctAnswer": "Especialización económica",
+        "explanation": "Una región está especializada cuando una parte importante de sus actividades se concentra en determinados bienes o servicios.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-130",
+        "number": 130,
+        "topic": "Geografía insular · Verdadero o falso",
+        "concept": "territorio_insular_incluye_islas",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un territorio insular está formado por islas o incluye islas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "“Insular” se refiere a islas; un territorio insular puede incluir una o varias islas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-131",
+        "number": 131,
+        "topic": "Periferia urbana",
+        "concept": "periferia_urbana_une_usos_ciudad_y_campo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué zona suele encontrarse en el borde de una ciudad, donde el uso rural y el urbano pueden encontrarse?",
+        "options": [
+          "Periferia urbana",
+          "Lecho oceánico",
+          "Divisoria continental",
+          "Núcleo terrestre"
+        ],
+        "correctAnswer": "Periferia urbana",
+        "explanation": "En la periferia urbana pueden mezclarse construcciones de la ciudad y actividades de áreas rurales cercanas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-132",
+        "number": 132,
+        "topic": "Población y territorio",
+        "concept": "mapa_de_distribucion_muestra_ubicacion_de_personas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué muestra un mapa de distribución de población?",
+        "options": [
+          "La composición mineral de las rocas",
+          "Dónde se ubican las personas en el territorio",
+          "La profundidad de cada océano",
+          "La trayectoria de los planetas"
+        ],
+        "correctAnswer": "Dónde se ubican las personas en el territorio",
+        "explanation": "Estos mapas representan cómo se localiza la población, a menudo mediante símbolos, puntos o zonas graduadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-133",
+        "number": 133,
+        "topic": "Economía y territorio",
+        "concept": "industria_alimentaria_transformacion_pertenece_sector_secundario",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué actividad pertenece principalmente al sector secundario?",
+        "options": [
+          "Pescar en el mar",
+          "Prestar una consulta médica",
+          "Transformar leche en queso",
+          "Vender un producto en una tienda"
+        ],
+        "correctAnswer": "Transformar leche en queso",
+        "explanation": "El sector secundario transforma materias primas en productos elaborados, como la leche en queso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-134",
+        "number": 134,
+        "topic": "Paisaje cultural",
+        "concept": "paisaje_cultural_nace_de_interaccion_sociedad_entorno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele dar origen a un paisaje cultural?",
+        "options": [
+          "La acumulación de lava solamente",
+          "Un cambio natural del clima sin ocupación humana",
+          "La erosión natural sin uso del espacio",
+          "La interacción histórica de una sociedad con su entorno"
+        ],
+        "correctAnswer": "La interacción histórica de una sociedad con su entorno",
+        "explanation": "Los paisajes culturales reflejan cómo las sociedades habitan, transforman y atribuyen significado a los lugares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-135",
+        "number": 135,
+        "topic": "Escalas geográficas",
+        "concept": "acceso_a_parques_se_analiza_a_escala_local",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ejemplo corresponde a una escala local de análisis?",
+        "options": [
+          "Comparar todos los continentes",
+          "Examinar el acceso a parques dentro de un barrio",
+          "Estudiar los océanos del planeta",
+          "Analizar la migración entre países de varios continentes"
+        ],
+        "correctAnswer": "Examinar el acceso a parques dentro de un barrio",
+        "explanation": "La escala local enfoca un área pequeña, como un barrio, para estudiar relaciones y condiciones específicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-136",
+        "number": 136,
+        "topic": "Fronteras fluviales",
+        "concept": "frontera_fluctuante_requiere_revisar_definicion_legal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Si cambia el cauce de un río que funciona como frontera, ¿qué aspecto debe aclararse para evitar disputas?",
+        "options": [
+          "El color del agua en temporada seca",
+          "El nombre del valle vecino",
+          "El acuerdo y la definición legal del límite",
+          "El número de peces que cruza el río"
+        ],
+        "correctAnswer": "El acuerdo y la definición legal del límite",
+        "explanation": "La ubicación jurídica de una frontera requiere revisar acuerdos y criterios oficiales; el cauce físico puede variar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-137",
+        "number": 137,
+        "topic": "Comparación demográfica",
+        "concept": "densidad_compara_concentracion_entre_areas_distintas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad tiene más habitantes que otra, pero también ocupa un área mucho mayor. ¿Qué dato permite comparar concentración poblacional?",
+        "options": [
+          "Densidad de población",
+          "Altura de edificios",
+          "Longitud de sus fronteras",
+          "Caudal máximo de sus ríos"
+        ],
+        "correctAnswer": "Densidad de población",
+        "explanation": "La densidad relaciona el número de habitantes con el área ocupada y ayuda a comparar concentración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-138",
+        "number": 138,
+        "topic": "Desarrollo humano · Verdadero o falso",
+        "concept": "ingreso_promedio_no_muestra_distribucion_del_bienestar",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El ingreso promedio de una región basta por sí solo para mostrar cómo se distribuye el bienestar entre sus habitantes.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Un promedio puede ocultar desigualdades; también se revisan distribución, acceso a servicios y otros indicadores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-139",
+        "number": 139,
+        "topic": "Redes de transporte",
+        "concept": "transporte_combinado_aprovecha_ventajas_de_cada_modo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ventaja puede ofrecer combinar tren y camión en el transporte de mercancías?",
+        "options": [
+          "Eliminar la necesidad de centros de carga",
+          "Reducir el número de rutas a una sola",
+          "Cambiar la localización de las ciudades",
+          "Usar cada modo en los tramos donde resulta más adecuado"
+        ],
+        "correctAnswer": "Usar cada modo en los tramos donde resulta más adecuado",
+        "explanation": "La combinación de modos puede aprovechar la eficiencia de cada tramo, por ejemplo tren en largas distancias y camión en el acceso local.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-140",
+        "number": 140,
+        "topic": "Conflictos de uso del suelo",
+        "concept": "industria_ruidosa_junto_a_viviendas_genera_conflicto_de_uso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué situación representa un conflicto de uso del suelo?",
+        "options": [
+          "Una fábrica ruidosa junto a viviendas sin medidas de mitigación",
+          "Un mapa que indica la escala gráfica",
+          "Un río que desemboca en el mar",
+          "Una carretera que cruza una zona deshabitada"
+        ],
+        "correctAnswer": "Una fábrica ruidosa junto a viviendas sin medidas de mitigación",
+        "explanation": "Actividades incompatibles muy próximas pueden generar molestias o riesgos para quienes viven alrededor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-141",
+        "number": 141,
+        "topic": "Migración y ambiente",
+        "concept": "sequias_y_perdida_de_ingresos_pueden_influir_en_migracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué situación puede contribuir a que una familia migre de una zona rural?",
+        "options": [
+          "La existencia de mapas topográficos",
+          "Pérdida reiterada de cultivos por sequías y falta de alternativas",
+          "La presencia de un puente estable",
+          "Un cambio de huso horario"
+        ],
+        "correctAnswer": "Pérdida reiterada de cultivos por sequías y falta de alternativas",
+        "explanation": "Las dificultades ambientales y económicas pueden influir en la migración, junto con factores sociales y decisiones familiares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-142",
+        "number": 142,
+        "topic": "Cambio costero · Verdadero o falso",
+        "concept": "aumento_del_mar_puede_incrementar_riesgo_costero",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El aumento del nivel del mar puede incrementar la erosión o inundación en algunos sectores costeros.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El efecto depende de la forma de la costa, las mareas, las tormentas, los sedimentos y otras condiciones locales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-143",
+        "number": 143,
+        "topic": "Agua y contaminación",
+        "concept": "monitoreo_de_quebrada_compara_calidad_entre_puntos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una quebrada recibe descargas aguas arriba y una comunidad usa agua más abajo. ¿Qué medición ayuda a vigilar su calidad?",
+        "options": [
+          "El número de casas del municipio",
+          "La distancia a la frontera nacional",
+          "Indicadores como turbidez y contaminación en distintos puntos",
+          "La altura de los árboles del parque"
+        ],
+        "correctAnswer": "Indicadores como turbidez y contaminación en distintos puntos",
+        "explanation": "Medir indicadores en varios puntos permite observar cambios a lo largo del curso, aunque identificar causas requiere análisis adicional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-144",
+        "number": 144,
+        "topic": "Incertidumbre cartográfica",
+        "concept": "fecha_de_mapa_ayuda_a_valorar_vigencia_de_datos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué un mapa de amenaza debe incluir fecha o periodo de elaboración?",
+        "options": [
+          "La fecha fija la escala del mapa",
+          "El año determina la dirección del norte",
+          "Todos los límites cambian cada año",
+          "Los datos y el territorio pueden cambiar con el tiempo"
+        ],
+        "correctAnswer": "Los datos y el territorio pueden cambiar con el tiempo",
+        "explanation": "Cambios en territorio, población o información disponible pueden afectar la vigencia de un mapa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-145",
+        "number": 145,
+        "topic": "Ordenamiento territorial · Verdadero o falso",
+        "concept": "ordenamiento_puede_restringir_uso_para_reducir_riesgo",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las reglas de uso del suelo pueden limitar construcciones en zonas donde se busca reducir riesgos o proteger ecosistemas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El ordenamiento territorial orienta las actividades permitidas y puede restringir usos incompatibles con seguridad o conservación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-146",
+        "number": 146,
+        "topic": "Acceso a servicios",
+        "concept": "transporte_escolar_planifica_hogares_caminos_y_tiempos",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escuela rural atiende estudiantes que viven dispersos y tienen rutas distintas. ¿Qué análisis apoya mejor una decisión sobre transporte escolar?",
+        "options": [
+          "Comparar ubicación de hogares, caminos y tiempos de viaje",
+          "Contar solo los pupitres del edificio",
+          "Elegir la ruta con más curvas",
+          "Medir la distancia a otro país"
+        ],
+        "correctAnswer": "Comparar ubicación de hogares, caminos y tiempos de viaje",
+        "explanation": "La ubicación de estudiantes y las condiciones de las rutas ayudan a organizar recorridos seguros y tiempos razonables.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-147",
+        "number": 147,
+        "topic": "Conflicto por recursos",
+        "concept": "expansion_agricola_evalua_demanda_y_efectos_en_cuenca",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una región planea ampliar agricultura en una cuenca que también abastece acueductos. ¿Qué paso ayuda a decidir con evidencia?",
+        "options": [
+          "Suponer que el caudal nunca cambia",
+          "Evaluar disponibilidad estacional, demanda y efectos sobre usuarios",
+          "Excluir del análisis a las comunidades",
+          "Medir únicamente la producción agrícola"
+        ],
+        "correctAnswer": "Evaluar disponibilidad estacional, demanda y efectos sobre usuarios",
+        "explanation": "La decisión debe considerar variación del recurso, usos existentes e impactos en comunidades y ecosistemas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-148",
+        "number": 148,
+        "topic": "Conservación de bosques",
+        "concept": "restauracion_nativa_reconecta_fragmentos_de_bosque",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una zona deforestada conecta dos fragmentos de bosque. ¿Qué intervención puede recuperar funciones ecológicas y conectividad?",
+        "options": [
+          "Pavimentar el corredor",
+          "Aumentar la tala en sus bordes",
+          "Restaurar vegetación nativa entre fragmentos",
+          "Introducir cualquier especie de rápido crecimiento"
+        ],
+        "correctAnswer": "Restaurar vegetación nativa entre fragmentos",
+        "explanation": "Restaurar especies apropiadas del lugar puede ayudar a reconectar hábitats; su éxito requiere seguimiento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-149",
+        "number": 149,
+        "topic": "Transporte sostenible",
+        "concept": "proximidad_y_movilidad_activa_reducen_viajes_cortos_en_auto",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ciudad quiere reducir congestión y emisiones en viajes cortos. ¿Qué combinación territorial puede ayudar?",
+        "options": [
+          "Separar viviendas de todos los servicios",
+          "Aumentar estacionamientos en el centro",
+          "Eliminar andenes y ciclovías",
+          "Acercar servicios y conectar transporte público con caminata y bicicleta"
+        ],
+        "correctAnswer": "Acercar servicios y conectar transporte público con caminata y bicicleta",
+        "explanation": "Usos próximos y alternativas conectadas pueden reducir viajes en automóvil, aunque requieren seguridad e infraestructura adecuada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "GEO7-150",
+        "number": 150,
+        "topic": "Modelos geográficos · Verdadero o falso",
+        "concept": "modelo_geografico_selecciona_datos_segun_proposito",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un modelo o mapa del territorio selecciona información y por eso puede dejar fuera detalles importantes para una decisión específica.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La escala y el propósito hacen que toda representación simplifique; conviene revisar si incluye la información necesaria para la decisión.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
+  },
+  {
+    "catalogId": "edusyn-lengua-literatura-grade-7-v1",
+    "title": "Lengua y literatura · 7.º",
+    "grade": 7,
+    "subjectArea": "Duelos",
+    "category": "Lengua y literatura",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://www.mineducacion.gov.co/1621/article-116042.html",
+      "https://www.rae.es/libro-estilo-lengua-espa%C3%B1ola/el-modo-indicativo-o-subjuntivo",
+      "https://www.rae.es/ortograf%C3%ADa/los-dos-puntos"
+    ],
+    "questions": [
+      {
+        "id": "LEN7-001",
+        "number": 1,
+        "topic": "Textos informativos",
+        "concept": "titular_presenta_asunto_central_de_noticia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento de una noticia suele resumir el hecho principal y atraer al lector?",
+        "options": [
+          "Titular",
+          "Bibliografía",
+          "Glosario",
+          "Desenlace"
+        ],
+        "correctAnswer": "Titular",
+        "explanation": "El titular presenta de forma breve el asunto central de una noticia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-002",
+        "number": 2,
+        "topic": "Discurso",
+        "concept": "cita_directa_reproduce_palabras_de_fuente",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué recurso permite reproducir literalmente las palabras de una persona en un texto?",
+        "options": [
+          "Resumen",
+          "Cita directa",
+          "Paráfrasis",
+          "Descripción"
+        ],
+        "correctAnswer": "Cita directa",
+        "explanation": "Una cita directa reproduce las palabras de una fuente y debe distinguirse claramente del resto del texto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-003",
+        "number": 3,
+        "topic": "Uso de fuentes",
+        "concept": "autoria_identifica_responsable_de_texto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué dato ayuda a identificar quién escribió un artículo?",
+        "options": [
+          "El color del fondo",
+          "La cantidad de párrafos",
+          "La autoría",
+          "El tamaño de la pantalla"
+        ],
+        "correctAnswer": "La autoría",
+        "explanation": "La autoría indica quién es responsable del contenido y permite valorar su experiencia o trayectoria.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-004",
+        "number": 4,
+        "topic": "Tiempos verbales",
+        "concept": "visitaremos_expresa_tiempo_futuro",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En la oración “Mañana visitaremos la biblioteca”, ¿qué tiempo expresa “visitaremos”?",
+        "options": [
+          "Presente",
+          "Pasado",
+          "Condicional",
+          "Futuro"
+        ],
+        "correctAnswer": "Futuro",
+        "explanation": "“Visitaremos” expresa una acción que ocurrirá después del momento en que se habla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-005",
+        "number": 5,
+        "topic": "Poesía · Verdadero o falso",
+        "concept": "poema_puede_existir_sin_rima",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Todo poema debe tener rima para ser considerado poema.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Hay poemas con rima y poemas en verso libre que no siguen un patrón fijo de rima.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-006",
+        "number": 6,
+        "topic": "Oración y sentido",
+        "concept": "temprano_modifica_verbo_como_adverbio",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué palabra funciona como adverbio en “El equipo llegó temprano”?",
+        "options": [
+          "Temprano",
+          "Equipo",
+          "Llegó",
+          "El"
+        ],
+        "correctAnswer": "Temprano",
+        "explanation": "“Temprano” modifica al verbo “llegó” e indica cuándo ocurrió la acción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-007",
+        "number": 7,
+        "topic": "Vocabulario",
+        "concept": "preciso_equivale_a_exacto_en_contexto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra es sinónimo de “preciso” en la expresión “una explicación precisa”?",
+        "options": [
+          "Dudosa",
+          "Exacta",
+          "Extensa",
+          "Divertida"
+        ],
+        "correctAnswer": "Exacta",
+        "explanation": "En este contexto, “precisa” significa clara y exacta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-008",
+        "number": 8,
+        "topic": "Adecuación",
+        "concept": "saludo_se_adecua_a_destinatario_institucional",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué saludo resulta más adecuado al escribir una solicitud formal a una institución?",
+        "options": [
+          "Qué más, parce",
+          "Hola, ¿todo bien?",
+          "Señores: cordial saludo",
+          "Ey, necesito algo"
+        ],
+        "correctAnswer": "Señores: cordial saludo",
+        "explanation": "El saludo formal se ajusta al destinatario y a la situación institucional.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-009",
+        "number": 9,
+        "topic": "Inferencia",
+        "concept": "inferir_fin_de_jornada_por_indicios_del_aula",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El salón quedó vacío, las sillas estaban sobre las mesas y el tablero limpio.” ¿Qué pudo ocurrir?",
+        "options": [
+          "La clase aún no había empezado",
+          "Se suspendieron todas las clases del año",
+          "El salón estaba en construcción",
+          "La jornada terminó y dejaron el aula organizada"
+        ],
+        "correctAnswer": "La jornada terminó y dejaron el aula organizada",
+        "explanation": "Los indicios sugieren que la jornada terminó y el espacio se preparó para después.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-010",
+        "number": 10,
+        "topic": "Punto de vista narrativo",
+        "concept": "narrador_omnisciente_conoce_varios_puntos_de_vista",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un narrador cuenta los pensamientos de varios personajes y conoce hechos que ellos ignoran. ¿Qué tipo de narrador es?",
+        "options": [
+          "Omnisciente",
+          "Testigo limitado",
+          "Protagonista en primera persona",
+          "Narrador objetivo sin acceso a pensamientos"
+        ],
+        "correctAnswer": "Omnisciente",
+        "explanation": "El narrador omnisciente puede conocer pensamientos y hechos fuera de la experiencia de un solo personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-011",
+        "number": 11,
+        "topic": "Argumentación",
+        "concept": "tesis_presenta_postura_central_de_argumentacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple la tesis en un texto argumentativo?",
+        "options": [
+          "Enumerar todos los personajes",
+          "Presentar la postura principal que se defenderá",
+          "Describir el escenario",
+          "Cerrar siempre con una pregunta"
+        ],
+        "correctAnswer": "Presentar la postura principal que se defenderá",
+        "explanation": "La tesis comunica la idea o postura central que los argumentos buscarán sostener.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-012",
+        "number": 12,
+        "topic": "Cohesión",
+        "concept": "por_eso_introduce_consecuencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El equipo entrenó durante semanas; ___, mejoró su coordinación.” ¿Qué conector completa mejor la relación?",
+        "options": [
+          "Aunque",
+          "Sin embargo",
+          "Por eso",
+          "Mientras"
+        ],
+        "correctAnswer": "Por eso",
+        "explanation": "“Por eso” introduce una consecuencia relacionada con el entrenamiento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-013",
+        "number": 13,
+        "topic": "Citas · Verdadero o falso",
+        "concept": "cita_textual_requiere_atribucion_a_fuente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Si se copian palabras exactas de una fuente, se deben presentar como propias siempre que se cambie el tipo de letra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Las palabras ajenas deben identificarse como cita y atribuirse a su fuente; cambiar el formato no reemplaza la atribución.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-014",
+        "number": 14,
+        "topic": "Ironía",
+        "concept": "ironia_expresa_sentido_opuesto_al_literal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Tras perder el bus por llegar tarde, alguien dice: “¡Qué puntualidad la mía!”. ¿Qué recurso usa?",
+        "options": [
+          "Comparación literal",
+          "Onomatopeya",
+          "Enumeración",
+          "Ironía"
+        ],
+        "correctAnswer": "Ironía",
+        "explanation": "La expresión comunica lo contrario de lo literal para señalar, con humor, que la persona no fue puntual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-015",
+        "number": 15,
+        "topic": "Evaluación de argumentos",
+        "concept": "registros_comparables_sustentan_afirmacion_sobre_residuos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué fortalece más una afirmación sobre el aumento de residuos en un barrio?",
+        "options": [
+          "Una anécdota sin fecha",
+          "Una frase compartida muchas veces",
+          "Una fotografía de otro municipio",
+          "Registros comparables de recolección en varios meses"
+        ],
+        "correctAnswer": "Registros comparables de recolección en varios meses",
+        "explanation": "Datos comparables a lo largo del tiempo ofrecen evidencia más pertinente para valorar la afirmación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-016",
+        "number": 16,
+        "topic": "Polisemia",
+        "concept": "contexto_distingue_significados_de_palabra_polisemica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “La llave del grifo gotea” y “Perdí la llave de la puerta”, ¿qué ocurre con la palabra “llave”?",
+        "options": [
+          "Tiene significados distintos según el contexto",
+          "Siempre funciona como verbo",
+          "Cambia de idioma",
+          "No guarda relación con las oraciones"
+        ],
+        "correctAnswer": "Tiene significados distintos según el contexto",
+        "explanation": "“Llave” puede nombrar objetos distintos; el contexto permite interpretar cuál significado corresponde.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-017",
+        "number": 17,
+        "topic": "Voz pasiva · Verdadero o falso",
+        "concept": "sujeto_pasivo_recibe_accion_verbal",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En “La novela fue escrita por una autora colombiana”, el sujeto recibe la acción expresada por el verbo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En una construcción pasiva, el sujeto gramatical recibe la acción; quien la realiza aparece en el complemento agente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-018",
+        "number": 18,
+        "topic": "Comprensión de información",
+        "concept": "evaluar_periodos_y_metodo_de_datos_comparados",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un texto afirma que una campaña redujo el desperdicio de agua y presenta cifras antes y después. ¿Qué conviene revisar para evaluar la conclusión?",
+        "options": [
+          "El color de los gráficos",
+          "Si las cifras corresponden a periodos comparables y cómo se midieron",
+          "Si el titular tiene una pregunta",
+          "La cantidad de adjetivos del texto"
+        ],
+        "correctAnswer": "Si las cifras corresponden a periodos comparables y cómo se midieron",
+        "explanation": "Periodos y métodos comparables ayudan a interpretar si el cambio respalda la conclusión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-019",
+        "number": 19,
+        "topic": "Parónimos",
+        "concept": "absorber_liquido_se_distingue_de_absolver",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué oración usa correctamente “absorber”?",
+        "options": [
+          "El juez decidió absorber el caso en voz alta",
+          "El suelo puede absolver agua tras la lluvia",
+          "La esponja puede absorber parte del líquido",
+          "La pared absorbió a la estudiante en el debate"
+        ],
+        "correctAnswer": "La esponja puede absorber parte del líquido",
+        "explanation": "“Absorber” significa atraer o retener un líquido; “absolver” significa declarar libre de una acusación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-020",
+        "number": 20,
+        "topic": "Conversación · Verdadero o falso",
+        "concept": "parafrasear_y_confirmar_mejora_dialogo",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Parafrasear la idea de otra persona y preguntarle si se entendió bien puede ayudar a resolver un desacuerdo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Reformular con respeto permite comprobar la comprensión antes de responder o buscar acuerdos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-021",
+        "number": 21,
+        "topic": "Lectura crítica",
+        "concept": "promesa_comercial_se_contrasta_con_evidencia_independiente",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una publicación dice: “Este suplemento mejora la memoria en todos los estudiantes”, pero solo enlaza una página de venta. ¿Qué paso ayuda más a evaluar la afirmación?",
+        "options": [
+          "Revisar si hay estudios independientes y evidencia verificable",
+          "Compartirla porque promete un beneficio",
+          "Concluir que es cierta por tener muchas visitas",
+          "Fijarse únicamente en el diseño del anuncio"
+        ],
+        "correctAnswer": "Revisar si hay estudios independientes y evidencia verificable",
+        "explanation": "Una promesa comercial requiere contrastarse con evidencia independiente y fuentes confiables.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-022",
+        "number": 22,
+        "topic": "Edición y público",
+        "concept": "aviso_escolar_claro_indica_hora_lugar_y_accion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un equipo redacta para estudiantes de séptimo un aviso sobre una actividad. ¿Qué versión resulta más clara?",
+        "options": [
+          "“La concurrencia queda supeditada a las disposiciones…”",
+          "“Ven el viernes a las 3:00 p. m. al patio central; trae tu cuaderno.”",
+          "“Actividad, horario y sitio serán considerados eventualmente.”",
+          "“Se comunica lo anterior a quien corresponda en virtud de ello.”"
+        ],
+        "correctAnswer": "“Ven el viernes a las 3:00 p. m. al patio central; trae tu cuaderno.”",
+        "explanation": "La versión indica destinatarios, hora, lugar y acción con palabras directas y datos concretos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-023",
+        "number": 23,
+        "topic": "Interpretación de personajes",
+        "concept": "inferir_reserva_del_personaje_sin_asumir_motivo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Marina guardó el dibujo en su mochila cuando oyó que se acercaban sus compañeros.” ¿Qué puede inferirse con más respaldo?",
+        "options": [
+          "Marina quiere mostrar el dibujo a todos",
+          "El dibujo es una tarea de matemáticas",
+          "Marina quizá desea mantenerlo privado por ahora",
+          "Sus compañeros ya habían visto el dibujo"
+        ],
+        "correctAnswer": "Marina quizá desea mantenerlo privado por ahora",
+        "explanation": "Guardarlo al oír que se acercaban sugiere que Marina no quería mostrarlo en ese momento, aunque no confirma su motivo exacto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-024",
+        "number": 24,
+        "topic": "Evidencia y conclusión",
+        "concept": "medir_comprension_con_criterio_comun_apoya_conclusion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante sostiene que leer en voz alta mejora la comprensión. ¿Qué evidencia apoya mejor esa conclusión?",
+        "options": [
+          "Un afiche que dice “leer es bueno”",
+          "Una opinión sin ejemplos",
+          "Un video popular sobre lectura",
+          "Resultados de comprensión comparados antes y después con el mismo criterio"
+        ],
+        "correctAnswer": "Resultados de comprensión comparados antes y después con el mismo criterio",
+        "explanation": "Comparar resultados con un criterio común ofrece evidencia más directa, aunque también deben considerarse otras variables.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-025",
+        "number": 25,
+        "topic": "Representación y sesgo · Verdadero o falso",
+        "concept": "personaje_ficticio_no_demuestra_rasgos_de_grupo_social",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un personaje de una historia representa a todo un grupo social de forma negativa; esa historia por sí sola demuestra que el grupo es así.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una representación literaria refleja decisiones de autoría y no constituye evidencia suficiente sobre todas las personas de un grupo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-026",
+        "number": 26,
+        "topic": "Pronombres",
+        "concept": "pronombre_reemplaza_o_se_refiere_a_sustantivo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple un pronombre en una oración?",
+        "options": [
+          "Puede reemplazar o señalar un sustantivo",
+          "Siempre expresa una acción",
+          "Indica exclusivamente el tiempo verbal",
+          "Une dos párrafos"
+        ],
+        "correctAnswer": "Puede reemplazar o señalar un sustantivo",
+        "explanation": "Pronombres como “ella”, “eso” o “quienes” pueden reemplazar o referirse a nombres ya conocidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-027",
+        "number": 27,
+        "topic": "Conectores",
+        "concept": "porque_introduce_una_causa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“No pudimos salir ___ comenzó a llover.” ¿Qué conector expresa causa?",
+        "options": [
+          "Aunque",
+          "Porque",
+          "Sin embargo",
+          "Después"
+        ],
+        "correctAnswer": "Porque",
+        "explanation": "“Porque” introduce la razón por la que no pudieron salir.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-028",
+        "number": 28,
+        "topic": "Debate",
+        "concept": "debate_respetuoso_escucha_y_responde_ideas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué práctica ayuda a que un debate sea respetuoso?",
+        "options": [
+          "Interrumpir cada intervención",
+          "Burlarse de quien discrepa",
+          "Escuchar el turno y responder a las ideas",
+          "Cambiar el tema cuando surge evidencia"
+        ],
+        "correctAnswer": "Escuchar el turno y responder a las ideas",
+        "explanation": "Escuchar y responder a los argumentos, sin atacar a las personas, permite intercambiar razones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-029",
+        "number": 29,
+        "topic": "Narrativa",
+        "concept": "retrospeccion_narra_hecho_anterior",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué recurso interrumpe la secuencia principal para narrar un hecho anterior?",
+        "options": [
+          "Desenlace",
+          "Diálogo",
+          "Descripción física",
+          "Retrospección"
+        ],
+        "correctAnswer": "Retrospección",
+        "explanation": "La retrospección o analepsis vuelve a un momento anterior de la historia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-030",
+        "number": 30,
+        "topic": "Puntuación · Verdadero o falso",
+        "concept": "comillas_pueden_marcar_cita_directa",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Las comillas pueden señalar palabras reproducidas literalmente de otra persona.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las comillas pueden marcar citas directas, aunque el estilo editorial puede usar también otros recursos tipográficos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-031",
+        "number": 31,
+        "topic": "Formación de palabras",
+        "concept": "prefijo_re_aporta_repeticion_en_releer",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “releer”, ¿qué aporta el prefijo “re-”?",
+        "options": [
+          "Indica que se vuelve a realizar la acción",
+          "Señala quién lee",
+          "Convierte el verbo en un sustantivo",
+          "Niega por completo la acción"
+        ],
+        "correctAnswer": "Indica que se vuelve a realizar la acción",
+        "explanation": "En “releer”, el prefijo “re-” aporta la idea de repetir la lectura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-032",
+        "number": 32,
+        "topic": "Significado figurado",
+        "concept": "corazon_de_oro_significa_bondad",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Tiene un corazón de oro”, ¿qué significa la expresión?",
+        "options": [
+          "Su corazón está hecho de metal",
+          "Es una persona muy bondadosa",
+          "Le duele el pecho",
+          "Trabaja como joyera"
+        ],
+        "correctAnswer": "Es una persona muy bondadosa",
+        "explanation": "La expresión se usa de manera figurada para describir a alguien generoso o amable.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-033",
+        "number": 33,
+        "topic": "Párrafos",
+        "concept": "parrafo_desarrolla_ideas_relacionadas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele reunir un párrafo bien organizado?",
+        "options": [
+          "Ideas sin relación entre sí",
+          "Solo una lista de títulos",
+          "Oraciones que desarrollan una idea relacionada",
+          "Palabras sin formar enunciados"
+        ],
+        "correctAnswer": "Oraciones que desarrollan una idea relacionada",
+        "explanation": "Las oraciones de un párrafo desarrollan o apoyan una idea central y mantienen relación entre sí.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-034",
+        "number": 34,
+        "topic": "Información y opinión",
+        "concept": "valoracion_de_conveniencia_es_opinion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál enunciado presenta principalmente una opinión?",
+        "options": [
+          "El tren salió a las 7:15 según el registro",
+          "El informe contiene cuatro tablas",
+          "La reunión tuvo lugar el martes",
+          "El nuevo horario es mucho más conveniente"
+        ],
+        "correctAnswer": "El nuevo horario es mucho más conveniente",
+        "explanation": "“Más conveniente” expresa una valoración que puede variar entre personas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-035",
+        "number": 35,
+        "topic": "Titulares",
+        "concept": "titular_exagerado_distorsiona_importancia_de_hecho",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un titular dice: “¡La noticia que cambiará todo para siempre!”, pero el artículo describe un ajuste menor. ¿Qué problema tiene?",
+        "options": [
+          "Presenta el contenido de forma exagerada",
+          "Indica con exactitud un resultado medido",
+          "Cita a una fuente identificada",
+          "Resume con neutralidad el hecho"
+        ],
+        "correctAnswer": "Presenta el contenido de forma exagerada",
+        "explanation": "El titular exagera la importancia del hecho y puede crear una expectativa que el texto no respalda.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-036",
+        "number": 36,
+        "topic": "Comas",
+        "concept": "comas_delimitan_aclaracion_inserta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué sirven las comas que encierran una aclaración dentro de una oración?",
+        "options": [
+          "Para separar siempre sujeto y verbo",
+          "Para delimitar una información explicativa adicional",
+          "Para reemplazar el punto final",
+          "Para convertir una afirmación en pregunta"
+        ],
+        "correctAnswer": "Para delimitar una información explicativa adicional",
+        "explanation": "Las comas pueden delimitar una aclaración que amplía información sin formar el núcleo principal de la oración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-037",
+        "number": 37,
+        "topic": "Géneros literarios",
+        "concept": "memorias_reconstruyen_experiencias_desde_mirada_personal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué rasgo caracteriza principalmente a una memoria literaria?",
+        "options": [
+          "Presenta instrucciones para reparar un objeto",
+          "Expone datos sin perspectiva personal",
+          "Relata experiencias recordadas desde la perspectiva de quien las vivió",
+          "Es una lista de palabras ordenadas alfabéticamente"
+        ],
+        "correctAnswer": "Relata experiencias recordadas desde la perspectiva de quien las vivió",
+        "explanation": "Las memorias narran experiencias pasadas desde una mirada personal y selectiva.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-038",
+        "number": 38,
+        "topic": "Contexto y citas · Verdadero o falso",
+        "concept": "recortar_cita_puede_alterar_sentido_original",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una cita puede dar una impresión distinta si se elimina el contexto que explica a qué respondía la persona.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Recortar una cita puede cambiar el sentido o la intención que tenía dentro de la conversación original.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-039",
+        "number": 39,
+        "topic": "Sátira",
+        "concept": "satira_usa_humor_para_criticar_conductas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una historieta exagera las excusas de un personaje poderoso para criticar su conducta. ¿Qué recurso puede estar usando?",
+        "options": [
+          "Instrucción técnica",
+          "Definición literal",
+          "Descripción científica",
+          "Sátira"
+        ],
+        "correctAnswer": "Sátira",
+        "explanation": "La sátira usa humor o exageración para criticar conductas, ideas o instituciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-040",
+        "number": 40,
+        "topic": "Cohesión referencial",
+        "concept": "pronombre_la_retoma_sustantivo_femenino_singular",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Valeria encontró una novela. La llevó a casa y la empezó esa noche”, ¿a qué se refiere “la”?",
+        "options": [
+          "A la noche",
+          "A la novela",
+          "A la casa",
+          "A Valeria"
+        ],
+        "correctAnswer": "A la novela",
+        "explanation": "El pronombre “la” retoma el sustantivo femenino singular “novela”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-041",
+        "number": 41,
+        "topic": "Paráfrasis y fuentes",
+        "concept": "parafrasis_de_idea_ajena_requiere_atribucion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante explica con sus propias palabras una idea tomada de un artículo. ¿Qué debe hacer?",
+        "options": [
+          "Presentarla como descubrimiento propio",
+          "Cambiar algunas palabras y ocultar el enlace",
+          "Atribuir la idea a la fuente consultada",
+          "Evitar mencionar la fuente si entendió el texto"
+        ],
+        "correctAnswer": "Atribuir la idea a la fuente consultada",
+        "explanation": "Parafrasear cambia la redacción, pero la idea ajena sigue requiriendo atribución.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-042",
+        "number": 42,
+        "topic": "Perspectiva narrativa",
+        "concept": "focalizacion_interna_limita_info_a_personaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una historia cuenta solo lo que piensa y percibe una protagonista, aunque está narrada en tercera persona. ¿Qué perspectiva predomina?",
+        "options": [
+          "Narrador que conoce el futuro de todos",
+          "Narración sin acceso a ningún personaje",
+          "Voz directa de un autor real",
+          "Focalización interna en la protagonista"
+        ],
+        "correctAnswer": "Focalización interna en la protagonista",
+        "explanation": "La focalización interna limita la información a lo que sabe, piensa o percibe un personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-043",
+        "number": 43,
+        "topic": "Preguntas · Verdadero o falso",
+        "concept": "pregunta_abierta_permite_respuesta_desarrollada",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una pregunta abierta suele permitir respuestas desarrolladas, mientras que una cerrada puede limitar las opciones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las preguntas abiertas invitan a elaborar; las cerradas suelen orientar a opciones delimitadas, como sí/no.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-044",
+        "number": 44,
+        "topic": "Falacias",
+        "concept": "acuerdo_de_mayoria_no_prueba_validez_de_idea",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Mi propuesta debe ser correcta porque todos mis amigos están de acuerdo.” ¿Qué debilidad tiene el argumento?",
+        "options": [
+          "Usa el acuerdo de un grupo como prueba suficiente",
+          "Presenta datos verificables",
+          "Explica una relación de causa",
+          "Reconoce una objeción y la responde"
+        ],
+        "correctAnswer": "Usa el acuerdo de un grupo como prueba suficiente",
+        "explanation": "Que varias personas estén de acuerdo no demuestra por sí mismo que una afirmación sea correcta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-045",
+        "number": 45,
+        "topic": "Referencias · Verdadero o falso",
+        "concept": "bibliografia_identifica_fuentes_consultadas",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una bibliografía permite reconocer las fuentes utilizadas en un trabajo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La bibliografía reúne información para identificar y localizar fuentes consultadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-046",
+        "number": 46,
+        "topic": "Edición de ambigüedad",
+        "concept": "repetir_referente_resuelve_posesivo_ambiguo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Camila le dijo a Laura que su presentación estaba incompleta.” ¿Qué cambio aclara de quién es la presentación?",
+        "options": [
+          "“Camila le dijo a Laura sobre la presentación.”",
+          "“Camila le dijo a Laura que la presentación de Laura estaba incompleta.”",
+          "“Camila habló y la presentación incompleta.”",
+          "“Su presentación estaba incompleta, le dijo.”"
+        ],
+        "correctAnswer": "“Camila le dijo a Laura que la presentación de Laura estaba incompleta.”",
+        "explanation": "Nombrar a Laura elimina la duda sobre el referente del posesivo “su”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-047",
+        "number": 47,
+        "topic": "Verificación de información",
+        "concept": "verificar_norma_consulta_fuente_oficial_y_fecha",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un video afirma que una norma escolar cambió, pero no muestra fecha ni documento. ¿Qué conviene hacer antes de compartirlo?",
+        "options": [
+          "Buscar la norma vigente en una fuente oficial y revisar la fecha",
+          "Compartirlo porque tiene muchos comentarios",
+          "Aceptarlo si lo publicó una cuenta popular",
+          "Reenviarlo para que otros decidan sin contexto"
+        ],
+        "correctAnswer": "Buscar la norma vigente en una fuente oficial y revisar la fecha",
+        "explanation": "Comprobar el documento, la fecha y la entidad responsable ayuda a verificar si la información sigue vigente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-048",
+        "number": 48,
+        "topic": "Interpretación literaria",
+        "concept": "interpretacion_literaria_se_sustenta_en_indicios_textuales",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos lectores interpretan de modo distinto el final de un cuento. ¿Qué ayuda más a sostener cada interpretación?",
+        "options": [
+          "Decir que su lectura es la única posible",
+          "Elegir la opinión de quien habló más fuerte",
+          "Relacionar la interpretación con indicios del texto",
+          "Ignorar el final y describir la portada"
+        ],
+        "correctAnswer": "Relacionar la interpretación con indicios del texto",
+        "explanation": "Una interpretación puede diferir, pero debe apoyarse en palabras, acciones o detalles presentes en el relato.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-049",
+        "number": 49,
+        "topic": "Comunicación multimodal",
+        "concept": "subtitulos_facilitan_acceso_a_video_sin_audio",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo comparte un video informativo en una plataforma donde muchos estudiantes lo ven sin sonido. ¿Qué mejora facilita el acceso al contenido?",
+        "options": [
+          "Aumentar solo el volumen",
+          "Quitar las imágenes",
+          "Reducir el tamaño de la letra",
+          "Usar subtítulos sincronizados"
+        ],
+        "correctAnswer": "Usar subtítulos sincronizados",
+        "explanation": "Los subtítulos permiten seguir el contenido hablado cuando el audio está apagado y apoyan a distintos espectadores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-050",
+        "number": 50,
+        "topic": "Síntesis · Verdadero o falso",
+        "concept": "resumen_conserva_ideas_centrales_y_omite_detalles_secundarios",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un resumen eficaz conserva las ideas centrales y puede omitir ejemplos secundarios.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Resumir implica seleccionar lo esencial y reducir detalles que no son necesarios para comprender el contenido principal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-051",
+        "number": 51,
+        "topic": "Acentuación",
+        "concept": "reloj_es_palabra_aguda",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En cuál palabra la sílaba tónica está al final?",
+        "options": [
+          "Reloj",
+          "Árbol",
+          "Música",
+          "Lápices"
+        ],
+        "correctAnswer": "Reloj",
+        "explanation": "“Reloj” es aguda: su sílaba tónica es la última.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-052",
+        "number": 52,
+        "topic": "Teatro",
+        "concept": "acotaciones_orientan_acciones_y_escena_teatral",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suelen indicar las acotaciones en un guion teatral?",
+        "options": [
+          "La biografía de quien lo escribió",
+          "Movimientos, gestos o elementos de escena",
+          "La lista de lectores del libro",
+          "La opinión del público al final"
+        ],
+        "correctAnswer": "Movimientos, gestos o elementos de escena",
+        "explanation": "Las acotaciones orientan la representación con información sobre acciones, tono o escenario.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-053",
+        "number": 53,
+        "topic": "Glosarios",
+        "concept": "glosario_explica_terminos_del_texto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué sirve principalmente el glosario de un libro?",
+        "options": [
+          "Para narrar el final",
+          "Para enumerar los personajes",
+          "Para explicar términos usados en el texto",
+          "Para indicar la opinión del ilustrador"
+        ],
+        "correctAnswer": "Para explicar términos usados en el texto",
+        "explanation": "Un glosario reúne palabras o términos y ofrece sus significados en el contexto de la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-054",
+        "number": 54,
+        "topic": "Sujeto y predicado",
+        "concept": "las_nubes_es_sujeto_de_oracion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Las nubes cubrieron el cielo”, ¿qué grupo de palabras es el sujeto?",
+        "options": [
+          "Cubrieron el cielo",
+          "El cielo",
+          "Cubrieron",
+          "Las nubes"
+        ],
+        "correctAnswer": "Las nubes",
+        "explanation": "“Las nubes” es aquello de lo que se dice que realizó la acción de cubrir.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-055",
+        "number": 55,
+        "topic": "Guion teatral · Verdadero o falso",
+        "concept": "acotacion_se_distingue_del_dialogo_teatral",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Las acotaciones teatrales suelen distinguirse del diálogo de los personajes.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En muchos guiones las acotaciones se escriben entre paréntesis, en cursiva o con otro formato para separarlas de lo hablado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-056",
+        "number": 56,
+        "topic": "Prefijos",
+        "concept": "prefijo_im_niega_posibilidad",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué significa “imposible” en comparación con “posible”?",
+        "options": [
+          "Que no es posible",
+          "Que vuelve a ser posible",
+          "Que ocurrió antes",
+          "Que es muy posible"
+        ],
+        "correctAnswer": "Que no es posible",
+        "explanation": "El prefijo “im-” expresa negación en “imposible”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-057",
+        "number": 57,
+        "topic": "Estrofas",
+        "concept": "estrofa_agrupa_versos_en_poema",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama un conjunto de versos que forma una unidad en un poema?",
+        "options": [
+          "Capítulo",
+          "Estrofa",
+          "Escena",
+          "Párrafo"
+        ],
+        "correctAnswer": "Estrofa",
+        "explanation": "Una estrofa agrupa versos dentro de la estructura de un poema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-058",
+        "number": 58,
+        "topic": "Títulos",
+        "concept": "titulo_anticipa_tema_o_enfoque",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué aspecto de un texto suele anticipar su título?",
+        "options": [
+          "La identidad de cada lector",
+          "El número exacto de párrafos",
+          "El tema o enfoque principal",
+          "La fuente de todas sus imágenes"
+        ],
+        "correctAnswer": "El tema o enfoque principal",
+        "explanation": "El título suele ofrecer una pista sobre el tema o la perspectiva del texto, sin resumir necesariamente todo su contenido.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-059",
+        "number": 59,
+        "topic": "Voz poética",
+        "concept": "voz_poetica_no_equivale_necesariamente_al_autor",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Quién habla dentro de un poema?",
+        "options": [
+          "Siempre la persona que lo lee",
+          "El editor de la antología",
+          "El personaje de la portada",
+          "La voz poética"
+        ],
+        "correctAnswer": "La voz poética",
+        "explanation": "La voz poética es quien expresa ideas y emociones dentro del poema; no tiene que ser el autor real.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-060",
+        "number": 60,
+        "topic": "Contraargumento",
+        "concept": "contraargumento_responde_a_razon_opuesta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un contraargumento en una discusión?",
+        "options": [
+          "Una idea que responde a una razón contraria a la postura",
+          "Un ejemplo que repite la tesis sin explicarla",
+          "Un título que resume el texto",
+          "Una lista de palabras difíciles"
+        ],
+        "correctAnswer": "Una idea que responde a una razón contraria a la postura",
+        "explanation": "Un contraargumento considera una postura opuesta y ofrece una respuesta razonada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-061",
+        "number": 61,
+        "topic": "Recursos poéticos",
+        "concept": "anafora_repite_inicio_para_enfasis_y_ritmo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué efecto puede producir la repetición de una palabra al inicio de varios versos?",
+        "options": [
+          "Cambiar el género del poema",
+          "Crear énfasis y ritmo",
+          "Eliminar la voz poética",
+          "Convertirlo en una noticia"
+        ],
+        "correctAnswer": "Crear énfasis y ritmo",
+        "explanation": "La repetición inicial puede destacar una idea y crear ritmo; este recurso se conoce como anáfora.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-062",
+        "number": 62,
+        "topic": "Evidencia",
+        "concept": "cifras_sin_fuente_no_permiten_evaluar_origen",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una opinión incluye cifras, pero no indica de dónde provienen. ¿Qué falta para valorar mejor esa evidencia?",
+        "options": [
+          "Un dibujo decorativo",
+          "Más signos de exclamación",
+          "Identificar la fuente y cómo obtuvo los datos",
+          "Cambiar las cifras por adjetivos"
+        ],
+        "correctAnswer": "Identificar la fuente y cómo obtuvo los datos",
+        "explanation": "La fuente y el método permiten revisar la pertinencia y confiabilidad de las cifras.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-063",
+        "number": 63,
+        "topic": "Preguntas indirectas",
+        "concept": "pregunta_indirecta_no_separa_subordinada_con_signos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál opción escribe correctamente una pregunta indirecta dentro de una afirmación?",
+        "options": [
+          "No sé ¿dónde queda la biblioteca?",
+          "No sé donde queda la biblioteca.",
+          "No sé: dónde queda la biblioteca?",
+          "No sé dónde queda la biblioteca."
+        ],
+        "correctAnswer": "No sé dónde queda la biblioteca.",
+        "explanation": "La pregunta indirecta no lleva signos propios, pero “dónde” conserva la tilde por ser interrogativo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-064",
+        "number": 64,
+        "topic": "Autor y narrador · Verdadero o falso",
+        "concept": "narrador_ficticio_puede_diferir_del_autor",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El narrador de una novela siempre es la misma persona que la escribió.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "El narrador es una voz construida dentro de la obra y puede ser distinto del autor real.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-065",
+        "number": 65,
+        "topic": "Conectores",
+        "concept": "aunque_introduce_relacion_de_concesion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “Aunque llovía, el partido continuó”, ¿qué relación expresa “aunque”?",
+        "options": [
+          "Causa",
+          "Tiempo",
+          "Condición",
+          "Concesión"
+        ],
+        "correctAnswer": "Concesión",
+        "explanation": "“Aunque” introduce una dificultad que no impide que ocurra la acción principal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-066",
+        "number": 66,
+        "topic": "Símbolos literarios",
+        "concept": "objeto_recurrente_puede_adquirir_sentido_simbolico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un relato, una puerta cerrada aparece cada vez que el personaje teme tomar una decisión. ¿Qué podría representar?",
+        "options": [
+          "Un obstáculo o una oportunidad que no se atreve a enfrentar",
+          "La hora exacta de la escena",
+          "Una lista de objetos del cuarto",
+          "Una definición literal de carpintería"
+        ],
+        "correctAnswer": "Un obstáculo o una oportunidad que no se atreve a enfrentar",
+        "explanation": "Un objeto recurrente puede adquirir un sentido simbólico por la forma en que se relaciona con el personaje y la historia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-067",
+        "number": 67,
+        "topic": "Comunicación oral · Verdadero o falso",
+        "concept": "ritmo_volumen_y_pausas_modifican_interpretacion_oral",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El ritmo, el volumen y las pausas pueden influir en cómo se interpreta un mensaje oral.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Además de las palabras, la entonación, el volumen y las pausas aportan información sobre énfasis o intención.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-068",
+        "number": 68,
+        "topic": "Contraste de testimonios",
+        "concept": "posicion_del_testigo_influye_en_detalles_observados",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos personas describen de forma distinta un mismo accidente porque observaron lugares diferentes. ¿Qué ayuda a entender la diferencia?",
+        "options": [
+          "Elegir la versión con más adjetivos",
+          "Comparar dónde estaba cada testigo y qué pudo observar",
+          "Suponer que una persona miente",
+          "Ignorar ambas versiones"
+        ],
+        "correctAnswer": "Comparar dónde estaba cada testigo y qué pudo observar",
+        "explanation": "La posición y el campo de visión pueden hacer que dos testimonios registren detalles distintos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-069",
+        "number": 69,
+        "topic": "Propósito textual",
+        "concept": "folleto_de_emergencia_orienta_acciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propósito predomina en un folleto que explica pasos para actuar durante un sismo?",
+        "options": [
+          "Narrar una aventura ficticia",
+          "Describir sentimientos de un personaje",
+          "Orientar al lector con instrucciones",
+          "Convencerlo de comprar una novela"
+        ],
+        "correctAnswer": "Orientar al lector con instrucciones",
+        "explanation": "El folleto busca orientar acciones mediante información e instrucciones prácticas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-070",
+        "number": 70,
+        "topic": "Caracterización · Verdadero o falso",
+        "concept": "dialogo_aporta_pistas_sobre_personaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La forma de hablar de un personaje puede dar pistas sobre su estado de ánimo o sus relaciones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Vocabulario, tono y maneras de dirigirse a otros contribuyen a caracterizar a un personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-071",
+        "number": 71,
+        "topic": "Lectura de evidencia",
+        "concept": "muestra_local_pequena_no_sustenta_generalizacion_amplia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un artículo afirma que “todos los jóvenes prefieren estudiar de noche”, pero solo presenta respuestas de diez estudiantes de un salón. ¿Qué objeción es más sólida?",
+        "options": [
+          "La muestra pequeña y localizada no representa necesariamente a todos los jóvenes",
+          "El título no tiene signos de exclamación",
+          "El artículo tiene más de tres párrafos",
+          "La pregunta se hizo en una escuela"
+        ],
+        "correctAnswer": "La muestra pequeña y localizada no representa necesariamente a todos los jóvenes",
+        "explanation": "Una muestra pequeña de un solo grupo no basta para generalizar a una población amplia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-072",
+        "number": 72,
+        "topic": "Narrador no confiable",
+        "concept": "contradicciones_invitan_a_cuestionar_narrador",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un narrador asegura que nunca se equivoca, pero el relato muestra varias contradicciones en sus recuerdos. ¿Qué conviene hacer como lector?",
+        "options": [
+          "Aceptar todo lo que afirma literalmente",
+          "Comparar sus palabras con los hechos narrados",
+          "Ignorar las contradicciones",
+          "Suponer que el autor olvidó corregir el texto"
+        ],
+        "correctAnswer": "Comparar sus palabras con los hechos narrados",
+        "explanation": "Las contradicciones invitan a contrastar la versión del narrador con otros indicios del relato.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-073",
+        "number": 73,
+        "topic": "Revisión de oraciones",
+        "concept": "precisar_referente_aclara_oracion_ambigua",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué cambio mejora “El grupo entregó el informe tarde y esto molestó al profesor porque no estaba listo”?",
+        "options": [
+          "Reemplazar todos los verbos por sustantivos",
+          "Quitar el sujeto y dejar la frase incompleta",
+          "Aclarar qué “no estaba listo” y revisar la secuencia",
+          "Añadir más adjetivos sin precisar el referente"
+        ],
+        "correctAnswer": "Aclarar qué “no estaba listo” y revisar la secuencia",
+        "explanation": "“No estaba listo” puede referirse al grupo o al informe; precisar el referente elimina una ambigüedad importante.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-074",
+        "number": 74,
+        "topic": "Respuesta a una objeción",
+        "concept": "propuesta_responde_objecion_con_alternativas_evidenciables",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una estudiante propone ampliar la biblioteca. Alguien objeta que hay poco espacio. ¿Qué respuesta fortalece mejor su propuesta?",
+        "options": [
+          "“Tu objeción no importa.”",
+          "“Todos saben que tengo razón.”",
+          "“No voy a escuchar otras ideas.”",
+          "Proponer reorganizar el espacio y comparar alternativas con datos"
+        ],
+        "correctAnswer": "Proponer reorganizar el espacio y comparar alternativas con datos",
+        "explanation": "Reconocer la objeción y responder con alternativas evaluables mejora la argumentación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-075",
+        "number": 75,
+        "topic": "Revisión de textos · Verdadero o falso",
+        "concept": "edicion_elimina_redundancia_sin_cambiar_idea_central",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Quitar una repetición innecesaria puede mejorar la claridad sin cambiar la idea central de un texto.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La edición puede eliminar redundancias para que las ideas se lean mejor, siempre que conserve el sentido necesario.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-076",
+        "number": 76,
+        "topic": "Diálogos escritos",
+        "concept": "raya_introduce_intervencion_en_dialogo_narrativo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué signo se usa con frecuencia al inicio de la intervención de un personaje en un diálogo narrativo en español?",
+        "options": [
+          "Raya",
+          "Barra inclinada",
+          "Corchete",
+          "Asterisco"
+        ],
+        "correctAnswer": "Raya",
+        "explanation": "La raya puede introducir la intervención de un personaje en los diálogos narrativos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-077",
+        "number": 77,
+        "topic": "Crónica",
+        "concept": "cronica_relatos_de_hechos_con_contexto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué suele hacer una crónica periodística?",
+        "options": [
+          "Presenta una lista de definiciones",
+          "Relata hechos en una secuencia con contexto",
+          "Expone únicamente instrucciones",
+          "Reúne versos con rima fija"
+        ],
+        "correctAnswer": "Relata hechos en una secuencia con contexto",
+        "explanation": "La crónica relata acontecimientos y puede incluir contexto y observaciones del cronista.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-078",
+        "number": 78,
+        "topic": "Homófonas",
+        "concept": "votar_y_botar_suenan_igual_con_significado_distinto",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tienen en común las palabras “votar” y “botar” en la mayoría de variedades del español?",
+        "options": [
+          "Se escriben igual y tienen el mismo significado",
+          "Son sustantivos colectivos",
+          "Suenan igual, pero tienen escritura y significado distintos",
+          "Siempre se usan como adjetivos"
+        ],
+        "correctAnswer": "Suenan igual, pero tienen escritura y significado distintos",
+        "explanation": "“Votar” es elegir mediante un voto; “botar” puede significar arrojar o desechar. Suenan igual en la mayoría de dialectos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-079",
+        "number": 79,
+        "topic": "Sufijos",
+        "concept": "sufijo_mente_forma_adverbio_de_modo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué palabra se forma al añadir “-mente” al adjetivo “cuidadosa”?",
+        "options": [
+          "Cuidadoso",
+          "Cuidadosa",
+          "Cuidado",
+          "Cuidadosamente"
+        ],
+        "correctAnswer": "Cuidadosamente",
+        "explanation": "El sufijo “-mente” suele formar adverbios de modo a partir de adjetivos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-080",
+        "number": 80,
+        "topic": "Paratextos",
+        "concept": "portada_identifica_titulo_y_autoria",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué información aparece normalmente en la portada interior de un libro?",
+        "options": [
+          "Título y autoría",
+          "Todas las opiniones de los lectores",
+          "El final completo de la obra",
+          "Una lista de preguntas del examen"
+        ],
+        "correctAnswer": "Título y autoría",
+        "explanation": "La portada suele identificar la obra y a quien la escribió; puede incluir editorial u otros datos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-081",
+        "number": 81,
+        "topic": "Notas al pie",
+        "concept": "nota_al_pie_aporta_aclaracion_o_referencia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Para qué puede servir una nota al pie en un texto?",
+        "options": [
+          "Para reemplazar el título",
+          "Para añadir una aclaración o referencia breve",
+          "Para cambiar el final del relato",
+          "Para eliminar la fuente consultada"
+        ],
+        "correctAnswer": "Para añadir una aclaración o referencia breve",
+        "explanation": "Una nota al pie aporta información complementaria o una referencia sin interrumpir el cuerpo principal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-082",
+        "number": 82,
+        "topic": "Narrativa · Verdadero o falso",
+        "concept": "narracion_puede_alternar_voces_o_perspectivas",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una narración puede incluir más de una voz o perspectiva narrativa.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Algunas obras alternan narradores o perspectivas para mostrar diferentes experiencias.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-083",
+        "number": 83,
+        "topic": "Versificación",
+        "concept": "rima_repite_sonidos_al_final_de_versos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama la repetición de sonidos al final de dos o más versos?",
+        "options": [
+          "Métrica",
+          "Estrofa",
+          "Rima",
+          "Acotación"
+        ],
+        "correctAnswer": "Rima",
+        "explanation": "La rima es la coincidencia total o parcial de sonidos al final de los versos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-084",
+        "number": 84,
+        "topic": "Coherencia",
+        "concept": "agrupar_ideas_y_conectores_mejora_coherencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué cambio ayuda más a que un párrafo sobre varias causas mantenga un orden claro?",
+        "options": [
+          "Mezclar causas y consecuencias sin conectores",
+          "Repetir la misma oración",
+          "Cambiar de tema en cada frase",
+          "Agrupar las causas y enlazarlas con conectores adecuados"
+        ],
+        "correctAnswer": "Agrupar las causas y enlazarlas con conectores adecuados",
+        "explanation": "Agrupar ideas relacionadas y señalar sus vínculos facilita seguir el razonamiento.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-085",
+        "number": 85,
+        "topic": "Inferencia y evidencia",
+        "concept": "algunos_indica_parte_sin_cantidad_exacta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un informe dice que “algunos” estudiantes usaron la biblioteca, pero no indica cuántos. ¿Qué conclusión está respaldada?",
+        "options": [
+          "Al menos una parte del grupo la utilizó",
+          "Todos los estudiantes fueron",
+          "Nadie la visitó",
+          "La biblioteca tuvo exactamente cien visitantes"
+        ],
+        "correctAnswer": "Al menos una parte del grupo la utilizó",
+        "explanation": "“Algunos” permite concluir que hubo usuarios, pero no establece una cantidad exacta ni que fueran todos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-086",
+        "number": 86,
+        "topic": "Paráfrasis · Verdadero o falso",
+        "concept": "parafrasis_conserva_sentido_y_reconoce_fuente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una paráfrasis puede cambiar palabras y estructura, pero debe conservar la idea de la fuente y reconocerla.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Parafrasear expresa una idea ajena con redacción propia, sin cambiar su sentido y atribuyéndola correctamente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-087",
+        "number": 87,
+        "topic": "Fábula",
+        "concept": "fabula_suele_personificar_animales_y_presentar_ensenanza",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué rasgo es común en muchas fábulas?",
+        "options": [
+          "Presentan instrucciones de seguridad",
+          "Sus personajes pueden ser animales con conductas humanas",
+          "Incluyen resultados de laboratorio",
+          "Siempre narran un hecho periodístico real"
+        ],
+        "correctAnswer": "Sus personajes pueden ser animales con conductas humanas",
+        "explanation": "Muchas fábulas usan animales personificados para desarrollar una historia y una enseñanza.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-088",
+        "number": 88,
+        "topic": "Textos de opinión",
+        "concept": "resena_critica_anade_valoracion_razonada",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué distingue principalmente una reseña crítica de un resumen neutral?",
+        "options": [
+          "La reseña siempre cuenta el final",
+          "El resumen necesariamente usa rima",
+          "La reseña incorpora una valoración sustentada",
+          "El resumen incluye diálogos inventados"
+        ],
+        "correctAnswer": "La reseña incorpora una valoración sustentada",
+        "explanation": "La reseña crítica puede resumir una obra y además evaluarla con razones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-089",
+        "number": 89,
+        "topic": "Textos históricos",
+        "concept": "ficcion_historica_combina_invencion_y_contexto_pasado",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué rasgo puede tener una novela histórica?",
+        "options": [
+          "Presentar solo documentos sin narración",
+          "Evitar cualquier referencia a un periodo real",
+          "Ser siempre una autobiografía",
+          "Combinar una narración ficticia con un contexto del pasado"
+        ],
+        "correctAnswer": "Combinar una narración ficticia con un contexto del pasado",
+        "explanation": "La ficción histórica sitúa una narración en un periodo pasado, pero sus elementos no son todos registros documentales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-090",
+        "number": 90,
+        "topic": "Publicidad",
+        "concept": "terminos_y_excepciones_aclaran_alcance_de_anuncio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un anuncio destaca beneficios, pero omite condiciones importantes del producto. ¿Qué debe revisar el lector?",
+        "options": [
+          "Si la imagen combina con el fondo",
+          "El número de colores usados",
+          "El tamaño del logotipo solamente",
+          "La letra pequeña y los términos de la oferta"
+        ],
+        "correctAnswer": "La letra pequeña y los términos de la oferta",
+        "explanation": "Condiciones, límites y excepciones ayudan a comprender el alcance real de una oferta publicitaria.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-091",
+        "number": 91,
+        "topic": "Conectores de contraste",
+        "concept": "sin_embargo_introduce_contraste_entre_ideas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“El plan era económico; ___, necesitaba más tiempo.” ¿Qué conector expresa contraste?",
+        "options": [
+          "Porque",
+          "Por eso",
+          "Sin embargo",
+          "Luego"
+        ],
+        "correctAnswer": "Sin embargo",
+        "explanation": "“Sin embargo” introduce una idea que contrasta con la anterior.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-092",
+        "number": 92,
+        "topic": "Citas · Verdadero o falso",
+        "concept": "cita_breve_tambien_requiere_identificar_fuente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una cita textual breve queda automáticamente atribuida a su autor aunque no se indique la fuente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La extensión no elimina la necesidad de señalar la fuente de las palabras citadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-093",
+        "number": 93,
+        "topic": "Tesis y argumentos",
+        "concept": "argumentos_relevantes_sostienen_tesis",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué relación debe existir entre la tesis y las razones de un texto argumentativo?",
+        "options": [
+          "Las razones deben contradecirla sin explicación",
+          "Las razones deben apoyarla con lógica o evidencia",
+          "La tesis debe aparecer solo en el título",
+          "Las razones deben tratar un tema diferente"
+        ],
+        "correctAnswer": "Las razones deben apoyarla con lógica o evidencia",
+        "explanation": "Los argumentos deben guardar relación con la postura y aportar razones para sostenerla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-094",
+        "number": 94,
+        "topic": "Signos de puntuación",
+        "concept": "dos_puntos_pueden_introducir_enumeracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué uso de los dos puntos es correcto?",
+        "options": [
+          "Para introducir una enumeración anunciada",
+          "Para separar siempre sujeto y verbo",
+          "Para sustituir todos los signos de interrogación",
+          "Para indicar que la oración no termina"
+        ],
+        "correctAnswer": "Para introducir una enumeración anunciada",
+        "explanation": "Los dos puntos pueden anunciar elementos que desarrollan o especifican lo dicho antes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-095",
+        "number": 95,
+        "topic": "Revisión · Verdadero o falso",
+        "concept": "reorganizar_parrafos_puede_mejorar_orden_sin_cambiar_postura",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una revisión puede reorganizar párrafos para mejorar el orden sin cambiar la postura principal.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Editar puede cambiar la organización para facilitar la lectura mientras se conserva la idea central.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-096",
+        "number": 96,
+        "topic": "Instrucciones",
+        "concept": "instrucciones_deben_ordenar_pasos_segun_secuencia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un instructivo enumera: 1) hornear la mezcla; 2) precalentar el horno; 3) preparar la mezcla. ¿Qué problema presenta?",
+        "options": [
+          "La secuencia debe reorganizarse antes de realizar los pasos",
+          "La oración no tiene ningún verbo",
+          "Los ingredientes no pueden mezclarse",
+          "El texto está escrito en primera persona"
+        ],
+        "correctAnswer": "La secuencia debe reorganizarse antes de realizar los pasos",
+        "explanation": "Conviene preparar la mezcla y precalentar el horno antes de hornear.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-097",
+        "number": 97,
+        "topic": "Discusión de ideas",
+        "concept": "refutar_argumento_responde_a_razones_no_a_persona",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un debate, alguien responde: “Tu argumento es falso porque no sabes nada del tema.” ¿Qué mejora la respuesta?",
+        "options": [
+          "Repetir el ataque con más fuerza",
+          "Señalar qué premisa o evidencia considera equivocada y explicar por qué",
+          "Cambiar de tema",
+          "Burlarse de quien habló"
+        ],
+        "correctAnswer": "Señalar qué premisa o evidencia considera equivocada y explicar por qué",
+        "explanation": "Responder al contenido con razones permite discutir la idea en vez de atacar a la persona.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-098",
+        "number": 98,
+        "topic": "Lectura multimodal",
+        "concept": "etiquetas_y_fuente_aclaran_relacion_en_infografia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una infografía usa una flecha roja entre dos cifras, pero no incluye leyenda ni explica la relación. ¿Qué debería hacer el lector?",
+        "options": [
+          "Suponer que la flecha prueba causalidad",
+          "Ignorar todas las cifras",
+          "Buscar título, etiquetas y fuente antes de interpretar la relación",
+          "Concluir que la cifra roja es más exacta"
+        ],
+        "correctAnswer": "Buscar título, etiquetas y fuente antes de interpretar la relación",
+        "explanation": "Título, etiquetas y fuente aclaran qué comparan las cifras y qué significa el símbolo; una flecha sola no demuestra causalidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-099",
+        "number": 99,
+        "topic": "Encuadre y medios",
+        "concept": "encuadre_fotografico_influye_en_impresion_del_publico",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una fotografía de una protesta muestra solo un grupo pequeño, aunque había más personas fuera del encuadre. ¿Qué efecto puede tener esa selección?",
+        "options": [
+          "Garantiza que la imagen sea falsa",
+          "Cambia la resolución original",
+          "Convierte la foto en una grabación sonora",
+          "Influye en la impresión que recibe quien la observa"
+        ],
+        "correctAnswer": "Influye en la impresión que recibe quien la observa",
+        "explanation": "El encuadre selecciona qué aparece y puede influir en la interpretación sin alterar necesariamente los elementos fotografiados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-100",
+        "number": 100,
+        "topic": "Relación titular y contenido · Verdadero o falso",
+        "concept": "omitir_contexto_en_titular_puede_inducir_a_error",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un titular puede ser literalmente verdadero y aun así dar una impresión engañosa si omite información clave del artículo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La selección de datos y el contexto que se omite pueden distorsionar la interpretación aunque las palabras citadas sean ciertas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-101",
+        "number": 101,
+        "topic": "Modo verbal",
+        "concept": "subjuntivo_expresa_deseo_en_ojala_lleguemos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál oración expresa una posibilidad o deseo?",
+        "options": [
+          "Ojalá lleguemos temprano",
+          "Llegamos temprano ayer",
+          "Llegaremos temprano mañana",
+          "Llegad temprano al salón"
+        ],
+        "correctAnswer": "Ojalá lleguemos temprano",
+        "explanation": "“Ojalá lleguemos” expresa un deseo; “lleguemos” aparece en modo subjuntivo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-102",
+        "number": 102,
+        "topic": "Formas verbales",
+        "concept": "escribir_es_verbo_en_infinitivo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál forma está en infinitivo?",
+        "options": [
+          "Cantaba",
+          "Escribir",
+          "Salieron",
+          "Comemos"
+        ],
+        "correctAnswer": "Escribir",
+        "explanation": "“Escribir” es el infinitivo del verbo y termina en “-ir”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-103",
+        "number": 103,
+        "topic": "Referencias culturales",
+        "concept": "caballo_de_troya_funciona_como_alusion_cultural",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un relato menciona “el caballo de Troya” para aludir a un engaño que oculta un peligro. ¿Qué recurso usa?",
+        "options": [
+          "Cita textual",
+          "Abreviatura",
+          "Alusión cultural",
+          "Nota al pie"
+        ],
+        "correctAnswer": "Alusión cultural",
+        "explanation": "La expresión remite indirectamente a una historia conocida para añadir un sentido al texto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-104",
+        "number": 104,
+        "topic": "Sufijos",
+        "concept": "sufijo_isimo_forma_superlativo_de_adjetivo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma expresa “muy rápido” con el sufijo superlativo?",
+        "options": [
+          "Rapidito",
+          "Rapidez",
+          "Rápidamente",
+          "Rapidísimo"
+        ],
+        "correctAnswer": "Rapidísimo",
+        "explanation": "El sufijo “-ísimo” forma el superlativo de muchos adjetivos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-105",
+        "number": 105,
+        "topic": "Tradición oral · Verdadero o falso",
+        "concept": "leyenda_oral_puede_presentar_variantes",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una leyenda puede transmitirse oralmente y cambiar en sus distintas versiones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La transmisión oral puede dar lugar a variantes según las comunidades y los momentos en que se cuenta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-106",
+        "number": 106,
+        "topic": "Figuras literarias",
+        "concept": "comparacion_con_como_es_simil",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué figura aparece en “Tus manos son suaves como la seda”?",
+        "options": [
+          "Símil",
+          "Hipérbole",
+          "Ironía",
+          "Aliteración"
+        ],
+        "correctAnswer": "Símil",
+        "explanation": "El símil compara dos elementos de manera explícita con una expresión como “como”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-107",
+        "number": 107,
+        "topic": "Idea principal",
+        "concept": "oracion_tematica_presenta_idea_organizadora",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué expresa la oración temática de un párrafo?",
+        "options": [
+          "Una nota sobre la edición",
+          "La idea que organiza el párrafo",
+          "Una opinión del lector",
+          "El significado de todas las palabras"
+        ],
+        "correctAnswer": "La idea que organiza el párrafo",
+        "explanation": "La oración temática presenta la idea principal que las demás oraciones desarrollan o apoyan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-108",
+        "number": 108,
+        "topic": "Siglas y acrónimos",
+        "concept": "acronimo_se_forma_con_partes_y_se_pronuncia_como_palabra",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué caracteriza a un acrónimo como “Unesco”?",
+        "options": [
+          "Es una palabra que imita un sonido",
+          "Es el nombre de una estrofa",
+          "Se forma con partes de un nombre compuesto y puede leerse como palabra",
+          "Es siempre una cita textual"
+        ],
+        "correctAnswer": "Se forma con partes de un nombre compuesto y puede leerse como palabra",
+        "explanation": "Algunos acrónimos combinan elementos de varias palabras y se pronuncian como una palabra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-109",
+        "number": 109,
+        "topic": "Denotación y connotación",
+        "concept": "balde_de_agua_fria_connota_sorpresa_desagradable",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “La noticia cayó como un balde de agua fría”, ¿qué aporta la expresión destacada?",
+        "options": [
+          "Una medida exacta de temperatura",
+          "Una instrucción para usar agua",
+          "Una descripción literal de un balde",
+          "La idea de sorpresa o impacto desagradable"
+        ],
+        "correctAnswer": "La idea de sorpresa o impacto desagradable",
+        "explanation": "La expresión se usa con sentido figurado para transmitir una reacción de sorpresa o desagrado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-110",
+        "number": 110,
+        "topic": "Evidencia",
+        "concept": "argumento_se_sustenta_con_razones_pertinentes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento convierte mejor una afirmación en un argumento sustentado?",
+        "options": [
+          "Razones o evidencias pertinentes",
+          "Repetir la afirmación varias veces",
+          "Aumentar el tamaño de letra",
+          "Usar una palabra más difícil"
+        ],
+        "correctAnswer": "Razones o evidencias pertinentes",
+        "explanation": "Las razones y evidencias pertinentes explican por qué la postura merece ser considerada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-111",
+        "number": 111,
+        "topic": "Causa y coincidencia",
+        "concept": "coincidencia_temporal_no_demuestra_causalidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Me puse mi camiseta favorita y ganamos; por eso la camiseta causó la victoria.” ¿Qué error presenta?",
+        "options": [
+          "Usa un conector temporal",
+          "Confunde coincidencia con causalidad",
+          "Cita una fuente primaria",
+          "Formula una pregunta abierta"
+        ],
+        "correctAnswer": "Confunde coincidencia con causalidad",
+        "explanation": "Que dos hechos ocurran juntos no demuestra que uno haya causado el otro.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-112",
+        "number": 112,
+        "topic": "Adaptación",
+        "concept": "adaptacion_teatral_selecciona_elementos_del_relato",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué decisión suele ser necesaria al convertir una novela extensa en una obra teatral breve?",
+        "options": [
+          "Representar cada oración de la novela",
+          "Eliminar toda acción",
+          "Seleccionar escenas y diálogos que conserven el conflicto central",
+          "Cambiar todos los personajes por el narrador"
+        ],
+        "correctAnswer": "Seleccionar escenas y diálogos que conserven el conflicto central",
+        "explanation": "Una adaptación selecciona elementos y los ajusta al formato y duración de la representación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-113",
+        "number": 113,
+        "topic": "Adaptaciones · Verdadero o falso",
+        "concept": "adaptacion_cambia_formato_y_conserva_conflicto",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una adaptación puede cambiar el formato o algunos elementos de una obra y conservar parte de su conflicto central.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Adaptar implica tomar decisiones para trasladar una obra a otro medio o contexto, no copiarla palabra por palabra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-114",
+        "number": 114,
+        "topic": "Caracterización",
+        "concept": "devolver_objeto_encontrado_sugiere_honestidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“Sin que nadie se lo pidiera, Julián devolvió la billetera que encontró.” ¿Qué rasgo se sugiere mediante su acción?",
+        "options": [
+          "Descuido",
+          "Impaciencia",
+          "Timidez",
+          "Honestidad"
+        ],
+        "correctAnswer": "Honestidad",
+        "explanation": "Devolver un objeto encontrado permite inferir honestidad a partir de la conducta del personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-115",
+        "number": 115,
+        "topic": "Fuentes primarias",
+        "concept": "diario_contemporaneo_es_fuente_primaria_personal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál fuente es primaria para estudiar cómo vivió una persona un acontecimiento?",
+        "options": [
+          "Su diario escrito durante ese periodo",
+          "Un resumen escolar publicado décadas después",
+          "Una enciclopedia general actual",
+          "Una reseña de una película inspirada en el hecho"
+        ],
+        "correctAnswer": "Su diario escrito durante ese periodo",
+        "explanation": "Un diario contemporáneo registra la experiencia de quien vivió el periodo, aunque refleja su perspectiva personal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-116",
+        "number": 116,
+        "topic": "Voz pasiva",
+        "concept": "propuesta_es_sujeto_paciente_en_voz_pasiva",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “La propuesta fue aprobada por el consejo”, ¿qué elemento recibe la acción?",
+        "options": [
+          "El consejo",
+          "La propuesta",
+          "La aprobación",
+          "La reunión"
+        ],
+        "correctAnswer": "La propuesta",
+        "explanation": "“La propuesta” es el sujeto paciente: recibe la acción de ser aprobada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-117",
+        "number": 117,
+        "topic": "Generalizaciones · Verdadero o falso",
+        "concept": "testimonio_individual_no_representa_toda_comunidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un único testimonio personal basta para describir lo que piensa toda una comunidad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una persona puede ofrecer una experiencia valiosa, pero no representa automáticamente las opiniones de un grupo entero.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-118",
+        "number": 118,
+        "topic": "Variedades lingüísticas",
+        "concept": "palabras_regionales_reflejan_variedad_linguistica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un personaje usa palabras propias de su región. ¿Qué conclusión es más adecuada?",
+        "options": [
+          "Está hablando incorrectamente en todos los contextos",
+          "No conoce ninguna otra palabra",
+          "Usa una variedad lingüística vinculada a su comunidad",
+          "El texto dejó de estar escrito en español"
+        ],
+        "correctAnswer": "Usa una variedad lingüística vinculada a su comunidad",
+        "explanation": "El español presenta variedades regionales; sus formas no son errores por el solo hecho de ser locales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-119",
+        "number": 119,
+        "topic": "Falacias",
+        "concept": "falso_dilema_reduce_opciones_posibles_a_dos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "“O apoyas mi propuesta o no te importa la escuela.” ¿Qué debilidad presenta este argumento?",
+        "options": [
+          "Resume dos datos del informe",
+          "Distingue varias alternativas razonables",
+          "Sustenta la tesis con evidencia",
+          "Reduce la discusión a dos opciones excluyentes"
+        ],
+        "correctAnswer": "Reduce la discusión a dos opciones excluyentes",
+        "explanation": "El falso dilema presenta solo dos opciones cuando pueden existir otras posturas o razones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-120",
+        "number": 120,
+        "topic": "Identificación bibliográfica · Verdadero o falso",
+        "concept": "isbn_identifica_edicion_o_formato_de_publicacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El ISBN ayuda a identificar una edición o formato específico de una publicación.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El ISBN identifica una publicación comercial concreta; distintas ediciones o formatos pueden tener números diferentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-121",
+        "number": 121,
+        "topic": "Conclusión",
+        "concept": "conclusion_conecta_evidencia_con_propuesta_con_cautela",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un texto defiende ampliar el horario de la biblioteca con datos de asistencia. ¿Qué conclusión mantiene mejor el vínculo entre evidencia y propuesta?",
+        "options": [
+          "“La asistencia aumenta después de clases; ampliar el horario podría responder a esa demanda.”",
+          "“La biblioteca tiene paredes azules, por eso debe abrir más.”",
+          "“Todos deben apoyar la propuesta sin preguntas.”",
+          "“Los datos no importan si la idea parece atractiva.”"
+        ],
+        "correctAnswer": "“La asistencia aumenta después de clases; ampliar el horario podría responder a esa demanda.”",
+        "explanation": "La conclusión relaciona el dato de asistencia con la propuesta, sin presentar más certeza de la que aporta la evidencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-122",
+        "number": 122,
+        "topic": "Revisión argumentativa",
+        "concept": "evidencia_debe_corresponder_a_afirmacion_sobre_rendimiento",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un borrador sostiene que “el uniforme mejora el rendimiento”, pero solo presenta opiniones sobre comodidad. ¿Qué ajuste lo fortalece?",
+        "options": [
+          "Repetir la tesis al final",
+          "Conseguir datos pertinentes sobre rendimiento y reconocer límites de la evidencia",
+          "Eliminar todas las razones",
+          "Añadir una anécdota sobre otro colegio como prueba definitiva"
+        ],
+        "correctAnswer": "Conseguir datos pertinentes sobre rendimiento y reconocer límites de la evidencia",
+        "explanation": "La evidencia debe corresponder a la afirmación; opiniones de comodidad no demuestran por sí solas un efecto académico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-123",
+        "number": 123,
+        "topic": "Entrevistas",
+        "concept": "pregunta_abierta_indaga_cambios_y_participantes",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un reportaje usa una entrevista para explicar por qué cambió una tradición del barrio. ¿Qué pregunta aporta más detalle sobre el proceso?",
+        "options": [
+          "¿Te gusta el barrio?",
+          "¿Sí o no?",
+          "¿Qué cambió, cuándo empezó y quiénes participaron?",
+          "¿Cuál es tu color favorito?"
+        ],
+        "correctAnswer": "¿Qué cambió, cuándo empezó y quiénes participaron?",
+        "explanation": "Una pregunta abierta y específica invita a explicar cambios, momentos y participantes relacionados con el tema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-124",
+        "number": 124,
+        "topic": "Fiabilidad narrativa",
+        "concept": "narrador_basado_en_rumores_requiere_lectura_cautelosa",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un narrador describe un hecho con seguridad, pero más tarde reconoce que no estuvo presente y que lo supo por rumores. ¿Cómo conviene leer su versión?",
+        "options": [
+          "Como registro directo e infalible",
+          "Como dato confirmado por la historia",
+          "Como una explicación científica",
+          "Con cautela, distinguiendo lo que sabe de lo que supone"
+        ],
+        "correctAnswer": "Con cautela, distinguiendo lo que sabe de lo que supone",
+        "explanation": "Admitir que conoce los hechos por rumores limita la fiabilidad de su relato y exige contrastar sus afirmaciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-125",
+        "number": 125,
+        "topic": "Verificación de contenido · Verdadero o falso",
+        "concept": "correccion_ortografica_no_garantiza_veracidad_de_datos",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Que una publicación tenga buena ortografía no garantiza que los datos que presenta sean verdaderos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La corrección formal y la veracidad son aspectos distintos; los datos también requieren verificación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-126",
+        "number": 126,
+        "topic": "Modo imperativo",
+        "concept": "cierra_expresa_instruccion_directa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál oración da una instrucción directa?",
+        "options": [
+          "Cierra la ventana, por favor",
+          "Tal vez cierre la ventana",
+          "Cerró la ventana ayer",
+          "La ventana estaba cerrada"
+        ],
+        "correctAnswer": "Cierra la ventana, por favor",
+        "explanation": "“Cierra” se usa para pedir o indicar directamente una acción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-127",
+        "number": 127,
+        "topic": "Comparación",
+        "concept": "mas_que_expresa_comparacion_de_superioridad",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El río es más ancho que el arroyo”, ¿qué relación expresa “más ancho que”?",
+        "options": [
+          "Igualdad",
+          "Comparación de superioridad",
+          "Negación",
+          "Duda"
+        ],
+        "correctAnswer": "Comparación de superioridad",
+        "explanation": "La estructura “más… que” compara dos elementos y señala mayor grado en una característica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-128",
+        "number": 128,
+        "topic": "Onomatopeya",
+        "concept": "tic_tac_imita_sonido_de_reloj",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál palabra imita un sonido?",
+        "options": [
+          "Brillante",
+          "Silencioso",
+          "Tic-tac",
+          "Distante"
+        ],
+        "correctAnswer": "Tic-tac",
+        "explanation": "“Tic-tac” representa mediante sonidos escritos el ruido regular de un reloj.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-129",
+        "number": 129,
+        "topic": "Mayúsculas",
+        "concept": "nombre_propio_medellin_lleva_mayuscula_y_tilde",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál opción escribe correctamente el nombre de una ciudad colombiana?",
+        "options": [
+          "medellín",
+          "MEDELLÍN?",
+          "MedelliN",
+          "Medellín"
+        ],
+        "correctAnswer": "Medellín",
+        "explanation": "Los nombres propios llevan mayúscula inicial y conservan las tildes que corresponden.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-130",
+        "number": 130,
+        "topic": "Comunicación oral · Verdadero o falso",
+        "concept": "gestos_y_rostro_complementan_mensaje_oral",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Los gestos y la expresión del rostro pueden complementar lo que una persona dice oralmente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La comunicación oral suele incluir elementos no verbales que aportan información sobre intención o emoción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-131",
+        "number": 131,
+        "topic": "Nombres propios",
+        "concept": "nosotros_incluye_hablante_y_otras_personas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué pronombre incluye a quien habla y a otras personas?",
+        "options": [
+          "Nosotros",
+          "Ustedes",
+          "Ellos",
+          "Él"
+        ],
+        "correctAnswer": "Nosotros",
+        "explanation": "“Nosotros” incluye a la persona que habla y a una o más personas con ella.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-132",
+        "number": 132,
+        "topic": "Complemento directo",
+        "concept": "el_proyecto_es_complemento_directo_de_presento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El equipo presentó el proyecto”, ¿qué recibió directamente la acción de presentar?",
+        "options": [
+          "El equipo",
+          "El proyecto",
+          "Presentó",
+          "La tarde"
+        ],
+        "correctAnswer": "El proyecto",
+        "explanation": "“El proyecto” es el complemento directo: aquello que el equipo presentó.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-133",
+        "number": 133,
+        "topic": "Puntuación",
+        "concept": "puntos_suspensivos_pueden_indicar_interrupcion_o_duda",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indican normalmente los puntos suspensivos en un diálogo?",
+        "options": [
+          "El comienzo obligatorio de un párrafo",
+          "Una cita de autor conocido",
+          "Una interrupción, duda o expresión que queda abierta",
+          "El final de una pregunta directa"
+        ],
+        "correctAnswer": "Una interrupción, duda o expresión que queda abierta",
+        "explanation": "Los puntos suspensivos pueden señalar vacilación, interrupción o una expresión que no se completa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-134",
+        "number": 134,
+        "topic": "Narración en primera persona",
+        "concept": "verbo_en_primera_persona_muestra_narrador_participante",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué expresión muestra que quien narra participa en los hechos?",
+        "options": [
+          "Ella cruzó la plaza",
+          "El viajero cruzó la plaza",
+          "Alguien cruzó la plaza",
+          "Crucé la plaza antes del anochecer"
+        ],
+        "correctAnswer": "Crucé la plaza antes del anochecer",
+        "explanation": "“Crucé” está en primera persona y presenta al narrador como participante de la acción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-135",
+        "number": 135,
+        "topic": "Concordancia",
+        "concept": "aves_plural_concuerda_con_verbo_migran",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué oración mantiene la concordancia entre sujeto y verbo?",
+        "options": [
+          "Las aves migran en ciertas temporadas",
+          "Las aves migra en ciertas temporadas",
+          "El grupo de aves migran en ciertas temporadas siempre",
+          "Las aves migración en ciertas temporadas"
+        ],
+        "correctAnswer": "Las aves migran en ciertas temporadas",
+        "explanation": "El sujeto plural “las aves” concuerda con el verbo plural “migran”.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-136",
+        "number": 136,
+        "topic": "Campos semánticos",
+        "concept": "campo_semantico_de_orientacion_agrupa_terminos_relacionados",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué grupo reúne palabras de un mismo campo semántico relacionado con la orientación?",
+        "options": [
+          "Estrofa, verso, rima, poema",
+          "Brújula, mapa, ruta, coordenada",
+          "Metáfora, símil, ironía, hipérbole",
+          "Adjetivo, verbo, sustantivo, adverbio"
+        ],
+        "correctAnswer": "Brújula, mapa, ruta, coordenada",
+        "explanation": "Las cuatro palabras se relacionan con formas de ubicarse o representar direcciones y lugares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-137",
+        "number": 137,
+        "topic": "Pregunta retórica",
+        "concept": "pregunta_retorica_involucra_audiencia_sin_respuesta_literal",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un discurso, “¿Quién no quiere un barrio más seguro?” no busca necesariamente una respuesta literal. ¿Qué función puede cumplir?",
+        "options": [
+          "Solicitar un dato censal",
+          "Abrir una entrevista",
+          "Invitar al público a compartir una postura",
+          "Corregir una tilde"
+        ],
+        "correctAnswer": "Invitar al público a compartir una postura",
+        "explanation": "Una pregunta retórica puede enfatizar una idea o involucrar al público sin esperar una respuesta informativa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-138",
+        "number": 138,
+        "topic": "Lengua y sociedad · Verdadero o falso",
+        "concept": "lengua_incorpora_vocabulario_para_nuevas_realidades",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El vocabulario de una lengua puede incorporar palabras nuevas cuando aparecen objetos o prácticas nuevas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las lenguas cambian y pueden crear o adoptar palabras para nombrar nuevas realidades.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-139",
+        "number": 139,
+        "topic": "Editoriales y noticias",
+        "concept": "noticia_informa_y_editorial_expresa_postura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué diferencia suele haber entre una noticia y un editorial?",
+        "options": [
+          "La noticia siempre es ficción y el editorial siempre poesía",
+          "El editorial solo presenta mapas",
+          "No puede haber ninguna diferencia",
+          "La noticia informa hechos; el editorial expresa una postura institucional"
+        ],
+        "correctAnswer": "La noticia informa hechos; el editorial expresa una postura institucional",
+        "explanation": "La noticia prioriza informar acontecimientos; el editorial presenta la posición de un medio o institución.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-140",
+        "number": 140,
+        "topic": "Ejemplos y explicaciones",
+        "concept": "ejemplo_concreto_ilustra_idea_general",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple un ejemplo concreto después de una explicación general?",
+        "options": [
+          "Reemplazar todas las ideas del texto",
+          "Ocultar la tesis",
+          "Ilustrar cómo se aplica la idea",
+          "Cambiar el tema sin aviso"
+        ],
+        "correctAnswer": "Ilustrar cómo se aplica la idea",
+        "explanation": "Un ejemplo puede ayudar a comprender una idea al mostrarla en una situación particular.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-141",
+        "number": 141,
+        "topic": "Estructura narrativa",
+        "concept": "climax_concentra_tension_antes_de_resolucion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una narración, ¿qué momento suele concentrar la tensión principal antes de la resolución?",
+        "options": [
+          "Introducción",
+          "Clímax",
+          "Epílogo",
+          "Acotación"
+        ],
+        "correctAnswer": "Clímax",
+        "explanation": "El clímax es el punto de mayor tensión o el momento decisivo antes de que la historia avance hacia su resolución.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-142",
+        "number": 142,
+        "topic": "Biografía · Verdadero o falso",
+        "concept": "biografia_y_autobiografia_difieren_en_autoria",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una biografía y una autobiografía siempre son relatos escritos por la misma persona sobre su propia vida.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una autobiografía narra la vida de quien la escribe; una biografía puede ser escrita por otra persona.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-143",
+        "number": 143,
+        "topic": "Raya explicativa",
+        "concept": "rayas_delimitan_aclaracion_en_oracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En “El teatro —cerrado por reparaciones— reabrió ayer”, ¿qué función cumplen las rayas?",
+        "options": [
+          "Introducen una pregunta directa",
+          "Marcan la intervención de otro personaje",
+          "Separan sílabas de una palabra",
+          "Encierran una aclaración dentro de la oración"
+        ],
+        "correctAnswer": "Encierran una aclaración dentro de la oración",
+        "explanation": "Las rayas delimitan un comentario explicativo que puede retirarse sin romper la oración principal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-144",
+        "number": 144,
+        "topic": "Preguntas de encuesta",
+        "concept": "pregunta_sugerente_puede_influir_respuesta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una encuesta pregunta: “¿No te parece que el nuevo horario es mucho mejor?”. ¿Qué problema puede influir en las respuestas?",
+        "options": [
+          "La redacción sugiere una respuesta favorable",
+          "La pregunta tiene signos de interrogación",
+          "El enunciado usa la palabra “horario”",
+          "La respuesta podría escribirse en una hoja"
+        ],
+        "correctAnswer": "La redacción sugiere una respuesta favorable",
+        "explanation": "La formulación conduce al encuestado hacia una valoración positiva y puede sesgar el resultado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-145",
+        "number": 145,
+        "topic": "Argumentos · Verdadero o falso",
+        "concept": "extension_del_argumento_no_garantiza_fuerza",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un argumento más largo es necesariamente más convincente que uno breve.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La solidez depende de la relevancia y el respaldo de las razones, no solo de la cantidad de palabras.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-146",
+        "number": 146,
+        "topic": "Titulares",
+        "concept": "titular_refleja_variacion_sin_generalizar_resultados",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un artículo explica que una medida tuvo resultados distintos según el barrio. ¿Qué titular representa mejor esa información?",
+        "options": [
+          "“La medida tuvo efectos variados entre barrios, según el informe”",
+          "“La medida cambió todo para siempre”",
+          "“Nadie sabe qué ocurrió”",
+          "“Un barrio demuestra lo que pasa en toda la ciudad”"
+        ],
+        "correctAnswer": "“La medida tuvo efectos variados entre barrios, según el informe”",
+        "explanation": "El titular presenta la variación reportada sin exagerar ni generalizar más allá de los datos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-147",
+        "number": 147,
+        "topic": "Adaptación narrativa",
+        "concept": "alternar_voces_muestra_perspectivas_de_conflicto",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una obra breve debe mostrar el mismo conflicto desde dos perspectivas. ¿Qué recurso puede ayudar?",
+        "options": [
+          "Borrar el conflicto principal",
+          "Alternar escenas o voces de los personajes",
+          "Quitar todas las acciones",
+          "Usar solo la descripción del escenario"
+        ],
+        "correctAnswer": "Alternar escenas o voces de los personajes",
+        "explanation": "Alternar escenas o voces permite mostrar cómo distintos personajes experimentan el mismo conflicto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-148",
+        "number": 148,
+        "topic": "Citas y atribución",
+        "concept": "atribucion_de_cita_se_verifica_en_fuente_confiable",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una persona comparte una frase entre comillas atribuida a una escritora, pero no encuentra el libro original. ¿Qué paso es más responsable?",
+        "options": [
+          "Repetirla como auténtica porque aparece en muchas imágenes",
+          "Añadir el nombre de otro autor conocido",
+          "Buscar una fuente primaria o confiable antes de atribuirla",
+          "Quitar las comillas y presentarla como propia"
+        ],
+        "correctAnswer": "Buscar una fuente primaria o confiable antes de atribuirla",
+        "explanation": "La repetición en redes no confirma la autoría; conviene localizar una fuente fiable antes de atribuir la frase.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-149",
+        "number": 149,
+        "topic": "Síntesis de datos",
+        "concept": "conteos_12_y_16_difieren_por_cuatro_visitas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un registro muestra 12 visitas a una biblioteca el lunes y 16 el viernes. ¿Qué afirmación está respaldada?",
+        "options": [
+          "Todos los estudiantes fueron el viernes",
+          "El horario del viernes causó la diferencia",
+          "La biblioteca duplicó sus visitas",
+          "El viernes hubo cuatro visitas más que el lunes"
+        ],
+        "correctAnswer": "El viernes hubo cuatro visitas más que el lunes",
+        "explanation": "La comparación permite describir una diferencia de cuatro visitas, pero no explica su causa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "LEN7-150",
+        "number": 150,
+        "topic": "Traducción · Verdadero o falso",
+        "concept": "traduccion_literal_puede_perder_modismo_y_tono",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una traducción literal puede conservar palabras, pero perder un modismo o el tono del texto original.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Para traducir con sentido es necesario considerar contexto, expresiones idiomáticas y tono, no solo sustituir palabra por palabra.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
+  }
 ];

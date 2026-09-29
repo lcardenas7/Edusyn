@@ -33,7 +33,15 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.map((item) => item.grade)).toEqual([6, 6, 6, 6, 6, 6, 6, 6]);
+    expect(catalogs.filter((item) => item.grade === 7)).toHaveLength(6);
+    expect(catalogs.filter((item) => item.grade === 6)).toHaveLength(8);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-arte-cultura-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-deportes-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-geografia-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-8-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-6-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-matematicas-logica-grade-6-v1')).toBe(true);
@@ -94,6 +102,26 @@ describe('QuestionBankService', () => {
     expect(imported[149].text).toContain('linterna');
   });
 
+  it('imports the official seventh-grade science bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-7', name: 'Séptimo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'science-grade-7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-ciencia-naturaleza-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-ciencia-naturaleza-grade-7-v1', gradeId: 'grade-7', title: 'Ciencia y naturaleza · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('material genético');
+    expect(imported[149].text).toContain('especies nativas');
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
   it('imports the official geography bank with its audited 150 questions', async () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
@@ -115,6 +143,46 @@ describe('QuestionBankService', () => {
     expect(imported[36].correctAnswer).toBe('El área que aporta agua a una salida común');
     expect(imported[36].options).toContain(imported[36].correctAnswer);
     expect(imported[149].text).toContain('imágenes satelitales');
+  });
+
+  it('imports the official seventh-grade geography bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-7', name: 'Séptimo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'geography-grade-7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-geografia-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-geografia-grade-7-v1', gradeId: 'grade-7', title: 'Geografía · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('franja estrecha de tierra');
+    expect(imported[149].text).toContain('modelo o mapa del territorio');
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
+  it('imports the official seventh-grade language and literature bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-7', name: 'Séptimo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'language-grade-7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-lengua-literatura-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-lengua-literatura-grade-7-v1', gradeId: 'grade-7', title: 'Lengua y literatura · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('noticia');
+    expect(imported[149].text).toContain('traducción literal');
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
   });
 
   it('imports the official sixth-grade language and literature bank with all audited questions', async () => {
@@ -178,6 +246,87 @@ describe('QuestionBankService', () => {
     expect(imported[145].text).toContain('tres casillas');
     expect(imported[145].correctAnswer).toContain('ciclo');
     expect(imported[148].correctAnswer).toBe('Falso');
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
+  it('imports the seventh-grade art bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'art7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-arte-cultura-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-arte-cultura-grade-7-v1', title: 'Arte y cultura · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('contorno');
+    expect(imported[149].type).toBe('TRUE_FALSE');
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
+  it('imports the seventh-grade history bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'history7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-historia-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-historia-grade-7-v1', title: 'Historia · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('asentamientos permanentes');
+    expect(imported[149].type).toBe('MULTIPLE_CHOICE');
+    expect(imported.filter((item: { type: string }) => item.type === 'TRUE_FALSE')).toHaveLength(30);
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
+  it('imports the eighth-grade history bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'history8-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-historia-grade-8-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-historia-grade-8-v1', title: 'Historia · 8.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('fuente de energía');
+    expect(imported.filter((item: { type: string }) => item.type === 'TRUE_FALSE')).toHaveLength(30);
+    expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
+  });
+
+  it('imports the seventh-grade sports bank with all audited questions', async () => {
+    const { service, prisma } = setup();
+    prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
+    prisma.questionBankCollection.findFirst.mockResolvedValue(null);
+    const tx = {
+      questionBankCollection: { create: jest.fn().mockResolvedValue({ id: 'sports7-copy' }) },
+      questionBankItem: { createMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx));
+    await service.importOfficial(actor, 'classroom-1', 'edusyn-deportes-grade-7-v1');
+    expect(tx.questionBankCollection.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      officialCatalogId: 'edusyn-deportes-grade-7-v1', title: 'Deportes · 7.º', isPublished: true,
+    }) });
+    const imported = tx.questionBankItem.createMany.mock.calls[0][0].data;
+    expect(imported).toHaveLength(150);
+    expect(imported[0].text).toContain('fútbol');
+    expect(imported.filter((item: { type: string }) => item.type === 'TRUE_FALSE')).toHaveLength(30);
     expect(imported.every((item: { options: string[]; correctAnswer: string }) => item.options.includes(item.correctAnswer))).toBe(true);
   });
 

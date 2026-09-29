@@ -1,0 +1,2828 @@
+{
+  "catalogId": "edusyn-geografia-grade-7-v1",
+  "title": "Geografía · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Geografía",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://portal.gestiondelriesgo.gov.co/colombiaresiliente/Paginas/glosario.aspx",
+    "https://sigi.igac.gov.co/colombia-mapas/sobre-colombia-en-mapas/",
+    "https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion/censo-nacional-de-poblacion-y-vivenda-2018/informacion-tecnica",
+    "https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion/proyecciones-de-poblacion",
+    "https://www.ideam.gov.co/sites/default/files/prensa/boletines/2024-08-16/iearnr_2021.pdf",
+    "https://www.igac.gov.co/node/5575"
+  ],
+  "questions": [
+    {
+      "id": "GEO7-001",
+      "number": 1,
+      "topic": "Formas del territorio",
+      "concept": "istmo_conecta_areas_terrestres_y_separa_aguas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama una franja estrecha de tierra que conecta dos áreas mayores y separa dos cuerpos de agua?",
+      "options": [
+        "Delta",
+        "Península",
+        "Golfo",
+        "Istmo"
+      ],
+      "correctAnswer": "Istmo",
+      "explanation": "Un istmo es una franja angosta de tierra que une dos porciones mayores y suele separar cuerpos de agua.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-002",
+      "number": 2,
+      "topic": "Cartografía",
+      "concept": "leyenda_explica_simbolos_de_mapa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un mapa, ¿qué elemento explica el significado de los colores y símbolos?",
+      "options": [
+        "Escala",
+        "Leyenda",
+        "Meridiano",
+        "Coordenada"
+      ],
+      "correctAnswer": "Leyenda",
+      "explanation": "La leyenda indica cómo interpretar los signos, líneas y colores que aparecen en un mapa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-003",
+      "number": 3,
+      "topic": "Geografía de Colombia",
+      "concept": "meta_y_guaviare_drenan_llanuras_orinoquia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál región colombiana reúne gran parte de las llanuras orientales drenadas por los ríos Meta y Guaviare?",
+      "options": [
+        "Caribe",
+        "Pacífica",
+        "Orinoquía",
+        "Insular"
+      ],
+      "correctAnswer": "Orinoquía",
+      "explanation": "La Orinoquía comprende extensas llanuras del oriente colombiano, atravesadas por ríos que pertenecen a la cuenca del Orinoco.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-004",
+      "number": 4,
+      "topic": "Población",
+      "concept": "piramide_poblacional_distribuye_edades_y_sexo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué representa una pirámide de población?",
+      "options": [
+        "La altura de las montañas de un país",
+        "La cantidad de lluvia por región",
+        "Las actividades económicas de cada ciudad",
+        "La población distribuida por edad y sexo"
+      ],
+      "correctAnswer": "La población distribuida por edad y sexo",
+      "explanation": "Una pirámide poblacional organiza la cantidad o proporción de habitantes por grupos de edad y sexo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-005",
+      "number": 5,
+      "topic": "Regiones y territorios",
+      "concept": "departamento_agrupa_municipios_y_tiene_gobernacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál división territorial colombiana agrupa municipios y tiene un gobernador?",
+      "options": [
+        "Vereda",
+        "Localidad",
+        "Corregimiento",
+        "Departamento"
+      ],
+      "correctAnswer": "Departamento",
+      "explanation": "El departamento agrupa municipios y es dirigido por una gobernación; las otras opciones corresponden a divisiones o asentamientos de menor escala.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-006",
+      "number": 6,
+      "topic": "Actividad económica",
+      "concept": "agricultura_pertenece_sector_primario",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál actividad pertenece principalmente al sector primario de la economía?",
+      "options": [
+        "Cultivar café",
+        "Fabricar zapatos",
+        "Transportar pasajeros",
+        "Atender en un hotel"
+      ],
+      "correctAnswer": "Cultivar café",
+      "explanation": "El sector primario obtiene recursos directamente de la naturaleza mediante actividades como agricultura, pesca y minería.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-007",
+      "number": 7,
+      "topic": "Relieve",
+      "concept": "meseta_superficie_extensa_elevada_y_relativamente_plana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma de relieve es una superficie extensa, relativamente plana y situada a gran altura?",
+      "options": [
+        "Valle",
+        "Meseta",
+        "Llanura costera",
+        "Depresión"
+      ],
+      "correctAnswer": "Meseta",
+      "explanation": "Una meseta es una superficie amplia y elevada, con sectores relativamente planos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-008",
+      "number": 8,
+      "topic": "Geografía física · Verdadero o falso",
+      "concept": "cuenca_reune_aguas_hacia_salida_comun",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una cuenca hidrográfica reúne el territorio cuyas aguas drenan hacia un río principal o una salida común.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los límites de una cuenca dependen del relieve que dirige la escorrentía hacia una red de drenaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-009",
+      "number": 9,
+      "topic": "Mapas y escala",
+      "concept": "escala_mayor_muestra_mas_detalle_de_area_pequena",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos mapas muestran la misma región. ¿Cuál suele permitir ver más calles y detalles de una zona pequeña?",
+      "options": [
+        "El de escala 1:1.000.000",
+        "El que no tiene escala",
+        "El de escala 1:10.000",
+        "El de escala 1:5.000.000"
+      ],
+      "correctAnswer": "El de escala 1:10.000",
+      "explanation": "Una escala cartográfica mayor representa menos territorio en más detalle; 1:10.000 es mayor que las otras escalas numéricas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-010",
+      "number": 10,
+      "topic": "Regiones naturales",
+      "concept": "altitud_genera_pisos_ambientales_en_montana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué factor ayuda a explicar que en una misma montaña existan distintos pisos de vegetación?",
+      "options": [
+        "La altitud modifica temperatura y condiciones ambientales",
+        "La longitud elimina la gravedad",
+        "Todos los suelos tienen igual humedad",
+        "Los ríos cambian de continente"
+      ],
+      "correctAnswer": "La altitud modifica temperatura y condiciones ambientales",
+      "explanation": "La altitud influye en la temperatura y otras condiciones, creando ambientes distintos a diferentes alturas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-011",
+      "number": 11,
+      "topic": "Territorio y límites",
+      "concept": "limites_municipales_se_consultan_en_cartografia_oficial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos municipios comparten una frontera administrativa. ¿Qué fuente es más adecuada para localizarla oficialmente?",
+      "options": [
+        "Una fotografía sin ubicación",
+        "Un mapa oficial de límites territoriales",
+        "Una publicación sin autor en redes",
+        "Un dibujo turístico sin escala"
+      ],
+      "correctAnswer": "Un mapa oficial de límites territoriales",
+      "explanation": "Para consultar límites oficiales conviene usar cartografía institucional y datos territoriales autorizados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-012",
+      "number": 12,
+      "topic": "Actividad económica y territorio",
+      "concept": "puerto_conecta_transporte_maritimo_y_terrestre",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué un puerto puede favorecer el comercio de una región?",
+      "options": [
+        "Hace innecesarias las carreteras",
+        "Cambia la ubicación de las montañas",
+        "Conecta rutas terrestres con transporte marítimo",
+        "Elimina las distancias entre ciudades"
+      ],
+      "correctAnswer": "Conecta rutas terrestres con transporte marítimo",
+      "explanation": "Los puertos permiten transferir mercancías entre barcos y redes de transporte terrestre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-013",
+      "number": 13,
+      "topic": "Población · Verdadero o falso",
+      "concept": "mas_habitantes_misma_area_aumenta_densidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Si aumenta la cantidad de habitantes y la superficie permanece igual, aumenta la densidad de población.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La densidad relaciona el número de habitantes con la superficie; más personas en la misma área elevan el valor.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-014",
+      "number": 14,
+      "topic": "Clima y territorio",
+      "concept": "relieve_crea_diferencia_de_lluvia_barlovento_sotavento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ladera que recibe directamente los vientos húmedos puede tener más lluvia que otra protegida detrás de una cordillera. ¿Qué lo explica?",
+      "options": [
+        "El efecto de barlovento y sotavento",
+        "El cambio de longitud de los ríos",
+        "La escala del mapa",
+        "La rotación de las ciudades"
+      ],
+      "correctAnswer": "El efecto de barlovento y sotavento",
+      "explanation": "El aire húmedo asciende en barlovento y puede enfriarse y precipitar; el sotavento suele recibir aire más seco.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-015",
+      "number": 15,
+      "topic": "Migración",
+      "concept": "traslado_del_campo_a_ciudad_es_migracion_rural_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una familia se traslada del campo a una ciudad principalmente para acceder a estudios y empleo. ¿Qué tipo de movimiento describe?",
+      "options": [
+        "Migración estacional de fauna",
+        "Desplazamiento de placas",
+        "Movimiento pendular diario",
+        "Migración rural-urbana"
+      ],
+      "correctAnswer": "Migración rural-urbana",
+      "explanation": "La migración rural-urbana ocurre cuando personas se trasladan de áreas rurales a áreas urbanas por motivos como estudio o trabajo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-016",
+      "number": 16,
+      "topic": "Mapas temáticos",
+      "concept": "mapa_tematico_compara_variable_poblacional",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mapa sería más útil para comparar la cantidad de habitantes entre departamentos?",
+      "options": [
+        "Un mapa de curvas de nivel",
+        "Un mapa temático de población",
+        "Un plano de rutas de bus",
+        "Una carta de navegación marítima"
+      ],
+      "correctAnswer": "Un mapa temático de población",
+      "explanation": "Un mapa temático representa una variable específica, como población, mediante símbolos o tonos comparables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-017",
+      "number": 17,
+      "topic": "Cuencas y relieve",
+      "concept": "divisoria_de_aguas_separa_cuencas_en_alturas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele marcar el límite entre dos cuencas hidrográficas vecinas?",
+      "options": [
+        "Una divisoria de aguas en zonas elevadas",
+        "El centro de cada municipio",
+        "Una línea de longitud",
+        "La desembocadura del río más largo"
+      ],
+      "correctAnswer": "Una divisoria de aguas en zonas elevadas",
+      "explanation": "La divisoria de aguas sigue sectores altos del relieve desde donde la escorrentía fluye en direcciones distintas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-018",
+      "number": 18,
+      "topic": "Proyecciones cartográficas · Verdadero o falso",
+      "concept": "proyeccion_plana_no_conserva_todas_propiedades_a_la_vez",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Toda proyección plana conserva exactamente las formas, áreas y distancias de la superficie terrestre al mismo tiempo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Representar una superficie curva en un plano produce distorsiones; distintas proyecciones priorizan propiedades diferentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-019",
+      "number": 19,
+      "topic": "Riesgos naturales",
+      "concept": "pendiente_saturacion_y_deforestacion_favorecen_deslizamiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué combinación aumenta el riesgo de deslizamiento en una ladera?",
+      "options": [
+        "Pendiente suave y vegetación densa",
+        "Suelo seco sobre terreno plano",
+        "Pendiente fuerte, suelo saturado y poca cobertura vegetal",
+        "Drenaje adecuado y monitoreo"
+      ],
+      "correctAnswer": "Pendiente fuerte, suelo saturado y poca cobertura vegetal",
+      "explanation": "La pendiente, la saturación y la pérdida de raíces estabilizadoras pueden favorecer movimientos en masa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-020",
+      "number": 20,
+      "topic": "Geografía humana · Verdadero o falso",
+      "concept": "expansion_urbana_puede_formar_conurbacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una ciudad puede crecer hacia municipios vecinos y formar una zona urbana continua con ellos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La expansión urbana puede conectar físicamente áreas construidas de municipios cercanos y formar una conurbación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-021",
+      "number": 21,
+      "topic": "Gestión del territorio",
+      "concept": "planeacion_en_planicie_consulta_amenaza_y_crecientes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un barrio nuevo se construye sobre una planicie de inundación. ¿Qué información debería orientar primero la planeación?",
+      "options": [
+        "Mapas de amenaza, drenaje e historial de crecientes",
+        "El color de las fachadas",
+        "La distancia a otros continentes",
+        "El nombre de las calles"
+      ],
+      "correctAnswer": "Mapas de amenaza, drenaje e historial de crecientes",
+      "explanation": "La cartografía de amenazas y los registros de inundaciones ayudan a decidir dónde construir y qué medidas aplicar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-022",
+      "number": 22,
+      "topic": "Datos demográficos",
+      "concept": "explicar_cambio_poblacional_requiere_componentes_demograficos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una gráfica indica que la población de una ciudad creció, pero no muestra entradas, salidas ni nacimientos. ¿Qué dato falta para explicar el cambio completo?",
+      "options": [
+        "El número de parques",
+        "Los componentes del cambio poblacional",
+        "La altura del edificio municipal",
+        "La cantidad de vías rurales"
+      ],
+      "correctAnswer": "Los componentes del cambio poblacional",
+      "explanation": "Para explicar el cambio poblacional se consideran nacimientos, defunciones, inmigración y emigración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-023",
+      "number": 23,
+      "topic": "Conectividad ecológica",
+      "concept": "pasos_de_fauna_mejoran_conectividad_de_habitats",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una carretera divide un bosque y dificulta el movimiento de animales entre sus partes. ¿Qué medida puede ayudar a reducir esa fragmentación?",
+      "options": [
+        "Ampliar la zona pavimentada",
+        "Retirar la vegetación de los bordes",
+        "Crear pasos de fauna y corredores conectados",
+        "Iluminar toda la ruta durante la noche"
+      ],
+      "correctAnswer": "Crear pasos de fauna y corredores conectados",
+      "explanation": "Los pasos de fauna y corredores pueden facilitar el desplazamiento entre hábitats separados por infraestructura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-024",
+      "number": 24,
+      "topic": "Elección de fuentes geográficas",
+      "concept": "imagenes_satelitales_comparables_muestran_cambio_urbano",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante compara la expansión urbana de una ciudad en dos décadas. ¿Qué recurso ofrece evidencia espacial comparable?",
+      "options": [
+        "Dos opiniones sin fecha",
+        "Un relato sin indicar lugares",
+        "Fotografías de ciudades diferentes",
+        "Imágenes satelitales fechadas y de escala semejante"
+      ],
+      "correctAnswer": "Imágenes satelitales fechadas y de escala semejante",
+      "explanation": "Imágenes de fechas y escalas comparables permiten observar cambios en la cobertura urbana a través del tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-025",
+      "number": 25,
+      "topic": "Cartografía · Verdadero o falso",
+      "concept": "distancia_real_requiere_aplicar_escala_de_cada_mapa",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si se comparan dos mapas con escalas distintas, medir con una regla la misma distancia en ambos basta para concluir que la distancia real es igual.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La distancia en el terreno depende de la escala de cada mapa; primero se debe convertir cada medición usando su escala.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-026",
+      "number": 26,
+      "topic": "Demografía",
+      "concept": "censo_recopila_informacion_de_poblacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento reúne información sobre las características de la población de un país?",
+      "options": [
+        "Censo",
+        "Carta náutica",
+        "Perfil topográfico",
+        "Pronóstico del tiempo"
+      ],
+      "correctAnswer": "Censo",
+      "explanation": "Un censo recoge información de la población en un territorio en un momento determinado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-027",
+      "number": 27,
+      "topic": "Geografía urbana",
+      "concept": "urbanizacion_crece_poblacion_y_area_urbana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso describe el crecimiento de la proporción de personas que vive en ciudades?",
+      "options": [
+        "Desertificación",
+        "Urbanización",
+        "Sedimentación",
+        "Erosión"
+      ],
+      "correctAnswer": "Urbanización",
+      "explanation": "La urbanización es el crecimiento de la población urbana y de las áreas construidas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-028",
+      "number": 28,
+      "topic": "Formas del relieve",
+      "concept": "valle_es_zona_baja_entre_elevaciones",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el terreno bajo situado entre montañas o elevaciones?",
+      "options": [
+        "Meseta",
+        "Cordillera",
+        "Valle",
+        "Altiplano"
+      ],
+      "correctAnswer": "Valle",
+      "explanation": "Un valle es una zona baja alargada entre elevaciones, a menudo recorrida por un río.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-029",
+      "number": 29,
+      "topic": "Cartografía política",
+      "concept": "mapa_politico_destaca_limites_y_asentamientos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento suele distinguir principalmente un mapa político?",
+      "options": [
+        "Límites entre territorios y asentamientos",
+        "Tipos de vegetación",
+        "Profundidad de los océanos",
+        "Variación diaria de lluvia"
+      ],
+      "correctAnswer": "Límites entre territorios y asentamientos",
+      "explanation": "Los mapas políticos muestran divisiones territoriales y suelen identificar países, ciudades y límites.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-030",
+      "number": 30,
+      "topic": "Orientación cartográfica · Verdadero o falso",
+      "concept": "norte_arriba_es_convencion_no_requisito",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un mapa siempre debe colocar el norte en la parte superior para ser útil.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Muchos mapas ubican el norte arriba por convención, pero pueden orientarse de otra manera si indican su orientación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-031",
+      "number": 31,
+      "topic": "Fronteras de Colombia",
+      "concept": "panama_comparte_frontera_terrestre_noroeste_colombia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál país comparte frontera terrestre con Colombia al noroeste?",
+      "options": [
+        "Costa Rica",
+        "Panamá",
+        "Nicaragua",
+        "República Dominicana"
+      ],
+      "correctAnswer": "Panamá",
+      "explanation": "Panamá limita por tierra con Colombia en el sector noroccidental de Suramérica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-032",
+      "number": 32,
+      "topic": "Transporte y relieve",
+      "concept": "tunel_permite_transporte_a_traves_de_montana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué infraestructura facilita el paso de una carretera a través de una montaña?",
+      "options": [
+        "Túnel",
+        "Estuario",
+        "Delta",
+        "Dunas"
+      ],
+      "correctAnswer": "Túnel",
+      "explanation": "Un túnel atraviesa una elevación y permite conectar zonas separadas por el relieve.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-033",
+      "number": 33,
+      "topic": "Ecosistemas costeros",
+      "concept": "manglar_protege_costa_y_ofrece_habitat",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ecosistema costero puede proteger las orillas y servir de criadero para peces?",
+      "options": [
+        "Sabana",
+        "Páramo",
+        "Desierto frío",
+        "Manglar"
+      ],
+      "correctAnswer": "Manglar",
+      "explanation": "Los manglares ayudan a proteger costas y ofrecen hábitat y zonas de crianza para distintas especies.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-034",
+      "number": 34,
+      "topic": "Ambiente urbano",
+      "concept": "superficies_urbanas_y_arbolado_afectan_calor_local",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una ciudad, algunos barrios con poco arbolado se calientan más que parques cercanos. ¿Qué factor contribuye a esa diferencia?",
+      "options": [
+        "La línea del ecuador atraviesa cada barrio",
+        "Las superficies construidas retienen y liberan calor",
+        "La escala del plano es diferente",
+        "Los parques cambian de hemisferio"
+      ],
+      "correctAnswer": "Las superficies construidas retienen y liberan calor",
+      "explanation": "Pavimento y edificaciones pueden almacenar calor, mientras la vegetación aporta sombra y enfriamiento por evapotranspiración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-035",
+      "number": 35,
+      "topic": "Geografía económica",
+      "concept": "accesibilidad_de_vias_favorece_intercambio_comercial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja suele tener un mercado ubicado cerca de una vía principal y del transporte público?",
+      "options": [
+        "Evita toda competencia",
+        "Cambia el clima regional",
+        "Facilita el acceso de clientes y mercancías",
+        "Elimina la necesidad de proveedores"
+      ],
+      "correctAnswer": "Facilita el acceso de clientes y mercancías",
+      "explanation": "La accesibilidad influye en los desplazamientos de compradores, trabajadores y productos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-036",
+      "number": 36,
+      "topic": "Escala cartográfica",
+      "concept": "escala_uno_a_cincuenta_mil_convierte_cuatro_cm_a_dos_km",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un mapa a escala 1:50.000, una distancia mide 4 cm. ¿A qué distancia aproximada corresponde en el terreno?",
+      "options": [
+        "200 m",
+        "20 km",
+        "2 km",
+        "500 m"
+      ],
+      "correctAnswer": "500 m",
+      "explanation": "Cada centímetro representa 50.000 cm, es decir 500 m; cuatro centímetros representan 2 km.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-037",
+      "number": 37,
+      "topic": "Cuencas hidrográficas",
+      "concept": "deforestacion_alta_cuenca_aumenta_escorrentia_y_sedimentos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué consecuencia puede tener la deforestación en la parte alta de una cuenca?",
+      "options": [
+        "Aumentar escorrentía y sedimentos aguas abajo",
+        "Detener el ciclo del agua",
+        "Cambiar la ubicación del nacimiento del Sol",
+        "Eliminar todas las inundaciones"
+      ],
+      "correctAnswer": "Aumentar escorrentía y sedimentos aguas abajo",
+      "explanation": "La pérdida de cobertura vegetal puede reducir la infiltración y aumentar la escorrentía y el arrastre de suelo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-038",
+      "number": 38,
+      "topic": "Demografía · Verdadero o falso",
+      "concept": "estructura_envejecida_influye_en_demanda_de_servicios",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una población con mayor proporción de personas mayores puede requerir más servicios de cuidado y salud.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La estructura por edades influye en las necesidades de servicios, aunque estas también dependen de otros factores sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-039",
+      "number": 39,
+      "topic": "Clima y distancia al mar",
+      "concept": "capacidad_termica_del_mar_modera_variacion_costera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué algunos lugares interiores tienen mayor variación de temperatura entre día y noche que zonas costeras cercanas?",
+      "options": [
+        "La rotación terrestre se detiene tierra adentro",
+        "El mar cambia de lugar cada noche",
+        "El agua suele calentarse y enfriarse más lentamente que el suelo",
+        "Las ciudades interiores están fuera de la atmósfera"
+      ],
+      "correctAnswer": "El agua suele calentarse y enfriarse más lentamente que el suelo",
+      "explanation": "El agua tiene alta capacidad térmica y modera los cambios de temperatura en áreas cercanas a la costa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-040",
+      "number": 40,
+      "topic": "Fuentes de información",
+      "concept": "fecha_y_productor_permiten_evaluar_dato_demografico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dato ayuda a comprobar si una cifra de población corresponde a una medición reciente?",
+      "options": [
+        "El tipo de letra del gráfico",
+        "La fecha y la entidad que produjo el dato",
+        "El color de la página",
+        "La cantidad de imágenes decorativas"
+      ],
+      "correctAnswer": "La fecha y la entidad que produjo el dato",
+      "explanation": "Fecha y entidad responsable permiten valorar la actualidad, método y confiabilidad de un dato demográfico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-041",
+      "number": 41,
+      "topic": "Expansión urbana",
+      "concept": "expansion_urbana_transformacion_de_suelo_rural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad crece sobre suelos agrícolas cercanos. ¿Qué cambio territorial se observa?",
+      "options": [
+        "Urbanización de suelo antes rural",
+        "Formación de una nueva cordillera",
+        "Aumento automático de las lluvias",
+        "Transformación de un río en frontera marítima"
+      ],
+      "correctAnswer": "Urbanización de suelo antes rural",
+      "explanation": "La expansión de construcciones sobre áreas rurales transforma usos del suelo y puede reducir terrenos agrícolas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-042",
+      "number": 42,
+      "topic": "Regiones geográficas · Verdadero o falso",
+      "concept": "regiones_naturales_no_tienen_que_coincidir_con_departamentos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Los límites de una región natural necesariamente coinciden con los límites de los departamentos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Regiones naturales se definen por rasgos físicos o ecológicos y pueden atravesar varias divisiones político-administrativas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-043",
+      "number": 43,
+      "topic": "Pueblos y territorio",
+      "concept": "territorio_indigena_une_espacio_cultura_y_comunidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación describe mejor un territorio indígena?",
+      "options": [
+        "Un espacio sin historia ni normas",
+        "Un lugar definido solo por su clima",
+        "Un espacio ligado a comunidad, cultura y formas de organización",
+        "Una zona que existe únicamente en los mapas turísticos"
+      ],
+      "correctAnswer": "Un espacio ligado a comunidad, cultura y formas de organización",
+      "explanation": "El territorio tiene dimensiones sociales, culturales, históricas y políticas para las comunidades que lo habitan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-044",
+      "number": 44,
+      "topic": "Proyecciones y áreas",
+      "concept": "proyeccion_equivalente_conserva_proporciones_de_area",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica busca conservar principalmente una proyección equivalente?",
+      "options": [
+        "La distancia exacta entre todos los puntos",
+        "La forma de todos los continentes",
+        "Los ángulos en toda la superficie",
+        "La proporción de las áreas representadas"
+      ],
+      "correctAnswer": "La proporción de las áreas representadas",
+      "explanation": "Una proyección equivalente conserva las proporciones de área, aunque puede distorsionar formas o ángulos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-045",
+      "number": 45,
+      "topic": "Clima tropical · Verdadero o falso",
+      "concept": "zona_tropical_puede_tener_estaciones_de_lluvia_y_sequia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una zona tropical puede tener estaciones lluviosas y secas aunque reciba radiación solar durante todo el año.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En regiones tropicales puede variar la precipitación por cambios estacionales en la circulación y la humedad, aun con temperaturas relativamente cálidas todo el año.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-046",
+      "number": 46,
+      "topic": "Planeación urbana",
+      "concept": "arbolado_y_sombra_reducen_exposicion_al_calor_urbano",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un barrio muy pavimentado registra calor intenso al mediodía. ¿Qué intervención puede reducir la exposición térmica en espacios públicos?",
+      "options": [
+        "Retirar los árboles de las calles",
+        "Reemplazar parques por superficies oscuras",
+        "Cubrir las aceras con más asfalto",
+        "Crear sombra con árboles y espacios públicos frescos"
+      ],
+      "correctAnswer": "Crear sombra con árboles y espacios públicos frescos",
+      "explanation": "El arbolado y los espacios sombreados reducen la radiación directa y pueden moderar el calor experimentado por peatones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-047",
+      "number": 47,
+      "topic": "Estructura de población",
+      "concept": "proyeccion_de_edades_y_ubicacion_apoya_planeacion_escolar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un municipio espera más estudiantes de primaria en cinco años. ¿Qué información apoya mejor la planeación de cupos?",
+      "options": [
+        "Número de vehículos en las carreteras nacionales",
+        "Proyecciones por edad y ubicación de los hogares",
+        "Altura promedio de sus montañas",
+        "Caudal de ríos de otro departamento"
+      ],
+      "correctAnswer": "Proyecciones por edad y ubicación de los hogares",
+      "explanation": "Proyecciones por edad y distribución espacial ayudan a estimar dónde se necesitarán escuelas y cupos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-048",
+      "number": 48,
+      "topic": "Restauración de cuencas",
+      "concept": "restauracion_vegetacion_ribera_reduce_sedimentos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una quebrada presenta erosión y agua turbia después de lluvias. ¿Qué acción aborda una causa frecuente en sus orillas?",
+      "options": [
+        "Retirar la vegetación restante",
+        "Aumentar el tránsito de maquinaria",
+        "Restaurar cobertura vegetal ribereña y monitorear sedimentos",
+        "Cubrir el cauce con concreto sin diagnóstico"
+      ],
+      "correctAnswer": "Restaurar cobertura vegetal ribereña y monitorear sedimentos",
+      "explanation": "La vegetación ribereña puede estabilizar suelos y reducir el ingreso de sedimentos; el monitoreo permite valorar resultados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-049",
+      "number": 49,
+      "topic": "Logística agrícola",
+      "concept": "acopio_agricola_equilibra_cercania_a_productores_y_vias",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Pequeños agricultores deben enviar productos perecederos a un mercado regional. ¿Qué ubicación conviene para un centro de acopio?",
+      "options": [
+        "Lejos de los cultivos y sin conexión vial",
+        "En una zona aislada de los caminos transitables",
+        "En el centro de la ciudad, lejos de productores",
+        "Cerca de productores y de una vía segura todo el año"
+      ],
+      "correctAnswer": "Cerca de productores y de una vía segura todo el año",
+      "explanation": "La cercanía a los productores y el acceso confiable a vías ayudan a trasladar productos perecederos a tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-050",
+      "number": 50,
+      "topic": "Interpretación cartográfica · Verdadero o falso",
+      "concept": "ausencia_de_datos_no_significa_ausencia_de_riesgo",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un mapa de riesgo muestra una zona como “sin datos”, eso demuestra que allí no existe ningún peligro.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "“Sin datos” señala falta de información suficiente; no equivale a riesgo nulo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-051",
+      "number": 51,
+      "topic": "Paisaje cultural",
+      "concept": "puente_es_huella_humana_en_paisaje",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento muestra una huella humana dentro de un paisaje?",
+      "options": [
+        "Un puente construido sobre un río",
+        "Una nube de lluvia",
+        "Una montaña sin caminos",
+        "Una corriente marina"
+      ],
+      "correctAnswer": "Un puente construido sobre un río",
+      "explanation": "Puentes y otras construcciones son elementos creados por personas y modifican el paisaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-052",
+      "number": 52,
+      "topic": "Asentamientos",
+      "concept": "asentamiento_se_organiza_linealmente_junto_a_eje",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un pueblo se extiende a lo largo de una carretera y sus construcciones siguen la misma dirección. ¿Qué patrón describe?",
+      "options": [
+        "Disperso",
+        "Circular",
+        "Lineal",
+        "Concéntrico"
+      ],
+      "correctAnswer": "Lineal",
+      "explanation": "En un patrón lineal, las viviendas o actividades se organizan siguiendo un eje como una vía o un río.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-053",
+      "number": 53,
+      "topic": "Regiones funcionales",
+      "concept": "ciudad_central_se_vincula_por_flujos_y_servicios",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relación suele conectar una ciudad central con los municipios de su entorno?",
+      "options": [
+        "Un límite entre continentes",
+        "Una divisoria de aguas",
+        "Viajes y servicios compartidos",
+        "Una corriente oceánica"
+      ],
+      "correctAnswer": "Viajes y servicios compartidos",
+      "explanation": "Los desplazamientos por trabajo, estudio, comercio y servicios pueden vincular una ciudad con su área de influencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-054",
+      "number": 54,
+      "topic": "Costas",
+      "concept": "oleaje_puede_erosionar_costa_rocosa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso puede desgastar una costa rocosa por acción repetida del oleaje?",
+      "options": [
+        "Polinización",
+        "Infiltración profunda",
+        "Sedimentación eólica",
+        "Erosión marina"
+      ],
+      "correctAnswer": "Erosión marina",
+      "explanation": "El oleaje golpea y desgasta las rocas costeras, aunque el ritmo depende de las condiciones locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-055",
+      "number": 55,
+      "topic": "Representación del espacio · Verdadero o falso",
+      "concept": "mapa_selecciona_y_simplifica_informacion_territorial",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un mapa puede mostrar todos los objetos del territorio con el mismo detalle que se ven en el lugar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Todo mapa selecciona y simplifica información según su escala, propósito y nivel de detalle.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-056",
+      "number": 56,
+      "topic": "Movilidad cotidiana",
+      "concept": "viaje_diario_entre_hogar_y_trabajo_es_movimiento_pendular",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una persona viaja cada día de su casa al trabajo y regresa. ¿Qué desplazamiento realiza?",
+      "options": [
+        "Movimiento pendular",
+        "Migración internacional",
+        "Desplazamiento forzado",
+        "Migración estacional"
+      ],
+      "correctAnswer": "Movimiento pendular",
+      "explanation": "Los movimientos pendulares son viajes periódicos entre el lugar de residencia y actividades como trabajo o estudio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-057",
+      "number": 57,
+      "topic": "Archipiélagos",
+      "concept": "archipielago_es_conjunto_de_islas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama un conjunto de islas próximas entre sí?",
+      "options": [
+        "Istmo",
+        "Archipiélago",
+        "Delta",
+        "Cordillera"
+      ],
+      "correctAnswer": "Archipiélago",
+      "explanation": "Un archipiélago es un conjunto de islas agrupadas en una zona marítima o lacustre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-058",
+      "number": 58,
+      "topic": "Costas",
+      "concept": "olas_y_corrientes_mueven_sedimentos_de_playa",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso puede desplazar arena a lo largo de una playa?",
+      "options": [
+        "La condensación del aire",
+        "La sombra de las montañas",
+        "El crecimiento de las mareas",
+        "El oleaje y las corrientes costeras"
+      ],
+      "correctAnswer": "El oleaje y las corrientes costeras",
+      "explanation": "El oleaje y las corrientes pueden transportar sedimentos a lo largo de la costa y cambiar la forma de la playa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-059",
+      "number": 59,
+      "topic": "Sectores económicos",
+      "concept": "servicios_de_salud_pertenecen_sector_terciario",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál actividad pertenece principalmente al sector terciario?",
+      "options": [
+        "Extraer carbón",
+        "Cultivar arroz",
+        "Prestar servicios de salud",
+        "Fabricar cemento"
+      ],
+      "correctAnswer": "Prestar servicios de salud",
+      "explanation": "El sector terciario comprende servicios como salud, educación, comercio y transporte.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-060",
+      "number": 60,
+      "topic": "Agricultura y clima",
+      "concept": "estacion_seca_prolongada_puede_requerir_riego_agricola",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una región con una estación seca larga puede necesitar sistemas de riego para ciertos cultivos?",
+      "options": [
+        "El viento convierte todas las plantas en rocas",
+        "Las lluvias pueden no cubrir las necesidades de agua del cultivo",
+        "La estación seca aumenta el tamaño de los ríos",
+        "El relieve impide que exista evaporación"
+      ],
+      "correctAnswer": "Las lluvias pueden no cubrir las necesidades de agua del cultivo",
+      "explanation": "Si la precipitación es insuficiente durante parte del ciclo agrícola, el riego puede aportar agua adicional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-061",
+      "number": 61,
+      "topic": "Uso del suelo",
+      "concept": "pendiente_y_estabilidad_orientan_construccion_en_ladera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dato es clave al evaluar si una ladera es adecuada para construir viviendas?",
+      "options": [
+        "El número de idiomas del país",
+        "La distancia al ecuador solamente",
+        "El color de los techos cercanos",
+        "La pendiente y estabilidad del terreno"
+      ],
+      "correctAnswer": "La pendiente y estabilidad del terreno",
+      "explanation": "Pendiente, estabilidad, drenaje y amenazas deben considerarse antes de urbanizar una ladera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-062",
+      "number": 62,
+      "topic": "División territorial · Verdadero o falso",
+      "concept": "jurisdiccion_municipal_incluye_areas_urbanas_y_rurales",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un municipio puede abarcar áreas urbanas y rurales dentro de su límite.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La jurisdicción municipal suele incluir una cabecera y otros asentamientos o áreas rurales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-063",
+      "number": 63,
+      "topic": "Servicios y territorio",
+      "concept": "carretera_mejora_conectividad_y_acceso_a_servicios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué efecto puede tener una nueva carretera entre una zona rural y una ciudad cercana?",
+      "options": [
+        "Reducir tiempos de traslado y facilitar intercambios",
+        "Cambiar la latitud de ambos lugares",
+        "Eliminar la necesidad de transporte",
+        "Detener la migración en todos los casos"
+      ],
+      "correctAnswer": "Reducir tiempos de traslado y facilitar intercambios",
+      "explanation": "Una vía puede mejorar la conectividad y el acceso a mercados o servicios, aunque sus efectos dependen de su uso y planificación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-064",
+      "number": 64,
+      "topic": "Indicadores de desarrollo",
+      "concept": "cobertura_de_servicios_compara_acceso_territorial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué comparación ayuda más a saber si dos municipios tienen acceso parecido a servicios básicos?",
+      "options": [
+        "Comparar únicamente sus nombres",
+        "Revisar cobertura de agua, saneamiento y electricidad",
+        "Contar sus montañas más altas",
+        "Medir la longitud de sus ríos sin habitantes"
+      ],
+      "correctAnswer": "Revisar cobertura de agua, saneamiento y electricidad",
+      "explanation": "La cobertura de servicios básicos permite comparar condiciones de acceso que afectan la vida cotidiana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-065",
+      "number": 65,
+      "topic": "Actividad económica y transporte",
+      "concept": "industria_se_localiza_cerca_de_insumos_y_transporte",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué algunas industrias se ubican cerca de materias primas o vías de carga?",
+      "options": [
+        "Para modificar el huso horario",
+        "Para evitar toda regulación ambiental",
+        "Para reducir costos de traslado y abastecimiento",
+        "Para eliminar la necesidad de trabajadores"
+      ],
+      "correctAnswer": "Para reducir costos de traslado y abastecimiento",
+      "explanation": "La localización cercana a insumos y transporte puede reducir tiempos y costos logísticos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-066",
+      "number": 66,
+      "topic": "Territorio y servicios · Verdadero o falso",
+      "concept": "distancia_directa_no_equivale_a_tiempo_de_viaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La distancia en línea recta siempre equivale al tiempo real que toma llegar de un barrio a un hospital.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Rutas, tráfico, relieve y disponibilidad de transporte pueden hacer que el tiempo de viaje difiera de la distancia directa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-067",
+      "number": 67,
+      "topic": "Energía y territorio",
+      "concept": "caudal_y_desnivel_favorecen_potencial_hidroelectrico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué condición puede favorecer la generación de energía hidroeléctrica en una región?",
+      "options": [
+        "Lluvias escasas y terreno plano sin ríos",
+        "Solo una temperatura alta todo el año",
+        "Ninguna diferencia de altura en los cauces",
+        "Disponibilidad de agua y desniveles aprovechables"
+      ],
+      "correctAnswer": "Disponibilidad de agua y desniveles aprovechables",
+      "explanation": "El caudal y la diferencia de altura del agua pueden aprovecharse para mover turbinas, junto con consideraciones ambientales y sociales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-068",
+      "number": 68,
+      "topic": "Distribución de población",
+      "concept": "empleo_estudio_y_servicios_atraen_poblacion_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué factor suele atraer población hacia una ciudad intermedia?",
+      "options": [
+        "Oportunidades de empleo, estudio y servicios",
+        "La ausencia de toda vía de acceso",
+        "La falta de viviendas y agua",
+        "Una frontera que impide el intercambio"
+      ],
+      "correctAnswer": "Oportunidades de empleo, estudio y servicios",
+      "explanation": "Empleo, educación, salud y comercio pueden atraer población, aunque también influyen factores familiares y ambientales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-069",
+      "number": 69,
+      "topic": "Circulación de mercancías",
+      "concept": "nodo_de_transporte_concentra_y_distribuye_flujos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa que una ciudad funcione como nodo de transporte?",
+      "options": [
+        "Que no se conecta con otras localidades",
+        "Que concentra y distribuye flujos de personas o mercancías",
+        "Que siempre está junto al mar",
+        "Que carece de actividades económicas"
+      ],
+      "correctAnswer": "Que concentra y distribuye flujos de personas o mercancías",
+      "explanation": "Un nodo articula rutas y concentra conexiones entre distintos puntos de una red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-070",
+      "number": 70,
+      "topic": "Teledetección · Verdadero o falso",
+      "concept": "imagenes_satelitales_comparadas_detectan_cambio_de_cobertura",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una imagen satelital puede ayudar a identificar cambios en la cobertura del suelo si se compara con otra de fecha distinta.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Comparaciones temporales permiten observar cambios, siempre que se consideren resolución, fechas y condiciones de captura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-071",
+      "number": 71,
+      "topic": "Preparación ante inundaciones",
+      "concept": "alerta_volcanica_prioriza_ruta_oficial_a_refugio_seguro",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una localidad recibe una alerta oficial por actividad volcánica. ¿Qué ruta debe seguir una escuela durante la evacuación?",
+      "options": [
+        "La ruta habitual que pasa cerca del volcán",
+        "La que cruza la zona de evacuación para acortar camino",
+        "La ruta indicada hacia un albergue seguro fuera de la zona de amenaza",
+        "Cualquier camino sin consultar la alerta"
+      ],
+      "correctAnswer": "La ruta indicada hacia un albergue seguro fuera de la zona de amenaza",
+      "explanation": "Las rutas oficiales y los puntos de encuentro consideran las zonas de amenaza y las instrucciones de gestión del riesgo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-072",
+      "number": 72,
+      "topic": "Infraestructura y conservación",
+      "concept": "trazado_y_pasos_de_fauna_reducen_fragmentacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una carretera propuesta atravesaría un corredor usado por animales entre dos fragmentos de bosque. ¿Qué ajuste reduce mejor el impacto?",
+      "options": [
+        "Eliminar todos los árboles del corredor",
+        "Aumentar el tránsito nocturno",
+        "Cerrar los pasos existentes de fauna",
+        "Rediseñar el trazado o incluir pasos de fauna en puntos adecuados"
+      ],
+      "correctAnswer": "Rediseñar el trazado o incluir pasos de fauna en puntos adecuados",
+      "explanation": "Evitar el corredor o mantener conectividad mediante pasos diseñados para las especies puede reducir la fragmentación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-073",
+      "number": 73,
+      "topic": "Planeación de servicios",
+      "concept": "sede_de_salud_prioriza_demanda_y_accesibilidad_estacional",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una zona rural tiene pocos centros de salud y vías difíciles durante lluvias. ¿Qué análisis ayuda a priorizar una nueva sede?",
+      "options": [
+        "Población atendida, tiempos de viaje y accesibilidad estacional",
+        "El número de tiendas de ropa",
+        "La distancia a países vecinos",
+        "La cantidad de edificios altos en la capital"
+      ],
+      "correctAnswer": "Población atendida, tiempos de viaje y accesibilidad estacional",
+      "explanation": "Combinar población, tiempo de viaje y condiciones de las rutas ayuda a identificar necesidades de cobertura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-074",
+      "number": 74,
+      "topic": "Turismo y territorio",
+      "concept": "manejo_de_visitantes_protege_paramo_y_limita_erosion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una zona de páramo recibe más visitantes y aparecen senderos erosionados. ¿Qué acción puede equilibrar uso y conservación?",
+      "options": [
+        "Abrir rutas nuevas sin señalización",
+        "Definir senderos, límites de visita y monitoreo ambiental",
+        "Permitir vehículos en toda la zona",
+        "Retirar toda la vegetación para ver el suelo"
+      ],
+      "correctAnswer": "Definir senderos, límites de visita y monitoreo ambiental",
+      "explanation": "El manejo de visitantes puede concentrar el tránsito en rutas adecuadas y vigilar impactos sobre un ecosistema sensible.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-075",
+      "number": 75,
+      "topic": "Cartografía participativa · Verdadero o falso",
+      "concept": "cartografia_local_complementa_datos_oficiales_verificados",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un mapa elaborado con residentes puede aportar nombres de lugares y rutas locales, pero conviene contrastar datos críticos de emergencia con fuentes oficiales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El conocimiento local complementa otras fuentes; para decisiones de emergencia se deben verificar riesgos y rutas con información validada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-076",
+      "number": 76,
+      "topic": "Mapas del clima",
+      "concept": "isoyetas_unen_lugares_de_igual_precipitacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un mapa climático, ¿qué unen las líneas llamadas isoyetas?",
+      "options": [
+        "Lugares con igual precipitación",
+        "Ciudades con igual población",
+        "Puntos a igual distancia del mar",
+        "Ríos con igual longitud"
+      ],
+      "correctAnswer": "Lugares con igual precipitación",
+      "explanation": "Las isoyetas unen puntos que registran valores iguales de precipitación en un periodo indicado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-077",
+      "number": 77,
+      "topic": "Mapas de relieve",
+      "concept": "mapa_hipsometrico_representa_rangos_de_altitud",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué representan normalmente los tonos de un mapa hipsométrico?",
+      "options": [
+        "Límites de países",
+        "Rangos de altitud del terreno",
+        "Cantidad de habitantes",
+        "Rutas de transporte"
+      ],
+      "correctAnswer": "Rangos de altitud del terreno",
+      "explanation": "Los mapas hipsométricos usan colores para representar rangos de elevación sobre el nivel del mar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-078",
+      "number": 78,
+      "topic": "División político-administrativa",
+      "concept": "municipio_es_entidad_territorial_local_colombiana",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es la entidad territorial básica del Estado colombiano dentro de un departamento?",
+      "options": [
+        "Continente",
+        "Región natural",
+        "Municipio",
+        "Cuenca"
+      ],
+      "correctAnswer": "Municipio",
+      "explanation": "El municipio es una entidad territorial local con autoridades y límites propios dentro de la organización colombiana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-079",
+      "number": 79,
+      "topic": "Agua y territorio",
+      "concept": "afluente_desemboca_en_curso_principal",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el río pequeño que desemboca en otro río mayor?",
+      "options": [
+        "Estuario",
+        "Delta",
+        "Acuífero",
+        "Afluente"
+      ],
+      "correctAnswer": "Afluente",
+      "explanation": "Un afluente aporta sus aguas a un río principal u otro curso de agua.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-080",
+      "number": 80,
+      "topic": "Organización urbana",
+      "concept": "cabecera_municipal_concentra_gobierno_local",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué lugar concentra normalmente autoridades y servicios principales de un municipio?",
+      "options": [
+        "Cabecera municipal",
+        "Divisoria de aguas",
+        "Zona de alta mar",
+        "Límite internacional"
+      ],
+      "correctAnswer": "Cabecera municipal",
+      "explanation": "La cabecera municipal concentra la sede de gobierno local y muchos servicios, aunque el municipio también incluye zonas rurales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-081",
+      "number": 81,
+      "topic": "Desiertos",
+      "concept": "oasis_es_zona_con_agua_en_region_arida",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica describe un oasis en un ambiente desértico?",
+      "options": [
+        "Una zona sin ninguna forma de vida",
+        "Un lugar con agua disponible entre áreas áridas",
+        "Una corriente oceánica fría",
+        "Una montaña siempre cubierta de hielo"
+      ],
+      "correctAnswer": "Un lugar con agua disponible entre áreas áridas",
+      "explanation": "Un oasis es un lugar en una región árida donde hay agua suficiente para sostener vegetación y asentamientos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-082",
+      "number": 82,
+      "topic": "Ecosistemas costeros · Verdadero o falso",
+      "concept": "manglar_puede_amortiguar_oleaje_y_tormentas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Los manglares pueden reducir parte del impacto de oleajes y tormentas sobre algunas costas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Sus raíces y vegetación pueden disipar energía del oleaje y retener sedimentos, aunque no eliminan todo riesgo costero.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-083",
+      "number": 83,
+      "topic": "Formas costeras",
+      "concept": "viento_deposita_arena_y_forma_dunas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso forma muchas dunas costeras?",
+      "options": [
+        "Congelación de agua subterránea",
+        "Acumulación de lava",
+        "Depósito de arena transportada por el viento",
+        "Compactación de coral en alta montaña"
+      ],
+      "correctAnswer": "Depósito de arena transportada por el viento",
+      "explanation": "El viento transporta y deposita arena; la vegetación puede ayudar a estabilizar algunas dunas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-084",
+      "number": 84,
+      "topic": "Distribución de lluvias",
+      "concept": "climograma_muestra_estacionalidad_de_precipitacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un climograma muestra lluvias concentradas en ciertos meses y una estación seca marcada. ¿Qué permite inferir?",
+      "options": [
+        "La altitud exacta de cada vivienda",
+        "El tamaño de todas las cuencas",
+        "La dirección diaria de cada viento",
+        "La estacionalidad de la precipitación"
+      ],
+      "correctAnswer": "La estacionalidad de la precipitación",
+      "explanation": "Un climograma organiza variables climáticas por meses y permite observar temporadas lluviosas o secas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-085",
+      "number": 85,
+      "topic": "Cambio de uso del suelo",
+      "concept": "urbanizacion_sustituye_cobertura_boscosa_y_cambia_uso",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un bosque cercano se convierte en urbanización. ¿Qué cambio geográfico ocurre directamente?",
+      "options": [
+        "Cambio de cobertura y uso del suelo",
+        "Desplazamiento del ecuador",
+        "Aumento automático de la población nacional",
+        "Cambio de órbita terrestre"
+      ],
+      "correctAnswer": "Cambio de cobertura y uso del suelo",
+      "explanation": "La conversión de bosque en zona construida modifica la cobertura física y el uso que las personas dan al terreno.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-086",
+      "number": 86,
+      "topic": "Recursos y actividades económicas",
+      "concept": "conflicto_hidrico_evalua_oferta_demanda_y_usuarios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una mina y una comunidad necesitan la misma fuente de agua durante una temporada seca. ¿Qué información ayudaría a evaluar el conflicto?",
+      "options": [
+        "Solo el número de edificios de la capital",
+        "Disponibilidad de agua, usos y necesidades de ambas partes",
+        "El color de los vehículos de la mina",
+        "La distancia a otro continente"
+      ],
+      "correctAnswer": "Disponibilidad de agua, usos y necesidades de ambas partes",
+      "explanation": "Conocer disponibilidad, demanda y usos permite analizar competencia por el recurso y considerar decisiones de gestión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-087",
+      "number": 87,
+      "topic": "Áreas protegidas",
+      "concept": "area_protegida_conserva_ecosistemas_con_manejo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué propósito principal cumple un parque natural protegido?",
+      "options": [
+        "Convertir todo el territorio en zona urbana",
+        "Garantizar que ninguna especie cambie",
+        "Conservar ecosistemas y valores naturales bajo reglas de manejo",
+        "Impedir toda investigación y visita"
+      ],
+      "correctAnswer": "Conservar ecosistemas y valores naturales bajo reglas de manejo",
+      "explanation": "Las áreas protegidas buscan conservar valores naturales y culturales mediante objetivos y normas de manejo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-088",
+      "number": 88,
+      "topic": "Redes urbanas",
+      "concept": "ciudad_de_influencia_recibe_viajes_por_servicios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele distinguir a una ciudad que presta servicios a localidades cercanas?",
+      "options": [
+        "Está aislada de todas las vías",
+        "No tiene comercio ni instituciones",
+        "Carece de población residente",
+        "Recibe desplazamientos de su área de influencia"
+      ],
+      "correctAnswer": "Recibe desplazamientos de su área de influencia",
+      "explanation": "Una ciudad puede atraer viajes por servicios, comercio, educación o empleo desde localidades cercanas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-089",
+      "number": 89,
+      "topic": "Cuencas transfronterizas · Verdadero o falso",
+      "concept": "cuenca_hidrografica_puede_cruzar_frontera_politica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una cuenca hidrográfica puede atravesar la frontera entre dos países.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El agua sigue el relieve y las redes de drenaje; sus cuencas no se limitan necesariamente a fronteras políticas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-090",
+      "number": 90,
+      "topic": "Cartografía digital",
+      "concept": "capas_gis_combinan_variables_espaciales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un sistema de información geográfica, ¿qué ventaja tiene mantener separadas capas de vías, ríos y población?",
+      "options": [
+        "Permite combinar y comparar variables espaciales",
+        "Evita registrar dónde están los datos",
+        "Elimina la necesidad de revisar las fuentes",
+        "Convierte los mapas en fotografías sin escala"
+      ],
+      "correctAnswer": "Permite combinar y comparar variables espaciales",
+      "explanation": "Las capas permiten analizar relaciones entre distintos tipos de información que comparten una referencia espacial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-091",
+      "number": 91,
+      "topic": "Cuencas y territorios",
+      "concept": "ciudad_depende_de_cuenca_compartida_con_municipios_aguas_arriba",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad se abastece de un río que nace en municipios montañosos aguas arriba. ¿Qué relación territorial muestra?",
+      "options": [
+        "Que los límites municipales detienen el flujo del agua",
+        "La interdependencia entre territorios aguas arriba y abajo",
+        "Que el río cambia de cuenca al cruzar una ciudad",
+        "Que las ciudades producen por sí solas toda el agua que consumen"
+      ],
+      "correctAnswer": "La interdependencia entre territorios aguas arriba y abajo",
+      "explanation": "Las actividades de una ciudad pueden depender del agua y de decisiones de gestión tomadas en municipios de la cuenca alta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-092",
+      "number": 92,
+      "topic": "Agua y clima · Verdadero o falso",
+      "concept": "lluvia_abundante_no_garantiza_acceso_a_agua_segura",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una región que recibe mucha lluvia necesariamente dispone de agua limpia y accesible para todos sus habitantes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Cantidad de lluvia no garantiza calidad, infraestructura, distribución ni acceso equitativo al agua.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-093",
+      "number": 93,
+      "topic": "Orientación de laderas",
+      "concept": "orientacion_de_ladera_modifica_exposicion_solar",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos laderas tienen igual altitud y pendiente, pero reciben distinta cantidad de radiación solar directa. ¿Qué elemento puede explicar la diferencia?",
+      "options": [
+        "El nombre del municipio",
+        "El ancho del río más cercano",
+        "La orientación de cada ladera",
+        "La escala del mapa político"
+      ],
+      "correctAnswer": "La orientación de cada ladera",
+      "explanation": "La orientación hacia el Sol modifica la exposición y puede influir en temperatura, humedad y vegetación local.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-094",
+      "number": 94,
+      "topic": "Mapas de uso del suelo",
+      "concept": "mapa_de_uso_del_suelo_clasifica_actividades_territoriales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mapa ayuda a distinguir zonas residenciales, agrícolas e industriales?",
+      "options": [
+        "Carta de corrientes oceánicas",
+        "Mapa de relieve submarino",
+        "Mapa de límites horarios",
+        "Mapa de uso del suelo"
+      ],
+      "correctAnswer": "Mapa de uso del suelo",
+      "explanation": "Un mapa de uso del suelo clasifica el territorio según las actividades o funciones asignadas a cada zona.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-095",
+      "number": 95,
+      "topic": "Proyecciones demográficas · Verdadero o falso",
+      "concept": "proyeccion_poblacional_depende_de_supuestos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una proyección de población es una estimación condicionada por supuestos, no una certeza sobre el futuro.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las proyecciones dependen de supuestos sobre nacimientos, muertes y migración, que pueden cambiar con el tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-096",
+      "number": 96,
+      "topic": "Transporte y accesibilidad",
+      "concept": "acceso_real_considera_tiempo_y_disponibilidad_estacional",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos veredas están a la misma distancia de un hospital en el mapa, pero una queda aislada durante lluvias. ¿Qué indicador refleja mejor el acceso real?",
+      "options": [
+        "Tiempo de viaje y transitabilidad de rutas durante distintas temporadas",
+        "Distancia directa medida sin considerar caminos",
+        "Número de vías departamentales en todo el país",
+        "Distancia al límite del municipio, sin revisar el recorrido"
+      ],
+      "correctAnswer": "Tiempo de viaje y transitabilidad de rutas durante distintas temporadas",
+      "explanation": "Tiempo de viaje y disponibilidad estacional de rutas reflejan mejor si las personas pueden llegar al servicio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-097",
+      "number": 97,
+      "topic": "Desigualdad territorial",
+      "concept": "distribucion_espacial_de_empleo_revela_desigualdad_interna",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos municipios tienen igual población total, pero uno concentra casi todo el empleo formal en su cabecera. ¿Qué dato permitiría comparar mejor esa desigualdad espacial?",
+      "options": [
+        "El área total de cada municipio",
+        "Distribución de empleos entre cabecera y zonas rurales",
+        "Número total de nacimientos sin ubicación",
+        "Cantidad de empresas del país, sin división territorial"
+      ],
+      "correctAnswer": "Distribución de empleos entre cabecera y zonas rurales",
+      "explanation": "Desagregar oportunidades por ubicación muestra cómo se distribuyen dentro del territorio y quiénes pueden acceder a ellas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-098",
+      "number": 98,
+      "topic": "Gestión costera",
+      "concept": "planeacion_costera_evalua_habitat_y_proteccion_del_manglar",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra turística se proyecta sobre un manglar que protege viviendas y sirve de hábitat. ¿Qué decisión considera mejor las funciones del lugar?",
+      "options": [
+        "Construir sin evaluar efectos",
+        "Rellenar el manglar para crear estacionamientos",
+        "Evitar o rediseñar la obra y evaluar alternativas de bajo impacto",
+        "Retirar raíces para abrir canales de navegación"
+      ],
+      "correctAnswer": "Evitar o rediseñar la obra y evaluar alternativas de bajo impacto",
+      "explanation": "Considerar protección costera y hábitat exige evaluar impactos y alternativas antes de intervenir el manglar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-099",
+      "number": 99,
+      "topic": "Cobertura del suelo",
+      "concept": "comparar_cobertura_verifica_fecha_resolucion_y_captura",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad compara imágenes de una zona boscosa y observa más suelo descubierto en la imagen reciente. ¿Qué verificación ayuda antes de concluir que hubo deforestación?",
+      "options": [
+        "Comparar escenas de épocas distintas del año",
+        "Basarse solo en el color que aparece en pantalla",
+        "Revisar una imagen sin conocer su ubicación",
+        "Confirmar fechas, resolución y condiciones de captura"
+      ],
+      "correctAnswer": "Confirmar fechas, resolución y condiciones de captura",
+      "explanation": "Diferencias de resolución, estación o condiciones de captura pueden alterar la apariencia; verificar estos datos mejora la comparación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-100",
+      "number": 100,
+      "topic": "Indicadores de población · Verdadero o falso",
+      "concept": "alta_densidad_no_implica_mayor_poblacion_total",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un municipio pequeño puede tener alta densidad de población aunque tenga menos habitantes en total que un municipio extenso.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La densidad divide población por superficie, por lo que un área pequeña puede registrar un valor alto con menos habitantes totales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-101",
+      "number": 101,
+      "topic": "Plataformas continentales",
+      "concept": "plataforma_continental_extiende_continente_bajo_el_mar",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué parte sumergida del continente se extiende desde la costa antes de un descenso más pronunciado del fondo marino?",
+      "options": [
+        "Plataforma continental",
+        "Fosa oceánica",
+        "Dorsal volcánica",
+        "Abanico aluvial"
+      ],
+      "correctAnswer": "Plataforma continental",
+      "explanation": "La plataforma continental es la prolongación submarina relativamente poco profunda del continente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-102",
+      "number": 102,
+      "topic": "Ríos",
+      "concept": "cauce_es_canal_por_donde_fluye_un_rio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el recorrido por donde fluye el agua de un río?",
+      "options": [
+        "Delta",
+        "Cauce",
+        "Divisoria",
+        "Estuario"
+      ],
+      "correctAnswer": "Cauce",
+      "explanation": "El cauce es el lecho o canal por el que circula un río o una corriente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-103",
+      "number": 103,
+      "topic": "Economía rural",
+      "concept": "ganaderia_cria_animales_para_obtener_productos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué actividad del sector primario cría animales para obtener alimentos u otros productos?",
+      "options": [
+        "Manufactura",
+        "Comercio",
+        "Ganadería",
+        "Transporte"
+      ],
+      "correctAnswer": "Ganadería",
+      "explanation": "La ganadería consiste en criar y manejar animales para obtener productos como carne, leche o lana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-104",
+      "number": 104,
+      "topic": "Curvas de nivel",
+      "concept": "curva_de_nivel_indica_elevacion_del_terreno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué información permite leer principalmente una curva de nivel en un mapa?",
+      "options": [
+        "Número de habitantes por barrio",
+        "Dirección de los vientos",
+        "Fronteras entre municipios",
+        "Altura del terreno respecto de un nivel de referencia"
+      ],
+      "correctAnswer": "Altura del terreno respecto de un nivel de referencia",
+      "explanation": "Las curvas de nivel unen puntos con la misma elevación y representan la forma del relieve.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-105",
+      "number": 105,
+      "topic": "Gestión del riesgo · Verdadero o falso",
+      "concept": "impacto_de_amenaza_depende_de_exposicion_y_vulnerabilidad",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "El impacto de una amenaza depende también de quiénes están expuestos y de su vulnerabilidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La intensidad de un fenómeno importa, pero la exposición y las condiciones de vulnerabilidad influyen en sus consecuencias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-106",
+      "number": 106,
+      "topic": "Climas áridos",
+      "concept": "clima_arido_tiene_precipitacion_baja_frente_a_evaporacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica es común en un clima árido?",
+      "options": [
+        "Precipitación escasa en relación con la evaporación",
+        "Lluvia abundante todos los días",
+        "Hielo permanente en toda superficie",
+        "Ausencia total de viento"
+      ],
+      "correctAnswer": "Precipitación escasa en relación con la evaporación",
+      "explanation": "En climas áridos la disponibilidad de agua es reducida, con precipitación baja respecto de la demanda evaporativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-107",
+      "number": 107,
+      "topic": "Recursos hídricos",
+      "concept": "acuifero_almacena_y_transmite_agua_subterranea",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué formación subterránea puede almacenar y transmitir agua a través de sus poros o fracturas?",
+      "options": [
+        "Duna",
+        "Acuífero",
+        "Meseta",
+        "Estuario"
+      ],
+      "correctAnswer": "Acuífero",
+      "explanation": "Un acuífero es una formación geológica que puede almacenar y permitir el flujo de agua subterránea.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-108",
+      "number": 108,
+      "topic": "Cadenas productivas",
+      "concept": "manufactura_transformacion_de_materias_primas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué etapa transforma materias primas en productos elaborados?",
+      "options": [
+        "Extracción",
+        "Distribución minorista",
+        "Manufactura",
+        "Consumo final"
+      ],
+      "correctAnswer": "Manufactura",
+      "explanation": "La manufactura procesa materias primas para producir bienes con distinto grado de elaboración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-109",
+      "number": 109,
+      "topic": "Curvas de nivel y rutas",
+      "concept": "trazado_sinuoso_reduce_pendiente_de_carretera_montanosa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una carretera de montaña suele trazar curvas en vez de subir directamente por la pendiente más empinada?",
+      "options": [
+        "Para cambiar la ubicación del valle",
+        "Para eliminar la altitud del mapa",
+        "Para evitar todos los puentes",
+        "Para reducir la inclinación de la ruta"
+      ],
+      "correctAnswer": "Para reducir la inclinación de la ruta",
+      "explanation": "Un trazado sinuoso puede reducir la pendiente efectiva y facilitar el ascenso, aunque aumenta la distancia recorrida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-110",
+      "number": 110,
+      "topic": "Cambio territorial",
+      "concept": "fuentes_espaciales_comparables_muestran_expansion_urbana",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué evidencia permite comparar mejor la expansión de una ciudad en dos décadas?",
+      "options": [
+        "Planos o imágenes de fechas comparables y con cobertura semejante",
+        "Un mapa actual y un relato sin fecha",
+        "Fotografías de ciudades diferentes",
+        "Una lista de nombres de barrios"
+      ],
+      "correctAnswer": "Planos o imágenes de fechas comparables y con cobertura semejante",
+      "explanation": "Fuentes espaciales comparables permiten identificar dónde y cuánto cambió la cobertura urbana.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-111",
+      "number": 111,
+      "topic": "Cadena productiva",
+      "concept": "procesamiento_local_agrega_valor_a_cadena_de_cacao",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un municipio cultiva cacao, pero lo vende sin procesar. ¿Qué actividad podría agregar una etapa de transformación local?",
+      "options": [
+        "Transporte de pasajeros",
+        "Elaborar chocolate a partir del cacao",
+        "Medir la altitud de las fincas",
+        "Trazar límites administrativos"
+      ],
+      "correctAnswer": "Elaborar chocolate a partir del cacao",
+      "explanation": "Transformar cacao en chocolate agrega procesamiento antes de la comercialización del producto final.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-112",
+      "number": 112,
+      "topic": "Escala y representación",
+      "concept": "escala_y_proposito_determinan_detalle_representable",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al preparar un mapa de todo un país en una hoja, ¿por qué no se dibuja cada edificio?",
+      "options": [
+        "Porque los edificios no ocupan espacio",
+        "Porque el mapa solo puede mostrar ríos",
+        "La escala y el propósito requieren seleccionar detalles",
+        "Porque los edificios cambian de hemisferio"
+      ],
+      "correctAnswer": "La escala y el propósito requieren seleccionar detalles",
+      "explanation": "La escala pequeña y el propósito del mapa determinan qué objetos pueden representarse con claridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-113",
+      "number": 113,
+      "topic": "Sistemas de información geográfica · Verdadero o falso",
+      "concept": "superponer_vias_y_salud_apoya_analisis_de_acceso",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Combinar una capa de carreteras con otra de centros de salud puede ayudar a estudiar su accesibilidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Al superponer capas espaciales se pueden analizar conexiones y distancias entre infraestructura y servicios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-114",
+      "number": 114,
+      "topic": "Geografía urbana",
+      "concept": "distancia_y_conectividad_afectan_acceso_a_equipamientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un barrio tiene parques y viviendas, pero está lejos de escuelas, centros de salud y rutas de transporte. ¿Qué aspecto urbano presenta una dificultad?",
+      "options": [
+        "El grosor de la corteza bajo los continentes",
+        "La distancia a otros países",
+        "El color de las viviendas",
+        "El acceso a servicios y equipamientos"
+      ],
+      "correctAnswer": "El acceso a servicios y equipamientos",
+      "explanation": "La localización y conectividad de servicios influyen en la accesibilidad y calidad de vida de los residentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-115",
+      "number": 115,
+      "topic": "Pueblos y territorio · Verdadero o falso",
+      "concept": "territorio_comunitario_incluye_memoria_y_vinculos_culturales",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Para una comunidad, el territorio puede incluir vínculos culturales y de memoria además de límites físicos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las relaciones con lugares, prácticas y recuerdos forman parte de cómo las comunidades comprenden y usan sus territorios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-116",
+      "number": 116,
+      "topic": "Inundaciones",
+      "concept": "sedimentos_enriquecen_planicie_aluvial_expuesta_a_crecidas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una planicie aluvial puede ser fértil y, a la vez, tener riesgo de inundación?",
+      "options": [
+        "El viento deposita hielo y lava",
+        "Las crecidas depositan sedimentos, pero el río puede desbordarse",
+        "El suelo impide toda infiltración",
+        "Las planicies detienen la lluvia antes del cauce"
+      ],
+      "correctAnswer": "Las crecidas depositan sedimentos, pero el río puede desbordarse",
+      "explanation": "Sedimentos fluviales pueden enriquecer suelos de planicie, que también puede quedar expuesta a desbordamientos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-117",
+      "number": 117,
+      "topic": "Transporte intermodal",
+      "concept": "puerto_intermodal_conecta_varios_modos_de_transporte",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué significa que un puerto sea intermodal?",
+      "options": [
+        "Que opera únicamente con aviones",
+        "Que no maneja carga",
+        "Que conecta varios modos de transporte",
+        "Que está fuera de toda red vial"
+      ],
+      "correctAnswer": "Que conecta varios modos de transporte",
+      "explanation": "Un puerto intermodal transfiere carga entre modos, por ejemplo entre transporte marítimo, carretera y ferrocarril.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-118",
+      "number": 118,
+      "topic": "Planificación urbana",
+      "concept": "zonificacion_separa_usos_y_requiere_planear_conectividad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué debe acompañar una zonificación que separa industrias de viviendas?",
+      "options": [
+        "Planes de transporte y servicios entre las zonas",
+        "Eliminar todas las vías de acceso",
+        "Impedir que trabajadores lleguen a las plantas",
+        "Omitir la evaluación de impactos"
+      ],
+      "correctAnswer": "Planes de transporte y servicios entre las zonas",
+      "explanation": "Separar algunos usos puede reducir conflictos, pero la planificación debe mantener accesibilidad y atender impactos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-119",
+      "number": 119,
+      "topic": "Externalidades ambientales",
+      "concept": "contaminacion_industrial_impone_costo_a_terceros",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una fábrica obtiene beneficios, pero sus emisiones afectan a barrios cercanos. ¿Qué concepto describe ese costo que recae también en terceros?",
+      "options": [
+        "Costo interno de producción",
+        "Subsidio público",
+        "Arancel comercial",
+        "Externalidad negativa"
+      ],
+      "correctAnswer": "Externalidad negativa",
+      "explanation": "Una externalidad negativa ocurre cuando una actividad impone costos, como contaminación, a personas ajenas a la transacción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-120",
+      "number": 120,
+      "topic": "Paisaje cultural · Verdadero o falso",
+      "concept": "paisaje_cultural_refleja_interaccion_historica_sociedad_ambiente",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un paisaje cultural puede reflejar cómo una sociedad ha transformado y usado un espacio a lo largo del tiempo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Construcciones, caminos, cultivos y otros elementos muestran interacciones históricas entre sociedad y ambiente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-121",
+      "number": 121,
+      "topic": "Selección de rutas",
+      "concept": "ruta_de_carga_evalua_vias_riesgos_y_tiempos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una empresa debe transportar alimentos entre dos municipios durante la temporada de lluvias. ¿Qué combinación conviene revisar al elegir la ruta?",
+      "options": [
+        "Estado de las vías, cierres por riesgo y tiempo estimado",
+        "Color de los vehículos y nombre de las veredas",
+        "Número de montañas en otros países",
+        "Distancia al ecuador sin consultar carreteras"
+      ],
+      "correctAnswer": "Estado de las vías, cierres por riesgo y tiempo estimado",
+      "explanation": "Condiciones viales, amenazas y tiempo permiten escoger una ruta más confiable para carga perecedera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-122",
+      "number": 122,
+      "topic": "Gestión de recursos",
+      "concept": "cuenca_compartida_requiere_acuerdos_y_evaluacion_de_caudal",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En época seca, dos municipios comparten un río y uno propone captar más agua aguas arriba. ¿Qué decisión favorece una gestión territorial responsable?",
+      "options": [
+        "Ignorar a quienes viven aguas abajo",
+        "Revisar caudales, necesidades y acuerdos entre usuarios de la cuenca",
+        "Suponer que el río produce agua ilimitada",
+        "Cerrar todos los caminos del valle"
+      ],
+      "correctAnswer": "Revisar caudales, necesidades y acuerdos entre usuarios de la cuenca",
+      "explanation": "La gestión integrada considera disponibilidad, necesidades y coordinación entre usuarios conectados por la misma cuenca.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-123",
+      "number": 123,
+      "topic": "Cambio climático y costas",
+      "concept": "adaptacion_costera_integra_erosion_ecosistemas_y_exposicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un municipio costero compara opciones ante erosión creciente. ¿Qué plan ofrece una respuesta más informada?",
+      "options": [
+        "Construir sobre la playa sin estudiar corrientes",
+        "Retirar la vegetación costera restante",
+        "Combinar mapas de cambio costero, ecosistemas y exposición de viviendas",
+        "Usar solo una fotografía sin fecha"
+      ],
+      "correctAnswer": "Combinar mapas de cambio costero, ecosistemas y exposición de viviendas",
+      "explanation": "Mapas y datos de costa, hábitats y asentamientos ayudan a comparar riesgos y alternativas de adaptación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-124",
+      "number": 124,
+      "topic": "Resiliencia económica",
+      "concept": "diversificacion_economica_reduce_dependencia_de_actividad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un municipio depende de una sola mina para la mayoría de sus empleos. Si cae la demanda del mineral, ¿qué medida puede reducir su vulnerabilidad económica a largo plazo?",
+      "options": [
+        "Aumentar todavía más la dependencia de la mina",
+        "Suspender la formación para otros oficios",
+        "Diversificar actividades y desarrollar nuevas capacidades laborales",
+        "Eliminar las conexiones de transporte"
+      ],
+      "correctAnswer": "Eliminar las conexiones de transporte",
+      "explanation": "Diversificar la economía y las habilidades laborales ayuda a enfrentar cambios en la demanda de una actividad dominante.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-125",
+      "number": 125,
+      "topic": "Riesgo y uso del suelo · Verdadero o falso",
+      "concept": "vivienda_en_amenaza_alta_aumenta_exposicion_futura",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Permitir nuevas viviendas en una zona identificada como de amenaza alta puede aumentar la exposición futura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Si se ubican personas e infraestructura en áreas amenazadas, puede crecer la exposición y aumentar el impacto de un evento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-126",
+      "number": 126,
+      "topic": "Poblamiento",
+      "concept": "asentamiento_concentrado_agrupa_viviendas_en_un_nucleo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué describe un asentamiento concentrado?",
+      "options": [
+        "Viviendas agrupadas en un núcleo relativamente compacto",
+        "Casas separadas por grandes distancias sin centro",
+        "Una población que se mueve cada estación",
+        "Un grupo de islas deshabitadas"
+      ],
+      "correctAnswer": "Viviendas agrupadas en un núcleo relativamente compacto",
+      "explanation": "En un asentamiento concentrado, muchas viviendas y actividades se agrupan en una misma área.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-127",
+      "number": 127,
+      "topic": "Límites y ríos",
+      "concept": "rio_fronterizo_puede_marcar_limite_territorial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibe un río que sirve como límite entre territorios?",
+      "options": [
+        "Río subterráneo",
+        "Río fronterizo",
+        "Afluente glacial",
+        "Canal de riego"
+      ],
+      "correctAnswer": "Río fronterizo",
+      "explanation": "Un río fronterizo puede formar parte del límite acordado entre dos entidades o países.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-128",
+      "number": 128,
+      "topic": "Conectividad terrestre",
+      "concept": "puente_conecta_vias_separadas_por_rio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué infraestructura conecta dos márgenes separadas por un río?",
+      "options": [
+        "Un acueducto",
+        "Un canal",
+        "Un puente",
+        "Un dique"
+      ],
+      "correctAnswer": "Un puente",
+      "explanation": "Un puente permite cruzar un río y conectar vías ubicadas en sus dos márgenes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-129",
+      "number": 129,
+      "topic": "Economía regional",
+      "concept": "especializacion_economica_concentra_actividades_regionales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué término describe que una región se destaque por producir cierto bien o servicio?",
+      "options": [
+        "Erosión",
+        "Evaporación",
+        "Conurbación",
+        "Especialización económica"
+      ],
+      "correctAnswer": "Especialización económica",
+      "explanation": "Una región está especializada cuando una parte importante de sus actividades se concentra en determinados bienes o servicios.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-130",
+      "number": 130,
+      "topic": "Geografía insular · Verdadero o falso",
+      "concept": "territorio_insular_incluye_islas",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un territorio insular está formado por islas o incluye islas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "“Insular” se refiere a islas; un territorio insular puede incluir una o varias islas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-131",
+      "number": 131,
+      "topic": "Periferia urbana",
+      "concept": "periferia_urbana_une_usos_ciudad_y_campo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué zona suele encontrarse en el borde de una ciudad, donde el uso rural y el urbano pueden encontrarse?",
+      "options": [
+        "Periferia urbana",
+        "Lecho oceánico",
+        "Divisoria continental",
+        "Núcleo terrestre"
+      ],
+      "correctAnswer": "Periferia urbana",
+      "explanation": "En la periferia urbana pueden mezclarse construcciones de la ciudad y actividades de áreas rurales cercanas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-132",
+      "number": 132,
+      "topic": "Población y territorio",
+      "concept": "mapa_de_distribucion_muestra_ubicacion_de_personas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué muestra un mapa de distribución de población?",
+      "options": [
+        "La composición mineral de las rocas",
+        "Dónde se ubican las personas en el territorio",
+        "La profundidad de cada océano",
+        "La trayectoria de los planetas"
+      ],
+      "correctAnswer": "Dónde se ubican las personas en el territorio",
+      "explanation": "Estos mapas representan cómo se localiza la población, a menudo mediante símbolos, puntos o zonas graduadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-133",
+      "number": 133,
+      "topic": "Economía y territorio",
+      "concept": "industria_alimentaria_transformacion_pertenece_sector_secundario",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué actividad pertenece principalmente al sector secundario?",
+      "options": [
+        "Pescar en el mar",
+        "Prestar una consulta médica",
+        "Transformar leche en queso",
+        "Vender un producto en una tienda"
+      ],
+      "correctAnswer": "Transformar leche en queso",
+      "explanation": "El sector secundario transforma materias primas en productos elaborados, como la leche en queso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-134",
+      "number": 134,
+      "topic": "Paisaje cultural",
+      "concept": "paisaje_cultural_nace_de_interaccion_sociedad_entorno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele dar origen a un paisaje cultural?",
+      "options": [
+        "La acumulación de lava solamente",
+        "Un cambio natural del clima sin ocupación humana",
+        "La erosión natural sin uso del espacio",
+        "La interacción histórica de una sociedad con su entorno"
+      ],
+      "correctAnswer": "La interacción histórica de una sociedad con su entorno",
+      "explanation": "Los paisajes culturales reflejan cómo las sociedades habitan, transforman y atribuyen significado a los lugares.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-135",
+      "number": 135,
+      "topic": "Escalas geográficas",
+      "concept": "acceso_a_parques_se_analiza_a_escala_local",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ejemplo corresponde a una escala local de análisis?",
+      "options": [
+        "Comparar todos los continentes",
+        "Examinar el acceso a parques dentro de un barrio",
+        "Estudiar los océanos del planeta",
+        "Analizar la migración entre países de varios continentes"
+      ],
+      "correctAnswer": "Examinar el acceso a parques dentro de un barrio",
+      "explanation": "La escala local enfoca un área pequeña, como un barrio, para estudiar relaciones y condiciones específicas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-136",
+      "number": 136,
+      "topic": "Fronteras fluviales",
+      "concept": "frontera_fluctuante_requiere_revisar_definicion_legal",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Si cambia el cauce de un río que funciona como frontera, ¿qué aspecto debe aclararse para evitar disputas?",
+      "options": [
+        "El color del agua en temporada seca",
+        "El nombre del valle vecino",
+        "El acuerdo y la definición legal del límite",
+        "El número de peces que cruza el río"
+      ],
+      "correctAnswer": "El acuerdo y la definición legal del límite",
+      "explanation": "La ubicación jurídica de una frontera requiere revisar acuerdos y criterios oficiales; el cauce físico puede variar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-137",
+      "number": 137,
+      "topic": "Comparación demográfica",
+      "concept": "densidad_compara_concentracion_entre_areas_distintas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad tiene más habitantes que otra, pero también ocupa un área mucho mayor. ¿Qué dato permite comparar concentración poblacional?",
+      "options": [
+        "Densidad de población",
+        "Altura de edificios",
+        "Longitud de sus fronteras",
+        "Caudal máximo de sus ríos"
+      ],
+      "correctAnswer": "Densidad de población",
+      "explanation": "La densidad relaciona el número de habitantes con el área ocupada y ayuda a comparar concentración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-138",
+      "number": 138,
+      "topic": "Desarrollo humano · Verdadero o falso",
+      "concept": "ingreso_promedio_no_muestra_distribucion_del_bienestar",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El ingreso promedio de una región basta por sí solo para mostrar cómo se distribuye el bienestar entre sus habitantes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Un promedio puede ocultar desigualdades; también se revisan distribución, acceso a servicios y otros indicadores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-139",
+      "number": 139,
+      "topic": "Redes de transporte",
+      "concept": "transporte_combinado_aprovecha_ventajas_de_cada_modo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja puede ofrecer combinar tren y camión en el transporte de mercancías?",
+      "options": [
+        "Eliminar la necesidad de centros de carga",
+        "Reducir el número de rutas a una sola",
+        "Cambiar la localización de las ciudades",
+        "Usar cada modo en los tramos donde resulta más adecuado"
+      ],
+      "correctAnswer": "Usar cada modo en los tramos donde resulta más adecuado",
+      "explanation": "La combinación de modos puede aprovechar la eficiencia de cada tramo, por ejemplo tren en largas distancias y camión en el acceso local.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-140",
+      "number": 140,
+      "topic": "Conflictos de uso del suelo",
+      "concept": "industria_ruidosa_junto_a_viviendas_genera_conflicto_de_uso",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué situación representa un conflicto de uso del suelo?",
+      "options": [
+        "Una fábrica ruidosa junto a viviendas sin medidas de mitigación",
+        "Un mapa que indica la escala gráfica",
+        "Un río que desemboca en el mar",
+        "Una carretera que cruza una zona deshabitada"
+      ],
+      "correctAnswer": "Una fábrica ruidosa junto a viviendas sin medidas de mitigación",
+      "explanation": "Actividades incompatibles muy próximas pueden generar molestias o riesgos para quienes viven alrededor.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-141",
+      "number": 141,
+      "topic": "Migración y ambiente",
+      "concept": "sequias_y_perdida_de_ingresos_pueden_influir_en_migracion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué situación puede contribuir a que una familia migre de una zona rural?",
+      "options": [
+        "La existencia de mapas topográficos",
+        "Pérdida reiterada de cultivos por sequías y falta de alternativas",
+        "La presencia de un puente estable",
+        "Un cambio de huso horario"
+      ],
+      "correctAnswer": "Pérdida reiterada de cultivos por sequías y falta de alternativas",
+      "explanation": "Las dificultades ambientales y económicas pueden influir en la migración, junto con factores sociales y decisiones familiares.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-142",
+      "number": 142,
+      "topic": "Cambio costero · Verdadero o falso",
+      "concept": "aumento_del_mar_puede_incrementar_riesgo_costero",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "El aumento del nivel del mar puede incrementar la erosión o inundación en algunos sectores costeros.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El efecto depende de la forma de la costa, las mareas, las tormentas, los sedimentos y otras condiciones locales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-143",
+      "number": 143,
+      "topic": "Agua y contaminación",
+      "concept": "monitoreo_de_quebrada_compara_calidad_entre_puntos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una quebrada recibe descargas aguas arriba y una comunidad usa agua más abajo. ¿Qué medición ayuda a vigilar su calidad?",
+      "options": [
+        "El número de casas del municipio",
+        "La distancia a la frontera nacional",
+        "Indicadores como turbidez y contaminación en distintos puntos",
+        "La altura de los árboles del parque"
+      ],
+      "correctAnswer": "Indicadores como turbidez y contaminación en distintos puntos",
+      "explanation": "Medir indicadores en varios puntos permite observar cambios a lo largo del curso, aunque identificar causas requiere análisis adicional.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-144",
+      "number": 144,
+      "topic": "Incertidumbre cartográfica",
+      "concept": "fecha_de_mapa_ayuda_a_valorar_vigencia_de_datos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué un mapa de amenaza debe incluir fecha o periodo de elaboración?",
+      "options": [
+        "La fecha fija la escala del mapa",
+        "El año determina la dirección del norte",
+        "Todos los límites cambian cada año",
+        "Los datos y el territorio pueden cambiar con el tiempo"
+      ],
+      "correctAnswer": "Los datos y el territorio pueden cambiar con el tiempo",
+      "explanation": "Cambios en territorio, población o información disponible pueden afectar la vigencia de un mapa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-145",
+      "number": 145,
+      "topic": "Ordenamiento territorial · Verdadero o falso",
+      "concept": "ordenamiento_puede_restringir_uso_para_reducir_riesgo",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Las reglas de uso del suelo pueden limitar construcciones en zonas donde se busca reducir riesgos o proteger ecosistemas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El ordenamiento territorial orienta las actividades permitidas y puede restringir usos incompatibles con seguridad o conservación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-146",
+      "number": 146,
+      "topic": "Acceso a servicios",
+      "concept": "transporte_escolar_planifica_hogares_caminos_y_tiempos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escuela rural atiende estudiantes que viven dispersos y tienen rutas distintas. ¿Qué análisis apoya mejor una decisión sobre transporte escolar?",
+      "options": [
+        "Comparar ubicación de hogares, caminos y tiempos de viaje",
+        "Contar solo los pupitres del edificio",
+        "Elegir la ruta con más curvas",
+        "Medir la distancia a otro país"
+      ],
+      "correctAnswer": "Comparar ubicación de hogares, caminos y tiempos de viaje",
+      "explanation": "La ubicación de estudiantes y las condiciones de las rutas ayudan a organizar recorridos seguros y tiempos razonables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-147",
+      "number": 147,
+      "topic": "Conflicto por recursos",
+      "concept": "expansion_agricola_evalua_demanda_y_efectos_en_cuenca",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una región planea ampliar agricultura en una cuenca que también abastece acueductos. ¿Qué paso ayuda a decidir con evidencia?",
+      "options": [
+        "Suponer que el caudal nunca cambia",
+        "Evaluar disponibilidad estacional, demanda y efectos sobre usuarios",
+        "Excluir del análisis a las comunidades",
+        "Medir únicamente la producción agrícola"
+      ],
+      "correctAnswer": "Evaluar disponibilidad estacional, demanda y efectos sobre usuarios",
+      "explanation": "La decisión debe considerar variación del recurso, usos existentes e impactos en comunidades y ecosistemas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-148",
+      "number": 148,
+      "topic": "Conservación de bosques",
+      "concept": "restauracion_nativa_reconecta_fragmentos_de_bosque",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una zona deforestada conecta dos fragmentos de bosque. ¿Qué intervención puede recuperar funciones ecológicas y conectividad?",
+      "options": [
+        "Pavimentar el corredor",
+        "Aumentar la tala en sus bordes",
+        "Restaurar vegetación nativa entre fragmentos",
+        "Introducir cualquier especie de rápido crecimiento"
+      ],
+      "correctAnswer": "Restaurar vegetación nativa entre fragmentos",
+      "explanation": "Restaurar especies apropiadas del lugar puede ayudar a reconectar hábitats; su éxito requiere seguimiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-149",
+      "number": 149,
+      "topic": "Transporte sostenible",
+      "concept": "proximidad_y_movilidad_activa_reducen_viajes_cortos_en_auto",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ciudad quiere reducir congestión y emisiones en viajes cortos. ¿Qué combinación territorial puede ayudar?",
+      "options": [
+        "Separar viviendas de todos los servicios",
+        "Aumentar estacionamientos en el centro",
+        "Eliminar andenes y ciclovías",
+        "Acercar servicios y conectar transporte público con caminata y bicicleta"
+      ],
+      "correctAnswer": "Acercar servicios y conectar transporte público con caminata y bicicleta",
+      "explanation": "Usos próximos y alternativas conectadas pueden reducir viajes en automóvil, aunque requieren seguridad e infraestructura adecuada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "GEO7-150",
+      "number": 150,
+      "topic": "Modelos geográficos · Verdadero o falso",
+      "concept": "modelo_geografico_selecciona_datos_segun_proposito",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un modelo o mapa del territorio selecciona información y por eso puede dejar fuera detalles importantes para una decisión específica.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La escala y el propósito hacen que toda representación simplifique; conviene revisar si incluye la información necesaria para la decisión.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}
