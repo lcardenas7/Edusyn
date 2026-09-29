@@ -1,0 +1,2825 @@
+{
+  "catalogId": "edusyn-arte-cultura-grade-8-v1",
+  "title": "Arte y cultura · 8.º",
+  "grade": 8,
+  "subjectArea": "Duelos",
+  "category": "Arte y cultura",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://ich.unesco.org/es/convenci%C3%B3n",
+    "https://patrimonio.mincultura.gov.co/Pages/Patrimonio-Cultural-Inmaterial.aspx",
+    "https://www.mineducacion.gov.co/1780/articles-411706_recurso_4.pdf"
+  ],
+  "questions": [
+    {
+      "id": "ART8-001",
+      "number": 1,
+      "topic": "Elementos visuales",
+      "concept": "linea_registra_recorrido_visual",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento visual describe la trayectoria que deja un lápiz al desplazarse?",
+      "options": [
+        "Línea",
+        "Textura",
+        "Volumen",
+        "Tono"
+      ],
+      "correctAnswer": "Línea",
+      "explanation": "La línea puede registrar un recorrido y orientar la mirada dentro de una imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-002",
+      "number": 2,
+      "topic": "Patrimonio cultural",
+      "concept": "patrimonio_inmaterial_se_transmite_en_practicas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracteriza principalmente a un bien cultural inmaterial?",
+      "options": [
+        "Está hecho siempre de piedra",
+        "Se transmite mediante prácticas y saberes",
+        "Permanece guardado en una vitrina",
+        "Solo existe en documentos escritos"
+      ],
+      "correctAnswer": "Se transmite mediante prácticas y saberes",
+      "explanation": "Las tradiciones, celebraciones y conocimientos pueden transmitirse entre generaciones sin ser objetos físicos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-003",
+      "number": 3,
+      "topic": "Música",
+      "concept": "tempo_indica_rapidez_del_pulso",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué indica principalmente el tempo de una pieza musical?",
+      "options": [
+        "La altura de cada nota",
+        "El material del instrumento",
+        "La rapidez de los pulsos",
+        "El número de intérpretes"
+      ],
+      "correctAnswer": "La rapidez de los pulsos",
+      "explanation": "El tempo señala qué tan rápido o lento transcurre el pulso musical.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-004",
+      "number": 4,
+      "topic": "Teatro",
+      "concept": "dialogo_teatral_muestra_interaccion_de_personajes",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple principalmente el diálogo en una obra teatral?",
+      "options": [
+        "Medir el tamaño del escenario",
+        "Definir el precio de la entrada",
+        "Registrar el orden de las escenas",
+        "Mostrar palabras e interacciones de los personajes"
+      ],
+      "correctAnswer": "Mostrar palabras e interacciones de los personajes",
+      "explanation": "El diálogo permite que los personajes comuniquen ideas, conflictos y relaciones durante la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-005",
+      "number": 5,
+      "topic": "Fotografía",
+      "concept": "encuadre_selecciona_elementos_de_fotografia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué decisión determina qué elementos aparecen dentro de una fotografía?",
+      "options": [
+        "Encuadre",
+        "Pigmento",
+        "Coreografía",
+        "Fundición"
+      ],
+      "correctAnswer": "Encuadre",
+      "explanation": "El encuadre selecciona qué parte de la escena incluye la imagen y desde qué límites se observa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-006",
+      "number": 6,
+      "topic": "Arte colombiano",
+      "concept": "currulao_se_asocia_con_region_pacifica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿A qué región colombiana se asocia principalmente el ritmo del currulao?",
+      "options": [
+        "Andina",
+        "Pacífica",
+        "Orinoquía",
+        "Insular"
+      ],
+      "correctAnswer": "Pacífica",
+      "explanation": "El currulao es una expresión musical y dancística vinculada especialmente con comunidades del Pacífico colombiano.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-007",
+      "number": 7,
+      "topic": "Cine",
+      "concept": "guion_organiza_escenas_y_dialogos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cómo se llama el texto que organiza las escenas y acciones de una película antes de filmarla?",
+      "options": [
+        "Catálogo",
+        "Partitura",
+        "Guion",
+        "Inventario"
+      ],
+      "correctAnswer": "Guion",
+      "explanation": "El guion describe diálogos, acciones y escenas que orientan la producción audiovisual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Color",
+      "concept": "mezcla_aditiva_rojo_y_verde_produce_amarillo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En una pantalla, la mezcla de luz roja y verde puede producir luz amarilla.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En la mezcla aditiva de luz, rojo y verde combinados producen amarillo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-009",
+      "number": 9,
+      "topic": "Composición visual",
+      "concept": "escala_relativa_crea_jerarquia_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una ilustración coloca un objeto pequeño junto a otro muy grande. ¿Qué relación puede destacar esa diferencia?",
+      "options": [
+        "El peso real de ambos",
+        "Su antigüedad exacta",
+        "El sonido que producen",
+        "Escala y jerarquía visual"
+      ],
+      "correctAnswer": "Escala y jerarquía visual",
+      "explanation": "El tamaño relativo puede hacer que un elemento parezca más importante o establecer una comparación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-010",
+      "number": 10,
+      "topic": "Patrimonio colombiano",
+      "concept": "murallas_cartagena_documentan_historia_y_arquitectura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué las murallas de Cartagena tienen valor patrimonial?",
+      "options": [
+        "Conservan evidencias de la historia y la arquitectura",
+        "Fueron construidas para celebrar una danza",
+        "Son el único ejemplo de vivienda indígena",
+        "Se usan como instrumentos musicales"
+      ],
+      "correctAnswer": "Conservan evidencias de la historia y la arquitectura",
+      "explanation": "Las fortificaciones muestran técnicas y procesos históricos vinculados con la ciudad y su defensa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-011",
+      "number": 11,
+      "topic": "Danza",
+      "concept": "coreografia_organiza_formaciones_y_desplazamientos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos grupos ejecutan los mismos pasos, pero uno cambia las formaciones y las entradas. ¿Qué aspecto varía principalmente?",
+      "options": [
+        "La afinación",
+        "La composición coreográfica",
+        "El material escénico",
+        "La iluminación natural"
+      ],
+      "correctAnswer": "La composición coreográfica",
+      "explanation": "La coreografía organiza movimientos, desplazamientos y relaciones espaciales entre bailarines.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-012",
+      "number": 12,
+      "topic": "Arte y contexto",
+      "concept": "contexto_social_apoya_interpretacion_de_obra",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra creada durante una protesta muestra pancartas y figuras reunidas. ¿Qué dato ayudaría más a interpretar su intención?",
+      "options": [
+        "El tamaño del marco",
+        "El precio actual de los materiales",
+        "El contexto social de creación",
+        "La distancia entre la obra y la puerta"
+      ],
+      "correctAnswer": "El contexto social de creación",
+      "explanation": "Conocer el momento y las circunstancias de creación ayuda a relacionar las imágenes con el mensaje de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-013",
+      "number": 13,
+      "topic": "Verdadero o falso · Música",
+      "concept": "interpretacion_modifica_expresividad_musical",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Dos interpretaciones de una misma canción pueden transmitir sensaciones diferentes por cambios de ritmo, intensidad o timbre.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las decisiones de interpretación modifican cómo se percibe una pieza, aunque la melodía sea reconocible.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-014",
+      "number": 14,
+      "topic": "Cine y montaje",
+      "concept": "montaje_paralelo_relaciona_acciones_simultaneas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una película alterna imágenes de dos lugares que ocurren al mismo tiempo. ¿Qué recurso usa principalmente?",
+      "options": [
+        "Escultura",
+        "Perspectiva",
+        "Modelado",
+        "Montaje paralelo"
+      ],
+      "correctAnswer": "Montaje paralelo",
+      "explanation": "El montaje paralelo alterna acciones simultáneas para relacionarlas o crear expectativa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-015",
+      "number": 15,
+      "topic": "Lectura de imágenes",
+      "concept": "tamano_y_contraste_establecen_jerarquia_de_lectura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un afiche, el texto principal tiene mayor tamaño y contraste que los demás. ¿Qué busca establecer?",
+      "options": [
+        "Jerarquía de lectura",
+        "Profundidad física",
+        "Textura táctil",
+        "Simetría exacta"
+      ],
+      "correctAnswer": "Jerarquía de lectura",
+      "explanation": "El tamaño y el contraste ayudan a indicar qué información debe captar primero el público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-016",
+      "number": 16,
+      "topic": "Patrimonio vivo",
+      "concept": "tradicion_se_conserva_al_transmitirse_y_transformarse",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad enseña a jóvenes una técnica tradicional de tejido y adapta algunos diseños. ¿Qué ocurre?",
+      "options": [
+        "La tradición desaparece necesariamente",
+        "El saber se transmite y transforma",
+        "El tejido deja de ser una práctica cultural",
+        "La técnica se vuelve patrimonio material solamente"
+      ],
+      "correctAnswer": "El saber se transmite y transforma",
+      "explanation": "Las tradiciones pueden conservarse mientras las comunidades las reinterpretan y las transmiten.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-017",
+      "number": 17,
+      "topic": "Arte digital",
+      "concept": "recontextualizacion_visual_comunica_critica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista modifica una fotografía para cuestionar cómo se representa la belleza en redes sociales. ¿Qué hace principalmente?",
+      "options": [
+        "Copia sin intención la imagen original",
+        "Elimina cualquier interpretación posible",
+        "Recontextualiza una imagen para comunicar una crítica",
+        "Convierte la fotografía en una grabación sonora"
+      ],
+      "correctAnswer": "Recontextualiza una imagen para comunicar una crítica",
+      "explanation": "Cambiar el contexto y el tratamiento de una imagen puede producir una lectura crítica distinta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-018",
+      "number": 18,
+      "topic": "Verdadero o falso · Teatro",
+      "concept": "escenografia_sugiere_lugar_y_epoca",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La escenografía puede sugerir dónde y cuándo ocurre una escena sin explicarlo en un diálogo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El espacio, los objetos y el diseño escénico aportan información sobre el lugar y la época.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-019",
+      "number": 19,
+      "topic": "Expresión artística",
+      "concept": "espacio_vacio_participa_en_composicion_escultorica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura deja huecos amplios entre sus partes. ¿Qué aspecto también forma parte de su composición?",
+      "options": [
+        "La duración de una canción",
+        "El orden de los capítulos",
+        "La velocidad de proyección",
+        "El espacio vacío"
+      ],
+      "correctAnswer": "El espacio vacío",
+      "explanation": "En escultura, los vacíos y las relaciones entre formas contribuyen a la composición tanto como la materia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-020",
+      "number": 20,
+      "topic": "Diseño gráfico",
+      "concept": "contraste_y_brevedad_mejoran_lectura_de_aviso",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cartel de emergencia debe leerse rápido desde cierta distancia. ¿Qué decisión favorece más esa lectura?",
+      "options": [
+        "Contraste claro y texto breve",
+        "Varias tipografías decorativas",
+        "Párrafos largos en letra pequeña",
+        "Colores similares para texto y fondo"
+      ],
+      "correctAnswer": "Contraste claro y texto breve",
+      "explanation": "Un contraste suficiente y pocas palabras facilitan localizar y comprender el mensaje con rapidez.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-021",
+      "number": 21,
+      "topic": "Interpretación visual",
+      "concept": "sombras_deben_coincidir_con_fuente_de_luz",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un mural, las figuras aparecen inclinadas hacia una zona iluminada, pero sus sombras apuntan al lado contrario. ¿Qué conviene revisar primero?",
+      "options": [
+        "El título de la obra",
+        "La coherencia entre luz y sombras",
+        "El precio de la pintura",
+        "La cantidad de espectadores"
+      ],
+      "correctAnswer": "La coherencia entre luz y sombras",
+      "explanation": "La dirección de las sombras debe guardar relación con la fuente de luz representada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-022",
+      "number": 22,
+      "topic": "Conservación del patrimonio",
+      "concept": "controlar_luz_protege_piezas_patrimoniales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pieza antigua se expone junto a una ventana donde recibe sol directo. ¿Qué medida reduce mejor el riesgo de deterioro?",
+      "options": [
+        "Cambiar su etiqueta cada día",
+        "Aumentar el volumen de la sala",
+        "Controlar la luz y ubicarla lejos del sol directo",
+        "Limpiar la superficie con cualquier producto"
+      ],
+      "correctAnswer": "Controlar la luz y ubicarla lejos del sol directo",
+      "explanation": "La luz intensa puede deteriorar materiales y pigmentos; la conservación requiere controlar la exposición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-023",
+      "number": 23,
+      "topic": "Verdadero o falso · Medios digitales",
+      "concept": "omitir_credito_no_elimina_derechos_de_autor",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una imagen artística se comparte sin indicar su autor, deja de estar protegida por derechos de autor.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La autoría y los derechos no desaparecen por omitir el crédito; se deben respetar las condiciones de uso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-024",
+      "number": 24,
+      "topic": "Diseño sonoro",
+      "concept": "mezcla_sonora_prioriza_efectos_relevantes",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un cortometraje, el público no entiende que una puerta se abrió porque el sonido quedó cubierto por la música. ¿Qué ajuste ayudaría más?",
+      "options": [
+        "Aumentar el brillo de la imagen",
+        "Cambiar el vestuario del personaje",
+        "Añadir más texto al título",
+        "Equilibrar niveles o ubicar el efecto en otro momento"
+      ],
+      "correctAnswer": "Equilibrar niveles o ubicar el efecto en otro momento",
+      "explanation": "Ajustar la mezcla y el momento del efecto permite que el sonido importante se perciba sin competir con la música.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Interpretación artística",
+      "concept": "interpretacion_plural_debe_apoyarse_en_evidencia",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una obra admite interpretaciones distintas, eso significa que cualquier explicación es igualmente válida aunque contradiga lo que muestra.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Puede haber lecturas diversas, pero conviene sustentarlas en elementos de la obra y su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-026",
+      "number": 26,
+      "topic": "Técnicas artísticas",
+      "concept": "collage_ensambla_fragmentos_sobre_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica consiste en ensamblar fragmentos de materiales distintos sobre una superficie?",
+      "options": [
+        "Collage",
+        "Acuarela",
+        "Grabado",
+        "Modelado"
+      ],
+      "correctAnswer": "Collage",
+      "explanation": "El collage construye una composición al reunir y pegar recortes u otros materiales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-027",
+      "number": 27,
+      "topic": "Patrimonio arquitectónico",
+      "concept": "plano_documenta_distribucion_arquitectonica",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple un plano en la documentación de un edificio histórico?",
+      "options": [
+        "Reemplazar su historia oral",
+        "Representar su distribución y dimensiones",
+        "Determinar quién puede visitarlo",
+        "Medir la antigüedad de sus materiales"
+      ],
+      "correctAnswer": "Representar su distribución y dimensiones",
+      "explanation": "Un plano registra la organización espacial y algunas medidas del edificio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-028",
+      "number": 28,
+      "topic": "Artes visuales",
+      "concept": "mosaico_compone_imagen_con_piezas_pequenas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica forma una imagen mediante pequeñas piezas de vidrio, piedra u otros materiales?",
+      "options": [
+        "Fresco",
+        "Serigrafía",
+        "Mosaico",
+        "Caricatura"
+      ],
+      "correctAnswer": "Mosaico",
+      "explanation": "El mosaico crea imágenes al disponer piezas pequeñas sobre una superficie.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-029",
+      "number": 29,
+      "topic": "Música",
+      "concept": "melodia_es_sucesion_organizada_de_alturas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica distingue principalmente una melodía?",
+      "options": [
+        "La cantidad de butacas",
+        "El material de una partitura",
+        "El tamaño del instrumento",
+        "Una sucesión reconocible de alturas musicales"
+      ],
+      "correctAnswer": "Una sucesión reconocible de alturas musicales",
+      "explanation": "La melodía organiza notas en una secuencia que puede reconocerse y recordarse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-030",
+      "number": 30,
+      "topic": "Lenguaje audiovisual",
+      "concept": "plano_general_ubica_personaje_en_entorno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué plano suele mostrar a una persona de cuerpo entero y parte de su entorno?",
+      "options": [
+        "Plano general",
+        "Primerísimo primer plano",
+        "Plano detalle",
+        "Plano cenital extremo"
+      ],
+      "correctAnswer": "Plano general",
+      "explanation": "El plano general incluye más espacio alrededor del personaje y permite ubicarlo en el entorno.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-031",
+      "number": 31,
+      "topic": "Arte y cultura",
+      "concept": "museo_conserva_e_interpreta_colecciones",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué institución suele conservar y exhibir colecciones de valor artístico o histórico?",
+      "options": [
+        "Taller mecánico",
+        "Museo",
+        "Estación de servicio",
+        "Centro de distribución"
+      ],
+      "correctAnswer": "Museo",
+      "explanation": "Los museos conservan, investigan e interpretan colecciones para compartirlas con el público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-032",
+      "number": 32,
+      "topic": "Artes escénicas",
+      "concept": "marca_escenica_orienta_desplazamiento_de_interpretes",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento indica a los intérpretes por dónde deben desplazarse durante una escena?",
+      "options": [
+        "El afiche",
+        "El inventario",
+        "La marca escénica",
+        "La crítica"
+      ],
+      "correctAnswer": "La marca escénica",
+      "explanation": "Las marcas escénicas orientan posiciones y desplazamientos de quienes actúan.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Arte público",
+      "concept": "arte_publico_modifica_percepcion_de_espacio_compartido",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una obra de arte público puede cambiar la manera en que las personas perciben un espacio compartido.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una intervención puede atraer la atención hacia lugares, memorias o usos del espacio que antes pasaban inadvertidos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-034",
+      "number": 34,
+      "topic": "Fotografía documental",
+      "concept": "encuadre_parcial_modifica_percepcion_de_escala",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una foto de una marcha muestra solo una esquina con pocas personas, aunque la concentración era extensa. ¿Qué efecto puede producir ese encuadre?",
+      "options": [
+        "Garantizar que la escena sea neutral",
+        "Mostrar toda la escala del evento",
+        "Eliminar la perspectiva del fotógrafo",
+        "Reducir la impresión sobre el tamaño de la marcha"
+      ],
+      "correctAnswer": "Reducir la impresión sobre el tamaño de la marcha",
+      "explanation": "El encuadre selecciona una parte de la escena y puede cambiar cómo se interpreta su escala.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-035",
+      "number": 35,
+      "topic": "Restauración",
+      "concept": "documentacion_de_restauracion_registra_intervenciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una restauradora documenta las intervenciones realizadas sobre una pintura?",
+      "options": [
+        "Para dejar registro de los materiales y cambios",
+        "Para demostrar que la obra nunca tuvo daños",
+        "Para reemplazar la firma del artista",
+        "Para garantizar que el color no volverá a cambiar"
+      ],
+      "correctAnswer": "Para dejar registro de los materiales y cambios",
+      "explanation": "El registro permite conocer qué se hizo y apoya futuras decisiones de conservación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-036",
+      "number": 36,
+      "topic": "Diseño visual",
+      "concept": "jerarquia_visual_facilita_encontrar_titulo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una página contiene muchos elementos del mismo tamaño y color. ¿Qué cambio facilitaría encontrar primero el título?",
+      "options": [
+        "Repetir todos los elementos",
+        "Darle mayor jerarquía visual",
+        "Quitar los márgenes",
+        "Usar el mismo tamaño en todo"
+      ],
+      "correctAnswer": "Darle mayor jerarquía visual",
+      "explanation": "Diferenciar tamaño, ubicación o contraste del título ayuda a establecer un orden de lectura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-037",
+      "number": 37,
+      "topic": "Música y escena",
+      "concept": "ritmo_musical_acompana_accion_dramatica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una escena, la música cambia de ritmo cada vez que el personaje toma una decisión. ¿Qué relación se construye?",
+      "options": [
+        "La música mide el vestuario",
+        "El sonido sustituye todo movimiento",
+        "El ritmo acompaña la acción dramática",
+        "La escena pierde toda estructura"
+      ],
+      "correctAnswer": "El ritmo acompaña la acción dramática",
+      "explanation": "Los cambios musicales pueden reforzar el ritmo de la acción y orientar la percepción del público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-038",
+      "number": 38,
+      "topic": "Verdadero o falso · Interpretación del color",
+      "concept": "significado_del_color_depende_de_contexto",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un color tiene exactamente el mismo significado en todas las culturas y situaciones.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La percepción y el significado de los colores dependen del contexto, las convenciones y la experiencia de quien observa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-039",
+      "number": 39,
+      "topic": "Patrimonio tecnológico",
+      "concept": "comparar_soluciones_materiales_entre_epocas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una exposición pone herramientas antiguas junto a objetos actuales que cumplen una función similar. ¿Qué comparación propone?",
+      "options": [
+        "Diferencias entre técnicas de actuación",
+        "Contrastes entre ritmos musicales",
+        "Similitudes entre estilos de iluminación",
+        "Cambios en las formas de resolver necesidades"
+      ],
+      "correctAnswer": "Cambios en las formas de resolver necesidades",
+      "explanation": "Relacionar objetos de épocas distintas permite observar cómo cambian las soluciones y los recursos disponibles.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-040",
+      "number": 40,
+      "topic": "Publicidad e imagen",
+      "concept": "contraste_figura_fondo_destaca_producto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un anuncio muestra un producto aislado sobre un fondo oscuro y brillante. ¿Qué recurso dirige la atención hacia él?",
+      "options": [
+        "Contraste figura-fondo",
+        "Rima consonante",
+        "Perspectiva atmosférica",
+        "Ritmo coreográfico"
+      ],
+      "correctAnswer": "Contraste figura-fondo",
+      "explanation": "Separar visualmente la figura de su fondo hace que destaque y atraiga la mirada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-041",
+      "number": 41,
+      "topic": "Teatro",
+      "concept": "gestos_y_voz_matizan_discurso_de_personaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un personaje afirma que está tranquilo, pero habla con voz temblorosa y evita mirar a los demás. ¿Qué aporta la actuación?",
+      "options": [
+        "Una descripción del vestuario",
+        "Señales que contradicen o matizan las palabras",
+        "Una medida exacta del escenario",
+        "Un cambio de época histórica"
+      ],
+      "correctAnswer": "Señales que contradicen o matizan las palabras",
+      "explanation": "La voz y los gestos pueden revelar emociones diferentes de las que el personaje declara.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-042",
+      "number": 42,
+      "topic": "Arte y medioambiente",
+      "concept": "material_reutilizado_refuerza_tema_de_obra",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una instalación utiliza envases recuperados para hablar del consumo. ¿Qué relación establece principalmente?",
+      "options": [
+        "La obra debe ser permanente",
+        "El material determina por completo el mensaje",
+        "Los materiales refuerzan el tema de la obra",
+        "El reciclaje elimina la interpretación artística"
+      ],
+      "correctAnswer": "Los materiales refuerzan el tema de la obra",
+      "explanation": "Los materiales elegidos pueden relacionarse con el tema y ampliar lo que la obra comunica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-043",
+      "number": 43,
+      "topic": "Verdadero o falso · Cine",
+      "concept": "orden_de_montaje_modifica_informacion_narrativa",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Cambiar el orden de dos escenas puede modificar la información que el público conoce y su interpretación.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El orden del montaje controla cuándo se revela información y cómo se relacionan los acontecimientos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-044",
+      "number": 44,
+      "topic": "Lectura crítica de imágenes",
+      "concept": "analizar_elementos_excluidos_por_recorte",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una publicación recorta una fotografía para ocultar un objeto que aparece al borde. ¿Qué pregunta ayuda más a evaluar su mensaje?",
+      "options": [
+        "¿Cuántos píxeles tiene el archivo?",
+        "¿Qué marca tomó la foto?",
+        "¿En qué carpeta fue guardada?",
+        "¿Qué información excluyó el recorte?"
+      ],
+      "correctAnswer": "¿Qué información excluyó el recorte?",
+      "explanation": "Preguntar qué quedó fuera permite analizar cómo la selección visual orienta una interpretación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-045",
+      "number": 45,
+      "topic": "Patrimonio y memoria",
+      "concept": "lugar_patrimonial_conserva_memoria_colectiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué una comunidad puede proteger un antiguo teatro aunque ya no funcione como sala de espectáculos?",
+      "options": [
+        "Puede conservar memoria e identidad colectiva",
+        "Todos los edificios antiguos tienen el mismo uso",
+        "La edad de un lugar impide cualquier cambio",
+        "El inmueble debe convertirse en museo obligatoriamente"
+      ],
+      "correctAnswer": "Puede conservar memoria e identidad colectiva",
+      "explanation": "Un lugar puede tener valor por las historias y vínculos que representa para una comunidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-046",
+      "number": 46,
+      "topic": "Creación audiovisual",
+      "concept": "recursos_audiovisuales_distinguen_recuerdo_de_presente",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo quiere que el público note que una escena recuerda un momento pasado. ¿Qué decisión ayuda sin añadir una explicación extensa?",
+      "options": [
+        "Ocultar todos los sonidos",
+        "Usar señales visuales y sonoras coherentes con el recuerdo",
+        "Mantener idénticos el color y el sonido sin transición",
+        "Cambiar el título de la película"
+      ],
+      "correctAnswer": "Usar señales visuales y sonoras coherentes con el recuerdo",
+      "explanation": "Una transición visual o sonora coherente puede distinguir el recuerdo del presente y orientar al público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-047",
+      "number": 47,
+      "topic": "Accesibilidad cultural",
+      "concept": "recursos_multiformato_amplian_acceso_a_exposicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un museo presenta una exposición con textos pequeños y sin alternativas auditivas. ¿Qué mejora amplía mejor el acceso?",
+      "options": [
+        "Reducir el número de visitantes",
+        "Quitar las descripciones",
+        "Incorporar letra legible y recursos accesibles variados",
+        "Iluminar menos todas las salas"
+      ],
+      "correctAnswer": "Incorporar letra legible y recursos accesibles variados",
+      "explanation": "Combinar textos legibles con opciones como audio, alto contraste o formatos accesibles facilita distintas formas de participación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-048",
+      "number": 48,
+      "topic": "Diseño de afiche",
+      "concept": "afiche_debe_destacar_datos_esenciales",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un afiche para una actividad escolar se ve atractivo, pero no indica hora ni lugar. ¿Qué ajuste es más necesario?",
+      "options": [
+        "Añadir más ilustraciones decorativas",
+        "Aumentar el tamaño del logo solamente",
+        "Cambiar todos los colores",
+        "Hacer visibles los datos esenciales del evento"
+      ],
+      "correctAnswer": "Hacer visibles los datos esenciales del evento",
+      "explanation": "La información práctica debe destacarse para que las personas sepan cuándo y dónde participar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-049",
+      "number": 49,
+      "topic": "Verdadero o falso · Uso de imágenes",
+      "concept": "imagen_encontrada_en_web_no_implica_uso_libre",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Encontrar una imagen en un buscador significa que se puede usar libremente en cualquier proyecto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Que una imagen sea fácil de encontrar no elimina las condiciones de autoría, licencia o permiso de uso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Lectura crítica",
+      "concept": "texto_fuera_de_contexto_puede_distorsionar_fotografia",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Una fotografía puede ser auténtica y, aun así, inducir a error si se presenta con un texto que cambia su contexto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La imagen puede ser real, pero un pie de foto engañoso altera la interpretación de lo que muestra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-051",
+      "number": 51,
+      "topic": "Grabado",
+      "concept": "matriz_de_grabado_transfiere_imagenes",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En el grabado, ¿qué permite una matriz?",
+      "options": [
+        "Transferir una imagen a varias impresiones",
+        "Reproducir una melodía",
+        "Medir el volumen de una escultura",
+        "Organizar el orden de una obra teatral"
+      ],
+      "correctAnswer": "Transferir una imagen a varias impresiones",
+      "explanation": "La matriz contiene el diseño que puede entintarse y transferirse a una o varias superficies.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-052",
+      "number": 52,
+      "topic": "Arquitectura",
+      "concept": "escalera_conecta_niveles_de_edificio",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento de un edificio permite el paso de personas entre niveles?",
+      "options": [
+        "Cornisa",
+        "Escalera",
+        "Vitrina",
+        "Mosaico"
+      ],
+      "correctAnswer": "Escalera",
+      "explanation": "La escalera conecta distintos niveles y forma parte de la circulación del edificio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-053",
+      "number": 53,
+      "topic": "Danza",
+      "concept": "coreografo_organiza_movimientos_de_danza",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibe la persona que crea o organiza los movimientos de una danza?",
+      "options": [
+        "Curador",
+        "Escenógrafo",
+        "Coreógrafo",
+        "Editor"
+      ],
+      "correctAnswer": "Coreógrafo",
+      "explanation": "El coreógrafo organiza movimientos, secuencias y relaciones espaciales para una danza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-054",
+      "number": 54,
+      "topic": "Apreciación artística",
+      "concept": "ficha_de_obra_presenta_datos_de_identificacion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué información ofrece principalmente una ficha de una obra en una exposición?",
+      "options": [
+        "La contraseña del museo",
+        "La opinión de todos los visitantes",
+        "El precio de cada entrada",
+        "Datos como autoría, título y técnica"
+      ],
+      "correctAnswer": "Datos como autoría, título y técnica",
+      "explanation": "La ficha presenta información básica que ayuda a identificar y contextualizar una obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-055",
+      "number": 55,
+      "topic": "Patrimonio cultural",
+      "concept": "transmision_respetuosa_conserva_tradicion_oral",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué práctica ayuda a conservar una tradición oral?",
+      "options": [
+        "Registrar relatos con permiso y transmitirlos",
+        "Cambiar sus relatos por anuncios",
+        "Impedir que nuevas generaciones los aprendan",
+        "Guardar en secreto todas sus versiones"
+      ],
+      "correctAnswer": "Registrar relatos con permiso y transmitirlos",
+      "explanation": "La transmisión y el registro respetuoso ayudan a que los relatos sigan compartiéndose.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-056",
+      "number": 56,
+      "topic": "Color y luz",
+      "concept": "mezcla_aditiva_rojo_y_azul_produce_magenta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué sucede al superponer luz roja y azul en una pantalla?",
+      "options": [
+        "Se obtiene luz verde",
+        "Se produce luz magenta",
+        "La luz se convierte en sombra",
+        "Se obtiene luz amarilla"
+      ],
+      "correctAnswer": "Se produce luz magenta",
+      "explanation": "En la mezcla aditiva de luz, rojo y azul producen magenta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-057",
+      "number": 57,
+      "topic": "Cine",
+      "concept": "editor_selecciona_y_ordena_tomas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarea realiza principalmente quien edita una película?",
+      "options": [
+        "Diseña los planos de un edificio",
+        "Compone todos los diálogos",
+        "Selecciona y ordena tomas",
+        "Pinta cada fotograma a mano"
+      ],
+      "correctAnswer": "Selecciona y ordena tomas",
+      "explanation": "La edición selecciona y organiza las tomas para construir la continuidad y el ritmo de la película.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Expresión visual",
+      "concept": "textura_visual_representa_cualidad_tactil",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "La textura visual puede hacer que una superficie parezca áspera aunque se vea en una pantalla lisa.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Líneas, sombras y patrones pueden representar visualmente una textura sin que la superficie se pueda tocar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-059",
+      "number": 59,
+      "topic": "Arquitectura",
+      "concept": "condiciones_climaticas_influyen_en_diseno_arquitectonico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un edificio tiene ventanas pequeñas y muros gruesos en una zona cálida y soleada. ¿Qué factor pudo influir en ese diseño?",
+      "options": [
+        "La letra de una canción",
+        "El género de una pintura",
+        "El orden de una coreografía",
+        "El clima y las condiciones del lugar"
+      ],
+      "correctAnswer": "El clima y las condiciones del lugar",
+      "explanation": "El clima y el entorno pueden orientar decisiones de forma, materiales y ventilación en la arquitectura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-060",
+      "number": 60,
+      "topic": "Arte colaborativo",
+      "concept": "pauta_compartida_coordina_obra_colectiva",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una obra colectiva, cada participante pinta una sección con colores acordados por el grupo. ¿Qué hace posible la unidad del conjunto?",
+      "options": [
+        "Una pauta visual compartida",
+        "Que una sola persona firme todas las secciones",
+        "Eliminar las diferencias entre participantes",
+        "Pintar todas las partes en lugares distintos"
+      ],
+      "correctAnswer": "Una pauta visual compartida",
+      "explanation": "Acordar criterios visuales permite coordinar aportes individuales dentro de una composición colectiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-061",
+      "number": 61,
+      "topic": "Música y cultura",
+      "concept": "funcion_de_tambor_se_reconoce_por_papel_musical",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad usa tambores distintos en una celebración. ¿Qué comparación permite reconocer mejor sus funciones?",
+      "options": [
+        "El color de sus estuches",
+        "Su ritmo y papel dentro del conjunto",
+        "El precio en una tienda",
+        "El orden alfabético de sus nombres"
+      ],
+      "correctAnswer": "Su ritmo y papel dentro del conjunto",
+      "explanation": "El patrón rítmico y la función musical permiten distinguir cómo participa cada tambor.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-062",
+      "number": 62,
+      "topic": "Diseño editorial",
+      "concept": "secuencia_editorial_crea_ritmo_de_lectura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un libro alterna páginas con imágenes grandes y páginas con texto breve. ¿Qué puede aportar esa organización?",
+      "options": [
+        "Una medida del peso del libro",
+        "Una lista de los materiales de impresión",
+        "Ritmo y énfasis en la lectura",
+        "Una garantía sobre su precio"
+      ],
+      "correctAnswer": "Ritmo y énfasis en la lectura",
+      "explanation": "La secuencia de páginas regula pausas, atención y ritmo durante la lectura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-063",
+      "number": 63,
+      "topic": "Verdadero o falso · Patrimonio",
+      "concept": "continuidad_cultural_admite_adaptaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una tradición cultural solo puede conservarse si se practica exactamente de la misma manera en cada generación.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las comunidades pueden adaptar sus prácticas y seguir transmitiendo su significado y vínculos colectivos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-064",
+      "number": 64,
+      "topic": "Arte y materiales",
+      "concept": "temperatura_puede_deformar_escultura_de_cera",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura hecha con cera se expone en una sala muy caliente. ¿Qué característica del material debe considerar el museo?",
+      "options": [
+        "Cambia su peso al escuchar música",
+        "Se vuelve invisible en espacios amplios",
+        "Cambia de idioma con el tiempo",
+        "Puede ablandarse o deformarse con el calor"
+      ],
+      "correctAnswer": "Puede ablandarse o deformarse con el calor",
+      "explanation": "La cera puede ablandarse por el calor, por lo que la temperatura afecta su conservación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-065",
+      "number": 65,
+      "topic": "Patrimonio colombiano",
+      "concept": "significado_comunitario_documenta_practica_cultural",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una comunidad del Caribe colombiano prepara una celebración con música, danza y vestuario propio. ¿Qué evidencia permite estudiarla como práctica cultural?",
+      "options": [
+        "Cómo se transmite y qué significado tiene para la comunidad",
+        "La cantidad de fotografías publicadas",
+        "El costo de cada traje",
+        "La duración de una canción aislada"
+      ],
+      "correctAnswer": "Cómo se transmite y qué significado tiene para la comunidad",
+      "explanation": "La transmisión y los significados compartidos ayudan a comprender una práctica cultural en su contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-066",
+      "number": 66,
+      "topic": "Perspectiva",
+      "concept": "perspectiva_lineal_crea_profundidad_por_convergencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un dibujo de una calle, los bordes de los edificios parecen acercarse a un mismo punto lejano. ¿Qué recurso crea esa sensación?",
+      "options": [
+        "Simetría radial",
+        "Perspectiva lineal",
+        "Repetición sonora",
+        "Textura táctil"
+      ],
+      "correctAnswer": "Perspectiva lineal",
+      "explanation": "La perspectiva lineal representa profundidad mediante líneas que convergen hacia puntos de fuga.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-067",
+      "number": 67,
+      "topic": "Artes escénicas",
+      "concept": "cambio_de_luz_modifica_ambiente_escenico",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una directora cambia la iluminación de cálida a fría durante un monólogo. ¿Qué puede sugerir el cambio?",
+      "options": [
+        "La cantidad de actores",
+        "El costo del escenario",
+        "Una transformación en el tono o ambiente de la escena",
+        "El número de palabras del texto"
+      ],
+      "correctAnswer": "Una transformación en el tono o ambiente de la escena",
+      "explanation": "La luz puede modificar el ambiente y apoyar cambios emocionales o narrativos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-068",
+      "number": 68,
+      "topic": "Verdadero o falso · Cultura digital",
+      "concept": "facilidad_de_copia_no_elimina_autoria_digital",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una obra digital deja de tener autoría porque puede copiarse fácilmente.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La facilidad de copia no elimina la autoría ni las condiciones de uso de una obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-069",
+      "number": 69,
+      "topic": "Arte y espacio",
+      "concept": "recorrido_del_espectador_revela_vistas_de_escultura",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura alta y estrecha se observa desde distintos lados. ¿Qué experiencia ofrece frente a una imagen plana?",
+      "options": [
+        "Solo una lectura verbal",
+        "Un sonido más intenso",
+        "Una secuencia fija de fotogramas",
+        "Cambios de forma aparente al desplazarse alrededor"
+      ],
+      "correctAnswer": "Cambios de forma aparente al desplazarse alrededor",
+      "explanation": "Al rodear una escultura, el punto de vista cambia y revela distintas relaciones entre sus formas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-070",
+      "number": 70,
+      "topic": "Crítica de arte",
+      "concept": "critica_argumentada_conecta_evidencia_e_interpretacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una reseña describe los materiales de una obra y explica cómo contribuyen a su mensaje. ¿Qué la hace más útil?",
+      "options": [
+        "Relaciona observaciones con una interpretación",
+        "Afirma que toda obra debe gustar",
+        "Sustituye el análisis por una calificación",
+        "Enumera detalles sin explicar su relevancia"
+      ],
+      "correctAnswer": "Relaciona observaciones con una interpretación",
+      "explanation": "Una crítica argumentada conecta evidencias observables con la interpretación que propone.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-071",
+      "number": 71,
+      "topic": "Diseño inclusivo",
+      "concept": "contraste_y_tipografia_apoyan_accesibilidad_visual",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un cartel anuncia una actividad para estudiantes con baja visión. ¿Qué combinación mejora su lectura?",
+      "options": [
+        "Texto pequeño y fondos estampados",
+        "Alto contraste y tipografía legible",
+        "Colores muy similares",
+        "Información solo codificada por color"
+      ],
+      "correctAnswer": "Alto contraste y tipografía legible",
+      "explanation": "El contraste y una tipografía legible ayudan a distinguir la información; no conviene depender solo del color.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-072",
+      "number": 72,
+      "topic": "Producción teatral",
+      "concept": "coordinacion_de_turnos_y_posiciones_aclara_dialogo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un ensayo, el público no distingue quién habla porque varios actores se mueven y hablan al tiempo. ¿Qué ajuste ayuda más?",
+      "options": [
+        "Aumentar los objetos decorativos",
+        "Apagar todas las luces",
+        "Coordinar turnos, posiciones y proyección de voz",
+        "Hacer más rápido todo el diálogo"
+      ],
+      "correctAnswer": "Coordinar turnos, posiciones y proyección de voz",
+      "explanation": "Organizar turnos y posiciones permite reconocer a quien habla y seguir la acción escénica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-073",
+      "number": 73,
+      "topic": "Verdadero o falso · Apropiación cultural",
+      "concept": "perspectiva_de_comunidad_aporta_contexto_cultural",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Para interpretar una expresión cultural basta con observar su vestuario; conocer la perspectiva de la comunidad no aporta información importante.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El contexto y la voz de quienes practican una expresión ayudan a evitar interpretaciones incompletas o descontextualizadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-074",
+      "number": 74,
+      "topic": "Conservación preventiva",
+      "concept": "replica_permite_uso_escenico_sin_danar_original",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escuela presta una máscara antigua para una obra y alguien propone pegarle adornos directamente. ¿Cuál es la mejor decisión?",
+      "options": [
+        "Pintarla para que combine con el vestuario",
+        "Usarla sin revisar su estado",
+        "Añadir adhesivo removible sobre la superficie original",
+        "Guardar sus datos y hacerle una copia para la obra"
+      ],
+      "correctAnswer": "Guardar sus datos y hacerle una copia para la obra",
+      "explanation": "Una copia permite usar la pieza sin intervenir ni poner en riesgo el objeto original.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-075",
+      "number": 75,
+      "topic": "Verdadero o falso · Interpretación audiovisual",
+      "concept": "orden_de_escenas_crea_expectativa_narrativa",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Mostrar primero una casa vacía y después a una persona entrando puede crear expectativa sobre la relación entre ambos momentos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Presentar información en etapas puede invitar al público a anticipar conexiones entre escenas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-076",
+      "number": 76,
+      "topic": "Pintura mural",
+      "concept": "fresco_aplica_pigmento_sobre_yeso_humedo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica aplica pigmentos sobre una capa de yeso todavía húmeda?",
+      "options": [
+        "Fresco",
+        "Mosaico",
+        "Collage",
+        "Grabado"
+      ],
+      "correctAnswer": "Fresco",
+      "explanation": "En el fresco, los pigmentos se aplican sobre el enlucido húmedo y quedan integrados al secarse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-077",
+      "number": 77,
+      "topic": "Literatura y arte",
+      "concept": "autoria_identifica_creador_de_obra",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento indica quién realizó una obra?",
+      "options": [
+        "El marco",
+        "La autoría",
+        "La escala",
+        "El soporte"
+      ],
+      "correctAnswer": "La autoría",
+      "explanation": "La autoría identifica a la persona o colectivo responsable de crear la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-078",
+      "number": 78,
+      "topic": "Música",
+      "concept": "conjunto_vocal_interpreta_musica_con_voces",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es un conjunto vocal?",
+      "options": [
+        "Una colección de pinturas",
+        "Una serie de escenas teatrales",
+        "Un grupo que interpreta con la voz",
+        "Un plano de un edificio"
+      ],
+      "correctAnswer": "Un grupo que interpreta con la voz",
+      "explanation": "Un conjunto vocal reúne intérpretes que producen música principalmente mediante la voz.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-079",
+      "number": 79,
+      "topic": "Artes escénicas",
+      "concept": "senal_escenica_anuncia_inicio_de_funcion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué elemento informa al público sobre el inicio de una función en vivo?",
+      "options": [
+        "La ficha de conservación",
+        "La matriz de grabado",
+        "El pie de foto",
+        "La señal de inicio o tercera llamada"
+      ],
+      "correctAnswer": "La señal de inicio o tercera llamada",
+      "explanation": "Una señal previa organiza la atención del público y anuncia que la representación va a comenzar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-080",
+      "number": 80,
+      "topic": "Fotografía",
+      "concept": "obturador_controla_tiempo_de_exposicion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué permite registrar principalmente el obturador de una cámara?",
+      "options": [
+        "El tiempo durante el que entra luz",
+        "El nombre del fotógrafo",
+        "La edad de la escena",
+        "El material del fondo"
+      ],
+      "correctAnswer": "El tiempo durante el que entra luz",
+      "explanation": "El obturador controla cuánto tiempo llega luz al sensor o a la película.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-081",
+      "number": 81,
+      "topic": "Patrimonio",
+      "concept": "archivo_preserva_documentos_para_consulta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué lugar suele guardar documentos y fotografías para consulta histórica?",
+      "options": [
+        "Un teatro",
+        "Un archivo",
+        "Una cafetería",
+        "Un taller de danza"
+      ],
+      "correctAnswer": "Un archivo",
+      "explanation": "Los archivos organizan y preservan documentos que pueden servir como fuentes para conocer el pasado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-082",
+      "number": 82,
+      "topic": "Artes plásticas",
+      "concept": "pincel_aplica_pintura_sobre_superficie",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué herramienta se utiliza para aplicar pintura sobre un lienzo?",
+      "options": [
+        "Compás",
+        "Cincel",
+        "Pincel",
+        "Diapasón"
+      ],
+      "correctAnswer": "Pincel",
+      "explanation": "El pincel permite extender o trazar pintura sobre una superficie.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Arte y comunidad",
+      "concept": "obra_publica_puede_activar_dialogo_sobre_memoria_local",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una obra creada en un espacio público puede invitar a conversar sobre la historia del lugar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las obras públicas pueden activar preguntas y conversaciones sobre la memoria y el uso de un espacio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-084",
+      "number": 84,
+      "topic": "Artes visuales y ritmo",
+      "concept": "repeticion_y_espaciado_crean_movimiento_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una composición repite círculos a distancias cada vez menores. ¿Qué sensación puede sugerir?",
+      "options": [
+        "Que todos los elementos tienen la misma función",
+        "Que desapareció el contraste",
+        "Que la imagen es una grabación sonora",
+        "Ritmo visual y movimiento hacia un centro"
+      ],
+      "correctAnswer": "Ritmo visual y movimiento hacia un centro",
+      "explanation": "La repetición y la variación de distancia pueden guiar la mirada y crear movimiento visual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-085",
+      "number": 85,
+      "topic": "Curaduría",
+      "concept": "curaduria_conecta_obras_por_tema",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una exposición reúne obras sobre la migración de distintas épocas. ¿Qué aporta principalmente esa selección?",
+      "options": [
+        "Una lectura temática que relaciona las obras",
+        "Una garantía de que todos los artistas se conocieron",
+        "Una cronología exacta de cada migración",
+        "Una explicación única para cada visitante"
+      ],
+      "correctAnswer": "Una lectura temática que relaciona las obras",
+      "explanation": "La curaduría puede conectar obras mediante un tema y proponer relaciones para el público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-086",
+      "number": 86,
+      "topic": "Artes escénicas",
+      "concept": "repeticion_y_sonido_intensifican_tension_escenica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una escena, la actriz repite un movimiento cada vez más rápido mientras el sonido se intensifica. ¿Qué efecto pueden construir juntos?",
+      "options": [
+        "Una ficha de museo",
+        "Aumento de tensión o urgencia",
+        "Un cambio del idioma hablado",
+        "La medida del escenario"
+      ],
+      "correctAnswer": "Aumento de tensión o urgencia",
+      "explanation": "El ritmo corporal y el sonido pueden reforzarse para aumentar la tensión percibida.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-087",
+      "number": 87,
+      "topic": "Arte y tecnología",
+      "concept": "sensor_detecta_estimulo_y_activa_respuesta_artistica",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una instalación responde con luces cuando el público se acerca. ¿Qué papel tiene el sensor?",
+      "options": [
+        "Conservar el color original",
+        "Definir el precio de la obra",
+        "Detectar una condición y activar una respuesta",
+        "Sustituir todas las decisiones del artista"
+      ],
+      "correctAnswer": "Detectar una condición y activar una respuesta",
+      "explanation": "El sensor detecta cambios, como la proximidad, y puede activar una acción programada en la instalación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-088",
+      "number": 88,
+      "topic": "Verdadero o falso · Diseño",
+      "concept": "exceso_de_estimulos_puede_reducir_claridad",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Usar muchos colores llamativos en un afiche siempre mejora la claridad del mensaje.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Demasiados estímulos pueden competir entre sí; el diseño debe ordenar la atención según el propósito.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-089",
+      "number": 89,
+      "topic": "Patrimonio y memoria",
+      "concept": "mapa_comunitario_registra_memoria_y_nombres_locales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un barrio conserva los nombres tradicionales de sus calles en un mapa comunitario. ¿Qué valor puede tener esa acción?",
+      "options": [
+        "Reemplazar todos los mapas oficiales",
+        "Evitar cualquier cambio urbano",
+        "Confirmar que los nombres son idénticos en todo el país",
+        "Registrar memoria y referencias locales"
+      ],
+      "correctAnswer": "Registrar memoria y referencias locales",
+      "explanation": "Los nombres y relatos asociados a los lugares pueden conservar conocimientos y memorias de la comunidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-090",
+      "number": 90,
+      "topic": "Cine y sonido",
+      "concept": "sonido_fuera_de_campo_amplia_espacio_narrativo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una película se escucha el sonido de lluvia aunque no aparece en pantalla. ¿Cómo se clasifica respecto a la imagen?",
+      "options": [
+        "Sonido fuera de campo",
+        "Perspectiva lineal",
+        "Plano general",
+        "Montaje de continuidad"
+      ],
+      "correctAnswer": "Sonido fuera de campo",
+      "explanation": "El sonido fuera de campo se escucha aunque su fuente no esté visible dentro del encuadre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-091",
+      "number": 91,
+      "topic": "Arte colombiano",
+      "concept": "diversidad_de_voces_ev",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una exposición incluye obras de artistas de distintas regiones de Colombia. ¿Qué decisión puede evitar que la muestra presente una sola experiencia como si fuera universal?",
+      "options": [
+        "Usar una única etiqueta para todas las regiones",
+        "Dar espacio a contextos y voces diversas",
+        "Ordenar las obras solo por tamaño",
+        "Ocultar los nombres de los lugares"
+      ],
+      "correctAnswer": "Dar espacio a contextos y voces diversas",
+      "explanation": "Incluir contextos y voces diversas ayuda a reconocer diferencias regionales sin reducirlas a una sola perspectiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-092",
+      "number": 92,
+      "topic": "Diseño y señalización",
+      "concept": "codigos_visuales_diferencian_instrucciones_prioritarias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un pasillo, todas las señales usan el mismo color y forma, incluso las de salida y las decorativas. ¿Qué problema puede surgir?",
+      "options": [
+        "El pasillo se vuelve más corto",
+        "Las señales cambian de autoría",
+        "Las instrucciones importantes pierden distinción",
+        "La arquitectura deja de tener escala"
+      ],
+      "correctAnswer": "Las instrucciones importantes pierden distinción",
+      "explanation": "Si no hay diferencias visuales, puede costar identificar rápidamente las señales prioritarias.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-093",
+      "number": 93,
+      "topic": "Verdadero o falso · Fotografía",
+      "concept": "angulo_fotografico_cambia_informacion_visible",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una fotografía tomada desde otro ángulo puede mostrar información distinta de la misma escena.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El punto de vista cambia qué elementos quedan visibles y cómo se relacionan dentro del encuadre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-094",
+      "number": 94,
+      "topic": "Arte y espacio público",
+      "concept": "intervencion_publica_debe_preservar_accesibilidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura se instala en una plaza estrecha donde bloquea el paso de sillas de ruedas. ¿Qué debería considerar el equipo?",
+      "options": [
+        "Únicamente el color de la escultura",
+        "La cantidad de fotografías que se publicarán",
+        "La firma que tendrá la placa",
+        "El acceso y el tránsito de las personas"
+      ],
+      "correctAnswer": "El acceso y el tránsito de las personas",
+      "explanation": "El diseño de una intervención pública debe considerar cómo se usa el espacio y quién puede recorrerlo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-095",
+      "number": 95,
+      "topic": "Artes visuales",
+      "concept": "marcas_de_pincel_hacen_visible_proceso",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista deja visibles las marcas de pincel en vez de cubrirlas. ¿Qué puede aportar esa decisión?",
+      "options": [
+        "Evidenciar el gesto y el proceso de creación",
+        "Convertir la pintura en una fotografía",
+        "Determinar la edad exacta del artista",
+        "Borrar toda relación entre material y forma"
+      ],
+      "correctAnswer": "Evidenciar el gesto y el proceso de creación",
+      "explanation": "Las marcas pueden hacer visible cómo se aplicó la pintura y aportar expresividad a la superficie.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-096",
+      "number": 96,
+      "topic": "Diseño para públicos",
+      "concept": "mediacion_clara_orienta_sin_imponer_lectura",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una muestra incluye visitantes que no conocen términos técnicos de arte. ¿Qué apoyo puede facilitar la comprensión sin imponer una interpretación?",
+      "options": [
+        "Retirar las obras más complejas",
+        "Ofrecer explicaciones breves y preguntas abiertas",
+        "Dar una única respuesta correcta para cada obra",
+        "Evitar cualquier información contextual"
+      ],
+      "correctAnswer": "Ofrecer explicaciones breves y preguntas abiertas",
+      "explanation": "Un lenguaje claro y preguntas abiertas orientan la observación, pero dejan espacio para distintas lecturas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-097",
+      "number": 97,
+      "topic": "Proyección digital",
+      "concept": "probar_proyeccion_en_condiciones_de_exhibicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra se ve clara en el portátil, pero demasiado oscura al proyectarla en una sala. ¿Qué conviene probar antes de inaugurar?",
+      "options": [
+        "Cambiar el nombre del archivo",
+        "Añadir una descripción más larga",
+        "Probar la imagen en el proyector y ajustar su visualización",
+        "Aumentar la cantidad de marcos en pantalla"
+      ],
+      "correctAnswer": "Probar la imagen en el proyector y ajustar su visualización",
+      "explanation": "Revisar la obra en el equipo y la iluminación reales permite ajustar su visualización para el público.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-098",
+      "number": 98,
+      "topic": "Verdadero o falso · Accesibilidad cultural",
+      "concept": "accesibilidad_requiere_apoyos_complementarios",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una exposición ofrece audio descriptivo, ya no necesita considerar otros apoyos de accesibilidad.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las necesidades varían; conviene combinar apoyos y permitir distintas maneras de acceder a la muestra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-099",
+      "number": 99,
+      "topic": "Diseño colaborativo",
+      "concept": "consulta_comunitaria_informa_diseno_de_mural",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un grupo diseña un mural para una comunidad, pero sus integrantes no han consultado a quienes usarán el espacio. ¿Qué paso mejoraría el proceso?",
+      "options": [
+        "Elegir el diseño más rápido",
+        "Pintar primero y preguntar después",
+        "Evitar explicar el proyecto",
+        "Conversar con la comunidad y recoger sus perspectivas"
+      ],
+      "correctAnswer": "Conversar con la comunidad y recoger sus perspectivas",
+      "explanation": "Consultar a las personas vinculadas al lugar ayuda a que el diseño considere sus necesidades y significados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-100",
+      "number": 100,
+      "topic": "Verdadero o falso · Diseño sonoro",
+      "concept": "aumento_de_volumen_sugiere_fuente_sonora_cercana",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "En una escena, aumentar gradualmente el volumen de unos pasos puede sugerir que el personaje se acerca.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El volumen y otros cambios sonoros pueden dar pistas sobre la distancia de una fuente fuera de campo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-101",
+      "number": 101,
+      "topic": "Artes gráficas",
+      "concept": "serigrafia_transfiere_tinta_a_traves_de_malla",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica imprime una imagen haciendo pasar tinta a través de una malla preparada?",
+      "options": [
+        "Serigrafía",
+        "Mosaico",
+        "Modelado",
+        "Acuarela"
+      ],
+      "correctAnswer": "Serigrafía",
+      "explanation": "La serigrafía transfiere tinta a través de zonas abiertas de una pantalla o malla.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-102",
+      "number": 102,
+      "topic": "Composición",
+      "concept": "espacio_negativo_rodea_y_separa_formas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué nombre recibe la zona alrededor y entre las formas de una composición?",
+      "options": [
+        "Contrapunto",
+        "Espacio negativo",
+        "Perspectiva sonora",
+        "Textura táctil"
+      ],
+      "correctAnswer": "Espacio negativo",
+      "explanation": "El espacio negativo es el área vacía que rodea o separa los elementos principales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-103",
+      "number": 103,
+      "topic": "Museos",
+      "concept": "ficha_de_registro_identifica_pieza_de_coleccion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué documento puede acompañar una pieza y registrar su número de inventario?",
+      "options": [
+        "Programa de concierto",
+        "Guion de cine",
+        "Ficha de registro",
+        "Partitura"
+      ],
+      "correctAnswer": "Ficha de registro",
+      "explanation": "La ficha de registro identifica una pieza dentro de la colección y permite organizar su información.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-104",
+      "number": 104,
+      "topic": "Danza",
+      "concept": "zapateado_produce_ritmo_con_pies",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué parte del cuerpo participa principalmente en un zapateado?",
+      "options": [
+        "Codo",
+        "Hombro",
+        "Muñeca",
+        "Pies"
+      ],
+      "correctAnswer": "Pies",
+      "explanation": "En el zapateado, los golpes rítmicos se producen principalmente con los pies.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-105",
+      "number": 105,
+      "topic": "Diseño gráfico",
+      "concept": "tipografia_disena_forma_visual_de_letras",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es una tipografía?",
+      "options": [
+        "Un diseño de letras",
+        "Una técnica para tallar madera",
+        "Una secuencia de pasos de danza",
+        "Un tipo de escenario"
+      ],
+      "correctAnswer": "Un diseño de letras",
+      "explanation": "La tipografía comprende el diseño y la organización visual de letras y caracteres.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-106",
+      "number": 106,
+      "topic": "Escultura",
+      "concept": "talla_forma_escultura_al_retirar_material",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica consiste en retirar material de una piedra o bloque para formar una figura?",
+      "options": [
+        "Ensamblaje",
+        "Talla",
+        "Estampación",
+        "Tejido"
+      ],
+      "correctAnswer": "Talla",
+      "explanation": "En la talla se elimina material para descubrir o construir una forma escultórica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-107",
+      "number": 107,
+      "topic": "Vestuario escénico",
+      "concept": "vestuario_comunica_rasgos_de_personaje",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función puede cumplir el vestuario en una obra de teatro?",
+      "options": [
+        "Medir la duración de la función",
+        "Reemplazar el texto dramático",
+        "Comunicar rasgos de personajes o época",
+        "Registrar la acústica de la sala"
+      ],
+      "correctAnswer": "Comunicar rasgos de personajes o época",
+      "explanation": "El vestuario puede dar pistas sobre identidad, oficio, época o circunstancias de un personaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-108",
+      "number": 108,
+      "topic": "Verdadero o falso · Arte público",
+      "concept": "mural_publico_se_integra_a_experiencia_del_barrio",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un mural puede formar parte de la experiencia cotidiana de quienes transitan por un barrio.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Al estar en un espacio compartido, el mural puede ser visto e interpretado en la vida diaria de la comunidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-109",
+      "number": 109,
+      "topic": "Perspectiva visual",
+      "concept": "perspectiva_atmosferica_reduce_detalle_a_distancia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una imagen, las montañas lejanas aparecen más claras y menos detalladas que los objetos cercanos. ¿Qué recurso puede explicar ese efecto?",
+      "options": [
+        "Repetición métrica",
+        "Contraste tipográfico",
+        "Simetría axial",
+        "Perspectiva atmosférica"
+      ],
+      "correctAnswer": "Perspectiva atmosférica",
+      "explanation": "La perspectiva atmosférica representa la distancia reduciendo contraste y detalle en los elementos lejanos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-110",
+      "number": 110,
+      "topic": "Apreciación de danza",
+      "concept": "velocidad_de_movimiento_modifica_ritmo_de_danza",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos bailarines realizan el mismo movimiento, pero a distinta velocidad. ¿Qué elemento cambia principalmente?",
+      "options": [
+        "El ritmo de la ejecución",
+        "El material del escenario",
+        "La autoría de la música",
+        "El tamaño del vestuario"
+      ],
+      "correctAnswer": "El ritmo de la ejecución",
+      "explanation": "La velocidad de los movimientos modifica el ritmo con que se desarrolla la danza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-111",
+      "number": 111,
+      "topic": "Cultura visual",
+      "concept": "tamano_y_posicion_central_dan_protagonismo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un anuncio usa una figura mucho más grande que los demás elementos y la coloca al centro. ¿Qué efecto busca probablemente?",
+      "options": [
+        "Representar el sonido del producto",
+        "Darle mayor protagonismo visual",
+        "Describir la textura real del objeto",
+        "Ocultar el formato del anuncio"
+      ],
+      "correctAnswer": "Darle mayor protagonismo visual",
+      "explanation": "El tamaño y la ubicación central pueden dirigir la atención hacia una figura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-112",
+      "number": 112,
+      "topic": "Fotografía",
+      "concept": "exposicion_larga_registra_estela_de_movimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al fotografiar agua en movimiento con una exposición larga, ¿qué efecto puede aparecer?",
+      "options": [
+        "El agua se vuelve completamente sólida",
+        "Desaparece la fuente de luz",
+        "El movimiento deja un rastro difuminado",
+        "Cambia la autoría de la imagen"
+      ],
+      "correctAnswer": "El movimiento deja un rastro difuminado",
+      "explanation": "Una exposición prolongada registra el movimiento durante más tiempo y puede producir un efecto de estela.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-113",
+      "number": 113,
+      "topic": "Verdadero o falso · Edición de imágenes",
+      "concept": "filtro_digital_modifica_atmosfera_de_fotografia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Aplicar un filtro digital puede cambiar la atmósfera y la interpretación de una fotografía.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El color, el contraste y otros ajustes influyen en cómo se percibe una imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-114",
+      "number": 114,
+      "topic": "Creación colectiva",
+      "concept": "escucha_activa_sostiene_improvisacion_teatral",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una improvisación teatral, ¿qué respuesta ayuda a que la escena continúe?",
+      "options": [
+        "Ignorar lo que propone la otra persona",
+        "Detener toda acción al surgir una idea",
+        "Repetir siempre la misma frase",
+        "Escuchar y construir sobre la propuesta del compañero"
+      ],
+      "correctAnswer": "Escuchar y construir sobre la propuesta del compañero",
+      "explanation": "Atender las propuestas del otro permite sostener la interacción y desarrollar la escena conjuntamente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-115",
+      "number": 115,
+      "topic": "Arte y ambiente",
+      "concept": "ambiente_de_exhibicion_afecta_durabilidad_de_materiales",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una instalación hecha con materiales recuperados se deteriora al estar a la intemperie. ¿Qué aspecto debe valorarse antes de exhibirla?",
+      "options": [
+        "La durabilidad y el ambiente de exposición",
+        "El número de personas que conocen al artista",
+        "La cantidad de colores del catálogo",
+        "El orden alfabético de los materiales"
+      ],
+      "correctAnswer": "La durabilidad y el ambiente de exposición",
+      "explanation": "La exposición debe considerar cómo el clima y el tiempo afectan los materiales de la instalación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-116",
+      "number": 116,
+      "topic": "Memoria cultural",
+      "concept": "contexto_de_interpretacion_enriquece_documentacion_de_cancion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al documentar una canción tradicional, ¿por qué conviene registrar quién la interpreta y en qué ocasión se canta?",
+      "options": [
+        "Para fijar una sola forma de cantarla",
+        "Para conservar información sobre su contexto de uso",
+        "Para determinar qué versión es la más comercial",
+        "Para reemplazar la participación comunitaria"
+      ],
+      "correctAnswer": "Para conservar información sobre su contexto de uso",
+      "explanation": "El contexto de interpretación ayuda a comprender cómo se usa y qué significado tiene la canción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-117",
+      "number": 117,
+      "topic": "Cine y narrativa",
+      "concept": "silencio_posterior_a_evento_da_peso_narrativo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una película deja unos segundos de silencio después de una noticia importante. ¿Qué puede lograr esa pausa?",
+      "options": [
+        "Cambiar el tamaño de la pantalla",
+        "Asegurar que nadie interprete la escena",
+        "Dar espacio para que el público procese el momento",
+        "Indicar el costo de producción"
+      ],
+      "correctAnswer": "Dar espacio para que el público procese el momento",
+      "explanation": "Una pausa sonora puede dar peso a un acontecimiento y permitir que el público perciba la reacción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-118",
+      "number": 118,
+      "topic": "Verdadero o falso · Mediación cultural",
+      "concept": "texto_de_sala_orienta_sin_agotar_interpretacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un texto de sala puede orientar la observación de una obra, aunque no describa todo lo que cada visitante puede interpretar.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El texto aporta contexto y pistas, pero la experiencia de observación puede producir lecturas diversas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-119",
+      "number": 119,
+      "topic": "Diseño de exposiciones",
+      "concept": "recorrido_despejado_facilita_circulacion_en_sala",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una sala tiene un pasillo estrecho entre dos vitrinas. ¿Qué decisión facilita recorrerla?",
+      "options": [
+        "Añadir más objetos al pasillo",
+        "Quitar toda iluminación",
+        "Esconder el recorrido recomendado",
+        "Mantener un paso libre y señalizado"
+      ],
+      "correctAnswer": "Mantener un paso libre y señalizado",
+      "explanation": "Un recorrido despejado y comprensible mejora la circulación y el acceso a la exposición.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-120",
+      "number": 120,
+      "topic": "Historieta",
+      "concept": "signos_graficos_representan_pensamiento_en_historieta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una historieta, una nube con signos de interrogación sobre un personaje suele comunicar:",
+      "options": [
+        "Que está pensando o tiene una duda",
+        "Que el personaje cambió de vestuario",
+        "Que la escena ocurre bajo el agua",
+        "Que inició una canción"
+      ],
+      "correctAnswer": "Que está pensando o tiene una duda",
+      "explanation": "Los signos y convenciones gráficas permiten representar pensamientos o preguntas sin escribir una explicación extensa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-121",
+      "number": 121,
+      "topic": "Diseño de espacio",
+      "concept": "exhibicion_escolar_equilibra_visibilidad_y_circulacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una biblioteca escolar quiere mostrar trabajos de estudiantes, pero el pasillo tiene poca luz y mucho tránsito. ¿Qué propuesta equilibra mejor exhibición y uso del lugar?",
+      "options": [
+        "Cubrir las salidas con paneles",
+        "Elegir un muro visible sin bloquear el paso y mejorar la iluminación",
+        "Colgar las obras detrás de puertas",
+        "Poner todas las piezas en el suelo"
+      ],
+      "correctAnswer": "Elegir un muro visible sin bloquear el paso y mejorar la iluminación",
+      "explanation": "Un lugar visible, bien iluminado y fuera del flujo principal permite apreciar las obras y circular con seguridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-122",
+      "number": 122,
+      "topic": "Arte y contexto",
+      "concept": "contexto_ambiental_apoya_lectura_de_paisaje_artistico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una obra representa un río conocido por la comunidad, pero no muestra agua limpia ni paisajes idealizados. ¿Qué enfoque ayuda a analizarla?",
+      "options": [
+        "Suponer que toda obra de paisaje debe ser decorativa",
+        "Evaluar únicamente si se parece a una fotografía",
+        "Relacionar sus decisiones visuales con el contexto del río",
+        "Ignorar el tema y contar los colores"
+      ],
+      "correctAnswer": "Relacionar sus decisiones visuales con el contexto del río",
+      "explanation": "Relacionar los elementos visuales con el contexto ambiental y comunitario puede revelar la intención de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-123",
+      "number": 123,
+      "topic": "Verdadero o falso · Diseño accesible",
+      "concept": "senal_accesible_no_depende_solo_del_color",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si una señal usa colores distintos para cada instrucción, el color por sí solo siempre basta para que todas las personas la comprendan.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Conviene añadir formas, palabras o símbolos, pues algunas personas no distinguen ciertos colores o ven la señal en otras condiciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-124",
+      "number": 124,
+      "topic": "Arte y archivo",
+      "concept": "investigar_procedencia_antes_de_atribuir_pieza",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un museo recibe una pieza cuya comunidad de origen no ha sido identificada. ¿Qué decisión inicial es más respetuosa?",
+      "options": [
+        "Publicar de inmediato una historia no confirmada",
+        "Cambiar el nombre para facilitar su venta",
+        "Guardar la pieza sin documentarla",
+        "Investigar su procedencia y consultar fuentes pertinentes"
+      ],
+      "correctAnswer": "Investigar su procedencia y consultar fuentes pertinentes",
+      "explanation": "Investigar la procedencia y consultar fuentes confiables evita atribuciones apresuradas y mejora la documentación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Creación artística",
+      "concept": "prueba_con_visitantes_detecta_problemas_de_exhibicion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Probar una maqueta de exposición con algunos visitantes puede revelar problemas de lectura o circulación antes de abrirla al público.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una prueba permite observar cómo las personas usan el espacio y ajustar el diseño con anticipación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-126",
+      "number": 126,
+      "topic": "Grabado",
+      "concept": "monotipo_produce_impresion_singular",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué técnica produce una única impresión directa que puede variar en cada intento?",
+      "options": [
+        "Monotipo",
+        "Mosaico",
+        "Fresco",
+        "Tejido"
+      ],
+      "correctAnswer": "Monotipo",
+      "explanation": "El monotipo se realiza para obtener una impresión singular, aunque algunas técnicas permiten variaciones o impresiones adicionales más débiles.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-127",
+      "number": 127,
+      "topic": "Diseño",
+      "concept": "paleta_reune_colores_de_diseno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué característica describe mejor una paleta de colores?",
+      "options": [
+        "El orden de las páginas",
+        "El conjunto de colores elegido para un diseño",
+        "La forma de una escultura",
+        "La duración de una canción"
+      ],
+      "correctAnswer": "El conjunto de colores elegido para un diseño",
+      "explanation": "La paleta reúne los colores que se seleccionan para una obra o proyecto visual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-128",
+      "number": 128,
+      "topic": "Teatro",
+      "concept": "direccion_coordina_puesta_en_escena",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarea realiza principalmente quien dirige una obra teatral?",
+      "options": [
+        "Reparar los instrumentos",
+        "Registrar el inventario del museo",
+        "Coordinar la puesta en escena",
+        "Diseñar mapas geográficos"
+      ],
+      "correctAnswer": "Coordinar la puesta en escena",
+      "explanation": "La dirección coordina elementos como actuación, ritmo, espacio y puesta en escena.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-129",
+      "number": 129,
+      "topic": "Escultura",
+      "concept": "bajorrelieve_figuras_sobresalen_poco_del_fondo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué relieve presenta figuras que sobresalen poco del fondo?",
+      "options": [
+        "Bulto redondo",
+        "Escultura cinética",
+        "Instalación sonora",
+        "Bajorrelieve"
+      ],
+      "correctAnswer": "Bajorrelieve",
+      "explanation": "En el bajorrelieve, las formas sobresalen poco de una superficie de fondo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-130",
+      "number": 130,
+      "topic": "Diseño visual",
+      "concept": "contraste_de_luminosidad_distingue_texto_y_fondo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué recurso separa con claridad un texto oscuro de un fondo claro?",
+      "options": [
+        "Contraste",
+        "Perspectiva",
+        "Ritmo",
+        "Balance"
+      ],
+      "correctAnswer": "Contraste",
+      "explanation": "El contraste de luminosidad hace que los elementos puedan distinguirse con mayor facilidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-131",
+      "number": 131,
+      "topic": "Fotografía",
+      "concept": "lente_enfoca_luz_para_formar_imagen",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué parte de una cámara permite enfocar la luz para formar una imagen?",
+      "options": [
+        "El trípode",
+        "El lente",
+        "El estuche",
+        "La correa"
+      ],
+      "correctAnswer": "El lente",
+      "explanation": "El lente dirige y enfoca la luz que llega al sensor o a la película.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-132",
+      "number": 132,
+      "topic": "Música",
+      "concept": "dinamica_indica_intensidad_sonora",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué indica la dinámica en una interpretación musical?",
+      "options": [
+        "El lugar de origen del instrumento",
+        "El número de páginas de la partitura",
+        "La intensidad del sonido",
+        "La forma del escenario"
+      ],
+      "correctAnswer": "La intensidad del sonido",
+      "explanation": "Las dinámicas indican cambios de intensidad, desde sonidos suaves hasta fuertes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-133",
+      "number": 133,
+      "topic": "Dibujo",
+      "concept": "linea_del_horizonte_corresponde_a_altura_visual",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué línea suele señalar la altura aparente de los ojos del observador en una perspectiva?",
+      "options": [
+        "Línea de corte",
+        "Eje del sonido",
+        "Margen de página",
+        "Línea del horizonte"
+      ],
+      "correctAnswer": "Línea del horizonte",
+      "explanation": "En perspectiva, la línea del horizonte corresponde a la altura del punto de vista del observador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-134",
+      "number": 134,
+      "topic": "Arte textil",
+      "concept": "telar_entrelaza_hilos_para_formar_tela",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué herramienta permite entrecruzar hilos para formar una tela?",
+      "options": [
+        "Telar",
+        "Cincel",
+        "Atril",
+        "Proyector"
+      ],
+      "correctAnswer": "Telar",
+      "explanation": "El telar mantiene los hilos organizados para entrelazarlos y producir una pieza textil.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-135",
+      "number": 135,
+      "topic": "Verdadero o falso · Cultura",
+      "concept": "celebracion_adquiere_formas_segun_comunidad",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una misma celebración puede incluir expresiones diferentes según la comunidad que la realiza.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las comunidades aportan historias, prácticas y símbolos que pueden dar formas distintas a una celebración.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-136",
+      "number": 136,
+      "topic": "Arquitectura y entorno",
+      "concept": "aleros_protegen_aberturas_de_lluvia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una casa tradicional usa aleros amplios en una zona de lluvias frecuentes. ¿Qué función práctica pueden cumplir?",
+      "options": [
+        "Cambiar el género musical del lugar",
+        "Mostrar el nombre del arquitecto",
+        "Aumentar el número de habitaciones",
+        "Proteger paredes y ventanas de la lluvia"
+      ],
+      "correctAnswer": "Proteger paredes y ventanas de la lluvia",
+      "explanation": "Los aleros pueden reducir la cantidad de lluvia que llega a muros y aberturas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-137",
+      "number": 137,
+      "topic": "Crítica visual",
+      "concept": "agrupacion_de_figuras_afecta_equilibrio_compositivo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una reseña afirma que una pintura parece desequilibrada porque todas las figuras están agrupadas en un lado. ¿Qué elemento está analizando?",
+      "options": [
+        "La biografía del público",
+        "La composición",
+        "La licencia de uso",
+        "La duración de la exposición"
+      ],
+      "correctAnswer": "La composición",
+      "explanation": "La composición organiza las formas y el peso visual dentro de la imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-138",
+      "number": 138,
+      "topic": "Medios audiovisuales",
+      "concept": "angulo_bajo_aumenta_sensacion_de_imponencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una cámara situada muy abajo hace que un personaje parezca dominante. ¿Qué decisión contribuye a ese efecto?",
+      "options": [
+        "El color de la banda sonora",
+        "La duración de los créditos",
+        "El ángulo de cámara",
+        "El material de la pantalla"
+      ],
+      "correctAnswer": "El ángulo de cámara",
+      "explanation": "Un ángulo bajo puede hacer que una persona parezca más imponente dentro del encuadre.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-139",
+      "number": 139,
+      "topic": "Patrimonio cultural",
+      "concept": "mercado_local_concentra_memoria_y_relaciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué un mercado tradicional puede ser relevante para la memoria de un barrio?",
+      "options": [
+        "Solo porque vende productos antiguos",
+        "Porque todos sus puestos tienen el mismo diseño",
+        "Porque nunca cambia de actividad",
+        "Porque concentra prácticas, relaciones e historias locales"
+      ],
+      "correctAnswer": "Porque concentra prácticas, relaciones e historias locales",
+      "explanation": "Los lugares cotidianos también pueden reunir recuerdos, oficios y relaciones que la comunidad valora.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-140",
+      "number": 140,
+      "topic": "Verdadero o falso · Color",
+      "concept": "respuesta_emocional_al_color_varia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una combinación de colores produce exactamente la misma emoción en todas las personas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las respuestas al color pueden variar por experiencia personal, cultura y contexto de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-141",
+      "number": 141,
+      "topic": "Retrato",
+      "concept": "objetos_en_retrato_aportan_pistas_de_identidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una persona aparece en un retrato junto a herramientas de su oficio. ¿Qué información pueden aportar esos objetos?",
+      "options": [
+        "Pistas sobre su actividad o identidad",
+        "El año exacto de nacimiento",
+        "La estatura real del artista",
+        "El número de visitantes de la exposición"
+      ],
+      "correctAnswer": "Pistas sobre su actividad o identidad",
+      "explanation": "Los objetos representados pueden aportar pistas sobre la ocupación, intereses o papel de la persona retratada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-142",
+      "number": 142,
+      "topic": "Símbolos culturales",
+      "concept": "objeto_se_vuelve_simbolo_al_representar_idea",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un artista usa una llave para representar libertad en una obra. ¿Qué permite interpretar ese objeto como símbolo?",
+      "options": [
+        "Su peso medido",
+        "La relación que establece con una idea",
+        "El color de la pared",
+        "El tamaño de la sala"
+      ],
+      "correctAnswer": "La relación que establece con una idea",
+      "explanation": "Un objeto funciona como símbolo cuando representa una idea más amplia dentro de un contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-143",
+      "number": 143,
+      "topic": "Representación cultural",
+      "concept": "revisar_perspectivas_evita_representacion_estereotipada",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un afiche representa a una comunidad únicamente con un estereotipo. ¿Qué revisión convendría hacer?",
+      "options": [
+        "Añadir más adornos sin cambiar la imagen",
+        "Reducir el tamaño del título",
+        "Consultar otras perspectivas y formas de representación",
+        "Quitar todos los nombres propios"
+      ],
+      "correctAnswer": "Consultar otras perspectivas y formas de representación",
+      "explanation": "Revisar perspectivas ayuda a representar a las personas con más contexto y evita reducirlas a una sola característica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-144",
+      "number": 144,
+      "topic": "Diseño y equilibrio",
+      "concept": "varios_elementos_pequenos_compensan_peso_visual",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un afiche, una imagen grande a la izquierda y varias pequeñas a la derecha parecen equilibradas. ¿Qué puede explicarlo?",
+      "options": [
+        "Todos los elementos tienen el mismo peso",
+        "La imagen grande no atrae la mirada",
+        "El afiche carece de composición",
+        "Varios elementos pequeños pueden compensar uno dominante"
+      ],
+      "correctAnswer": "Varios elementos pequeños pueden compensar uno dominante",
+      "explanation": "El equilibrio visual depende de relaciones de tamaño, posición y atención, no de que todo sea idéntico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-145",
+      "number": 145,
+      "topic": "Verdadero o falso · Música",
+      "concept": "interpretacion_de_musica_instrumental_no_es_unica",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una pieza instrumental comunica siempre una sola emoción y todos los oyentes deben interpretarla igual.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La música puede sugerir sensaciones, pero cada oyente también interpreta desde su experiencia y contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-146",
+      "number": 146,
+      "topic": "Creación de exposición",
+      "concept": "consultar_comunidad_mejora_representacion_de_tradicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un grupo quiere mostrar una tradición de otra comunidad en una exposición escolar. ¿Qué acción mejora el respeto y la precisión?",
+      "options": [
+        "Consultar fuentes y, cuando sea posible, voces de esa comunidad",
+        "Inventar detalles para que la historia sea más llamativa",
+        "Presentar una sola imagen sin explicar su contexto",
+        "Cambiar el nombre de la práctica"
+      ],
+      "correctAnswer": "Consultar fuentes y, cuando sea posible, voces de esa comunidad",
+      "explanation": "Consultar fuentes pertinentes y voces vinculadas con la tradición ayuda a representarla con contexto y cuidado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-147",
+      "number": 147,
+      "topic": "Producción artística",
+      "concept": "uso_y_ambiente_orientan_material_y_seguridad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escultura para un patio escolar debe soportar lluvia y contacto ocasional. ¿Qué decisión conviene tomar antes de construirla?",
+      "options": [
+        "Elegir el material solo por su color",
+        "Evaluar resistencia, seguridad y mantenimiento",
+        "Evitar probar una maqueta",
+        "Diseñarla sin considerar dónde irá"
+      ],
+      "correctAnswer": "Evaluar resistencia, seguridad y mantenimiento",
+      "explanation": "El uso y las condiciones ambientales orientan la selección de materiales y las medidas de seguridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-148",
+      "number": 148,
+      "topic": "Verdadero o falso · Participación cultural",
+      "concept": "revision_comunitaria_detecta_falta_de_contexto",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Invitar a la comunidad usuaria a revisar una exposición antes de abrirla puede ayudar a detectar interpretaciones incompletas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las personas vinculadas con un tema pueden aportar conocimientos y señalar aspectos que necesitan contexto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-149",
+      "number": 149,
+      "topic": "Accesibilidad de exposición",
+      "concept": "ajustar_luz_y_angulo_reduce_reflejo_en_exhibicion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una sala tiene una obra importante detrás de un reflejo intenso en el vidrio. ¿Qué ajuste ayudaría más a observarla?",
+      "options": [
+        "Poner más texto frente al vidrio",
+        "Apagar todas las luces de emergencia",
+        "Cambiar la iluminación o el ángulo para reducir el reflejo",
+        "Aumentar el volumen de la sala"
+      ],
+      "correctAnswer": "Cambiar la iluminación o el ángulo para reducir el reflejo",
+      "explanation": "Modificar la iluminación o el ángulo de observación puede reducir reflejos y facilitar la lectura de la obra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "ART8-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Animación",
+      "concept": "secuencia_de_dibujos_crea_ilusion_de_movimiento",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "En un folioscopio, dibujos con cambios graduales que se muestran rápidamente pueden crear la ilusión de movimiento.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Al pasar las imágenes en secuencia, las pequeñas diferencias entre dibujos se perciben como una acción continua.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}
