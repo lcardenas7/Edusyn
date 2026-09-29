@@ -40,6 +40,12 @@ fijo en el banco. Verificado: 331 pruebas del módulo classroom, `tsc` de api y 
 de web, y recorrido en `arena-local.html` a 375×640. **Pendiente:** prueba en el celular
 con dos estudiantes sobre este despliegue.
 
+### Corrección de bancos y bancos oficiales de Tecnología 7, Arte 8 y Ciencia 8 — staging · 2026-09-29
+
+f79119cc, 4b08b410, bf6e3bda. Se reparan las 30 respuestas de V/F de Geografía 6, se reemplazan tres preguntas de Lengua basadas en tildes o puntuación, y se valida la normalización de respuestas y opciones al importar o copiar bancos. La migración solo modifica copias oficiales que aún conservan las opciones y respuestas originales. Se agregan los bancos opcionales de Tecnología 7, Arte y cultura 8, y Ciencia y naturaleza 8, cada uno con 150 preguntas y auditoría 120/30, 50/70/30 y 30 claves por letra.
+
+Verificación antes de publicar: 27 pruebas de question-bank.service.spec.ts, auditoría global de bancos y tsc --noEmit aprobados. Railway aplica la migración al iniciar el despliegue; después se verificará en la Biblioteca docente de staging que los bancos aparezcan con Usar este banco y que las copias oficiales existentes queden reparadas.
+
 ### Verificación de Matemáticas y lógica · 7.º en staging · 2026-09-28
 
 Tras `35149bdd`, la Biblioteca docente del aula 8C muestra **Matemáticas y lógica · 7.º**
