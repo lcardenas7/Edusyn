@@ -57,6 +57,7 @@ describe('QuestionBankService', () => {
     expect(catalogs.some((item) => item.catalogId === 'edusyn-tecnologia-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-8-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-arte-cultura-grade-8-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-8-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-6-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-matematicas-logica-grade-6-v1')).toBe(true);
