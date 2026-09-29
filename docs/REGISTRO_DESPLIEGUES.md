@@ -22,6 +22,14 @@
 
 ## Historial (más reciente arriba)
 
+### Matemáticas y lógica · 7.º para Duelos — staging · 2026-09-28
+
+`35149bdd`. API + catálogo y banco oficial de 150 preguntas; sin migración.
+Auditoría: 120 opción múltiple, 30 verdadero/falso, 50 básicas, 70 intermedias,
+30 de aplicación, 30 claves por letra y 150 conceptos únicos. Prueba de importación,
+25 pruebas de `question-bank.service.spec.ts` y `npx tsc --noEmit` aprobados.
+Pendiente verificar que Railway despliegue y que el catálogo aparezca en la Biblioteca docente.
+
 ### Arena de Duelos y bancos oficiales · staging · 2026-09-28
 
 `9b396869` (integración de `32364b54`). API + web + siete bancos oficiales nuevos:
