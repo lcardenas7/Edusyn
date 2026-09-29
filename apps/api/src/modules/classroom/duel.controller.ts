@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -25,6 +25,19 @@ export class DuelController {
     return this.actor(req).then((actor) => this.service.dashboard(actor, classroomId));
   }
 
+  @Get('classrooms/:classroomId/ranking')
+  @Roles('DOCENTE', 'ESTUDIANTE')
+  ranking(@Param('classroomId') classroomId: string, @Query('scope') scope: string, @Request() req: any) {
+    const valid = scope === 'grade' || scope === 'general' ? scope : 'group';
+    return this.actor(req).then((actor) => this.service.ranking(actor, classroomId, valid));
+  }
+
+  @Get('classrooms/:classroomId/me')
+  @Roles('ESTUDIANTE')
+  profile(@Param('classroomId') classroomId: string, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.profile(actor, classroomId));
+  }
+
   @Put('classrooms/:classroomId/sources/:activityId')
   @Roles('DOCENTE')
   setSource(@Param('classroomId') classroomId: string, @Param('activityId') activityId: string, @Body() body: { enabled: boolean }, @Request() req: any) {
@@ -33,8 +46,8 @@ export class DuelController {
 
   @Post('classrooms/:classroomId')
   @Roles('ESTUDIANTE')
-  invite(@Param('classroomId') classroomId: string, @Body() body: { opponentEnrollmentId: string; category?: string; selectionMode?: string }, @Request() req: any) {
-    return this.actor(req).then((actor) => this.service.invite(actor, classroomId, body?.opponentEnrollmentId, { category: body?.category, selectionMode: body?.selectionMode }));
+  invite(@Param('classroomId') classroomId: string, @Body() body: { opponentEnrollmentId?: string; category?: string; selectionMode?: string; rivalMode?: string }, @Request() req: any) {
+    return this.actor(req).then((actor) => this.service.invite(actor, classroomId, body?.opponentEnrollmentId, { category: body?.category, selectionMode: body?.selectionMode, rivalMode: body?.rivalMode }));
   }
 
   @Get(':duelId')
@@ -63,7 +76,8 @@ export class DuelController {
 
   @Post(':duelId/power')
   @Roles('ESTUDIANTE')
-  usePower(@Param('duelId') duelId: string, @Body() body: { ordinal: number }, @Request() req: any) {
-    return this.actor(req).then((actor) => this.service.usePower(actor, duelId, body?.ordinal));
+  usePower(@Param('duelId') duelId: string, @Body() body: { ordinal: number; kind?: string; category?: string }, @Request() req: any) {
+    const kind = body?.kind === 'CATEGORY' ? 'CATEGORY' : 'FIFTY';
+    return this.actor(req).then((actor) => this.service.usePower(actor, duelId, body?.ordinal, kind, body?.category));
   }
 }

@@ -440,3 +440,143 @@ body {
 .crea-studio button:not(:disabled):active {
   transform: translateY(1px);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Arena · movimiento.
+
+   La Arena se presenta como un juego, y en un juego el movimiento cuenta cosas:
+   una pregunta que entra desde la derecha dice "ronda nueva", una opción que se
+   hunde dice "te escuché", un marcador que da un salto dice "esto cambió". Sin
+   eso, responder siete preguntas se siente como enviar siete formularios.
+
+   Las animaciones son cortas (por debajo de medio segundo) y solo mueven
+   `transform` y `opacity`, que el navegador resuelve sin volver a calcular la
+   página: en un teléfono de gama media eso es la diferencia entre fluido y
+   a tirones.
+
+   Todo esto se apaga entero con "reducir movimiento" del sistema, al final.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes arena-entra {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes arena-sube {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes arena-salto {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+@keyframes arena-pulso {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+/* La pregunta de cada ronda entra desde la derecha, como una carta que se pasa. */
+.arena-pregunta { animation: arena-entra .34s cubic-bezier(.2, .7, .3, 1) both; }
+
+/* Las opciones aparecen escalonadas: se leen de arriba abajo, no de golpe.
+   El retardo lo pone el componente con la variable --i (índice de la opción). */
+.arena-opcion {
+  animation: arena-sube .3s cubic-bezier(.2, .7, .3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 90ms);
+}
+
+/* Cada número del marcador salta cuando cambia. */
+.arena-salto { animation: arena-salto .42s cubic-bezier(.2, .7, .3, 1); }
+
+/* El trofeo del resultado respira un momento antes de quedarse quieto. */
+.arena-trofeo { animation: arena-pulso 1.1s ease-in-out 2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-pregunta,
+  .arena-opcion,
+  .arena-salto,
+  .arena-trofeo {
+    animation: none;
+  }
+}
+
+/* ── Arena · secuencia de la ronda ─────────────────────────────────────────
+   La ronda se cuenta en pasos y cada paso tiene su gesto: la rueda frena y el
+   tope rebota, el anuncio del tema entra de golpe, la pregunta se deja leer
+   sola y después bajan las opciones. Sin estos gestos los cuatro pasos se
+   confunden en uno y no se entiende qué pasó. */
+
+@keyframes arena-tope {
+  0%, 100% { transform: translateY(0); }
+  30%      { transform: translateY(5px); }
+  60%      { transform: translateY(1px); }
+}
+@keyframes arena-anuncio {
+  0%   { opacity: 0; transform: scale(.72); }
+  55%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes arena-gajo {
+  0%, 100% { transform: scale(1); }
+  40%      { transform: scale(1.35); }
+}
+@keyframes arena-reloj {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* El tope rebota cuando la rueda acaba de frenar. */
+.arena-tope { animation: arena-tope .5s cubic-bezier(.3, 1.4, .5, 1); }
+/* El icono del gajo premiado da un salto para señalar dónde paró. */
+.arena-gajo { animation: arena-gajo .55s cubic-bezier(.3, 1.3, .5, 1); }
+/* Tarjeta con el tema que tocó. */
+.arena-anuncio { animation: arena-anuncio .55s cubic-bezier(.2, .9, .3, 1) both; }
+/* Barra del tiempo: la duración la pone el componente con --t. */
+.arena-reloj { animation: arena-reloj var(--t, 30s) linear forwards; transform-origin: left; }
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-tope,
+  .arena-gajo,
+  .arena-anuncio { animation: none; }
+  /* El reloj se conserva: no es decoración, informa de cuánto queda. */
+}
+
+/* ── Arena · anuncio del tema, por partes ──────────────────────────────────
+   El anuncio no entra de una pieza: primero el color inunda la pantalla, luego
+   la mascota salta, y al final suben las dos líneas de texto. Escalonado se lee
+   como un acontecimiento; todo a la vez, como un cambio de pantalla. */
+
+@keyframes arena-inunda {
+  from { clip-path: circle(0% at 50% 45%); }
+  to   { clip-path: circle(140% at 50% 45%); }
+}
+@keyframes arena-mascota {
+  0%   { opacity: 0; transform: scale(.3) rotate(-14deg); }
+  55%  { opacity: 1; transform: scale(1.12) rotate(4deg); }
+  75%  { transform: scale(.96) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes arena-aro {
+  0%   { opacity: .55; transform: scale(.85); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+@keyframes arena-sube-texto {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.arena-inunda  { animation: arena-inunda .5s cubic-bezier(.3, .8, .3, 1) both; }
+.arena-mascota { animation: arena-mascota .7s cubic-bezier(.2, .9, .3, 1) .12s both; }
+.arena-aro     { animation: arena-aro .9s ease-out .3s both; }
+.arena-sube-1  { animation: arena-sube-texto .45s cubic-bezier(.2, .8, .3, 1) .34s both; }
+.arena-sube-2  { animation: arena-sube-texto .45s cubic-bezier(.2, .8, .3, 1) .44s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-inunda,
+  .arena-mascota,
+  .arena-aro,
+  .arena-sube-1,
+  .arena-sube-2 {
+    animation: none;
+  }
+}
