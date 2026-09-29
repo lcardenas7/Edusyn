@@ -22,13 +22,19 @@
 
 ## Historial (más reciente arriba)
 
+### Verificación de Matemáticas y lógica · 7.º en staging · 2026-09-28
+
+Tras `35149bdd`, la Biblioteca docente del aula 8C muestra **Matemáticas y lógica · 7.º**
+como banco oficial disponible con el botón **Usar este banco**. Confirmado también que la
+Arena del aula carga con 2.238 preguntas. No se importó el banco durante esta comprobación.
+
 ### Matemáticas y lógica · 7.º para Duelos — staging · 2026-09-28
 
 `35149bdd`. API + catálogo y banco oficial de 150 preguntas; sin migración.
 Auditoría: 120 opción múltiple, 30 verdadero/falso, 50 básicas, 70 intermedias,
 30 de aplicación, 30 claves por letra y 150 conceptos únicos. Prueba de importación,
 25 pruebas de `question-bank.service.spec.ts` y `npx tsc --noEmit` aprobados.
-Pendiente verificar que Railway despliegue y que el catálogo aparezca en la Biblioteca docente.
+Despliegue verificado en la Biblioteca docente del aula 8C.
 
 ### Arena de Duelos y bancos oficiales · staging · 2026-09-28
 
