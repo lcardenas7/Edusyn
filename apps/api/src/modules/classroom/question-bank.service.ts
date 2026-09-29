@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { deriveGradeNumber } from '../../common/utils/academic-level.util';
 import { Prisma, QuestionType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { norm } from '../../common/utils/answer-matching.util';
+import { canonicalText } from '../../common/utils/answer-matching.util';
 import { ClassroomActor, ClassroomTenantAccessService } from './classroom-tenant-access.service';
 import { OFFICIAL_DUEL_BANKS } from './official-duel-banks';
 
@@ -48,10 +48,11 @@ export class QuestionBankService {
     let options = input.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : input.options;
     if (!Array.isArray(options) || options.length < 2 || options.length > 5 || options.some((item) => typeof item !== 'string' || !item.trim() || item.length > 300)) throw new BadRequestException('Escribe entre 2 y 5 opciones válidas');
     options = options.map((item) => item.trim());
-    if (new Set(options.map(norm)).size !== options.length) throw new BadRequestException('Las opciones no pueden repetirse');
+    if (new Set(options.map(canonicalText)).size !== options.length) throw new BadRequestException('Las opciones no pueden repetirse, aunque cambien tildes, mayúsculas o puntuación');
     const correctAnswer = typeof input.correctAnswer === 'string' ? input.correctAnswer.trim() : '';
-    if (!options.some((option) => norm(option) === norm(correctAnswer))) throw new BadRequestException('La respuesta correcta debe coincidir con una opción');
-    return { text, explanation, options, correctAnswer, type: input.type };
+    const matchingOption = options.find((option) => canonicalText(option) === canonicalText(correctAnswer));
+    if (!matchingOption) throw new BadRequestException('La respuesta correcta debe coincidir con una opción');
+    return { text, explanation, options, correctAnswer: matchingOption, type: input.type };
   }
 
   private async editableCollection(actor: ClassroomActor, classroomId: string, collectionId: string) {
@@ -97,9 +98,10 @@ export class QuestionBankService {
     if (!catalog) throw new NotFoundException('Banco oficial no disponible para este grado');
     const existing = await this.prisma.questionBankCollection.findFirst({ where: { institutionId: actor.institutionId, gradeId: grade.id, officialCatalogId: catalogId, isActive: true }, select: { id: true } });
     if (existing) return this.list(actor, classroomId);
+    const questions = catalog.questions.map((question) => this.validQuestion(question));
     await this.prisma.$transaction(async (tx) => {
       const collection = await tx.questionBankCollection.create({ data: { institutionId: actor.institutionId, gradeId: grade.id, createdById: actor.userId, title: catalog.title, subjectArea: catalog.subjectArea, category: catalog.category, isPublished: true, officialCatalogId: catalog.catalogId } });
-      await tx.questionBankItem.createMany({ data: catalog.questions.map((question) => ({ institutionId: actor.institutionId, collectionId: collection.id, type: question.type, text: question.text, options: question.options as Prisma.InputJsonValue, correctAnswer: question.correctAnswer, explanation: question.explanation })) });
+      await tx.questionBankItem.createMany({ data: questions.map((question) => ({ institutionId: actor.institutionId, collectionId: collection.id, ...question, options: question.options as Prisma.InputJsonValue })) });
     });
     return this.list(actor, classroomId);
   }
@@ -142,12 +144,13 @@ export class QuestionBankService {
     if (collection.questions.length < 1 || collection.questions.length > 200) throw new BadRequestException('El cuestionario debe tener entre 1 y 200 preguntas');
     const activity = await this.access.activityInScope(actor, activityId);
     if (activity.classroomId !== classroomId || activity.isPublished || !['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'].includes(activity.type)) throw new BadRequestException('Elige un quiz en borrador de esta aula');
+    const questions = collection.questions.map((question) => this.validQuestion(question as BankQuestionInput));
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.classroomActivity.findUnique({ where: { id: activityId }, select: { isPublished: true } });
       if (!current || current.isPublished) throw new BadRequestException('El quiz ya fue publicado');
       const last = await tx.activityQuestion.findFirst({ where: { activityId }, select: { sortOrder: true }, orderBy: { sortOrder: 'desc' } });
       const firstOrder = (last?.sortOrder ?? -1) + 1;
-      await tx.activityQuestion.createMany({ data: collection.questions.map((question, index) => ({
+      await tx.activityQuestion.createMany({ data: questions.map((question, index) => ({
           activityId, type: question.type, text: question.text, options: question.options as Prisma.InputJsonValue,
           correctAnswer: question.correctAnswer, explanation: question.explanation, subjectArea: collection.subjectArea, sortOrder: firstOrder + index,
         })) });

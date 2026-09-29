@@ -1,0 +1,2824 @@
+{
+  "catalogId": "edusyn-tecnologia-grade-7-v1",
+  "title": "Tecnología · 7.º",
+  "grade": 7,
+  "subjectArea": "Duelos",
+  "category": "Tecnología",
+  "version": "1.0",
+  "availability": "institution-opt-in",
+  "editorialStatus": "ready-for-import",
+  "audit": {
+    "questions": 150,
+    "multipleChoice": 120,
+    "trueFalse": 30,
+    "difficulty": {
+      "basic": 50,
+      "intermediate": 70,
+      "application": 30
+    },
+    "answerPositions": {
+      "A": 30,
+      "B": 30,
+      "C": 30,
+      "D": 30
+    },
+    "conceptsPresent": 150,
+    "conceptsMissing": 0
+  },
+  "sources": [
+    "https://www.colombiaaprende.edu.co/sites/default/files/files_public/2022-11/Orientaciones_Curricures_Tecnologia.pdf",
+    "https://www.mineducacion.gov.co/1780/articles-411706_recurso_5.pdf"
+  ],
+  "questions": [
+    {
+      "id": "TEC7-001",
+      "number": 1,
+      "topic": "Diseño estructural",
+      "concept": "triangulacion_aumenta_rigidez_estructural",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué forma suele dar rigidez a una estructura liviana?",
+      "options": [
+        "Triángulos unidos",
+        "Círculos separados",
+        "Líneas sin unión",
+        "Placas superpuestas sin soporte"
+      ],
+      "correctAnswer": "Triángulos unidos",
+      "explanation": "Los triángulos distribuyen las fuerzas entre sus lados y ayudan a evitar deformaciones de la estructura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-002",
+      "number": 2,
+      "topic": "Mecanismos",
+      "concept": "dientes_de_engranajes_transmiten_giro",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un sistema de engranajes, ¿qué pieza transmite el giro al entrar en contacto con otra?",
+      "options": [
+        "Una bisagra",
+        "Un engranaje",
+        "Un resorte",
+        "Un aislante"
+      ],
+      "correctAnswer": "Un engranaje",
+      "explanation": "Los dientes de engranajes en contacto transmiten movimiento giratorio de una rueda a otra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-003",
+      "number": 3,
+      "topic": "Materiales",
+      "concept": "conductividad_electrica_de_metales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué propiedad permite que un cable metálico conduzca corriente?",
+      "options": [
+        "Elasticidad",
+        "Transparencia",
+        "Conductividad eléctrica",
+        "Porosidad"
+      ],
+      "correctAnswer": "Conductividad eléctrica",
+      "explanation": "Los metales suelen conducir la corriente y por eso se usan en el núcleo de muchos cables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-004",
+      "number": 4,
+      "topic": "Sistemas tecnológicos",
+      "concept": "valvula_motorizada_controla_flujo_fisico",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un sistema de riego automático, ¿qué elemento aplica físicamente la acción de abrir el paso del agua?",
+      "options": [
+        "Una tabla de datos",
+        "Una regla condicional",
+        "Una pantalla",
+        "Una válvula motorizada"
+      ],
+      "correctAnswer": "Una válvula motorizada",
+      "explanation": "La válvula motorizada ejecuta la acción física que permite o interrumpe el flujo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-005",
+      "number": 5,
+      "topic": "Circuitos eléctricos",
+      "concept": "interruptor_abre_y_cierra_circuito",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué componente permite abrir o cerrar manualmente un circuito sencillo?",
+      "options": [
+        "Interruptor",
+        "Resistencia fija",
+        "Diodo emisor de luz",
+        "Batería"
+      ],
+      "correctAnswer": "Interruptor",
+      "explanation": "El interruptor cambia la continuidad del circuito para permitir o detener el paso de corriente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-006",
+      "number": 6,
+      "topic": "Diseño y comunicación",
+      "concept": "vista_frontal_representa_objeto_desde_direccion",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué sirve una vista frontal en un dibujo técnico de un objeto?",
+      "options": [
+        "Mostrar su masa exacta",
+        "Representar cómo se ve desde el frente",
+        "Indicar su precio de venta",
+        "Medir cuánto tarda en fabricarse"
+      ],
+      "correctAnswer": "Representar cómo se ve desde el frente",
+      "explanation": "La vista frontal comunica la forma del objeto desde una dirección definida; por sí sola no informa su masa ni su costo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-007",
+      "number": 7,
+      "topic": "Medición",
+      "concept": "regla_graduada_mide_longitud",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Con qué instrumento se mide la longitud de una pieza pequeña?",
+      "options": [
+        "Cronómetro",
+        "Termómetro",
+        "Regla graduada",
+        "Balanza"
+      ],
+      "correctAnswer": "Regla graduada",
+      "explanation": "La regla graduada permite medir longitudes usando unidades como milímetros o centímetros.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-008",
+      "number": 8,
+      "topic": "Verdadero o falso · Materiales",
+      "concept": "aislante_dificulta_paso_de_corriente",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un material aislante dificulta el paso de la corriente eléctrica.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los aislantes, como el plástico seco, ofrecen resistencia al paso de corriente y se usan para recubrir conductores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-009",
+      "number": 9,
+      "topic": "Transmisión de movimiento",
+      "concept": "engranajes_externos_invierten_sentido_de_giro",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos engranajes externos están en contacto. Si el primero gira en sentido horario, ¿en qué sentido gira el segundo?",
+      "options": [
+        "También horario",
+        "No puede girar",
+        "Antihorario",
+        "Depende del color"
+      ],
+      "correctAnswer": "Antihorario",
+      "explanation": "En el punto de contacto, los dientes empujan en sentidos opuestos, así que dos engranajes externos invierten el sentido de giro.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-010",
+      "number": 10,
+      "topic": "Circuitos en serie",
+      "concept": "circuito_serie_interrupcion_detiene_todos_componentes",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un circuito en serie con dos bombillos, uno se desenrosca y el otro se apaga. ¿Qué explica el resultado?",
+      "options": [
+        "La fuente duplicó su voltaje",
+        "Se interrumpió el único camino de corriente",
+        "El bombillo restante se volvió aislante",
+        "El circuito cambió a paralelo"
+      ],
+      "correctAnswer": "Se interrumpió el único camino de corriente",
+      "explanation": "En serie todos los componentes comparten un mismo camino; al abrirlo, deja de circular corriente por el circuito completo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-011",
+      "number": 11,
+      "topic": "Selección de materiales",
+      "concept": "elegir_material_exterior_resistente_a_corrosion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pieza exterior quedará expuesta a la lluvia. ¿Qué propiedad conviene priorizar al elegir el material?",
+      "options": [
+        "Resistencia a la corrosión",
+        "Facilidad para absorber agua",
+        "Transparencia total",
+        "Conductividad térmica alta"
+      ],
+      "correctAnswer": "Resistencia a la corrosión",
+      "explanation": "La humedad puede deteriorar ciertos materiales; resistir la corrosión ayuda a prolongar la vida útil de la pieza.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-012",
+      "number": 12,
+      "topic": "Datos de prueba",
+      "concept": "mediana_de_tres_mediciones_de_prueba",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo mide tres veces el tiempo de recorrido de un carrito y obtiene 4, 5 y 5 segundos. ¿Cuál es la mediana?",
+      "options": [
+        "4 segundos",
+        "14 segundos",
+        "4,7 segundos",
+        "5 segundos"
+      ],
+      "correctAnswer": "5 segundos",
+      "explanation": "Al ordenar 4, 5 y 5, el valor central es 5; la mediana reduce la influencia de una medición extrema.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-013",
+      "number": 13,
+      "topic": "Control con realimentación",
+      "concept": "realimentacion_compara_salida_con_objetivo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un termostato enciende y apaga la calefacción para mantener una temperatura objetivo. ¿Qué permite que ajuste su acción?",
+      "options": [
+        "Un horario fijo sin mediciones",
+        "La retroalimentación de la temperatura",
+        "El tamaño del recinto",
+        "La velocidad de internet"
+      ],
+      "correctAnswer": "La retroalimentación de la temperatura",
+      "explanation": "El sistema mide el resultado y lo compara con la temperatura objetivo para corregir su funcionamiento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-014",
+      "number": 14,
+      "topic": "Medición y precisión",
+      "concept": "equivalencia_entre_metros_y_centimetros",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos grupos miden la misma mesa; uno anota 120 cm y otro 1,2 m. ¿Qué conclusión es correcta?",
+      "options": [
+        "La mesa cambió de tamaño",
+        "Una medición es necesariamente falsa",
+        "Ambas medidas representan la misma longitud",
+        "No se pueden comparar longitudes"
+      ],
+      "correctAnswer": "Ambas medidas representan la misma longitud",
+      "explanation": "Un metro equivale a 100 centímetros; por tanto, 1,2 m equivale a 120 cm.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-015",
+      "number": 15,
+      "topic": "Documentación técnica",
+      "concept": "lista_de_materiales_planifica_ensamblaje",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Antes de ensamblar una maqueta, el equipo necesita reunir y contar sus piezas. ¿Qué documento le ayuda más?",
+      "options": [
+        "Lista de materiales",
+        "Diagrama de flujo",
+        "Registro de asistencia",
+        "Calendario de publicación"
+      ],
+      "correctAnswer": "Lista de materiales",
+      "explanation": "La lista de materiales identifica y cuantifica los elementos necesarios para construir el diseño.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-016",
+      "number": 16,
+      "topic": "Verdadero o falso · Transmisión de movimiento",
+      "concept": "transmision_intercambia_rapidez_por_torque",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una transmisión de engranajes puede aumentar la rapidez de giro y reducir el torque disponible.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En una transmisión, cambiar rapidez y torque es un intercambio; la relación depende del tamaño de los engranajes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-017",
+      "number": 17,
+      "topic": "Escala en dibujo técnico",
+      "concept": "interpretar_escala_uno_a_dos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un dibujo a escala 1:2, una pieza mide 4 cm. ¿Cuánto mide en el objeto real?",
+      "options": [
+        "2 cm",
+        "4 cm",
+        "6 cm",
+        "8 cm"
+      ],
+      "correctAnswer": "8 cm",
+      "explanation": "La escala 1:2 indica que el dibujo mide la mitad; la pieza real mide el doble: 8 cm.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-018",
+      "number": 18,
+      "topic": "Consumo energético",
+      "concept": "consumo_energetico_potencia_por_tiempo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una lámpara de 10 W permanece encendida durante 2 horas. ¿Cuánta energía consume?",
+      "options": [
+        "5 Wh",
+        "10 Wh",
+        "12 Wh",
+        "20 Wh"
+      ],
+      "correctAnswer": "20 Wh",
+      "explanation": "Energía = potencia × tiempo: 10 W × 2 h = 20 Wh.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-019",
+      "number": 19,
+      "topic": "Selección de mecanismo",
+      "concept": "polea_movil_reduce_fuerza_a_cambio_de_distancia",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una maqueta necesita elevar una carga con una fuerza menor, aunque la carga deba recorrer más distancia. ¿Qué mecanismo puede ayudar?",
+      "options": [
+        "Un eje rígido sin rueda",
+        "Una polea móvil",
+        "Un interruptor",
+        "Una placa aislante"
+      ],
+      "correctAnswer": "Una polea móvil",
+      "explanation": "Una polea móvil puede reducir la fuerza requerida a cambio de tirar de más cuerda; intercambia fuerza por distancia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-020",
+      "number": 20,
+      "topic": "Resolución de sensores",
+      "concept": "resolucion_de_sensor_distingue_valores_cercanos",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un sistema debe distinguir si el suelo tiene 20 % o 25 % de humedad, pero su sensor solo informa «seco» o «húmedo». ¿Qué limitación tiene?",
+      "options": [
+        "El sensor no registra el color",
+        "El sistema carece de memoria permanente",
+        "La lectura no tiene suficiente resolución",
+        "La humedad no puede medirse electrónicamente"
+      ],
+      "correctAnswer": "La lectura no tiene suficiente resolución",
+      "explanation": "Una salida de solo dos estados no permite distinguir valores cercanos dentro de «húmedo»; se necesita mayor resolución.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-021",
+      "number": 21,
+      "topic": "Interpretación de datos",
+      "concept": "acotar_capacidad_estructural_con_pruebas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una estructura soporta 1 kg, 2 kg y 3 kg en pruebas sucesivas, pero se deforma con 4 kg. ¿Qué límite se observó?",
+      "options": [
+        "Más de 4 kg",
+        "Exactamente 1 kg",
+        "Al menos 4 kg sin deformación",
+        "Entre 3 y 4 kg para las condiciones probadas"
+      ],
+      "correctAnswer": "Entre 3 y 4 kg para las condiciones probadas",
+      "explanation": "Soportó 3 kg sin deformarse y falló al probar 4 kg; la capacidad exacta no se conoce, pero queda entre esos valores para ese ensayo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-022",
+      "number": 22,
+      "topic": "Seguridad de prototipos",
+      "concept": "detener_prueba_ante_sobrecalentamiento_electrico",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un circuito de aula se calienta mucho y desprende olor a plástico. ¿Cuál es la primera acción segura?",
+      "options": [
+        "Desconectar la fuente sin tocar partes calientes",
+        "Cubrirlo con papel",
+        "Añadir más baterías",
+        "Continuar la prueba para medir cuánto aguanta"
+      ],
+      "correctAnswer": "Desconectar la fuente sin tocar partes calientes",
+      "explanation": "El calor y el olor pueden indicar una falla; se detiene la prueba y se corta la energía con cuidado antes de revisar el circuito.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-023",
+      "number": 23,
+      "topic": "Verdadero o falso · Circuitos",
+      "concept": "suma_de_voltajes_de_celdas_en_serie",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Dos celdas de 1,5 V conectadas en serie y con la polaridad correcta entregan idealmente 3 V en conjunto.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "En serie, los voltajes de las celdas se suman: 1,5 V + 1,5 V = 3 V.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-024",
+      "number": 24,
+      "topic": "Verdadero o falso · Medición",
+      "concept": "verificar_cero_del_instrumento_antes_de_medir",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Poner un instrumento en cero antes de medir ayuda a evitar un error constante en todas las lecturas.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Si el instrumento parte de un valor distinto de cero, todas las mediciones pueden quedar desplazadas por ese error inicial.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-025",
+      "number": 25,
+      "topic": "Verdadero o falso · Diagramas técnicos",
+      "concept": "esquema_electrico_representa_conexiones_no_tamano",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un esquema eléctrico puede mostrar qué componentes están conectados aunque no represente sus tamaños reales.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El esquema representa relaciones y conexiones mediante símbolos; una vista a escala cumple otra función.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-026",
+      "number": 26,
+      "topic": "Máquinas simples",
+      "concept": "fulcro_punto_de_apoyo_de_palanca",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una palanca, ¿cómo se llama el punto alrededor del cual gira la barra?",
+      "options": [
+        "Fulcro",
+        "Polea",
+        "Engranaje",
+        "Eje eléctrico"
+      ],
+      "correctAnswer": "Fulcro",
+      "explanation": "El fulcro es el punto de apoyo que permite que la palanca gire.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-027",
+      "number": 27,
+      "topic": "Mecanismos",
+      "concept": "leva_convierte_giro_en_movimiento_alternativo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué movimiento produce normalmente una leva al empujar un seguidor?",
+      "options": [
+        "Solo movimiento circular",
+        "Movimiento de subida y bajada",
+        "Una señal de radio",
+        "Una corriente eléctrica"
+      ],
+      "correctAnswer": "Movimiento de subida y bajada",
+      "explanation": "El perfil giratorio de una leva desplaza el seguidor, convirtiendo el giro en movimiento alternativo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-028",
+      "number": 28,
+      "topic": "Circuitos eléctricos",
+      "concept": "componentes_en_paralelo_ocupan_ramas_separadas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un circuito en paralelo, cada bombillo está conectado en:",
+      "options": [
+        "El mismo único camino",
+        "Una secuencia sin ramificaciones",
+        "Su propia rama",
+        "Una conexión sin fuente"
+      ],
+      "correctAnswer": "Su propia rama",
+      "explanation": "Las ramas paralelas ofrecen caminos separados para la corriente y permiten que los componentes funcionen de manera independiente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-029",
+      "number": 29,
+      "topic": "Electrónica",
+      "concept": "resistencia_limita_corriente_para_proteger_led",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué componente limita la corriente que pasa por un LED en un circuito sencillo?",
+      "options": [
+        "Interruptor",
+        "Motor",
+        "Batería",
+        "Resistencia"
+      ],
+      "correctAnswer": "Resistencia",
+      "explanation": "Una resistencia adecuada limita la corriente y ayuda a proteger el LED de dañarse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-030",
+      "number": 30,
+      "topic": "Transmisión de movimiento",
+      "concept": "correa_floja_pierde_agarre_y_patina",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede pasar si una correa de transmisión queda demasiado floja?",
+      "options": [
+        "Puede deslizarse y transmitir el giro de forma irregular",
+        "Invierte siempre el sentido del motor",
+        "Duplica el voltaje de salida",
+        "Bloquea el eje de manera permanente"
+      ],
+      "correctAnswer": "Puede deslizarse y transmitir el giro de forma irregular",
+      "explanation": "Con poca tensión, la correa puede perder agarre y patinar sobre las ruedas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-031",
+      "number": 31,
+      "topic": "Estructuras",
+      "concept": "tension_esfuerzo_que_estira_elemento",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué esfuerzo tiende a estirar una cuerda o un cable?",
+      "options": [
+        "Compresión",
+        "Tensión",
+        "Torsión",
+        "Flexión"
+      ],
+      "correctAnswer": "Tensión",
+      "explanation": "La tensión aparece cuando fuerzas opuestas tiran de los extremos de un elemento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-032",
+      "number": 32,
+      "topic": "Representación de objetos",
+      "concept": "vista_isometrica_muestra_tres_dimensiones",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué vista muestra simultáneamente alto, ancho y profundidad de una pieza?",
+      "options": [
+        "Planta",
+        "Perfil",
+        "Isométrica",
+        "Alzado frontal"
+      ],
+      "correctAnswer": "Isométrica",
+      "explanation": "La representación isométrica permite apreciar tres dimensiones en una misma vista.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-033",
+      "number": 33,
+      "topic": "Verdadero o falso · Materiales",
+      "concept": "polea_fija_cambia_direccion_de_fuerza",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una polea fija puede cambiar la dirección en que se aplica una fuerza.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una polea fija puede redirigir el esfuerzo, aunque por sí sola no reduce la fuerza necesaria en un sistema ideal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-034",
+      "number": 34,
+      "topic": "Mecanismos",
+      "concept": "comparar_rapidez_por_vueltas_en_intervalo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una rueda pequeña de un sistema de correa gira 4 veces mientras la grande gira 2. ¿Qué relación se observa?",
+      "options": [
+        "La grande gira el doble de rápido",
+        "No se puede comparar por sus vueltas",
+        "Ambas giran igual",
+        "La pequeña gira el doble de rápido"
+      ],
+      "correctAnswer": "La pequeña gira el doble de rápido",
+      "explanation": "En el mismo intervalo, cuatro vueltas son el doble de dos; la rueda pequeña gira más rápido en esa relación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-035",
+      "number": 35,
+      "topic": "Especificaciones de diseño",
+      "concept": "tolerancia_dimensional_garantiza_ajuste",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pieza debe encajar en una ranura de 10 mm de ancho. ¿Qué dato de fabricación resulta más útil?",
+      "options": [
+        "La fecha de la prueba",
+        "El nombre del fabricante",
+        "El color de la pieza",
+        "La tolerancia dimensional"
+      ],
+      "correctAnswer": "La tolerancia dimensional",
+      "explanation": "La tolerancia indica cuánto puede variar una dimensión y aun permitir que las piezas encajen como se espera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-036",
+      "number": 36,
+      "topic": "Circuitos en paralelo",
+      "concept": "rama_paralela_funciona_independientemente_de_otra",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un circuito en paralelo se desconecta un bombillo de una rama. ¿Qué debería ocurrir con el de la otra rama?",
+      "options": [
+        "También se apaga siempre",
+        "Se convierte en interruptor",
+        "Cambia de color",
+        "Puede seguir encendido"
+      ],
+      "correctAnswer": "Puede seguir encendido",
+      "explanation": "La rama restante conserva su propio camino eléctrico, aunque el resultado también depende del estado de la fuente y las conexiones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-037",
+      "number": 37,
+      "topic": "Fuentes de energía",
+      "concept": "bateria_almacena_energia_para_uso_posterior",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un panel fotovoltaico alimenta una lámpara durante el día, pero esta debe seguir encendida de noche. ¿Qué elemento permite guardar energía para después?",
+      "options": [
+        "Una batería recargable",
+        "Un engranaje",
+        "Un aislante térmico",
+        "Una polea fija"
+      ],
+      "correctAnswer": "Una batería recargable",
+      "explanation": "La batería almacena energía eléctrica para usarla cuando el panel no recibe luz solar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-038",
+      "number": 38,
+      "topic": "Fabricación digital",
+      "concept": "fabricacion_aditiva_agrega_material_en_capas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una impresora 3D forma una pieza agregando material capa por capa. ¿Qué tipo de fabricación utiliza?",
+      "options": [
+        "Sustractiva",
+        "Aditiva",
+        "Forja manual",
+        "Laminado de papel"
+      ],
+      "correctAnswer": "Aditiva",
+      "explanation": "La fabricación aditiva construye objetos añadiendo material en capas sucesivas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-039",
+      "number": 39,
+      "topic": "Algoritmos y pseudocódigo",
+      "concept": "funcion_encapsula_tarea_reutilizable",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un algoritmo, ¿qué aporta una función pequeña con nombre como `calcularTotal`?",
+      "options": [
+        "Cambia el material del computador",
+        "Reemplaza todos los datos por imágenes",
+        "Agrupa una tarea reutilizable",
+        "Elimina la necesidad de probar"
+      ],
+      "correctAnswer": "Agrupa una tarea reutilizable",
+      "explanation": "Una función reúne instrucciones para una tarea y permite llamarlas desde distintos lugares del programa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-040",
+      "number": 40,
+      "topic": "Datos y sesgos",
+      "concept": "muestra_de_usuarios_unico_medio_no_representa_poblacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo encuesta solo a quienes usan bicicleta para saber cómo llega todo el colegio. ¿Qué problema tiene la muestra?",
+      "options": [
+        "Tiene demasiados datos",
+        "Carece de unidades de medida",
+        "Usa una pregunta abierta",
+        "Excluye otros medios de transporte"
+      ],
+      "correctAnswer": "Excluye otros medios de transporte",
+      "explanation": "La muestra deja por fuera a estudiantes que llegan de otras maneras, así que no representa bien a todo el colegio.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-041",
+      "number": 41,
+      "topic": "Electrónica y señales",
+      "concept": "distinguir_senal_digital_discreta_de_analogica_continua",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia práctica hay entre una señal digital de dos estados y una analógica?",
+      "options": [
+        "La digital representa niveles discretos; la analógica puede variar continuamente",
+        "La digital siempre necesita internet; la analógica no",
+        "La analógica solo transmite imágenes",
+        "No existe diferencia entre sus valores"
+      ],
+      "correctAnswer": "La digital representa niveles discretos; la analógica puede variar continuamente",
+      "explanation": "Una señal digital usa estados definidos; una señal analógica puede representar variaciones continuas de una magnitud.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-042",
+      "number": 42,
+      "topic": "Diseño centrado en usuarios",
+      "concept": "interfaz_confirma_estado_despues_de_accion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Después de pulsar «Enviar» en un formulario, la pantalla no cambia. ¿Qué respuesta de la interfaz confirmaría mejor que la acción se completó?",
+      "options": [
+        "El color favorito del equipo",
+        "Un mensaje de confirmación con el estado",
+        "Borrar los campos sin aviso",
+        "Ocultar el botón permanentemente"
+      ],
+      "correctAnswer": "Un mensaje de confirmación con el estado",
+      "explanation": "Una señal de estado comprensible permite saber que el sistema recibió y procesó la acción.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-043",
+      "number": 43,
+      "topic": "Seguridad de dispositivos",
+      "concept": "bloquear_sesion_en_dispositivo_desatendido",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué práctica ayuda a evitar que cualquiera use un dispositivo conectado que quedó sin supervisión?",
+      "options": [
+        "Dejar la sesión abierta",
+        "Usar la misma clave pública",
+        "Bloquear la sesión al alejarse",
+        "Apagar las actualizaciones"
+      ],
+      "correctAnswer": "Bloquear la sesión al alejarse",
+      "explanation": "Bloquear la sesión reduce el acceso casual a archivos y funciones mientras el dispositivo está desatendido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-044",
+      "number": 44,
+      "topic": "Verdadero o falso · Datos",
+      "concept": "exclusion_sistematica_sesga_resultados_de_muestra",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Si una muestra excluye sistemáticamente a un grupo relevante, sus resultados pueden representar mal a la población completa.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una selección sesgada puede ocultar experiencias y producir conclusiones que no se generalizan a todos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-045",
+      "number": 45,
+      "topic": "Verdadero o falso · Diseño",
+      "concept": "vista_isometrica_no_sustituye_cotas_de_fabricacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un dibujo isométrico puede ayudar a comunicar la forma de una pieza, pero no reemplaza todas las medidas necesarias para fabricarla.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La vista muestra la forma tridimensional; cotas y especificaciones adicionales indican dimensiones y requisitos de fabricación.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-046",
+      "number": 46,
+      "topic": "Optimización de mecanismos",
+      "concept": "reduccion_de_velocidad_aumenta_torque_de_salida",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un motor pequeño debe levantar una carga pesada lentamente. ¿Qué cambio en los engranajes favorece ese objetivo?",
+      "options": [
+        "Motor pequeño a rueda grande de salida",
+        "Dos ruedas iguales sin conexión",
+        "Quitar todos los engranajes",
+        "Motor a rueda de salida aún más pequeña"
+      ],
+      "correctAnswer": "Motor pequeño a rueda grande de salida",
+      "explanation": "Reducir la velocidad mediante una rueda de salida mayor puede aumentar el torque disponible para levantar la carga.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-047",
+      "number": 47,
+      "topic": "Selección de proceso de fabricación",
+      "concept": "plantilla_mejora_repetibilidad_de_fabricacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una clase debe fabricar veinte piezas iguales de cartón y quiere reducir diferencias entre ellas. ¿Qué ayuda más?",
+      "options": [
+        "Cortar cada pieza a ojo",
+        "Usar una plantilla con medidas marcadas",
+        "Cambiar el diseño en cada corte",
+        "Hacerlas con herramientas distintas sin guía"
+      ],
+      "correctAnswer": "Usar una plantilla con medidas marcadas",
+      "explanation": "Una plantilla guía cada corte con la misma forma y dimensiones, lo que mejora la repetibilidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-048",
+      "number": 48,
+      "topic": "Diagnóstico de un circuito",
+      "concept": "diagnosticar_conexion_intermitente_por_respuesta_al_movimiento",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una lámpara no enciende. La batería tiene carga y la lámpara funciona en otro circuito; al mover un cable, enciende. ¿Qué falla es más probable?",
+      "options": [
+        "Batería descargada",
+        "Lámpara quemada",
+        "Conexión floja",
+        "Falta de luz ambiental"
+      ],
+      "correctAnswer": "Conexión floja",
+      "explanation": "Que el contacto cambie al mover el cable indica una conexión intermitente o floja.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-049",
+      "number": 49,
+      "topic": "Verdadero o falso · Control de riesgos",
+      "concept": "prever_parada_segura_en_mecanismo_cercano_a_personas",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un sistema automático puede mover una pieza cerca de la mano de una persona, conviene prever cómo detenerlo ante una falla o emergencia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Una parada segura reduce el riesgo cuando el control normal deja de funcionar o aparece una situación peligrosa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-050",
+      "number": 50,
+      "topic": "Verdadero o falso · Interpretación de datos",
+      "concept": "promedio_no_describe_cada_observacion_individual",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Un promedio de 12 minutos en una fila garantiza que cada persona esperó cerca de 12 minutos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El promedio resume el conjunto, pero algunas esperas pueden ser mucho menores o mayores.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-051",
+      "number": 51,
+      "topic": "Archivos digitales",
+      "concept": "extension_png_identifica_formato_de_imagen",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué extensión suele identificar una imagen PNG?",
+      "options": [
+        ".mp3",
+        ".png",
+        ".csv",
+        ".wav"
+      ],
+      "correctAnswer": ".png",
+      "explanation": "La extensión ayuda a reconocer el formato; PNG es un formato de imagen.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-052",
+      "number": 52,
+      "topic": "Navegación web",
+      "concept": "navegador_muestra_paginas_web",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué programa permite abrir y recorrer páginas web?",
+      "options": [
+        "Una hoja de cálculo",
+        "Un cortafuegos",
+        "Un navegador",
+        "Un buscador"
+      ],
+      "correctAnswer": "Un navegador",
+      "explanation": "El navegador muestra páginas web; un buscador ayuda a localizar páginas dentro de la Web.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-053",
+      "number": 53,
+      "topic": "Transformación de energía",
+      "concept": "bombilla_convierte_energia_electrica_en_luz",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una bombilla encendida, ¿en qué forma se transforma parte de la energía eléctrica?",
+      "options": [
+        "Luz",
+        "Sonido",
+        "Movimiento",
+        "Energía química"
+      ],
+      "correctAnswer": "Luz",
+      "explanation": "La bombilla convierte energía eléctrica principalmente en luz y también libera calor.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-054",
+      "number": 54,
+      "topic": "Seguridad de cuentas",
+      "concept": "clave_larga_y_unica_protege_cuenta",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué práctica protege mejor una cuenta personal?",
+      "options": [
+        "Repetir una clave corta",
+        "Usar el nombre propio",
+        "Compartirla con el grupo",
+        "Crear una clave larga y única"
+      ],
+      "correctAnswer": "Crear una clave larga y única",
+      "explanation": "Una clave larga y diferente para cada cuenta reduce el riesgo de acceso si otra clave se filtra.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-055",
+      "number": 55,
+      "topic": "Mensajes engañosos",
+      "concept": "verificar_aviso_accediendo_por_sitio_oficial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un correo urgente pide confirmar la contraseña desde un enlace desconocido. ¿Qué conviene hacer?",
+      "options": [
+        "Entrar al servicio desde su dirección oficial",
+        "Responder con la contraseña",
+        "Reenviar el enlace a los contactos",
+        "Descargar el archivo adjunto"
+      ],
+      "correctAnswer": "Entrar al servicio desde su dirección oficial",
+      "explanation": "Acceder por la dirección oficial permite comprobar el aviso sin seguir un enlace potencialmente fraudulento.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-056",
+      "number": 56,
+      "topic": "Hojas de cálculo",
+      "concept": "celda_interseccion_de_fila_y_columna",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una hoja de cálculo, ¿cómo se llama la intersección de una fila y una columna?",
+      "options": [
+        "Rango",
+        "Celda",
+        "Fórmula",
+        "Gráfico"
+      ],
+      "correctAnswer": "Celda",
+      "explanation": "Cada celda ocupa una posición definida por una columna y una fila.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-057",
+      "number": 57,
+      "topic": "Software",
+      "concept": "licencia_abierta_permite_estudiar_codigo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué caracteriza al software de código abierto?",
+      "options": [
+        "Solo funciona sin conexión",
+        "No requiere licencia",
+        "Código consultable según su licencia",
+        "Siempre es gratis para todos"
+      ],
+      "correctAnswer": "Código consultable según su licencia",
+      "explanation": "Las licencias de código abierto permiten acceder al código y establecen condiciones para usarlo, estudiarlo o modificarlo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-058",
+      "number": 58,
+      "topic": "Verdadero o falso · Copias de seguridad",
+      "concept": "copia_seguridad_facilita_recuperar_archivo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una copia de seguridad puede ayudar a recuperar un archivo si se pierde el original.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La copia conserva otra versión del archivo para recuperarlo ante pérdida o daño.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-059",
+      "number": 59,
+      "topic": "Redes",
+      "concept": "enrutador_dirige_datos_entre_redes",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dispositivo suele dirigir datos entre una red local e internet?",
+      "options": [
+        "Módem",
+        "Conmutador",
+        "Punto de acceso",
+        "Enrutador"
+      ],
+      "correctAnswer": "Enrutador",
+      "explanation": "El enrutador conecta redes y decide hacia dónde enviar los paquetes de datos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-060",
+      "number": 60,
+      "topic": "Comunicación entre dispositivos",
+      "concept": "protocolo_define_reglas_de_intercambio_de_datos",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué define las reglas para que dos dispositivos intercambien datos?",
+      "options": [
+        "Protocolo",
+        "Dirección IP",
+        "Ancho de banda",
+        "Puerto de red"
+      ],
+      "correctAnswer": "Protocolo",
+      "explanation": "Un protocolo define reglas para enviar, recibir e interpretar datos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-061",
+      "number": 61,
+      "topic": "Búsqueda de información",
+      "concept": "comillas_busqueda_localiza_frase_exacta",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele buscar un motor al escribir una frase entre comillas?",
+      "options": [
+        "Páginas de un dominio con `site:`",
+        "La frase exacta",
+        "Páginas que excluyen una palabra con `-`",
+        "Resultados que incluyan uno u otro término con `OR`"
+      ],
+      "correctAnswer": "La frase exacta",
+      "explanation": "Las comillas suelen solicitar resultados que contienen la frase exacta, lo que puede reducir coincidencias irrelevantes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-062",
+      "number": 62,
+      "topic": "Códigos QR",
+      "concept": "verificar_dominio_antes_de_ingresar_datos_desde_qr",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un código QR pegado sobre un aviso dirige a una página de inicio de sesión. ¿Qué se debe revisar antes de escribir datos?",
+      "options": [
+        "El color del código",
+        "El tamaño del aviso",
+        "El dominio de la página",
+        "La marca del teléfono"
+      ],
+      "correctAnswer": "El dominio de la página",
+      "explanation": "Un QR puede llevar a cualquier dirección; comprobar el dominio ayuda a detectar sitios que imitan al servicio legítimo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-063",
+      "number": 63,
+      "topic": "Eficiencia energética",
+      "concept": "eficiencia_compara_salida_util_con_energia_consumida",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos lámparas dan la misma luz. ¿Qué comparación muestra cuál consume menos?",
+      "options": [
+        "El color del cuerpo y su tamaño",
+        "El precio y el nombre del fabricante",
+        "El peso y el material de la carcasa",
+        "La energía consumida para dar esa luz"
+      ],
+      "correctAnswer": "La energía consumida para dar esa luz",
+      "explanation": "La eficiencia compara el resultado útil con la energía necesaria para obtenerlo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-064",
+      "number": 64,
+      "topic": "Verdadero o falso · Archivos",
+      "concept": "renombrar_archivo_no_cambia_su_contenido",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Cambiar el nombre de un archivo modifica automáticamente la información que contiene.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Renombrar cambia la etiqueta del archivo, no necesariamente sus datos internos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-065",
+      "number": 65,
+      "topic": "Privacidad digital",
+      "concept": "limitar_permiso_de_ubicacion_a_uso_necesario",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una aplicación pide acceso permanente a la ubicación, aunque una función básica sirve sin ella. ¿Qué decisión protege mejor la privacidad?",
+      "options": [
+        "Permitir ubicación solo cuando haga falta",
+        "Compartir la cuenta con otra persona",
+        "Publicar la ubicación en el perfil",
+        "Aceptar todo para evitar avisos"
+      ],
+      "correctAnswer": "Permitir ubicación solo cuando haga falta",
+      "explanation": "Limitar los permisos a lo necesario reduce la recopilación de datos personales.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-066",
+      "number": 66,
+      "topic": "Diseño accesible",
+      "concept": "combinar_color_con_texto_mejora_accesibilidad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una interfaz comunica que una tarea terminó cambiando solo el color de un botón. ¿Qué mejora ayuda a más usuarios a reconocerlo?",
+      "options": [
+        "Usar un color más brillante",
+        "Añadir texto o un símbolo con significado",
+        "Reducir el tamaño de la letra",
+        "Quitar el botón"
+      ],
+      "correctAnswer": "Añadir texto o un símbolo con significado",
+      "explanation": "Combinar color con texto o símbolos permite comunicar el estado a personas que no distinguen ese cambio de color.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-067",
+      "number": 67,
+      "topic": "Pruebas de prototipos",
+      "concept": "estimar_autonomia_con_capacidad_util_y_consumo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una batería de 3 Ah permite usar el 80 % de su capacidad. Con un consumo de 1 A, ¿cuánto durará aproximadamente?",
+      "options": [
+        "1,5 horas",
+        "2 horas",
+        "2,4 horas",
+        "3,8 horas"
+      ],
+      "correctAnswer": "2,4 horas",
+      "explanation": "El 80 % de 3 Ah es 2,4 Ah; a 1 A, la duración aproximada es 2,4 horas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-068",
+      "number": 68,
+      "topic": "Verdadero o falso · Archivos digitales",
+      "concept": "compresion_no_equivale_a_cifrado",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Comprimir un archivo siempre cifra su contenido para que nadie pueda leerlo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "La compresión reduce tamaño o agrupa archivos; el cifrado protege el contenido y es una función diferente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-069",
+      "number": 69,
+      "topic": "Seguridad de descargas",
+      "concept": "verificar_origen_antes_de_habilitar_macros",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un archivo que parece un documento pide habilitar macros para poder leerlo. ¿Qué acción es más prudente?",
+      "options": [
+        "Activarlas si el nombre parece conocido",
+        "Abrirlo en otra computadora",
+        "Desactivar el antivirus antes de abrirlo",
+        "Confirmar el origen y dejarlas desactivadas"
+      ],
+      "correctAnswer": "Confirmar el origen y dejarlas desactivadas",
+      "explanation": "Las macros pueden ejecutar acciones; verificar el remitente y el propósito reduce el riesgo de abrir contenido malicioso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-070",
+      "number": 70,
+      "topic": "Verdadero o falso · Huella digital",
+      "concept": "contenido_publicado_puede_permanecer_en_copias",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una publicación en internet puede copiarse y permanecer accesible después de que su autor la borre.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Otras personas pueden guardar o compartir una copia antes de que se elimine la publicación original.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-071",
+      "number": 71,
+      "topic": "Sistemas fuera de línea",
+      "concept": "sistema_local_mantiene_funcion_sin_internet",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una alarma escolar debe funcionar aunque se interrumpa internet. ¿Qué diseño cumple mejor ese requisito?",
+      "options": [
+        "Sensor local conectado a una sirena local",
+        "Aviso exclusivo en una red social",
+        "Mensaje enviado solo a un servidor remoto",
+        "Pantalla que depende de una página web"
+      ],
+      "correctAnswer": "Sensor local conectado a una sirena local",
+      "explanation": "Un circuito local puede detectar y comunicar la alerta sin depender de la conexión externa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-072",
+      "number": 72,
+      "topic": "Reparación y reutilización",
+      "concept": "uniones_desmontables_facilitan_reparacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué decisión facilita desmontar un producto para reparar una pieza dañada?",
+      "options": [
+        "Pegar permanentemente todas sus partes",
+        "Unirlo con fijaciones desmontables",
+        "Cubrir las uniones con resina",
+        "Mezclar materiales inseparables"
+      ],
+      "correctAnswer": "Unirlo con fijaciones desmontables",
+      "explanation": "Tornillos y uniones desmontables permiten acceder a componentes y reemplazarlos con más facilidad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-073",
+      "number": 73,
+      "topic": "Verdadero o falso · Actuadores",
+      "concept": "motor_convierte_energia_electrica_en_movimiento",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un motor puede transformar energía eléctrica en movimiento.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El motor actúa como actuador y convierte energía eléctrica en movimiento mecánico.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-074",
+      "number": 74,
+      "topic": "Formatos y compatibilidad",
+      "concept": "formato_abierto_favorece_interoperabilidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ventaja puede ofrecer un formato de archivo abierto?",
+      "options": [
+        "Impedir que otros programas lo lean",
+        "Eliminar la necesidad de guardar copias",
+        "Facilitar su uso en programas compatibles",
+        "Garantizar que nunca cambie"
+      ],
+      "correctAnswer": "Facilitar su uso en programas compatibles",
+      "explanation": "Un formato abierto y documentado facilita que distintos programas implementen su lectura o escritura.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-075",
+      "number": 75,
+      "topic": "Mejora basada en evidencia",
+      "concept": "usar_resultados_contrarios_para_revisar_diseno",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una prueba contradice la idea inicial del equipo. ¿Qué paso ayuda más a mejorar el prototipo?",
+      "options": [
+        "Repetirla sin cambiar las condiciones",
+        "Ajustar el objetivo para que coincida",
+        "Descartar el dato sin investigarlo",
+        "Registrar el resultado y revisar supuestos"
+      ],
+      "correctAnswer": "Registrar el resultado y revisar supuestos",
+      "explanation": "Conservar los resultados permite identificar qué supuesto falló y hacer un cambio que luego pueda probarse.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-076",
+      "number": 76,
+      "topic": "Propiedades de materiales",
+      "concept": "dureza_resiste_rayado_superficial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué propiedad describe la resistencia de un material a ser rayado?",
+      "options": [
+        "Dureza",
+        "Elasticidad",
+        "Densidad",
+        "Conductividad"
+      ],
+      "correctAnswer": "Dureza",
+      "explanation": "La dureza indica cuánto resiste un material la penetración o el rayado de su superficie.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-077",
+      "number": 77,
+      "topic": "Verdadero o falso · Prototipos",
+      "concept": "prototipo_prueba_idea_antes_de_producto_final",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Un prototipo puede ser un modelo sencillo que sirve para probar una idea antes de fabricar el producto final.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Un prototipo permite observar y probar aspectos del diseño antes de fabricar la versión definitiva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-078",
+      "number": 78,
+      "topic": "Diseño digital",
+      "concept": "cad_crea_y_edita_disenos_digitales",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué se usa principalmente un programa CAD?",
+      "options": [
+        "Navegar por páginas web",
+        "Crear o editar diseños digitales",
+        "Proteger una red inalámbrica",
+        "Reproducir señales de radio"
+      ],
+      "correctAnswer": "Crear o editar diseños digitales",
+      "explanation": "CAD significa diseño asistido por computador y permite crear o modificar representaciones de objetos.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-079",
+      "number": 79,
+      "topic": "Instrumentos de medición",
+      "concept": "calibrador_mide_diametro_de_pieza",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué instrumento permite medir con precisión el diámetro de una pieza pequeña?",
+      "options": [
+        "Cronómetro",
+        "Balanza",
+        "Calibrador",
+        "Termómetro"
+      ],
+      "correctAnswer": "Calibrador",
+      "explanation": "Un calibrador mide dimensiones como diámetros y espesores con más detalle que una regla común.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-080",
+      "number": 80,
+      "topic": "Magnitudes eléctricas",
+      "concept": "kilovatio_mide_potencia_no_energia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué magnitud se mide en kilovatios (kW)?",
+      "options": [
+        "Corriente",
+        "Energía",
+        "Voltaje",
+        "Potencia"
+      ],
+      "correctAnswer": "Potencia",
+      "explanation": "El kilovatio mide potencia; la energía consumida suele expresarse en kilovatios-hora.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-081",
+      "number": 81,
+      "topic": "Herramientas",
+      "concept": "tornillo_de_banco_sujeta_pieza_de_trabajo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué herramienta mantiene una pieza quieta mientras se trabaja sobre ella?",
+      "options": [
+        "Tornillo de banco",
+        "Multímetro",
+        "Transportador",
+        "Nivel de burbuja"
+      ],
+      "correctAnswer": "Tornillo de banco",
+      "explanation": "El tornillo de banco sujeta la pieza para que no se mueva durante operaciones como cortar o limar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-082",
+      "number": 82,
+      "topic": "Hardware",
+      "concept": "sensor_es_componente_fisico_hardware",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál de estos elementos es un componente físico de un sistema tecnológico?",
+      "options": [
+        "Una hoja de cálculo",
+        "Un sensor de temperatura",
+        "Un sistema operativo",
+        "Un algoritmo"
+      ],
+      "correctAnswer": "Un sensor de temperatura",
+      "explanation": "El sensor es un componente que puede instalarse físicamente; los otros son programas o instrucciones.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-083",
+      "number": 83,
+      "topic": "Verdadero o falso · Consumo responsable",
+      "concept": "etiqueta_ambiental_no_prueba_impacto_nulo",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Una etiqueta ambiental, por sí sola, demuestra que un producto no genera ningún impacto ambiental.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las etiquetas pueden aportar información, pero ningún producto tiene impacto ambiental nulo en todas sus etapas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-084",
+      "number": 84,
+      "topic": "Restricciones de diseño",
+      "concept": "propuesta_debe_cumplir_varias_restricciones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un robot escolar debe caber en una caja pequeña, costar poco y detenerse ante un obstáculo. ¿Qué propuesta respeta mejor esas condiciones?",
+      "options": [
+        "Elegir el motor más rápido sin medirlo",
+        "Aumentar el tamaño para instalar más piezas",
+        "Probar una solución compacta, segura y dentro del presupuesto",
+        "Elegir el diseño solo por su apariencia"
+      ],
+      "correctAnswer": "Probar una solución compacta, segura y dentro del presupuesto",
+      "explanation": "Una solución debe cumplir las restricciones de tamaño, costo y seguridad, no solo una de ellas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-085",
+      "number": 85,
+      "topic": "Sistemas de control",
+      "concept": "temporizador_sin_sensor_es_control_sin_realimentacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un aspersor se activa cada tarde con un temporizador, sin medir la humedad del suelo. ¿Qué tipo de control usa?",
+      "options": [
+        "Realimentado por humedad",
+        "Manual con sensor",
+        "Adaptativo al clima",
+        "Programado sin realimentación"
+      ],
+      "correctAnswer": "Programado sin realimentación",
+      "explanation": "El temporizador actúa según un horario fijo y no corrige su acción a partir del estado del suelo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-086",
+      "number": 86,
+      "topic": "Visualización de datos",
+      "concept": "grafico_lineal_muestra_cambio_a_traves_del_tiempo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué gráfico ayuda más a mostrar cómo cambia la temperatura durante una hora?",
+      "options": [
+        "Gráfico de líneas",
+        "Plano de una pieza",
+        "Diagrama de partes",
+        "Tabla de materiales"
+      ],
+      "correctAnswer": "Gráfico de líneas",
+      "explanation": "Un gráfico de líneas permite observar tendencias en mediciones ordenadas a lo largo del tiempo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-087",
+      "number": 87,
+      "topic": "Verdadero o falso · Acceso a cuentas",
+      "concept": "segundo_factor_agrega_prueba_a_contrasena",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "La verificación en dos pasos añade una segunda prueba de identidad además de la contraseña.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El segundo factor puede ser un código o una confirmación en otro dispositivo y dificulta el acceso no autorizado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-088",
+      "number": 88,
+      "topic": "Verdadero o falso · Actualizaciones",
+      "concept": "actualizaciones_no_eliminan_todos_los_riesgos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Instalar una actualización garantiza que un dispositivo quedará protegido frente a cualquier amenaza futura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Las actualizaciones corrigen fallas conocidas, pero no eliminan todos los riesgos ni reemplazan otras medidas de seguridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-089",
+      "number": 89,
+      "topic": "Mantenimiento",
+      "concept": "limpieza_periodica_es_mantenimiento_preventivo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Cuál es un ejemplo de mantenimiento preventivo de un ventilador?",
+      "options": [
+        "Esperar a que deje de girar",
+        "Limpiar sus rejillas antes de que se obstruyan",
+        "Golpearlo cuando haga ruido",
+        "Desconectar su protección térmica"
+      ],
+      "correctAnswer": "Limpiar sus rejillas antes de que se obstruyan",
+      "explanation": "Limpiar e inspeccionar el equipo antes de que falle puede reducir obstrucciones y desgaste.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-090",
+      "number": 90,
+      "topic": "Pruebas controladas",
+      "concept": "multiples_cambios_dificultan_identificar_causa",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un equipo cambia al mismo tiempo el material y la forma de una pieza. ¿Qué dificulta esa prueba?",
+      "options": [
+        "Registrar los cambios",
+        "Usar una herramienta",
+        "Saber cuál cambio causó el resultado",
+        "Comparar el tamaño"
+      ],
+      "correctAnswer": "Saber cuál cambio causó el resultado",
+      "explanation": "Si cambian varias variables a la vez, es más difícil atribuir el resultado a una causa específica.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-091",
+      "number": 91,
+      "topic": "Accesibilidad digital",
+      "concept": "texto_alternativo_comunica_imagen_a_lector_pantalla",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué ayuda a que un lector de pantalla describa una fotografía informativa en una página?",
+      "options": [
+        "Reducir su resolución",
+        "Cambiar el color del borde",
+        "Guardarla en una carpeta distinta",
+        "Añadir un texto alternativo útil"
+      ],
+      "correctAnswer": "Añadir un texto alternativo útil",
+      "explanation": "El texto alternativo comunica el contenido relevante de una imagen a quienes usan tecnologías de asistencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-092",
+      "number": 92,
+      "topic": "Historial de archivos",
+      "concept": "historial_versiones_permite_recuperar_cambios",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué permite el historial de versiones de un documento compartido?",
+      "options": [
+        "Consultar cambios y recuperar una versión anterior",
+        "Evitar que existan copias del archivo",
+        "Convertir automáticamente toda opinión en dato",
+        "Impedir el acceso a usuarios autorizados"
+      ],
+      "correctAnswer": "Consultar cambios y recuperar una versión anterior",
+      "explanation": "El historial registra versiones y puede ayudar a recuperar contenido anterior tras un cambio no deseado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-093",
+      "number": 93,
+      "topic": "Energía en dispositivos",
+      "concept": "equipo_en_espera_puede_seguir_consumiendo_energia",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede ocurrir con un equipo apagado pero conectado a la corriente?",
+      "options": [
+        "La energía que produce al estar desconectado",
+        "La energía que aún puede usar mientras espera",
+        "La potencia máxima de su motor",
+        "El calor que almacena su carcasa"
+      ],
+      "correctAnswer": "La energía que aún puede usar mientras espera",
+      "explanation": "Algunos equipos siguen consumiendo energía para mantener funciones de espera aunque no estén en uso activo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-094",
+      "number": 94,
+      "topic": "Verdadero o falso · Ciclo de vida",
+      "concept": "impacto_tecnologico_se_evalua_en_varias_etapas",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Al evaluar el impacto de un producto pueden considerarse la extracción de materiales, la fabricación, el uso y su disposición final.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "El análisis del ciclo de vida considera impactos en varias etapas, desde la obtención de materiales hasta el final del producto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-095",
+      "number": 95,
+      "topic": "Redes inalámbricas",
+      "concept": "microondas_puede_interferir_con_wifi_24ghz",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una conexión Wi-Fi de 2,4 GHz se interrumpe cuando funciona un horno microondas cercano. ¿Qué explicación es más probable?",
+      "options": [
+        "El teclado cambió la contraseña",
+        "La pantalla bloqueó el enrutador",
+        "Puede haber interferencia en la banda de radio",
+        "La batería del computador borró la red"
+      ],
+      "correctAnswer": "Puede haber interferencia en la banda de radio",
+      "explanation": "Algunos hornos microondas pueden interferir con señales inalámbricas que usan una banda cercana de 2,4 GHz.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-096",
+      "number": 96,
+      "topic": "Ahorro de energía",
+      "concept": "suspension_automatica_reduce_consumo_en_inactividad",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una sala de informática, varios equipos quedan encendidos durante largos periodos sin uso. ¿Qué ajuste reduce consumo sin cerrar una tarea activa?",
+      "options": [
+        "Aumentar el brillo al máximo",
+        "Mantener siempre abierta la pantalla",
+        "Desactivar el modo de suspensión",
+        "Configurar suspensión tras un periodo de inactividad"
+      ],
+      "correctAnswer": "Configurar suspensión tras un periodo de inactividad",
+      "explanation": "La suspensión automática reduce el consumo cuando el equipo queda inactivo, y el tiempo puede configurarse para no interrumpir el trabajo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-097",
+      "number": 97,
+      "topic": "Interfaces inclusivas",
+      "concept": "navegacion_por_teclado_y_foco_visible_mejoran_acceso",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un portal escolar solo permite navegar con el ratón. ¿Qué cambio facilitaría su uso con teclado?",
+      "options": [
+        "Añadir navegación por teclado e indicador de foco",
+        "Ocultar los enlaces al mover el ratón",
+        "Usar íconos sin etiquetas",
+        "Hacer que todos los botones cambien de lugar"
+      ],
+      "correctAnswer": "Añadir navegación por teclado e indicador de foco",
+      "explanation": "La navegación por teclado y un foco visible ayudan a quienes no pueden usar un ratón con precisión.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-098",
+      "number": 98,
+      "topic": "Energía fuera de la red",
+      "concept": "bateria_respalda_sistema_solar_con_baja_generacion",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una estación de medición solar está en una zona nublada y debe operar de noche. ¿Qué solución ayuda a mantenerla activa?",
+      "options": [
+        "Usar solo una pantalla más grande",
+        "Añadir una batería para guardar energía",
+        "Desconectar el panel durante el día",
+        "Aumentar el brillo del indicador"
+      ],
+      "correctAnswer": "Añadir una batería para guardar energía",
+      "explanation": "La batería almacena parte de la energía generada cuando hay luz para usarla después.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-099",
+      "number": 99,
+      "topic": "Diseño para exteriores",
+      "concept": "sellado_y_prueba_de_agua_protegen_caja_exterior",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una caja electrónica deja de funcionar después de la lluvia durante una prueba. ¿Qué mejora conviene evaluar antes de instalarla afuera?",
+      "options": [
+        "Aumentar el tamaño de la pantalla",
+        "Cambiar el color del indicador",
+        "Sellar las uniones y probar con agua",
+        "Reducir el número de etiquetas"
+      ],
+      "correctAnswer": "Sellar las uniones y probar con agua",
+      "explanation": "El ingreso de agua puede dañar conexiones; un cierre apropiado debe comprobarse en condiciones representativas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-100",
+      "number": 100,
+      "topic": "Seguridad estructural",
+      "concept": "prueba_ciclica_detecta_falla_por_cargas_repetidas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una pieza soporta una carga una vez, pero falla después de varios ciclos repetidos. ¿Qué prueba debería añadirse?",
+      "options": [
+        "Medir solo la carga inicial",
+        "Revisar únicamente el peso vacío",
+        "Repetir una prueba estática",
+        "Registrar fallas en ciclos repetidos"
+      ],
+      "correctAnswer": "Registrar fallas en ciclos repetidos",
+      "explanation": "Algunas fallas aparecen por cargas repetidas; una prueba cíclica puede revelar desgaste o fatiga que no muestra una carga única.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-101",
+      "number": 101,
+      "topic": "Diagramas de flujo",
+      "concept": "rombo_en_diagrama_representa_decision",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué suele representar un rombo en un diagrama de flujo?",
+      "options": [
+        "Una decisión o condición",
+        "El inicio o el final",
+        "Un dato guardado",
+        "Una operación de cálculo"
+      ],
+      "correctAnswer": "Una decisión o condición",
+      "explanation": "El rombo representa una pregunta o condición que dirige el flujo hacia distintas rutas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-102",
+      "number": 102,
+      "topic": "Firmware",
+      "concept": "firmware_controla_funciones_basicas_del_dispositivo",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es el firmware de un dispositivo?",
+      "options": [
+        "Una pieza externa de soporte",
+        "Instrucciones integradas que controlan funciones básicas",
+        "Una contraseña temporal",
+        "Una conexión inalámbrica"
+      ],
+      "correctAnswer": "Instrucciones integradas que controlan funciones básicas",
+      "explanation": "El firmware es software integrado que permite controlar funciones esenciales del dispositivo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-103",
+      "number": 103,
+      "topic": "Verdadero o falso · Medición",
+      "concept": "unidades_comunes_facilitan_comparar_mediciones",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "Usar las mismas unidades facilita comparar mediciones hechas por equipos diferentes.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Las unidades comunes permiten interpretar y comparar cantidades sin conversiones ambiguas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-104",
+      "number": 104,
+      "topic": "Etiquetas eléctricas",
+      "concept": "voltios_indican_diferencia_de_potencial",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un cargador, ¿qué indica normalmente la etiqueta “5 V”?",
+      "options": [
+        "La corriente máxima",
+        "La energía almacenada",
+        "El voltaje de salida",
+        "La potencia mecánica"
+      ],
+      "correctAnswer": "El voltaje de salida",
+      "explanation": "La unidad voltio (V) expresa diferencia de potencial eléctrico o voltaje.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-105",
+      "number": 105,
+      "topic": "Protección de circuitos",
+      "concept": "fusible_interrumpe_corriente_por_encima_del_limite",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué función cumple un fusible en un circuito?",
+      "options": [
+        "Aumentar el voltaje",
+        "Almacenar energía",
+        "Medir la temperatura",
+        "Interrumpir la corriente si supera un límite"
+      ],
+      "correctAnswer": "Interrumpir la corriente si supera un límite",
+      "explanation": "El fusible se abre cuando la corriente supera su valor previsto y ayuda a proteger el circuito.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-106",
+      "number": 106,
+      "topic": "Entrada de datos",
+      "concept": "lector_codigo_barras_captura_datos_de_entrada",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hace un lector de códigos de barras?",
+      "options": [
+        "Captura información para que un sistema la procese",
+        "Enfría el procesador",
+        "Guarda energía eléctrica",
+        "Amplía la señal de una antena"
+      ],
+      "correctAnswer": "Captura información para que un sistema la procese",
+      "explanation": "El lector captura el patrón del código y lo convierte en datos que el sistema puede interpretar.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-107",
+      "number": 107,
+      "topic": "Fabricación",
+      "concept": "cortadora_laser_retira_material_segun_diseno",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué hace principalmente una cortadora láser al fabricar una pieza?",
+      "options": [
+        "Añade plástico en capas",
+        "Corta o graba material siguiendo un diseño",
+        "Une piezas con corriente eléctrica",
+        "Mide la resistencia del material"
+      ],
+      "correctAnswer": "Corta o graba material siguiendo un diseño",
+      "explanation": "La cortadora dirige un haz para cortar o grabar el material de acuerdo con un diseño digital.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-108",
+      "number": 108,
+      "topic": "Sistemas operativos",
+      "concept": "sistema_operativo_coordina_recursos_y_programas",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué tarea realiza principalmente un sistema operativo?",
+      "options": [
+        "Fabricar físicamente el procesador",
+        "Diseñar cada página de internet",
+        "Coordinar recursos del equipo y programas",
+        "Reemplazar todos los archivos del usuario"
+      ],
+      "correctAnswer": "Coordinar recursos del equipo y programas",
+      "explanation": "El sistema operativo administra recursos como memoria y dispositivos y permite ejecutar programas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-109",
+      "number": 109,
+      "topic": "Fórmulas",
+      "concept": "formula_recalcula_al_cambiar_dato_de_entrada",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una celda calcula `=A2*B2`. Si A2 cambia de 4 a 5 y B2 sigue en 3, ¿qué resultado aparece?",
+      "options": [
+        "15",
+        "7",
+        "12",
+        "20"
+      ],
+      "correctAnswer": "15",
+      "explanation": "La fórmula vuelve a calcularse con los nuevos datos: 5 × 3 = 15.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-110",
+      "number": 110,
+      "topic": "Condiciones en programas",
+      "concept": "comparar_valor_con_umbral_determina_accion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un ventilador se activa si la temperatura supera 30 °C. ¿Qué ocurre cuando el sensor marca 28 °C?",
+      "options": [
+        "El ventilador se activa porque 28 es mayor que 30",
+        "El ventilador no se activa por esa condición",
+        "El sensor cambia a modo de reposo",
+        "El programa borra la temperatura"
+      ],
+      "correctAnswer": "El ventilador no se activa por esa condición",
+      "explanation": "Como 28 no supera 30, la condición para activar el ventilador no se cumple.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-111",
+      "number": 111,
+      "topic": "Verdadero o falso · Inteligencia artificial",
+      "concept": "verificar_datos_generados_por_ia_antes_de_citarlos",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Antes de citar un dato factual generado por inteligencia artificial, conviene comprobarlo en fuentes confiables.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La respuesta generada puede contener errores; verificarla con fuentes confiables evita propagar información falsa.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-112",
+      "number": 112,
+      "topic": "Hojas de cálculo",
+      "concept": "referencia_relativa_se_ajusta_al_copiar_formula",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Al copiar una fórmula hacia abajo, ¿qué suele ocurrir con una referencia relativa como A1?",
+      "options": [
+        "Se convierte automáticamente en texto",
+        "Se bloquea en la misma celda",
+        "Se ajusta según la nueva posición",
+        "Se elimina de la fórmula"
+      ],
+      "correctAnswer": "Se ajusta según la nueva posición",
+      "explanation": "Las referencias relativas cambian de acuerdo con el desplazamiento de la fórmula.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-113",
+      "number": 113,
+      "topic": "Selección de gráficos",
+      "concept": "barras_comparan_valores_entre_categorias",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Se quieren comparar las ventas de cinco tiendas durante un mes. ¿Qué gráfico facilita esa comparación?",
+      "options": [
+        "Una línea de tiempo",
+        "Un plano de ubicación",
+        "Un diagrama de flujo",
+        "Un gráfico de barras"
+      ],
+      "correctAnswer": "Un gráfico de barras",
+      "explanation": "Las barras permiten comparar cantidades entre categorías, como distintas tiendas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-114",
+      "number": 114,
+      "topic": "Memoria y almacenamiento",
+      "concept": "ram_temporal_contrasta_con_almacenamiento_persistente",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué diferencia describe mejor la memoria RAM frente al almacenamiento del equipo?",
+      "options": [
+        "La RAM mantiene datos de trabajo temporalmente; el almacenamiento conserva archivos",
+        "La RAM es siempre externa y el almacenamiento siempre interno",
+        "La RAM guarda archivos sin electricidad durante años",
+        "El almacenamiento ejecuta todas las instrucciones en lugar del procesador"
+      ],
+      "correctAnswer": "La RAM mantiene datos de trabajo temporalmente; el almacenamiento conserva archivos",
+      "explanation": "La RAM guarda temporalmente datos en uso; el almacenamiento conserva archivos incluso cuando el equipo se apaga.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-115",
+      "number": 115,
+      "topic": "Residuos electrónicos",
+      "concept": "bateria_danada_requiere_recoleccion_especial",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Dónde conviene llevar una batería dañada para desecharla?",
+      "options": [
+        "A una fuente de agua",
+        "A un punto de recolección autorizado",
+        "A una caneca de papel",
+        "A una fogata al aire libre"
+      ],
+      "correctAnswer": "A un punto de recolección autorizado",
+      "explanation": "Las baterías pueden contener materiales que requieren manejo especial y recolección adecuada.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-116",
+      "number": 116,
+      "topic": "Verdadero o falso · Inteligencia artificial",
+      "concept": "datos_de_entrenamiento_poco_representativos_afectan_resultados",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Si los ejemplos usados para entrenar un sistema de inteligencia artificial excluyen a un grupo, sus resultados pueden ser menos adecuados para ese grupo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los datos de entrenamiento influyen en los patrones que aprende el sistema y pueden limitar su desempeño en grupos poco representados.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-117",
+      "number": 117,
+      "topic": "Ciclos de programación",
+      "concept": "ciclo_mientras_repite_mientras_condicion_se_cumpla",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En un programa, ¿para qué sirve un ciclo que se repite “mientras” una condición sea verdadera?",
+      "options": [
+        "Para borrar todas las variables",
+        "Para detener permanentemente el dispositivo",
+        "Para repetir instrucciones mientras se cumpla la condición",
+        "Para convertir un sensor en una pantalla"
+      ],
+      "correctAnswer": "Para repetir instrucciones mientras se cumpla la condición",
+      "explanation": "El ciclo vuelve a ejecutar sus instrucciones mientras la condición indicada siga siendo verdadera.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-118",
+      "number": 118,
+      "topic": "Verdadero o falso · Internet de las cosas",
+      "concept": "dispositivo_iot_conecta_sensores_y_red",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Un dispositivo del Internet de las cosas puede combinar sensores con conexión de red para compartir datos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los dispositivos IoT capturan datos y pueden intercambiarlos mediante una red para ofrecer funciones conectadas.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-119",
+      "number": 119,
+      "topic": "Imágenes digitales",
+      "concept": "dimensiones_mayores_implican_mas_pixeles",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una imagen mide 1200 × 1200 píxeles y otra 600 × 600. ¿Cuál contiene más píxeles?",
+      "options": [
+        "La de 600 × 600",
+        "Ambas contienen la misma cantidad",
+        "No puede saberse por sus dimensiones",
+        "La de 1200 × 1200"
+      ],
+      "correctAnswer": "La de 1200 × 1200",
+      "explanation": "La primera tiene 1 440 000 píxeles y la segunda 360 000; esto no garantiza por sí solo mayor calidad visual.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-120",
+      "number": 120,
+      "topic": "Uso de recursos digitales",
+      "concept": "revisar_licencia_y_atribuir_recurso_digital",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un estudiante incluye en su presentación una fotografía creada por otra persona. ¿Qué práctica es más responsable?",
+      "options": [
+        "Quitar el nombre del autor",
+        "Afirmar que la encontró primero",
+        "Recortarla para ocultar la fuente",
+        "Revisar la licencia y atribuirla según sus condiciones"
+      ],
+      "correctAnswer": "Revisar la licencia y atribuirla según sus condiciones",
+      "explanation": "Revisar la licencia y atribuir la autoría respeta las condiciones de uso del recurso.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-121",
+      "number": 121,
+      "topic": "Validación de prototipos",
+      "concept": "probar_prototipo_en_condiciones_previstas_de_uso",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un prototipo funcionará con lluvia y vibración, pero solo se probó sobre una mesa seca. ¿Qué debería hacer el equipo antes de fabricarlo?",
+      "options": [
+        "Ensayarlo bajo condiciones representativas de uso",
+        "Aprobarlo porque superó una prueba",
+        "Cambiar el color de la carcasa",
+        "Omitir las pruebas para ahorrar tiempo"
+      ],
+      "correctAnswer": "Ensayarlo bajo condiciones representativas de uso",
+      "explanation": "Las pruebas deben representar las condiciones previstas para encontrar fallas antes de fabricar el producto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-122",
+      "number": 122,
+      "topic": "Lógica de control",
+      "concept": "operador_and_exige_dos_condiciones_verdaderas",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una puerta automática debe abrirse solo si detecta una persona y el interruptor de seguridad está habilitado. ¿Qué operador lógico representa esa regla?",
+      "options": [
+        "OR",
+        "AND",
+        "NOT",
+        "Repetir"
+      ],
+      "correctAnswer": "AND",
+      "explanation": "AND exige que ambas condiciones sean verdaderas antes de abrir la puerta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-123",
+      "number": 123,
+      "topic": "Privacidad de sensores",
+      "concept": "minimizar_datos_personales_en_medicion_de_entorno",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un sensor del aula envía temperatura junto con el nombre del estudiante que está cerca, aunque ese dato no se necesita. ¿Qué cambio reduce mejor la exposición de información?",
+      "options": [
+        "Enviar mediciones con nombres",
+        "Guardar datos por más tiempo",
+        "Enviar solo lo necesario, sin identificar al estudiante",
+        "Publicar las mediciones en una red social"
+      ],
+      "correctAnswer": "Enviar solo lo necesario, sin identificar al estudiante",
+      "explanation": "Recopilar y enviar solo los datos necesarios reduce la exposición de información personal.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-124",
+      "number": 124,
+      "topic": "Seguridad de máquinas",
+      "concept": "control_dos_manos_reduce_riesgo_en_arranque",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una máquina peligrosa requiere dos controles intencionales para ponerse en marcha y proteger las manos del operador. ¿Qué diseño responde mejor?",
+      "options": [
+        "Un botón oculto tras la carcasa",
+        "Un sonido más fuerte al arrancar",
+        "Una pantalla con más instrucciones",
+        "Un control de dos manos con activación simultánea"
+      ],
+      "correctAnswer": "Un control de dos manos con activación simultánea",
+      "explanation": "Un control de dos manos exige una acción deliberada y mantiene ambas manos alejadas de la zona peligrosa durante el arranque.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-125",
+      "number": 125,
+      "topic": "Verdadero o falso · Protección eléctrica",
+      "concept": "aumentar_fusible_sin_diagnostico_elimina_proteccion",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Si un fusible se quema repetidamente, reemplazarlo por otro de mayor corriente sin revisar la causa es una solución segura.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Un fusible mayor puede dejar pasar una corriente peligrosa; primero se debe identificar y corregir la falla del circuito.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-126",
+      "number": 126,
+      "topic": "Protección de información",
+      "concept": "cifrado_protege_datos_con_clave",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué proceso transforma datos para que no puedan leerse sin la clave adecuada?",
+      "options": [
+        "Cifrado",
+        "Compresión",
+        "Formato",
+        "Respaldo"
+      ],
+      "correctAnswer": "Cifrado",
+      "explanation": "El cifrado transforma la información y requiere una clave autorizada para recuperarla de forma legible.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-127",
+      "number": 127,
+      "topic": "Direcciones web",
+      "concept": "url_indica_direccion_de_recurso_web",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es una URL?",
+      "options": [
+        "Un programa para abrir páginas",
+        "La dirección de un recurso en la Web",
+        "Una red inalámbrica",
+        "Un dispositivo de almacenamiento"
+      ],
+      "correctAnswer": "La dirección de un recurso en la Web",
+      "explanation": "La URL indica dónde localizar un recurso, como una página o un archivo en la Web.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-128",
+      "number": 128,
+      "topic": "Redes",
+      "concept": "ancho_banda_expresa_capacidad_de_transferencia",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué mide principalmente el ancho de banda de una conexión?",
+      "options": [
+        "El tiempo de demora de una respuesta",
+        "La distancia al enrutador",
+        "La cantidad de datos que puede transferirse por unidad de tiempo",
+        "El tamaño de la pantalla"
+      ],
+      "correctAnswer": "La cantidad de datos que puede transferirse por unidad de tiempo",
+      "explanation": "El ancho de banda expresa la capacidad de transferencia de datos durante un intervalo.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-129",
+      "number": 129,
+      "topic": "Pensamiento computacional",
+      "concept": "algoritmo_secuencia_pasos_para_resolver_tarea",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué es un algoritmo?",
+      "options": [
+        "Una conexión entre redes",
+        "Un archivo de imagen",
+        "Una pieza electrónica",
+        "Una secuencia de pasos para resolver una tarea"
+      ],
+      "correctAnswer": "Una secuencia de pasos para resolver una tarea",
+      "explanation": "Un algoritmo organiza instrucciones en un orden que permite alcanzar un resultado.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-130",
+      "number": 130,
+      "topic": "Verdadero o falso · Streaming",
+      "concept": "streaming_reproduce_mientras_recibe_datos",
+      "difficulty": "BASIC",
+      "type": "TRUE_FALSE",
+      "text": "En el streaming, el contenido puede reproducirse mientras siguen llegando datos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "La reproducción comienza con los datos recibidos, mientras el resto continúa transmitiéndose.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-131",
+      "number": 131,
+      "topic": "Almacenamiento en la nube",
+      "concept": "nube_guarda_archivos_en_servidores_remotos",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Dónde se guardan normalmente los archivos de un servicio de almacenamiento en la nube?",
+      "options": [
+        "En servidores remotos accesibles por internet",
+        "Solo en la memoria RAM del dispositivo",
+        "En el cable de corriente",
+        "Dentro de la pantalla"
+      ],
+      "correctAnswer": "En servidores remotos accesibles por internet",
+      "explanation": "El servicio guarda archivos en servidores remotos y permite acceder a ellos por una conexión de red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-132",
+      "number": 132,
+      "topic": "Organización de datos",
+      "concept": "fila_de_tabla_representa_registro",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una tabla de registros, ¿qué suele representar cada fila?",
+      "options": [
+        "Una fórmula única",
+        "Un registro o elemento",
+        "El nombre del programa",
+        "Un tipo de gráfico"
+      ],
+      "correctAnswer": "Un registro o elemento",
+      "explanation": "Cada fila suele reunir los datos de un elemento, mientras las columnas indican sus características.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-133",
+      "number": 133,
+      "topic": "Identificación en redes",
+      "concept": "direccion_ip_identifica_interfaz_en_red",
+      "difficulty": "BASIC",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué dato ayuda a identificar una interfaz dentro de una red para enviarle información?",
+      "options": [
+        "Una URL",
+        "Un título de página",
+        "Una dirección IP",
+        "Una contraseña de archivo"
+      ],
+      "correctAnswer": "Una dirección IP",
+      "explanation": "La dirección IP permite identificar una interfaz de red para dirigir datos hacia ella.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-134",
+      "number": 134,
+      "topic": "Verdadero o falso · Direcciones web",
+      "concept": "url_puede_incluir_componentes_ademas_de_dominio",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una URL y un nombre de dominio son exactamente lo mismo en todos los casos.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "El dominio forma parte de muchas URL, que también pueden incluir protocolo, ruta y otros componentes.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-135",
+      "number": 135,
+      "topic": "Servicios de red",
+      "concept": "dns_relaciona_dominio_con_direccion_ip",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué servicio ayuda a localizar la dirección IP asociada con un nombre de dominio?",
+      "options": [
+        "Cortafuegos",
+        "Compresor",
+        "Hoja de cálculo",
+        "DNS"
+      ],
+      "correctAnswer": "DNS",
+      "explanation": "DNS relaciona nombres de dominio fáciles de recordar con direcciones utilizadas por la red.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-136",
+      "number": 136,
+      "topic": "Seguridad de redes",
+      "concept": "cortafuegos_filtra_trafico_segun_reglas",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué herramienta puede filtrar conexiones de red según reglas configuradas?",
+      "options": [
+        "Cortafuegos",
+        "Navegador",
+        "Editor de imágenes",
+        "Reproductor de audio"
+      ],
+      "correctAnswer": "Cortafuegos",
+      "explanation": "Un cortafuegos permite o bloquea cierto tráfico de red según reglas de seguridad.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-137",
+      "number": 137,
+      "topic": "Sistemas integrados",
+      "concept": "sistema_integrado_controla_funcion_de_producto",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un controlador de lavadora regula el llenado y el ciclo de lavado. ¿Qué tipo de sistema es?",
+      "options": [
+        "Un buscador web",
+        "Un sistema integrado para una función específica",
+        "Una hoja de cálculo",
+        "Un servicio de almacenamiento remoto"
+      ],
+      "correctAnswer": "Un sistema integrado para una función específica",
+      "explanation": "Un sistema integrado combina componentes de hardware y software para realizar funciones dentro de un producto.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-138",
+      "number": 138,
+      "topic": "Rendimiento de red",
+      "concept": "latencia_mide_retraso_de_comunicacion",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una videollamada, la voz tarda mucho en llegar aunque se escuche con claridad. ¿Qué medida describe mejor ese retraso?",
+      "options": [
+        "Resolución",
+        "Almacenamiento",
+        "Latencia",
+        "Contraste"
+      ],
+      "correctAnswer": "Latencia",
+      "explanation": "La latencia mide el tiempo que tardan los datos en llegar y producir una respuesta.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-139",
+      "number": 139,
+      "topic": "Verdadero o falso · Rendimiento de red",
+      "concept": "ancho_banda_no_determina_por_si_solo_latencia",
+      "difficulty": "INTERMEDIATE",
+      "type": "TRUE_FALSE",
+      "text": "Una conexión con mucho ancho de banda siempre tiene baja latencia.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Falso",
+      "explanation": "Ancho de banda y latencia miden aspectos distintos; una conexión puede transferir mucho y aun así responder con demora.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-140",
+      "number": 140,
+      "topic": "Permisos compartidos",
+      "concept": "permiso_solo_lectura_no_permite_editar",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Qué puede hacer normalmente una persona con permiso de solo lectura en un documento compartido?",
+      "options": [
+        "Cambiar los permisos de todos",
+        "Borrar el archivo original",
+        "Editar el contenido",
+        "Consultar el contenido sin modificarlo"
+      ],
+      "correctAnswer": "Consultar el contenido sin modificarlo",
+      "explanation": "El permiso de lectura permite consultar el archivo, pero no cambiar su contenido.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-141",
+      "number": 141,
+      "topic": "Topologías de red",
+      "concept": "topologia_estrella_conecta_dispositivos_a_centro",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "En una topología en estrella, ¿a qué se conectan normalmente los dispositivos?",
+      "options": [
+        "A un punto central",
+        "Solo entre dispositivos vecinos",
+        "A una única línea compartida sin centro",
+        "A una ruta circular cerrada"
+      ],
+      "correctAnswer": "A un punto central",
+      "explanation": "En la topología en estrella cada dispositivo se comunica a través de un punto central, como un conmutador.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-142",
+      "number": 142,
+      "topic": "Navegación segura",
+      "concept": "https_cifra_conexion_no_garantiza_confiabilidad",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una página usa HTTPS. ¿Qué conclusión es razonable?",
+      "options": [
+        "Todo lo publicado en ella es verdadero",
+        "La conexión está cifrada, pero el contenido aún debe evaluarse",
+        "La página pertenece necesariamente al gobierno",
+        "El sitio no puede recopilar datos"
+      ],
+      "correctAnswer": "La conexión está cifrada, pero el contenido aún debe evaluarse",
+      "explanation": "HTTPS protege la conexión, pero no garantiza que el sitio o la información sean legítimos o confiables.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-143",
+      "number": 143,
+      "topic": "Redes locales",
+      "concept": "red_wifi_local_puede_funcionar_sin_internet",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Un portátil está conectado al Wi-Fi de la escuela, pero no abre sitios externos. ¿Qué afirmación puede ser cierta?",
+      "options": [
+        "El Wi-Fi y el internet son siempre lo mismo",
+        "Ningún dispositivo local puede comunicarse",
+        "Puede seguir accediendo a recursos de la red local",
+        "El portátil ya no tiene dirección de red"
+      ],
+      "correctAnswer": "Puede seguir accediendo a recursos de la red local",
+      "explanation": "Una red Wi-Fi local puede seguir conectando dispositivos entre sí aunque se interrumpa el acceso a internet.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-144",
+      "number": 144,
+      "topic": "Documentos sincronizados",
+      "concept": "resolver_conflicto_de_sincronizacion_comparando_versiones",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Dos estudiantes editan copias del mismo documento sin conexión y luego vuelven a sincronizarlas. ¿Qué conviene hacer si aparecen cambios en conflicto?",
+      "options": [
+        "Borrar las dos versiones",
+        "Aceptar una versión sin revisarla",
+        "Cambiar el nombre del curso",
+        "Comparar los cambios y combinar los que se necesitan"
+      ],
+      "correctAnswer": "Comparar los cambios y combinar los que se necesitan",
+      "explanation": "Comparar las versiones permite conservar aportes útiles sin sobrescribir cambios inadvertidamente.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-145",
+      "number": 145,
+      "topic": "Caché",
+      "concept": "cache_almacena_recursos_temporales_para_acelerar_acceso",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Por qué un navegador guarda temporalmente algunos recursos de páginas visitadas?",
+      "options": [
+        "Para cargarlos más rápido en visitas posteriores",
+        "Para cambiar su autoría",
+        "Para reemplazar la conexión a internet",
+        "Para borrar el historial de versiones"
+      ],
+      "correctAnswer": "Para cargarlos más rápido en visitas posteriores",
+      "explanation": "La caché conserva copias temporales de recursos para evitar descargarlos de nuevo cada vez.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-146",
+      "number": 146,
+      "topic": "Integridad de archivos",
+      "concept": "checksum_detecta_cambio_o_dano_de_archivo",
+      "difficulty": "INTERMEDIATE",
+      "type": "MULTIPLE_CHOICE",
+      "text": "¿Para qué se compara una suma de verificación antes y después de transferir un archivo?",
+      "options": [
+        "Para traducir el contenido",
+        "Para detectar si cambió o se dañó",
+        "Para elegir quién puede editarlo",
+        "Para aumentar su resolución"
+      ],
+      "correctAnswer": "Para detectar si cambió o se dañó",
+      "explanation": "Si las sumas no coinciden, el archivo pudo cambiar o dañarse durante el almacenamiento o la transferencia.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-147",
+      "number": 147,
+      "topic": "Verdadero o falso · Copias de seguridad",
+      "concept": "copia_en_mismo_equipo_no_protege_frente_a_su_perdida",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Guardar la única copia de seguridad en el mismo computador no protege frente a la pérdida o robo de ese equipo.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Si el dispositivo se pierde o daña, la copia guardada allí también puede quedar inaccesible.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-148",
+      "number": 148,
+      "topic": "Impresión en red local",
+      "concept": "impresion_local_puede_operar_sin_acceso_externo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "La conexión a internet de una escuela falla, pero el Wi-Fi local sigue activo. ¿Qué permitiría imprimir en una impresora de esa red?",
+      "options": [
+        "Conectar la impresora a otra ciudad",
+        "Esperar a que vuelva el servicio externo",
+        "Mantener impresora y portátil en la misma red local",
+        "Desactivar la red inalámbrica"
+      ],
+      "correctAnswer": "Mantener impresora y portátil en la misma red local",
+      "explanation": "Si ambos equipos comparten la red local y el servicio de impresión está disponible, no necesitan acceso externo a internet.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-149",
+      "number": 149,
+      "topic": "Privacidad y residuos electrónicos",
+      "concept": "borrar_datos_de_forma_segura_antes_de_donar_equipo",
+      "difficulty": "APPLICATION",
+      "type": "MULTIPLE_CHOICE",
+      "text": "Una escuela donará un computador antiguo que contiene datos de estudiantes. ¿Qué paso protege mejor esa información?",
+      "options": [
+        "Cambiar el fondo de pantalla",
+        "Borrar el acceso directo",
+        "Apagar el monitor",
+        "Borrar los datos de forma segura o retirar el almacenamiento"
+      ],
+      "correctAnswer": "Borrar los datos de forma segura o retirar el almacenamiento",
+      "explanation": "Antes de donar o reciclar un equipo, hay que impedir que terceros recuperen los datos personales que conserva.",
+      "stability": "STABLE",
+      "source": null
+    },
+    {
+      "id": "TEC7-150",
+      "number": 150,
+      "topic": "Verdadero o falso · Privacidad de ubicación",
+      "concept": "patrones_de_ubicacion_pueden_revelar_rutinas_personales",
+      "difficulty": "APPLICATION",
+      "type": "TRUE_FALSE",
+      "text": "Aunque un registro de ubicación no incluya un nombre, sus patrones pueden revelar los recorridos habituales de una persona.",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correctAnswer": "Verdadero",
+      "explanation": "Los lugares y horarios repetidos pueden permitir inferir rutinas y asociar datos con alguien.",
+      "stability": "STABLE",
+      "source": null
+    }
+  ]
+}

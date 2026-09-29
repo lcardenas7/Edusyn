@@ -1,4 +1,6 @@
 import { QuestionBankService } from './question-bank.service';
+import { canonicalText } from '../../common/utils/answer-matching.util';
+import { OFFICIAL_DUEL_BANKS } from './official-duel-banks';
 
 const actor = { userId: 'teacher-1', institutionId: 'school-1', roles: ['DOCENTE'], isSuperAdmin: false };
 const collection = { title: 'Reto de fracciones', subjectArea: 'Matemáticas', category: 'Fracciones', isPublished: true };
@@ -21,6 +23,16 @@ function setup() {
 }
 
 describe('QuestionBankService', () => {
+  it('audits every official bank for exact answers, canonical option uniqueness, and exact true/false values', () => {
+    for (const bank of OFFICIAL_DUEL_BANKS) {
+      for (const question of bank.questions) {
+        expect(question.options).toContain(question.correctAnswer);
+        expect(new Set(question.options.map(canonicalText)).size).toBe(question.options.length);
+        if (question.type === 'TRUE_FALSE') expect(['Verdadero', 'Falso']).toContain(question.correctAnswer);
+      }
+    }
+  });
+
   it('offers only official banks matching the classroom grade', async () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-6', name: 'Sexto' } });
@@ -33,7 +45,7 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     prisma.group.findFirst.mockResolvedValue({ grade: { id: 'grade-8', name: 'Octavo' } });
     const catalogs = await service.officialCatalog(actor, 'classroom-1');
-    expect(catalogs.filter((item) => item.grade === 7)).toHaveLength(7);
+    expect(catalogs.filter((item) => item.grade === 7)).toHaveLength(8);
     expect(catalogs.filter((item) => item.grade === 6)).toHaveLength(8);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-arte-cultura-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-7-v1')).toBe(true);
@@ -42,6 +54,7 @@ describe('QuestionBankService', () => {
     expect(catalogs.some((item) => item.catalogId === 'edusyn-geografia-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-matematicas-logica-grade-7-v1')).toBe(true);
+    expect(catalogs.some((item) => item.catalogId === 'edusyn-tecnologia-grade-7-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-historia-grade-8-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-ciencia-naturaleza-grade-6-v1')).toBe(true);
     expect(catalogs.some((item) => item.catalogId === 'edusyn-lengua-literatura-grade-6-v1')).toBe(true);
@@ -376,6 +389,21 @@ describe('QuestionBankService', () => {
     const { service, prisma } = setup();
     await expect(service.createQuestion(actor, 'classroom-1', 'collection-1', { ...question, correctAnswer: 'Cuatro unidades' })).rejects.toThrow('La respuesta correcta');
     expect(prisma.questionBankItem.create).not.toHaveBeenCalled();
+  });
+
+  it('canonicalizes the stored answer to the exact option and rejects options that differ only by accents', async () => {
+    const { service, prisma } = setup();
+    await service.createQuestion(actor, 'classroom-1', 'collection-1', {
+      type: 'MULTIPLE_CHOICE', text: '¿Qué ciudad es la capital de Colombia?',
+      options: ['Bogotá', 'Cali'], correctAnswer: 'bogota.',
+    });
+    expect(prisma.questionBankItem.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ correctAnswer: 'Bogotá' }),
+    }));
+    await expect(service.createQuestion(actor, 'classroom-1', 'collection-1', {
+      type: 'MULTIPLE_CHOICE', text: '¿Cómo se escribe el nombre?',
+      options: ['Medellín', 'Medellin'], correctAnswer: 'Medellín',
+    })).rejects.toThrow('Las opciones no pueden repetirse');
   });
 
   it('lets only the questionnaire author add questions', async () => {

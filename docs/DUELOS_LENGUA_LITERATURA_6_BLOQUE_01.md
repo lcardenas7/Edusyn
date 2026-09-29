@@ -886,17 +886,17 @@ D. Ciudad
 **Explicación:** En *río*, la vocal cerrada tónica y la abierta se pronuncian en sílabas separadas.  
 **Concepto:** hiato_vocal_cerrada_tonica
 
-### 79. Básica · Mayúsculas
-¿Cuál opción escribe correctamente el nombre de una ciudad colombiana?
+### 79. Básica · Géneros periodísticos
+¿Qué parte de una noticia resume el hecho principal en pocas palabras?
 
-A. medellín  
-B. Medellin  
-C. MEDELLÍN ciudad  
-D. Medellín
+A. Pie de foto<br>
+B. Intertítulo<br>
+C. Epígrafe<br>
+D. Titular
 
 **Respuesta:** D.  
-**Explicación:** Los nombres propios de ciudades empiezan con mayúscula y *Medellín* lleva tilde.  
-**Concepto:** mayuscula_y_tilde_nombre_ciudad
+**Explicación:** El titular presenta de forma breve el hecho o tema central de una noticia.
+**Concepto:** titular_resume_hecho_principal
 
 ### 80. Básica · Géneros literarios
 ¿Qué tipo de relato tradicional suele explicar el origen de un pueblo o un fenómeno mediante seres sobrenaturales?

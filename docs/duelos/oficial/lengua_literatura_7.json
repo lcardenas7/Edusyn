@@ -4,7 +4,7 @@
   "grade": 7,
   "subjectArea": "Duelos",
   "category": "Lengua y literatura",
-  "version": "1.0",
+  "version": "1.1",
   "availability": "institution-opt-in",
   "editorialStatus": "ready-for-import",
   "audit": {
@@ -1190,19 +1190,19 @@
     {
       "id": "LEN7-063",
       "number": 63,
-      "topic": "Preguntas indirectas",
-      "concept": "pregunta_indirecta_no_separa_subordinada_con_signos",
+      "topic": "Opinión y argumentos",
+      "concept": "opinion_requiere_razones_que_la_sustenten",
       "difficulty": "INTERMEDIATE",
       "type": "MULTIPLE_CHOICE",
-      "text": "¿Cuál opción escribe correctamente una pregunta indirecta dentro de una afirmación?",
+      "text": "Una reseña califica una película como excelente, pero no explica por qué. ¿Qué le falta para sostener esa opinión?",
       "options": [
-        "No sé ¿dónde queda la biblioteca?",
-        "No sé donde queda la biblioteca.",
-        "No sé: dónde queda la biblioteca?",
-        "No sé dónde queda la biblioteca."
+        "Un título más llamativo",
+        "Más nombres de personajes",
+        "Un resumen del final",
+        "Razones o evidencias"
       ],
-      "correctAnswer": "No sé dónde queda la biblioteca.",
-      "explanation": "La pregunta indirecta no lleva signos propios, pero “dónde” conserva la tilde por ser interrogativo.",
+      "correctAnswer": "Razones o evidencias",
+      "explanation": "Una opinión se vuelve más convincente cuando se acompaña de razones o evidencias pertinentes.",
       "stability": "STABLE",
       "source": null
     },
@@ -2416,19 +2416,19 @@
     {
       "id": "LEN7-129",
       "number": 129,
-      "topic": "Mayúsculas",
-      "concept": "nombre_propio_medellin_lleva_mayuscula_y_tilde",
+      "topic": "Teatro",
+      "concept": "reparto_identifica_actores_y_personajes",
       "difficulty": "BASIC",
       "type": "MULTIPLE_CHOICE",
-      "text": "¿Cuál opción escribe correctamente el nombre de una ciudad colombiana?",
+      "text": "En el programa de una obra, ¿qué sección indica quién interpreta cada personaje?",
       "options": [
-        "medellín",
-        "MEDELLÍN?",
-        "MedelliN",
-        "Medellín"
+        "Acotación",
+        "Escenografía",
+        "Diálogo",
+        "Reparto"
       ],
-      "correctAnswer": "Medellín",
-      "explanation": "Los nombres propios llevan mayúscula inicial y conservan las tildes que corresponden.",
+      "correctAnswer": "Reparto",
+      "explanation": "El reparto relaciona a los intérpretes con los personajes que representan.",
       "stability": "STABLE",
       "source": null
     },

@@ -695,17 +695,17 @@ D. Cambiar las cifras por adjetivos
 **Explicación:** La fuente y el método permiten revisar la pertinencia y confiabilidad de las cifras.<br>
 **Concepto:** cifras_sin_fuente_no_permiten_evaluar_origen
 
-### 63. Intermedia · Preguntas indirectas
-¿Cuál opción escribe correctamente una pregunta indirecta dentro de una afirmación?
+### 63. Intermedia · Opinión y argumentos
+Una reseña califica una película como excelente, pero no explica por qué. ¿Qué le falta para sostener esa opinión?
 
-A. No sé ¿dónde queda la biblioteca?<br>
-B. No sé donde queda la biblioteca.<br>
-C. No sé: dónde queda la biblioteca?<br>
-D. No sé dónde queda la biblioteca.
+A. Un título más llamativo<br>
+B. Más nombres de personajes<br>
+C. Un resumen del final<br>
+D. Razones o evidencias
 
 **Respuesta:** D.<br>
-**Explicación:** La pregunta indirecta no lleva signos propios, pero “dónde” conserva la tilde por ser interrogativo.
-**Concepto:** pregunta_indirecta_no_separa_subordinada_con_signos
+**Explicación:** Una opinión se vuelve más convincente cuando se acompaña de razones o evidencias pertinentes.
+**Concepto:** opinion_requiere_razones_que_la_sustenten
 
 ### 64. Intermedia · Autor y narrador · Verdadero o falso
 El narrador de una novela siempre es la misma persona que la escribió.
@@ -1423,17 +1423,17 @@ D. Distante
 **Explicación:** “Tic-tac” representa mediante sonidos escritos el ruido regular de un reloj.<br>
 **Concepto:** tic_tac_imita_sonido_de_reloj
 
-### 129. Básica · Mayúsculas
-¿Cuál opción escribe correctamente el nombre de una ciudad colombiana?
+### 129. Básica · Teatro
+En el programa de una obra, ¿qué sección indica quién interpreta cada personaje?
 
-A. medellín<br>
-B. MEDELLÍN?<br>
-C. MedelliN<br>
-D. Medellín
+A. Acotación<br>
+B. Escenografía<br>
+C. Diálogo<br>
+D. Reparto
 
 **Respuesta:** D.<br>
-**Explicación:** Los nombres propios llevan mayúscula inicial y conservan las tildes que corresponden.<br>
-**Concepto:** nombre_propio_medellin_lleva_mayuscula_y_tilde
+**Explicación:** El reparto relaciona a los intérpretes con los personajes que representan.<br>
+**Concepto:** reparto_identifica_actores_y_personajes
 
 ### 130. Básica · Comunicación oral · Verdadero o falso
 Los gestos y la expresión del rostro pueden complementar lo que una persona dice oralmente.

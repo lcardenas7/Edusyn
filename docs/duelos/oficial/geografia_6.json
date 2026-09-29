@@ -4,7 +4,7 @@
   "grade": 6,
   "subjectArea": "Duelos",
   "category": "Geografía",
-  "version": "1.0",
+  "version": "1.1",
   "availability": "institution-opt-in",
   "editorialStatus": "ready-for-import",
   "audit": {
@@ -145,7 +145,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Al girar sobre su eje, distintas partes de la Tierra quedan iluminadas por el Sol y luego pasan a la oscuridad.  ",
       "stability": "STABLE",
       "source": null
@@ -181,7 +181,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "El territorio colombiano tiene costa en ambos cuerpos de agua.  ",
       "stability": "STABLE",
       "source": null
@@ -350,7 +350,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Los meridianos convergen en los polos y se separan hacia el ecuador.  ",
       "stability": "STABLE",
       "source": null
@@ -405,7 +405,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "El río Amazonas recorre parte del extremo sur colombiano antes de seguir por Brasil.  ",
       "stability": "STABLE",
       "source": null
@@ -479,7 +479,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "A esa escala, 1 cm en el mapa equivale a 100.000 cm en la realidad, es decir, 1 km.  ",
       "stability": "STABLE",
       "source": null
@@ -591,7 +591,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Los mapas políticos representan territorios y límites administrativos; sus detalles dependen de la escala.  ",
       "stability": "STABLE",
       "source": null
@@ -665,7 +665,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Falso.  ",
+      "correctAnswer": "Falso",
       "explanation": "La brújula responde al campo magnético terrestre, cuyo norte no coincide exactamente con el polo geográfico.  ",
       "stability": "STABLE",
       "source": null
@@ -777,7 +777,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "A diferencia de un mapa plano, el globo conserva la forma esférica general de la Tierra.  ",
       "stability": "STABLE",
       "source": null
@@ -851,7 +851,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Las curvas de nivel conectan lugares de igual altura sobre el nivel de referencia del mapa.  ",
       "stability": "STABLE",
       "source": null
@@ -963,7 +963,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "La fecha importa: un mapa puede ser preciso para su época y estar desactualizado para orientarse hoy.  ",
       "stability": "STABLE",
       "source": null
@@ -1056,7 +1056,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "La atracción gravitacional de ambos astros participa en las mareas; la Luna tiene la influencia mayor.  ",
       "stability": "STABLE",
       "source": null
@@ -1244,7 +1244,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Falso.  ",
+      "correctAnswer": "Falso",
       "explanation": "Un desierto se define sobre todo por su escasa precipitación; existen desiertos fríos y con estaciones distintas.  ",
       "stability": "STABLE",
       "source": null
@@ -1280,7 +1280,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "En terrenos de caliza, el agua disuelve parte de la roca y puede desarrollar formas kársticas, como cuevas.  ",
       "stability": "STABLE",
       "source": null
@@ -1316,7 +1316,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Las corrientes transportan agua y calor, por lo que pueden afectar el ambiente costero según la región.  ",
       "stability": "STABLE",
       "source": null
@@ -1428,7 +1428,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Usar el mismo recorte y escala ayuda a comparar áreas de forma justa; también se debe revisar la leyenda y la fecha.  ",
       "stability": "STABLE",
       "source": null
@@ -1521,7 +1521,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "En un mismo país coexisten lugares rurales y ciudades, con distintas actividades y formas de ocupación.  ",
       "stability": "STABLE",
       "source": null
@@ -1633,7 +1633,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Esta gráfica representa la composición de la población por edad y sexo, con grupos en cada lado.  ",
       "stability": "STABLE",
       "source": null
@@ -1707,7 +1707,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Para conocer la distribución espacial se necesitan datos por lugares, no solo el total nacional.  ",
       "stability": "STABLE",
       "source": null
@@ -1800,7 +1800,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "El desplazamiento cotidiano puede conectar lugares sin que la persona se mude a vivir al sitio de trabajo.  ",
       "stability": "STABLE",
       "source": null
@@ -1893,7 +1893,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "La pirámide resume composición demográfica; se requieren datos o mapas adicionales para localizar a la población.  ",
       "stability": "STABLE",
       "source": null
@@ -1986,7 +1986,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Una vía u otra barrera puede fragmentar un hábitat y separar los espacios usados por algunas especies.  ",
       "stability": "STABLE",
       "source": null
@@ -2136,7 +2136,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "La conectividad puede facilitar el desplazamiento entre parches, aunque su utilidad depende de cada especie y paisaje.  ",
       "stability": "STABLE",
       "source": null
@@ -2229,7 +2229,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "La mezcla de agua dulce y marina define gradientes de salinidad que influyen en los hábitats del estuario.  ",
       "stability": "STABLE",
       "source": null
@@ -2265,7 +2265,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Las plantas y los sedimentos de marismas pueden ayudar a proteger orillas y servir de hábitat.  ",
       "stability": "STABLE",
       "source": null
@@ -2358,7 +2358,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Falso.  ",
+      "correctAnswer": "Falso",
       "explanation": "La protección de un área no asegura conectividad; también pueden requerirse corredores y manejo del paisaje circundante.  ",
       "stability": "STABLE",
       "source": null
@@ -2755,7 +2755,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "El agua almacenada en formaciones permeables puede emerger de manera natural o extraerse mediante pozos.  ",
       "stability": "STABLE",
       "source": "https://md.water.usgs.gov/preview/faq/groundwater.html"
@@ -2772,7 +2772,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "En zonas montañosas, los valles suelen facilitar el tránsito entre lugares separados por elevaciones.  ",
       "stability": "STABLE",
       "source": null
@@ -2789,7 +2789,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "El impacto repetido de las olas desgasta la costa y puede hacer que el borde del acantilado avance tierra adentro.  ",
       "stability": "STABLE",
       "source": null
@@ -2806,7 +2806,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Falso.  ",
+      "correctAnswer": "Falso",
       "explanation": "La ausencia de puntos puede deberse al periodo observado, a pocos registros o a la escala; el mapa no demuestra riesgo nulo.  ",
       "stability": "STABLE",
       "source": null
@@ -2823,7 +2823,7 @@
         "Verdadero",
         "Falso"
       ],
-      "correctAnswer": "Verdadero.  ",
+      "correctAnswer": "Verdadero",
       "explanation": "Las composiciones de falso color combinan bandas de luz para facilitar la observación de ciertos rasgos del terreno.  ",
       "stability": "STABLE",
       "source": "https://vlab.noaa.gov/web/oclo/gamma"
