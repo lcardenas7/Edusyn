@@ -1,0 +1,544 @@
+.duel-stage {
+  position:fixed;
+  inset:0;
+  z-index:120;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  color:#fff;
+  background:radial-gradient(ellipse at 20% 70%,#35379e80,transparent 60%),radial-gradient(ellipse at 95% 95%,#12649588,transparent 55%),linear-gradient(160deg,#0d3474,#071935 85%);
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+  isolation:isolate
+}
+
+.duel-stage-inner {
+  max-width:480px;
+  min-height:100%;
+  margin:0 auto;
+  min-width:0
+}
+.duel-stage-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:24px
+}
+.duel-stage-heading h1 {
+  font-size:17px;
+  font-weight:800;
+  text-align:center;
+  line-height:1.3
+}
+.duel-icon-button {
+  display:grid;
+  place-items:center;
+  min-height:44px;
+  min-width:44px;
+  border-radius:50%;
+  background:#ffffff0c;
+  flex-shrink:0
+}
+.duel-icon-button:hover {
+  background:#ffffff20
+}
+
+.duel-versus-screen {
+  padding-top:clamp(16px,5vh,54px)
+}
+.duel-versus-players {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 50px minmax(0,1fr);
+  align-items:center;
+  gap:8px
+}
+.duel-player {
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  text-align:center;
+  min-width:0;
+  gap:8px
+}
+.duel-player strong {
+  font-size:14px;
+  line-height:1.3;
+  overflow-wrap:anywhere
+}
+.duel-player>span:last-child:not(.duel-avatar) {
+  font-size:13px;
+  color:#b8ceef
+}
+.duel-avatar {
+  display:grid;
+  place-items:center;
+  width:92px;
+  height:92px;
+  border:4px solid #9edcff;
+  border-radius:50%;
+  background:linear-gradient(145deg,#c5eaff,#a6b4fb);
+  font-size:52px;
+  box-shadow:0 0 25px #2998ff50
+}
+.duel-versus-mark {
+  font-size:34px;
+  font-weight:950;
+  color:#ffdf57;
+  font-style:italic;
+  text-shadow:0 3px 0 #a96b08,0 0 22px #ffc83f88
+}
+.duel-rules {
+  display:flex;
+  gap:12px;
+  justify-content:space-around;
+  margin:30px 0 16px;
+  border:1px solid #ffffff15;
+  border-radius:20px;
+  padding:18px 12px;
+  background:#ffffff07;
+  font-size:13px
+}
+.duel-rules strong {
+  font-size:17px
+}
+.duel-wait-card {
+  padding:24px 20px;
+  text-align:center;
+  background:#030e2670;
+  border-radius:24px
+}
+.duel-hourglass {
+  display:block;
+  font-size:68px;
+  margin:0 auto 16px;
+  animation:duel-bob 2.4s ease-in-out infinite
+}
+.duel-wait-card h2 {
+  font-size:18px;
+  font-weight:800
+}
+.duel-wait-card p {
+  font-size:14px;
+  line-height:1.65;
+  color:#bfceeb;
+  margin-top:12px
+}
+.duel-cancel {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:48px;
+  margin:24px auto 0;
+  border:1px solid #fb718566;
+  color:#fda4af;
+  border-radius:99px;
+  padding:10px 26px
+}
+.duel-tip {
+  font-size:13px;
+  line-height:1.6;
+  color:#bbceee;
+  text-align:center;
+  padding:20px 8px
+}
+
+.duel-scoreboard {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+  padding:14px 8px;
+  border-radius:22px;
+  border:1px solid #8bafff30;
+  background:#061c46b0;
+  box-shadow:0 8px 28px #0002
+}
+.duel-player-small {
+  gap:4px
+}
+.duel-player-small .duel-avatar {
+  height:46px;
+  width:46px;
+  font-size:28px;
+  border-width:2px
+}
+.duel-player-small strong {
+  font-size:11px
+}
+.duel-score {
+  text-align:center;
+  display:block;
+  font-size:24px;
+  font-weight:900;
+  margin-top:5px
+}
+.duel-score small {
+  font-size:12px;
+  font-weight:600;
+  color:#a8d1ee
+}
+.duel-score-vs {
+  font-size:13px;
+  font-weight:900;
+  color:#ffdf68;
+  text-align:center
+}
+.duel-progress-label {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-size:12px;
+  color:#d5e1fa;
+  margin:18px 2px 10px
+}
+.duel-progress {
+  display:flex;
+  gap:4px;
+  margin-bottom:26px
+}
+.duel-progress>span {
+  height:9px;
+  flex:1;
+  border-radius:3px;
+  background:#ffffff20
+}
+.duel-progress>.is-correct {
+  background:#3cdda0
+}
+.duel-progress>.is-wrong {
+  background:#fca579
+}
+.duel-progress>.is-current {
+  background:#9bbdff
+}
+
+.duel-question-stack {
+  position:relative;
+  margin:0 3px 22px;
+  z-index:0
+}
+.duel-question-stack:before,.duel-question-stack:after {
+  content:"";
+  position:absolute;
+  inset:-8px 10px 10px;
+  background:#c9d5ee;
+  border-radius:22px;
+  transform:rotate(-2deg);
+  z-index:-1
+}
+.duel-question-stack:after {
+  inset:-3px 5px 7px;
+  background:#e5ebfa;
+  transform:rotate(1deg)
+}
+.duel-question-card {
+  background:linear-gradient(145deg,#fff,#f3f6ff);
+  border-radius:22px;
+  padding:22px 20px;
+  color:#101b38;
+  box-shadow:0 10px 24px #0003
+}
+.duel-question-meta {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-bottom:18px
+}
+.duel-question-meta>span {
+  background:linear-gradient(135deg,#d960f0,#854cce);
+  color:#fff;
+  font-size:25px;
+  display:grid;
+  place-items:center;
+  width:35px;
+  height:35px;
+  border-radius:9px;
+  flex-shrink:0
+}
+.duel-question-meta p {
+  font-size:12px;
+  color:#626d87;
+  flex:1;
+  min-width:0
+}
+.duel-question-meta strong {
+  font-size:12px;
+  padding:7px 9px;
+  border-radius:12px;
+  background:#cdf6e1;
+  color:#16704f;
+  white-space:nowrap
+}
+.duel-question-card h2 {
+  font-size:clamp(21px,5.6vw,27px);
+  font-weight:850;
+  line-height:1.35;
+  overflow-wrap:anywhere
+}
+.duel-options {
+  display:grid;
+  gap:12px;
+  padding:0 3px
+}
+.duel-option {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  text-align:left;
+  border:2px solid #dbe4f1;
+  background:linear-gradient(#fff,#f4f6fd);
+  color:#192640;
+  border-radius:99px;
+  padding:9px 15px 9px 8px;
+  min-height:62px;
+  font-size:17px;
+  font-weight:750;
+  box-shadow:0 4px 0 #96a7c2;
+  transition:transform .15s,box-shadow .15s,background .2s;
+  overflow-wrap:anywhere
+}
+.duel-option>span:nth-child(2) {
+  flex:1;
+  min-width:0
+}
+.duel-option:not(:disabled):active {
+  transform:translateY(3px);
+  box-shadow:0 1px 0 #96a7c2
+}
+.duel-option-letter {
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  flex-shrink:0;
+  background:#e5eaf2;
+  border-radius:50%;
+  font-weight:800;
+  color:#52617a
+}
+.duel-option.is-correct {
+  background:#a6f5c5;
+  border-color:#83ffb2;
+  box-shadow:0 0 25px #4af58c66,0 4px 0 #368e68;
+  color:#064a2e
+}
+.duel-option.is-correct .duel-option-letter {
+  background:#4cdd97;
+  color:#07593a
+}
+.duel-option.is-wrong {
+  background:#ffe0df;
+  color:#8b2936;
+  border-color:#ffb6bd;
+  box-shadow:0 4px 0 #a86070
+}
+.duel-option.is-muted {
+  opacity:.48;
+  box-shadow:none
+}
+.duel-saving {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin:18px 0;
+  font-size:13px
+}
+
+.duel-feedback {
+  position:relative;
+  margin-top:22px;
+  background:#163f42;
+  border:1px solid #63d8a5;
+  border-radius:20px;
+  padding:16px
+}
+.duel-feedback.is-wrong {
+  background:#43394c;
+  border-color:#cd9e92
+}
+.duel-feedback-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px
+}
+.duel-feedback-heading>strong {
+  font-size:16px
+}
+.duel-feedback-heading>button {
+  border-radius:99px;
+  background:#7352c1;
+  padding:10px 12px;
+  min-height:44px;
+  font-size:12px;
+  font-weight:700;
+  flex-shrink:0
+}
+.duel-feedback p {
+  font-size:14px;
+  line-height:1.6;
+  margin-top:12px;
+  color:#e1edfa
+}
+.duel-primary {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  min-height:52px;
+  margin-top:18px;
+  padding:12px 18px;
+  background:linear-gradient(135deg,#2364ff,#0043e4);
+  border-radius:16px;
+  font-weight:800;
+  color:white;
+  box-shadow:0 4px 0 #062e8f
+}
+.duel-primary:disabled,.duel-cancel:disabled {
+  opacity:.5
+}
+.duel-result {
+  text-align:center;
+  padding:30px 4px
+}
+.duel-result-icon {
+  display:block;
+  font-size:76px
+}
+.duel-result h2 {
+  font-size:26px;
+  font-weight:900;
+  margin:16px 0
+}
+.duel-result>p {
+  font-size:14px;
+  line-height:1.65;
+  color:#c9d9f2;
+  margin-top:12px
+}
+.duel-review {
+  text-align:left;
+  margin-top:24px;
+  background:#ffffff0b;
+  border-radius:18px;
+  padding:16px
+}
+.duel-review summary {
+  cursor:pointer;
+  min-height:32px;
+  font-weight:700
+}
+.duel-review>div {
+  border-top:1px solid #ffffff20;
+  padding:14px 0;
+  font-size:13px;
+  line-height:1.6
+}
+.duel-review p {
+  color:#c8d7f1;
+  margin-top:5px
+}
+.duel-confetti {
+  position:absolute;
+  inset:-22px 0 0;
+  pointer-events:none;
+  overflow:hidden
+}
+.duel-confetti i {
+  position:absolute;
+  top:0;
+  width:6px;
+  height:12px;
+  animation:duel-confetti .85s ease-out both
+}
+
+.duel-icon-button:focus-visible,.duel-option:focus-visible,.duel-primary:focus-visible,.duel-cancel:focus-visible,.duel-feedback button:focus-visible {
+  outline:3px solid #ffdf68;
+  outline-offset:4px
+}
+
+@keyframes duel-bob {
+  50% {
+  transform:translateY(-8px) rotate(4deg)
+}
+
+}
+@keyframes duel-confetti {
+  from {
+  transform:translateY(-5px) rotate(0);
+  opacity:1
+}
+to {
+  transform:translateY(150px) rotate(220deg);
+  opacity:0
+}
+
+}
+
+@media(max-height:700px) {
+  .duel-stage-heading {
+  margin-bottom:12px
+}
+.duel-scoreboard {
+  padding:8px
+}
+.duel-player-small .duel-avatar {
+  height:36px;
+  width:36px;
+  font-size:23px
+}
+.duel-question-card {
+  padding:18px
+}
+.duel-question-meta {
+  margin-bottom:12px
+}
+.duel-progress {
+  margin-bottom:20px
+}
+.duel-option {
+  min-height:54px;
+  padding-top:6px;
+  padding-bottom:6px
+}
+.duel-options {
+  gap:10px
+}
+
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .duel-stage *,.duel-stage *:before,.duel-stage *:after {
+  animation:none!important;
+  transition:none!important;
+  scroll-behavior:auto!important
+}
+
+}
+
+
+.math-event-incoming {
+  animation:duel-invite-in .3s ease-out both
+}
+
+@keyframes duel-invite-in {
+  from {
+  opacity:0;
+  transform:translateY(-10px)
+}
+to {
+  opacity:1;
+  transform:translateY(0)
+}
+
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .math-event-incoming {
+  animation:none
+}
+
+}
+

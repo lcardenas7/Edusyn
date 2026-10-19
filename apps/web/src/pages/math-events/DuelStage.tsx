@@ -1,0 +1,146 @@
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowLeft, Check, ChevronRight, LoaderCircle, Maximize, Minimize, Swords, X } from "lucide-react";
+import "./duel-stage.css";
+
+export type DuelQuestion = {
+  id: string; text: string; options: string[]; topic?: string | null;
+  answered: boolean; correctAnswer?: string; explanation?: string | null; isCorrect?: boolean;
+};
+export type DuelState = {
+  id: string; status: string; round: number; total: number; finished: boolean;
+  allDone: boolean; questions: DuelQuestion[]; myScore: number; opponentScore: number | null;
+};
+export type AnswerFeedback = {
+  duelId: string; ordinal: number; question: DuelQuestion; selected: string;
+  isCorrect: boolean; correctAnswer?: string; explanation?: string | null;
+};
+type Player = { firstName: string; lastName: string; course: string; grade: number; avatarCode: string };
+type Props = {
+  title: string; me: Player; opponent: Player; glyphs: Record<string, string>;
+  duel: DuelState | null; feedback: AnswerFeedback | null; answering: boolean; busy: boolean;
+  onAnswer: (q: DuelQuestion, ordinal: number, value: string) => void;
+  onContinue: () => void; onBack: () => void; onCancel?: () => void;
+};
+
+function PlayerBadge({ player, glyphs, small = false }: { player: Player; glyphs: Record<string, string>; small?: boolean }) {
+  return <div className={`duel-player ${small ? "duel-player-small" : ""}`}>
+    <span className="duel-avatar" aria-hidden="true">{glyphs[player.avatarCode] || "⭐"}</span>
+    <strong>{player.firstName} {player.lastName}</strong>
+    {!small && <span>{player.grade}.º · {player.course}</span>}
+  </div>;
+}
+
+export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answering, busy, onAnswer, onContinue, onBack, onCancel }: Props) {
+  const reduceMotion = useReducedMotion();
+  const stageRef = useRef<HTMLElement>(null);
+  const [explain, setExplain] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [intro, setIntro] = useState(!!duel && !duel.finished && !duel.questions.some(q => q.answered));
+  useEffect(() => {
+    if (!intro) return;
+    const timer = window.setTimeout(() => setIntro(false), reduceMotion ? 0 : 1500);
+    return () => clearTimeout(timer);
+  }, [intro, reduceMotion]);
+  useEffect(() => { setExplain(false); }, [feedback]);
+  useEffect(() => {
+    const update = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+  useEffect(() => {
+    // Freeze only the background page; the stage itself remains scrollable on short screens.
+    const previous = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    document.body.style.overflow = "hidden";
+    stageRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previous;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen?.();
+    } catch { /* Immersive layout also works when the browser declines fullscreen. */ }
+  };
+  const question = feedback?.question ?? duel?.questions.find(q => !q.answered);
+  const ordinal = feedback?.ordinal ?? (duel ? duel.questions.findIndex(q => !q.answered) : 0);
+  const waiting = !duel;
+  const transition = { duration: reduceMotion ? 0 : 0.24 };
+  return <section ref={stageRef} tabIndex={-1} role="dialog" aria-modal="true" className="duel-stage" aria-label="Partida de matemáticas" onKeyDown={event => {
+    if (event.key === "Escape") { onBack(); return; }
+    if (event.key !== "Tab") return;
+    const controls = Array.from(stageRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), summary, [tabindex="0"]') ?? []);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === stageRef.current)) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  }}>
+    <div className="duel-stage-inner">
+      <header className="duel-stage-heading">
+        <button onClick={onBack} className="duel-icon-button" aria-label="Volver al evento; la partida continúa"><ArrowLeft size={22} /></button>
+        <h1>{title}</h1>
+        {document.fullscreenEnabled ? <button onClick={toggleFullscreen} className="duel-icon-button" aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}>{fullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button> : <Swords size={22} aria-hidden="true" />}
+      </header>
+      <AnimatePresence mode="wait" initial={false}>
+        {waiting || intro ? <motion.div key="versus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={transition} className="duel-versus-screen">
+          <div className="duel-versus-players">
+            <PlayerBadge player={me} glyphs={glyphs} />
+            <span className="duel-versus-mark" aria-label="contra">VS</span>
+            <PlayerBadge player={opponent} glyphs={glyphs} />
+          </div>
+          <div className="duel-rules"><span>❔ <strong>{duel?.total ?? 7}</strong> preguntas</span><span>🏆 <strong>10 pts</strong> por acierto</span></div>
+          <div className="duel-wait-card" role="status">
+            <span className="duel-hourglass" aria-hidden="true">{waiting ? "⏳" : "⚡"}</span>
+            <h2>{waiting ? "Esperando a que tu rival acepte…" : "¡El reto comienza!"}</h2>
+            <p>{waiting ? "Te avisaremos aquí cuando acepte. Puedes volver al evento mientras tanto." : "Piensa, elige y demuestra lo que sabes."}</p>
+          </div>
+          {waiting && onCancel && <button disabled={busy} onClick={onCancel} className="duel-cancel"><X size={18} /> Cancelar reto</button>}
+          <p className="duel-tip">💡 Cada acierto cuenta. ¡Tómate un momento para pensar!</p>
+        </motion.div> : <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={transition}>
+          <div className="duel-scoreboard">
+            <div><PlayerBadge player={me} glyphs={glyphs} small /><strong className="duel-score">{(duel?.myScore ?? 0) * 10} <small>pts</small></strong></div>
+            <span className="duel-score-vs">VS</span>
+            <div><PlayerBadge player={opponent} glyphs={glyphs} small /><strong className="duel-score">{duel?.opponentScore == null ? "…" : duel.opponentScore * 10} <small>{duel?.opponentScore == null ? "en juego" : "pts"}</small></strong></div>
+          </div>
+          <div className="duel-progress-label"><span>{question ? `Pregunta ${ordinal + 1} de ${duel?.total}` : "Tus respuestas están guardadas"}</span><span>{duel?.myScore ?? 0} aciertos</span></div>
+          <div className="duel-progress" aria-label="Progreso de preguntas">{duel?.questions.map((q, i) => <span key={q.id} className={q.answered ? q.isCorrect ? "is-correct" : "is-wrong" : i === ordinal ? "is-current" : ""} />)}</div>
+          {question ? <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={question.id} initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -12 }} transition={transition}>
+              <div className="duel-question-stack"><article className="duel-question-card">
+                <div className="duel-question-meta"><span>▦</span><p>{question.topic || "Desafío matemático"}</p><strong>+10 pts</strong></div>
+                <h2>{question.text}</h2>
+              </article></div>
+              <div className="duel-options" aria-label="Opciones de respuesta" aria-busy={answering}>
+                {question.options.map((option, i) => {
+                  const correct = !!feedback && (option === feedback.correctAnswer || (feedback.isCorrect && option === feedback.selected));
+                  const wrong = !!feedback && option === feedback.selected && !feedback.isCorrect;
+                  return <button key={`${i}-${option}`} disabled={answering || !!feedback} onClick={() => onAnswer(question, ordinal, option)} className={`duel-option ${correct ? "is-correct" : wrong ? "is-wrong" : feedback ? "is-muted" : ""}`}>
+                    <span className="duel-option-letter" aria-hidden="true">{String.fromCharCode(65 + i)}</span><span>{option}</span>{correct ? <Check size={24} aria-label="Respuesta correcta" /> : wrong ? <X size={24} aria-label="Respuesta incorrecta" /> : null}
+                  </button>;
+                })}
+              </div>
+              {answering && <p className="duel-saving" role="status"><LoaderCircle size={16} className="animate-spin" /> Guardando tu respuesta…</p>}
+              {feedback && <motion.div initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} transition={transition} className={`duel-feedback ${feedback.isCorrect ? "is-correct" : "is-wrong"}`}>
+                {feedback.isCorrect && !reduceMotion && <div className="duel-confetti" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <i key={i} style={{ left: `${8 + i * 7}%`, animationDelay: `${i % 4 * 0.06}s`, background: ["#ffdf58", "#58dbb2", "#9893ff", "#ff8eb2"][i % 4] }} />)}</div>}
+                <div className="duel-feedback-heading" role="status"><strong>{feedback.isCorrect ? "✓ ¡Correcto! +10 puntos" : "Sigamos, ¡tú puedes!"}</strong>{feedback.explanation && <button onClick={() => setExplain(!explain)} aria-expanded={explain}>¿Por qué?</button>}</div>
+                {!feedback.isCorrect && <p>Respuesta: {feedback.correctAnswer ?? "Consulta el resumen al terminar."}</p>}
+                {explain && <p>{feedback.explanation}</p>}
+                <button disabled={answering} onClick={onContinue} className="duel-primary">{ordinal + 1 === duel?.total ? "Ver mi resultado" : "Siguiente pregunta"}<ChevronRight size={20} /></button>
+              </motion.div>}
+              {!feedback && <p className="duel-tip">Toca una opción para responder.</p>}
+            </motion.div>
+          </AnimatePresence> : <div className="duel-result" role="status">
+            <span className="duel-result-icon" aria-hidden="true">{duel?.allDone ? "🏆" : "⏳"}</span>
+            <h2>{duel?.allDone ? duel.myScore > (duel.opponentScore ?? 0) ? "¡Ganaste el duelo!" : duel.myScore === duel.opponentScore ? "¡Un gran empate!" : "¡Bien jugado!" : "¡Terminaste tu parte!"}</h2>
+            <p>{duel?.myScore} aciertos de {duel?.total} · {(duel?.myScore ?? 0) * 10} puntos por aciertos</p>
+            <p>{duel?.allDone ? "El ranking incluye el bono por victoria o empate." : "Tu rival sigue jugando. Vuelve al evento y consulta el resultado después."}</p>
+            {duel?.allDone && <details className="duel-review"><summary>Revisar mis respuestas</summary>{duel.questions.map((q, i) => <div key={q.id}><strong>{i + 1}. {q.text}</strong><p>{q.isCorrect ? "✓" : "·"} {q.correctAnswer}</p>{q.explanation && <p>{q.explanation}</p>}</div>)}</details>}
+            <button onClick={onBack} className="duel-primary">Volver al evento <ChevronRight size={20} /></button>
+          </div>}
+        </motion.div>}
+      </AnimatePresence>
+    </div>
+  </section>;
+}

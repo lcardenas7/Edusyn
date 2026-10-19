@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, LoaderCircle, Swords, X } from "lucide-react";
 import api from "../lib/api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../lib/toast";
 import { bogotaInputToIso } from "../lib/datetime";
+import { DuelStage, type DuelState, type AnswerFeedback } from "./math-events/DuelStage";
 
 type EventCard = {
   id: string;
@@ -48,25 +49,7 @@ type Board = {
   roster: Person[];
   duels: any[];
 };
-type Duel = {
-  id: string;
-  status: string;
-  round: number;
-  total: number;
-  finished: boolean;
-  allDone: boolean;
-  questions: Array<{
-    id: string;
-    text: string;
-    options: string[];
-    answered: boolean;
-    correctAnswer?: string;
-    explanation?: string | null;
-    isCorrect?: boolean;
-  }>;
-  myScore: number;
-  opponentScore: number | null;
-};
+type Duel = DuelState;
 const avatars = [
   "star",
   "fox",
@@ -215,7 +198,12 @@ export default function MathEventsPage() {
   const [scope, setScope] = useState<"general" | "grade" | "course">("general");
   const [busy, setBusy] = useState(false);
   const [answering, setAnswering] = useState(false);
-  const [feedback, setFeedback] = useState<any>(null);
+  const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
+  const [stageId, setStageId] = useState<string | null>(null);
+  const [hiddenDuelId, setHiddenDuelId] = useState<string | null>(null);
+  const duelOpponents = useRef<Record<string, Person>>({});
+  const answerInFlight = useRef(false);
+  const announcedInvites = useRef(new Set<string>());
   const [available, setAvailable] = useState(false);
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -235,6 +223,7 @@ export default function MathEventsPage() {
     if (!eventId) return;
     try {
       const r = await api.get<Board>(`/math-events/${eventId}`);
+      for (const d of r.data.duels) duelOpponents.current[d.id] = d.opponent;
       setBoard(r.data);
       setError("");
     } catch (e) {
@@ -297,8 +286,19 @@ export default function MathEventsPage() {
   useEffect(() => {
     const active = board?.duels?.find((d: any) => d.status === "ACTIVE");
     if (active) loadDuel(active.id);
-    else setDuel(null);
-  }, [board?.duels, loadDuel]);
+    else if (duel && !duel.allDone) loadDuel(duel.id);
+  }, [board?.duels, loadDuel, duel?.id, duel?.allDone]);
+  useEffect(() => {
+    if (duel && duel.id !== hiddenDuelId) setStageId(duel.id);
+  }, [duel?.id, hiddenDuelId]);
+  useEffect(() => {
+    for (const invitation of board?.duels ?? []) {
+      if (invitation.status === "INVITED" && !invitation.invitedByMe && !announcedInvites.current.has(invitation.id)) {
+        announcedInvites.current.add(invitation.id);
+        toast.success(`¡${invitation.opponent.firstName} te reta! Acepta el duelo en el evento.`);
+      }
+    }
+  }, [board?.duels]);
   const play = async (
     opponentId: string,
     mode: "DIRECT" | "MATCH" = "DIRECT",
@@ -307,11 +307,13 @@ export default function MathEventsPage() {
     setBusy(true);
     try {
       if (mode === "MATCH") {
-        await api.post(`/math-events/${eventId}/matchmake`);
+        const r = await api.post(`/math-events/${eventId}/matchmake`);
+        setStageId(r.data.id);
       } else {
-        await api.post(`/math-events/${eventId}/challenges`, {
+        const r = await api.post(`/math-events/${eventId}/challenges`, {
           opponentEnrollmentId: opponentId,
         });
+        setStageId(r.data.id);
       }
       await loadBoard();
       toast.success("Reto enviado.");
@@ -326,7 +328,12 @@ export default function MathEventsPage() {
     try {
       await api.post(`/math-events/${id}/${accept ? "accept" : "decline"}`);
       await loadBoard();
-      if (accept) await loadDuel(id);
+      if (accept) {
+        setHiddenDuelId(null);
+        setFeedback(null);
+        setStageId(id);
+        await loadDuel(id);
+      }
     } catch (e) {
       toast.error(e);
     } finally {
@@ -339,6 +346,7 @@ export default function MathEventsPage() {
       await api.post(`/math-events/${id}/cancel`);
       await loadBoard();
       setDuel(null);
+      setStageId(null);
       toast.success("Reto cancelado.");
     } catch (e) {
       toast.error(e);
@@ -403,19 +411,21 @@ export default function MathEventsPage() {
     ordinal: number,
     value: string,
   ) => {
-    if (!eventId || !duel) return;
+    if (!eventId || !duel || answerInFlight.current) return;
+    answerInFlight.current = true;
     setAnswering(true);
     try {
       const r = await api.post(`/math-events/duels/${duel.id}/answers`, {
         ordinal,
         answer: value,
       });
-      setFeedback({ selected: value, ...r.data });
+      setFeedback({ ...r.data, duelId: duel.id, ordinal, question: q, selected: value });
       await loadDuel(duel.id);
       await loadBoard();
     } catch (e) {
       toast.error(e);
     } finally {
+      answerInFlight.current = false;
       setAnswering(false);
     }
   };
@@ -491,8 +501,6 @@ export default function MathEventsPage() {
         <LoaderCircle className="animate-spin text-blue-700" />
       </div>
     );
-  const current =
-    duel && !duel.finished ? duel.questions.find((q) => !q.answered) : null;
   const invites = board.duels.filter(
     (d) => d.status === "INVITED" && !d.invitedByMe,
   );
@@ -510,7 +518,7 @@ export default function MathEventsPage() {
           <ArrowLeft size={16} />
           Eventos
         </Link>
-        <header className="mt-4 rounded-3xl bg-gradient-to-br from-[#173b86] via-[#2157b4] to-[#4389e5] p-5 text-white shadow-lg">
+        <header className="mt-4 rounded-3xl bg-gradient-to-br from-[#164ccd] via-[#2455d7] to-[#5036be] p-5 text-white shadow-lg">
           <div className="flex items-start justify-between gap-3">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-blue-100">
@@ -529,110 +537,12 @@ export default function MathEventsPage() {
           </div>
         </header>
         {duel && (
-          <section className="mt-4 rounded-3xl bg-[#101b36] p-5 text-white shadow-xl">
-            {feedback && (
-              <div
-                className={`mb-4 rounded-2xl p-4 ${feedback.isCorrect ? "bg-emerald-500/20" : "bg-amber-400/15"}`}
-              >
-                <strong className="text-lg">
-                  {feedback.isCorrect ? "¡Correcto!" : "Casi, revisa la idea"}
-                </strong>
-                <p className="mt-1 text-sm text-slate-100">
-                  Respuesta: {feedback.correctAnswer}
-                </p>
-                {feedback.explanation && (
-                  <p className="mt-2 text-sm text-slate-200">
-                    {feedback.explanation}
-                  </p>
-                )}
-                <button
-                  onClick={() => setFeedback(null)}
-                  className="mt-3 min-h-11 rounded-xl bg-white px-4 font-bold text-slate-900"
-                >
-                  Continuar
-                </button>
-              </div>
-            )}
-            {feedback ? null : duel.status === "ACTIVE" && current ? (
-              <>
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-widest text-blue-200">
-                    Pregunta {duel.round} de {duel.total}
-                  </span>
-                  <strong>{duel.myScore} puntos</strong>
-                </div>
-                <h2 className="text-xl font-extrabold leading-snug">
-                  {current.text}
-                </h2>
-                <div className="mt-5 grid gap-3">
-                  {current.options.map((o, i) => (
-                    <button
-                      key={i}
-                      disabled={answering}
-                      onClick={() => submit(current, duel.round - 1, o)}
-                      className="min-h-14 rounded-2xl bg-white px-4 text-left font-bold text-slate-900 shadow-md transition active:scale-[.99] disabled:opacity-60"
-                    >
-                      {o}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : duel.status === "ACTIVE" && duel.finished && !duel.allDone ? (
-              <div className="text-center">
-                <div className="text-4xl">⏳</div>
-                <h2 className="mt-2 text-lg font-black">
-                  ¡Terminaste tu parte!
-                </h2>
-                <p className="mt-1 text-sm text-slate-300">
-                  Esperando a que tu rival termine.
-                </p>
-              </div>
-            ) : duel.allDone ? (
-              <div className="text-center">
-                <div className="text-4xl">🏆</div>
-                <h2 className="mt-2 text-xl font-black">Duelo terminado</h2>
-                <p className="mt-2">
-                  Tú {duel.myScore} · {duel.opponentScore} rival
-                </p>
-                <div className="mt-4 max-h-64 space-y-2 overflow-auto text-left">
-                  {duel.questions.map((q, i) => (
-                    <div
-                      key={q.id}
-                      className="rounded-xl bg-white/10 p-3 text-xs"
-                    >
-                      <strong>
-                        {i + 1}. {q.text}
-                      </strong>
-                      <p className="mt-1 text-slate-200">
-                        {q.isCorrect ? "✓" : "·"} {q.correctAnswer}
-                        {q.explanation ? ` — ${q.explanation}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => {
-                    setFeedback(null);
-                    setDuel(null);
-                    loadBoard();
-                  }}
-                  className="mt-4 rounded-xl bg-blue-500 px-5 py-3 font-bold"
-                >
-                  Volver a jugar
-                </button>
-              </div>
-            ) : (
-              <div>
-                <h2 className="font-bold">Reto enviado</h2>
-                <p className="mt-1 text-sm text-slate-300">
-                  Cuando tu compañero acepte, podrán empezar.
-                </p>
-              </div>
-            )}
-          </section>
+          <button onClick={() => { setStageId(duel.id); setHiddenDuelId(null); }} className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-blue-700 px-4 font-extrabold text-white shadow-lg">
+            <Swords size={20} /> {duel.allDone ? "Ver resultado del duelo" : duel.finished ? "Consultar mi duelo" : "Continuar mi duelo"}
+          </button>
         )}
         {invites.length > 0 && (
-          <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <section className="math-event-incoming mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <strong>Te retaron</strong>
             {invites.map((d: any) => (
               <div
@@ -670,7 +580,7 @@ export default function MathEventsPage() {
             className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white p-3 text-sm text-slate-600"
           >
             <span>
-              Invitación enviada a {d.opponent.firstName}. Esperando respuesta.
+              <button onClick={() => setStageId(d.id)} className="text-left font-bold text-blue-800">Ver reto contra {d.opponent.firstName} · Esperando respuesta →</button>
             </span>
             <button
               disabled={busy}
@@ -738,13 +648,13 @@ export default function MathEventsPage() {
               {busy ? "Buscando…" : "Buscar rival disponible"}
             </button>
             <h2 className="mb-2 mt-6 text-lg font-black">
-              Estudiantes del evento
+              ¿Con quién quieres jugar?
             </h2>
             <div className="space-y-2">
               {board.roster.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
+                  className={`flex items-center gap-3 rounded-2xl border p-3 shadow-sm transition-colors ${p.available ? "border-emerald-100 bg-emerald-50" : "border-white bg-white"}`}
                 >
                   <span className="grid h-11 w-11 place-items-center rounded-full bg-blue-50 text-2xl">
                     {avatarGlyph[p.avatarCode] || "⭐"}
@@ -767,9 +677,9 @@ export default function MathEventsPage() {
                       busy || p.inMatch || board.me.matchesRemaining < 1
                     }
                     onClick={() => play(p.id)}
-                    className="min-h-11 shrink-0 rounded-xl bg-blue-100 px-3 py-2 text-sm font-extrabold text-blue-800 disabled:opacity-40"
+                    className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-blue-700 px-3 py-2 text-sm font-extrabold text-white disabled:bg-slate-200 disabled:text-slate-500"
                   >
-                    Retar
+                    <Swords size={16} /> Retar
                   </button>
                 </div>
               ))}
@@ -851,6 +761,22 @@ export default function MathEventsPage() {
           </section>
         )}
       </div>
+      {stageId && (() => {
+        const entry = board.duels.find(d => d.id === stageId);
+        const currentDuel = duel?.id === stageId ? duel : null;
+        const opponent = entry?.opponent ?? duelOpponents.current[stageId];
+        if (!opponent || (!currentDuel && entry?.status !== "INVITED")) return null;
+        return <DuelStage key={`${stageId}-${currentDuel ? "active" : "waiting"}`}
+          title="Reto de Matemáticas" me={board.me}
+          opponent={board.roster.find(p => p.id === opponent.id) ?? opponent}
+          glyphs={avatarGlyph} duel={currentDuel}
+          feedback={feedback?.duelId === stageId ? feedback : null}
+          busy={busy} answering={answering} onAnswer={submit}
+          onContinue={() => setFeedback(null)}
+          onBack={() => { setHiddenDuelId(stageId); setStageId(null); }}
+          onCancel={entry?.invitedByMe ? () => cancelInvite(stageId) : undefined}
+        />;
+      })()}
       <footer className="math-event-footer fixed inset-x-0 bottom-0 border-t bg-white/95 p-3 backdrop-blur">
         <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-slate-600">¿Listo para jugar?</span>
