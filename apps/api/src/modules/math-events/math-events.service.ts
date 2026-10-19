@@ -286,12 +286,13 @@ export class MathEventsService {
           status: { in: ['INVITED', 'ACTIVE'] },
           expiresAt: { gt: now },
         },
-        select: { inviterEnrollmentId: true, inviteeEnrollmentId: true },
+        select: { inviterEnrollmentId: true, inviteeEnrollmentId: true, status: true },
       }),
     ]);
     const busy = new Set(
-      open.flatMap((d) => [d.inviterEnrollmentId, d.inviteeEnrollmentId]),
+      open.filter(d => d.status === 'ACTIVE').flatMap((d) => [d.inviterEnrollmentId, d.inviteeEnrollmentId]),
     );
+    const pending = new Set(open.filter(d => d.status === 'INVITED').flatMap(d => [d.inviterEnrollmentId, d.inviteeEnrollmentId]));
     const publicPerson = (x: any) => ({
       id: x.enrollmentId,
       firstName: x.enrollment.student.firstName.trim().split(/\s+/)[0],
@@ -305,6 +306,7 @@ export class MathEventsService {
         x.presenceUntil > now &&
         !busy.has(x.enrollmentId),
       inMatch: busy.has(x.enrollmentId),
+      hasPendingInvite: pending.has(x.enrollmentId),
     });
     return {
       event: {
@@ -335,11 +337,23 @@ export class MathEventsService {
             this.eligible(e, gradeOf(x.enrollment.group.grade)),
         )
         .map(publicPerson),
-      duels: duels.map((d) => ({
+      duels: duels.map((d) => {
+        const opponentId = d.inviterEnrollmentId === s.id ? d.inviteeEnrollmentId : d.inviterEnrollmentId;
+        const myBusy = busy.has(s.id), opponentBusy = busy.has(opponentId);
+        const inWindow = e.startsAt <= now && e.endsAt >= now && d.expiresAt > now;
+        return {
         id: d.id,
         status: d.status,
         expiresAt: d.expiresAt,
         invitedByMe: d.inviterEnrollmentId === s.id,
+        canAccept: d.status === 'INVITED' && d.inviteeEnrollmentId === s.id && !myBusy && !opponentBusy && inWindow,
+        waitingReason: !inWindow ? 'CLOSED' : myBusy ? 'YOU_PLAYING' : opponentBusy ? 'OPPONENT_PLAYING' : null,
+        invitationMessage: !inWindow
+          ? 'Este reto ya no se puede aceptar: revisa la fecha del evento o su vencimiento.'
+          : myBusy ? 'Tienes otro duelo en curso. Este reto sigue pendiente y podrá comenzar cuando ese duelo termine.'
+          : opponentBusy ? 'Tu compañero está jugando otro duelo. El reto sigue pendiente; espera a que termine.'
+          : d.inviteeEnrollmentId === s.id ? 'Ambos están libres. Puedes aceptar este reto.'
+          : 'Esperando a que tu compañero acepte. El reto sigue pendiente.',
         opponent: publicPerson({
           enrollmentId:
             d.inviterEnrollmentId === s.id
@@ -349,7 +363,7 @@ export class MathEventsService {
           avatarCode: 'star',
           available: false,
         }),
-      })),
+      }; }),
     };
   }
   async presence(actor: ClassroomActor, eventId: string, available: boolean) {
@@ -770,6 +784,9 @@ export class MathEventsService {
           ].sort())
             await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event:${d.eventId}:${id}`}))::text`;
           if (accept) {
+            const now = new Date();
+            if (d.event.status !== 'PUBLISHED' || now < d.event.startsAt || now > d.event.endsAt || d.expiresAt <= now)
+              throw new BadRequestException('El reto o el evento ya venció. Elige un evento disponible.');
             for (const id of [d.inviterEnrollmentId, d.inviteeEnrollmentId]) {
               const count = await tx.mathEventDuel.count({
                 where: {
@@ -800,7 +817,9 @@ export class MathEventsService {
               });
               if (active)
                 throw new BadRequestException(
-                  'Uno de los participantes ya está en otra partida.',
+                  id === s.id
+                    ? 'Tienes otro duelo en curso. La invitación sigue pendiente; podrás aceptarla cuando ese duelo termine.'
+                    : 'Tu compañero está jugando otro duelo. La invitación sigue pendiente; espera a que termine y vuelve a aceptar.',
                 );
             }
           }
@@ -823,7 +842,7 @@ export class MathEventsService {
     } catch (err: any) {
       if (err?.code === 'P2034')
         throw new BadRequestException(
-          'Otra partida se confirmó al mismo tiempo. Actualiza y vuelve a intentar.',
+          'La disponibilidad cambió mientras aceptabas. Revisa el estado del reto; si quedó en espera, podrás aceptarlo cuando ambos estén libres.',
         );
       throw err;
     }
