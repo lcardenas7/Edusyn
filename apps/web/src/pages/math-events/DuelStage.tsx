@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Check, ChevronRight, LoaderCircle, Maximize, Minimize, Music2, Swords, Volume2, VolumeX, X } from "lucide-react";
-import { Reactions } from "./Reactions";
+import { Reactions, RecognitionSummary } from "./Reactions";
 import "./duel-stage.css";
 
 export type DuelQuestion = {
@@ -25,7 +25,8 @@ type Props = {
   duel: DuelState | null; feedback: AnswerFeedback | null; answering: boolean; busy: boolean;
   onAnswer: (q: DuelQuestion, ordinal: number, value: string) => void;
   onContinue: () => void; onBack: () => void; onCancel?: () => void;
-  onRanking: () => void; ranking: any; opponentRanking: any; reacting: boolean; onReact: (kind: string) => void;
+  onRanking: () => void; ranking: any; opponentRanking: any; reacting: boolean; onReact: (kind: string | null) => Promise<boolean>;
+  myRecognitions?: Record<string, number>;
   audio: { effects: boolean; music: boolean; toggleEffects: () => void; toggleMusic: () => void };
 };
 
@@ -37,7 +38,7 @@ function PlayerBadge({ player, glyphs, small = false }: { player: Player; glyphs
   </div>;
 }
 
-export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answering, busy, onAnswer, onContinue, onBack, onCancel, onRanking, ranking, opponentRanking, reacting, onReact, audio, waitingMessage }: Props) {
+export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answering, busy, onAnswer, onContinue, onBack, onCancel, onRanking, ranking, opponentRanking, reacting, onReact, audio, waitingMessage, myRecognitions }: Props) {
   const reduceMotion = useReducedMotion();
   const stageRef = useRef<HTMLElement>(null);
   const [explain, setExplain] = useState(false);
@@ -153,6 +154,7 @@ export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answeri
             <p>{duel?.allDone ? `${duel.pointsAwarded ?? duel.myScore * 10} puntos al ranking · Bono: +${duel.bonus ?? 0}` : "Tu rival sigue jugando. El resultado aparecerá aquí cuando termine."}</p>
             {duel?.allDone && <>
               <div className="duel-final-score"><strong>Tú<br />{duel.myScore * 10} pts</strong><span>VS</span><strong>{opponent.firstName}<br />{(duel.opponentScore ?? 0) * 10} pts</strong></div>
+              <RecognitionSummary counts={myRecognitions} />
               <h3 className="duel-section-title">Reconoce a tu rival</h3>
               <Reactions counts={opponentRanking?.reactions} selected={opponentRanking?.myReaction} disabled={reacting} onReact={onReact} />
               <div className="duel-ranking-preview"><h3>🏆 Ranking {ranking?.scope === "course" ? "de mi curso" : ranking?.scope === "grade" ? "de mi grado" : "general"}</h3>

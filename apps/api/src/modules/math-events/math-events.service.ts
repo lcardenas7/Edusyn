@@ -1081,17 +1081,8 @@ export class MathEventsService {
         b.correct - a.correct ||
         a.firstName.localeCompare(b.firstName, 'es'),
     );
-    const recipientIds = result.slice(0, 100).map(x => x.id);
-    const where = { institutionId: actor.institutionId, eventId: e.id, recipientEnrollmentId: { in: recipientIds } };
-    const [reactions, mineReactions] = recipientIds.length ? await Promise.all([
-      this.db.mathEventReaction.groupBy({ by: ['recipientEnrollmentId', 'kind'], where, _count: { _all: true } }),
-      this.db.mathEventReaction.findMany({ where: { ...where, senderEnrollmentId: s.id }, select: { recipientEnrollmentId: true, kind: true } }),
-    ]) : [[], []];
-    for (const row of result.slice(0, 100)) {
-      row.reactions = Object.fromEntries(['APPLAUSE','BRILLIANT','FAIR_PLAY','KEEP_GOING'].map(kind =>
-        [kind, reactions.find(r => r.recipientEnrollmentId === row.id && r.kind === kind)?._count._all ?? 0]));
-      row.myReaction = mineReactions.find(r => r.recipientEnrollmentId === row.id)?.kind ?? null;
-    }
+    const summaries = await this.recognitionSummaries(actor.institutionId, e.id, [...result.slice(0, 100).map(x => x.id), s.id], s.id);
+    for (const row of result.slice(0, 100)) Object.assign(row, summaries[row.id]);
     const mine = result.find((x) => x.id === s.id);
     return {
       scope,
@@ -1099,6 +1090,7 @@ export class MathEventsService {
         .slice(0, 100)
         .map((x, i) => ({ ...x, rank: i + 1, isMe: x.id === s.id })),
       myRank: mine ? result.indexOf(mine) + 1 : null,
+      myRecognitions: summaries[s.id].reactions,
       total: result.length,
     };
   }
@@ -1128,23 +1120,48 @@ export class MathEventsService {
     if (!d) throw new NotFoundException('Reto no encontrado.');
     return { id: d.id, status: d.expiresAt < new Date() && d.status !== 'COMPLETED' ? 'EXPIRED' : d.status };
   }
-  async react(actor: ClassroomActor, eventId: string, recipientEnrollmentId: string, kind: string) {
+  private async recognitionSummaries(institutionId: string, eventId: string, ids: string[], senderEnrollmentId: string) {
+    const recipients = [...new Set(ids)];
+    const where = { institutionId, eventId, recipientEnrollmentId: { in: recipients } };
+    const [counts, mine] = await Promise.all([
+      this.db.mathEventReaction.groupBy({ by: ['recipientEnrollmentId', 'kind'], where, _count: { _all: true } }),
+      this.db.mathEventReaction.findMany({ where: { ...where, senderEnrollmentId }, select: { recipientEnrollmentId: true, kind: true } }),
+    ]);
+    return Object.fromEntries(recipients.map(id => [id, {
+      reactions: Object.fromEntries(['APPLAUSE','BRILLIANT','FAIR_PLAY','KEEP_GOING'].map(kind =>
+        [kind, counts.find(row => row.recipientEnrollmentId === id && row.kind === kind)?._count._all ?? 0])),
+      myReaction: mine.find(row => row.recipientEnrollmentId === id)?.kind ?? null,
+    }]));
+  }
+  async recognitions(actor: ClassroomActor, eventId: string, recipientIds?: string) {
+    const s = await this.student(actor);
+    const e = await this.db.mathEvent.findFirst({ where: { id: eventId, institutionId: actor.institutionId, status: { in: ['PUBLISHED', 'CLOSED'] } }, select: { id: true, eligibleGrades: true } });
+    if (!e || !this.eligible(e, s.gradeNumber)) throw new NotFoundException('Evento no disponible.');
+    if (recipientIds !== undefined && (typeof recipientIds !== 'string' || recipientIds.length > 9000)) throw new BadRequestException('Lista de participantes no válida.');
+    const ids = recipientIds ? recipientIds.split(',') : [];
+    if (ids.length > 102 || ids.some(id => !/^[a-zA-Z0-9-]{1,80}$/.test(id))) throw new BadRequestException('Lista de participantes no válida.');
+    return { summaries: await this.recognitionSummaries(actor.institutionId, e.id, [...ids, s.id], s.id) };
+  }
+  async react(actor: ClassroomActor, eventId: string, recipientEnrollmentId: string, kind: string | null) {
     const s = await this.student(actor);
     const e = await this.event(eventId, actor.institutionId);
     if (!this.eligible(e, s.gradeNumber) || typeof recipientEnrollmentId !== 'string' || recipientEnrollmentId === s.id ||
-        !['APPLAUSE','BRILLIANT','FAIR_PLAY','KEEP_GOING'].includes(kind))
+        (kind !== null && !['APPLAUSE','BRILLIANT','FAIR_PLAY','KEEP_GOING'].includes(kind)))
       throw new BadRequestException('Reacción no válida.');
     const played = await Promise.all([s.id, recipientEnrollmentId].map(id => this.db.mathEventDuel.findFirst({ where: {
       eventId: e.id, institutionId: actor.institutionId, status: 'COMPLETED',
       OR: [{ inviterEnrollmentId: id }, { inviteeEnrollmentId: id }],
     }, select: { id: true } })));
     if (played.some(row => !row)) throw new ForbiddenException('Las reacciones son para participantes que ya jugaron.');
-    await this.db.mathEventReaction.upsert({
+    if (kind === null) {
+      await this.db.mathEventReaction.deleteMany({ where: { institutionId: actor.institutionId, eventId: e.id, senderEnrollmentId: s.id, recipientEnrollmentId } });
+    } else await this.db.mathEventReaction.upsert({
       where: { eventId_senderEnrollmentId_recipientEnrollmentId: { eventId: e.id, senderEnrollmentId: s.id, recipientEnrollmentId } },
       create: { institutionId: actor.institutionId, eventId: e.id, senderEnrollmentId: s.id, recipientEnrollmentId, kind },
       update: { kind },
     });
-    return { saved: true, kind };
+    const summaries = await this.recognitionSummaries(actor.institutionId, e.id, [recipientEnrollmentId], s.id);
+    return { saved: kind !== null, kind, ...summaries[recipientEnrollmentId] };
   }
   async createEvent(actor: ClassroomActor, input: any) {
     const title = typeof input?.title === 'string' ? input.title.trim() : '';

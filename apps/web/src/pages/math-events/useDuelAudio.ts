@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Cue = "correct" | "wrong" | "start" | "win" | "finish";
+type Cue = "correct" | "wrong" | "start" | "win" | "finish" | "reaction";
 function preference(key: string, fallback: boolean) {
   try { const stored = localStorage.getItem(key); return stored === null ? fallback : stored === "true"; } catch { return fallback; }
 }
@@ -35,8 +35,8 @@ export function useDuelAudio(playing: boolean) {
   }, []);
   const cue = useCallback((kind: Cue) => {
     if (!effectsRef.current) return;
-    const sequence = kind === "correct" ? [523.25, 659.25, 783.99] : kind === "wrong" ? [293.66, 246.94] : kind === "win" ? [523.25, 659.25, 783.99, 1046.5] : kind === "start" ? [392, 523.25, 783.99] : [523.25, 659.25];
-    sequence.forEach((hz, i) => tone(hz, i * 0.1, 0.22, 0.06));
+    const sequence = kind === "reaction" ? [659.25, 880] : kind === "correct" ? [523.25, 659.25, 783.99] : kind === "wrong" ? [293.66, 246.94] : kind === "win" ? [523.25, 659.25, 783.99, 1046.5] : kind === "start" ? [392, 523.25, 783.99] : [523.25, 659.25];
+    sequence.forEach((hz, i) => tone(hz, i * (kind === "reaction" ? 0.07 : 0.1), kind === "reaction" ? 0.14 : 0.22, kind === "reaction" ? 0.035 : 0.06));
   }, [tone]);
   const stop = useCallback((musicOnly = false) => {
     for (const group of musicOnly ? [musicNotes.current] : [notes.current, musicNotes.current]) {
