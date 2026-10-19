@@ -1717,6 +1717,8 @@ model StudentEnrollment {
   eventDuelAnswers           MathEventDuelAnswer[]
   eventQuestionHistory       MathEventQuestionSeen[]
   mathEventPushSubscriptions MathEventPushSubscription[]
+  mathReactionsSent          MathEventReaction[] @relation("MathReactionSender")
+  mathReactionsReceived      MathEventReaction[] @relation("MathReactionRecipient")
   convivenciaEntries     ConvivenciaEntry[]
 
   // Observador del estudiante (sub-módulos)
@@ -8423,6 +8425,8 @@ model MathEvent {
   endsAt            DateTime
   eligibleGrades    Json
   dailyMatchLimit   Int                         @default(25)
+  showCorrectAnswers Boolean                    @default(true)
+  showExplanations   Boolean                    @default(true)
   createdById       String
   createdAt         DateTime                    @default(now())
   updatedAt         DateTime                    @updatedAt
@@ -8431,8 +8435,26 @@ model MathEvent {
   duels             MathEventDuel[]
   exposures         MathEventQuestionSeen[]
   pushSubscriptions MathEventPushSubscription[]
+  reactions         MathEventReaction[]
 
   @@index([institutionId, status, startsAt, endsAt])
+}
+
+model MathEventReaction {
+  id                   String @id @default(cuid())
+  institutionId        String
+  eventId              String
+  senderEnrollmentId   String
+  recipientEnrollmentId String
+  kind                 String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  event                MathEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sender               StudentEnrollment @relation("MathReactionSender", fields: [senderEnrollmentId], references: [id], onDelete: Cascade)
+  recipient            StudentEnrollment @relation("MathReactionRecipient", fields: [recipientEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, senderEnrollmentId, recipientEnrollmentId], map: "MathEventReaction_sender_recipient_key")
+  @@index([institutionId, eventId, recipientEnrollmentId], map: "MathEventReaction_recipient_idx")
 }
 
 model MathEventParticipant {

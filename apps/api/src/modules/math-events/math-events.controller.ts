@@ -50,6 +50,11 @@ export class MathEventsController {
   banks(@Request() r: any) {
     return this.actor(r).then((a) => this.service.listMathBanks(a));
   }
+  @Get('manage')
+  @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
+  manage(@Request() r: any) {
+    return this.actor(r).then(a => this.service.manageEvents(a));
+  }
   @Post()
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
   create(@Body() b: any, @Request() r: any) {
@@ -61,6 +66,20 @@ export class MathEventsController {
     return this.actor(r).then((a) =>
       this.service.importBanks(a, id, b?.collectionIds),
     );
+  }
+  @Get(':eventId/settings')
+  @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
+  settings(@Param('eventId') id: string, @Request() r: any) {
+    return this.actor(r).then(a => this.service.eventSettings(a, id));
+  }
+  @Put(':eventId/settings')
+  @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
+  updateSettings(@Param('eventId') id: string, @Body() b: any, @Request() r: any) {
+    return this.actor(r).then(a => this.service.updateSettings(a, id, b));
+  }
+  @Put(':eventId/reactions') @Roles('ESTUDIANTE')
+  react(@Param('eventId') id: string, @Body() b: any, @Request() r: any) {
+    return this.actor(r).then(a => this.service.react(a, id, b?.recipientEnrollmentId, b?.kind));
   }
   @Post(':eventId/publish')
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
@@ -160,6 +179,10 @@ export class MathEventsController {
     @Request() r: any,
   ) {
     return this.actor(r).then((a) => this.service.getDuel(a, id));
+  }
+  @Get('duels/:duelId/state') @Roles('ESTUDIANTE')
+  duelState(@Param('duelId') id: string, @Request() r: any) {
+    return this.actor(r).then(a => this.service.duelState(a, id));
   }
   @Post('duels/:duelId/answers') @Roles('ESTUDIANTE') answer(
     @Param('duelId') id: string,
