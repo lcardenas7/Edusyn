@@ -81,6 +81,10 @@ export class MathEventsController {
   react(@Param('eventId') id: string, @Body() b: any, @Request() r: any) {
     return this.actor(r).then(a => this.service.react(a, id, b?.recipientEnrollmentId, b?.kind));
   }
+  @Get(':eventId/recognitions') @Roles('ESTUDIANTE')
+  recognitions(@Param('eventId') id: string, @Query('recipientIds') ids: string, @Request() r: any) {
+    return this.actor(r).then(a => this.service.recognitions(a, id, ids));
+  }
   @Post(':eventId/publish')
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
   publish(@Param('eventId') id: string, @Request() r: any) {

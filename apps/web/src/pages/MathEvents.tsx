@@ -7,7 +7,7 @@ import { toast } from "../lib/toast";
 import { bogotaInputToIso } from "../lib/datetime";
 import { DuelStage, type DuelState, type AnswerFeedback } from "./math-events/DuelStage";
 import { useDuelAudio } from "./math-events/useDuelAudio";
-import { Reactions } from "./math-events/Reactions";
+import { Reactions, RecognitionSummary, type Recognition } from "./math-events/Reactions";
 
 type EventCard = {
   id: string;
@@ -214,6 +214,12 @@ export default function MathEventsPage() {
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [reacting, setReacting] = useState(false);
+  const [recognitions, setRecognitions] = useState<Record<string, Recognition>>({});
+  const reactionInFlight = useRef(false);
+  const reactionRevision = useRef(0);
+  const recognitionEvent = useRef(eventId);
+  recognitionEvent.current = eventId;
+  useEffect(() => { setRecognitions({}); setRanking(null); reactionRevision.current++; }, [eventId]);
   const audio = useDuelAudio(!!stageId && !!duel && !duel.finished && !feedback);
   const playedCues = useRef(new Set<string>());
   useEffect(() => {
@@ -296,11 +302,13 @@ export default function MathEventsPage() {
     };
   }, [eventId, available]);
   useEffect(() => {
+    let live = true;
     if ((tab === "ranking" || duel?.allDone) && eventId)
       api
         .get(`/math-events/${eventId}/ranking`, { params: { scope } })
-        .then((r) => setRanking(r.data))
-        .catch(() => toast.error("No pudimos cargar la clasificación."));
+        .then((r) => { if (live) setRanking(r.data); })
+        .catch(() => { if (live) toast.error("No pudimos cargar la clasificación."); });
+    return () => { live = false; };
   }, [tab, eventId, scope, board?.me.matchesUsedToday, duel?.allDone]);
   useEffect(() => {
     const active = board?.duels?.find((d: any) => d.status === "ACTIVE");
@@ -357,14 +365,59 @@ export default function MathEventsPage() {
     document.addEventListener("visibilitychange", poll);
     return () => { live = false; controller.abort(); clearTimeout(timer); document.removeEventListener("visibilitychange", poll); };
   }, [waitingId, finishingId, loadDuel, loadBoard]);
-  const sendReaction = async (recipientEnrollmentId: string, kind: string) => {
-    if (!eventId || reacting) return;
+  const resultOpponentId = duel?.allDone
+    ? (board?.duels.find(d => d.id === duel.id)?.opponent?.id ?? duelOpponents.current[duel.id]?.id)
+    : null;
+  const recognitionIds = [...new Set([board?.me.enrollmentId, ...(ranking?.rows ?? []).map((r: any) => r.id), resultOpponentId].filter(Boolean))].sort().join(",");
+  const showRecognitions = tab === "ranking" || (stageId === duel?.id && !!duel?.allDone);
+  useEffect(() => {
+    if (!eventId || !recognitionIds || !showRecognitions) return;
+    let live = true, running = false;
+    let timer: number;
+    const controller = new AbortController();
+    const refresh = async () => {
+      if (!live || running) return;
+      clearTimeout(timer);
+      if (document.hidden || reactionInFlight.current) { timer = window.setTimeout(refresh, 12000); return; }
+      running = true;
+      const revision = reactionRevision.current;
+      try {
+        const r = await api.get<{ summaries: Record<string, Recognition> }>(`/math-events/${eventId}/recognitions`, { params: { recipientIds: recognitionIds }, signal: controller.signal });
+        if (live && revision === reactionRevision.current && !reactionInFlight.current)
+          setRecognitions(previous => ({ ...previous, ...r.data.summaries }));
+      } catch { /* Counts already loaded with the ranking remain visible during a connection failure. */ }
+      finally { running = false; if (live) timer = window.setTimeout(refresh, 12000); }
+    };
+    void refresh();
+    document.addEventListener("visibilitychange", refresh);
+    return () => { live = false; clearTimeout(timer); controller.abort(); document.removeEventListener("visibilitychange", refresh); };
+  }, [eventId, recognitionIds, showRecognitions]);
+  const sendReaction = async (recipientEnrollmentId: string, kind: string | null): Promise<boolean> => {
+    if (!eventId || reactionInFlight.current) return false;
+    audio.unlock();
+    reactionInFlight.current = true;
+    reactionRevision.current++;
     setReacting(true);
+    const ranked = ranking?.rows?.find((r: any) => r.id === recipientEnrollmentId);
+    const previous: Recognition = recognitions[recipientEnrollmentId] ?? { reactions: ranked?.reactions ?? {}, myReaction: ranked?.myReaction ?? null };
+    const counts = { ...previous.reactions };
+    if (previous.myReaction) counts[previous.myReaction] = Math.max(0, (counts[previous.myReaction] ?? 0) - 1);
+    if (kind) counts[kind] = (counts[kind] ?? 0) + 1;
+    setRecognitions(current => ({ ...current, [recipientEnrollmentId]: { reactions: counts, myReaction: kind } }));
     try {
-      await api.put(`/math-events/${eventId}/reactions`, { recipientEnrollmentId, kind });
-      const r = await api.get(`/math-events/${eventId}/ranking`, { params: { scope } });
-      setRanking(r.data); toast.success("¡Reconocimiento enviado!");
-    } catch (e) { toast.error(e); } finally { setReacting(false); }
+      const r = await api.put<Recognition>(`/math-events/${eventId}/reactions`, { recipientEnrollmentId, kind });
+      if (recognitionEvent.current !== eventId) return false;
+      setRecognitions(current => ({ ...current, [recipientEnrollmentId]: { reactions: r.data.reactions, myReaction: r.data.myReaction } }));
+      if (kind) audio.cue("reaction");
+      toast.success(kind ? "¡Reconocimiento enviado!" : "Retiraste tu reacción.");
+      return true;
+    } catch (e) {
+      if (recognitionEvent.current === eventId) {
+        setRecognitions(current => ({ ...current, [recipientEnrollmentId]: previous }));
+        toast.error(e);
+      }
+      return false;
+    } finally { reactionInFlight.current = false; setReacting(false); }
   };
   const play = async (
     opponentId: string,
@@ -785,6 +838,12 @@ export default function MathEventsPage() {
                 </button>
               ))}
             </div>
+            <div className="ranking-reaction-tools">
+              <p>Reconoce una buena partida con una reacción.</p>
+              <button type="button" onClick={audio.toggleEffects} aria-pressed={audio.effects}>{audio.effects ? "🔊" : "🔇"} Efectos {audio.effects ? "sí" : "no"}</button>
+            </div>
+            <RecognitionSummary counts={recognitions[board.me.enrollmentId]?.reactions ?? ranking?.myRecognitions} />
+            {ranking && !ranking.myRank && <p className="mt-3 text-xs text-slate-600">Completa un duelo para poder reaccionar a tus compañeros.</p>}
             {ranking?.rows?.map((r: any, i: number) => (
               <div
                 key={r.id}
@@ -802,7 +861,7 @@ export default function MathEventsPage() {
                   </span>
                 </div>
                 <strong className="text-blue-800">{r.points} pts</strong>
-                <Reactions counts={r.reactions} selected={r.myReaction} disabled={r.isMe || reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
+                <Reactions counts={recognitions[r.id]?.reactions ?? r.reactions} selected={recognitions[r.id] ? recognitions[r.id].myReaction : r.myReaction} readOnly={r.isMe} disabled={reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
               </div>
             ))}
             {ranking?.total === 0 && (
@@ -856,7 +915,8 @@ export default function MathEventsPage() {
           audio={audio} ranking={ranking} reacting={reacting}
           onRanking={() => { setStageId(null); setHiddenDuelId(stageId); setTab("ranking"); }}
           onReact={kind => sendReaction(opponent.id, kind)}
-          opponentRanking={ranking?.rows?.find((r: any) => r.id === opponent.id)}
+          opponentRanking={recognitions[opponent.id] ?? ranking?.rows?.find((r: any) => r.id === opponent.id)}
+          myRecognitions={recognitions[board.me.enrollmentId]?.reactions ?? ranking?.myRecognitions}
           onContinue={() => setFeedback(null)}
           onBack={() => { setHiddenDuelId(stageId); setStageId(null); }}
           onCancel={entry?.invitedByMe ? () => cancelInvite(stageId) : undefined}
