@@ -27,6 +27,7 @@ type Person = {
   avatarCode: string;
   available: boolean;
   inMatch: boolean;
+  hasPendingInvite?: boolean;
 };
 type Board = {
   event: {
@@ -208,6 +209,7 @@ export default function MathEventsPage() {
   const duelOpponents = useRef<Record<string, Person>>({});
   const answerInFlight = useRef(false);
   const announcedInvites = useRef(new Set<string>());
+  const invitationReadiness = useRef(new Map<string, boolean>());
   const [available, setAvailable] = useState(false);
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -312,7 +314,13 @@ export default function MathEventsPage() {
     for (const invitation of board?.duels ?? []) {
       if (invitation.status === "INVITED" && !invitation.invitedByMe && !announcedInvites.current.has(invitation.id)) {
         announcedInvites.current.add(invitation.id);
-        toast.success(`¡${invitation.opponent.firstName} te reta! Acepta el duelo en el evento.`);
+        toast.success(`¡${invitation.opponent.firstName} te reta! ${invitation.canAccept === false ? invitation.invitationMessage : "Puedes aceptar el duelo en el evento."}`);
+      }
+      if (invitation.status === "INVITED" && !invitation.invitedByMe) {
+        const ready = invitation.canAccept === true;
+        if (ready && invitationReadiness.current.get(invitation.id) === false)
+          toast.success(`El reto con ${invitation.opponent.firstName} ya está listo para aceptar.`);
+        invitationReadiness.current.set(invitation.id, ready);
       }
     }
   }, [board?.duels]);
@@ -323,6 +331,7 @@ export default function MathEventsPage() {
     if (!id) return;
     let live = true, running = false;
     let timer: number;
+    let lastWaitingRefresh = 0;
     const controller = new AbortController();
     const poll = async () => {
       if (!live || running) return;
@@ -334,6 +343,9 @@ export default function MathEventsPage() {
         if (!live) return;
         if ((r.data.status === "ACTIVE" && waitingId) || r.data.status === "COMPLETED") {
           await loadDuel(id); await loadBoard();
+        } else if (r.data.status === "INVITED" && Date.now() - lastWaitingRefresh >= 6000) {
+          lastWaitingRefresh = Date.now();
+          await loadBoard();
         } else if (!["INVITED", "ACTIVE"].includes(r.data.status)) {
           setStageId(null); await loadBoard();
           toast.success("El reto ya no está pendiente. Puedes elegir otro rival.");
@@ -393,6 +405,7 @@ export default function MathEventsPage() {
       }
     } catch (e) {
       toast.error(e);
+      await loadBoard();
     } finally {
       setBusy(false);
     }
@@ -612,27 +625,28 @@ export default function MathEventsPage() {
             {invites.map((d: any) => (
               <div
                 key={d.id}
-                className="mt-3 flex flex-wrap items-center justify-between gap-3"
+                className="mt-3 rounded-xl border border-amber-200/70 bg-white/70 p-3"
               >
-                <span className="text-sm">
-                  {avatarGlyph[d.opponent.avatarCode] || "⭐"}{" "}
+                <div className="min-w-0 flex-1 text-sm">
+                  <strong>{avatarGlyph[d.opponent.avatarCode] || "⭐"}{" "}
                   {d.opponent.firstName} {d.opponent.lastName} ·{" "}
-                  {d.opponent.grade}.º {d.opponent.course}
-                </span>
-                <div className="flex gap-2">
+                  {d.opponent.grade}.º {d.opponent.course}</strong>
+                  <p className="mt-2 text-sm leading-5 text-slate-700" role="status">{d.invitationMessage || "Puedes aceptar este reto."}</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     disabled={busy}
                     onClick={() => respond(d.id, false)}
                     className="min-h-11 rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-40"
                   >
-                    Ahora no
+                    Rechazar reto
                   </button>
                   <button
-                    disabled={busy}
+                    disabled={busy || d.canAccept === false}
                     onClick={() => respond(d.id, true)}
                     className="min-h-11 rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
                   >
-                    Aceptar
+                    {d.waitingReason === "CLOSED" ? "Fuera de fecha" : d.canAccept === false ? "En espera" : "Aceptar y jugar"}
                   </button>
                 </div>
               </div>
@@ -645,7 +659,8 @@ export default function MathEventsPage() {
             className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white p-3 text-sm text-slate-600"
           >
             <span>
-              <button onClick={() => setStageId(d.id)} className="text-left font-bold text-blue-800">Ver reto contra {d.opponent.firstName} · Esperando respuesta →</button>
+              <button onClick={() => setStageId(d.id)} className="text-left font-bold text-blue-800">Ver reto contra {d.opponent.firstName} →</button>
+              <span className="mt-1 block text-xs leading-5">{d.invitationMessage || "Esperando respuesta. Tu reto sigue pendiente."}</span>
             </span>
             <button
               disabled={busy}
@@ -734,7 +749,7 @@ export default function MathEventsPage() {
                         ? "🟢 Disponible"
                         : p.inMatch
                           ? "🟠 En partida"
-                          : "⚪ Ahora no"}
+                          : p.hasPendingInvite ? "✉️ Reto pendiente" : "⚪ Ahora no"}
                     </span>
                   </div>
                   <button
@@ -833,7 +848,7 @@ export default function MathEventsPage() {
         const opponent = entry?.opponent ?? duelOpponents.current[stageId];
         if (!opponent || (!currentDuel && entry?.status !== "INVITED")) return null;
         return <DuelStage key={`${stageId}-${currentDuel ? "active" : "waiting"}`}
-          title="Reto de Matemáticas" me={board.me}
+          title="Reto de Matemáticas" me={board.me} waitingMessage={entry?.invitationMessage}
           opponent={board.roster.find(p => p.id === opponent.id) ?? opponent}
           glyphs={avatarGlyph} duel={currentDuel}
           feedback={feedback?.duelId === stageId ? feedback : null}

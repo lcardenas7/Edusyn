@@ -20,6 +20,7 @@ export type AnswerFeedback = {
 };
 type Player = { firstName: string; lastName: string; course: string; grade: number; avatarCode: string };
 type Props = {
+  waitingMessage?: string;
   title: string; me: Player; opponent: Player; glyphs: Record<string, string>;
   duel: DuelState | null; feedback: AnswerFeedback | null; answering: boolean; busy: boolean;
   onAnswer: (q: DuelQuestion, ordinal: number, value: string) => void;
@@ -36,7 +37,7 @@ function PlayerBadge({ player, glyphs, small = false }: { player: Player; glyphs
   </div>;
 }
 
-export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answering, busy, onAnswer, onContinue, onBack, onCancel, onRanking, ranking, opponentRanking, reacting, onReact, audio }: Props) {
+export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answering, busy, onAnswer, onContinue, onBack, onCancel, onRanking, ranking, opponentRanking, reacting, onReact, audio, waitingMessage }: Props) {
   const reduceMotion = useReducedMotion();
   const stageRef = useRef<HTMLElement>(null);
   const [explain, setExplain] = useState(false);
@@ -108,7 +109,7 @@ export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answeri
           <div className="duel-wait-card" role="status">
             <span className="duel-hourglass" aria-hidden="true">{waiting ? "⏳" : "⚡"}</span>
             <h2>{waiting ? "Esperando a que tu rival acepte…" : "¡El reto comienza!"}</h2>
-            <p>{waiting ? "Te avisaremos aquí cuando acepte. Puedes volver al evento mientras tanto." : "Piensa, elige y demuestra lo que sabes."}</p>
+            <p>{waiting ? waitingMessage || "Te avisaremos aquí cuando acepte. Puedes volver al evento mientras tanto." : "Piensa, elige y demuestra lo que sabes."}</p>
           </div>
           {waiting && onCancel && <button disabled={busy} onClick={onCancel} className="duel-cancel"><X size={18} /> Cancelar reto</button>}
           <p className="duel-tip">💡 Cada acierto cuenta. ¡Tómate un momento para pensar!</p>
