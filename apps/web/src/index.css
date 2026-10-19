@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* El evento es una pantalla de aplicación: usa el ancho disponible y un único
+   encabezado, también al abrirlo desde la PWA instalada. */
+body[data-math-event-app] [data-app-sidebar],
+body[data-math-event-app] [data-app-header],
+body[data-math-event-app] [aria-label='Abrir Valeria'] {
+  display: none;
+}
+body[data-math-event-app] [data-app-main] {
+  padding: 0;
+  min-width: 0;
+}
+body[data-math-event-app] [data-app-content] {
+  padding: 0;
+  min-width: 0;
+}
+body[data-math-event-app] {
+  overscroll-behavior-y: contain;
+}
+body[data-math-event-app] button,
+body[data-math-event-app] a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.math-event-page {
+  padding-top: env(safe-area-inset-top, 0px);
+  overflow-wrap: anywhere;
+}
+.math-event-footer {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Toasts (sonner) SIEMPRE por encima de todo — incluidos modales/diálogos
    (DialogHost usa z-200, algunos overlays z-50). Sin esto, en algunas vistas

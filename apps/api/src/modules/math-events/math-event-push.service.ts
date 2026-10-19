@@ -107,7 +107,8 @@ export class MathEventPushService {
       );
     }
     await this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event-push:${eventId}:${enrollmentId}`}))`;
+      // Conservar el bloqueo transaccional sin devolver una columna void a Prisma.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event-push:${eventId}:${enrollmentId}`}))::text`;
       const pushSubscriptions = (tx as any).mathEventPushSubscription;
       const existing = await pushSubscriptions.findUnique({
         where: { eventId_endpoint: { eventId, endpoint } },

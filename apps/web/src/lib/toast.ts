@@ -4,6 +4,7 @@ import { toast as sonnerToast } from 'sonner'
 // MAPPER: errores de backend → mensajes humanos
 // ─────────────────────────────────────────────────────────────────────────────
 const ERROR_MAP: Record<string, string> = {
+  'Internal server error': 'No pudimos completar la acción. Inténtalo de nuevo en un momento.',
   // Prisma constraint errors
   'P2002': 'Ya existe un registro con esos datos. Verifica que el correo o documento no esté duplicado.',
   'P2025': 'No se encontró el registro que intentas modificar.',
