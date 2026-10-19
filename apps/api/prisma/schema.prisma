@@ -1701,6 +1701,12 @@ model StudentEnrollment {
   duelsReceived          ClassroomDuel[] @relation("DuelInvitee")
   duelAnswers            ClassroomDuelAnswer[]
   duelPowerUses          ClassroomDuelPowerUse[]
+  eventParticipations        MathEventParticipant[]
+  eventDuelsInvited          MathEventDuel[]         @relation("MathEventDuelInviter")
+  eventDuelsReceived         MathEventDuel[]         @relation("MathEventDuelInvitee")
+  eventDuelAnswers           MathEventDuelAnswer[]
+  eventQuestionHistory       MathEventQuestionSeen[]
+  mathEventPushSubscriptions MathEventPushSubscription[]
   convivenciaEntries     ConvivenciaEntry[]
 
   // Observador del estudiante (sub-módulos)
@@ -8207,4 +8213,151 @@ model FormativeGradeSyncItem {
 
   @@unique([syncId, resultId])
   @@index([resultId])
+}
+
+enum MathEventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum MathEventDuelStatus {
+  INVITED
+  ACTIVE
+  COMPLETED
+  DECLINED
+  EXPIRED
+}
+
+// Evento ludico institucional; resultados separados de notas y XP academico.
+model MathEvent {
+  id                String                      @id @default(cuid())
+  institutionId     String
+  title             String
+  description       String?                     @db.Text
+  status            MathEventStatus             @default(DRAFT)
+  startsAt          DateTime
+  endsAt            DateTime
+  eligibleGrades    Json
+  dailyMatchLimit   Int                         @default(25)
+  createdById       String
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  participants      MathEventParticipant[]
+  questions         MathEventQuestion[]
+  duels             MathEventDuel[]
+  exposures         MathEventQuestionSeen[]
+  pushSubscriptions MathEventPushSubscription[]
+
+  @@index([institutionId, status, startsAt, endsAt])
+}
+
+model MathEventParticipant {
+  id            String            @id @default(cuid())
+  institutionId String
+  eventId       String
+  enrollmentId  String
+  avatarCode    String            @default("star")
+  joinedAt      DateTime          @default(now())
+  available     Boolean           @default(false)
+  presenceUntil DateTime?
+  event         MathEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, enrollmentId])
+  @@index([institutionId, eventId, available, presenceUntil])
+}
+
+model MathEventQuestion {
+  id            String       @id @default(cuid())
+  institutionId String
+  eventId       String
+  sourceItemId  String?
+  code          String?
+  type          QuestionType
+  text          String       @db.Text
+  options       Json
+  correctAnswer String       @db.Text
+  explanation   String?      @db.Text
+  topic         String?
+  conceptKey    String
+  difficulty    String       @default("INTERMEDIATE")
+  event         MathEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, code])
+  @@index([institutionId, eventId, topic, difficulty])
+  @@index([eventId, conceptKey])
+}
+
+model MathEventDuel {
+  id                  String                @id @default(cuid())
+  institutionId       String
+  eventId             String
+  inviterEnrollmentId String
+  inviteeEnrollmentId String
+  pairKey             String
+  mode                String                @default("DIRECT")
+  status              MathEventDuelStatus   @default(INVITED)
+  questions           Json
+  createdAt           DateTime              @default(now())
+  expiresAt           DateTime
+  acceptedAt          DateTime?
+  completedAt         DateTime?
+  inviter             StudentEnrollment     @relation("MathEventDuelInviter", fields: [inviterEnrollmentId], references: [id], onDelete: Restrict)
+  invitee             StudentEnrollment     @relation("MathEventDuelInvitee", fields: [inviteeEnrollmentId], references: [id], onDelete: Restrict)
+  event               MathEvent             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  answers             MathEventDuelAnswer[]
+
+  @@index([institutionId, eventId, status, expiresAt])
+  @@index([institutionId, inviterEnrollmentId, createdAt])
+  @@index([institutionId, inviteeEnrollmentId, createdAt])
+}
+
+model MathEventDuelAnswer {
+  id            String            @id @default(cuid())
+  institutionId String
+  duelId        String
+  enrollmentId  String
+  ordinal       Int
+  answer        String            @db.Text
+  isCorrect     Boolean
+  createdAt     DateTime          @default(now())
+  duel          MathEventDuel     @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+
+  @@unique([duelId, enrollmentId, ordinal])
+  @@index([institutionId, enrollmentId])
+}
+
+model MathEventQuestionSeen {
+  id            String            @id @default(cuid())
+  institutionId String
+  eventId       String
+  enrollmentId  String
+  questionId    String
+  conceptKey    String
+  lastSeenAt    DateTime          @default(now())
+  event         MathEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, enrollmentId, questionId])
+  @@index([eventId, enrollmentId, lastSeenAt])
+  @@index([eventId, enrollmentId, conceptKey])
+}
+
+model MathEventPushSubscription {
+  id            String            @id @default(cuid())
+  institutionId String
+  eventId       String
+  enrollmentId  String
+  endpoint      String            @db.Text
+  p256dh        String
+  auth          String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  event         MathEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, endpoint])
+  @@index([institutionId, eventId, enrollmentId])
 }

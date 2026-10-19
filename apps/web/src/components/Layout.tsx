@@ -55,8 +55,10 @@ import {
   Sparkles,
   ExternalLink,
   PenLine,
+  Trophy,
 } from 'lucide-react'
 import MySignatureModal from './MySignatureModal'
+import { MathEventInvitation } from '../pages/MathEvents'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA' | 'AUXILIAR_CONTABLE' | 'ORIENTADOR' | 'BIBLIOTECARIO' | 'AUXILIAR'
 
@@ -281,6 +283,8 @@ const institutionalNavigation: NavItem[] = [
   // Aula Virtual
   { name: 'Aula Virtual', href: '/aula', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },
   { name: 'Mis Clases', href: '/aula', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
+  { name: 'Eventos', href: '/eventos', icon: Trophy, roles: ['ESTUDIANTE'] },
+  { name: 'Organizar eventos', href: '/eventos/organizar', icon: Trophy, roles: ['DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL'] },
 
   // Edusyn Play: motor SEPARADO (estilo Kahoot/Quizizz, no dependiente de institución).
   // Se retira del menú docente a pedido; las rutas /play-landing y /play siguen vivas
@@ -493,6 +497,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <ValeriaProvider>
+      <MathEventInvitation />
     <div className="min-h-screen bg-slate-50">
       <ConnectionStatusBar />
       {/* Mobile header */}

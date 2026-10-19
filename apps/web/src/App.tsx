@@ -57,6 +57,7 @@ import PreguntasFrecuentes from './pages/public/PreguntasFrecuentes'
 import Recursos from './pages/public/Recursos'
 import Contacto from './pages/public/Contacto'
 import Layout from './components/Layout'
+import { MathEventOrganizer, default as MathEventsPage } from './pages/MathEvents'
 import PlayLayout from './components/play/PlayLayout'
 import { PlayAuthProvider, usePlayAuth } from './contexts/PlayAuthContext'
 import {
@@ -449,6 +450,9 @@ function App() {
                       así que el botón "atrás" no rebota entre la ruta vieja y la nueva. */}
                   <Route path="/classroom" element={<Navigate to="/aula" replace />} />
                   <Route path="/my-classes" element={<Navigate to="/aula" replace />} />
+                  <Route path="/eventos/organizar" element={<MathEventOrganizer />} />
+                  <Route path="/eventos/:eventId" element={<MathEventsPage />} />
+                  <Route path="/eventos" element={<MathEventsPage />} />
                   <Route path="/aula-clasica" element={<Classroom />} />
                   <Route path="/aula" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId" element={<AulaVirtual />} />
