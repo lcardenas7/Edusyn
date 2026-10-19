@@ -587,8 +587,9 @@ export class MathEventsService {
     try {
       const created = await this.db.$transaction(
         async (tx) => {
+          // El bloqueo devuelve void; convertir a texto permite que Prisma lo lea.
           for (const id of [s.id, opponent.id].sort())
-            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event:${e.id}:${id}`}))`;
+            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event:${e.id}:${id}`}))::text`;
           const day = colombiaDayStart(now);
           const [
             senderUsed,
@@ -764,7 +765,7 @@ export class MathEventsService {
             d.inviterEnrollmentId,
             d.inviteeEnrollmentId,
           ].sort())
-            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event:${d.eventId}:${id}`}))`;
+            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`math-event:${d.eventId}:${id}`}))::text`;
           if (accept) {
             for (const id of [d.inviterEnrollmentId, d.inviteeEnrollmentId]) {
               const count = await tx.mathEventDuel.count({

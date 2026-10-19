@@ -219,6 +219,10 @@ export default function MathEventsPage() {
   const [available, setAvailable] = useState(false);
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  useEffect(() => {
+    document.body.setAttribute("data-math-event-app", "");
+    return () => document.body.removeAttribute("data-math-event-app");
+  }, []);
   const loadEvents = useCallback(async () => {
     try {
       const r = await api.get<EventCard[]>("/math-events/active");
@@ -291,10 +295,7 @@ export default function MathEventsPage() {
         .catch(() => toast.error("No pudimos cargar la clasificación."));
   }, [tab, eventId, scope, board?.me.matchesUsedToday]);
   useEffect(() => {
-    const active = board?.duels?.find(
-      (d: any) =>
-        d.status === "ACTIVE" || (d.status === "INVITED" && !d.invitedByMe),
-    );
+    const active = board?.duels?.find((d: any) => d.status === "ACTIVE");
     if (active) loadDuel(active.id);
     else setDuel(null);
   }, [board?.duels, loadDuel]);
@@ -305,14 +306,14 @@ export default function MathEventsPage() {
     if (!eventId) return;
     setBusy(true);
     try {
-      const r =
-        mode === "MATCH"
-          ? await api.post(`/math-events/${eventId}/matchmake`)
-          : await api.post(`/math-events/${eventId}/challenges`, {
-              opponentEnrollmentId: opponentId,
-            });
+      if (mode === "MATCH") {
+        await api.post(`/math-events/${eventId}/matchmake`);
+      } else {
+        await api.post(`/math-events/${eventId}/challenges`, {
+          opponentEnrollmentId: opponentId,
+        });
+      }
       await loadBoard();
-      await loadDuel(r.data.id);
       toast.success("Reto enviado.");
     } catch (e) {
       toast.error(e);
@@ -429,7 +430,7 @@ export default function MathEventsPage() {
   };
   if (!eventId)
     return (
-      <main className="mx-auto min-h-screen max-w-xl bg-slate-50 px-4 py-8">
+      <main className="mx-auto min-h-dvh w-full min-w-0 max-w-xl bg-slate-50 px-4 py-8">
         <header className="mb-6">
           <Link
             to="/aula"
@@ -500,8 +501,8 @@ export default function MathEventsPage() {
   );
   const dateLabel = `${fmt(board.event.startsAt)} – ${fmt(board.event.endsAt)}`;
   return (
-    <main className="min-h-screen bg-[#eff4ff] pb-24 text-slate-950">
-      <div className="mx-auto max-w-xl px-4 pb-5 pt-4">
+    <main className="math-event-page min-h-dvh w-full min-w-0 bg-[#eff4ff] pb-28 text-slate-950">
+      <div className="mx-auto w-full min-w-0 max-w-xl px-4 pb-5 pt-4">
         <Link
           to="/eventos"
           className="inline-flex items-center gap-2 text-sm font-bold text-slate-600"
@@ -636,7 +637,7 @@ export default function MathEventsPage() {
             {invites.map((d: any) => (
               <div
                 key={d.id}
-                className="mt-3 flex items-center justify-between gap-2"
+                className="mt-3 flex flex-wrap items-center justify-between gap-3"
               >
                 <span className="text-sm">
                   {avatarGlyph[d.opponent.avatarCode] || "⭐"}{" "}
@@ -645,14 +646,16 @@ export default function MathEventsPage() {
                 </span>
                 <div className="flex gap-2">
                   <button
+                    disabled={busy}
                     onClick={() => respond(d.id, false)}
-                    className="rounded-lg border px-3 py-2 text-xs font-bold"
+                    className="min-h-11 rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-40"
                   >
                     Ahora no
                   </button>
                   <button
+                    disabled={busy}
                     onClick={() => respond(d.id, true)}
-                    className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white"
+                    className="min-h-11 rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
                   >
                     Aceptar
                   </button>
@@ -698,8 +701,8 @@ export default function MathEventsPage() {
         {tab === "play" && (
           <section className="mt-4">
             <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Tu avatar
                   </p>
@@ -712,7 +715,7 @@ export default function MathEventsPage() {
                   aria-label="Elegir avatar"
                   value={board.me.avatarCode}
                   onChange={(e) => changeAvatar(e.target.value)}
-                  className="rounded-xl border p-2 text-xl"
+                  className="min-h-11 max-w-full rounded-xl border p-2 text-base"
                 >
                   {avatars.map((a) => (
                     <option key={a} value={a}>
@@ -764,7 +767,7 @@ export default function MathEventsPage() {
                       busy || p.inMatch || board.me.matchesRemaining < 1
                     }
                     onClick={() => play(p.id)}
-                    className="rounded-xl bg-blue-100 px-3 py-2 text-xs font-extrabold text-blue-800 disabled:opacity-40"
+                    className="min-h-11 shrink-0 rounded-xl bg-blue-100 px-3 py-2 text-sm font-extrabold text-blue-800 disabled:opacity-40"
                   >
                     Retar
                   </button>
@@ -848,8 +851,8 @@ export default function MathEventsPage() {
           </section>
         )}
       </div>
-      <footer className="fixed inset-x-0 bottom-0 border-t bg-white/95 p-3 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center justify-between">
+      <footer className="math-event-footer fixed inset-x-0 bottom-0 border-t bg-white/95 p-3 backdrop-blur">
+        <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-slate-600">¿Listo para jugar?</span>
           <button
             onClick={toggleAvailability}
