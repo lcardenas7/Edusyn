@@ -77,6 +77,7 @@ export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answeri
   const question = feedback?.question ?? duel?.questions.find(q => !q.answered);
   const ordinal = feedback?.ordinal ?? (duel ? duel.questions.findIndex(q => !q.answered) : 0);
   const waiting = !duel;
+  const completedSummary = !!duel?.allDone && !feedback && !answering;
   const transition = { duration: reduceMotion ? 0 : 0.24 };
   return <section ref={stageRef} tabIndex={-1} role="dialog" aria-modal="true" className="duel-stage" aria-label="Partida de matemáticas" onKeyDown={event => {
     if (event.key === "Escape") { onBack(); return; }
@@ -158,16 +159,16 @@ export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answeri
               </div>
             </>}
             {duel?.allDone && (duel.showCorrectAnswers !== false || duel.showExplanations !== false) && <details className="duel-review"><summary>Revisar mis respuestas</summary>{duel.questions.map((q, i) => <div key={q.id}><strong>{i + 1}. {q.text}</strong><p>{q.isCorrect ? "✓ Acierto" : "· Sin acierto"}{duel.showCorrectAnswers !== false && q.correctAnswer ? ` · ${q.correctAnswer}` : ""}</p>{duel.showExplanations !== false && q.explanation && <p>{q.explanation}</p>}</div>)}</details>}
-            <button onClick={duel?.allDone ? onRanking : onBack} className="duel-primary">{duel?.allDone ? "Ver ranking completo" : "Volver al evento"} <ChevronRight size={20} /></button>
+            {!duel?.allDone && <button onClick={onBack} className="duel-primary">Volver al evento <ChevronRight size={20} /></button>}
             {duel?.allDone && <button onClick={onBack} className="duel-return">Elegir otro rival</button>}
           </div>}
         </motion.div>}
       </AnimatePresence>
     </div>
     {feedback?.isCorrect && !reduceMotion && <motion.div key={`${feedback.duelId}-${feedback.ordinal}`} aria-hidden="true" className="duel-point-burst" initial={{ opacity: 0, y: 20, scale: 0.8 }} animate={{ opacity: [0, 1, 1, 0], y: [20, 0, 0, -30], scale: [0.8, 1.1, 1, 1] }} transition={{ duration: 1.3 }}>⭐ +10 pts</motion.div>}
-    {(feedback || answering) && !intro && <div className="duel-next-dock">
-      <div role="status">{!feedback ? "Comprobando tu respuesta…" : feedback.isCorrect ? "✓ ¡Correcto! +10 pts" : "Respuesta guardada · ¡Sigue adelante!"}</div>
-      <button disabled={answering || !feedback} onClick={onContinue} className="duel-primary">{answering ? "Guardando…" : ((feedback?.ordinal ?? 0) + 1 === duel?.total ? "Ver mi resultado" : "Siguiente pregunta")}<ChevronRight size={20} /></button>
+    {(feedback || answering || completedSummary) && !intro && <div className="duel-next-dock">
+      <div role="status">{completedSummary ? `${duel?.pointsAwarded ?? 0} puntos sumados al ranking` : !feedback ? "Comprobando tu respuesta…" : feedback.isCorrect ? "✓ ¡Correcto! +10 pts" : "Respuesta guardada · ¡Sigue adelante!"}</div>
+      <button disabled={!completedSummary && (answering || !feedback)} onClick={completedSummary ? onRanking : onContinue} className="duel-primary">{completedSummary ? "Ver ranking completo" : answering ? "Guardando…" : ((feedback?.ordinal ?? 0) + 1 === duel?.total ? "Ver mi resultado" : "Siguiente pregunta")}<ChevronRight size={20} /></button>
     </div>}
   </section>;
 }

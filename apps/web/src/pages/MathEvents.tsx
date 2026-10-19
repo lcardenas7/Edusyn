@@ -912,6 +912,7 @@ export function MathEventOrganizer() {
         showCorrectAnswers, showExplanations,
       });
       setEventId(r.data.id);
+      setManaged(rows => [r.data, ...rows]);
       setMessage(
         "Evento creado como borrador. Ahora copia las preguntas seleccionadas.",
       );
@@ -967,6 +968,8 @@ export function MathEventOrganizer() {
         <label className="block text-sm font-bold">Configurar evento existente
           <select className="mt-2 min-h-12 w-full rounded-xl border px-3" value={editingId} onChange={e => {
             setEditingId(e.target.value);
+            setEventId("");
+            setMessage("");
             const selected = managed.find(row => row.id === e.target.value);
             setShowCorrectAnswers(selected?.showCorrectAnswers ?? true); setShowExplanations(selected?.showExplanations ?? true);
           }}><option value="">Nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status}</option>)}</select>
