@@ -240,7 +240,7 @@ export class MathEventsService {
           eventId: e.id,
           institutionId: actor.institutionId,
           OR: [{ inviterEnrollmentId: s.id }, { inviteeEnrollmentId: s.id }],
-          status: { in: ['INVITED', 'ACTIVE'] },
+          status: { in: ['INVITED', 'ACTIVE', 'COMPLETED'] },
         },
         include: {
           inviter: {
@@ -315,6 +315,8 @@ export class MathEventsService {
         endsAt: e.endsAt,
         gradeNumbers: e.eligibleGrades,
         dailyMatchLimit: e.dailyMatchLimit,
+        showCorrectAnswers: e.showCorrectAnswers,
+        showExplanations: e.showExplanations,
       },
       me: {
         enrollmentId: s.id,
@@ -728,7 +730,8 @@ export class MathEventsService {
       await this.push
         .notifyIncomingDuel(actor.institutionId, e.id, opponent.id)
         .catch(() => undefined);
-      return created;
+      // Never serialize the stored question snapshot (it contains answer keys).
+      return { id: created.id, status: created.status, expiresAt: created.expiresAt };
     } catch (err: any) {
       if (err?.code === 'P2002' || err?.code === 'P2034')
         throw new BadRequestException(
@@ -856,6 +859,9 @@ export class MathEventsService {
     const next = answers.length;
     const finished = answers.length >= ROUNDS;
     const allDone = d.answers.length >= ROUNDS * 2;
+    const myScore = answers.filter(a => a.isCorrect).length;
+    const opponentScore = allDone ? d.answers.filter(a => a.enrollmentId !== s.id && a.isCorrect).length : null;
+    const bonus = allDone ? myScore > opponentScore! ? 5 : myScore === opponentScore ? 2 : 0 : null;
     return {
       id: d.id,
       status: d.status,
@@ -871,12 +877,16 @@ export class MathEventsService {
         answered: answers.some((a) => a.ordinal === i),
         ...(answers.some((a) => a.ordinal === i)
           ? {
-              correctAnswer: q.correctAnswer,
-              explanation: q.explanation,
+              ...(d.event.showCorrectAnswers ? { correctAnswer: q.correctAnswer } : {}),
+              ...(d.event.showExplanations ? { explanation: q.explanation } : {}),
               isCorrect: answers.find((a) => a.ordinal === i)?.isCorrect,
             }
           : {}),
       })),
+      pointsAwarded: allDone ? myScore * 10 + bonus! : null,
+      bonus,
+      showCorrectAnswers: d.event.showCorrectAnswers,
+      showExplanations: d.event.showExplanations,
       myScore: answers.filter((a) => a.isCorrect).length,
       opponentScore: allDone
         ? d.answers
@@ -953,8 +963,8 @@ export class MathEventsService {
     return {
       accepted: true,
       isCorrect,
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation,
+      ...(d.event.showCorrectAnswers ? { correctAnswer: q.correctAnswer } : {}),
+      ...(d.event.showExplanations ? { explanation: q.explanation } : {}),
     };
   }
   async ranking(
@@ -1052,6 +1062,17 @@ export class MathEventsService {
         b.correct - a.correct ||
         a.firstName.localeCompare(b.firstName, 'es'),
     );
+    const recipientIds = result.slice(0, 100).map(x => x.id);
+    const where = { institutionId: actor.institutionId, eventId: e.id, recipientEnrollmentId: { in: recipientIds } };
+    const [reactions, mineReactions] = recipientIds.length ? await Promise.all([
+      this.db.mathEventReaction.groupBy({ by: ['recipientEnrollmentId', 'kind'], where, _count: { _all: true } }),
+      this.db.mathEventReaction.findMany({ where: { ...where, senderEnrollmentId: s.id }, select: { recipientEnrollmentId: true, kind: true } }),
+    ]) : [[], []];
+    for (const row of result.slice(0, 100)) {
+      row.reactions = Object.fromEntries(['APPLAUSE','BRILLIANT','FAIR_PLAY','KEEP_GOING'].map(kind =>
+        [kind, reactions.find(r => r.recipientEnrollmentId === row.id && r.kind === kind)?._count._all ?? 0]));
+      row.myReaction = mineReactions.find(r => r.recipientEnrollmentId === row.id)?.kind ?? null;
+    }
     const mine = result.find((x) => x.id === s.id);
     return {
       scope,
@@ -1061,6 +1082,50 @@ export class MathEventsService {
       myRank: mine ? result.indexOf(mine) + 1 : null,
       total: result.length,
     };
+  }
+  async eventSettings(actor: ClassroomActor, eventId: string) {
+    const e = await this.event(eventId, actor.institutionId, true);
+    return { id: e.id, title: e.title, showCorrectAnswers: e.showCorrectAnswers, showExplanations: e.showExplanations };
+  }
+  async manageEvents(actor: ClassroomActor) {
+    return this.db.mathEvent.findMany({ where: { institutionId: actor.institutionId },
+      select: { id: true, title: true, status: true, showCorrectAnswers: true, showExplanations: true },
+      orderBy: { createdAt: 'desc' }, take: 100 });
+  }
+  async updateSettings(actor: ClassroomActor, eventId: string, input: any) {
+    const e = await this.event(eventId, actor.institutionId, true);
+    if (typeof input?.showCorrectAnswers !== 'boolean' || typeof input?.showExplanations !== 'boolean')
+      throw new BadRequestException('Selecciona las opciones de respuestas y explicaciones.');
+    return this.db.mathEvent.update({ where: { id: e.id }, data: {
+      showCorrectAnswers: input.showCorrectAnswers, showExplanations: input.showExplanations,
+    }, select: { id: true, showCorrectAnswers: true, showExplanations: true } });
+  }
+  async duelState(actor: ClassroomActor, duelId: string) {
+    const s = await this.student(actor);
+    const d = await this.db.mathEventDuel.findFirst({ where: {
+      id: duelId, institutionId: actor.institutionId,
+      OR: [{ inviterEnrollmentId: s.id }, { inviteeEnrollmentId: s.id }],
+    }, select: { id: true, status: true, expiresAt: true } });
+    if (!d) throw new NotFoundException('Reto no encontrado.');
+    return { id: d.id, status: d.expiresAt < new Date() && d.status !== 'COMPLETED' ? 'EXPIRED' : d.status };
+  }
+  async react(actor: ClassroomActor, eventId: string, recipientEnrollmentId: string, kind: string) {
+    const s = await this.student(actor);
+    const e = await this.event(eventId, actor.institutionId);
+    if (!this.eligible(e, s.gradeNumber) || typeof recipientEnrollmentId !== 'string' || recipientEnrollmentId === s.id ||
+        !['APPLAUSE','BRILLIANT','FAIR_PLAY','KEEP_GOING'].includes(kind))
+      throw new BadRequestException('Reacción no válida.');
+    const played = await Promise.all([s.id, recipientEnrollmentId].map(id => this.db.mathEventDuel.findFirst({ where: {
+      eventId: e.id, institutionId: actor.institutionId, status: 'COMPLETED',
+      OR: [{ inviterEnrollmentId: id }, { inviteeEnrollmentId: id }],
+    }, select: { id: true } })));
+    if (played.some(row => !row)) throw new ForbiddenException('Las reacciones son para participantes que ya jugaron.');
+    await this.db.mathEventReaction.upsert({
+      where: { eventId_senderEnrollmentId_recipientEnrollmentId: { eventId: e.id, senderEnrollmentId: s.id, recipientEnrollmentId } },
+      create: { institutionId: actor.institutionId, eventId: e.id, senderEnrollmentId: s.id, recipientEnrollmentId, kind },
+      update: { kind },
+    });
+    return { saved: true, kind };
   }
   async createEvent(actor: ClassroomActor, input: any) {
     const title = typeof input?.title === 'string' ? input.title.trim() : '';
@@ -1101,6 +1166,8 @@ export class MathEventsService {
         endsAt,
         eligibleGrades: eligible as any,
         dailyMatchLimit: limit,
+        showCorrectAnswers: input.showCorrectAnswers !== false,
+        showExplanations: input.showExplanations !== false,
         createdById: actor.userId,
       },
     });

@@ -6,6 +6,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../lib/toast";
 import { bogotaInputToIso } from "../lib/datetime";
 import { DuelStage, type DuelState, type AnswerFeedback } from "./math-events/DuelStage";
+import { useDuelAudio } from "./math-events/useDuelAudio";
+import { Reactions } from "./math-events/Reactions";
 
 type EventCard = {
   id: string;
@@ -35,6 +37,8 @@ type Board = {
     endsAt: string;
     gradeNumbers: number[];
     dailyMatchLimit: number;
+    showCorrectAnswers: boolean;
+    showExplanations: boolean;
   };
   me: {
     enrollmentId: string;
@@ -207,6 +211,17 @@ export default function MathEventsPage() {
   const [available, setAvailable] = useState(false);
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [reacting, setReacting] = useState(false);
+  const audio = useDuelAudio(!!stageId && !!duel && !duel.finished && !feedback);
+  const playedCues = useRef(new Set<string>());
+  useEffect(() => {
+    if (!duel) return;
+    const key = `${duel.id}:${duel.allDone ? "end" : "start"}`;
+    if (playedCues.current.has(key)) return;
+    playedCues.current.add(key);
+    if (duel.allDone) audio.cue(duel.myScore > (duel.opponentScore ?? 0) ? "win" : "finish");
+    else if (!duel.questions.some(q => q.answered)) audio.cue("start");
+  }, [duel?.id, duel?.allDone, audio.cue]);
   useEffect(() => {
     document.body.setAttribute("data-math-event-app", "");
     return () => document.body.removeAttribute("data-math-event-app");
@@ -254,9 +269,11 @@ export default function MathEventsPage() {
   }, [eventId, loadEvents, loadBoard]);
   useEffect(() => {
     if (!eventId) return;
-    const t = window.setInterval(() => loadBoard(), 9000);
+    const t = window.setInterval(() => {
+      if (!document.hidden && !stageId) void loadBoard();
+    }, 9000);
     return () => clearInterval(t);
-  }, [eventId, loadBoard]);
+  }, [eventId, loadBoard, stageId]);
   useEffect(() => {
     if (!eventId || !available) return;
     api
@@ -277,12 +294,12 @@ export default function MathEventsPage() {
     };
   }, [eventId, available]);
   useEffect(() => {
-    if (tab === "ranking" && eventId)
+    if ((tab === "ranking" || duel?.allDone) && eventId)
       api
         .get(`/math-events/${eventId}/ranking`, { params: { scope } })
         .then((r) => setRanking(r.data))
         .catch(() => toast.error("No pudimos cargar la clasificación."));
-  }, [tab, eventId, scope, board?.me.matchesUsedToday]);
+  }, [tab, eventId, scope, board?.me.matchesUsedToday, duel?.allDone]);
   useEffect(() => {
     const active = board?.duels?.find((d: any) => d.status === "ACTIVE");
     if (active) loadDuel(active.id);
@@ -299,11 +316,50 @@ export default function MathEventsPage() {
       }
     }
   }, [board?.duels]);
+  const waitingId = stageId && board?.duels.find(d => d.id === stageId && d.status === "INVITED") ? stageId : null;
+  const finishingId = duel?.finished && !duel.allDone ? duel.id : null;
+  useEffect(() => {
+    const id = waitingId ?? finishingId;
+    if (!id) return;
+    let live = true, running = false;
+    let timer: number;
+    const controller = new AbortController();
+    const poll = async () => {
+      if (!live || running) return;
+      clearTimeout(timer);
+      if (document.hidden) { timer = window.setTimeout(poll, 6000); return; }
+      running = true;
+      try {
+        const r = await api.get(`/math-events/duels/${id}/state`, { signal: controller.signal });
+        if (!live) return;
+        if ((r.data.status === "ACTIVE" && waitingId) || r.data.status === "COMPLETED") {
+          await loadDuel(id); await loadBoard();
+        } else if (!["INVITED", "ACTIVE"].includes(r.data.status)) {
+          setStageId(null); await loadBoard();
+          toast.success("El reto ya no está pendiente. Puedes elegir otro rival.");
+        }
+      } catch { /* The regular dashboard refresh remains available after transient errors. */ }
+      finally { running = false; if (live) timer = window.setTimeout(poll, 1500); }
+    };
+    void poll();
+    document.addEventListener("visibilitychange", poll);
+    return () => { live = false; controller.abort(); clearTimeout(timer); document.removeEventListener("visibilitychange", poll); };
+  }, [waitingId, finishingId, loadDuel, loadBoard]);
+  const sendReaction = async (recipientEnrollmentId: string, kind: string) => {
+    if (!eventId || reacting) return;
+    setReacting(true);
+    try {
+      await api.put(`/math-events/${eventId}/reactions`, { recipientEnrollmentId, kind });
+      const r = await api.get(`/math-events/${eventId}/ranking`, { params: { scope } });
+      setRanking(r.data); toast.success("¡Reconocimiento enviado!");
+    } catch (e) { toast.error(e); } finally { setReacting(false); }
+  };
   const play = async (
     opponentId: string,
     mode: "DIRECT" | "MATCH" = "DIRECT",
   ) => {
     if (!eventId) return;
+    audio.unlock();
     setBusy(true);
     try {
       if (mode === "MATCH") {
@@ -324,6 +380,7 @@ export default function MathEventsPage() {
     }
   };
   const respond = async (id: string, accept: boolean) => {
+    audio.unlock();
     setBusy(true);
     try {
       await api.post(`/math-events/${id}/${accept ? "accept" : "decline"}`);
@@ -412,6 +469,7 @@ export default function MathEventsPage() {
     value: string,
   ) => {
     if (!eventId || !duel || answerInFlight.current) return;
+    audio.unlock();
     answerInFlight.current = true;
     setAnswering(true);
     try {
@@ -420,6 +478,7 @@ export default function MathEventsPage() {
         answer: value,
       });
       setFeedback({ ...r.data, duelId: duel.id, ordinal, question: q, selected: value });
+      audio.cue(r.data.isCorrect ? "correct" : "wrong");
       await loadDuel(duel.id);
       await loadBoard();
     } catch (e) {
@@ -540,6 +599,12 @@ export default function MathEventsPage() {
           <button onClick={() => { setStageId(duel.id); setHiddenDuelId(null); }} className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-blue-700 px-4 font-extrabold text-white shadow-lg">
             <Swords size={20} /> {duel.allDone ? "Ver resultado del duelo" : duel.finished ? "Consultar mi duelo" : "Continuar mi duelo"}
           </button>
+        )}
+        {!duel && board.duels.some(d => d.status === "COMPLETED") && (
+          <button className="mt-4 min-h-12 w-full rounded-xl bg-white p-3 font-bold text-blue-800" onClick={() => {
+            const last = board.duels.find(d => d.status === "COMPLETED");
+            if (last) { setHiddenDuelId(null); setStageId(last.id); void loadDuel(last.id); }
+          }}>🏆 Ver mi último resultado</button>
         )}
         {invites.length > 0 && (
           <section className="math-event-incoming mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
@@ -708,7 +773,7 @@ export default function MathEventsPage() {
             {ranking?.rows?.map((r: any, i: number) => (
               <div
                 key={r.id}
-                className={`mt-2 flex items-center gap-3 rounded-xl p-3 ${r.isMe ? "bg-blue-50 ring-1 ring-blue-200" : "bg-slate-50"}`}
+                className={`mt-2 flex flex-wrap items-center gap-3 rounded-xl p-3 ${r.isMe ? "bg-blue-50 ring-1 ring-blue-200" : "bg-slate-50"}`}
               >
                 <strong className="w-7 text-center">
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : r.rank}
@@ -722,6 +787,7 @@ export default function MathEventsPage() {
                   </span>
                 </div>
                 <strong className="text-blue-800">{r.points} pts</strong>
+                <Reactions counts={r.reactions} selected={r.myReaction} disabled={r.isMe || reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
               </div>
             ))}
             {ranking?.total === 0 && (
@@ -772,6 +838,10 @@ export default function MathEventsPage() {
           glyphs={avatarGlyph} duel={currentDuel}
           feedback={feedback?.duelId === stageId ? feedback : null}
           busy={busy} answering={answering} onAnswer={submit}
+          audio={audio} ranking={ranking} reacting={reacting}
+          onRanking={() => { setStageId(null); setHiddenDuelId(stageId); setTab("ranking"); }}
+          onReact={kind => sendReaction(opponent.id, kind)}
+          opponentRanking={ranking?.rows?.find((r: any) => r.id === opponent.id)}
           onContinue={() => setFeedback(null)}
           onBack={() => { setHiddenDuelId(stageId); setStageId(null); }}
           onCancel={entry?.invitedByMe ? () => cancelInvite(stageId) : undefined}
@@ -793,6 +863,10 @@ export default function MathEventsPage() {
 }
 
 export function MathEventOrganizer() {
+  const [managed, setManaged] = useState<any[]>([]);
+  const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
+  const [showExplanations, setShowExplanations] = useState(true);
+  const [editingId, setEditingId] = useState("");
   const [banks, setBanks] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -808,6 +882,19 @@ export function MathEventOrganizer() {
       .then((r) => setBanks(r.data))
       .catch((e) => toast.error(e));
   }, []);
+  useEffect(() => {
+    api.get("/math-events/manage").then(r => setManaged(r.data)).catch(e => toast.error(e));
+  }, []);
+  const saveSettings = async () => {
+    const id = editingId || eventId;
+    if (!id) return;
+    setLoading(true);
+    try {
+      await api.put(`/math-events/${id}/settings`, { showCorrectAnswers, showExplanations });
+      setManaged(rows => rows.map(row => row.id === id ? { ...row, showCorrectAnswers, showExplanations } : row));
+      toast.success("Configuración guardada para el evento.");
+    } catch (e) { toast.error(e); } finally { setLoading(false); }
+  };
   const create = async () => {
     setLoading(true);
     try {
@@ -822,6 +909,7 @@ export function MathEventOrganizer() {
         endsAt,
         eligibleGrades: [6, 7, 8, 9, 10, 11],
         dailyMatchLimit: 25,
+        showCorrectAnswers, showExplanations,
       });
       setEventId(r.data.id);
       setMessage(
@@ -874,6 +962,21 @@ export function MathEventOrganizer() {
       <p className="mt-1 text-sm text-slate-600">
         Evento institucional, separado de las asignaturas y las notas.
       </p>
+      <section className="mt-5 space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="font-black">Respuestas y explicaciones</h2>
+        <label className="block text-sm font-bold">Configurar evento existente
+          <select className="mt-2 min-h-12 w-full rounded-xl border px-3" value={editingId} onChange={e => {
+            setEditingId(e.target.value);
+            const selected = managed.find(row => row.id === e.target.value);
+            setShowCorrectAnswers(selected?.showCorrectAnswers ?? true); setShowExplanations(selected?.showExplanations ?? true);
+          }}><option value="">Nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status}</option>)}</select>
+        </label>
+        <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showCorrectAnswers} onChange={e => setShowCorrectAnswers(e.target.checked)} />Mostrar la respuesta correcta después de responder</label>
+        <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showExplanations} onChange={e => setShowExplanations(e.target.checked)} />Habilitar «Ver explicación»</label>
+        <p className="text-xs leading-5 text-slate-600">Para una competencia con preguntas reutilizables, desactiva ambas opciones. Los aciertos y los puntos seguirán visibles; las soluciones ocultas no se enviarán al navegador.</p>
+        {(editingId || eventId) && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
+      </section>
+      {!editingId && <>
       <div className="mt-5 space-y-3 rounded-2xl bg-white p-4 shadow-sm">
         <label className="block text-sm font-bold">
           Nombre
@@ -972,6 +1075,7 @@ export function MathEventOrganizer() {
           </button>
         </section>
       )}
+      </>}
       {message && (
         <p className="mt-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
           {message}
