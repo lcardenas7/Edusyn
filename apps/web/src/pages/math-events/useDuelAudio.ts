@@ -9,16 +9,20 @@ export function useDuelAudio(playing: boolean) {
   const [music, setMusic] = useState(false);
   const context = useRef<AudioContext | null>(null);
   const notes = useRef(new Set<OscillatorNode>());
-  const musicNotes = useRef(new Set<OscillatorNode>());
+  const musicAudio = useRef<HTMLAudioElement | null>(null);
   const effectsRef = useRef(effects);
   effectsRef.current = effects;
+  const musicRef = useRef(music);
+  musicRef.current = music;
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
   const unlock = useCallback(() => {
     try {
       context.current ??= new AudioContext();
       if (context.current.state === "suspended") void context.current.resume().catch(() => {});
     } catch { /* Gameplay remains available on devices without audio support. */ }
   }, []);
-  const tone = useCallback((hz: number, delay: number, length: number, volume: number, accompaniment = false) => {
+  const tone = useCallback((hz: number, delay: number, length: number, volume: number) => {
     const ctx = context.current;
     if (!ctx || ctx.state !== "running" || document.hidden) return;
     const oscillator = ctx.createOscillator(), gain = ctx.createGain();
@@ -28,9 +32,8 @@ export function useDuelAudio(playing: boolean) {
     gain.gain.linearRampToValueAtTime(volume, start + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, start + length);
     oscillator.connect(gain); gain.connect(ctx.destination);
-    const playingNotes = accompaniment ? musicNotes.current : notes.current;
-    playingNotes.add(oscillator);
-    oscillator.onended = () => { playingNotes.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
+    notes.current.add(oscillator);
+    oscillator.onended = () => { notes.current.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
     oscillator.start(start); oscillator.stop(start + length + 0.03);
   }, []);
   const cue = useCallback((kind: Cue) => {
@@ -38,32 +41,50 @@ export function useDuelAudio(playing: boolean) {
     const sequence = kind === "reaction" ? [659.25, 880] : kind === "correct" ? [523.25, 659.25, 783.99] : kind === "wrong" ? [293.66, 246.94] : kind === "win" ? [523.25, 659.25, 783.99, 1046.5] : kind === "start" ? [392, 523.25, 783.99] : [523.25, 659.25];
     sequence.forEach((hz, i) => tone(hz, i * (kind === "reaction" ? 0.07 : 0.1), kind === "reaction" ? 0.14 : 0.22, kind === "reaction" ? 0.035 : 0.06));
   }, [tone]);
-  const stop = useCallback((musicOnly = false) => {
-    for (const group of musicOnly ? [musicNotes.current] : [notes.current, musicNotes.current]) {
-      for (const node of group) { try { node.stop(); } catch {} }
-      group.clear();
-    }
+  const stop = useCallback(() => {
+    for (const node of notes.current) { try { node.stop(); } catch {} }
+    notes.current.clear();
   }, []);
+  const getMusicAudio = useCallback(() => {
+    if (!musicAudio.current) {
+      const audio = new Audio('/audio/city-loop.mp3');
+      audio.loop = true;
+      audio.preload = 'none';
+      audio.volume = 0.16;
+      musicAudio.current = audio;
+    }
+    return musicAudio.current;
+  }, []);
+  const playMusic = useCallback(() => {
+    if (!playingRef.current || document.hidden) return;
+    const audio = getMusicAudio();
+    if (audio.paused) void audio.play().catch(() => { musicRef.current = false; setMusic(false); });
+  }, [getMusicAudio]);
   useEffect(() => {
     const visibility = () => {
-      if (document.hidden) { stop(); void context.current?.suspend().catch(() => {}); }
-      else if (context.current?.state === "suspended") void context.current.resume().catch(() => {});
+      if (document.hidden) { stop(); musicAudio.current?.pause(); void context.current?.suspend().catch(() => {}); }
+      else {
+        if (context.current?.state === "suspended") void context.current.resume().catch(() => {});
+        if (musicRef.current) playMusic();
+      }
     };
     document.addEventListener("visibilitychange", visibility);
-    return () => { document.removeEventListener("visibilitychange", visibility); stop(); void context.current?.close().catch(() => {}); context.current = null; };
-  }, [stop]);
+    return () => { document.removeEventListener("visibilitychange", visibility); stop(); musicAudio.current?.pause(); musicAudio.current = null; void context.current?.close().catch(() => {}); context.current = null; };
+  }, [stop, playMusic]);
   useEffect(() => {
-    if (!music || !playing) return;
-    let step = 0;
-    // Original quiet pentatonic accompaniment; no external media or downloads.
-    const melody = [261.63, 329.63, 392, 440, 392, 329.63, 293.66, 329.63];
-    const timer = window.setInterval(() => tone(melody[step++ % melody.length], 0, 0.55, 0.012, true), 700);
-    return () => { clearInterval(timer); stop(true); };
-  }, [music, playing, tone, stop]);
+    if (music && playing) playMusic();
+    else musicAudio.current?.pause();
+  }, [music, playing, playMusic]);
   const toggleEffects = () => {
     unlock(); const next = !effects; setEffects(next); if (!next) stop();
     try { localStorage.setItem("edusyn:duel-effects", String(next)); } catch {}
   };
-  const toggleMusic = () => { unlock(); setMusic(!music); if (music) stop(true); };
+  const toggleMusic = () => {
+    const next = !music;
+    musicRef.current = next;
+    setMusic(next);
+    if (next) playMusic();
+    else musicAudio.current?.pause();
+  };
   return { effects, music, toggleEffects, toggleMusic, unlock, cue };
 }
