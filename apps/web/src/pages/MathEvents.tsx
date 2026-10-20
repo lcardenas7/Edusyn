@@ -843,14 +843,13 @@ export default function MathEventsPage() {
               <p>Reconoce una buena partida con una reacción.</p>
               <button type="button" onClick={audio.toggleEffects} aria-pressed={audio.effects}>{audio.effects ? "🔊" : "🔇"} Efectos {audio.effects ? "sí" : "no"}</button>
             </div>
-            <RecognitionSummary counts={recognitions[board.me.enrollmentId]?.reactions ?? ranking?.myRecognitions} />
-            {ranking && !ranking.myRank && <p className="mt-3 text-xs text-slate-600">Completa un duelo para poder reaccionar a tus compañeros.</p>}
+            {ranking && !ranking.myRank && <p className="mt-2 text-xs text-slate-600">Completa un duelo para desbloquear reacciones.</p>}
             {ranking?.rows?.map((r: any, i: number) => (
               <div
                 key={r.id}
-                className={`mt-2 flex flex-wrap items-center gap-3 rounded-xl p-3 ${r.isMe ? "bg-blue-50 ring-1 ring-blue-200" : "bg-slate-50"}`}
+                className={`mt-2 flex min-w-0 flex-nowrap items-center gap-2 rounded-xl p-2 sm:gap-3 sm:p-3 ${r.isMe ? "bg-blue-50 ring-1 ring-blue-200" : "bg-slate-50"}`}
               >
-                <strong className="w-7 text-center">
+                <strong className="w-7 shrink-0 text-center">
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : r.rank}
                 </strong>
                 <div className="min-w-0 flex-1">
@@ -861,8 +860,8 @@ export default function MathEventsPage() {
                     {r.grade}.º · {r.course}
                   </span>
                 </div>
-                <strong className="text-blue-800">{r.points} pts</strong>
-                <Reactions counts={recognitions[r.id]?.reactions ?? r.reactions} selected={recognitions[r.id] ? recognitions[r.id].myReaction : r.myReaction} readOnly={r.isMe} disabled={reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
+                <strong className="shrink-0 text-sm text-blue-800 sm:text-base">{r.points} pts</strong>
+                <Reactions compact counts={recognitions[r.id]?.reactions ?? r.reactions} selected={recognitions[r.id] ? recognitions[r.id].myReaction : r.myReaction} readOnly={r.isMe} disabled={reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
               </div>
             ))}
             {ranking?.total === 0 && (
