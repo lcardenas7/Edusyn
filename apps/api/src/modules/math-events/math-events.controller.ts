@@ -75,6 +75,13 @@ export class MathEventsController {
       this.service.importBanks(a, id, b?.collectionIds),
     );
   }
+  @Post(':eventId/catalog/import')
+  @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
+  importEditorialCatalog(@Param('eventId') id: string, @Request() r: any) {
+    return this.actor(r).then((a) =>
+      this.service.importEditorialCatalog(a, id),
+    );
+  }
   @Get(':eventId/settings')
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
   settings(@Param('eventId') id: string, @Request() r: any) {

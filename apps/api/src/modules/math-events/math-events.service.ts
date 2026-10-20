@@ -8,8 +8,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ClassroomActor } from '../classroom/classroom-tenant-access.service';
 import { norm } from '../../common/utils/answer-matching.util';
 import { randomInt } from 'crypto';
+import { inflateSync } from 'zlib';
 import { OFFICIAL_DUEL_BANKS } from '../classroom/official-duel-banks';
 import { MathEventPushService } from './math-event-push.service';
+import { EDITORIAL_QUESTION_CATALOG_GZIP_BASE64 } from './editorial-question-catalog';
 
 type Q = {
   id: string;
@@ -20,7 +22,17 @@ type Q = {
   topic: string | null;
   conceptKey: string;
   difficulty: string;
+  grade?: number | null;
 };
+type EditorialQuestion = Omit<Q, 'id'> & {
+  code: string;
+  grade: number;
+  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+  timeLimitSeconds: number;
+};
+const EDITORIAL_CATALOG = JSON.parse(
+  inflateSync(Buffer.from(EDITORIAL_QUESTION_CATALOG_GZIP_BASE64, 'base64')).toString('utf8'),
+) as { questions: EditorialQuestion[]; questionCount: number };
 const ROUNDS = 7;
 const AVATARS = new Set([
   'star',
@@ -448,7 +460,7 @@ export class MathEventsService {
       endpoint,
     );
   }
-  private async makeQuestions(e: any, enrollmentIds: string[]) {
+  private async makeQuestions(e: any, enrollmentIds: string[], gradeLimit: number) {
     const history = await this.db.mathEventQuestionSeen.findMany({
       where: { eventId: e.id, enrollmentId: { in: enrollmentIds } },
       select: {
@@ -467,7 +479,11 @@ export class MathEventsService {
         usedConcepts.set(h.enrollmentId, new Set());
       usedConcepts.get(h.enrollmentId)!.add(h.conceptKey);
     }
-    const qs = e.questions as Q[];
+    // A cross-grade duel uses content suitable for the younger participant.
+    // Legacy questions without grade metadata remain eligible.
+    const qs = (e.questions as Q[]).filter(
+      (q) => q.grade == null || q.grade <= gradeLimit,
+    );
     if (qs.length < ROUNDS)
       throw new BadRequestException(
         'El evento necesita al menos siete preguntas activas.',
@@ -616,7 +632,12 @@ export class MathEventsService {
       },
     });
     if (existing) throw new BadRequestException('Ya tienen un reto abierto.');
-    const pair = await this.makeQuestions(e, [s.id, opponent.id]);
+    const opponentGrade = gradeOf(opponent.group.grade);
+    const pair = await this.makeQuestions(
+      e,
+      [s.id, opponent.id],
+      Math.min(s.gradeNumber, opponentGrade),
+    );
     try {
       const created = await this.db.$transaction(
         async (tx) => {
@@ -1206,9 +1227,22 @@ export class MathEventsService {
     const e = await this.event(eventId, actor.institutionId, true);
     if (typeof input?.showCorrectAnswers !== 'boolean' || typeof input?.showExplanations !== 'boolean')
       throw new BadRequestException('Selecciona las opciones de respuestas y explicaciones.');
+    const hasDates = input?.startsAt !== undefined || input?.endsAt !== undefined;
+    if (hasDates && e.status !== 'DRAFT')
+      throw new BadRequestException('Las fechas solo se pueden cambiar mientras el evento es borrador.');
+    const startsAt = input?.startsAt === undefined ? e.startsAt : new Date(input.startsAt);
+    const endsAt = input?.endsAt === undefined ? e.endsAt : new Date(input.endsAt);
+    if (hasDates && (
+      !Number.isFinite(startsAt.getTime()) ||
+      !Number.isFinite(endsAt.getTime()) ||
+      startsAt >= endsAt ||
+      endsAt <= new Date()
+    ))
+      throw new BadRequestException('El evento debe cerrar en una fecha futura y comenzar antes de terminar.');
     return this.db.mathEvent.update({ where: { id: e.id }, data: {
       showCorrectAnswers: input.showCorrectAnswers, showExplanations: input.showExplanations,
-    }, select: { id: true, showCorrectAnswers: true, showExplanations: true } });
+      ...(hasDates ? { startsAt, endsAt } : {}),
+    }, select: { id: true, startsAt: true, endsAt: true, showCorrectAnswers: true, showExplanations: true } });
   }
   async duelState(actor: ClassroomActor, duelId: string) {
     const s = await this.student(actor);
@@ -1437,6 +1471,7 @@ export class MathEventsService {
         data.push({
           institutionId: actor.institutionId,
           eventId: e.id,
+          grade: collection.grade.number,
           sourceItemId: item.id,
           code: source
             ? `${collection.officialCatalogId}:${source.id}`
@@ -1462,6 +1497,66 @@ export class MathEventsService {
       questionCount: await this.db.mathEventQuestion.count({
         where: { eventId: e.id, institutionId: actor.institutionId },
       }),
+    };
+  }
+  async importEditorialCatalog(actor: ClassroomActor, eventId: string) {
+    const e = await this.event(eventId, actor.institutionId, true);
+    if (e.status !== 'DRAFT')
+      throw new BadRequestException('El catálogo solo se carga en un borrador.');
+
+    const existing = await this.db.mathEventQuestion.findMany({
+      where: { eventId: e.id, institutionId: actor.institutionId },
+      select: { code: true, text: true },
+    });
+    const codes = new Set(existing.map((q) => q.code).filter(Boolean));
+    const texts = new Set(existing.map((q) => norm(q.text)));
+    const rows: any[] = [];
+    let skipped = 0;
+    for (const q of EDITORIAL_CATALOG.questions) {
+      const options = Array.isArray(q.options)
+        ? q.options.filter((x) => typeof x === 'string' && x.trim())
+        : [];
+      const fingerprint = norm(q.text);
+      if (
+        !q.code ||
+        !Number.isInteger(q.grade) || q.grade < 6 || q.grade > 11 ||
+        !q.text?.trim() || !q.conceptKey?.trim() || !q.topic?.trim() ||
+        !['MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(q.type) ||
+        options.length < 2 ||
+        !options.some((option) => norm(option) === norm(q.correctAnswer))
+      )
+        throw new BadRequestException(`Pregunta editorial inválida: ${q.code || 'sin código'}.`);
+      if (codes.has(q.code) || texts.has(fingerprint)) {
+        skipped++;
+        continue;
+      }
+      codes.add(q.code);
+      texts.add(fingerprint);
+      rows.push({
+        institutionId: actor.institutionId,
+        eventId: e.id,
+        code: q.code,
+        grade: q.grade,
+        type: q.type,
+        text: q.text.trim(),
+        options,
+        correctAnswer: options.find((option) => norm(option) === norm(q.correctAnswer))!,
+        explanation: q.explanation,
+        topic: q.topic,
+        conceptKey: q.conceptKey,
+        difficulty: q.difficulty,
+      });
+    }
+    const result = rows.length
+      ? await this.db.mathEventQuestion.createMany({ data: rows, skipDuplicates: true })
+      : { count: 0 };
+    return {
+      added: result.count,
+      skipped: skipped + rows.length - result.count,
+      questionCount: await this.db.mathEventQuestion.count({
+        where: { eventId: e.id, institutionId: actor.institutionId },
+      }),
+      catalogQuestionCount: EDITORIAL_CATALOG.questionCount,
     };
   }
   async publish(actor: ClassroomActor, eventId: string) {

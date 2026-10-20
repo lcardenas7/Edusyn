@@ -8294,6 +8294,7 @@ model MathEventQuestion {
   id            String       @id @default(cuid())
   institutionId String
   eventId       String
+  grade         Int?
   sourceItemId  String?
   code          String?
   type          QuestionType
@@ -8308,6 +8309,7 @@ model MathEventQuestion {
 
   @@unique([eventId, code])
   @@index([institutionId, eventId, topic, difficulty])
+  @@index([eventId, grade, difficulty])
   @@index([eventId, conceptKey])
 }
 

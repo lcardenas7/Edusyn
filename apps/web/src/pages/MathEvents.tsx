@@ -4,7 +4,7 @@ import { ArrowLeft, LoaderCircle, Swords, X } from "lucide-react";
 import api from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../lib/toast";
-import { bogotaInputToIso } from "../lib/datetime";
+import { bogotaInputToIso, isoToBogotaInput } from "../lib/datetime";
 import { registerAppWorker } from "../lib/pwa";
 import { DuelStage, type DuelState, type AnswerFeedback } from "./math-events/DuelStage";
 import { useDuelAudio } from "./math-events/useDuelAudio";
@@ -966,6 +966,8 @@ export function MathEventOrganizer() {
   const [description, setDescription] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [draftStart, setDraftStart] = useState("");
+  const [draftEnd, setDraftEnd] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -999,8 +1001,16 @@ export function MathEventOrganizer() {
     if (!id) return;
     setLoading(true);
     try {
-      await api.put(`/math-events/${id}/settings`, { showCorrectAnswers, showExplanations });
-      setManaged(rows => rows.map(row => row.id === id ? { ...row, showCorrectAnswers, showExplanations } : row));
+      const payload: any = { showCorrectAnswers, showExplanations };
+      if (selectedEvent?.status === 'DRAFT') {
+        const startsAt = bogotaInputToIso(draftStart);
+        const endsAt = bogotaInputToIso(draftEnd);
+        if (!startsAt || !endsAt) throw new Error("Revisa las fechas del evento.");
+        payload.startsAt = startsAt;
+        payload.endsAt = endsAt;
+      }
+      const saved = await api.put(`/math-events/${id}/settings`, payload);
+      setManaged(rows => rows.map(row => row.id === id ? { ...row, ...saved.data, showCorrectAnswers, showExplanations } : row));
       toast.success("Configuración guardada para el evento.");
     } catch (e) { toast.error(e); } finally { setLoading(false); }
   };
@@ -1049,6 +1059,20 @@ export function MathEventOrganizer() {
       setLoading(false);
     }
   };
+  const importEditorialCatalog = async () => {
+    if (!editingId) return;
+    setLoading(true);
+    try {
+      const r = await api.post(`/math-events/${editingId}/catalog/import`);
+      const updated = await api.get(`/math-events/${editingId}/report`);
+      setReport(updated.data);
+      setMessage(`Catálogo cargado: ${r.data.added} preguntas nuevas, ${r.data.skipped} omitidas por duplicado. Total del evento: ${r.data.questionCount}.`);
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
   const publish = async () => {
     if (!editingId) return;
     setLoading(true);
@@ -1086,6 +1110,7 @@ export function MathEventOrganizer() {
             setMessage("");
             const selected = managed.find(row => row.id === e.target.value);
             setShowCorrectAnswers(selected?.showCorrectAnswers ?? true); setShowExplanations(selected?.showExplanations ?? true);
+            setDraftStart(isoToBogotaInput(selected?.startsAt)); setDraftEnd(isoToBogotaInput(selected?.endsAt));
           }}><option value="">Crear nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status === 'DRAFT' ? 'Borrador' : row.status === 'PUBLISHED' ? 'Publicado' : 'Finalizado'}</option>)}</select>
         </label>
         <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showCorrectAnswers} onChange={e => setShowCorrectAnswers(e.target.checked)} />Mostrar la respuesta correcta después de responder</label>
@@ -1182,6 +1207,17 @@ export function MathEventOrganizer() {
         <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="text-xl font-black">Completar borrador: {selectedEvent.title}</h2>
           <p className="mt-1 text-sm text-slate-600">{reportLoading ? 'Consultando preguntas…' : `${report?.totals.questionCount ?? 0} preguntas copiadas al evento`}</p>
+          <div className="mt-4 space-y-3 rounded-xl bg-slate-50 p-3">
+            <p className="text-sm font-bold">Fechas del evento (hora de Colombia)</p>
+            <label className="block text-sm">Comienza<input type="datetime-local" value={draftStart} onChange={e => setDraftStart(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-3" /></label>
+            <label className="block text-sm">Termina<input type="datetime-local" value={draftEnd} onChange={e => setDraftEnd(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-3" /></label>
+          </div>
+          <button disabled={loading || !draftStart || !draftEnd} onClick={saveSettings} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 font-bold text-blue-800 disabled:opacity-50">Guardar fechas y configuración</button>
+          <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 p-3">
+            <h3 className="font-black">Banco editorial de Matemáticas</h3>
+            <p className="mt-1 text-sm text-slate-700">Incluye preguntas de 6.º a 11.º y elimina cuatro enunciados exactos repetidos. En duelos entre grados distintos, el sistema elegirá preguntas hasta el grado del estudiante menor.</p>
+            <button disabled={loading} onClick={importEditorialCatalog} className="mt-3 min-h-12 w-full rounded-xl bg-indigo-700 px-4 font-bold text-white disabled:opacity-50">{loading ? 'Cargando…' : 'Importar catálogo editorial (996 preguntas)'}</button>
+          </div>
           <h3 className="mt-5 font-black">Bancos institucionales de Matemáticas</h3>
           <p className="mt-1 text-sm text-slate-600">
             Se copiarán al evento para que sus preguntas vivan
