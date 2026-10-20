@@ -4,6 +4,7 @@ import { ArrowLeft, LoaderCircle, Swords, X } from "lucide-react";
 import api from "../lib/api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../lib/toast";
+import { confirmDialog } from "../components/ui/confirm";
 import { bogotaInputToIso, isoToBogotaInput } from "../lib/datetime";
 import { registerAppWorker } from "../lib/pwa";
 import { DuelStage, type DuelState, type AnswerFeedback } from "./math-events/DuelStage";
@@ -27,6 +28,9 @@ type Person = {
   grade: number;
   avatarCode: string;
   available: boolean;
+  online?: boolean;
+  matchesWithMeToday?: number;
+  hasOpenDuelWithMe?: boolean;
   inMatch: boolean;
   hasPendingInvite?: boolean;
 };
@@ -51,6 +55,7 @@ type Board = {
     grade: number;
     matchesUsedToday: number;
     matchesRemaining: number;
+    hasUnfinishedDuel?: boolean;
   };
   roster: Person[];
   duels: any[];
@@ -224,6 +229,7 @@ export default function MathEventsPage() {
   const announcedInvites = useRef(new Set<string>());
   const invitationReadiness = useRef(new Map<string, boolean>());
   const [available, setAvailable] = useState(false);
+  const [rivalsFilter, setRivalsFilter] = useState<"online" | "all">("online");
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -278,7 +284,7 @@ export default function MathEventsPage() {
   }, [eventId]);
   const loadDuel = useCallback(async (id: string) => {
     try {
-      const r = await api.get<Duel>(`/math-events/duels/${id}`);
+      const r = await api.get<Duel>(`/math-events/duels/${id}`, { params: { deferClock: true } });
       setDuel(r.data);
     } catch {
       setDuel(null);
@@ -316,24 +322,25 @@ export default function MathEventsPage() {
     return () => clearInterval(t);
   }, [eventId, loadBoard, stageId]);
   useEffect(() => {
-    if (!eventId || !available) return;
-    api
-      .put(`/math-events/${eventId}/presence`, { available: true })
-      .catch(() => {});
-    const t = window.setInterval(
-      () =>
-        api
-          .put(`/math-events/${eventId}/presence`, { available: true })
-          .catch(() => {}),
-      18000,
-    );
-    return () => {
-      clearInterval(t);
-      api
-        .put(`/math-events/${eventId}/presence`, { available: false })
-        .catch(() => {});
+    if (!eventId) return;
+    let running = false;
+    const heartbeat = async () => {
+      if (running) return;
+      running = true;
+      try { await api.put('/math-events/' + eventId + '/presence', { available: available && !document.hidden, online: !document.hidden }, { timeout: 10000 }); }
+      catch { /* Presence expires on the server if connectivity is lost. */ }
+      finally { running = false; }
     };
+    void heartbeat();
+    const timer = window.setInterval(() => { if (!document.hidden) void heartbeat(); }, 18000);
+    document.addEventListener('visibilitychange', heartbeat);
+    window.addEventListener('online', heartbeat);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', heartbeat); window.removeEventListener('online', heartbeat); };
   }, [eventId, available]);
+  useEffect(() => {
+    if (!eventId) return;
+    return () => { void api.put('/math-events/' + eventId + '/presence', { available: false, online: false }).catch(() => {}); };
+  }, [eventId]);
   useEffect(() => {
     let live = true;
     if ((tab === "ranking" || duel?.allDone) && eventId)
@@ -344,7 +351,7 @@ export default function MathEventsPage() {
     return () => { live = false; };
   }, [tab, eventId, scope, board?.me.matchesUsedToday, duel?.allDone]);
   useEffect(() => {
-    const active = board?.duels?.find((d: any) => d.status === "ACTIVE");
+    const active = board?.duels?.find((d: any) => d.status === "ACTIVE" && !d.myFinished);
     if (active) loadDuel(active.id);
     else if (duel && !duel.allDone) loadDuel(duel.id);
   }, [board?.duels, loadDuel, duel?.id, duel?.allDone]);
@@ -567,7 +574,7 @@ export default function MathEventsPage() {
     ordinal: number,
     value: string,
   ) => {
-    if (!eventId || !duel || answerInFlight.current) return;
+    if (!eventId || !duel || answerInFlight.current) return false;
     audio.unlock();
     answerInFlight.current = true;
     setAnswering(true);
@@ -580,12 +587,32 @@ export default function MathEventsPage() {
       audio.cue(r.data.isCorrect ? "correct" : "wrong");
       await loadDuel(duel.id);
       await loadBoard();
+      return true;
     } catch (e) {
-      toast.error(e);
+      if (value) toast.error(e);
+      return false;
     } finally {
       answerInFlight.current = false;
       setAnswering(false);
     }
+  };
+  const startQuestion = async (ordinal: number) => {
+    if (!duel) return;
+    const id = duel.id;
+    const r = await api.post<Duel>('/math-events/duels/' + id + '/question/start', { ordinal }, { timeout: 12000 });
+    setDuel(current => current?.id === id ? r.data : current);
+  };
+  const leaveCurrentDuel = async () => {
+    if (!duel || busy) return;
+    if (!(await confirmDialog('¿Salir de esta partida? Conservas tus aciertos; las preguntas pendientes contarán como sin respuesta. Podrás elegir otro rival.'))) return;
+    setBusy(true);
+    try {
+      await api.post('/math-events/duels/' + duel.id + '/leave');
+      setFeedback(null);
+      await loadDuel(duel.id);
+      await loadBoard();
+    } catch (e) { toast.error(e); }
+    finally { setBusy(false); }
   };
   const changeAvatar = async (code: string) => {
     if (!eventId) return;
@@ -817,7 +844,8 @@ export default function MathEventsPage() {
               disabled={
                 busy ||
                 board.me.matchesRemaining < 1 ||
-                !board.roster.some((x) => x.available)
+                board.me.hasUnfinishedDuel ||
+                !board.roster.some((x) => x.available && !x.hasOpenDuelWithMe && (x.matchesWithMeToday ?? 0) < 2)
               }
               onClick={() => play("", "MATCH")}
               className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-blue-700 px-4 font-black text-white shadow-md disabled:opacity-45"
@@ -828,8 +856,14 @@ export default function MathEventsPage() {
             <h2 className="mb-2 mt-6 text-lg font-black">
               ¿Con quién quieres jugar?
             </h2>
+            {board.me.hasUnfinishedDuel && <p className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">Tienes preguntas pendientes. Vuelve a tu partida para terminarlas o elige «Salir de partida». Al completar tus siete respuestas podrás jugar con otro rival aunque el anterior siga respondiendo.</p>}
+            <div className="mb-3 flex gap-2">
+              {([['online', 'En línea ahora'], ['all', 'Todos los participantes']] as const).map(([key, label]) => <button key={key} onClick={() => setRivalsFilter(key)} className={`min-h-11 rounded-xl px-3 text-sm font-bold ${rivalsFilter === key ? 'bg-blue-700 text-white' : 'bg-white text-slate-700'}`}>{label}</button>)}
+            </div>
+            <p className="mb-3 text-xs text-slate-500">En línea muestra quién tiene abierto el evento. Puedes retar a alguien desconectado para que acepte después. Hasta dos partidas por rival al día.</p>
+            {rivalsFilter === 'online' && !board.roster.some(p => p.online) && <p className="rounded-xl bg-white p-4 text-sm text-slate-600">Ahora no hay otros participantes conectados. Consulta «Todos los participantes» para enviar un reto.</p>}
             <div className="space-y-2">
-              {board.roster.map((p) => (
+              {board.roster.filter(p => rivalsFilter === 'all' || p.online).sort((a, b) => Number(!!b.available) - Number(!!a.available) || Number(!!b.online) - Number(!!a.online)).map((p) => (
                 <div
                   key={p.id}
                   className={`flex items-center gap-3 rounded-2xl border p-3 shadow-sm transition-colors ${p.available ? "border-emerald-100 bg-emerald-50" : "border-white bg-white"}`}
@@ -847,12 +881,13 @@ export default function MathEventsPage() {
                         ? "🟢 Disponible"
                         : p.inMatch
                           ? "🟠 En partida"
-                          : p.hasPendingInvite ? "✉️ Reto pendiente" : "⚪ Ahora no"}
+                          : p.hasOpenDuelWithMe ? "✉️ Tienen un reto pendiente" : p.online ? "🟢 En línea" : "⚪ Desconectado"}
+                      {(p.matchesWithMeToday ?? 0) >= 2 && ' · 2/2 partidas hoy'}
                     </span>
                   </div>
                   <button
                     disabled={
-                      busy || p.inMatch || board.me.matchesRemaining < 1
+                      busy || p.inMatch || p.hasOpenDuelWithMe || board.me.hasUnfinishedDuel || (p.matchesWithMeToday ?? 0) >= 2 || board.me.matchesRemaining < 1
                     }
                     onClick={() => play(p.id)}
                     className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-blue-700 px-3 py-2 text-sm font-extrabold text-white disabled:bg-slate-200 disabled:text-slate-500"
@@ -956,6 +991,7 @@ export default function MathEventsPage() {
           glyphs={avatarGlyph} duel={currentDuel}
           feedback={feedback?.duelId === stageId ? feedback : null}
           busy={busy} answering={answering} onAnswer={submit}
+          onQuestionStart={startQuestion} onLeave={leaveCurrentDuel}
           audio={audio} ranking={ranking} reacting={reacting}
           onRanking={() => { setStageId(null); setHiddenDuelId(stageId); setTab("ranking"); }}
           onReact={kind => sendReaction(opponent.id, kind)}
@@ -1171,6 +1207,7 @@ export function MathEventOrganizer() {
         {accessCheck?.eventId === editingId && accessCheck.username.toLowerCase() === accessUsername.trim().toLowerCase() && <div role="status" className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
           <p className="font-bold">{accessCheck.username}: {accessCheck.canSeeEvent ? 'Cumple los requisitos de acceso' : 'Hay requisitos pendientes'}</p>
           {accessCheck.student && <p className="mt-1">{accessCheck.student.name} · {accessCheck.student.gradeName} {accessCheck.student.course} · Grado reconocido: {accessCheck.student.resolvedGrade ?? 'Sin matrícula'}</p>}
+          {accessCheck.profileStatusMismatch && <p className="mt-2 text-amber-800">La ficha conserva un indicador de inactividad. Para este evento se valida la matrícula vigente y la cuenta habilitada.</p>}
           <ul className="mt-2 space-y-1">{accessCheck.checks.map((check: any) => <li key={check.label}>{check.ok ? '✓' : '✗'} {check.label}</li>)}</ul>
         </div>}
       </section>}
