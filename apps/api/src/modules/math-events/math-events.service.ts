@@ -194,7 +194,7 @@ export class MathEventsService {
         status: { in: ['PUBLISHED', 'CLOSED'] },
         endsAt: { lt: new Date() },
       },
-      select: { id: true, title: true, description: true, startsAt: true, endsAt: true },
+      select: { id: true, title: true, description: true, startsAt: true, endsAt: true, eligibleGrades: true },
       orderBy: { endsAt: 'desc' },
       take: 30,
     });
@@ -1144,6 +1144,57 @@ export class MathEventsService {
     return this.db.mathEvent.findMany({ where: { institutionId: actor.institutionId },
       select: { id: true, title: true, status: true, startsAt: true, endsAt: true, showCorrectAnswers: true, showExplanations: true },
       orderBy: { createdAt: 'desc' }, take: 100 });
+  }
+  async checkStudentAccess(actor: ClassroomActor, eventId: string, input: unknown) {
+    if (typeof input !== 'string' || !/^[a-zA-Z0-9._@-]{2,100}$/.test(input.trim()))
+      throw new BadRequestException('Escribe el usuario del estudiante, sin contraseña.');
+    const username = input.trim();
+    const event = await this.db.mathEvent.findFirst({
+      where: { id: eventId, institutionId: actor.institutionId },
+      select: { status: true, startsAt: true, endsAt: true, eligibleGrades: true },
+    });
+    if (!event) throw new NotFoundException('Evento no disponible.');
+    const student = await this.db.student.findFirst({
+      where: { institutionId: actor.institutionId, user: { username: { equals: username, mode: 'insensitive' } } },
+      select: {
+        id: true, firstName: true, lastName: true, isActive: true,
+        user: { select: { isActive: true, roles: { select: { role: { select: { name: true } } } }, institutionUsers: {
+          where: { institutionId: actor.institutionId, isActive: true },
+          select: { institutionUserRoles: { select: { role: { select: { name: true } } } } },
+        } } },
+      },
+    });
+    if (!student) return { username, canSeeEvent: false, checks: [{ label: 'Estudiante vinculado a este colegio', ok: false }], student: null };
+    const enrollments = await this.db.studentEnrollment.findMany({
+      where: { institutionId: actor.institutionId, studentId: student.id, status: 'ACTIVE',
+        academicYear: { institutionId: actor.institutionId, status: 'ACTIVE' },
+        group: { grade: { institutionId: actor.institutionId } },
+      },
+      select: { group: { select: { name: true, grade: { select: { name: true, number: true } } } } },
+      take: 3,
+    });
+    const selected = enrollments.find(e => gradeOf(e.group.grade) >= 6 && gradeOf(e.group.grade) <= 11);
+    const enrollment = selected || enrollments[0];
+    const grade = enrollment ? gradeOf(enrollment.group.grade) : null;
+    const now = new Date();
+    const membership = student.user?.institutionUsers[0];
+    const tenantRoles = membership?.institutionUserRoles ?? [];
+    const roles = tenantRoles.length ? tenantRoles : student.user?.roles ?? [];
+    const checks = [
+      { label: 'Estudiante activo', ok: student.isActive },
+      { label: 'Cuenta de acceso activa', ok: student.user?.isActive === true },
+      { label: 'Vinculación activa de la cuenta al colegio', ok: !!membership },
+      { label: 'Rol ESTUDIANTE en este colegio', ok: !!membership && roles.some(r => r.role.name === 'ESTUDIANTE') },
+      { label: 'Matrícula activa en el año académico activo', ok: enrollments.length > 0 },
+      { label: 'Grado reconocido y habilitado para el evento', ok: !!selected && this.eligible(event, grade!) },
+      { label: 'Evento publicado', ok: event.status === 'PUBLISHED' },
+      { label: 'Evento dentro de sus fechas', ok: event.startsAt <= now && event.endsAt >= now },
+    ];
+    return { username, canSeeEvent: checks.every(c => c.ok), checks,
+      student: { name: `${student.firstName.trim().split(/\s+/)[0]} ${student.lastName.trim().split(/\s+/)[0]}`,
+        course: enrollment?.group.name ?? null, gradeName: enrollment?.group.grade.name ?? null,
+        storedGradeNumber: enrollment?.group.grade.number ?? null, resolvedGrade: grade },
+    };
   }
   async eventReport(actor: ClassroomActor, eventId: string) {
     const event = await this.event(eventId, actor.institutionId, true);
