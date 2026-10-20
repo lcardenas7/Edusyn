@@ -99,41 +99,52 @@ const fmt = (s: string) =>
   }).format(new Date(s));
 
 export function MathEventInvitation() {
-  const { user } = useAuth();
+  const { user, institution } = useAuth();
   const loc = useLocation();
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventCard[]>([]);
-  const [dismissed, setDismissed] = useState(false);
   const [show, setShow] = useState(false);
+  const studentRole = user?.roles?.some((r: any) => (r?.role?.name || r?.name || r) === "ESTUDIANTE") ?? false;
+  const inviteOwner = `${institution?.id || user?.institution?.id || "current"}:${user?.id || ""}`;
+  const inviteKey = (id: string) => `edusyn:event-invite:${inviteOwner}:${id}`;
   useEffect(() => {
-    const role = user?.roles?.some(
-      (r: any) => (r?.role?.name || r) === "ESTUDIANTE",
-    );
-    if (!role || loc.pathname.startsWith("/eventos")) return;
+    setEvents([]);
+    setShow(false);
+    if (!studentRole || !user?.id || loc.pathname.startsWith("/eventos")) return;
     let live = true;
-    api
-      .get<EventCard[]>("/math-events/active")
-      .then((r) => {
+    let inFlight = false;
+    const refresh = async () => {
+      if (!live || inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const r = await api.get<EventCard[]>("/math-events/active", { timeout: 12000 });
         if (!live) return;
         setEvents(r.data);
-        const pending = r.data.find(
-          (e) =>
-            localStorage.getItem(`edusyn:event-invite:${e.id}`) !== "dismissed",
-        );
-        setShow(!!pending);
-      })
-      .catch(() => {});
+        setShow(r.data.some(e => localStorage.getItem(`edusyn:event-invite:${inviteOwner}:${e.id}`) !== "dismissed"));
+      } catch {
+        // Retry on focus, reconnection or the next refresh after a transient failure.
+      } finally { inFlight = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 60000);
+    const onVisible = () => { if (!document.hidden) void refresh(); };
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("online", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       live = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("online", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [user?.id, loc.pathname]);
+  }, [user?.id, studentRole, inviteOwner, loc.pathname]);
   const event = events.find(
-    (e) => localStorage.getItem(`edusyn:event-invite:${e.id}`) !== "dismissed",
+    (e) => localStorage.getItem(inviteKey(e.id)) !== "dismissed",
   );
-  if (!show || dismissed || !event) return null;
+  if (!show || !event) return null;
   const close = () => {
-    localStorage.setItem(`edusyn:event-invite:${event.id}`, "dismissed");
-    setDismissed(true);
+    localStorage.setItem(inviteKey(event.id), "dismissed");
     setShow(false);
   };
   return (
@@ -173,7 +184,7 @@ export function MathEventInvitation() {
         <button
           onClick={() => {
             localStorage.setItem(
-              `edusyn:event-invite:${event.id}`,
+              inviteKey(event.id),
               "dismissed",
             );
             navigate(`/eventos/${event.id}`);
@@ -215,6 +226,8 @@ export default function MathEventsPage() {
   const [available, setAvailable] = useState(false);
   const [pushKey, setPushKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const eventsInFlight = useRef(false);
   const [reacting, setReacting] = useState(false);
   const [recognitions, setRecognitions] = useState<Record<string, Recognition>>({});
   const reactionInFlight = useRef(false);
@@ -237,16 +250,19 @@ export default function MathEventsPage() {
     return () => document.body.removeAttribute("data-math-event-app");
   }, []);
   const loadEvents = useCallback(async () => {
-    try {
-      const [active, past] = await Promise.all([
-        api.get<EventCard[]>("/math-events/active"),
-        api.get<EventCard[]>("/math-events/history"),
-      ]);
-      setEvents(active.data);
-      setHistory(past.data);
-    } catch (e) {
-      setError("No pudimos cargar los eventos ahora.");
-    }
+    if (eventsInFlight.current) return;
+    eventsInFlight.current = true;
+    setEventsLoading(true);
+    setError("");
+    const [active, past] = await Promise.allSettled([
+      api.get<EventCard[]>("/math-events/active", { timeout: 12000 }),
+      api.get<EventCard[]>("/math-events/history", { timeout: 12000 }),
+    ]);
+    if (active.status === "fulfilled") setEvents(active.value.data);
+    else setError("No pudimos consultar los eventos activos. Reintenta la carga; esto no significa que el evento haya terminado.");
+    if (past.status === "fulfilled") setHistory(past.value.data);
+    setEventsLoading(false);
+    eventsInFlight.current = false;
   }, []);
   const loadBoard = useCallback(async () => {
     if (!eventId) return;
@@ -270,8 +286,18 @@ export default function MathEventsPage() {
   }, []);
   useEffect(() => {
     if (!eventId) {
-      loadEvents();
-      return;
+      void loadEvents();
+      const refresh = () => { if (!document.hidden) void loadEvents(); };
+      const timer = window.setInterval(refresh, 60000);
+      window.addEventListener('focus', refresh);
+      window.addEventListener('online', refresh);
+      document.addEventListener('visibilitychange', refresh);
+      return () => {
+        window.clearInterval(timer);
+        window.removeEventListener('focus', refresh);
+        window.removeEventListener('online', refresh);
+        document.removeEventListener('visibilitychange', refresh);
+      };
     }
     api
       .get<{ publicKey: string | null }>(`/math-events/${eventId}/push/config`)
@@ -586,6 +612,8 @@ export default function MathEventsPage() {
             Juega, reta y participa en los eventos del colegio.
           </p>
         </header>
+        {error && <div role="alert" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>{error}</p><button disabled={eventsLoading} onClick={() => void loadEvents()} className="mt-3 min-h-11 rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Reintentar</button></div>}
+        {eventsLoading && <p role="status" className="mb-4 text-sm text-slate-600">Consultando eventos…</p>}
         {events.length ? (
           events.map((e) => (
             <button
@@ -607,11 +635,11 @@ export default function MathEventsPage() {
               </span>
             </button>
           ))
-        ) : (
+        ) : !eventsLoading && !error ? (
           <div className="rounded-2xl bg-white p-6 text-slate-600">
             No hay eventos activos por ahora.
           </div>
-        )}
+        ) : null}
         {history.length > 0 && <section className="mt-7">
           <h2 className="mb-3 text-xl font-black text-slate-950">Eventos anteriores</h2>
           {history.map((e) => <button key={e.id} onClick={() => nav(`/eventos/${e.id}`)} className="mb-3 w-full rounded-2xl border bg-white p-4 text-left shadow-sm">
@@ -971,7 +999,22 @@ export function MathEventOrganizer() {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [accessUsername, setAccessUsername] = useState("");
+  const [accessCheck, setAccessCheck] = useState<any>(null);
+  const [checkingAccess, setCheckingAccess] = useState(false);
   const selectedEvent = managed.find(row => row.id === editingId);
+  useEffect(() => { setAccessCheck(null); setAccessUsername(""); }, [editingId]);
+  const checkAccess = async () => {
+    if (!editingId || !accessUsername.trim() || checkingAccess) return;
+    const id = editingId;
+    setCheckingAccess(true);
+    setAccessCheck(null);
+    try {
+      const r = await api.post(`/math-events/${id}/access-check`, { username: accessUsername.trim() }, { timeout: 12000 });
+      setAccessCheck({ ...r.data, eventId: id });
+    } catch (e) { toast.error(e); }
+    finally { setCheckingAccess(false); }
+  };
   useEffect(() => {
     api
       .get("/math-events/banks")
@@ -1118,6 +1161,19 @@ export function MathEventOrganizer() {
         <p className="text-xs leading-5 text-slate-600">Para una competencia con preguntas reutilizables, desactiva ambas opciones. Los aciertos y los puntos seguirán visibles; las soluciones ocultas no se enviarán al navegador.</p>
         {editingId && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
       </section>
+      {editingId && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="font-black">Comprobar acceso de un estudiante</h2>
+        <p className="mt-1 text-sm text-slate-600">Consulta su matrícula y los requisitos del evento usando solo su usuario.</p>
+        <form onSubmit={e => { e.preventDefault(); void checkAccess(); }} className="mt-3 flex flex-wrap gap-2">
+          <label className="min-w-0 flex-1 text-sm font-semibold">Usuario<input value={accessUsername} onChange={e => { setAccessUsername(e.target.value); setAccessCheck(null); }} autoComplete="off" maxLength={100} className="mt-1 min-h-11 w-full rounded-xl border px-3" /></label>
+          <button disabled={checkingAccess || !accessUsername.trim()} className="min-h-11 self-end rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">{checkingAccess ? 'Consultando…' : 'Comprobar acceso'}</button>
+        </form>
+        {accessCheck?.eventId === editingId && accessCheck.username.toLowerCase() === accessUsername.trim().toLowerCase() && <div role="status" className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
+          <p className="font-bold">{accessCheck.username}: {accessCheck.canSeeEvent ? 'Cumple los requisitos de acceso' : 'Hay requisitos pendientes'}</p>
+          {accessCheck.student && <p className="mt-1">{accessCheck.student.name} · {accessCheck.student.gradeName} {accessCheck.student.course} · Grado reconocido: {accessCheck.student.resolvedGrade ?? 'Sin matrícula'}</p>}
+          <ul className="mt-2 space-y-1">{accessCheck.checks.map((check: any) => <li key={check.label}>{check.ok ? '✓' : '✗'} {check.label}</li>)}</ul>
+        </div>}
+      </section>}
       {editingId && selectedEvent?.status !== 'DRAFT' && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="text-xl font-black">Registro y resultados</h2>
         {reportLoading && <p className="mt-3 text-sm text-slate-600">Cargando resultados…</p>}
