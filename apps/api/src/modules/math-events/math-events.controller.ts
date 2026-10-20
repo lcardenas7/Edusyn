@@ -63,6 +63,11 @@ export class MathEventsController {
   report(@Param('eventId') id: string, @Request() r: any) {
     return this.actor(r).then(a => this.service.eventReport(a, id));
   }
+  @Get(':eventId/live')
+  @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
+  live(@Param('eventId') id: string, @Request() r: any) {
+    return this.actor(r).then(a => this.service.liveReport(a, id));
+  }
   @Post(':eventId/access-check')
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
   accessCheck(@Param('eventId') id: string, @Body() b: any, @Request() r: any) {
