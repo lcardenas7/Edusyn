@@ -5,6 +5,7 @@ import api from "../lib/api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../lib/toast";
 import { bogotaInputToIso } from "../lib/datetime";
+import { registerAppWorker } from "../lib/pwa";
 import { DuelStage, type DuelState, type AnswerFeedback } from "./math-events/DuelStage";
 import { useDuelAudio } from "./math-events/useDuelAudio";
 import { Reactions, RecognitionSummary, type Recognition } from "./math-events/Reactions";
@@ -510,7 +511,7 @@ export default function MathEventsPage() {
         );
         return;
       }
-      const registration = await navigator.serviceWorker.register("/sw.js");
+      const registration = await registerAppWorker();
       const current = await registration.pushManager.getSubscription();
       const subscription =
         current ||

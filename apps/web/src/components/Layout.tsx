@@ -1,5 +1,6 @@
 import { ReactNode, useMemo, useState, useEffect, useCallback } from 'react'
 import ConnectionStatusBar from './ConnectionStatusBar'
+import PwaExperience from './PwaExperience'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ValeriaProvider } from '../contexts/ValeriaContext'
@@ -818,6 +819,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         {/* `data-app-content` marca el relleno de página: un módulo a sangre —hoy el aula— lo
             anula desde CSS en vez de pelearse con él metiendo márgenes negativos. */}
         <div data-app-content className="p-4 lg:p-8">
+          <PwaExperience />
           {children}
         </div>
       </main>
