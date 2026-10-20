@@ -144,7 +144,7 @@
 
 .duel-scoreboard {
   display:grid;
-  grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr) 62px minmax(0,1fr);
   gap:8px;
   align-items:center;
   padding:14px 8px;
@@ -183,6 +183,10 @@
   color:#ffdf68;
   text-align:center
 }
+.duel-clock { display:flex; flex-direction:column; align-items:center; justify-content:center; width:62px; height:62px; border:4px solid #58dfae; border-radius:50%; background:#0b214e; font-variant-numeric:tabular-nums; }
+.duel-clock strong { font-size:24px; line-height:1; }
+.duel-clock small { font-size:10px; color:#d5e1fa; }
+.duel-clock.is-urgent { border-color:#ff8a9b; color:#ffbcc6; }
 .duel-progress-label {
   display:flex;
   justify-content:space-between;

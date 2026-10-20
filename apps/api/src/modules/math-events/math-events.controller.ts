@@ -129,7 +129,7 @@ export class MathEventsController {
     @Request() r: any,
   ) {
     return this.actor(r).then((a) =>
-      this.service.presence(a, id, b?.available === true),
+      this.service.presence(a, id, b?.available === true, b?.online !== false),
     );
   }
   @Put(':eventId/avatar') @Roles('ESTUDIANTE') avatar(
@@ -200,10 +200,17 @@ export class MathEventsController {
   }
   @Get('duels/:duelId') @Roles('ESTUDIANTE') duel(
     @Param('duelId') id: string,
+    @Query('deferClock') deferClock: string,
     @Request() r: any,
   ) {
-    return this.actor(r).then((a) => this.service.getDuel(a, id));
+    return this.actor(r).then((a) => this.service.getDuel(a, id, deferClock === 'true'));
   }
+  @Post('duels/:duelId/question/start') @Roles('ESTUDIANTE') startQuestion(
+    @Param('duelId') id: string, @Body() b: any, @Request() r: any,
+  ) { return this.actor(r).then(a => this.service.startQuestion(a, id, b?.ordinal)); }
+  @Post('duels/:duelId/leave') @Roles('ESTUDIANTE') leaveDuel(
+    @Param('duelId') id: string, @Request() r: any,
+  ) { return this.actor(r).then(a => this.service.leaveDuel(a, id)); }
   @Get('duels/:duelId/state') @Roles('ESTUDIANTE')
   duelState(@Param('duelId') id: string, @Request() r: any) {
     return this.actor(r).then(a => this.service.duelState(a, id));

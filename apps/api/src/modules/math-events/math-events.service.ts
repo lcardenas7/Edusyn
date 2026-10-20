@@ -96,7 +96,7 @@ export class MathEventsService {
         student: {
           institutionId: actor.institutionId,
           userId: actor.userId,
-          isActive: true,
+          user: { isActive: true, institutionUsers: { some: { institutionId: actor.institutionId, isActive: true } } },
         },
         academicYear: { institutionId: actor.institutionId, status: 'ACTIVE' },
         group: { grade: { institutionId: actor.institutionId } },
@@ -139,6 +139,54 @@ export class MathEventsService {
   }
   private eligible(e: any, grade: number) {
     return Array.isArray(e.eligibleGrades) && e.eligibleGrades.includes(grade);
+  }
+  private async unfinishedActiveCount(db: any, eventId: string, institutionId: string, enrollmentId: string) {
+    const duels = await db.mathEventDuel.findMany({
+      where: { eventId, institutionId, status: 'ACTIVE', expiresAt: { gt: new Date() },
+        OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }] },
+      select: { _count: { select: { answers: { where: { enrollmentId } } } } },
+    });
+    return duels.filter((d: any) => d._count.answers < ROUNDS).length;
+  }
+  private async lockedDuel<T>(institutionId: string, duelId: string, action: (tx: any, duel: any) => Promise<T>): Promise<T> {
+    return this.db.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "MathEventDuel" WHERE id = ${duelId} AND "institutionId" = ${institutionId} FOR UPDATE`;
+      const duel = await tx.mathEventDuel.findFirst({ where: { id: duelId, institutionId }, include: { event: true, answers: true } });
+      if (!duel) throw new NotFoundException('Reto no encontrado.');
+      return action(tx, duel);
+    }, { timeout: 15000 });
+  }
+  private async fillUnanswered(tx: any, duel: any, enrollmentIds: string[]) {
+    const rows = enrollmentIds.flatMap(enrollmentId => Array.from({ length: ROUNDS }, (_, ordinal) => ({
+      institutionId: duel.institutionId, duelId: duel.id, enrollmentId, ordinal, answer: '', isCorrect: false,
+    })).filter(row => !duel.answers.some((a: any) => a.enrollmentId === enrollmentId && a.ordinal === row.ordinal)));
+    if (rows.length) await tx.mathEventDuelAnswer.createMany({ data: rows, skipDuplicates: true });
+    const total = await tx.mathEventDuelAnswer.count({ where: { duelId: duel.id } });
+    if (total >= ROUNDS * 2) await tx.mathEventDuel.updateMany({ where: { id: duel.id, institutionId: duel.institutionId, status: 'ACTIVE' }, data: { status: 'COMPLETED', completedAt: new Date() } });
+  }
+  private async reconcileDuels(institutionId: string, filter: { eventId?: string; enrollmentIds?: string[]; duelId?: string }) {
+    const now = new Date();
+    const rows = await this.db.mathEventDuel.findMany({
+      where: { institutionId, status: 'ACTIVE', ...(filter.eventId ? { eventId: filter.eventId } : {}),
+        ...(filter.duelId ? { id: filter.duelId } : {}),
+        ...(filter.enrollmentIds ? { OR: filter.enrollmentIds.flatMap(id => [{ inviterEnrollmentId: id }, { inviteeEnrollmentId: id }]) } : {}),
+      },
+      select: { id: true, acceptedAt: true, expiresAt: true, answers: { select: { createdAt: true } } },
+      orderBy: { expiresAt: 'asc' }, take: 200,
+    });
+    for (const row of rows) {
+      const lastActivity = Math.max(row.acceptedAt?.getTime() ?? now.getTime(), ...row.answers.map(a => a.createdAt.getTime()));
+      if (row.answers.length < ROUNDS * 2 && row.expiresAt > now && now.getTime() - lastActivity < 10 * 60 * 1000) continue;
+      await this.lockedDuel(institutionId, row.id, async (tx, duel) => {
+        if (duel.status !== 'ACTIVE') return;
+        const last = Math.max(duel.acceptedAt?.getTime() ?? now.getTime(), ...duel.answers.map((a: any) => a.createdAt.getTime()));
+        const complete = duel.answers.length >= ROUNDS * 2;
+        const stale = duel.expiresAt <= now || now.getTime() - last >= 10 * 60 * 1000;
+        if (!complete && (!stale || duel.event.endsAt < now || duel.event.status === 'CLOSED')) return;
+        if (!complete) await tx.mathEventDuel.update({ where: { id: duel.id }, data: { questions: { ...(duel.questions as any), closureReason: 'INACTIVITY' } } });
+        await this.fillUnanswered(tx, duel, [duel.inviterEnrollmentId, duel.inviteeEnrollmentId]);
+      });
+    }
   }
   private async participant(
     eventId: string,
@@ -224,6 +272,7 @@ export class MathEventsService {
     if (!this.eligible(e, s.gradeNumber))
       throw new NotFoundException('Evento no disponible para este grado');
     const now = new Date();
+    await this.reconcileDuels(actor.institutionId, { eventId: e.id, enrollmentIds: [s.id] });
     const p = e.endsAt < now || e.status === 'CLOSED'
       ? await this.db.mathEventParticipant.findUnique({ where: { eventId_enrollmentId: { eventId: e.id, enrollmentId: s.id } } })
       : await this.participant(e.id, s.id, actor.institutionId);
@@ -232,7 +281,7 @@ export class MathEventsService {
       where: {
         eventId: e.id,
         institutionId: actor.institutionId,
-        status: { in: ['INVITED', 'ACTIVE'] },
+        status: 'INVITED',
         expiresAt: { lt: now },
       },
       data: { status: 'EXPIRED' },
@@ -245,7 +294,7 @@ export class MathEventsService {
           enrollment: {
             status: 'ACTIVE',
             academicYear: { status: 'ACTIVE' },
-            student: { isActive: true },
+            student: { institutionId: actor.institutionId, user: { isActive: true, institutionUsers: { some: { institutionId: actor.institutionId, isActive: true } } } },
             group: { grade: { institutionId: actor.institutionId } },
           },
         },
@@ -315,13 +364,18 @@ export class MathEventsService {
           status: { in: ['INVITED', 'ACTIVE'] },
           expiresAt: { gt: now },
         },
-        select: { inviterEnrollmentId: true, inviteeEnrollmentId: true, status: true },
+        select: { inviterEnrollmentId: true, inviteeEnrollmentId: true, status: true, answers: { select: { enrollmentId: true } } },
       }),
     ]);
     const busy = new Set(
-      open.filter(d => d.status === 'ACTIVE').flatMap((d) => [d.inviterEnrollmentId, d.inviteeEnrollmentId]),
+      open.filter(d => d.status === 'ACTIVE').flatMap(d => [d.inviterEnrollmentId, d.inviteeEnrollmentId].filter(id => d.answers.filter(a => a.enrollmentId === id).length < ROUNDS)),
     );
     const pending = new Set(open.filter(d => d.status === 'INVITED').flatMap(d => [d.inviterEnrollmentId, d.inviteeEnrollmentId]));
+    const dailyPairs = await this.db.mathEventDuel.groupBy({ by: ['pairKey'], where: {
+      institutionId: actor.institutionId, eventId: e.id, status: { in: ['ACTIVE', 'COMPLETED'] }, acceptedAt: { gte: day },
+      OR: [{ inviterEnrollmentId: s.id }, { inviteeEnrollmentId: s.id }],
+    }, _count: { _all: true } });
+    const pairCounts = new Map(dailyPairs.map(row => [row.pairKey, row._count._all]));
     const publicPerson = (x: any) => ({
       id: x.enrollmentId,
       firstName: x.enrollment.student.firstName.trim().split(/\s+/)[0],
@@ -329,6 +383,7 @@ export class MathEventsService {
       course: x.enrollment.group.name,
       grade: gradeOf(x.enrollment.group.grade),
       avatarCode: x.avatarCode,
+      online: !!x.presenceUntil && x.presenceUntil > now,
       available:
         x.available &&
         !!x.presenceUntil &&
@@ -336,6 +391,8 @@ export class MathEventsService {
         !busy.has(x.enrollmentId),
       inMatch: busy.has(x.enrollmentId),
       hasPendingInvite: pending.has(x.enrollmentId),
+      hasOpenDuelWithMe: open.some(d => [d.inviterEnrollmentId, d.inviteeEnrollmentId].includes(s.id) && [d.inviterEnrollmentId, d.inviteeEnrollmentId].includes(x.enrollmentId)),
+      matchesWithMeToday: pairCounts.get([s.id, x.enrollmentId].sort().join(':')) ?? 0,
     });
     return {
       event: {
@@ -358,6 +415,7 @@ export class MathEventsService {
         grade: s.gradeNumber,
         matchesUsedToday: used,
         matchesRemaining: Math.max(0, e.dailyMatchLimit - used),
+        hasUnfinishedDuel: busy.has(s.id),
       },
       roster: roster
         .filter(
@@ -373,6 +431,7 @@ export class MathEventsService {
         return {
         id: d.id,
         status: d.status,
+        myFinished: d.answers.filter(a => a.enrollmentId === s.id).length >= ROUNDS,
         expiresAt: d.expiresAt,
         invitedByMe: d.inviterEnrollmentId === s.id,
         canAccept: d.status === 'INVITED' && d.inviteeEnrollmentId === s.id && !myBusy && !opponentBusy && inWindow,
@@ -395,7 +454,7 @@ export class MathEventsService {
       }; }),
     };
   }
-  async presence(actor: ClassroomActor, eventId: string, available: boolean) {
+  async presence(actor: ClassroomActor, eventId: string, available: boolean, online = true) {
     const s = await this.student(actor);
     const e = await this.event(eventId, actor.institutionId);
     if (!this.eligible(e, s.gradeNumber)) throw new ForbiddenException();
@@ -404,8 +463,8 @@ export class MathEventsService {
       .update({
         where: { eventId_enrollmentId: { eventId: e.id, enrollmentId: s.id } },
         data: {
-          available: available === true,
-          presenceUntil: available ? new Date(Date.now() + 45000) : null,
+          available: available === true && online,
+          presenceUntil: online ? new Date(Date.now() + 45000) : null,
         },
       })
       .then((x) => ({
@@ -507,7 +566,9 @@ export class MathEventsService {
     // Los dos jugadores reciben exactamente las mismas preguntas y en el mismo orden.
     const sharedQuestions = shuffle(candidates).slice(0, ROUNDS);
     return {
-      version: 1,
+      version: 2,
+      timeLimitSeconds: 30,
+      clocks: {},
       inviter: sharedQuestions,
       invitee: sharedQuestions,
     };
@@ -533,8 +594,8 @@ export class MathEventsService {
         academicYear: { institutionId: actor.institutionId, status: 'ACTIVE' },
         student: {
           institutionId: actor.institutionId,
-          isActive: true,
           userId: { not: null },
+          user: { isActive: true, institutionUsers: { some: { institutionId: actor.institutionId, isActive: true } } },
         },
         group: { grade: { institutionId: actor.institutionId } },
       },
@@ -547,23 +608,17 @@ export class MathEventsService {
       throw new NotFoundException('Participante no disponible.');
     const ids = [s.id, opponent.id].sort();
     const pairKey = ids.join(':');
+    await this.reconcileDuels(actor.institutionId, { eventId: e.id, enrollmentIds: ids });
     await this.db.mathEventDuel.updateMany({
       where: {
         eventId: e.id,
         institutionId: actor.institutionId,
-        status: { in: ['INVITED', 'ACTIVE'] },
+        status: 'INVITED',
         expiresAt: { lt: now },
       },
       data: { status: 'EXPIRED' },
     });
-    const activeCount = await this.db.mathEventDuel.count({
-      where: {
-        eventId: e.id,
-        institutionId: actor.institutionId,
-        status: 'ACTIVE',
-        OR: [{ inviterEnrollmentId: s.id }, { inviteeEnrollmentId: s.id }],
-      },
-    });
+    const activeCount = await this.unfinishedActiveCount(this.db, e.id, actor.institutionId, s.id);
     if (activeCount)
       throw new BadRequestException(
         'Termina primero el duelo que ya tienes en curso.',
@@ -594,17 +649,7 @@ export class MathEventsService {
       throw new BadRequestException(
         'Alcanzaste tus partidas puntuables de hoy.',
       );
-    const opponentActive = await this.db.mathEventDuel.count({
-      where: {
-        eventId: e.id,
-        institutionId: actor.institutionId,
-        status: 'ACTIVE',
-        OR: [
-          { inviterEnrollmentId: opponent.id },
-          { inviteeEnrollmentId: opponent.id },
-        ],
-      },
-    });
+    const opponentActive = await this.unfinishedActiveCount(this.db, e.id, actor.institutionId, opponent.id);
     if (opponentActive)
       throw new BadRequestException(
         'Ese estudiante está en otra partida ahora.',
@@ -614,13 +659,13 @@ export class MathEventsService {
         eventId: e.id,
         institutionId: actor.institutionId,
         pairKey,
-        status: 'COMPLETED',
-        completedAt: { gte: colombiaDayStart(now) },
+        status: { in: ['ACTIVE', 'COMPLETED'] },
+        acceptedAt: { gte: colombiaDayStart(now) },
       },
     });
-    if (already)
+    if (already >= 2)
       throw new BadRequestException(
-        'Ya jugaron una partida puntuable entre ustedes hoy; mañana podrán volver a sumar puntos.',
+        'Ya jugaron sus dos partidas puntuables entre ustedes hoy; mañana podrán volver a enfrentarse.',
       );
     const existing = await this.db.mathEventDuel.findFirst({
       where: {
@@ -665,17 +710,7 @@ export class MathEventsService {
                 ],
               },
             }),
-            tx.mathEventDuel.count({
-              where: {
-                eventId: e.id,
-                institutionId: actor.institutionId,
-                status: 'ACTIVE',
-                OR: [
-                  { inviterEnrollmentId: s.id },
-                  { inviteeEnrollmentId: s.id },
-                ],
-              },
-            }),
+            this.unfinishedActiveCount(tx, e.id, actor.institutionId, s.id),
             tx.mathEventDuel.count({
               where: {
                 eventId: e.id,
@@ -685,24 +720,14 @@ export class MathEventsService {
                 expiresAt: { gt: now },
               },
             }),
-            tx.mathEventDuel.count({
-              where: {
-                eventId: e.id,
-                institutionId: actor.institutionId,
-                status: 'ACTIVE',
-                OR: [
-                  { inviterEnrollmentId: opponent.id },
-                  { inviteeEnrollmentId: opponent.id },
-                ],
-              },
-            }),
+            this.unfinishedActiveCount(tx, e.id, actor.institutionId, opponent.id),
             tx.mathEventDuel.count({
               where: {
                 eventId: e.id,
                 institutionId: actor.institutionId,
                 pairKey,
-                status: 'COMPLETED',
-                completedAt: { gte: day },
+                status: { in: ['ACTIVE', 'COMPLETED'] },
+                acceptedAt: { gte: day },
               },
             }),
             tx.mathEventDuel.count({
@@ -731,9 +756,9 @@ export class MathEventsService {
             throw new BadRequestException(
               'Ese estudiante está en otra partida ahora.',
             );
-          if (already)
+          if (already >= 2)
             throw new BadRequestException(
-              'Ya jugaron una partida puntuable entre ustedes hoy; mañana podrán volver a sumar puntos.',
+              'Ya jugaron sus dos partidas puntuables entre ustedes hoy; mañana podrán volver a enfrentarse.',
             );
           if (existing)
             throw new BadRequestException('Ya tienen un reto abierto.');
@@ -794,6 +819,7 @@ export class MathEventsService {
   }
   private async member(actor: ClassroomActor, duelId: string) {
     const s = await this.student(actor);
+    await this.reconcileDuels(actor.institutionId, { duelId, enrollmentIds: [s.id] });
     const d = await this.db.mathEventDuel.findFirst({
       where: { id: duelId, institutionId: actor.institutionId },
       include: { event: true, answers: true },
@@ -804,6 +830,7 @@ export class MathEventsService {
   }
   async respond(actor: ClassroomActor, duelId: string, accept: boolean) {
     const { s, d } = await this.member(actor, duelId);
+    if (accept) await this.reconcileDuels(actor.institutionId, { eventId: d.eventId, enrollmentIds: [d.inviterEnrollmentId, d.inviteeEnrollmentId] });
     if (d.status !== 'INVITED' || d.inviteeEnrollmentId !== s.id)
       throw new BadRequestException('Este reto ya no espera respuesta.');
     if (d.expiresAt < new Date()) {
@@ -825,6 +852,9 @@ export class MathEventsService {
             const now = new Date();
             if (d.event.status !== 'PUBLISHED' || now < d.event.startsAt || now > d.event.endsAt || d.expiresAt <= now)
               throw new BadRequestException('El reto o el evento ya venció. Elige un evento disponible.');
+            const pairUsed = await tx.mathEventDuel.count({ where: { institutionId: actor.institutionId, eventId: d.eventId,
+              pairKey: d.pairKey, status: { in: ['ACTIVE', 'COMPLETED'] }, acceptedAt: { gte: colombiaDayStart(now) } } });
+            if (pairUsed >= 2) throw new BadRequestException('Ya jugaron sus dos partidas puntuables entre ustedes hoy.');
             for (const id of [d.inviterEnrollmentId, d.inviteeEnrollmentId]) {
               const count = await tx.mathEventDuel.count({
                 where: {
@@ -842,17 +872,7 @@ export class MathEventsService {
                 throw new BadRequestException(
                   'Uno de los participantes alcanzó sus partidas puntuables de hoy.',
                 );
-              const active = await tx.mathEventDuel.count({
-                where: {
-                  eventId: d.eventId,
-                  institutionId: actor.institutionId,
-                  status: 'ACTIVE',
-                  OR: [
-                    { inviterEnrollmentId: id },
-                    { inviteeEnrollmentId: id },
-                  ],
-                },
-              });
+              const active = await this.unfinishedActiveCount(tx, d.eventId, actor.institutionId, id);
               if (active)
                 throw new BadRequestException(
                   id === s.id
@@ -867,7 +887,7 @@ export class MathEventsService {
               status: accept ? 'ACTIVE' : 'DECLINED',
               acceptedAt: accept ? new Date() : null,
               expiresAt: accept
-                ? new Date(Date.now() + 48 * 60 * 60 * 1000)
+                ? new Date(Math.min(d.event.endsAt.getTime(), Date.now() + ((d.questions as any)?.version >= 2 ? 8 * 60 : 48 * 60 * 60) * 1000))
                 : d.expiresAt,
             },
           });
@@ -904,129 +924,123 @@ export class MathEventsService {
       throw new BadRequestException('El reto ya fue respondido.');
     return { id: d.id, status: 'DECLINED' };
   }
-  async getDuel(actor: ClassroomActor, duelId: string) {
-    const { s, d } = await this.member(actor, duelId);
+  private async startClock(institutionId: string, duelId: string, enrollmentId: string, ordinal: number) {
+    if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= ROUNDS) throw new BadRequestException('Pregunta no válida.');
+    await this.lockedDuel(institutionId, duelId, async (tx, d) => {
+      if (![d.inviterEnrollmentId, d.inviteeEnrollmentId].includes(enrollmentId)) throw new NotFoundException('Reto no encontrado.');
+      if (d.status !== 'ACTIVE' || d.expiresAt <= new Date() || d.event.status !== 'PUBLISHED' || d.event.endsAt <= new Date()) throw new BadRequestException('Este duelo no está activo.');
+      const snapshot = d.questions as any;
+      if (snapshot.version < 2 || !snapshot.version) return;
+      const answers = d.answers.filter((a: any) => a.enrollmentId === enrollmentId);
+      if (answers.some((a: any) => a.ordinal === ordinal)) return;
+      if (answers.length !== ordinal) throw new BadRequestException('Responde las preguntas en orden.');
+      const side = d.inviterEnrollmentId === enrollmentId ? 'inviter' : 'invitee';
+      if (snapshot.clocks?.[side]?.ordinal === ordinal) return;
+      const startedAt = new Date();
+      const deadlineAt = new Date(Math.min(startedAt.getTime() + 30000, d.expiresAt.getTime(), d.event.endsAt.getTime()));
+      await tx.mathEventDuel.update({ where: { id: d.id }, data: { questions: { ...snapshot,
+        clocks: { ...(snapshot.clocks || {}), [side]: { ordinal, startedAt: startedAt.toISOString(), deadlineAt: deadlineAt.toISOString() } },
+      } } });
+    });
+  }
+  async startQuestion(actor: ClassroomActor, duelId: string, ordinal: number) {
+    const { s } = await this.member(actor, duelId);
+    await this.startClock(actor.institutionId, duelId, s.id, ordinal);
+    return this.getDuel(actor, duelId, true);
+  }
+  async leaveDuel(actor: ClassroomActor, duelId: string) {
+    const { s } = await this.member(actor, duelId);
+    await this.lockedDuel(actor.institutionId, duelId, async (tx, d) => {
+      if (![d.inviterEnrollmentId, d.inviteeEnrollmentId].includes(s.id)) throw new NotFoundException('Reto no encontrado.');
+      if (d.status !== 'ACTIVE' || d.event.endsAt < new Date() || d.event.status === 'CLOSED') throw new BadRequestException('Este duelo ya no está activo.');
+      const snapshot = d.questions as any;
+      await tx.mathEventDuel.update({ where: { id: d.id }, data: { questions: { ...snapshot, left: [...new Set([...(snapshot.left || []), s.id])] } } });
+      await this.fillUnanswered(tx, d, [s.id]);
+    });
+    return { saved: true };
+  }
+  async getDuel(actor: ClassroomActor, duelId: string, deferClock = false) {
+    const member = await this.member(actor, duelId);
+    const s = member.s;
+    let d = member.d;
     if (d.status !== 'COMPLETED' && (d.event.endsAt < new Date() || d.event.status === 'CLOSED'))
       throw new BadRequestException('Este evento terminó. Consulta el ranking final.');
     if (d.status !== 'ACTIVE' && d.status !== 'COMPLETED')
-      throw new BadRequestException(
-        'Acepta el reto para ver las preguntas de la partida.',
-      );
-    const both = d.questions as any;
-    const mine = d.inviterEnrollmentId === s.id ? both.inviter : both.invitee;
-    const answers = d.answers.filter((a) => a.enrollmentId === s.id);
+      throw new BadRequestException('Acepta el reto para ver las preguntas de la partida.');
+    let both = d.questions as any;
+    let answers = d.answers.filter(a => a.enrollmentId === s.id);
+    if (!deferClock && both.version >= 2 && d.status === 'ACTIVE' && answers.length < ROUNDS) {
+      await this.startClock(actor.institutionId, duelId, s.id, answers.length);
+      const fresh = await this.db.mathEventDuel.findFirst({ where: { id: duelId, institutionId: actor.institutionId }, include: { event: true, answers: true } });
+      if (!fresh) throw new NotFoundException('Reto no encontrado.');
+      d = fresh; both = d.questions as any; answers = d.answers.filter(a => a.enrollmentId === s.id);
+    }
+    const side = d.inviterEnrollmentId === s.id ? 'inviter' : 'invitee';
+    const mine = both[side];
     const next = answers.length;
-    const finished = answers.length >= ROUNDS;
+    const finished = next >= ROUNDS;
     const allDone = d.answers.length >= ROUNDS * 2;
     const myScore = answers.filter(a => a.isCorrect).length;
     const opponentScore = allDone ? d.answers.filter(a => a.enrollmentId !== s.id && a.isCorrect).length : null;
     const bonus = allDone ? myScore > opponentScore! ? 5 : myScore === opponentScore ? 2 : 0 : null;
+    const clock = both.clocks?.[side]?.ordinal === next ? both.clocks[side] : null;
     return {
-      id: d.id,
-      status: d.status,
-      round: Math.min(next + 1, ROUNDS),
-      total: ROUNDS,
-      finished,
-      allDone,
-      questions: mine.map((q: any, i: number) => ({
-        id: q.id,
-        text: q.text,
-        options: q.options,
-        topic: q.topic,
-        answered: answers.some((a) => a.ordinal === i),
-        ...(answers.some((a) => a.ordinal === i)
-          ? {
-              ...(d.event.showCorrectAnswers ? { correctAnswer: q.correctAnswer } : {}),
-              ...(d.event.showExplanations ? { explanation: q.explanation } : {}),
-              isCorrect: answers.find((a) => a.ordinal === i)?.isCorrect,
-            }
-          : {}),
-      })),
-      pointsAwarded: allDone ? myScore * 10 + bonus! : null,
-      bonus,
-      showCorrectAnswers: d.event.showCorrectAnswers,
-      showExplanations: d.event.showExplanations,
-      myScore: answers.filter((a) => a.isCorrect).length,
-      opponentScore: allDone
-        ? d.answers
-            .filter((a) => a.enrollmentId !== s.id)
-            .filter((a) => a.isCorrect).length
-        : null,
+      id: d.id, status: d.status, round: Math.min(next + 1, ROUNDS), total: ROUNDS, finished, allDone,
+      timeLimitSeconds: both.version >= 2 ? 30 : null,
+      questionDeadlineAt: !finished ? clock?.deadlineAt ?? null : null,
+      serverNow: new Date().toISOString(), expiresAt: d.expiresAt,
+      finishReason: both.left?.includes(s.id) ? 'LEFT' : both.closureReason ?? null,
+      questions: mine.map((q: any, i: number) => {
+        const answer = answers.find(a => a.ordinal === i);
+        const revealed = both.version < 2 || !both.version || !!answer || (i === next && !!clock);
+        return { id: q.id, text: revealed ? q.text : '', options: revealed ? q.options : [], topic: revealed ? q.topic : null,
+          answered: !!answer,
+          ...(answer ? {
+            ...(d.event.showCorrectAnswers ? { correctAnswer: q.correctAnswer } : {}),
+            ...(d.event.showExplanations ? { explanation: q.explanation } : {}),
+            isCorrect: answer.isCorrect, timedOut: answer.answer === '',
+          } : {}),
+        };
+      }),
+      pointsAwarded: allDone ? myScore * 10 + bonus! : null, bonus,
+      showCorrectAnswers: d.event.showCorrectAnswers, showExplanations: d.event.showExplanations,
+      myScore, opponentScore,
     };
   }
-  async answer(
-    actor: ClassroomActor,
-    duelId: string,
-    ordinal: number,
-    answer: string,
-  ) {
-    const { s, d } = await this.member(actor, duelId);
-    if (d.event.endsAt < new Date() || d.event.status === 'CLOSED')
-      throw new BadRequestException('Este evento terminó. Ya no se reciben respuestas.');
-    if (d.status !== 'ACTIVE' || d.expiresAt < new Date())
-      throw new BadRequestException('Este duelo no está activo.');
-    if (
-      !Number.isInteger(ordinal) ||
-      ordinal < 0 ||
-      ordinal >= ROUNDS ||
-      typeof answer !== 'string' ||
-      answer.length > 300
-    )
+  async answer(actor: ClassroomActor, duelId: string, ordinal: number, answer: string) {
+    const { s } = await this.member(actor, duelId);
+    if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= ROUNDS || typeof answer !== 'string' || answer.length > 300)
       throw new BadRequestException('Respuesta no válida.');
-    const questions = d.questions as any;
-    const mine =
-      d.inviterEnrollmentId === s.id ? questions.inviter : questions.invitee;
-    const q = mine[ordinal] as Q;
-    if (!q) throw new BadRequestException('Pregunta no encontrada.');
-    const prev = await this.db.mathEventDuelAnswer.findFirst({
-      where: { duelId: d.id, enrollmentId: s.id, ordinal },
+    return this.lockedDuel(actor.institutionId, duelId, async (tx, d) => {
+      if (![d.inviterEnrollmentId, d.inviteeEnrollmentId].includes(s.id)) throw new NotFoundException('Reto no encontrado.');
+      const snapshot = d.questions as any;
+      const side = d.inviterEnrollmentId === s.id ? 'inviter' : 'invitee';
+      const q = snapshot[side]?.[ordinal] as Q;
+      if (!q) throw new BadRequestException('Pregunta no encontrada.');
+      const feedback = (isCorrect: boolean, timedOut: boolean) => ({ accepted: true, isCorrect, timedOut,
+        ...(d.event.showCorrectAnswers ? { correctAnswer: q.correctAnswer } : {}),
+        ...(d.event.showExplanations ? { explanation: q.explanation } : {}),
+      });
+      const mine = d.answers.filter((a: any) => a.enrollmentId === s.id);
+      const prev = mine.find((a: any) => a.ordinal === ordinal);
+      if (prev) return feedback(prev.isCorrect, prev.answer === '');
+      const now = new Date();
+      if (d.event.endsAt < now || d.event.status !== 'PUBLISHED') throw new BadRequestException('Este evento terminó. Ya no se reciben respuestas.');
+      if (d.status !== 'ACTIVE' || d.expiresAt <= now) throw new BadRequestException('Este duelo no está activo.');
+      if (mine.length !== ordinal) throw new BadRequestException('Responde las preguntas en orden.');
+      let timedOut = false;
+      if (snapshot.version >= 2) {
+        const clock = snapshot.clocks?.[side];
+        if (clock?.ordinal !== ordinal || !clock.deadlineAt) throw new BadRequestException('Abre la pregunta para comenzar sus 30 segundos.');
+        timedOut = now.getTime() >= new Date(clock.deadlineAt).getTime();
+      }
+      if (!timedOut && !q.options.includes(answer)) throw new BadRequestException('Elige una de las opciones de la pregunta.');
+      const isCorrect = !timedOut && norm(answer) === norm(q.correctAnswer);
+      await tx.mathEventDuelAnswer.create({ data: { institutionId: actor.institutionId, duelId, enrollmentId: s.id, ordinal, answer: timedOut ? '' : answer, isCorrect } });
+      const total = await tx.mathEventDuelAnswer.count({ where: { duelId } });
+      if (total >= ROUNDS * 2) await tx.mathEventDuel.updateMany({ where: { id: duelId, institutionId: actor.institutionId, status: 'ACTIVE' }, data: { status: 'COMPLETED', completedAt: now } });
+      return feedback(isCorrect, timedOut);
     });
-    if (prev) return { accepted: true, isCorrect: prev.isCorrect };
-    const isCorrect = norm(answer) === norm(q.correctAnswer);
-    await this.db.$transaction(async (tx) => {
-      await tx.mathEventDuelAnswer.create({
-        data: {
-          institutionId: actor.institutionId,
-          duelId: d.id,
-          enrollmentId: s.id,
-          ordinal,
-          answer,
-          isCorrect,
-        },
-      });
-      await tx.mathEventQuestionSeen.upsert({
-        where: {
-          eventId_enrollmentId_questionId: {
-            eventId: d.eventId,
-            enrollmentId: s.id,
-            questionId: q.id,
-          },
-        },
-        create: {
-          institutionId: actor.institutionId,
-          eventId: d.eventId,
-          enrollmentId: s.id,
-          questionId: q.id,
-          conceptKey: q.conceptKey,
-          lastSeenAt: new Date(),
-        },
-        update: { conceptKey: q.conceptKey, lastSeenAt: new Date() },
-      });
-      const total = await tx.mathEventDuelAnswer.count({
-        where: { duelId: d.id },
-      });
-      if (total >= ROUNDS * 2)
-        await tx.mathEventDuel.updateMany({
-          where: { id: d.id, status: 'ACTIVE' },
-          data: { status: 'COMPLETED', completedAt: new Date() },
-        });
-    });
-    return {
-      accepted: true,
-      isCorrect,
-      ...(d.event.showCorrectAnswers ? { correctAnswer: q.correctAnswer } : {}),
-      ...(d.event.showExplanations ? { explanation: q.explanation } : {}),
-    };
   }
   async ranking(
     actor: ClassroomActor,
@@ -1035,6 +1049,7 @@ export class MathEventsService {
   ) {
     const s = await this.student(actor);
     const e = await this.event(eventId, actor.institutionId, false, true);
+    await this.reconcileDuels(actor.institutionId, { eventId: e.id });
     const duels = await this.db.mathEventDuel.findMany({
       where: {
         eventId: e.id,
@@ -1181,7 +1196,7 @@ export class MathEventsService {
     const tenantRoles = membership?.institutionUserRoles ?? [];
     const roles = tenantRoles.length ? tenantRoles : student.user?.roles ?? [];
     const checks = [
-      { label: 'Estudiante activo', ok: student.isActive },
+      { label: 'Participación activa según matrícula vigente', ok: enrollments.length > 0 && student.user?.isActive === true },
       { label: 'Cuenta de acceso activa', ok: student.user?.isActive === true },
       { label: 'Vinculación activa de la cuenta al colegio', ok: !!membership },
       { label: 'Rol ESTUDIANTE en este colegio', ok: !!membership && roles.some(r => r.role.name === 'ESTUDIANTE') },
@@ -1190,7 +1205,7 @@ export class MathEventsService {
       { label: 'Evento publicado', ok: event.status === 'PUBLISHED' },
       { label: 'Evento dentro de sus fechas', ok: event.startsAt <= now && event.endsAt >= now },
     ];
-    return { username, canSeeEvent: checks.every(c => c.ok), checks,
+    return { username, canSeeEvent: checks.every(c => c.ok), checks, profileStatusMismatch: !student.isActive,
       student: { name: `${student.firstName.trim().split(/\s+/)[0]} ${student.lastName.trim().split(/\s+/)[0]}`,
         course: enrollment?.group.name ?? null, gradeName: enrollment?.group.grade.name ?? null,
         storedGradeNumber: enrollment?.group.grade.number ?? null, resolvedGrade: grade },
@@ -1297,6 +1312,7 @@ export class MathEventsService {
   }
   async duelState(actor: ClassroomActor, duelId: string) {
     const s = await this.student(actor);
+    await this.reconcileDuels(actor.institutionId, { duelId, enrollmentIds: [s.id] });
     const d = await this.db.mathEventDuel.findFirst({ where: {
       id: duelId, institutionId: actor.institutionId,
       OR: [{ inviterEnrollmentId: s.id }, { inviteeEnrollmentId: s.id }],
@@ -1626,7 +1642,7 @@ export class MathEventsService {
   }
   async matchmake(actor: ClassroomActor, eventId: string) {
     const d = await this.dashboard(actor, eventId);
-    const rival = d.roster.filter((x) => x.available);
+    const rival = d.roster.filter((x) => x.available && !x.hasOpenDuelWithMe && x.matchesWithMeToday < 2);
     if (!rival.length)
       throw new BadRequestException(
         'No hay estudiantes esperando ahora. Puedes dejar un reto para después.',

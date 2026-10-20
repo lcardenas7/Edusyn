@@ -41,6 +41,21 @@ describe('Math event access diagnosis', () => {
     expect(result.canSeeEvent).toBe(false);
     expect(result.checks.find(c => c.label.startsWith('Matrícula'))?.ok).toBe(false);
   });
+  it('allows an enabled account with current enrollment despite a stale student profile flag', async () => {
+    const student = await db.student.findFirst();
+    student.isActive = false;
+    const result = await service.checkStudentAccess(actor, 'event', 'alopez-test');
+    expect(result.canSeeEvent).toBe(true);
+    expect(result.profileStatusMismatch).toBe(true);
+  });
+  it('still rejects disabled accounts and inactive school memberships', async () => {
+    const student = await db.student.findFirst();
+    student.user.isActive = false;
+    expect((await service.checkStudentAccess(actor, 'event', 'alopez-test')).canSeeEvent).toBe(false);
+    student.user.isActive = true;
+    student.user.institutionUsers = [];
+    expect((await service.checkStudentAccess(actor, 'event', 'alopez-test')).canSeeEvent).toBe(false);
+  });
   it('uses legacy global roles only when tenant roles are empty', async () => {
     const student = await db.student.findFirst();
     student.user.roles = [{ role: { name: 'ESTUDIANTE' } }];
