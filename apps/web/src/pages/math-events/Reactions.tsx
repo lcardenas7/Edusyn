@@ -23,8 +23,9 @@ export function RecognitionSummary({ counts }: { counts?: Record<string, number>
   </section>;
 }
 
-export function Reactions({ counts, selected, disabled, readOnly = false, onReact }: {
+export function Reactions({ counts, selected, disabled, readOnly = false, compact = false, onReact }: {
   counts?: Record<string, number>; selected?: string | null; disabled?: boolean; readOnly?: boolean;
+  compact?: boolean;
   onReact: (kind: string | null) => Promise<boolean>;
 }) {
   const [open, setOpen] = useState(false);
@@ -55,15 +56,15 @@ export function Reactions({ counts, selected, disabled, readOnly = false, onReac
     if (success && reaction && !reduced) setBurst({ glyph: reaction[1], id: Date.now() });
   };
   const visible = reactionTypes.filter(([kind]) => (counts?.[kind] ?? 0) > 0 || selected === kind);
-  return <div ref={root} className="duel-reactions" onKeyDown={event => {
+  return <div ref={root} className={`duel-reactions${compact ? " duel-reactions--compact" : ""}`} onKeyDown={event => {
     if (event.key === "Escape" && open) { event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
   }}>
-    <div className="reaction-counts" role="group" aria-label="Reconocimientos recibidos">
-      {visible.length ? visible.map(([kind, glyph, label]) => <span key={kind} className={`reaction-chip ${selected === kind ? "is-selected" : ""}`} title={label} aria-label={`${label}: ${counts?.[kind] ?? 0}${selected === kind ? ". Tu reacción" : ""}`}><span aria-hidden="true">{glyph}</span><Count value={counts?.[kind] ?? 0} /></span>) : <span className="reaction-empty">{counts ? "Sin reconocimientos aún" : "Cargando reconocimientos…"}</span>}
-    </div>
+    {visible.length > 0 && <div className="reaction-counts" role="group" aria-label="Reconocimientos recibidos">
+      {visible.map(([kind, glyph, label]) => <span key={kind} className={`reaction-chip ${selected === kind ? "is-selected" : ""}`} title={label} aria-label={`${label}: ${counts?.[kind] ?? 0}${selected === kind ? ". Tu reacción" : ""}`}><span aria-hidden="true">{glyph}</span><Count value={counts?.[kind] ?? 0} /></span>)}
+    </div>}
     {!readOnly && <div className="reaction-selector">
-      <button ref={trigger} type="button" disabled={disabled || !counts} aria-expanded={open} aria-controls={open ? pickerId : undefined} onClick={() => setOpen(!open)} className={`reaction-trigger ${choice ? "is-selected" : ""}`}>
-        {choice ? <span aria-hidden="true">{choice[1]}</span> : <SmilePlus size={18} />}<span>{choice ? choice[2] : "Reaccionar"}</span><ChevronDown size={15} />
+      <button ref={trigger} type="button" disabled={disabled || !counts} aria-label={choice ? `Cambiar reacción: ${choice[2]}` : "Reaccionar"} title={choice ? `Tu reacción: ${choice[2]}` : "Reaccionar"} aria-expanded={open} aria-controls={open ? pickerId : undefined} onClick={() => setOpen(!open)} className={`reaction-trigger${compact ? " reaction-trigger--compact" : ""} ${choice ? "is-selected" : ""}`}>
+        {choice ? <span aria-hidden="true">{choice[1]}</span> : <SmilePlus size={compact ? 20 : 18} />}{!compact && <><span>{choice ? choice[2] : "Reaccionar"}</span><ChevronDown size={15} /></>}
       </button>
       <AnimatePresence>{open && <motion.div id={pickerId} className="reaction-picker" role="group" aria-label="Elige un reconocimiento" initial={reduced ? false : { opacity: 0, y: 8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.18 }}>
         <div className="reaction-picker-options">{reactionTypes.map(([kind, glyph, label]) => <button key={kind} type="button" aria-pressed={selected === kind} disabled={disabled} onClick={() => void choose(kind)}><span aria-hidden="true">{glyph}</span><span>{label}</span></button>)}</div>
