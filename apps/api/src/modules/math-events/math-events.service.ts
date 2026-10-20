@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ClassroomActor } from '../classroom/classroom-tenant-access.service';
 import { norm } from '../../common/utils/answer-matching.util';
 import { randomInt } from 'crypto';
-import { inflateSync } from 'zlib';
+import { gunzipSync } from 'zlib';
 import { OFFICIAL_DUEL_BANKS } from '../classroom/official-duel-banks';
 import { MathEventPushService } from './math-event-push.service';
 import { EDITORIAL_QUESTION_CATALOG_GZIP_BASE64 } from './editorial-question-catalog';
@@ -31,7 +31,7 @@ type EditorialQuestion = Omit<Q, 'id'> & {
   timeLimitSeconds: number;
 };
 const EDITORIAL_CATALOG = JSON.parse(
-  inflateSync(Buffer.from(EDITORIAL_QUESTION_CATALOG_GZIP_BASE64, 'base64')).toString('utf8'),
+  gunzipSync(Buffer.from(EDITORIAL_QUESTION_CATALOG_GZIP_BASE64, 'base64')).toString('utf8'),
 ) as { questions: EditorialQuestion[]; questionCount: number };
 const ROUNDS = 7;
 const AVATARS = new Set([
