@@ -115,12 +115,13 @@ export class MathEventsService {
     eventId: string,
     institutionId: string,
     allowDraft = false,
+    allowClosed = false,
   ) {
     const e = await this.db.mathEvent.findFirst({
       where: { id: eventId, institutionId },
       include: { questions: true },
     });
-    if (!e || (!allowDraft && e.status !== 'PUBLISHED'))
+    if (!e || (!allowDraft && e.status !== 'PUBLISHED' && !(allowClosed && e.status === 'CLOSED')))
       throw new NotFoundException('Evento no disponible');
     return e;
   }
@@ -173,6 +174,20 @@ export class MathEventsService {
       }),
     );
   }
+  async history(actor: ClassroomActor) {
+    const student = await this.student(actor);
+    const rows = await this.db.mathEvent.findMany({
+      where: {
+        institutionId: actor.institutionId,
+        status: { in: ['PUBLISHED', 'CLOSED'] },
+        endsAt: { lt: new Date() },
+      },
+      select: { id: true, title: true, description: true, startsAt: true, endsAt: true },
+      orderBy: { endsAt: 'desc' },
+      take: 30,
+    });
+    return rows.filter((event) => this.eligible(event, student.gradeNumber));
+  }
   async join(actor: ClassroomActor, eventId: string, avatarCode?: string) {
     const [s, e] = await Promise.all([
       this.student(actor),
@@ -193,11 +208,13 @@ export class MathEventsService {
   }
   async dashboard(actor: ClassroomActor, eventId: string) {
     const s = await this.student(actor);
-    const e = await this.event(eventId, actor.institutionId);
+    const e = await this.event(eventId, actor.institutionId, false, true);
     if (!this.eligible(e, s.gradeNumber))
       throw new NotFoundException('Evento no disponible para este grado');
-    const p = await this.participant(e.id, s.id, actor.institutionId);
     const now = new Date();
+    const p = e.endsAt < now || e.status === 'CLOSED'
+      ? await this.db.mathEventParticipant.findUnique({ where: { eventId_enrollmentId: { eventId: e.id, enrollmentId: s.id } } })
+      : await this.participant(e.id, s.id, actor.institutionId);
     const day = colombiaDayStart(now);
     await this.db.mathEventDuel.updateMany({
       where: {
@@ -322,7 +339,7 @@ export class MathEventsService {
       },
       me: {
         enrollmentId: s.id,
-        avatarCode: p.avatarCode,
+        avatarCode: p?.avatarCode || 'star',
         firstName: s.student.firstName.trim().split(/\s+/)[0],
         lastName: s.student.lastName.trim().split(/\s+/)[0],
         course: s.group.name,
@@ -992,7 +1009,7 @@ export class MathEventsService {
     scope: 'general' | 'grade' | 'course',
   ) {
     const s = await this.student(actor);
-    const e = await this.event(eventId, actor.institutionId);
+    const e = await this.event(eventId, actor.institutionId, false, true);
     const duels = await this.db.mathEventDuel.findMany({
       where: {
         eventId: e.id,
@@ -1100,8 +1117,86 @@ export class MathEventsService {
   }
   async manageEvents(actor: ClassroomActor) {
     return this.db.mathEvent.findMany({ where: { institutionId: actor.institutionId },
-      select: { id: true, title: true, status: true, showCorrectAnswers: true, showExplanations: true },
+      select: { id: true, title: true, status: true, startsAt: true, endsAt: true, showCorrectAnswers: true, showExplanations: true },
       orderBy: { createdAt: 'desc' }, take: 100 });
+  }
+  async eventReport(actor: ClassroomActor, eventId: string) {
+    const event = await this.event(eventId, actor.institutionId, true);
+    const [questions, participants, duels] = await Promise.all([
+      this.db.mathEventQuestion.findMany({
+        where: { eventId, institutionId: actor.institutionId },
+        select: { id: true, code: true, text: true, type: true, topic: true, difficulty: true, options: true, correctAnswer: true, explanation: true },
+        orderBy: { code: 'asc' },
+      }),
+      this.db.mathEventParticipant.count({ where: { eventId, institutionId: actor.institutionId } }),
+      this.db.mathEventDuel.findMany({
+        where: { eventId, institutionId: actor.institutionId, status: 'COMPLETED' },
+        select: {
+          questions: true,
+          answers: { select: { enrollmentId: true, ordinal: true, isCorrect: true } },
+          inviter: { select: { id: true, student: { select: { firstName: true, lastName: true } }, group: { select: { name: true, grade: { select: { number: true, name: true } } } } } },
+          invitee: { select: { id: true, student: { select: { firstName: true, lastName: true } }, group: { select: { name: true, grade: { select: { number: true, name: true } } } } } },
+        },
+      }),
+    ]);
+    const questionStats = new Map(questions.map((q) => [q.id, { ...q, appearances: 0, answers: 0, correct: 0 }]));
+    const players = new Map<string, { id: string; firstName: string; lastName: string; course: string; grade: number; points: number; played: number; correct: number; wins: number; draws: number; losses: number }>();
+    let answered = 0;
+    let correct = 0;
+    for (const duel of duels) {
+      const snapshot = duel.questions as { inviter?: Array<{ id: string }>; invitee?: Array<{ id: string }> };
+      const sides = [
+        { enrollment: duel.inviter, sequence: snapshot.inviter || [] },
+        { enrollment: duel.invitee, sequence: snapshot.invitee || [] },
+      ];
+      const scores = sides.map(({ enrollment, sequence }) => {
+        const answers = duel.answers.filter((a) => a.enrollmentId === enrollment.id);
+        for (const q of sequence) {
+          const stat = questionStats.get(q.id);
+          if (stat) stat.appearances++;
+        }
+        for (const answer of answers) {
+          const stat = questionStats.get(sequence[answer.ordinal]?.id);
+          if (stat) {
+            stat.answers++;
+            if (answer.isCorrect) stat.correct++;
+          }
+          answered++;
+          if (answer.isCorrect) correct++;
+        }
+        return { enrollment, score: answers.filter((a) => a.isCorrect).length, count: answers.length };
+      });
+      for (let i = 0; i < scores.length; i++) {
+        const { enrollment, score, count } = scores[i];
+        if (count < ROUNDS) continue;
+        let row = players.get(enrollment.id);
+        if (!row) {
+          row = {
+            id: enrollment.id,
+            firstName: enrollment.student.firstName.trim().split(/\s+/)[0],
+            lastName: enrollment.student.lastName.trim().split(/\s+/)[0],
+            course: enrollment.group.name,
+            grade: gradeOf(enrollment.group.grade),
+            points: 0, played: 0, correct: 0, wins: 0, draws: 0, losses: 0,
+          };
+          players.set(enrollment.id, row);
+        }
+        row.played++;
+        row.correct += score;
+        row.points += score * 10;
+        const rivalScore = scores[1 - i].score;
+        if (score > rivalScore) { row.wins++; row.points += 5; }
+        else if (score === rivalScore) { row.draws++; row.points += 2; }
+        else row.losses++;
+      }
+    }
+    const ranking = [...players.values()].sort((a, b) => b.points - a.points || b.correct - a.correct || a.firstName.localeCompare(b.firstName, 'es'));
+    return {
+      event: { id: event.id, title: event.title, startsAt: event.startsAt, endsAt: event.endsAt, status: event.status },
+      totals: { participants, played: ranking.length, duels: duels.length, answered, correct, questionCount: questions.length },
+      ranking: ranking.map((row, index) => ({ ...row, rank: index + 1 })),
+      questions: [...questionStats.values()].map((q) => ({ ...q, accuracy: q.answers ? Math.round(100 * q.correct / q.answers) : null })),
+    };
   }
   async updateSettings(actor: ClassroomActor, eventId: string, input: any) {
     const e = await this.event(eventId, actor.institutionId, true);
