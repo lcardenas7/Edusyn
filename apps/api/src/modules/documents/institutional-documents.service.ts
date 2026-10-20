@@ -1,7 +1,13 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupabaseStorageService } from '../storage/supabase-storage.service';
 import { InstitutionalDocumentCategory } from '@prisma/client';
+import { expandEffectiveRoles } from '../auth/role-hierarchy';
 
 export interface CreateDocumentDto {
   institutionId: string;
@@ -23,7 +29,7 @@ export interface UpdateDocumentDto {
 export class InstitutionalDocumentsService {
   // Límite de tamaño por archivo: 10MB
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024;
-  
+
   // Tipos MIME permitidos
   private readonly ALLOWED_MIME_TYPES = [
     'application/pdf',
@@ -48,54 +54,113 @@ export class InstitutionalDocumentsService {
     file: Express.Multer.File,
     uploadedById: string,
   ) {
+    if (!dto.institutionId)
+      throw new BadRequestException('Se requiere institución.');
     // Validar archivo
     this.validateFile(file);
-    
+
     // Verificar límite de almacenamiento
     await this.checkStorageLimit(dto.institutionId, file.size);
-    
+
     // Subir archivo a Supabase
-    const uploadResult = await this.uploadDocument(dto.institutionId, file, dto.category);
-    
+    const uploadResult = await this.uploadDocument(
+      dto.institutionId,
+      file,
+      dto.category,
+    );
+
     // Crear registro en BD
     try {
-      const document = await this.prisma.institutionalDocument.create({
-        data: {
-          institutionId: dto.institutionId,
-          title: dto.title,
-          description: dto.description,
-          category: dto.category,
-          fileUrl: uploadResult.url,
-          fileName: uploadResult.fileName,
-          fileSize: uploadResult.fileSize,
-          mimeType: uploadResult.mimeType,
-          visibleToRoles: dto.visibleToRoles || [],
-          uploadedById,
-        },
-        include: {
-          uploadedBy: {
-            select: { id: true, firstName: true, lastName: true, email: true },
+      const document = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.institutionalDocument.create({
+          data: {
+            institutionId: dto.institutionId,
+            title: dto.title,
+            description: dto.description,
+            category: dto.category,
+            fileUrl: uploadResult.url,
+            fileName: uploadResult.fileName,
+            fileSize: uploadResult.fileSize,
+            mimeType: uploadResult.mimeType,
+            visibleToRoles: dto.visibleToRoles || [],
+            uploadedById,
           },
-        },
+          include: {
+            uploadedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        });
+        await this.updateStorageUsage(dto.institutionId, file.size, tx);
+        return created;
       });
-      
-      // Actualizar uso de almacenamiento
-      await this.updateStorageUsage(dto.institutionId, file.size);
-      
+
       return document;
     } catch (error) {
-      console.error('[InstitutionalDocuments] Error creating document in DB:', error);
+      console.error(
+        '[InstitutionalDocuments] Error creating document in DB:',
+        error,
+      );
       // Intentar eliminar el archivo subido si falla la BD
       try {
         await this.storageService.deleteByKey(uploadResult.path);
       } catch (deleteError) {
-        console.error('[InstitutionalDocuments] Error cleaning up file:', deleteError);
+        console.error(
+          '[InstitutionalDocuments] Error cleaning up file:',
+          deleteError,
+        );
       }
       throw error;
     }
   }
 
-  async findAll(institutionId: string, userRoles?: string[]) {
+  private canRead(
+    document: { visibleToRoles: string[] },
+    roles: string[],
+    isSuperAdmin: boolean,
+  ) {
+    const effectiveRoles = expandEffectiveRoles(roles);
+    return (
+      isSuperAdmin ||
+      effectiveRoles.includes('ADMIN_INSTITUTIONAL') ||
+      document.visibleToRoles.length === 0 ||
+      document.visibleToRoles.some((role) => effectiveRoles.includes(role))
+    );
+  }
+
+  private async requireDocument(
+    id: string,
+    institutionId: string,
+    roles: string[],
+    isSuperAdmin: boolean,
+    activeOnly = true,
+  ) {
+    if (!institutionId)
+      throw new BadRequestException('Se requiere institución.');
+    const document = await this.prisma.institutionalDocument.findFirst({
+      where: { id, institutionId, ...(activeOnly ? { isActive: true } : {}) },
+      include: {
+        uploadedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+    if (!document || !this.canRead(document, roles, isSuperAdmin)) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+    return document;
+  }
+
+  async findAll(
+    institutionId: string,
+    userRoles: string[] = [],
+    isSuperAdmin = false,
+  ) {
+    if (!institutionId)
+      throw new BadRequestException('Se requiere institución.');
     const documents = await this.prisma.institutionalDocument.findMany({
       where: {
         institutionId,
@@ -106,52 +171,52 @@ export class InstitutionalDocumentsService {
           select: { id: true, firstName: true, lastName: true },
         },
       },
-      orderBy: [
-        { category: 'asc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ category: 'asc' }, { createdAt: 'desc' }],
     });
-    
+
     // Filtrar por visibilidad de rol si no es admin
-    let filtered = documents;
-    if (userRoles && !userRoles.some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r))) {
-      filtered = documents.filter(doc => {
-        if (doc.visibleToRoles.length === 0) return true; // Visible para todos
-        return doc.visibleToRoles.some(role => userRoles.includes(role));
-      });
-    }
-    
+    const filtered = documents.filter((doc) =>
+      this.canRead(doc, userRoles, isSuperAdmin),
+    );
+
     // Regenerar URLs firmadas frescas para los archivos
     return this.refreshFileUrls(filtered);
   }
 
-  async findOne(id: string) {
-    const document = await this.prisma.institutionalDocument.findUnique({
-      where: { id },
-      include: {
-        uploadedBy: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-      },
-    });
-    
-    if (!document) {
-      throw new NotFoundException('Documento no encontrado');
-    }
-    
+  async findOne(
+    id: string,
+    institutionId: string,
+    roles: string[] = [],
+    isSuperAdmin = false,
+  ) {
+    const document = await this.requireDocument(
+      id,
+      institutionId,
+      roles,
+      isSuperAdmin,
+    );
+
     // Regenerar URL firmada fresca
-    const freshUrl = await this.storageService.resolveFileUrl(document.fileUrl, 15 * 60);
+    const freshUrl = await this.storageService.resolveFileUrl(
+      document.fileUrl,
+      15 * 60,
+    );
     return { ...document, fileUrl: freshUrl };
   }
 
   /**
    * Regenera URLs firmadas frescas para los archivos de documentos.
    */
-  private async refreshFileUrls<T extends { fileUrl: string }>(items: T[]): Promise<T[]> {
+  private async refreshFileUrls<T extends { fileUrl: string }>(
+    items: T[],
+  ): Promise<T[]> {
     return Promise.all(
       items.map(async (item) => {
         try {
-          const freshUrl = await this.storageService.resolveFileUrl(item.fileUrl, 15 * 60);
+          const freshUrl = await this.storageService.resolveFileUrl(
+            item.fileUrl,
+            15 * 60,
+          );
           return { ...item, fileUrl: freshUrl };
         } catch {
           return item;
@@ -160,11 +225,32 @@ export class InstitutionalDocumentsService {
     );
   }
 
-  async update(id: string, dto: UpdateDocumentDto) {
-    const document = await this.findOne(id);
-    
+  async update(
+    id: string,
+    dto: UpdateDocumentDto,
+    institutionId: string,
+    roles: string[] = [],
+    isSuperAdmin = false,
+  ) {
+    await this.requireDocument(id, institutionId, roles, isSuperAdmin, false);
+    if (
+      dto.visibleToRoles !== undefined &&
+      (!Array.isArray(dto.visibleToRoles) ||
+        dto.visibleToRoles.some((role) => typeof role !== 'string'))
+    ) {
+      throw new BadRequestException(
+        'visibleToRoles debe ser un arreglo de roles.',
+      );
+    }
+    if (
+      dto.category !== undefined &&
+      !Object.values(InstitutionalDocumentCategory).includes(dto.category)
+    ) {
+      throw new BadRequestException('Categoría inválida.');
+    }
+
     return this.prisma.institutionalDocument.update({
-      where: { id },
+      where: { id, institutionId },
       data: {
         title: dto.title,
         description: dto.description,
@@ -180,32 +266,37 @@ export class InstitutionalDocumentsService {
     });
   }
 
-  async delete(id: string) {
+  async delete(
+    id: string,
+    institutionId: string,
+    roles: string[] = [],
+    isSuperAdmin = false,
+  ) {
     // Leer raw de la DB para obtener la key original (sin resolver URL)
-    const document = await this.prisma.institutionalDocument.findUnique({
-      where: { id },
-      select: { id: true, fileUrl: true, fileSize: true, institutionId: true },
+    const document = await this.requireDocument(
+      id,
+      institutionId,
+      roles,
+      isSuperAdmin,
+      false,
+    );
+
+    // Retirar el registro y su contador juntos antes de borrar el objeto externo.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.institutionalDocument.delete({ where: { id, institutionId } });
+      await this.updateStorageUsage(institutionId, -document.fileSize, tx);
     });
-    if (!document) throw new NotFoundException('Documento no encontrado');
-    
-    // Eliminar archivo de R2 — fileUrl ya es la key completa (ej: documentos/institucion/xxx/...)
     try {
       await this.storageService.deleteByKey(document.fileUrl);
     } catch (error) {
       console.error('[InstitutionalDocuments] Error deleting file:', error);
     }
-    
-    // Actualizar uso de almacenamiento
-    await this.updateStorageUsage(document.institutionId, -document.fileSize);
-    
-    // Eliminar registro
-    await this.prisma.institutionalDocument.delete({ where: { id } });
-    
+
     return { success: true };
   }
 
   async getCategories() {
-    return Object.values(InstitutionalDocumentCategory).map(category => ({
+    return Object.values(InstitutionalDocumentCategory).map((category) => ({
       value: category,
       label: this.getCategoryLabel(category),
     }));
@@ -228,11 +319,13 @@ export class InstitutionalDocumentsService {
     if (!file) {
       throw new BadRequestException('Archivo requerido');
     }
-    
+
     if (file.size > this.MAX_FILE_SIZE) {
-      throw new BadRequestException(`El archivo excede el límite de ${this.MAX_FILE_SIZE / 1024 / 1024}MB`);
+      throw new BadRequestException(
+        `El archivo excede el límite de ${this.MAX_FILE_SIZE / 1024 / 1024}MB`,
+      );
     }
-    
+
     if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       throw new BadRequestException('Tipo de archivo no permitido');
     }
@@ -258,7 +351,7 @@ export class InstitutionalDocumentsService {
     const usage = await this.prisma.institutionStorageUsage.findUnique({
       where: { institutionId },
     });
-    
+
     if (!usage) {
       // Crear registro de uso si no existe
       await this.prisma.institutionStorageUsage.create({
@@ -266,19 +359,23 @@ export class InstitutionalDocumentsService {
       });
       return;
     }
-    
+
     const currentUsage = Number(usage.documentsUsage);
     const limit = Number(usage.documentsLimit);
-    
+
     if (limit > 0 && currentUsage + fileSize > limit) {
       throw new ForbiddenException(
-        `Límite de almacenamiento alcanzado. Uso: ${(currentUsage / 1024 / 1024).toFixed(2)}MB / ${(limit / 1024 / 1024).toFixed(2)}MB`
+        `Límite de almacenamiento alcanzado. Uso: ${(currentUsage / 1024 / 1024).toFixed(2)}MB / ${(limit / 1024 / 1024).toFixed(2)}MB`,
       );
     }
   }
 
-  private async updateStorageUsage(institutionId: string, sizeChange: number) {
-    await this.prisma.institutionStorageUsage.upsert({
+  private async updateStorageUsage(
+    institutionId: string,
+    sizeChange: number,
+    client: Pick<PrismaService, 'institutionStorageUsage'> = this.prisma,
+  ) {
+    await client.institutionStorageUsage.upsert({
       where: { institutionId },
       create: {
         institutionId,
@@ -297,7 +394,7 @@ export class InstitutionalDocumentsService {
     const usage = await this.prisma.institutionStorageUsage.findUnique({
       where: { institutionId },
     });
-    
+
     if (!usage) {
       return {
         documentsUsage: 0,
@@ -308,18 +405,20 @@ export class InstitutionalDocumentsService {
         evidencesUsagePercent: 0,
       };
     }
-    
+
     return {
       documentsUsage: Number(usage.documentsUsage),
       documentsLimit: Number(usage.documentsLimit),
-      documentsUsagePercent: Number(usage.documentsLimit) > 0 
-        ? (Number(usage.documentsUsage) / Number(usage.documentsLimit)) * 100 
-        : 0,
+      documentsUsagePercent:
+        Number(usage.documentsLimit) > 0
+          ? (Number(usage.documentsUsage) / Number(usage.documentsLimit)) * 100
+          : 0,
       evidencesUsage: Number(usage.evidencesUsage),
       evidencesLimit: Number(usage.evidencesLimit),
-      evidencesUsagePercent: Number(usage.evidencesLimit) > 0 
-        ? (Number(usage.evidencesUsage) / Number(usage.evidencesLimit)) * 100 
-        : 0,
+      evidencesUsagePercent:
+        Number(usage.evidencesLimit) > 0
+          ? (Number(usage.evidencesUsage) / Number(usage.evidencesLimit)) * 100
+          : 0,
     };
   }
 
@@ -327,8 +426,8 @@ export class InstitutionalDocumentsService {
    * Limpia archivos huérfanos de Supabase (archivos sin registro en BD)
    * y recalcula el uso de almacenamiento basado en los documentos reales
    */
-  async cleanupOrphanedFiles(institutionId: string): Promise<{ 
-    deletedFiles: string[]; 
+  async cleanupOrphanedFiles(institutionId: string): Promise<{
+    deletedFiles: string[];
     recalculatedUsage: number;
     message: string;
   }> {
@@ -337,26 +436,28 @@ export class InstitutionalDocumentsService {
       where: { institutionId },
       select: { fileUrl: true, fileSize: true },
     });
-    
+
     // Extraer paths de los documentos en BD
     const dbPaths = new Set(
-      dbDocuments.map(doc => {
-        const urlParts = doc.fileUrl.split('/storage/v1/object/public/documentos/');
+      dbDocuments.map((doc) => {
+        const urlParts = doc.fileUrl.split(
+          '/storage/v1/object/public/documentos/',
+        );
         return urlParts.length > 1 ? urlParts[1] : doc.fileUrl;
-      })
+      }),
     );
-    
+
     // 2. Listar archivos en Supabase para esta institución
     const basePath = `institucion/${institutionId}/institucionales`;
     let orphanedFiles: string[] = [];
     let allStorageFiles: string[] = [];
-    
+
     try {
       const folders = await this.storageService.listFiles(
         this.storageService.buckets.documentos,
         basePath,
       );
-      
+
       if (folders && folders.length > 0) {
         for (const folder of folders) {
           const categoryPath = `${basePath}/${folder.name}`;
@@ -364,7 +465,7 @@ export class InstitutionalDocumentsService {
             this.storageService.buckets.documentos,
             categoryPath,
           );
-          
+
           if (files) {
             for (const file of files) {
               if (file.name && !file.name.startsWith('.')) {
@@ -378,11 +479,10 @@ export class InstitutionalDocumentsService {
           }
         }
       }
-      
     } catch (error) {
       console.error('[InstitutionalDocuments] Error scanning storage:', error);
     }
-    
+
     // 3. Eliminar archivos huérfanos
     const deletedFiles: string[] = [];
     for (const filePath of orphanedFiles) {
@@ -393,13 +493,17 @@ export class InstitutionalDocumentsService {
         );
         deletedFiles.push(filePath);
       } catch (error) {
-        console.error('[InstitutionalDocuments] Error deleting file:', filePath, error);
+        console.error(
+          '[InstitutionalDocuments] Error deleting file:',
+          filePath,
+          error,
+        );
       }
     }
-    
+
     // 4. Recalcular uso de almacenamiento basado en documentos reales
     const totalSize = dbDocuments.reduce((sum, doc) => sum + doc.fileSize, 0);
-    
+
     await this.prisma.institutionStorageUsage.upsert({
       where: { institutionId },
       create: {
@@ -411,8 +515,7 @@ export class InstitutionalDocumentsService {
         lastCalculatedAt: new Date(),
       },
     });
-    
-    
+
     return {
       deletedFiles,
       recalculatedUsage: totalSize,
@@ -424,30 +527,38 @@ export class InstitutionalDocumentsService {
    * Genera una URL firmada temporal para descargar/ver un documento
    * Esto es necesario porque el bucket 'documentos' no es público
    */
-  async getDownloadUrl(id: string): Promise<{ url: string; expiresIn: number }> {
+  async getDownloadUrl(
+    id: string,
+    institutionId: string,
+    roles: string[] = [],
+    isSuperAdmin = false,
+  ): Promise<{ url: string; expiresIn: number }> {
     // Leer directamente de la DB para obtener la key/url original sin resolver
-    const document = await this.prisma.institutionalDocument.findUnique({
-      where: { id },
-      select: { fileUrl: true },
-    });
-
-    if (!document) {
-      throw new NotFoundException('Documento no encontrado');
-    }
+    const document = await this.requireDocument(
+      id,
+      institutionId,
+      roles,
+      isSuperAdmin,
+    );
 
     try {
       // resolveFileUrl maneja correctamente tanto keys de R2 como URLs antiguas de Supabase
-      const signedUrl = await this.storageService.resolveFileUrl(document.fileUrl, 900);
+      const signedUrl = await this.storageService.resolveFileUrl(
+        document.fileUrl,
+        900,
+      );
       return {
         url: signedUrl,
         expiresIn: 900,
       };
     } catch (error) {
-      console.error('[InstitutionalDocuments] Error generating signed URL:', error);
-      return {
-        url: document.fileUrl,
-        expiresIn: 0,
-      };
+      console.error(
+        '[InstitutionalDocuments] Error generating signed URL:',
+        error,
+      );
+      throw new BadRequestException(
+        'No se pudo generar el enlace de descarga.',
+      );
     }
   }
 }
