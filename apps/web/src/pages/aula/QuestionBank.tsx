@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, BookOpen, Check, ChevronRight, Pencil, Plus, Save } from 'lucide-react'
-import api from '../../lib/api/client'
+import api from '../../lib/api'
 
 type Question = { id: string; type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE'; text: string; options: string[]; correctAnswer: string; explanation: string | null }
 type Collection = { id: string; officialCatalogId?: string | null; title: string; subjectArea: string; category: string; isPublished: boolean; canEdit: boolean; questions: Question[] }

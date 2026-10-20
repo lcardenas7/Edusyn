@@ -341,6 +341,7 @@ export default function AulaVirtual() {
             </button>
           ))}
           {rol === 'docente' && vista === 'hoy' && <>
+            <button type="button" onClick={() => navigate(`/aula/${classroomId}/banco-preguntas`)} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm font-medium text-ink-primary hover:bg-surface-2">Banco de preguntas</button>
             <button type="button" onClick={() => setGestionAula('color')} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary">Color del aula</button>
             <button type="button" onClick={() => setGestionAula('copiar')} className="min-h-btn rounded-lg border border-hairline bg-surface-1 px-4 text-body-sm text-ink-primary">Copiar aula</button>
           </>}

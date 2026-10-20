@@ -50,6 +50,7 @@ import WorkspaceV2Page from './pages/WorkspaceV2'
 import SpaceDetailPage from './pages/WorkspaceV2/SpaceDetail'
 import Classroom from './pages/Classroom'
 import AulaVirtual from './pages/aula'
+import QuestionBank from './pages/aula/QuestionBank'
 import Caracteristicas from './pages/public/Caracteristicas'
 import Precios from './pages/public/Precios'
 import CasosDeExito from './pages/public/CasosDeExito'
@@ -455,6 +456,7 @@ function App() {
                   <Route path="/eventos" element={<MathEventsPage />} />
                   <Route path="/aula-clasica" element={<Classroom />} />
                   <Route path="/aula" element={<AulaVirtual />} />
+                  <Route path="/aula/:classroomId/banco-preguntas" element={<QuestionBank />} />
                   <Route path="/aula/:classroomId" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId/:vista" element={<AulaVirtual />} />
                   <Route path="/aula/:classroomId/actividades/:activityId" element={<AulaVirtual />} />

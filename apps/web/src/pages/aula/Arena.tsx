@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, Check, ChevronRight, Clock3, Dices, Sparkles, Swords, Trophy, Users, X } from 'lucide-react'
-import api from '../../lib/api/client'
+import api from '../../lib/api'
 
 type Source = { id: string; title: string; questionCount: number; enabled: boolean }
 type Peer = { id: string; name: string }

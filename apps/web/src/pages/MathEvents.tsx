@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, LoaderCircle, Swords, X } from "lucide-react";
-import api from "../lib/api/client";
+import api from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../lib/toast";
 import { bogotaInputToIso } from "../lib/datetime";
