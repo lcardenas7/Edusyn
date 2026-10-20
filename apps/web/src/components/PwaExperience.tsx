@@ -9,16 +9,21 @@ function looksLikeDesktopOnPhone() {
     Math.min(window.screen.width, window.screen.height) <= 600 &&
     window.innerWidth >= 800
 }
+function isIphoneBrowser() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches
+}
 
 export default function PwaExperience() {
   const [installable, setInstallable] = useState(canInstallApp)
   const [desktopHint, setDesktopHint] = useState(looksLikeDesktopOnPhone)
+  const [iphoneHint, setIphoneHint] = useState(isIphoneBrowser)
   const [dismissed, setDismissed] = useState(false)
   const [installing, setInstalling] = useState(false)
   useEffect(() => {
     const update = () => {
       setInstallable(canInstallApp())
       setDesktopHint(looksLikeDesktopOnPhone())
+      setIphoneHint(isIphoneBrowser())
     }
     window.addEventListener('edusyn:pwa-change', update)
     window.addEventListener('resize', update)
@@ -31,7 +36,7 @@ export default function PwaExperience() {
       mode.removeEventListener('change', update)
     }
   }, [])
-  if (dismissed || (!installable && !desktopHint)) return null
+  if (dismissed || (!installable && !desktopHint && !iphoneHint)) return null
   return (
     <aside data-pwa-help className="mb-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950" aria-label="Edusyn en tu celular">
       <div className="flex items-start justify-between gap-3">
@@ -39,8 +44,10 @@ export default function PwaExperience() {
           <p className="font-semibold">{desktopHint ? '¿Se ve todo muy pequeño?' : 'Lleva Edusyn en tu celular'}</p>
           <p className="mt-1">{desktopHint
             ? 'Chrome podría estar mostrando la versión de computadora. Abre Edusyn en Chrome, entra en ⋮ y desmarca «Sitio para computadoras» o «Versión para ordenador». Luego vuelve a abrir la app.'
+            : iphoneHint
+              ? 'En iPhone, abre Edusyn en Safari, toca Compartir y elige «Agregar a Inicio». Si aparece «Abrir como app web», actívalo. El icono quedará en tu pantalla de inicio.'
             : 'Instala la app para abrir el aula y los eventos desde tu pantalla de inicio.'}</p>
-          {installable && !desktopHint && <button type="button" disabled={installing} className="mt-2 min-h-11 rounded-xl bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60" onClick={async () => {
+          {installable && !desktopHint && !iphoneHint && <button type="button" disabled={installing} className="mt-2 min-h-11 rounded-xl bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60" onClick={async () => {
             setInstalling(true)
             try { await installApp() }
             catch { toast.error('No pudimos abrir la instalación. Inténtalo desde el menú de tu navegador.') }

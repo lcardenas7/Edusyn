@@ -197,6 +197,7 @@ export default function MathEventsPage() {
   const { eventId } = useParams();
   const nav = useNavigate();
   const [events, setEvents] = useState<EventCard[]>([]);
+  const [history, setHistory] = useState<EventCard[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
   const [tab, setTab] = useState<"play" | "ranking" | "profile">("play");
   const [duel, setDuel] = useState<Duel | null>(null);
@@ -237,8 +238,12 @@ export default function MathEventsPage() {
   }, []);
   const loadEvents = useCallback(async () => {
     try {
-      const r = await api.get<EventCard[]>("/math-events/active");
-      setEvents(r.data);
+      const [active, past] = await Promise.all([
+        api.get<EventCard[]>("/math-events/active"),
+        api.get<EventCard[]>("/math-events/history"),
+      ]);
+      setEvents(active.data);
+      setHistory(past.data);
     } catch (e) {
       setError("No pudimos cargar los eventos ahora.");
     }
@@ -249,6 +254,7 @@ export default function MathEventsPage() {
       const r = await api.get<Board>(`/math-events/${eventId}`);
       for (const d of r.data.duels) duelOpponents.current[d.id] = d.opponent;
       setBoard(r.data);
+      if (new Date(r.data.event.endsAt).getTime() < Date.now()) setTab("ranking");
       setError("");
     } catch (e) {
       setError("No pudimos abrir el evento. Vuelve a intentarlo.");
@@ -606,6 +612,14 @@ export default function MathEventsPage() {
             No hay eventos activos por ahora.
           </div>
         )}
+        {history.length > 0 && <section className="mt-7">
+          <h2 className="mb-3 text-xl font-black text-slate-950">Eventos anteriores</h2>
+          {history.map((e) => <button key={e.id} onClick={() => nav(`/eventos/${e.id}`)} className="mb-3 w-full rounded-2xl border bg-white p-4 text-left shadow-sm">
+            <span className="text-xs font-bold uppercase text-slate-500">Finalizado · {fmt(e.endsAt)}</span>
+            <strong className="mt-1 block text-lg font-black text-slate-950">{e.title}</strong>
+            <span className="mt-1 block text-sm text-blue-700">Ver ranking y mis resultados →</span>
+          </button>)}
+        </section>}
       </main>
     );
   if (error && !board)
@@ -634,6 +648,7 @@ export default function MathEventsPage() {
     (d) => d.status === "INVITED" && d.invitedByMe,
   );
   const dateLabel = `${fmt(board.event.startsAt)} – ${fmt(board.event.endsAt)}`;
+  const archived = new Date(board.event.endsAt).getTime() < Date.now();
   return (
     <main className="math-event-page min-h-dvh w-full min-w-0 bg-[#eff4ff] pb-28 text-slate-950">
       <div className="mx-auto w-full min-w-0 max-w-xl px-4 pb-5 pt-4">
@@ -655,12 +670,13 @@ export default function MathEventsPage() {
             <span className="text-3xl">🧮</span>
           </div>
           <p className="mt-2 text-sm text-blue-100">{dateLabel}</p>
-          <div className="mt-4 flex justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm">
+          {archived && <p className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-sm font-bold">Evento finalizado · El ranking queda disponible para consulta.</p>}
+          {!archived && <div className="mt-4 flex justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm">
             <span>Partidas puntuables hoy</span>
             <strong>
               {board.me.matchesUsedToday}/{board.event.dailyMatchLimit}
             </strong>
-          </div>
+          </div>}
         </header>
         {duel && (
           <button onClick={() => { setStageId(duel.id); setHiddenDuelId(null); }} className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-blue-700 px-4 font-extrabold text-white shadow-lg">
@@ -673,7 +689,7 @@ export default function MathEventsPage() {
             if (last) { setHiddenDuelId(null); setStageId(last.id); void loadDuel(last.id); }
           }}>🏆 Ver mi último resultado</button>
         )}
-        {invites.length > 0 && (
+        {!archived && invites.length > 0 && (
           <section className="math-event-incoming mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <strong>Te retaron</strong>
             {invites.map((d: any) => (
@@ -707,7 +723,7 @@ export default function MathEventsPage() {
             ))}
           </section>
         )}
-        {ownInvites.map((d: any) => (
+        {!archived && ownInvites.map((d: any) => (
           <div
             key={d.id}
             className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white p-3 text-sm text-slate-600"
@@ -728,7 +744,7 @@ export default function MathEventsPage() {
         <nav className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-white p-1.5 shadow-sm">
           {(
             [
-              ["play", "Jugar"],
+              ...(!archived ? [["play", "Jugar"] as const] : []),
               ["ranking", "Ranking"],
               ["profile", "Mi perfil"],
             ] as const
@@ -742,7 +758,7 @@ export default function MathEventsPage() {
             </button>
           ))}
         </nav>
-        {tab === "play" && (
+        {tab === "play" && !archived && (
           <section className="mt-4">
             <div className="rounded-2xl bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -922,7 +938,7 @@ export default function MathEventsPage() {
           onCancel={entry?.invitedByMe ? () => cancelInvite(stageId) : undefined}
         />;
       })()}
-      <footer className="math-event-footer fixed inset-x-0 bottom-0 border-t bg-white/95 p-3 backdrop-blur">
+      {!archived && <footer className="math-event-footer fixed inset-x-0 bottom-0 border-t bg-white/95 p-3 backdrop-blur">
         <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-slate-600">¿Listo para jugar?</span>
           <button
@@ -932,13 +948,16 @@ export default function MathEventsPage() {
             {available ? "🟢 Esperando rival" : "Activarme y recibir retos"}
           </button>
         </div>
-      </footer>
+      </footer>}
     </main>
   );
 }
 
 export function MathEventOrganizer() {
   const [managed, setManaged] = useState<any[]>([]);
+  const [report, setReport] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportScope, setReportScope] = useState('general');
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [showExplanations, setShowExplanations] = useState(true);
   const [editingId, setEditingId] = useState("");
@@ -960,6 +979,21 @@ export function MathEventOrganizer() {
   useEffect(() => {
     api.get("/math-events/manage").then(r => setManaged(r.data)).catch(e => toast.error(e));
   }, []);
+  useEffect(() => {
+    setReport(null);
+    setReportScope('general');
+    if (!editingId) return;
+    let live = true;
+    setReportLoading(true);
+    api.get(`/math-events/${editingId}/report`)
+      .then(r => { if (live) setReport(r.data); })
+      .catch(e => { if (live) toast.error(e); })
+      .finally(() => { if (live) setReportLoading(false); });
+    return () => { live = false; };
+  }, [editingId]);
+  const reportRows = report?.ranking?.filter((row: any) => reportScope === 'general' ||
+    (reportScope.startsWith('grade:') ? row.grade === Number(reportScope.slice(6)) :
+      `${row.grade}:${row.course}` === reportScope.slice(7))) ?? [];
   const saveSettings = async () => {
     const id = editingId || eventId;
     if (!id) return;
@@ -1054,6 +1088,40 @@ export function MathEventOrganizer() {
         <p className="text-xs leading-5 text-slate-600">Para una competencia con preguntas reutilizables, desactiva ambas opciones. Los aciertos y los puntos seguirán visibles; las soluciones ocultas no se enviarán al navegador.</p>
         {(editingId || eventId) && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
       </section>
+      {editingId && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="text-xl font-black">Registro y resultados</h2>
+        {reportLoading && <p className="mt-3 text-sm text-slate-600">Cargando resultados…</p>}
+        {report && <>
+          <p className="mt-1 text-sm text-slate-600">{fmt(report.event.startsAt)} – {fmt(report.event.endsAt)}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-center text-sm">
+            {[
+              ['Inscritos', report.totals.participants], ['Jugaron', report.totals.played],
+              ['Duelos completos', report.totals.duels], ['Respuestas', report.totals.answered],
+              ['Aciertos', report.totals.correct], ['Preguntas del banco', report.totals.questionCount],
+            ].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-blue-50 p-3"><strong className="block text-xl text-blue-800">{value}</strong>{label}</div>)}
+          </div>
+          <h3 className="mt-6 font-black">Ranking final</h3>
+          <select className="mt-2 min-h-11 w-full rounded-xl border px-3" aria-label="Filtrar ranking" value={reportScope} onChange={e => setReportScope(e.target.value)}>
+            <option value="general">General</option>
+            {[...new Set<number>(report.ranking.map((row: any) => row.grade))].sort((a, b) => a - b).map(grade => <option key={grade} value={`grade:${grade}`}>{grade}.º grado</option>)}
+            {[...new Set<string>(report.ranking.map((row: any) => `${row.grade}:${row.course}`))].sort().map(course => <option key={course} value={`course:${course}`}>Curso {course.replace(':', '.º ')}</option>)}
+          </select>
+          <div className="mt-3 max-h-80 space-y-1 overflow-auto">
+            {reportRows.map((row: any, index: number) => <div key={row.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+              <span className="w-6 font-bold">{index + 1}</span><span className="min-w-0 flex-1 truncate">{row.firstName} {row.lastName} · {row.grade}.º {row.course}</span><strong className="text-blue-800">{row.points} pts</strong>
+            </div>)}
+            {!reportRows.length && <p className="text-sm text-slate-500">Todavía no hay duelos completos.</p>}
+          </div>
+          <details className="mt-5 rounded-xl border p-3"><summary className="cursor-pointer font-black">Preguntas y rendimiento ({report.questions.length})</summary>
+            <p className="mt-2 text-xs text-slate-600">Apariciones: veces que se ofreció en duelos completos. Aciertos: respuestas correctas recibidas.</p>
+            <div className="mt-3 max-h-96 space-y-3 overflow-auto">{report.questions.map((q: any) => <div key={q.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+              <p className="text-xs font-bold text-blue-700">{q.code || q.topic || 'Pregunta'} · {q.type}</p>
+              <p className="mt-1 font-semibold">{q.text}</p>
+              <p className="mt-2 text-xs text-slate-600">{q.appearances} apariciones · {q.answers} respuestas · {q.correct} aciertos{q.accuracy !== null ? ` (${q.accuracy}%)` : ''}</p>
+            </div>)}</div>
+          </details>
+        </>}
+      </section>}
       {!editingId && <>
       <div className="mt-5 space-y-3 rounded-2xl bg-white p-4 shadow-sm">
         <label className="block text-sm font-bold">

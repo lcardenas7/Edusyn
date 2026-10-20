@@ -45,6 +45,9 @@ export class MathEventsController {
   @Get('active') @Roles('ESTUDIANTE') active(@Request() r: any) {
     return this.actor(r).then((a) => this.service.active(a));
   }
+  @Get('history') @Roles('ESTUDIANTE') history(@Request() r: any) {
+    return this.actor(r).then((a) => this.service.history(a));
+  }
   @Get('banks')
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
   banks(@Request() r: any) {
@@ -54,6 +57,11 @@ export class MathEventsController {
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
   manage(@Request() r: any) {
     return this.actor(r).then(a => this.service.manageEvents(a));
+  }
+  @Get(':eventId/report')
+  @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
+  report(@Param('eventId') id: string, @Request() r: any) {
+    return this.actor(r).then(a => this.service.eventReport(a, id));
   }
   @Post()
   @Roles('DOCENTE', 'COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL')
