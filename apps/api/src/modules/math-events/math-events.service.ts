@@ -885,6 +885,8 @@ export class MathEventsService {
   }
   async getDuel(actor: ClassroomActor, duelId: string) {
     const { s, d } = await this.member(actor, duelId);
+    if (d.status !== 'COMPLETED' && (d.event.endsAt < new Date() || d.event.status === 'CLOSED'))
+      throw new BadRequestException('Este evento terminó. Consulta el ranking final.');
     if (d.status !== 'ACTIVE' && d.status !== 'COMPLETED')
       throw new BadRequestException(
         'Acepta el reto para ver las preguntas de la partida.',
@@ -938,6 +940,8 @@ export class MathEventsService {
     answer: string,
   ) {
     const { s, d } = await this.member(actor, duelId);
+    if (d.event.endsAt < new Date() || d.event.status === 'CLOSED')
+      throw new BadRequestException('Este evento terminó. Ya no se reciben respuestas.');
     if (d.status !== 'ACTIVE' || d.expiresAt < new Date())
       throw new BadRequestException('Este duelo no está activo.');
     if (
