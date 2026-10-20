@@ -1020,6 +1020,8 @@ export default function MathEventsPage() {
 export function MathEventOrganizer() {
   const [managed, setManaged] = useState<any[]>([]);
   const [report, setReport] = useState<any>(null);
+  const [live, setLive] = useState<any>(null);
+  const [liveError, setLiveError] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportScope, setReportScope] = useState('general');
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
@@ -1039,6 +1041,10 @@ export function MathEventOrganizer() {
   const [accessCheck, setAccessCheck] = useState<any>(null);
   const [checkingAccess, setCheckingAccess] = useState(false);
   const selectedEvent = managed.find(row => row.id === editingId);
+  const refreshLive = useCallback(async (id: string) => {
+    try { const response = await api.get(`/math-events/${id}/live`, { timeout: 12000 }); setLive(response.data); setLiveError(false); }
+    catch { setLiveError(true); }
+  }, []);
   useEffect(() => { setAccessCheck(null); setAccessUsername(""); }, [editingId]);
   const checkAccess = async () => {
     if (!editingId || !accessUsername.trim() || checkingAccess) return;
@@ -1072,12 +1078,27 @@ export function MathEventOrganizer() {
       .finally(() => { if (live) setReportLoading(false); });
     return () => { live = false; };
   }, [editingId]);
+  useEffect(() => {
+    setLive(null); setLiveError(false);
+    if (!editingId || selectedEvent?.status !== 'PUBLISHED') return;
+    let running = false;
+    const refresh = async () => {
+      if (document.hidden || running) return;
+      running = true;
+      await refreshLive(editingId);
+      running = false;
+    };
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 10000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
+  }, [editingId, selectedEvent?.status, refreshLive]);
   const reportRows = report?.ranking?.filter((row: any) => reportScope === 'general' ||
     (reportScope.startsWith('grade:') ? row.grade === Number(reportScope.slice(6)) :
       `${row.grade}:${row.course}` === reportScope.slice(7))) ?? [];
   const saveSettings = async () => {
     const id = editingId;
-    if (!id) return;
+    if (!id || selectedEvent?.canManage !== true) return;
     setLoading(true);
     try {
       const payload: any = { showCorrectAnswers, showExplanations };
@@ -1110,7 +1131,7 @@ export function MathEventOrganizer() {
         showCorrectAnswers, showExplanations,
       });
       setEditingId(r.data.id);
-      setManaged(rows => [r.data, ...rows]);
+      setManaged(rows => [{ ...r.data, canManage: true, organizerName: 'Tú' }, ...rows]);
       setMessage(
         "Evento creado como borrador. Ahora copia las preguntas seleccionadas.",
       );
@@ -1121,7 +1142,7 @@ export function MathEventOrganizer() {
     }
   };
   const importSelected = async () => {
-    if (!editingId) return;
+    if (!editingId || selectedEvent?.canManage !== true) return;
     setLoading(true);
     try {
       const r = await api.post(`/math-events/${editingId}/banks/import`, {
@@ -1139,7 +1160,7 @@ export function MathEventOrganizer() {
     }
   };
   const importEditorialCatalog = async () => {
-    if (!editingId) return;
+    if (!editingId || selectedEvent?.canManage !== true) return;
     setLoading(true);
     try {
       const r = await api.post(`/math-events/${editingId}/catalog/import`);
@@ -1153,7 +1174,7 @@ export function MathEventOrganizer() {
     }
   };
   const publish = async () => {
-    if (!editingId) return;
+    if (!editingId || selectedEvent?.canManage !== true) return;
     setLoading(true);
     try {
       await api.post(`/math-events/${editingId}/publish`);
@@ -1190,13 +1211,34 @@ export function MathEventOrganizer() {
             const selected = managed.find(row => row.id === e.target.value);
             setShowCorrectAnswers(selected?.showCorrectAnswers ?? true); setShowExplanations(selected?.showExplanations ?? true);
             setDraftStart(isoToBogotaInput(selected?.startsAt)); setDraftEnd(isoToBogotaInput(selected?.endsAt));
-          }}><option value="">Crear nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status === 'DRAFT' ? 'Borrador' : row.status === 'PUBLISHED' ? 'Publicado' : 'Finalizado'}</option>)}</select>
+          }}><option value="">Crear nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status === 'DRAFT' ? 'Borrador' : row.status === 'PUBLISHED' ? 'Publicado' : 'Finalizado'} · {row.canManage ? 'Organizas tú' : `Organiza ${row.organizerName}`}</option>)}</select>
         </label>
-        <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showCorrectAnswers} onChange={e => setShowCorrectAnswers(e.target.checked)} />Mostrar la respuesta correcta después de responder</label>
-        <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showExplanations} onChange={e => setShowExplanations(e.target.checked)} />Habilitar «Ver explicación»</label>
+        {editingId && selectedEvent?.canManage !== true && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">Organizó este evento: {selectedEvent?.organizerName || 'otro docente'}. Solo esa persona o coordinación puede cambiar su configuración.</p>}
+        <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" disabled={!!editingId && selectedEvent?.canManage !== true} checked={showCorrectAnswers} onChange={e => setShowCorrectAnswers(e.target.checked)} />Mostrar la respuesta correcta después de responder</label>
+        <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" disabled={!!editingId && selectedEvent?.canManage !== true} checked={showExplanations} onChange={e => setShowExplanations(e.target.checked)} />Habilitar «Ver explicación»</label>
         <p className="text-xs leading-5 text-slate-600">Para una competencia con preguntas reutilizables, desactiva ambas opciones. Los aciertos y los puntos seguirán visibles; las soluciones ocultas no se enviarán al navegador.</p>
-        {editingId && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
+        {editingId && selectedEvent?.canManage === true && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
       </section>
+      {editingId && selectedEvent?.status === 'PUBLISHED' && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-xl font-black">Partidas en vivo</h2><p className="mt-1 text-sm text-slate-600">Se actualiza cada 10 segundos. Muestra el avance y los aciertos, nunca las respuestas elegidas.</p></div><button onClick={() => void refreshLive(editingId)} className="min-h-10 rounded-lg border px-3 text-sm font-bold">Actualizar</button></div>
+        {liveError && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">No se pudo actualizar el tablero. Reintentaremos automáticamente.</p>}
+        {live && <>
+          <p className="mt-2 text-xs text-slate-500">Actualizado: {fmt(live.updatedAt)}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[['Conectados',live.summary.participantsOnline],['Esperando respuesta',live.summary.invitationsPending],['En juego',live.summary.duelsInProgress],['Completados',live.summary.duelsCompleted],['Respuestas en curso',live.summary.answersInProgress]].map(([label,value])=><div key={String(label)} className="rounded-xl bg-blue-50 p-3 text-center"><strong className="block text-xl text-blue-800">{value}</strong><span className="text-xs text-slate-600">{label}</span></div>)}
+          </div>
+          <details className="mt-3 rounded-xl border p-3"><summary className="cursor-pointer font-bold">Estudiantes conectados ({live.summary.participantsOnline})</summary><div className="mt-2 flex flex-wrap gap-2">{live.onlineStudents.map((student:any,index:number)=><span key={`${student.firstName}:${student.course}:${index}`} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs text-emerald-900">🟢 {student.firstName} {student.lastName} · {student.grade}.º {student.course}</span>)}{!live.onlineStudents.length&&<span className="text-sm text-slate-500">No hay estudiantes conectados ahora.</span>}</div>{live.summary.participantsOnline>live.onlineStudents.length&&<p className="mt-2 text-xs text-slate-500">Se muestran los 200 más recientes de {live.summary.participantsOnline} conectados.</p>}</details>
+          <h3 className="mt-5 font-black">Retos actuales ({live.duels.length})</h3>
+          <div className="mt-2 max-h-[32rem] space-y-2 overflow-auto">
+            {live.duels.map((duel:any)=><article key={duel.id} className="rounded-xl border border-slate-200 p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><span className={`rounded-full px-2 py-1 text-xs font-bold ${duel.status==='ACTIVE'?'bg-emerald-100 text-emerald-800':'bg-amber-100 text-amber-900'}`}>{duel.status==='ACTIVE'?'En partida':'Invitación pendiente'}</span><span className="text-xs text-slate-500">{duel.status==='ACTIVE'&&duel.lastActivityAt ? `Última respuesta ${fmt(duel.lastActivityAt)}` : `Creado ${fmt(duel.createdAt)}`}</span></div>
+              <div className="grid gap-2 sm:grid-cols-2">{duel.players.map((player:any,index:number)=><div key={index} className="rounded-lg bg-slate-50 p-3"><div className="flex items-center justify-between gap-2"><strong className="truncate">{player.firstName} {player.lastName} · {player.grade}.º {player.course}</strong><span className="shrink-0 text-sm font-bold text-blue-800">{player.points} pts*</span></div><div className="mt-2 flex items-center justify-between text-xs text-slate-600"><span>{player.state==='INVITED'?'Esperando que acepte':player.state==='FINISHED_WAITING'?'Terminó; espera al rival':'Jugando'} · {player.answered}/{player.total}</span><span>{player.correct} aciertos</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.round(100*player.answered/player.total)}%`}} /></div></div>)}</div>
+            </article>)}
+            {!live.duels.length && <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No hay invitaciones ni partidas activas en este momento.</p>}
+          </div>
+          <p className="mt-2 text-xs text-slate-500">* Puntos provisionales por aciertos. Los puntos del duelo se confirman cuando ambos terminan.</p>
+        </>}
+      </section>}
       {editingId && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="font-black">Comprobar acceso de un estudiante</h2>
         <p className="mt-1 text-sm text-slate-600">Consulta su matrícula y los requisitos del evento usando solo su usuario.</p>
@@ -1300,16 +1342,17 @@ export function MathEventOrganizer() {
         <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="text-xl font-black">Completar borrador: {selectedEvent.title}</h2>
           <p className="mt-1 text-sm text-slate-600">{reportLoading ? 'Consultando preguntas…' : `${report?.totals.questionCount ?? 0} preguntas copiadas al evento`}</p>
+          {selectedEvent.canManage !== true && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">Este borrador pertenece a {selectedEvent.organizerName || 'otro docente'}. Puedes consultar el informe; para importar preguntas, cambiar fechas o publicar, debe hacerlo el organizador o coordinación.</p>}
           <div className="mt-4 space-y-3 rounded-xl bg-slate-50 p-3">
             <p className="text-sm font-bold">Fechas del evento (hora de Colombia)</p>
-            <label className="block text-sm">Comienza<input type="datetime-local" value={draftStart} onChange={e => setDraftStart(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-3" /></label>
-            <label className="block text-sm">Termina<input type="datetime-local" value={draftEnd} onChange={e => setDraftEnd(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-3" /></label>
+            <label className="block text-sm">Comienza<input disabled={selectedEvent.canManage !== true} type="datetime-local" value={draftStart} onChange={e => setDraftStart(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-3 disabled:bg-slate-100" /></label>
+            <label className="block text-sm">Termina<input disabled={selectedEvent.canManage !== true} type="datetime-local" value={draftEnd} onChange={e => setDraftEnd(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-3 disabled:bg-slate-100" /></label>
           </div>
-          <button disabled={loading || !draftStart || !draftEnd} onClick={saveSettings} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 font-bold text-blue-800 disabled:opacity-50">Guardar fechas y configuración</button>
+          {selectedEvent.canManage === true && <button disabled={loading || !draftStart || !draftEnd} onClick={saveSettings} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 font-bold text-blue-800 disabled:opacity-50">Guardar fechas y configuración</button>}
           <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 p-3">
             <h3 className="font-black">Banco editorial de Matemáticas</h3>
             <p className="mt-1 text-sm text-slate-700">Incluye preguntas de 6.º a 11.º y elimina cuatro enunciados exactos repetidos. En duelos entre grados distintos, el sistema elegirá preguntas hasta el grado del estudiante menor.</p>
-            <button disabled={loading} onClick={importEditorialCatalog} className="mt-3 min-h-12 w-full rounded-xl bg-indigo-700 px-4 font-bold text-white disabled:opacity-50">{loading ? 'Cargando…' : 'Importar catálogo editorial (996 preguntas)'}</button>
+            {selectedEvent.canManage === true && <button disabled={loading} onClick={importEditorialCatalog} className="mt-3 min-h-12 w-full rounded-xl bg-indigo-700 px-4 font-bold text-white disabled:opacity-50">{loading ? 'Cargando…' : 'Importar catálogo editorial (996 preguntas)'}</button>}
           </div>
           <h3 className="mt-5 font-black">Bancos institucionales de Matemáticas</h3>
           <p className="mt-1 text-sm text-slate-600">
@@ -1324,6 +1367,7 @@ export function MathEventOrganizer() {
                 className="flex items-center gap-3 rounded-xl border p-3 text-sm"
               >
                 <input
+                  disabled={selectedEvent.canManage !== true}
                   type="checkbox"
                   checked={selected.includes(b.id)}
                   onChange={(e) =>
@@ -1343,20 +1387,20 @@ export function MathEventOrganizer() {
               </label>
             ))}
           </div>
-          <button
+          {selectedEvent.canManage === true && <button
             disabled={loading || !selected.length}
             onClick={importSelected}
             className="mt-3 min-h-12 w-full rounded-xl bg-indigo-700 font-bold text-white"
           >
             Copiar preguntas seleccionadas
-          </button>
-          <button
+          </button>}
+          {selectedEvent.canManage === true && <button
             disabled={loading || (report?.totals.questionCount ?? 0) < 7 || new Date(selectedEvent.endsAt).getTime() <= Date.now()}
             onClick={publish}
             className="mt-2 min-h-12 w-full rounded-xl bg-emerald-700 font-bold text-white"
           >
             Publicar evento
-          </button>
+          </button>}
           {(report?.totals.questionCount ?? 0) < 7 && <p className="mt-2 text-xs text-slate-600">Para publicar se necesitan al menos 7 preguntas válidas. Este borrador tiene {report?.totals.questionCount ?? 0}.</p>}
           {new Date(selectedEvent.endsAt).getTime() <= Date.now() && <p className="mt-2 text-xs text-amber-800">Este borrador ya venció; se necesita un evento con fecha de cierre futura.</p>}
         </section>

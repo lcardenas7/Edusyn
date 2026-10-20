@@ -88,6 +88,19 @@ export class MathEventsService {
     private readonly db: PrismaService,
     private readonly push: MathEventPushService,
   ) {}
+  private canCoordinateEvent(actor: ClassroomActor) {
+    return actor.isSuperAdmin || actor.roles.some(role => ['COORDINADOR', 'RECTOR', 'ADMIN_INSTITUTIONAL'].includes(role));
+  }
+  private async assertEventManager(actor: ClassroomActor, eventId: string) {
+    const event = await this.db.mathEvent.findFirst({
+      where: { id: eventId, institutionId: actor.institutionId },
+      select: { id: true, createdById: true },
+    });
+    if (!event) throw new NotFoundException('Evento no disponible.');
+    if (!this.canCoordinateEvent(actor) && event.createdById !== actor.userId)
+      throw new ForbiddenException('Solo quien organizó este evento o coordinación puede modificarlo.');
+    return event;
+  }
   private async student(actor: ClassroomActor) {
     const rows = await this.db.studentEnrollment.findMany({
       where: {
@@ -1152,13 +1165,23 @@ export class MathEventsService {
     };
   }
   async eventSettings(actor: ClassroomActor, eventId: string) {
+    await this.assertEventManager(actor, eventId);
     const e = await this.event(eventId, actor.institutionId, true);
     return { id: e.id, title: e.title, showCorrectAnswers: e.showCorrectAnswers, showExplanations: e.showExplanations };
   }
   async manageEvents(actor: ClassroomActor) {
-    return this.db.mathEvent.findMany({ where: { institutionId: actor.institutionId },
-      select: { id: true, title: true, status: true, startsAt: true, endsAt: true, showCorrectAnswers: true, showExplanations: true },
+    const rows = await this.db.mathEvent.findMany({ where: { institutionId: actor.institutionId },
+      select: { id: true, title: true, status: true, startsAt: true, endsAt: true, showCorrectAnswers: true, showExplanations: true,
+        createdById: true },
       orderBy: { createdAt: 'desc' }, take: 100 });
+    const creators = await this.db.user.findMany({ where: { id: { in: [...new Set(rows.map(row => row.createdById))] },
+      institutionUsers: { some: { institutionId: actor.institutionId, isActive: true } } },
+      select: { id: true, firstName: true, lastName: true } });
+    const names = new Map(creators.map(user => [user.id, `${user.firstName} ${user.lastName}`.trim()]));
+    return rows.map(({ createdById, ...event }) => ({ ...event,
+      organizerName: names.get(createdById) || 'Organizador',
+      canManage: this.canCoordinateEvent(actor) || createdById === actor.userId,
+    }));
   }
   async checkStudentAccess(actor: ClassroomActor, eventId: string, input: unknown) {
     if (typeof input !== 'string' || !/^[a-zA-Z0-9._@-]{2,100}$/.test(input.trim()))
@@ -1216,7 +1239,7 @@ export class MathEventsService {
     const [questions, participants, duels] = await Promise.all([
       this.db.mathEventQuestion.findMany({
         where: { eventId, institutionId: actor.institutionId },
-        select: { id: true, code: true, text: true, type: true, topic: true, difficulty: true, options: true, correctAnswer: true, explanation: true },
+        select: { id: true, code: true, text: true, type: true, topic: true, difficulty: true },
         orderBy: { code: 'asc' },
       }),
       this.db.mathEventParticipant.count({ where: { eventId, institutionId: actor.institutionId } }),
@@ -1289,7 +1312,70 @@ export class MathEventsService {
       questions: [...questionStats.values()].map((q) => ({ ...q, accuracy: q.answers ? Math.round(100 * q.correct / q.answers) : null })),
     };
   }
+  async liveReport(actor: ClassroomActor, eventId: string) {
+    const event = await this.db.mathEvent.findFirst({
+      where: { id: eventId, institutionId: actor.institutionId },
+      select: { id: true, title: true, status: true },
+    });
+    if (!event) throw new NotFoundException('Evento no disponible.');
+    await this.reconcileDuels(actor.institutionId, { eventId });
+    const now = new Date();
+    const [participantsOnline, onlineRows, completed, duels] = await Promise.all([
+      this.db.mathEventParticipant.count({ where: { eventId, institutionId: actor.institutionId, presenceUntil: { gt: now } } }),
+      this.db.mathEventParticipant.findMany({
+        where: { eventId, institutionId: actor.institutionId, presenceUntil: { gt: now }, enrollment: {
+          institutionId: actor.institutionId, status: 'ACTIVE', academicYear: { institutionId: actor.institutionId, status: 'ACTIVE' },
+        } },
+        select: { presenceUntil: true, enrollment: { select: {
+          student: { select: { firstName: true, lastName: true } },
+          group: { select: { name: true, grade: { select: { number: true, name: true } } } },
+        } } },
+        orderBy: { presenceUntil: 'desc' }, take: 200,
+      }),
+      this.db.mathEventDuel.count({ where: { eventId, institutionId: actor.institutionId, status: 'COMPLETED' } }),
+      this.db.mathEventDuel.findMany({
+        where: { eventId, institutionId: actor.institutionId, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { gt: now } },
+        select: {
+          id: true, status: true, createdAt: true, acceptedAt: true, expiresAt: true,
+          answers: { select: { enrollmentId: true, isCorrect: true, createdAt: true } },
+          inviter: { select: { id: true, student: { select: { firstName: true, lastName: true } }, group: { select: { name: true, grade: { select: { number: true, name: true } } } } } },
+          invitee: { select: { id: true, student: { select: { firstName: true, lastName: true } }, group: { select: { name: true, grade: { select: { number: true, name: true } } } } } },
+        }, orderBy: { createdAt: 'desc' }, take: 100,
+      }),
+    ]);
+    const liveDuels = duels.map(duel => {
+      const players = [duel.inviter, duel.invitee].map(enrollment => {
+        const own = duel.answers.filter(answer => answer.enrollmentId === enrollment.id);
+        const answered = own.length;
+        return {
+          firstName: enrollment.student.firstName.trim().split(/\s+/)[0],
+          lastName: enrollment.student.lastName.trim().split(/\s+/)[0],
+          course: enrollment.group.name, grade: gradeOf(enrollment.group.grade),
+          answered, total: ROUNDS, correct: own.filter(answer => answer.isCorrect).length,
+          points: own.filter(answer => answer.isCorrect).length * 10,
+          state: duel.status === 'INVITED' ? 'INVITED' : answered >= ROUNDS ? 'FINISHED_WAITING' : 'PLAYING',
+        };
+      });
+      return { id: duel.id, status: duel.status, createdAt: duel.createdAt, acceptedAt: duel.acceptedAt,
+        expiresAt: duel.expiresAt, players,
+        lastActivityAt: duel.answers.reduce<Date | null>((latest, answer) => !latest || answer.createdAt > latest ? answer.createdAt : latest, duel.acceptedAt),
+      };
+    });
+    const onlineStudents = onlineRows.map(row => ({
+      firstName: row.enrollment.student.firstName.trim().split(/\s+/)[0],
+      lastName: row.enrollment.student.lastName.trim().split(/\s+/)[0],
+      course: row.enrollment.group.name, grade: gradeOf(row.enrollment.group.grade),
+    }));
+    return { event, updatedAt: now, onlineStudents, summary: {
+      participantsOnline,
+      invitationsPending: liveDuels.filter(duel => duel.status === 'INVITED').length,
+      duelsInProgress: liveDuels.filter(duel => duel.status === 'ACTIVE').length,
+      duelsCompleted: completed,
+      answersInProgress: liveDuels.reduce((total, duel) => total + duel.players.reduce((subtotal, player) => subtotal + player.answered, 0), 0),
+    }, duels: liveDuels };
+  }
   async updateSettings(actor: ClassroomActor, eventId: string, input: any) {
+    await this.assertEventManager(actor, eventId);
     const e = await this.event(eventId, actor.institutionId, true);
     if (typeof input?.showCorrectAnswers !== 'boolean' || typeof input?.showExplanations !== 'boolean')
       throw new BadRequestException('Selecciona las opciones de respuestas y explicaciones.');
@@ -1444,6 +1530,7 @@ export class MathEventsService {
     eventId: string,
     collectionIds: unknown,
   ) {
+    await this.assertEventManager(actor, eventId);
     const e = await this.event(eventId, actor.institutionId, true);
     if (e.status !== 'DRAFT')
       throw new BadRequestException(
@@ -1567,6 +1654,7 @@ export class MathEventsService {
     };
   }
   async importEditorialCatalog(actor: ClassroomActor, eventId: string) {
+    await this.assertEventManager(actor, eventId);
     const e = await this.event(eventId, actor.institutionId, true);
     if (e.status !== 'DRAFT')
       throw new BadRequestException('El catálogo solo se carga en un borrador.');
@@ -1627,6 +1715,7 @@ export class MathEventsService {
     };
   }
   async publish(actor: ClassroomActor, eventId: string) {
+    await this.assertEventManager(actor, eventId);
     const e = await this.event(eventId, actor.institutionId, true);
     const count = await this.db.mathEventQuestion.count({
       where: { eventId: e.id, institutionId: actor.institutionId },

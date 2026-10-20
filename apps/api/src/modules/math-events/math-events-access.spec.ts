@@ -56,6 +56,17 @@ describe('Math event access diagnosis', () => {
     student.user.institutionUsers = [];
     expect((await service.checkStudentAccess(actor, 'event', 'alopez-test')).canSeeEvent).toBe(false);
   });
+  it('restricts event management to its organizer and coordinators', async () => {
+    db.mathEvent.findFirst.mockResolvedValue({ id: 'event', createdById: 'other-teacher' });
+    await expect((service as any).assertEventManager(actor, 'event')).rejects.toThrow('Solo quien organizó');
+    expect(await (service as any).assertEventManager({ ...actor, userId: 'other-teacher' }, 'event')).toEqual({ id: 'event', createdById: 'other-teacher' });
+    expect(await (service as any).assertEventManager({ ...actor, roles: ['COORDINADOR'] }, 'event')).toEqual({ id: 'event', createdById: 'other-teacher' });
+    expect(await (service as any).assertEventManager({ ...actor, isSuperAdmin: true }, 'event')).toEqual({ id: 'event', createdById: 'other-teacher' });
+  });
+  it('rejects another teacher in the service layer before saving event settings', async () => {
+    db.mathEvent.findFirst.mockResolvedValue({ id: 'event', createdById: 'organizer' });
+    await expect(service.updateSettings(actor, 'event', { showCorrectAnswers: false, showExplanations: false })).rejects.toThrow('Solo quien organizó');
+  });
   it('uses legacy global roles only when tenant roles are empty', async () => {
     const student = await db.student.findFirst();
     student.user.roles = [{ role: { name: 'ESTUDIANTE' } }];

@@ -142,7 +142,7 @@ export function DuelStage({ title, me, opponent, glyphs, duel, feedback, answeri
       </header>
       <div className="duel-audio-controls">
         <button onClick={audio.toggleEffects} aria-pressed={audio.effects}>{audio.effects ? <Volume2 size={16} /> : <VolumeX size={16} />} Efectos {audio.effects ? "sí" : "no"}</button>
-        <button onClick={audio.toggleMusic} aria-pressed={audio.music}><Music2 size={16} /> Música {audio.music ? "sí" : "no"}</button>
+        <button onClick={audio.toggleMusic} aria-pressed={audio.music}><Music2 size={16} /> Ritmo {audio.music ? "sí" : "no"}</button>
         {duel && !duel.finished && <button disabled={busy || answering} onClick={onLeave}>Salir de partida</button>}
       </div>
       <AnimatePresence mode="wait" initial={false}>
