@@ -222,7 +222,7 @@ export default function MathEventsPage() {
   const recognitionEvent = useRef(eventId);
   recognitionEvent.current = eventId;
   useEffect(() => { setRecognitions({}); setRanking(null); reactionRevision.current++; }, [eventId]);
-  const audio = useDuelAudio(!!stageId && !!duel && !duel.finished && !feedback);
+  const audio = useDuelAudio(!!stageId && !duel?.finished);
   const playedCues = useRef(new Set<string>());
   useEffect(() => {
     if (!duel) return;
@@ -967,9 +967,9 @@ export function MathEventOrganizer() {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
-  const [eventId, setEventId] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const selectedEvent = managed.find(row => row.id === editingId);
   useEffect(() => {
     api
       .get("/math-events/banks")
@@ -995,7 +995,7 @@ export function MathEventOrganizer() {
     (reportScope.startsWith('grade:') ? row.grade === Number(reportScope.slice(6)) :
       `${row.grade}:${row.course}` === reportScope.slice(7))) ?? [];
   const saveSettings = async () => {
-    const id = editingId || eventId;
+    const id = editingId;
     if (!id) return;
     setLoading(true);
     try {
@@ -1020,7 +1020,7 @@ export function MathEventOrganizer() {
         dailyMatchLimit: 25,
         showCorrectAnswers, showExplanations,
       });
-      setEventId(r.data.id);
+      setEditingId(r.data.id);
       setManaged(rows => [r.data, ...rows]);
       setMessage(
         "Evento creado como borrador. Ahora copia las preguntas seleccionadas.",
@@ -1032,11 +1032,14 @@ export function MathEventOrganizer() {
     }
   };
   const importSelected = async () => {
+    if (!editingId) return;
     setLoading(true);
     try {
-      const r = await api.post(`/math-events/${eventId}/banks/import`, {
+      const r = await api.post(`/math-events/${editingId}/banks/import`, {
         collectionIds: selected,
       });
+      const updated = await api.get(`/math-events/${editingId}/report`);
+      setReport(updated.data);
       setMessage(
         `Se agregaron ${r.data.added} preguntas. Total: ${r.data.questionCount}.`,
       );
@@ -1047,9 +1050,11 @@ export function MathEventOrganizer() {
     }
   };
   const publish = async () => {
+    if (!editingId) return;
     setLoading(true);
     try {
-      await api.post(`/math-events/${eventId}/publish`);
+      await api.post(`/math-events/${editingId}/publish`);
+      setManaged(rows => rows.map(row => row.id === editingId ? { ...row, status: 'PUBLISHED' } : row));
       setMessage(
         "Evento publicado. Los estudiantes elegibles podrán entrar al comenzar la fecha.",
       );
@@ -1077,18 +1082,18 @@ export function MathEventOrganizer() {
         <label className="block text-sm font-bold">Configurar evento existente
           <select className="mt-2 min-h-12 w-full rounded-xl border px-3" value={editingId} onChange={e => {
             setEditingId(e.target.value);
-            setEventId("");
+            setSelected([]);
             setMessage("");
             const selected = managed.find(row => row.id === e.target.value);
             setShowCorrectAnswers(selected?.showCorrectAnswers ?? true); setShowExplanations(selected?.showExplanations ?? true);
-          }}><option value="">Nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status}</option>)}</select>
+          }}><option value="">Crear nuevo evento</option>{managed.map(row => <option key={row.id} value={row.id}>{row.title} · {row.status === 'DRAFT' ? 'Borrador' : row.status === 'PUBLISHED' ? 'Publicado' : 'Finalizado'}</option>)}</select>
         </label>
         <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showCorrectAnswers} onChange={e => setShowCorrectAnswers(e.target.checked)} />Mostrar la respuesta correcta después de responder</label>
         <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={showExplanations} onChange={e => setShowExplanations(e.target.checked)} />Habilitar «Ver explicación»</label>
         <p className="text-xs leading-5 text-slate-600">Para una competencia con preguntas reutilizables, desactiva ambas opciones. Los aciertos y los puntos seguirán visibles; las soluciones ocultas no se enviarán al navegador.</p>
-        {(editingId || eventId) && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
+        {editingId && <button disabled={loading} onClick={saveSettings} className="min-h-12 w-full rounded-xl bg-blue-700 px-4 font-bold text-white disabled:opacity-50">Guardar configuración</button>}
       </section>
-      {editingId && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
+      {editingId && selectedEvent?.status !== 'DRAFT' && <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="text-xl font-black">Registro y resultados</h2>
         {reportLoading && <p className="mt-3 text-sm text-slate-600">Cargando resultados…</p>}
         {report && <>
@@ -1100,7 +1105,7 @@ export function MathEventOrganizer() {
               ['Aciertos', report.totals.correct], ['Preguntas del banco', report.totals.questionCount],
             ].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-blue-50 p-3"><strong className="block text-xl text-blue-800">{value}</strong>{label}</div>)}
           </div>
-          <h3 className="mt-6 font-black">Ranking final</h3>
+          <h3 className="mt-6 font-black">{selectedEvent?.status === 'DRAFT' ? 'Ranking (aún sin publicar)' : 'Ranking del evento'}</h3>
           <select className="mt-2 min-h-11 w-full rounded-xl border px-3" aria-label="Filtrar ranking" value={reportScope} onChange={e => setReportScope(e.target.value)}>
             <option value="general">General</option>
             {[...new Set<number>(report.ranking.map((row: any) => row.grade))].sort((a, b) => a - b).map(grade => <option key={grade} value={`grade:${grade}`}>{grade}.º grado</option>)}
@@ -1165,20 +1170,24 @@ export function MathEventOrganizer() {
           duelos puntuables por día.
         </p>
         <button
-          disabled={loading || !!eventId || !title || !start || !end}
+          disabled={loading || !title || !start || !end}
           onClick={create}
           className="min-h-12 w-full rounded-xl bg-blue-700 font-bold text-white disabled:opacity-50"
         >
           Crear borrador
         </button>
       </div>
-      {eventId && (
+      </>}
+      {selectedEvent?.status === 'DRAFT' && (
         <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-          <h2 className="font-black">Bancos institucionales de Matemáticas</h2>
+          <h2 className="text-xl font-black">Completar borrador: {selectedEvent.title}</h2>
+          <p className="mt-1 text-sm text-slate-600">{reportLoading ? 'Consultando preguntas…' : `${report?.totals.questionCount ?? 0} preguntas copiadas al evento`}</p>
+          <h3 className="mt-5 font-black">Bancos institucionales de Matemáticas</h3>
           <p className="mt-1 text-sm text-slate-600">
             Se copiarán al evento para que sus preguntas vivan
             independientemente de las aulas.
           </p>
+          {banks.length === 0 && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">No encontramos bancos de Matemáticas publicados y activos para los grados 6.º a 11.º en este colegio. Publícalos en el banco docente para poder copiarlos aquí.</p>}
           <div className="mt-3 max-h-72 space-y-2 overflow-auto">
             {banks.map((b) => (
               <label
@@ -1213,15 +1222,16 @@ export function MathEventOrganizer() {
             Copiar preguntas seleccionadas
           </button>
           <button
-            disabled={loading}
+            disabled={loading || (report?.totals.questionCount ?? 0) < 7 || new Date(selectedEvent.endsAt).getTime() <= Date.now()}
             onClick={publish}
             className="mt-2 min-h-12 w-full rounded-xl bg-emerald-700 font-bold text-white"
           >
             Publicar evento
           </button>
+          {(report?.totals.questionCount ?? 0) < 7 && <p className="mt-2 text-xs text-slate-600">Para publicar se necesitan al menos 7 preguntas válidas. Este borrador tiene {report?.totals.questionCount ?? 0}.</p>}
+          {new Date(selectedEvent.endsAt).getTime() <= Date.now() && <p className="mt-2 text-xs text-amber-800">Este borrador ya venció; se necesita un evento con fecha de cierre futura.</p>}
         </section>
       )}
-      </>}
       {message && (
         <p className="mt-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
           {message}
