@@ -12,7 +12,7 @@ Se traslada a main el parche de dependencias `68fca171`, ya integrado en staging
 - XLSX pasa de 0.18.5 a la distribución vendorizada 0.20.3 que ya usaba staging. SHA-256 del archivo en ambas ramas: `8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8`.
 - BrowserRouter usa `useTransitions={false}`, nombre vigente en la versión actualizada, preservando la política de navegación inmediata del proyecto.
 - Se fija Node 22 en `.nvmrc` de raíz, API y web. El build remoto anterior usó Node 18 pese a los requisitos de Vite. La raíz es relevante porque Railway construye el monorepo desde allí; no bastaba el archivo interno de web.
-- El build web sustituye `npm install` por `npm ci --no-audit --no-fund` seguido de `npm --workspace apps/web run build`. Así instala el lockfile verificado y no recalcula versiones en cada publicación. La configuración de Node y el build reproducible se aplican también a staging.
+- El build web ejecuta `npm --workspace apps/web run build` sin volver a instalar paquetes. Nixpacks ya ejecuta `npm ci` en su fase de instalación (comprobado en los logs), por lo que se usa el lockfile y no se recalculan versiones con `npm install` durante el build. La configuración de Node y el build reproducible se aplican también a staging.
 
 No se ejecuta `npm audit fix --force`, no se rebajan versiones para silenciar avisos y no se retiran pruebas fallidas.
 
@@ -27,6 +27,8 @@ Medición con `npm audit --json --package-lock-only --omit=dev --ignore-scripts`
 | staging existente | 2 | 2 | 0 | 0 | 4 |
 
 La auditoría completa previa incluyendo desarrollo reportó 93 paquetes (5 bajos, 23 moderados, 61 altos y 4 críticos); no se usa ese total como si fuera exposición de ejecución. Un aviso tampoco demuestra por sí solo que el caso vulnerable sea alcanzable en Edusyn.
+
+La medición completa posterior queda en 37 paquetes: 2 bajos, 29 moderados, 6 altos y cero críticos. Los seis altos están en la cadena de desarrollo de Tailwind (braces, chokidar, fast-glob, micromatch, picomatch y tailwindcss). La revisión de herramientas de desarrollo sigue abierta; el resultado sin altos/críticos se limita a `--omit=dev`.
 
 Pendientes de ejecución: ExcelJS/uuid (moderados) y react-quill-new/Quill (bajos). npm propone cambios de versión mayor o retrocesos para estas cadenas; requieren revisión de uso, compatibilidad y pruebas propias. No se atribuye cierre global de seguridad ni cero avisos.
 
@@ -49,3 +51,9 @@ Fuentes primarias consultadas: [aviso jsPDF](https://github.com/parallax/jsPDF/s
 4. Siguiente lote: bancos de preguntas y sus diez fallos previos; después aislamiento HTTP de rutas nuevas y promoción selectiva del blindaje restante. No hace falta igualar todas las ramas para avanzar.
 
 Los avisos residuales de bibliotecas y la deuda visual de Arena quedan identificados; no se mezclan con notas, RLS ni los cambios locales de CREA.
+
+## Incidencias detectadas al verificar staging
+
+Los autodeploys `a0c890f0` (API) y `8a9aa792` (web), y el reintento de API `acaff7c5`, dejaron metadatos sin configFile y con Railpack sin comandos; el único log visible fue el arranque del builder. No se atribuye ese fallo a una compilación que no consta en los logs. La configuración del entorno conserva las rutas de archivos, y los intentos de edición por CLI respondieron «No changes to apply». El mecanismo de autodeploy queda pendiente de diagnóstico; la página general de Railway no mostraba incidencia abierta.
+
+Las subidas directas del mismo worktree recuperaron `/apps/api/railway.json` y `/apps/web/railway.json` con Nixpacks. API `3847c8a1` terminó en SUCCESS. El primer web directo `69eee579` llegó a ejecutar los comandos y falló por `EBUSY`: la segunda ejecución de `npm ci` intentaba borrar `/app/node_modules/.cache`, montado por Nixpacks. Ese segundo `npm ci` lo introducía este lote y se retira. Se conserva el `npm ci` inicial de Nixpacks y el build ejecuta solo el workspace web; verificar el siguiente despliegue antes de declarar publicado el lote.
