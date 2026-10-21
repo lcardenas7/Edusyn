@@ -23,4 +23,10 @@ Las 27 pruebas existentes de `question-bank.service.spec.ts` pasan después del 
 
 Verificación completa posterior: **77 suites / 1.453 pruebas API aprobadas, cero fallos**, con reporte `coverage/bank-reconciliation-api.json`; tipos API y web aprobados. La primera ejecución completa también aprobó los casos, pero falló al guardar el JSON porque faltaba la carpeta; se creó el directorio y la repetición terminó correctamente con `success: true`. No se atribuye al código ese fallo de escritura del reporte.
 
-La preparación no implica despliegue. El lote permanece separado hasta comprobar tipos/suite general y la publicación previa de las dependencias. Las rutas nuevas de banco y Duelos siguen formando parte del inventario de aislamiento HTTP pendiente; estas pruebas de servicio no acreditan cierre multi-tenant global ni RLS.
+Las rutas nuevas de banco y Duelos siguen formando parte del inventario de aislamiento HTTP pendiente; estas pruebas de servicio no acreditan cierre multi-tenant global ni RLS.
+
+## Publicación
+
+Enviado a main en `db4b2b07`, con commits separados para dependencias (`8b4d6b52`), bancos (`8c887ff2`) y corrección final del build/documentación (`db4b2b07`). Tipos API/web revalidados; build Nest aprobado. No se fusionó staging completo ni se arrastraron sus migraciones. Ver bitácora para el resultado terminal de Railway y la salud pública; el push por sí solo no demuestra despliegue.
+
+Resultado confirmado: API `3cf2cadc` y web `1596d22e` SUCCESS con `meta.commitHash` `db4b2b07`; API health HTTP 200/ok, web aula HTTP 200 y bundle nuevo comprobado. Ninguna colección institucional se importó para validar el despliegue. La comprobación funcional autenticada por docente y los casos HTTP entre instituciones quedan como seguimiento explícito.
