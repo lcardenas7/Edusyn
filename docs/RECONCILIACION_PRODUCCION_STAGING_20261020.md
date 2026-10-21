@@ -1,5 +1,7 @@
 # Reconciliación de producción, staging y blindaje
 
+Actualización 2026-10-21: preparado blindaje HTTP de bancos (siete rutas main, ocho staging conservando copia exclusiva), API main 78 suites/1.530 pruebas y focal staging 116 pruebas aprobadas. Enviado a staging `5853229a`; **todavía no desplegado**, Railway confirma builds pausados. Main permanece en `a403b4fe` y no recibe el nuevo candidato hasta verificar staging. Véase `AUDITORIA_AISLAMIENTO_BANCOS_20261021.md`. Inventario actual de staging candidato: 1.204 rutas/405 directas/44 incumplimientos; los números de la entrega anterior más abajo son históricos.
+
 ## Estado posterior verificado — 2026-10-20
 
 Producción ya publica `db4b2b07`: API `3cf2cadc` y web `1596d22e` SUCCESS, con hash confirmado por Railway. Node 22.14.0 en ambos builds; API health HTTP 200/ok y aula HTTP 200 con el bundle nuevo. Dependencias de ejecución pasan de 36 a 4 paquetes señalados, sin altos/críticos con `--omit=dev`; los avisos residuales y de desarrollo siguen abiertos. Véase `BLINDAJE_DEPENDENCIAS_20261020.md`.

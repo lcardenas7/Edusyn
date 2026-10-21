@@ -6,6 +6,8 @@ Siete rutas de producción con resolución institucional directa y guardas HTTP 
 
 Candidato main: 78 suites/1.530 pruebas API, tipos API/web y build Nest aprobados. Staging: 116 pruebas focales aprobadas. El inventario pasa a **1.204 rutas, 405 directas, 689 pendientes, 66 no institucionales y 44 incumplimientos estructurales restantes**, sin excepciones nuevas. Publicación/servicio efectivo se registran después de verificar Railway. Duelos y Eventos continúan como siguiente frente; este lote no cierra Classroom, concurrencia PostgreSQL, RLS ni el blindaje global.
 
+**Publicación pendiente:** enviado a staging `5853229a`, pero Railway rechazó la subida directa con «Deploys have been paused temporarily»; la página oficial confirma builds pausados. API staging sigue sirviendo `a1625ed2` (`bfb9118f` SUCCESS). El candidato de producción `65c1b794` no se envió a main; producción anterior permanece saludable. Retomar despliegue/verificación de staging antes de promover a main. Pendiente de código: 11 rutas de Duelos y 33 de Eventos; no son fugas confirmadas por este conteo.
+
 ## Corte de publicación y continuidad — 2026-10-20
 
 Documentos, Staff Leave y Teacher Schedule ya están publicados en producción; Documentos y la sincronización de Eventos también están publicados en staging. Las referencias posteriores a «sin publicar» describen cortes históricos. El detalle verificable está en `RECONCILIACION_PRODUCCION_STAGING_20261020.md` y la bitácora.
