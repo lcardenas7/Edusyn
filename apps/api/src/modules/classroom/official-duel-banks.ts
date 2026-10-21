@@ -47750,5 +47750,5656 @@ export const OFFICIAL_DUEL_BANKS: OfficialBank[] = [
         "source": null
       }
     ]
+  },
+  {
+    "catalogId": "edusyn-arte-cultura-grade-8-v1",
+    "title": "Arte y cultura · 8.º",
+    "grade": 8,
+    "subjectArea": "Duelos",
+    "category": "Arte y cultura",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://ich.unesco.org/es/convenci%C3%B3n",
+      "https://patrimonio.mincultura.gov.co/Pages/Patrimonio-Cultural-Inmaterial.aspx",
+      "https://www.mineducacion.gov.co/1780/articles-411706_recurso_4.pdf"
+    ],
+    "questions": [
+      {
+        "id": "ART8-001",
+        "number": 1,
+        "topic": "Elementos visuales",
+        "concept": "linea_registra_recorrido_visual",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento visual describe la trayectoria que deja un lápiz al desplazarse?",
+        "options": [
+          "Línea",
+          "Textura",
+          "Volumen",
+          "Tono"
+        ],
+        "correctAnswer": "Línea",
+        "explanation": "La línea puede registrar un recorrido y orientar la mirada dentro de una imagen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-002",
+        "number": 2,
+        "topic": "Patrimonio cultural",
+        "concept": "patrimonio_inmaterial_se_transmite_en_practicas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué caracteriza principalmente a un bien cultural inmaterial?",
+        "options": [
+          "Está hecho siempre de piedra",
+          "Se transmite mediante prácticas y saberes",
+          "Permanece guardado en una vitrina",
+          "Solo existe en documentos escritos"
+        ],
+        "correctAnswer": "Se transmite mediante prácticas y saberes",
+        "explanation": "Las tradiciones, celebraciones y conocimientos pueden transmitirse entre generaciones sin ser objetos físicos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-003",
+        "number": 3,
+        "topic": "Música",
+        "concept": "tempo_indica_rapidez_del_pulso",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indica principalmente el tempo de una pieza musical?",
+        "options": [
+          "La altura de cada nota",
+          "El material del instrumento",
+          "La rapidez de los pulsos",
+          "El número de intérpretes"
+        ],
+        "correctAnswer": "La rapidez de los pulsos",
+        "explanation": "El tempo señala qué tan rápido o lento transcurre el pulso musical.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-004",
+        "number": 4,
+        "topic": "Teatro",
+        "concept": "dialogo_teatral_muestra_interaccion_de_personajes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple principalmente el diálogo en una obra teatral?",
+        "options": [
+          "Medir el tamaño del escenario",
+          "Definir el precio de la entrada",
+          "Registrar el orden de las escenas",
+          "Mostrar palabras e interacciones de los personajes"
+        ],
+        "correctAnswer": "Mostrar palabras e interacciones de los personajes",
+        "explanation": "El diálogo permite que los personajes comuniquen ideas, conflictos y relaciones durante la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-005",
+        "number": 5,
+        "topic": "Fotografía",
+        "concept": "encuadre_selecciona_elementos_de_fotografia",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué decisión determina qué elementos aparecen dentro de una fotografía?",
+        "options": [
+          "Encuadre",
+          "Pigmento",
+          "Coreografía",
+          "Fundición"
+        ],
+        "correctAnswer": "Encuadre",
+        "explanation": "El encuadre selecciona qué parte de la escena incluye la imagen y desde qué límites se observa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-006",
+        "number": 6,
+        "topic": "Arte colombiano",
+        "concept": "currulao_se_asocia_con_region_pacifica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿A qué región colombiana se asocia principalmente el ritmo del currulao?",
+        "options": [
+          "Andina",
+          "Pacífica",
+          "Orinoquía",
+          "Insular"
+        ],
+        "correctAnswer": "Pacífica",
+        "explanation": "El currulao es una expresión musical y dancística vinculada especialmente con comunidades del Pacífico colombiano.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-007",
+        "number": 7,
+        "topic": "Cine",
+        "concept": "guion_organiza_escenas_y_dialogos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cómo se llama el texto que organiza las escenas y acciones de una película antes de filmarla?",
+        "options": [
+          "Catálogo",
+          "Partitura",
+          "Guion",
+          "Inventario"
+        ],
+        "correctAnswer": "Guion",
+        "explanation": "El guion describe diálogos, acciones y escenas que orientan la producción audiovisual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-008",
+        "number": 8,
+        "topic": "Verdadero o falso · Color",
+        "concept": "mezcla_aditiva_rojo_y_verde_produce_amarillo",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "En una pantalla, la mezcla de luz roja y verde puede producir luz amarilla.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En la mezcla aditiva de luz, rojo y verde combinados producen amarillo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-009",
+        "number": 9,
+        "topic": "Composición visual",
+        "concept": "escala_relativa_crea_jerarquia_visual",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una ilustración coloca un objeto pequeño junto a otro muy grande. ¿Qué relación puede destacar esa diferencia?",
+        "options": [
+          "El peso real de ambos",
+          "Su antigüedad exacta",
+          "El sonido que producen",
+          "Escala y jerarquía visual"
+        ],
+        "correctAnswer": "Escala y jerarquía visual",
+        "explanation": "El tamaño relativo puede hacer que un elemento parezca más importante o establecer una comparación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-010",
+        "number": 10,
+        "topic": "Patrimonio colombiano",
+        "concept": "murallas_cartagena_documentan_historia_y_arquitectura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué las murallas de Cartagena tienen valor patrimonial?",
+        "options": [
+          "Conservan evidencias de la historia y la arquitectura",
+          "Fueron construidas para celebrar una danza",
+          "Son el único ejemplo de vivienda indígena",
+          "Se usan como instrumentos musicales"
+        ],
+        "correctAnswer": "Conservan evidencias de la historia y la arquitectura",
+        "explanation": "Las fortificaciones muestran técnicas y procesos históricos vinculados con la ciudad y su defensa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-011",
+        "number": 11,
+        "topic": "Danza",
+        "concept": "coreografia_organiza_formaciones_y_desplazamientos",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos grupos ejecutan los mismos pasos, pero uno cambia las formaciones y las entradas. ¿Qué aspecto varía principalmente?",
+        "options": [
+          "La afinación",
+          "La composición coreográfica",
+          "El material escénico",
+          "La iluminación natural"
+        ],
+        "correctAnswer": "La composición coreográfica",
+        "explanation": "La coreografía organiza movimientos, desplazamientos y relaciones espaciales entre bailarines.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-012",
+        "number": 12,
+        "topic": "Arte y contexto",
+        "concept": "contexto_social_apoya_interpretacion_de_obra",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una obra creada durante una protesta muestra pancartas y figuras reunidas. ¿Qué dato ayudaría más a interpretar su intención?",
+        "options": [
+          "El tamaño del marco",
+          "El precio actual de los materiales",
+          "El contexto social de creación",
+          "La distancia entre la obra y la puerta"
+        ],
+        "correctAnswer": "El contexto social de creación",
+        "explanation": "Conocer el momento y las circunstancias de creación ayuda a relacionar las imágenes con el mensaje de la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-013",
+        "number": 13,
+        "topic": "Verdadero o falso · Música",
+        "concept": "interpretacion_modifica_expresividad_musical",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Dos interpretaciones de una misma canción pueden transmitir sensaciones diferentes por cambios de ritmo, intensidad o timbre.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las decisiones de interpretación modifican cómo se percibe una pieza, aunque la melodía sea reconocible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-014",
+        "number": 14,
+        "topic": "Cine y montaje",
+        "concept": "montaje_paralelo_relaciona_acciones_simultaneas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una película alterna imágenes de dos lugares que ocurren al mismo tiempo. ¿Qué recurso usa principalmente?",
+        "options": [
+          "Escultura",
+          "Perspectiva",
+          "Modelado",
+          "Montaje paralelo"
+        ],
+        "correctAnswer": "Montaje paralelo",
+        "explanation": "El montaje paralelo alterna acciones simultáneas para relacionarlas o crear expectativa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-015",
+        "number": 15,
+        "topic": "Lectura de imágenes",
+        "concept": "tamano_y_contraste_establecen_jerarquia_de_lectura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un afiche, el texto principal tiene mayor tamaño y contraste que los demás. ¿Qué busca establecer?",
+        "options": [
+          "Jerarquía de lectura",
+          "Profundidad física",
+          "Textura táctil",
+          "Simetría exacta"
+        ],
+        "correctAnswer": "Jerarquía de lectura",
+        "explanation": "El tamaño y el contraste ayudan a indicar qué información debe captar primero el público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-016",
+        "number": 16,
+        "topic": "Patrimonio vivo",
+        "concept": "tradicion_se_conserva_al_transmitirse_y_transformarse",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad enseña a jóvenes una técnica tradicional de tejido y adapta algunos diseños. ¿Qué ocurre?",
+        "options": [
+          "La tradición desaparece necesariamente",
+          "El saber se transmite y transforma",
+          "El tejido deja de ser una práctica cultural",
+          "La técnica se vuelve patrimonio material solamente"
+        ],
+        "correctAnswer": "El saber se transmite y transforma",
+        "explanation": "Las tradiciones pueden conservarse mientras las comunidades las reinterpretan y las transmiten.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-017",
+        "number": 17,
+        "topic": "Arte digital",
+        "concept": "recontextualizacion_visual_comunica_critica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un artista modifica una fotografía para cuestionar cómo se representa la belleza en redes sociales. ¿Qué hace principalmente?",
+        "options": [
+          "Copia sin intención la imagen original",
+          "Elimina cualquier interpretación posible",
+          "Recontextualiza una imagen para comunicar una crítica",
+          "Convierte la fotografía en una grabación sonora"
+        ],
+        "correctAnswer": "Recontextualiza una imagen para comunicar una crítica",
+        "explanation": "Cambiar el contexto y el tratamiento de una imagen puede producir una lectura crítica distinta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-018",
+        "number": 18,
+        "topic": "Verdadero o falso · Teatro",
+        "concept": "escenografia_sugiere_lugar_y_epoca",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La escenografía puede sugerir dónde y cuándo ocurre una escena sin explicarlo en un diálogo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El espacio, los objetos y el diseño escénico aportan información sobre el lugar y la época.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-019",
+        "number": 19,
+        "topic": "Expresión artística",
+        "concept": "espacio_vacio_participa_en_composicion_escultorica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escultura deja huecos amplios entre sus partes. ¿Qué aspecto también forma parte de su composición?",
+        "options": [
+          "La duración de una canción",
+          "El orden de los capítulos",
+          "La velocidad de proyección",
+          "El espacio vacío"
+        ],
+        "correctAnswer": "El espacio vacío",
+        "explanation": "En escultura, los vacíos y las relaciones entre formas contribuyen a la composición tanto como la materia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-020",
+        "number": 20,
+        "topic": "Diseño gráfico",
+        "concept": "contraste_y_brevedad_mejoran_lectura_de_aviso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un cartel de emergencia debe leerse rápido desde cierta distancia. ¿Qué decisión favorece más esa lectura?",
+        "options": [
+          "Contraste claro y texto breve",
+          "Varias tipografías decorativas",
+          "Párrafos largos en letra pequeña",
+          "Colores similares para texto y fondo"
+        ],
+        "correctAnswer": "Contraste claro y texto breve",
+        "explanation": "Un contraste suficiente y pocas palabras facilitan localizar y comprender el mensaje con rapidez.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-021",
+        "number": 21,
+        "topic": "Interpretación visual",
+        "concept": "sombras_deben_coincidir_con_fuente_de_luz",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un mural, las figuras aparecen inclinadas hacia una zona iluminada, pero sus sombras apuntan al lado contrario. ¿Qué conviene revisar primero?",
+        "options": [
+          "El título de la obra",
+          "La coherencia entre luz y sombras",
+          "El precio de la pintura",
+          "La cantidad de espectadores"
+        ],
+        "correctAnswer": "La coherencia entre luz y sombras",
+        "explanation": "La dirección de las sombras debe guardar relación con la fuente de luz representada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-022",
+        "number": 22,
+        "topic": "Conservación del patrimonio",
+        "concept": "controlar_luz_protege_piezas_patrimoniales",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una pieza antigua se expone junto a una ventana donde recibe sol directo. ¿Qué medida reduce mejor el riesgo de deterioro?",
+        "options": [
+          "Cambiar su etiqueta cada día",
+          "Aumentar el volumen de la sala",
+          "Controlar la luz y ubicarla lejos del sol directo",
+          "Limpiar la superficie con cualquier producto"
+        ],
+        "correctAnswer": "Controlar la luz y ubicarla lejos del sol directo",
+        "explanation": "La luz intensa puede deteriorar materiales y pigmentos; la conservación requiere controlar la exposición.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-023",
+        "number": 23,
+        "topic": "Verdadero o falso · Medios digitales",
+        "concept": "omitir_credito_no_elimina_derechos_de_autor",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si una imagen artística se comparte sin indicar su autor, deja de estar protegida por derechos de autor.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La autoría y los derechos no desaparecen por omitir el crédito; se deben respetar las condiciones de uso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-024",
+        "number": 24,
+        "topic": "Diseño sonoro",
+        "concept": "mezcla_sonora_prioriza_efectos_relevantes",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un cortometraje, el público no entiende que una puerta se abrió porque el sonido quedó cubierto por la música. ¿Qué ajuste ayudaría más?",
+        "options": [
+          "Aumentar el brillo de la imagen",
+          "Cambiar el vestuario del personaje",
+          "Añadir más texto al título",
+          "Equilibrar niveles o ubicar el efecto en otro momento"
+        ],
+        "correctAnswer": "Equilibrar niveles o ubicar el efecto en otro momento",
+        "explanation": "Ajustar la mezcla y el momento del efecto permite que el sonido importante se perciba sin competir con la música.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-025",
+        "number": 25,
+        "topic": "Verdadero o falso · Interpretación artística",
+        "concept": "interpretacion_plural_debe_apoyarse_en_evidencia",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si una obra admite interpretaciones distintas, eso significa que cualquier explicación es igualmente válida aunque contradiga lo que muestra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Puede haber lecturas diversas, pero conviene sustentarlas en elementos de la obra y su contexto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-026",
+        "number": 26,
+        "topic": "Técnicas artísticas",
+        "concept": "collage_ensambla_fragmentos_sobre_superficie",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué técnica consiste en ensamblar fragmentos de materiales distintos sobre una superficie?",
+        "options": [
+          "Collage",
+          "Acuarela",
+          "Grabado",
+          "Modelado"
+        ],
+        "correctAnswer": "Collage",
+        "explanation": "El collage construye una composición al reunir y pegar recortes u otros materiales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-027",
+        "number": 27,
+        "topic": "Patrimonio arquitectónico",
+        "concept": "plano_documenta_distribucion_arquitectonica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumple un plano en la documentación de un edificio histórico?",
+        "options": [
+          "Reemplazar su historia oral",
+          "Representar su distribución y dimensiones",
+          "Determinar quién puede visitarlo",
+          "Medir la antigüedad de sus materiales"
+        ],
+        "correctAnswer": "Representar su distribución y dimensiones",
+        "explanation": "Un plano registra la organización espacial y algunas medidas del edificio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-028",
+        "number": 28,
+        "topic": "Artes visuales",
+        "concept": "mosaico_compone_imagen_con_piezas_pequenas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué técnica forma una imagen mediante pequeñas piezas de vidrio, piedra u otros materiales?",
+        "options": [
+          "Fresco",
+          "Serigrafía",
+          "Mosaico",
+          "Caricatura"
+        ],
+        "correctAnswer": "Mosaico",
+        "explanation": "El mosaico crea imágenes al disponer piezas pequeñas sobre una superficie.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-029",
+        "number": 29,
+        "topic": "Música",
+        "concept": "melodia_es_sucesion_organizada_de_alturas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica distingue principalmente una melodía?",
+        "options": [
+          "La cantidad de butacas",
+          "El material de una partitura",
+          "El tamaño del instrumento",
+          "Una sucesión reconocible de alturas musicales"
+        ],
+        "correctAnswer": "Una sucesión reconocible de alturas musicales",
+        "explanation": "La melodía organiza notas en una secuencia que puede reconocerse y recordarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-030",
+        "number": 30,
+        "topic": "Lenguaje audiovisual",
+        "concept": "plano_general_ubica_personaje_en_entorno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué plano suele mostrar a una persona de cuerpo entero y parte de su entorno?",
+        "options": [
+          "Plano general",
+          "Primerísimo primer plano",
+          "Plano detalle",
+          "Plano cenital extremo"
+        ],
+        "correctAnswer": "Plano general",
+        "explanation": "El plano general incluye más espacio alrededor del personaje y permite ubicarlo en el entorno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-031",
+        "number": 31,
+        "topic": "Arte y cultura",
+        "concept": "museo_conserva_e_interpreta_colecciones",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué institución suele conservar y exhibir colecciones de valor artístico o histórico?",
+        "options": [
+          "Taller mecánico",
+          "Museo",
+          "Estación de servicio",
+          "Centro de distribución"
+        ],
+        "correctAnswer": "Museo",
+        "explanation": "Los museos conservan, investigan e interpretan colecciones para compartirlas con el público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-032",
+        "number": 32,
+        "topic": "Artes escénicas",
+        "concept": "marca_escenica_orienta_desplazamiento_de_interpretes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento indica a los intérpretes por dónde deben desplazarse durante una escena?",
+        "options": [
+          "El afiche",
+          "El inventario",
+          "La marca escénica",
+          "La crítica"
+        ],
+        "correctAnswer": "La marca escénica",
+        "explanation": "Las marcas escénicas orientan posiciones y desplazamientos de quienes actúan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-033",
+        "number": 33,
+        "topic": "Verdadero o falso · Arte público",
+        "concept": "arte_publico_modifica_percepcion_de_espacio_compartido",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una obra de arte público puede cambiar la manera en que las personas perciben un espacio compartido.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Una intervención puede atraer la atención hacia lugares, memorias o usos del espacio que antes pasaban inadvertidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-034",
+        "number": 34,
+        "topic": "Fotografía documental",
+        "concept": "encuadre_parcial_modifica_percepcion_de_escala",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una foto de una marcha muestra solo una esquina con pocas personas, aunque la concentración era extensa. ¿Qué efecto puede producir ese encuadre?",
+        "options": [
+          "Garantizar que la escena sea neutral",
+          "Mostrar toda la escala del evento",
+          "Eliminar la perspectiva del fotógrafo",
+          "Reducir la impresión sobre el tamaño de la marcha"
+        ],
+        "correctAnswer": "Reducir la impresión sobre el tamaño de la marcha",
+        "explanation": "El encuadre selecciona una parte de la escena y puede cambiar cómo se interpreta su escala.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-035",
+        "number": 35,
+        "topic": "Restauración",
+        "concept": "documentacion_de_restauracion_registra_intervenciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una restauradora documenta las intervenciones realizadas sobre una pintura?",
+        "options": [
+          "Para dejar registro de los materiales y cambios",
+          "Para demostrar que la obra nunca tuvo daños",
+          "Para reemplazar la firma del artista",
+          "Para garantizar que el color no volverá a cambiar"
+        ],
+        "correctAnswer": "Para dejar registro de los materiales y cambios",
+        "explanation": "El registro permite conocer qué se hizo y apoya futuras decisiones de conservación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-036",
+        "number": 36,
+        "topic": "Diseño visual",
+        "concept": "jerarquia_visual_facilita_encontrar_titulo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una página contiene muchos elementos del mismo tamaño y color. ¿Qué cambio facilitaría encontrar primero el título?",
+        "options": [
+          "Repetir todos los elementos",
+          "Darle mayor jerarquía visual",
+          "Quitar los márgenes",
+          "Usar el mismo tamaño en todo"
+        ],
+        "correctAnswer": "Darle mayor jerarquía visual",
+        "explanation": "Diferenciar tamaño, ubicación o contraste del título ayuda a establecer un orden de lectura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-037",
+        "number": 37,
+        "topic": "Música y escena",
+        "concept": "ritmo_musical_acompana_accion_dramatica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una escena, la música cambia de ritmo cada vez que el personaje toma una decisión. ¿Qué relación se construye?",
+        "options": [
+          "La música mide el vestuario",
+          "El sonido sustituye todo movimiento",
+          "El ritmo acompaña la acción dramática",
+          "La escena pierde toda estructura"
+        ],
+        "correctAnswer": "El ritmo acompaña la acción dramática",
+        "explanation": "Los cambios musicales pueden reforzar el ritmo de la acción y orientar la percepción del público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-038",
+        "number": 38,
+        "topic": "Verdadero o falso · Interpretación del color",
+        "concept": "significado_del_color_depende_de_contexto",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un color tiene exactamente el mismo significado en todas las culturas y situaciones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La percepción y el significado de los colores dependen del contexto, las convenciones y la experiencia de quien observa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-039",
+        "number": 39,
+        "topic": "Patrimonio tecnológico",
+        "concept": "comparar_soluciones_materiales_entre_epocas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una exposición pone herramientas antiguas junto a objetos actuales que cumplen una función similar. ¿Qué comparación propone?",
+        "options": [
+          "Diferencias entre técnicas de actuación",
+          "Contrastes entre ritmos musicales",
+          "Similitudes entre estilos de iluminación",
+          "Cambios en las formas de resolver necesidades"
+        ],
+        "correctAnswer": "Cambios en las formas de resolver necesidades",
+        "explanation": "Relacionar objetos de épocas distintas permite observar cómo cambian las soluciones y los recursos disponibles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-040",
+        "number": 40,
+        "topic": "Publicidad e imagen",
+        "concept": "contraste_figura_fondo_destaca_producto",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un anuncio muestra un producto aislado sobre un fondo oscuro y brillante. ¿Qué recurso dirige la atención hacia él?",
+        "options": [
+          "Contraste figura-fondo",
+          "Rima consonante",
+          "Perspectiva atmosférica",
+          "Ritmo coreográfico"
+        ],
+        "correctAnswer": "Contraste figura-fondo",
+        "explanation": "Separar visualmente la figura de su fondo hace que destaque y atraiga la mirada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-041",
+        "number": 41,
+        "topic": "Teatro",
+        "concept": "gestos_y_voz_matizan_discurso_de_personaje",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un personaje afirma que está tranquilo, pero habla con voz temblorosa y evita mirar a los demás. ¿Qué aporta la actuación?",
+        "options": [
+          "Una descripción del vestuario",
+          "Señales que contradicen o matizan las palabras",
+          "Una medida exacta del escenario",
+          "Un cambio de época histórica"
+        ],
+        "correctAnswer": "Señales que contradicen o matizan las palabras",
+        "explanation": "La voz y los gestos pueden revelar emociones diferentes de las que el personaje declara.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-042",
+        "number": 42,
+        "topic": "Arte y medioambiente",
+        "concept": "material_reutilizado_refuerza_tema_de_obra",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una instalación utiliza envases recuperados para hablar del consumo. ¿Qué relación establece principalmente?",
+        "options": [
+          "La obra debe ser permanente",
+          "El material determina por completo el mensaje",
+          "Los materiales refuerzan el tema de la obra",
+          "El reciclaje elimina la interpretación artística"
+        ],
+        "correctAnswer": "Los materiales refuerzan el tema de la obra",
+        "explanation": "Los materiales elegidos pueden relacionarse con el tema y ampliar lo que la obra comunica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-043",
+        "number": 43,
+        "topic": "Verdadero o falso · Cine",
+        "concept": "orden_de_montaje_modifica_informacion_narrativa",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Cambiar el orden de dos escenas puede modificar la información que el público conoce y su interpretación.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El orden del montaje controla cuándo se revela información y cómo se relacionan los acontecimientos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-044",
+        "number": 44,
+        "topic": "Lectura crítica de imágenes",
+        "concept": "analizar_elementos_excluidos_por_recorte",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una publicación recorta una fotografía para ocultar un objeto que aparece al borde. ¿Qué pregunta ayuda más a evaluar su mensaje?",
+        "options": [
+          "¿Cuántos píxeles tiene el archivo?",
+          "¿Qué marca tomó la foto?",
+          "¿En qué carpeta fue guardada?",
+          "¿Qué información excluyó el recorte?"
+        ],
+        "correctAnswer": "¿Qué información excluyó el recorte?",
+        "explanation": "Preguntar qué quedó fuera permite analizar cómo la selección visual orienta una interpretación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-045",
+        "number": 45,
+        "topic": "Patrimonio y memoria",
+        "concept": "lugar_patrimonial_conserva_memoria_colectiva",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una comunidad puede proteger un antiguo teatro aunque ya no funcione como sala de espectáculos?",
+        "options": [
+          "Puede conservar memoria e identidad colectiva",
+          "Todos los edificios antiguos tienen el mismo uso",
+          "La edad de un lugar impide cualquier cambio",
+          "El inmueble debe convertirse en museo obligatoriamente"
+        ],
+        "correctAnswer": "Puede conservar memoria e identidad colectiva",
+        "explanation": "Un lugar puede tener valor por las historias y vínculos que representa para una comunidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-046",
+        "number": 46,
+        "topic": "Creación audiovisual",
+        "concept": "recursos_audiovisuales_distinguen_recuerdo_de_presente",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un equipo quiere que el público note que una escena recuerda un momento pasado. ¿Qué decisión ayuda sin añadir una explicación extensa?",
+        "options": [
+          "Ocultar todos los sonidos",
+          "Usar señales visuales y sonoras coherentes con el recuerdo",
+          "Mantener idénticos el color y el sonido sin transición",
+          "Cambiar el título de la película"
+        ],
+        "correctAnswer": "Usar señales visuales y sonoras coherentes con el recuerdo",
+        "explanation": "Una transición visual o sonora coherente puede distinguir el recuerdo del presente y orientar al público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-047",
+        "number": 47,
+        "topic": "Accesibilidad cultural",
+        "concept": "recursos_multiformato_amplian_acceso_a_exposicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un museo presenta una exposición con textos pequeños y sin alternativas auditivas. ¿Qué mejora amplía mejor el acceso?",
+        "options": [
+          "Reducir el número de visitantes",
+          "Quitar las descripciones",
+          "Incorporar letra legible y recursos accesibles variados",
+          "Iluminar menos todas las salas"
+        ],
+        "correctAnswer": "Incorporar letra legible y recursos accesibles variados",
+        "explanation": "Combinar textos legibles con opciones como audio, alto contraste o formatos accesibles facilita distintas formas de participación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-048",
+        "number": 48,
+        "topic": "Diseño de afiche",
+        "concept": "afiche_debe_destacar_datos_esenciales",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un afiche para una actividad escolar se ve atractivo, pero no indica hora ni lugar. ¿Qué ajuste es más necesario?",
+        "options": [
+          "Añadir más ilustraciones decorativas",
+          "Aumentar el tamaño del logo solamente",
+          "Cambiar todos los colores",
+          "Hacer visibles los datos esenciales del evento"
+        ],
+        "correctAnswer": "Hacer visibles los datos esenciales del evento",
+        "explanation": "La información práctica debe destacarse para que las personas sepan cuándo y dónde participar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-049",
+        "number": 49,
+        "topic": "Verdadero o falso · Uso de imágenes",
+        "concept": "imagen_encontrada_en_web_no_implica_uso_libre",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Encontrar una imagen en un buscador significa que se puede usar libremente en cualquier proyecto.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Que una imagen sea fácil de encontrar no elimina las condiciones de autoría, licencia o permiso de uso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-050",
+        "number": 50,
+        "topic": "Verdadero o falso · Lectura crítica",
+        "concept": "texto_fuera_de_contexto_puede_distorsionar_fotografia",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una fotografía puede ser auténtica y, aun así, inducir a error si se presenta con un texto que cambia su contexto.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La imagen puede ser real, pero un pie de foto engañoso altera la interpretación de lo que muestra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-051",
+        "number": 51,
+        "topic": "Grabado",
+        "concept": "matriz_de_grabado_transfiere_imagenes",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En el grabado, ¿qué permite una matriz?",
+        "options": [
+          "Transferir una imagen a varias impresiones",
+          "Reproducir una melodía",
+          "Medir el volumen de una escultura",
+          "Organizar el orden de una obra teatral"
+        ],
+        "correctAnswer": "Transferir una imagen a varias impresiones",
+        "explanation": "La matriz contiene el diseño que puede entintarse y transferirse a una o varias superficies.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-052",
+        "number": 52,
+        "topic": "Arquitectura",
+        "concept": "escalera_conecta_niveles_de_edificio",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento de un edificio permite el paso de personas entre niveles?",
+        "options": [
+          "Cornisa",
+          "Escalera",
+          "Vitrina",
+          "Mosaico"
+        ],
+        "correctAnswer": "Escalera",
+        "explanation": "La escalera conecta distintos niveles y forma parte de la circulación del edificio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-053",
+        "number": 53,
+        "topic": "Danza",
+        "concept": "coreografo_organiza_movimientos_de_danza",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nombre recibe la persona que crea o organiza los movimientos de una danza?",
+        "options": [
+          "Curador",
+          "Escenógrafo",
+          "Coreógrafo",
+          "Editor"
+        ],
+        "correctAnswer": "Coreógrafo",
+        "explanation": "El coreógrafo organiza movimientos, secuencias y relaciones espaciales para una danza.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-054",
+        "number": 54,
+        "topic": "Apreciación artística",
+        "concept": "ficha_de_obra_presenta_datos_de_identificacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué información ofrece principalmente una ficha de una obra en una exposición?",
+        "options": [
+          "La contraseña del museo",
+          "La opinión de todos los visitantes",
+          "El precio de cada entrada",
+          "Datos como autoría, título y técnica"
+        ],
+        "correctAnswer": "Datos como autoría, título y técnica",
+        "explanation": "La ficha presenta información básica que ayuda a identificar y contextualizar una obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-055",
+        "number": 55,
+        "topic": "Patrimonio cultural",
+        "concept": "transmision_respetuosa_conserva_tradicion_oral",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué práctica ayuda a conservar una tradición oral?",
+        "options": [
+          "Registrar relatos con permiso y transmitirlos",
+          "Cambiar sus relatos por anuncios",
+          "Impedir que nuevas generaciones los aprendan",
+          "Guardar en secreto todas sus versiones"
+        ],
+        "correctAnswer": "Registrar relatos con permiso y transmitirlos",
+        "explanation": "La transmisión y el registro respetuoso ayudan a que los relatos sigan compartiéndose.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-056",
+        "number": 56,
+        "topic": "Color y luz",
+        "concept": "mezcla_aditiva_rojo_y_azul_produce_magenta",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué sucede al superponer luz roja y azul en una pantalla?",
+        "options": [
+          "Se obtiene luz verde",
+          "Se produce luz magenta",
+          "La luz se convierte en sombra",
+          "Se obtiene luz amarilla"
+        ],
+        "correctAnswer": "Se produce luz magenta",
+        "explanation": "En la mezcla aditiva de luz, rojo y azul producen magenta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-057",
+        "number": 57,
+        "topic": "Cine",
+        "concept": "editor_selecciona_y_ordena_tomas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tarea realiza principalmente quien edita una película?",
+        "options": [
+          "Diseña los planos de un edificio",
+          "Compone todos los diálogos",
+          "Selecciona y ordena tomas",
+          "Pinta cada fotograma a mano"
+        ],
+        "correctAnswer": "Selecciona y ordena tomas",
+        "explanation": "La edición selecciona y organiza las tomas para construir la continuidad y el ritmo de la película.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-058",
+        "number": 58,
+        "topic": "Verdadero o falso · Expresión visual",
+        "concept": "textura_visual_representa_cualidad_tactil",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La textura visual puede hacer que una superficie parezca áspera aunque se vea en una pantalla lisa.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Líneas, sombras y patrones pueden representar visualmente una textura sin que la superficie se pueda tocar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-059",
+        "number": 59,
+        "topic": "Arquitectura",
+        "concept": "condiciones_climaticas_influyen_en_diseno_arquitectonico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un edificio tiene ventanas pequeñas y muros gruesos en una zona cálida y soleada. ¿Qué factor pudo influir en ese diseño?",
+        "options": [
+          "La letra de una canción",
+          "El género de una pintura",
+          "El orden de una coreografía",
+          "El clima y las condiciones del lugar"
+        ],
+        "correctAnswer": "El clima y las condiciones del lugar",
+        "explanation": "El clima y el entorno pueden orientar decisiones de forma, materiales y ventilación en la arquitectura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-060",
+        "number": 60,
+        "topic": "Arte colaborativo",
+        "concept": "pauta_compartida_coordina_obra_colectiva",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una obra colectiva, cada participante pinta una sección con colores acordados por el grupo. ¿Qué hace posible la unidad del conjunto?",
+        "options": [
+          "Una pauta visual compartida",
+          "Que una sola persona firme todas las secciones",
+          "Eliminar las diferencias entre participantes",
+          "Pintar todas las partes en lugares distintos"
+        ],
+        "correctAnswer": "Una pauta visual compartida",
+        "explanation": "Acordar criterios visuales permite coordinar aportes individuales dentro de una composición colectiva.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-061",
+        "number": 61,
+        "topic": "Música y cultura",
+        "concept": "funcion_de_tambor_se_reconoce_por_papel_musical",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad usa tambores distintos en una celebración. ¿Qué comparación permite reconocer mejor sus funciones?",
+        "options": [
+          "El color de sus estuches",
+          "Su ritmo y papel dentro del conjunto",
+          "El precio en una tienda",
+          "El orden alfabético de sus nombres"
+        ],
+        "correctAnswer": "Su ritmo y papel dentro del conjunto",
+        "explanation": "El patrón rítmico y la función musical permiten distinguir cómo participa cada tambor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-062",
+        "number": 62,
+        "topic": "Diseño editorial",
+        "concept": "secuencia_editorial_crea_ritmo_de_lectura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un libro alterna páginas con imágenes grandes y páginas con texto breve. ¿Qué puede aportar esa organización?",
+        "options": [
+          "Una medida del peso del libro",
+          "Una lista de los materiales de impresión",
+          "Ritmo y énfasis en la lectura",
+          "Una garantía sobre su precio"
+        ],
+        "correctAnswer": "Ritmo y énfasis en la lectura",
+        "explanation": "La secuencia de páginas regula pausas, atención y ritmo durante la lectura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-063",
+        "number": 63,
+        "topic": "Verdadero o falso · Patrimonio",
+        "concept": "continuidad_cultural_admite_adaptaciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una tradición cultural solo puede conservarse si se practica exactamente de la misma manera en cada generación.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Las comunidades pueden adaptar sus prácticas y seguir transmitiendo su significado y vínculos colectivos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-064",
+        "number": 64,
+        "topic": "Arte y materiales",
+        "concept": "temperatura_puede_deformar_escultura_de_cera",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escultura hecha con cera se expone en una sala muy caliente. ¿Qué característica del material debe considerar el museo?",
+        "options": [
+          "Cambia su peso al escuchar música",
+          "Se vuelve invisible en espacios amplios",
+          "Cambia de idioma con el tiempo",
+          "Puede ablandarse o deformarse con el calor"
+        ],
+        "correctAnswer": "Puede ablandarse o deformarse con el calor",
+        "explanation": "La cera puede ablandarse por el calor, por lo que la temperatura afecta su conservación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-065",
+        "number": 65,
+        "topic": "Patrimonio colombiano",
+        "concept": "significado_comunitario_documenta_practica_cultural",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una comunidad del Caribe colombiano prepara una celebración con música, danza y vestuario propio. ¿Qué evidencia permite estudiarla como práctica cultural?",
+        "options": [
+          "Cómo se transmite y qué significado tiene para la comunidad",
+          "La cantidad de fotografías publicadas",
+          "El costo de cada traje",
+          "La duración de una canción aislada"
+        ],
+        "correctAnswer": "Cómo se transmite y qué significado tiene para la comunidad",
+        "explanation": "La transmisión y los significados compartidos ayudan a comprender una práctica cultural en su contexto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-066",
+        "number": 66,
+        "topic": "Perspectiva",
+        "concept": "perspectiva_lineal_crea_profundidad_por_convergencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un dibujo de una calle, los bordes de los edificios parecen acercarse a un mismo punto lejano. ¿Qué recurso crea esa sensación?",
+        "options": [
+          "Simetría radial",
+          "Perspectiva lineal",
+          "Repetición sonora",
+          "Textura táctil"
+        ],
+        "correctAnswer": "Perspectiva lineal",
+        "explanation": "La perspectiva lineal representa profundidad mediante líneas que convergen hacia puntos de fuga.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-067",
+        "number": 67,
+        "topic": "Artes escénicas",
+        "concept": "cambio_de_luz_modifica_ambiente_escenico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una directora cambia la iluminación de cálida a fría durante un monólogo. ¿Qué puede sugerir el cambio?",
+        "options": [
+          "La cantidad de actores",
+          "El costo del escenario",
+          "Una transformación en el tono o ambiente de la escena",
+          "El número de palabras del texto"
+        ],
+        "correctAnswer": "Una transformación en el tono o ambiente de la escena",
+        "explanation": "La luz puede modificar el ambiente y apoyar cambios emocionales o narrativos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-068",
+        "number": 68,
+        "topic": "Verdadero o falso · Cultura digital",
+        "concept": "facilidad_de_copia_no_elimina_autoria_digital",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una obra digital deja de tener autoría porque puede copiarse fácilmente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La facilidad de copia no elimina la autoría ni las condiciones de uso de una obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-069",
+        "number": 69,
+        "topic": "Arte y espacio",
+        "concept": "recorrido_del_espectador_revela_vistas_de_escultura",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escultura alta y estrecha se observa desde distintos lados. ¿Qué experiencia ofrece frente a una imagen plana?",
+        "options": [
+          "Solo una lectura verbal",
+          "Un sonido más intenso",
+          "Una secuencia fija de fotogramas",
+          "Cambios de forma aparente al desplazarse alrededor"
+        ],
+        "correctAnswer": "Cambios de forma aparente al desplazarse alrededor",
+        "explanation": "Al rodear una escultura, el punto de vista cambia y revela distintas relaciones entre sus formas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-070",
+        "number": 70,
+        "topic": "Crítica de arte",
+        "concept": "critica_argumentada_conecta_evidencia_e_interpretacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una reseña describe los materiales de una obra y explica cómo contribuyen a su mensaje. ¿Qué la hace más útil?",
+        "options": [
+          "Relaciona observaciones con una interpretación",
+          "Afirma que toda obra debe gustar",
+          "Sustituye el análisis por una calificación",
+          "Enumera detalles sin explicar su relevancia"
+        ],
+        "correctAnswer": "Relaciona observaciones con una interpretación",
+        "explanation": "Una crítica argumentada conecta evidencias observables con la interpretación que propone.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-071",
+        "number": 71,
+        "topic": "Diseño inclusivo",
+        "concept": "contraste_y_tipografia_apoyan_accesibilidad_visual",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un cartel anuncia una actividad para estudiantes con baja visión. ¿Qué combinación mejora su lectura?",
+        "options": [
+          "Texto pequeño y fondos estampados",
+          "Alto contraste y tipografía legible",
+          "Colores muy similares",
+          "Información solo codificada por color"
+        ],
+        "correctAnswer": "Alto contraste y tipografía legible",
+        "explanation": "El contraste y una tipografía legible ayudan a distinguir la información; no conviene depender solo del color.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-072",
+        "number": 72,
+        "topic": "Producción teatral",
+        "concept": "coordinacion_de_turnos_y_posiciones_aclara_dialogo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un ensayo, el público no distingue quién habla porque varios actores se mueven y hablan al tiempo. ¿Qué ajuste ayuda más?",
+        "options": [
+          "Aumentar los objetos decorativos",
+          "Apagar todas las luces",
+          "Coordinar turnos, posiciones y proyección de voz",
+          "Hacer más rápido todo el diálogo"
+        ],
+        "correctAnswer": "Coordinar turnos, posiciones y proyección de voz",
+        "explanation": "Organizar turnos y posiciones permite reconocer a quien habla y seguir la acción escénica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-073",
+        "number": 73,
+        "topic": "Verdadero o falso · Apropiación cultural",
+        "concept": "perspectiva_de_comunidad_aporta_contexto_cultural",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Para interpretar una expresión cultural basta con observar su vestuario; conocer la perspectiva de la comunidad no aporta información importante.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "El contexto y la voz de quienes practican una expresión ayudan a evitar interpretaciones incompletas o descontextualizadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-074",
+        "number": 74,
+        "topic": "Conservación preventiva",
+        "concept": "replica_permite_uso_escenico_sin_danar_original",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escuela presta una máscara antigua para una obra y alguien propone pegarle adornos directamente. ¿Cuál es la mejor decisión?",
+        "options": [
+          "Pintarla para que combine con el vestuario",
+          "Usarla sin revisar su estado",
+          "Añadir adhesivo removible sobre la superficie original",
+          "Guardar sus datos y hacerle una copia para la obra"
+        ],
+        "correctAnswer": "Guardar sus datos y hacerle una copia para la obra",
+        "explanation": "Una copia permite usar la pieza sin intervenir ni poner en riesgo el objeto original.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-075",
+        "number": 75,
+        "topic": "Verdadero o falso · Interpretación audiovisual",
+        "concept": "orden_de_escenas_crea_expectativa_narrativa",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Mostrar primero una casa vacía y después a una persona entrando puede crear expectativa sobre la relación entre ambos momentos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Presentar información en etapas puede invitar al público a anticipar conexiones entre escenas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-076",
+        "number": 76,
+        "topic": "Pintura mural",
+        "concept": "fresco_aplica_pigmento_sobre_yeso_humedo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué técnica aplica pigmentos sobre una capa de yeso todavía húmeda?",
+        "options": [
+          "Fresco",
+          "Mosaico",
+          "Collage",
+          "Grabado"
+        ],
+        "correctAnswer": "Fresco",
+        "explanation": "En el fresco, los pigmentos se aplican sobre el enlucido húmedo y quedan integrados al secarse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-077",
+        "number": 77,
+        "topic": "Literatura y arte",
+        "concept": "autoria_identifica_creador_de_obra",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento indica quién realizó una obra?",
+        "options": [
+          "El marco",
+          "La autoría",
+          "La escala",
+          "El soporte"
+        ],
+        "correctAnswer": "La autoría",
+        "explanation": "La autoría identifica a la persona o colectivo responsable de crear la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-078",
+        "number": 78,
+        "topic": "Música",
+        "concept": "conjunto_vocal_interpreta_musica_con_voces",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un conjunto vocal?",
+        "options": [
+          "Una colección de pinturas",
+          "Una serie de escenas teatrales",
+          "Un grupo que interpreta con la voz",
+          "Un plano de un edificio"
+        ],
+        "correctAnswer": "Un grupo que interpreta con la voz",
+        "explanation": "Un conjunto vocal reúne intérpretes que producen música principalmente mediante la voz.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-079",
+        "number": 79,
+        "topic": "Artes escénicas",
+        "concept": "senal_escenica_anuncia_inicio_de_funcion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué elemento informa al público sobre el inicio de una función en vivo?",
+        "options": [
+          "La ficha de conservación",
+          "La matriz de grabado",
+          "El pie de foto",
+          "La señal de inicio o tercera llamada"
+        ],
+        "correctAnswer": "La señal de inicio o tercera llamada",
+        "explanation": "Una señal previa organiza la atención del público y anuncia que la representación va a comenzar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-080",
+        "number": 80,
+        "topic": "Fotografía",
+        "concept": "obturador_controla_tiempo_de_exposicion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué permite registrar principalmente el obturador de una cámara?",
+        "options": [
+          "El tiempo durante el que entra luz",
+          "El nombre del fotógrafo",
+          "La edad de la escena",
+          "El material del fondo"
+        ],
+        "correctAnswer": "El tiempo durante el que entra luz",
+        "explanation": "El obturador controla cuánto tiempo llega luz al sensor o a la película.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-081",
+        "number": 81,
+        "topic": "Patrimonio",
+        "concept": "archivo_preserva_documentos_para_consulta",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué lugar suele guardar documentos y fotografías para consulta histórica?",
+        "options": [
+          "Un teatro",
+          "Un archivo",
+          "Una cafetería",
+          "Un taller de danza"
+        ],
+        "correctAnswer": "Un archivo",
+        "explanation": "Los archivos organizan y preservan documentos que pueden servir como fuentes para conocer el pasado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-082",
+        "number": 82,
+        "topic": "Artes plásticas",
+        "concept": "pincel_aplica_pintura_sobre_superficie",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué herramienta se utiliza para aplicar pintura sobre un lienzo?",
+        "options": [
+          "Compás",
+          "Cincel",
+          "Pincel",
+          "Diapasón"
+        ],
+        "correctAnswer": "Pincel",
+        "explanation": "El pincel permite extender o trazar pintura sobre una superficie.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-083",
+        "number": 83,
+        "topic": "Verdadero o falso · Arte y comunidad",
+        "concept": "obra_publica_puede_activar_dialogo_sobre_memoria_local",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una obra creada en un espacio público puede invitar a conversar sobre la historia del lugar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las obras públicas pueden activar preguntas y conversaciones sobre la memoria y el uso de un espacio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-084",
+        "number": 84,
+        "topic": "Artes visuales y ritmo",
+        "concept": "repeticion_y_espaciado_crean_movimiento_visual",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una composición repite círculos a distancias cada vez menores. ¿Qué sensación puede sugerir?",
+        "options": [
+          "Que todos los elementos tienen la misma función",
+          "Que desapareció el contraste",
+          "Que la imagen es una grabación sonora",
+          "Ritmo visual y movimiento hacia un centro"
+        ],
+        "correctAnswer": "Ritmo visual y movimiento hacia un centro",
+        "explanation": "La repetición y la variación de distancia pueden guiar la mirada y crear movimiento visual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-085",
+        "number": 85,
+        "topic": "Curaduría",
+        "concept": "curaduria_conecta_obras_por_tema",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una exposición reúne obras sobre la migración de distintas épocas. ¿Qué aporta principalmente esa selección?",
+        "options": [
+          "Una lectura temática que relaciona las obras",
+          "Una garantía de que todos los artistas se conocieron",
+          "Una cronología exacta de cada migración",
+          "Una explicación única para cada visitante"
+        ],
+        "correctAnswer": "Una lectura temática que relaciona las obras",
+        "explanation": "La curaduría puede conectar obras mediante un tema y proponer relaciones para el público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-086",
+        "number": 86,
+        "topic": "Artes escénicas",
+        "concept": "repeticion_y_sonido_intensifican_tension_escenica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una escena, la actriz repite un movimiento cada vez más rápido mientras el sonido se intensifica. ¿Qué efecto pueden construir juntos?",
+        "options": [
+          "Una ficha de museo",
+          "Aumento de tensión o urgencia",
+          "Un cambio del idioma hablado",
+          "La medida del escenario"
+        ],
+        "correctAnswer": "Aumento de tensión o urgencia",
+        "explanation": "El ritmo corporal y el sonido pueden reforzarse para aumentar la tensión percibida.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-087",
+        "number": 87,
+        "topic": "Arte y tecnología",
+        "concept": "sensor_detecta_estimulo_y_activa_respuesta_artistica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una instalación responde con luces cuando el público se acerca. ¿Qué papel tiene el sensor?",
+        "options": [
+          "Conservar el color original",
+          "Definir el precio de la obra",
+          "Detectar una condición y activar una respuesta",
+          "Sustituir todas las decisiones del artista"
+        ],
+        "correctAnswer": "Detectar una condición y activar una respuesta",
+        "explanation": "El sensor detecta cambios, como la proximidad, y puede activar una acción programada en la instalación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-088",
+        "number": 88,
+        "topic": "Verdadero o falso · Diseño",
+        "concept": "exceso_de_estimulos_puede_reducir_claridad",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Usar muchos colores llamativos en un afiche siempre mejora la claridad del mensaje.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Demasiados estímulos pueden competir entre sí; el diseño debe ordenar la atención según el propósito.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-089",
+        "number": 89,
+        "topic": "Patrimonio y memoria",
+        "concept": "mapa_comunitario_registra_memoria_y_nombres_locales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un barrio conserva los nombres tradicionales de sus calles en un mapa comunitario. ¿Qué valor puede tener esa acción?",
+        "options": [
+          "Reemplazar todos los mapas oficiales",
+          "Evitar cualquier cambio urbano",
+          "Confirmar que los nombres son idénticos en todo el país",
+          "Registrar memoria y referencias locales"
+        ],
+        "correctAnswer": "Registrar memoria y referencias locales",
+        "explanation": "Los nombres y relatos asociados a los lugares pueden conservar conocimientos y memorias de la comunidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-090",
+        "number": 90,
+        "topic": "Cine y sonido",
+        "concept": "sonido_fuera_de_campo_amplia_espacio_narrativo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una película se escucha el sonido de lluvia aunque no aparece en pantalla. ¿Cómo se clasifica respecto a la imagen?",
+        "options": [
+          "Sonido fuera de campo",
+          "Perspectiva lineal",
+          "Plano general",
+          "Montaje de continuidad"
+        ],
+        "correctAnswer": "Sonido fuera de campo",
+        "explanation": "El sonido fuera de campo se escucha aunque su fuente no esté visible dentro del encuadre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-091",
+        "number": 91,
+        "topic": "Arte colombiano",
+        "concept": "diversidad_de_voces_ev",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una exposición incluye obras de artistas de distintas regiones de Colombia. ¿Qué decisión puede evitar que la muestra presente una sola experiencia como si fuera universal?",
+        "options": [
+          "Usar una única etiqueta para todas las regiones",
+          "Dar espacio a contextos y voces diversas",
+          "Ordenar las obras solo por tamaño",
+          "Ocultar los nombres de los lugares"
+        ],
+        "correctAnswer": "Dar espacio a contextos y voces diversas",
+        "explanation": "Incluir contextos y voces diversas ayuda a reconocer diferencias regionales sin reducirlas a una sola perspectiva.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-092",
+        "number": 92,
+        "topic": "Diseño y señalización",
+        "concept": "codigos_visuales_diferencian_instrucciones_prioritarias",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un pasillo, todas las señales usan el mismo color y forma, incluso las de salida y las decorativas. ¿Qué problema puede surgir?",
+        "options": [
+          "El pasillo se vuelve más corto",
+          "Las señales cambian de autoría",
+          "Las instrucciones importantes pierden distinción",
+          "La arquitectura deja de tener escala"
+        ],
+        "correctAnswer": "Las instrucciones importantes pierden distinción",
+        "explanation": "Si no hay diferencias visuales, puede costar identificar rápidamente las señales prioritarias.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-093",
+        "number": 93,
+        "topic": "Verdadero o falso · Fotografía",
+        "concept": "angulo_fotografico_cambia_informacion_visible",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una fotografía tomada desde otro ángulo puede mostrar información distinta de la misma escena.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El punto de vista cambia qué elementos quedan visibles y cómo se relacionan dentro del encuadre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-094",
+        "number": 94,
+        "topic": "Arte y espacio público",
+        "concept": "intervencion_publica_debe_preservar_accesibilidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escultura se instala en una plaza estrecha donde bloquea el paso de sillas de ruedas. ¿Qué debería considerar el equipo?",
+        "options": [
+          "Únicamente el color de la escultura",
+          "La cantidad de fotografías que se publicarán",
+          "La firma que tendrá la placa",
+          "El acceso y el tránsito de las personas"
+        ],
+        "correctAnswer": "El acceso y el tránsito de las personas",
+        "explanation": "El diseño de una intervención pública debe considerar cómo se usa el espacio y quién puede recorrerlo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-095",
+        "number": 95,
+        "topic": "Artes visuales",
+        "concept": "marcas_de_pincel_hacen_visible_proceso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un artista deja visibles las marcas de pincel en vez de cubrirlas. ¿Qué puede aportar esa decisión?",
+        "options": [
+          "Evidenciar el gesto y el proceso de creación",
+          "Convertir la pintura en una fotografía",
+          "Determinar la edad exacta del artista",
+          "Borrar toda relación entre material y forma"
+        ],
+        "correctAnswer": "Evidenciar el gesto y el proceso de creación",
+        "explanation": "Las marcas pueden hacer visible cómo se aplicó la pintura y aportar expresividad a la superficie.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-096",
+        "number": 96,
+        "topic": "Diseño para públicos",
+        "concept": "mediacion_clara_orienta_sin_imponer_lectura",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una muestra incluye visitantes que no conocen términos técnicos de arte. ¿Qué apoyo puede facilitar la comprensión sin imponer una interpretación?",
+        "options": [
+          "Retirar las obras más complejas",
+          "Ofrecer explicaciones breves y preguntas abiertas",
+          "Dar una única respuesta correcta para cada obra",
+          "Evitar cualquier información contextual"
+        ],
+        "correctAnswer": "Ofrecer explicaciones breves y preguntas abiertas",
+        "explanation": "Un lenguaje claro y preguntas abiertas orientan la observación, pero dejan espacio para distintas lecturas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-097",
+        "number": 97,
+        "topic": "Proyección digital",
+        "concept": "probar_proyeccion_en_condiciones_de_exhibicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una obra se ve clara en el portátil, pero demasiado oscura al proyectarla en una sala. ¿Qué conviene probar antes de inaugurar?",
+        "options": [
+          "Cambiar el nombre del archivo",
+          "Añadir una descripción más larga",
+          "Probar la imagen en el proyector y ajustar su visualización",
+          "Aumentar la cantidad de marcos en pantalla"
+        ],
+        "correctAnswer": "Probar la imagen en el proyector y ajustar su visualización",
+        "explanation": "Revisar la obra en el equipo y la iluminación reales permite ajustar su visualización para el público.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-098",
+        "number": 98,
+        "topic": "Verdadero o falso · Accesibilidad cultural",
+        "concept": "accesibilidad_requiere_apoyos_complementarios",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si una exposición ofrece audio descriptivo, ya no necesita considerar otros apoyos de accesibilidad.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Las necesidades varían; conviene combinar apoyos y permitir distintas maneras de acceder a la muestra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-099",
+        "number": 99,
+        "topic": "Diseño colaborativo",
+        "concept": "consulta_comunitaria_informa_diseno_de_mural",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo diseña un mural para una comunidad, pero sus integrantes no han consultado a quienes usarán el espacio. ¿Qué paso mejoraría el proceso?",
+        "options": [
+          "Elegir el diseño más rápido",
+          "Pintar primero y preguntar después",
+          "Evitar explicar el proyecto",
+          "Conversar con la comunidad y recoger sus perspectivas"
+        ],
+        "correctAnswer": "Conversar con la comunidad y recoger sus perspectivas",
+        "explanation": "Consultar a las personas vinculadas al lugar ayuda a que el diseño considere sus necesidades y significados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-100",
+        "number": 100,
+        "topic": "Verdadero o falso · Diseño sonoro",
+        "concept": "aumento_de_volumen_sugiere_fuente_sonora_cercana",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "En una escena, aumentar gradualmente el volumen de unos pasos puede sugerir que el personaje se acerca.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El volumen y otros cambios sonoros pueden dar pistas sobre la distancia de una fuente fuera de campo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-101",
+        "number": 101,
+        "topic": "Artes gráficas",
+        "concept": "serigrafia_transfiere_tinta_a_traves_de_malla",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué técnica imprime una imagen haciendo pasar tinta a través de una malla preparada?",
+        "options": [
+          "Serigrafía",
+          "Mosaico",
+          "Modelado",
+          "Acuarela"
+        ],
+        "correctAnswer": "Serigrafía",
+        "explanation": "La serigrafía transfiere tinta a través de zonas abiertas de una pantalla o malla.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-102",
+        "number": 102,
+        "topic": "Composición",
+        "concept": "espacio_negativo_rodea_y_separa_formas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nombre recibe la zona alrededor y entre las formas de una composición?",
+        "options": [
+          "Contrapunto",
+          "Espacio negativo",
+          "Perspectiva sonora",
+          "Textura táctil"
+        ],
+        "correctAnswer": "Espacio negativo",
+        "explanation": "El espacio negativo es el área vacía que rodea o separa los elementos principales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-103",
+        "number": 103,
+        "topic": "Museos",
+        "concept": "ficha_de_registro_identifica_pieza_de_coleccion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué documento puede acompañar una pieza y registrar su número de inventario?",
+        "options": [
+          "Programa de concierto",
+          "Guion de cine",
+          "Ficha de registro",
+          "Partitura"
+        ],
+        "correctAnswer": "Ficha de registro",
+        "explanation": "La ficha de registro identifica una pieza dentro de la colección y permite organizar su información.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-104",
+        "number": 104,
+        "topic": "Danza",
+        "concept": "zapateado_produce_ritmo_con_pies",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué parte del cuerpo participa principalmente en un zapateado?",
+        "options": [
+          "Codo",
+          "Hombro",
+          "Muñeca",
+          "Pies"
+        ],
+        "correctAnswer": "Pies",
+        "explanation": "En el zapateado, los golpes rítmicos se producen principalmente con los pies.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-105",
+        "number": 105,
+        "topic": "Diseño gráfico",
+        "concept": "tipografia_disena_forma_visual_de_letras",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es una tipografía?",
+        "options": [
+          "Un diseño de letras",
+          "Una técnica para tallar madera",
+          "Una secuencia de pasos de danza",
+          "Un tipo de escenario"
+        ],
+        "correctAnswer": "Un diseño de letras",
+        "explanation": "La tipografía comprende el diseño y la organización visual de letras y caracteres.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-106",
+        "number": 106,
+        "topic": "Escultura",
+        "concept": "talla_forma_escultura_al_retirar_material",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué técnica consiste en retirar material de una piedra o bloque para formar una figura?",
+        "options": [
+          "Ensamblaje",
+          "Talla",
+          "Estampación",
+          "Tejido"
+        ],
+        "correctAnswer": "Talla",
+        "explanation": "En la talla se elimina material para descubrir o construir una forma escultórica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-107",
+        "number": 107,
+        "topic": "Vestuario escénico",
+        "concept": "vestuario_comunica_rasgos_de_personaje",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función puede cumplir el vestuario en una obra de teatro?",
+        "options": [
+          "Medir la duración de la función",
+          "Reemplazar el texto dramático",
+          "Comunicar rasgos de personajes o época",
+          "Registrar la acústica de la sala"
+        ],
+        "correctAnswer": "Comunicar rasgos de personajes o época",
+        "explanation": "El vestuario puede dar pistas sobre identidad, oficio, época o circunstancias de un personaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-108",
+        "number": 108,
+        "topic": "Verdadero o falso · Arte público",
+        "concept": "mural_publico_se_integra_a_experiencia_del_barrio",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Un mural puede formar parte de la experiencia cotidiana de quienes transitan por un barrio.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Al estar en un espacio compartido, el mural puede ser visto e interpretado en la vida diaria de la comunidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-109",
+        "number": 109,
+        "topic": "Perspectiva visual",
+        "concept": "perspectiva_atmosferica_reduce_detalle_a_distancia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una imagen, las montañas lejanas aparecen más claras y menos detalladas que los objetos cercanos. ¿Qué recurso puede explicar ese efecto?",
+        "options": [
+          "Repetición métrica",
+          "Contraste tipográfico",
+          "Simetría axial",
+          "Perspectiva atmosférica"
+        ],
+        "correctAnswer": "Perspectiva atmosférica",
+        "explanation": "La perspectiva atmosférica representa la distancia reduciendo contraste y detalle en los elementos lejanos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-110",
+        "number": 110,
+        "topic": "Apreciación de danza",
+        "concept": "velocidad_de_movimiento_modifica_ritmo_de_danza",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos bailarines realizan el mismo movimiento, pero a distinta velocidad. ¿Qué elemento cambia principalmente?",
+        "options": [
+          "El ritmo de la ejecución",
+          "El material del escenario",
+          "La autoría de la música",
+          "El tamaño del vestuario"
+        ],
+        "correctAnswer": "El ritmo de la ejecución",
+        "explanation": "La velocidad de los movimientos modifica el ritmo con que se desarrolla la danza.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-111",
+        "number": 111,
+        "topic": "Cultura visual",
+        "concept": "tamano_y_posicion_central_dan_protagonismo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un anuncio usa una figura mucho más grande que los demás elementos y la coloca al centro. ¿Qué efecto busca probablemente?",
+        "options": [
+          "Representar el sonido del producto",
+          "Darle mayor protagonismo visual",
+          "Describir la textura real del objeto",
+          "Ocultar el formato del anuncio"
+        ],
+        "correctAnswer": "Darle mayor protagonismo visual",
+        "explanation": "El tamaño y la ubicación central pueden dirigir la atención hacia una figura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-112",
+        "number": 112,
+        "topic": "Fotografía",
+        "concept": "exposicion_larga_registra_estela_de_movimiento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al fotografiar agua en movimiento con una exposición larga, ¿qué efecto puede aparecer?",
+        "options": [
+          "El agua se vuelve completamente sólida",
+          "Desaparece la fuente de luz",
+          "El movimiento deja un rastro difuminado",
+          "Cambia la autoría de la imagen"
+        ],
+        "correctAnswer": "El movimiento deja un rastro difuminado",
+        "explanation": "Una exposición prolongada registra el movimiento durante más tiempo y puede producir un efecto de estela.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-113",
+        "number": 113,
+        "topic": "Verdadero o falso · Edición de imágenes",
+        "concept": "filtro_digital_modifica_atmosfera_de_fotografia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Aplicar un filtro digital puede cambiar la atmósfera y la interpretación de una fotografía.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El color, el contraste y otros ajustes influyen en cómo se percibe una imagen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-114",
+        "number": 114,
+        "topic": "Creación colectiva",
+        "concept": "escucha_activa_sostiene_improvisacion_teatral",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una improvisación teatral, ¿qué respuesta ayuda a que la escena continúe?",
+        "options": [
+          "Ignorar lo que propone la otra persona",
+          "Detener toda acción al surgir una idea",
+          "Repetir siempre la misma frase",
+          "Escuchar y construir sobre la propuesta del compañero"
+        ],
+        "correctAnswer": "Escuchar y construir sobre la propuesta del compañero",
+        "explanation": "Atender las propuestas del otro permite sostener la interacción y desarrollar la escena conjuntamente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-115",
+        "number": 115,
+        "topic": "Arte y ambiente",
+        "concept": "ambiente_de_exhibicion_afecta_durabilidad_de_materiales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una instalación hecha con materiales recuperados se deteriora al estar a la intemperie. ¿Qué aspecto debe valorarse antes de exhibirla?",
+        "options": [
+          "La durabilidad y el ambiente de exposición",
+          "El número de personas que conocen al artista",
+          "La cantidad de colores del catálogo",
+          "El orden alfabético de los materiales"
+        ],
+        "correctAnswer": "La durabilidad y el ambiente de exposición",
+        "explanation": "La exposición debe considerar cómo el clima y el tiempo afectan los materiales de la instalación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-116",
+        "number": 116,
+        "topic": "Memoria cultural",
+        "concept": "contexto_de_interpretacion_enriquece_documentacion_de_cancion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al documentar una canción tradicional, ¿por qué conviene registrar quién la interpreta y en qué ocasión se canta?",
+        "options": [
+          "Para fijar una sola forma de cantarla",
+          "Para conservar información sobre su contexto de uso",
+          "Para determinar qué versión es la más comercial",
+          "Para reemplazar la participación comunitaria"
+        ],
+        "correctAnswer": "Para conservar información sobre su contexto de uso",
+        "explanation": "El contexto de interpretación ayuda a comprender cómo se usa y qué significado tiene la canción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-117",
+        "number": 117,
+        "topic": "Cine y narrativa",
+        "concept": "silencio_posterior_a_evento_da_peso_narrativo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una película deja unos segundos de silencio después de una noticia importante. ¿Qué puede lograr esa pausa?",
+        "options": [
+          "Cambiar el tamaño de la pantalla",
+          "Asegurar que nadie interprete la escena",
+          "Dar espacio para que el público procese el momento",
+          "Indicar el costo de producción"
+        ],
+        "correctAnswer": "Dar espacio para que el público procese el momento",
+        "explanation": "Una pausa sonora puede dar peso a un acontecimiento y permitir que el público perciba la reacción.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-118",
+        "number": 118,
+        "topic": "Verdadero o falso · Mediación cultural",
+        "concept": "texto_de_sala_orienta_sin_agotar_interpretacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un texto de sala puede orientar la observación de una obra, aunque no describa todo lo que cada visitante puede interpretar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El texto aporta contexto y pistas, pero la experiencia de observación puede producir lecturas diversas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-119",
+        "number": 119,
+        "topic": "Diseño de exposiciones",
+        "concept": "recorrido_despejado_facilita_circulacion_en_sala",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una sala tiene un pasillo estrecho entre dos vitrinas. ¿Qué decisión facilita recorrerla?",
+        "options": [
+          "Añadir más objetos al pasillo",
+          "Quitar toda iluminación",
+          "Esconder el recorrido recomendado",
+          "Mantener un paso libre y señalizado"
+        ],
+        "correctAnswer": "Mantener un paso libre y señalizado",
+        "explanation": "Un recorrido despejado y comprensible mejora la circulación y el acceso a la exposición.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-120",
+        "number": 120,
+        "topic": "Historieta",
+        "concept": "signos_graficos_representan_pensamiento_en_historieta",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una historieta, una nube con signos de interrogación sobre un personaje suele comunicar:",
+        "options": [
+          "Que está pensando o tiene una duda",
+          "Que el personaje cambió de vestuario",
+          "Que la escena ocurre bajo el agua",
+          "Que inició una canción"
+        ],
+        "correctAnswer": "Que está pensando o tiene una duda",
+        "explanation": "Los signos y convenciones gráficas permiten representar pensamientos o preguntas sin escribir una explicación extensa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-121",
+        "number": 121,
+        "topic": "Diseño de espacio",
+        "concept": "exhibicion_escolar_equilibra_visibilidad_y_circulacion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una biblioteca escolar quiere mostrar trabajos de estudiantes, pero el pasillo tiene poca luz y mucho tránsito. ¿Qué propuesta equilibra mejor exhibición y uso del lugar?",
+        "options": [
+          "Cubrir las salidas con paneles",
+          "Elegir un muro visible sin bloquear el paso y mejorar la iluminación",
+          "Colgar las obras detrás de puertas",
+          "Poner todas las piezas en el suelo"
+        ],
+        "correctAnswer": "Elegir un muro visible sin bloquear el paso y mejorar la iluminación",
+        "explanation": "Un lugar visible, bien iluminado y fuera del flujo principal permite apreciar las obras y circular con seguridad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-122",
+        "number": 122,
+        "topic": "Arte y contexto",
+        "concept": "contexto_ambiental_apoya_lectura_de_paisaje_artistico",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una obra representa un río conocido por la comunidad, pero no muestra agua limpia ni paisajes idealizados. ¿Qué enfoque ayuda a analizarla?",
+        "options": [
+          "Suponer que toda obra de paisaje debe ser decorativa",
+          "Evaluar únicamente si se parece a una fotografía",
+          "Relacionar sus decisiones visuales con el contexto del río",
+          "Ignorar el tema y contar los colores"
+        ],
+        "correctAnswer": "Relacionar sus decisiones visuales con el contexto del río",
+        "explanation": "Relacionar los elementos visuales con el contexto ambiental y comunitario puede revelar la intención de la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-123",
+        "number": 123,
+        "topic": "Verdadero o falso · Diseño accesible",
+        "concept": "senal_accesible_no_depende_solo_del_color",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si una señal usa colores distintos para cada instrucción, el color por sí solo siempre basta para que todas las personas la comprendan.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Conviene añadir formas, palabras o símbolos, pues algunas personas no distinguen ciertos colores o ven la señal en otras condiciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-124",
+        "number": 124,
+        "topic": "Arte y archivo",
+        "concept": "investigar_procedencia_antes_de_atribuir_pieza",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un museo recibe una pieza cuya comunidad de origen no ha sido identificada. ¿Qué decisión inicial es más respetuosa?",
+        "options": [
+          "Publicar de inmediato una historia no confirmada",
+          "Cambiar el nombre para facilitar su venta",
+          "Guardar la pieza sin documentarla",
+          "Investigar su procedencia y consultar fuentes pertinentes"
+        ],
+        "correctAnswer": "Investigar su procedencia y consultar fuentes pertinentes",
+        "explanation": "Investigar la procedencia y consultar fuentes confiables evita atribuciones apresuradas y mejora la documentación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-125",
+        "number": 125,
+        "topic": "Verdadero o falso · Creación artística",
+        "concept": "prueba_con_visitantes_detecta_problemas_de_exhibicion",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Probar una maqueta de exposición con algunos visitantes puede revelar problemas de lectura o circulación antes de abrirla al público.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Una prueba permite observar cómo las personas usan el espacio y ajustar el diseño con anticipación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-126",
+        "number": 126,
+        "topic": "Grabado",
+        "concept": "monotipo_produce_impresion_singular",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué técnica produce una única impresión directa que puede variar en cada intento?",
+        "options": [
+          "Monotipo",
+          "Mosaico",
+          "Fresco",
+          "Tejido"
+        ],
+        "correctAnswer": "Monotipo",
+        "explanation": "El monotipo se realiza para obtener una impresión singular, aunque algunas técnicas permiten variaciones o impresiones adicionales más débiles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-127",
+        "number": 127,
+        "topic": "Diseño",
+        "concept": "paleta_reune_colores_de_diseno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica describe mejor una paleta de colores?",
+        "options": [
+          "El orden de las páginas",
+          "El conjunto de colores elegido para un diseño",
+          "La forma de una escultura",
+          "La duración de una canción"
+        ],
+        "correctAnswer": "El conjunto de colores elegido para un diseño",
+        "explanation": "La paleta reúne los colores que se seleccionan para una obra o proyecto visual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-128",
+        "number": 128,
+        "topic": "Teatro",
+        "concept": "direccion_coordina_puesta_en_escena",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tarea realiza principalmente quien dirige una obra teatral?",
+        "options": [
+          "Reparar los instrumentos",
+          "Registrar el inventario del museo",
+          "Coordinar la puesta en escena",
+          "Diseñar mapas geográficos"
+        ],
+        "correctAnswer": "Coordinar la puesta en escena",
+        "explanation": "La dirección coordina elementos como actuación, ritmo, espacio y puesta en escena.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-129",
+        "number": 129,
+        "topic": "Escultura",
+        "concept": "bajorrelieve_figuras_sobresalen_poco_del_fondo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué relieve presenta figuras que sobresalen poco del fondo?",
+        "options": [
+          "Bulto redondo",
+          "Escultura cinética",
+          "Instalación sonora",
+          "Bajorrelieve"
+        ],
+        "correctAnswer": "Bajorrelieve",
+        "explanation": "En el bajorrelieve, las formas sobresalen poco de una superficie de fondo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-130",
+        "number": 130,
+        "topic": "Diseño visual",
+        "concept": "contraste_de_luminosidad_distingue_texto_y_fondo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué recurso separa con claridad un texto oscuro de un fondo claro?",
+        "options": [
+          "Contraste",
+          "Perspectiva",
+          "Ritmo",
+          "Balance"
+        ],
+        "correctAnswer": "Contraste",
+        "explanation": "El contraste de luminosidad hace que los elementos puedan distinguirse con mayor facilidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-131",
+        "number": 131,
+        "topic": "Fotografía",
+        "concept": "lente_enfoca_luz_para_formar_imagen",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué parte de una cámara permite enfocar la luz para formar una imagen?",
+        "options": [
+          "El trípode",
+          "El lente",
+          "El estuche",
+          "La correa"
+        ],
+        "correctAnswer": "El lente",
+        "explanation": "El lente dirige y enfoca la luz que llega al sensor o a la película.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-132",
+        "number": 132,
+        "topic": "Música",
+        "concept": "dinamica_indica_intensidad_sonora",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indica la dinámica en una interpretación musical?",
+        "options": [
+          "El lugar de origen del instrumento",
+          "El número de páginas de la partitura",
+          "La intensidad del sonido",
+          "La forma del escenario"
+        ],
+        "correctAnswer": "La intensidad del sonido",
+        "explanation": "Las dinámicas indican cambios de intensidad, desde sonidos suaves hasta fuertes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-133",
+        "number": 133,
+        "topic": "Dibujo",
+        "concept": "linea_del_horizonte_corresponde_a_altura_visual",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué línea suele señalar la altura aparente de los ojos del observador en una perspectiva?",
+        "options": [
+          "Línea de corte",
+          "Eje del sonido",
+          "Margen de página",
+          "Línea del horizonte"
+        ],
+        "correctAnswer": "Línea del horizonte",
+        "explanation": "En perspectiva, la línea del horizonte corresponde a la altura del punto de vista del observador.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-134",
+        "number": 134,
+        "topic": "Arte textil",
+        "concept": "telar_entrelaza_hilos_para_formar_tela",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué herramienta permite entrecruzar hilos para formar una tela?",
+        "options": [
+          "Telar",
+          "Cincel",
+          "Atril",
+          "Proyector"
+        ],
+        "correctAnswer": "Telar",
+        "explanation": "El telar mantiene los hilos organizados para entrelazarlos y producir una pieza textil.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-135",
+        "number": 135,
+        "topic": "Verdadero o falso · Cultura",
+        "concept": "celebracion_adquiere_formas_segun_comunidad",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Una misma celebración puede incluir expresiones diferentes según la comunidad que la realiza.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las comunidades aportan historias, prácticas y símbolos que pueden dar formas distintas a una celebración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-136",
+        "number": 136,
+        "topic": "Arquitectura y entorno",
+        "concept": "aleros_protegen_aberturas_de_lluvia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una casa tradicional usa aleros amplios en una zona de lluvias frecuentes. ¿Qué función práctica pueden cumplir?",
+        "options": [
+          "Cambiar el género musical del lugar",
+          "Mostrar el nombre del arquitecto",
+          "Aumentar el número de habitaciones",
+          "Proteger paredes y ventanas de la lluvia"
+        ],
+        "correctAnswer": "Proteger paredes y ventanas de la lluvia",
+        "explanation": "Los aleros pueden reducir la cantidad de lluvia que llega a muros y aberturas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-137",
+        "number": 137,
+        "topic": "Crítica visual",
+        "concept": "agrupacion_de_figuras_afecta_equilibrio_compositivo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una reseña afirma que una pintura parece desequilibrada porque todas las figuras están agrupadas en un lado. ¿Qué elemento está analizando?",
+        "options": [
+          "La biografía del público",
+          "La composición",
+          "La licencia de uso",
+          "La duración de la exposición"
+        ],
+        "correctAnswer": "La composición",
+        "explanation": "La composición organiza las formas y el peso visual dentro de la imagen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-138",
+        "number": 138,
+        "topic": "Medios audiovisuales",
+        "concept": "angulo_bajo_aumenta_sensacion_de_imponencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una cámara situada muy abajo hace que un personaje parezca dominante. ¿Qué decisión contribuye a ese efecto?",
+        "options": [
+          "El color de la banda sonora",
+          "La duración de los créditos",
+          "El ángulo de cámara",
+          "El material de la pantalla"
+        ],
+        "correctAnswer": "El ángulo de cámara",
+        "explanation": "Un ángulo bajo puede hacer que una persona parezca más imponente dentro del encuadre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-139",
+        "number": 139,
+        "topic": "Patrimonio cultural",
+        "concept": "mercado_local_concentra_memoria_y_relaciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué un mercado tradicional puede ser relevante para la memoria de un barrio?",
+        "options": [
+          "Solo porque vende productos antiguos",
+          "Porque todos sus puestos tienen el mismo diseño",
+          "Porque nunca cambia de actividad",
+          "Porque concentra prácticas, relaciones e historias locales"
+        ],
+        "correctAnswer": "Porque concentra prácticas, relaciones e historias locales",
+        "explanation": "Los lugares cotidianos también pueden reunir recuerdos, oficios y relaciones que la comunidad valora.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-140",
+        "number": 140,
+        "topic": "Verdadero o falso · Color",
+        "concept": "respuesta_emocional_al_color_varia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una combinación de colores produce exactamente la misma emoción en todas las personas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Las respuestas al color pueden variar por experiencia personal, cultura y contexto de la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-141",
+        "number": 141,
+        "topic": "Retrato",
+        "concept": "objetos_en_retrato_aportan_pistas_de_identidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una persona aparece en un retrato junto a herramientas de su oficio. ¿Qué información pueden aportar esos objetos?",
+        "options": [
+          "Pistas sobre su actividad o identidad",
+          "El año exacto de nacimiento",
+          "La estatura real del artista",
+          "El número de visitantes de la exposición"
+        ],
+        "correctAnswer": "Pistas sobre su actividad o identidad",
+        "explanation": "Los objetos representados pueden aportar pistas sobre la ocupación, intereses o papel de la persona retratada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-142",
+        "number": 142,
+        "topic": "Símbolos culturales",
+        "concept": "objeto_se_vuelve_simbolo_al_representar_idea",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un artista usa una llave para representar libertad en una obra. ¿Qué permite interpretar ese objeto como símbolo?",
+        "options": [
+          "Su peso medido",
+          "La relación que establece con una idea",
+          "El color de la pared",
+          "El tamaño de la sala"
+        ],
+        "correctAnswer": "La relación que establece con una idea",
+        "explanation": "Un objeto funciona como símbolo cuando representa una idea más amplia dentro de un contexto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-143",
+        "number": 143,
+        "topic": "Representación cultural",
+        "concept": "revisar_perspectivas_evita_representacion_estereotipada",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un afiche representa a una comunidad únicamente con un estereotipo. ¿Qué revisión convendría hacer?",
+        "options": [
+          "Añadir más adornos sin cambiar la imagen",
+          "Reducir el tamaño del título",
+          "Consultar otras perspectivas y formas de representación",
+          "Quitar todos los nombres propios"
+        ],
+        "correctAnswer": "Consultar otras perspectivas y formas de representación",
+        "explanation": "Revisar perspectivas ayuda a representar a las personas con más contexto y evita reducirlas a una sola característica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-144",
+        "number": 144,
+        "topic": "Diseño y equilibrio",
+        "concept": "varios_elementos_pequenos_compensan_peso_visual",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un afiche, una imagen grande a la izquierda y varias pequeñas a la derecha parecen equilibradas. ¿Qué puede explicarlo?",
+        "options": [
+          "Todos los elementos tienen el mismo peso",
+          "La imagen grande no atrae la mirada",
+          "El afiche carece de composición",
+          "Varios elementos pequeños pueden compensar uno dominante"
+        ],
+        "correctAnswer": "Varios elementos pequeños pueden compensar uno dominante",
+        "explanation": "El equilibrio visual depende de relaciones de tamaño, posición y atención, no de que todo sea idéntico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-145",
+        "number": 145,
+        "topic": "Verdadero o falso · Música",
+        "concept": "interpretacion_de_musica_instrumental_no_es_unica",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una pieza instrumental comunica siempre una sola emoción y todos los oyentes deben interpretarla igual.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La música puede sugerir sensaciones, pero cada oyente también interpreta desde su experiencia y contexto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-146",
+        "number": 146,
+        "topic": "Creación de exposición",
+        "concept": "consultar_comunidad_mejora_representacion_de_tradicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo quiere mostrar una tradición de otra comunidad en una exposición escolar. ¿Qué acción mejora el respeto y la precisión?",
+        "options": [
+          "Consultar fuentes y, cuando sea posible, voces de esa comunidad",
+          "Inventar detalles para que la historia sea más llamativa",
+          "Presentar una sola imagen sin explicar su contexto",
+          "Cambiar el nombre de la práctica"
+        ],
+        "correctAnswer": "Consultar fuentes y, cuando sea posible, voces de esa comunidad",
+        "explanation": "Consultar fuentes pertinentes y voces vinculadas con la tradición ayuda a representarla con contexto y cuidado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-147",
+        "number": 147,
+        "topic": "Producción artística",
+        "concept": "uso_y_ambiente_orientan_material_y_seguridad",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escultura para un patio escolar debe soportar lluvia y contacto ocasional. ¿Qué decisión conviene tomar antes de construirla?",
+        "options": [
+          "Elegir el material solo por su color",
+          "Evaluar resistencia, seguridad y mantenimiento",
+          "Evitar probar una maqueta",
+          "Diseñarla sin considerar dónde irá"
+        ],
+        "correctAnswer": "Evaluar resistencia, seguridad y mantenimiento",
+        "explanation": "El uso y las condiciones ambientales orientan la selección de materiales y las medidas de seguridad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-148",
+        "number": 148,
+        "topic": "Verdadero o falso · Participación cultural",
+        "concept": "revision_comunitaria_detecta_falta_de_contexto",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Invitar a la comunidad usuaria a revisar una exposición antes de abrirla puede ayudar a detectar interpretaciones incompletas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las personas vinculadas con un tema pueden aportar conocimientos y señalar aspectos que necesitan contexto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-149",
+        "number": 149,
+        "topic": "Accesibilidad de exposición",
+        "concept": "ajustar_luz_y_angulo_reduce_reflejo_en_exhibicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una sala tiene una obra importante detrás de un reflejo intenso en el vidrio. ¿Qué ajuste ayudaría más a observarla?",
+        "options": [
+          "Poner más texto frente al vidrio",
+          "Apagar todas las luces de emergencia",
+          "Cambiar la iluminación o el ángulo para reducir el reflejo",
+          "Aumentar el volumen de la sala"
+        ],
+        "correctAnswer": "Cambiar la iluminación o el ángulo para reducir el reflejo",
+        "explanation": "Modificar la iluminación o el ángulo de observación puede reducir reflejos y facilitar la lectura de la obra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "ART8-150",
+        "number": 150,
+        "topic": "Verdadero o falso · Animación",
+        "concept": "secuencia_de_dibujos_crea_ilusion_de_movimiento",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "En un folioscopio, dibujos con cambios graduales que se muestran rápidamente pueden crear la ilusión de movimiento.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Al pasar las imágenes en secuencia, las pequeñas diferencias entre dibujos se perciben como una acción continua.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
+  },
+  {
+    "catalogId": "edusyn-ciencia-naturaleza-grade-8-v1",
+    "title": "Ciencia y naturaleza · 8.º",
+    "grade": 8,
+    "subjectArea": "Duelos",
+    "category": "Ciencia y naturaleza",
+    "version": "1.0",
+    "availability": "institution-opt-in",
+    "editorialStatus": "ready-for-import",
+    "audit": {
+      "questions": 150,
+      "multipleChoice": 120,
+      "trueFalse": 30,
+      "difficulty": {
+        "basic": 50,
+        "intermediate": 70,
+        "application": 30
+      },
+      "answerPositions": {
+        "A": 30,
+        "B": 30,
+        "C": 30,
+        "D": 30
+      },
+      "conceptsPresent": 150,
+      "conceptsMissing": 0
+    },
+    "sources": [
+      "https://openstax.org/details/books/biology-2e",
+      "https://science.nasa.gov/earth/facts/",
+      "https://water.usgs.gov/water-basics_glossary.html",
+      "https://www.noaa.gov/education/resource-collections/freshwater/water-cycle"
+    ],
+    "questions": [
+      {
+        "id": "SCI8-001",
+        "number": 1,
+        "topic": "Biología celular",
+        "concept": "membrana_regula_intercambio_celular",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura controla qué sustancias entran y salen de una célula?",
+        "options": [
+          "Membrana celular",
+          "Núcleo",
+          "Citoplasma",
+          "Ribosoma"
+        ],
+        "correctAnswer": "Membrana celular",
+        "explanation": "La membrana celular regula el intercambio de sustancias entre la célula y su entorno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-002",
+        "number": 2,
+        "topic": "Materia",
+        "concept": "atomo_es_unidad_basica_de_elemento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál es la unidad más pequeña de un elemento que conserva sus propiedades químicas?",
+        "options": [
+          "Tejido",
+          "Átomo",
+          "Órgano",
+          "Planeta"
+        ],
+        "correctAnswer": "Átomo",
+        "explanation": "Un átomo es la unidad básica de un elemento químico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-003",
+        "number": 3,
+        "topic": "Fuerzas",
+        "concept": "fuerza_se_mide_en_newtons",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué unidad se usa para medir una fuerza en el Sistema Internacional?",
+        "options": [
+          "Metro",
+          "Joule",
+          "Newton",
+          "Litro"
+        ],
+        "correctAnswer": "Newton",
+        "explanation": "La fuerza se mide en newtons, nombrados así en honor a Isaac Newton.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-004",
+        "number": 4,
+        "topic": "Ecosistemas",
+        "concept": "planta_produce_materia_organica_por_fotosintesis",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué organismo produce su propio alimento mediante fotosíntesis?",
+        "options": [
+          "Hongo",
+          "Consumidor",
+          "Depredador",
+          "Planta"
+        ],
+        "correctAnswer": "Planta",
+        "explanation": "Las plantas usan energía luminosa para producir sustancias orgánicas a partir de agua y dióxido de carbono.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-005",
+        "number": 5,
+        "topic": "Energía",
+        "concept": "calor_es_transferencia_por_diferencia_de_temperatura",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué forma de energía se transfiere entre cuerpos por diferencia de temperatura?",
+        "options": [
+          "Calor",
+          "Sonido",
+          "Luz",
+          "Movimiento"
+        ],
+        "correctAnswer": "Calor",
+        "explanation": "El calor es energía que se transfiere debido a una diferencia de temperatura.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-006",
+        "number": 6,
+        "topic": "Tierra",
+        "concept": "litosfera_incluye_corteza_y_manto_superior_rigido",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué capa de la Tierra incluye la corteza y la parte superior rígida del manto?",
+        "options": [
+          "Núcleo externo",
+          "Litosfera",
+          "Atmósfera",
+          "Hidrosfera"
+        ],
+        "correctAnswer": "Litosfera",
+        "explanation": "La litosfera comprende la corteza y la porción superior rígida del manto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-007",
+        "number": 7,
+        "topic": "Herencia",
+        "concept": "adn_contiene_informacion_hereditaria",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué molécula se encuentra la información hereditaria de la mayoría de los seres vivos?",
+        "options": [
+          "Agua",
+          "Glucosa",
+          "ADN",
+          "Oxígeno"
+        ],
+        "correctAnswer": "ADN",
+        "explanation": "El ADN contiene instrucciones hereditarias en los organismos celulares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-008",
+        "number": 8,
+        "topic": "Verdadero o falso · Cambios de estado",
+        "concept": "congelacion_cambia_agua_de_liquido_a_solido",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "Al congelarse, el agua líquida pasa al estado sólido.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La congelación ocurre cuando el agua pierde energía térmica suficiente para formar hielo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-009",
+        "number": 9,
+        "topic": "Biología celular",
+        "concept": "mitocondria_participa_en_respiracion_celular",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una célula necesita producir energía utilizable a partir de nutrientes. ¿Qué estructura participa directamente en la respiración celular?",
+        "options": [
+          "Pared celular",
+          "Vacuola",
+          "Cloroplasto",
+          "Mitocondria"
+        ],
+        "correctAnswer": "Mitocondria",
+        "explanation": "Las mitocondrias participan en procesos de respiración celular que liberan energía de moléculas orgánicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-010",
+        "number": 10,
+        "topic": "Mezclas",
+        "concept": "filtracion_separa_solido_insoluble_de_liquido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Se mezcla arena con agua y luego se deja reposar. ¿Qué método permite separar la arena con facilidad?",
+        "options": [
+          "Filtración",
+          "Evaporación del hierro",
+          "Imantación del agua",
+          "Destilación de la arena"
+        ],
+        "correctAnswer": "Filtración",
+        "explanation": "La arena no se disuelve y puede quedar retenida en un filtro mientras el agua lo atraviesa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-011",
+        "number": 11,
+        "topic": "Ecosistemas",
+        "concept": "depredacion_relaciona_cazador_y_presa",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una cadena alimentaria, ¿qué relación describe mejor a un zorro que caza un conejo?",
+        "options": [
+          "Competencia por luz",
+          "Depredación",
+          "Polinización",
+          "Descomposición"
+        ],
+        "correctAnswer": "Depredación",
+        "explanation": "En la depredación, un organismo captura y consume a otro.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-012",
+        "number": 12,
+        "topic": "Movimiento",
+        "concept": "distancias_iguales_en_tiempos_iguales_indican_movimiento_uniforme",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un ciclista recorre distancias iguales en tiempos iguales. ¿Cómo se describe su movimiento?",
+        "options": [
+          "Acelerado",
+          "Circular",
+          "Uniforme",
+          "Aleatorio"
+        ],
+        "correctAnswer": "Uniforme",
+        "explanation": "En un movimiento uniforme la rapidez se mantiene constante.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-013",
+        "number": 13,
+        "topic": "Verdadero o falso · Fotosíntesis",
+        "concept": "fotosintesis_usa_luz_para_producir_materia_organica",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La fotosíntesis utiliza luz para ayudar a convertir agua y dióxido de carbono en sustancias orgánicas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En la fotosíntesis, la energía luminosa impulsa la producción de materia orgánica y se libera oxígeno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-014",
+        "number": 14,
+        "topic": "Propiedades de la materia",
+        "concept": "igual_volumen_mayor_masa_implica_mayor_densidad",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos objetos tienen el mismo volumen, pero uno tiene mayor masa. ¿Cuál tiene mayor densidad?",
+        "options": [
+          "El de menor masa",
+          "Ambos tienen densidad cero",
+          "El que ocupa más espacio",
+          "El de mayor masa"
+        ],
+        "correctAnswer": "El de mayor masa",
+        "explanation": "Si el volumen es igual, el objeto con más masa tiene mayor masa por unidad de volumen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-015",
+        "number": 15,
+        "topic": "Transferencia de energía",
+        "concept": "conduccion_transfiere_energia_en_solido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una cuchara metálica se calienta al dejarla en una bebida caliente. ¿Cómo se transfiere principalmente la energía a lo largo de la cuchara?",
+        "options": [
+          "Conducción",
+          "Evaporación",
+          "Reflexión",
+          "Condensación"
+        ],
+        "correctAnswer": "Conducción",
+        "explanation": "La conducción transfiere energía térmica a través de un material por interacción entre sus partículas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-016",
+        "number": 16,
+        "topic": "Genética",
+        "concept": "variacion_depende_de_herencia_y_ambiente",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos individuos de una especie comparten muchos rasgos, pero no son idénticos. ¿Qué puede explicar parte de esas diferencias?",
+        "options": [
+          "Que tienen distinto número de planetas",
+          "Variaciones en la información hereditaria y el ambiente",
+          "Que todos sus genes desaparecieron",
+          "Que el agua dejó de existir"
+        ],
+        "correctAnswer": "Variaciones en la información hereditaria y el ambiente",
+        "explanation": "Las diferencias pueden relacionarse con variaciones heredadas y con experiencias o condiciones ambientales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-017",
+        "number": 17,
+        "topic": "Tierra y clima",
+        "concept": "angulo_de_radiacion_varia_con_latitud",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una zona cercana al ecuador suele recibir más energía solar directa durante el año que una zona polar?",
+        "options": [
+          "Está más cerca de la Luna",
+          "Tiene más continentes",
+          "Los rayos solares llegan con ángulo más directo",
+          "La gravedad es menor"
+        ],
+        "correctAnswer": "Los rayos solares llegan con ángulo más directo",
+        "explanation": "La curvatura terrestre hace que la luz llegue más directa a latitudes bajas y más inclinada a latitudes altas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-018",
+        "number": 18,
+        "topic": "Verdadero o falso · Circuitos",
+        "concept": "circuito_en_serie_tiene_una_sola_trayectoria",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un circuito en serie, si se interrumpe el único camino de corriente, los demás componentes dejan de funcionar.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Un circuito en serie tiene una sola trayectoria; al abrirse, se detiene la corriente en todo el circuito.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-019",
+        "number": 19,
+        "topic": "Fuerzas",
+        "concept": "friccion_se_opone_al_deslizamiento",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una caja se desliza por el piso y poco a poco se detiene. ¿Qué fuerza se opone principalmente a su movimiento?",
+        "options": [
+          "Empuje magnético",
+          "Flotación",
+          "Fuerza eléctrica",
+          "Fricción"
+        ],
+        "correctAnswer": "Fricción",
+        "explanation": "La fricción entre las superficies se opone al deslizamiento y reduce la rapidez de la caja.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-020",
+        "number": 20,
+        "topic": "Ecología",
+        "concept": "descomponedores_reciclan_nutrientes_del_ambiente",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumplen los descomponedores en un ecosistema?",
+        "options": [
+          "Transforman restos orgánicos y devuelven nutrientes al ambiente",
+          "Producen luz solar",
+          "Impiden todo cambio en las poblaciones",
+          "Eliminan la necesidad de productores"
+        ],
+        "correctAnswer": "Transforman restos orgánicos y devuelven nutrientes al ambiente",
+        "explanation": "Hongos y bacterias descomponen materia orgánica y participan en el reciclaje de nutrientes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-021",
+        "number": 21,
+        "topic": "Experimentos",
+        "concept": "controlar_variables_permite_evaluar_efecto_de_luz",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una estudiante compara el crecimiento de dos plantas y quiere probar si la luz influye. ¿Qué debe mantener igual para comparar mejor?",
+        "options": [
+          "Cambiar simultáneamente agua y suelo",
+          "La especie, el agua y el tipo de suelo",
+          "Poner ambas en completa oscuridad",
+          "Medir una planta al inicio y otra al final"
+        ],
+        "correctAnswer": "La especie, el agua y el tipo de suelo",
+        "explanation": "Para atribuir diferencias a la luz, conviene mantener constantes otros factores relevantes como especie, agua y suelo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-022",
+        "number": 22,
+        "topic": "Cambio químico",
+        "concept": "oxidacion_superficial_oscurece_manzana_cortada",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una manzana cortada se oscurece después de un tiempo al aire. ¿Qué explicación es más adecuada?",
+        "options": [
+          "Se convirtió en metal",
+          "Perdió toda su masa",
+          "Ocurrieron reacciones químicas con sustancias del aire",
+          "El frío la congeló"
+        ],
+        "correctAnswer": "Ocurrieron reacciones químicas con sustancias del aire",
+        "explanation": "El oscurecimiento puede deberse a reacciones de oxidación en la superficie expuesta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-023",
+        "number": 23,
+        "topic": "Verdadero o falso · Ecosistemas",
+        "concept": "menos_polinizadores_puede_reducir_formacion_de_semillas",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si disminuye mucho una población de insectos polinizadores, algunas plantas pueden producir menos semillas.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "En especies que dependen de polinizadores, menos visitas pueden reducir la fecundación y la producción de semillas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-024",
+        "number": 24,
+        "topic": "Fuerzas y máquinas",
+        "concept": "rampa_reduce_fuerza_aumentando_distancia",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una persona usa una rampa para subir una caja pesada a un camión. ¿Qué ventaja ofrece principalmente la rampa?",
+        "options": [
+          "Elimina la gravedad",
+          "Hace que la caja pierda masa",
+          "Evita que exista fricción",
+          "Reduce la fuerza necesaria al aumentar la distancia del recorrido"
+        ],
+        "correctAnswer": "Reduce la fuerza necesaria al aumentar la distancia del recorrido",
+        "explanation": "Una rampa permite aplicar una fuerza menor a lo largo de una distancia más extensa para elevar la carga.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-025",
+        "number": 25,
+        "topic": "Verdadero o falso · Evidencia científica",
+        "concept": "correlacion_no_demuestra_causalidad",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si dos variables cambian al mismo tiempo en un estudio, eso demuestra por sí solo que una causó el cambio de la otra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una asociación no basta para demostrar causalidad; se deben considerar otras variables y diseñar pruebas adecuadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-026",
+        "number": 26,
+        "topic": "Biología celular",
+        "concept": "cloroplasto_capta_luz_para_fotosintesis",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura de las células vegetales capta energía luminosa para la fotosíntesis?",
+        "options": [
+          "Cloroplasto",
+          "Mitocondria",
+          "Núcleo",
+          "Membrana celular"
+        ],
+        "correctAnswer": "Cloroplasto",
+        "explanation": "Los cloroplastos contienen pigmentos que captan luz y participan en la fotosíntesis.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-027",
+        "number": 27,
+        "topic": "Electricidad",
+        "concept": "cobre_es_material_conductor",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué material permite con facilidad el paso de corriente eléctrica?",
+        "options": [
+          "Caucho",
+          "Cobre",
+          "Madera seca",
+          "Vidrio"
+        ],
+        "correctAnswer": "Cobre",
+        "explanation": "El cobre conduce la corriente y se usa comúnmente en cables eléctricos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-028",
+        "number": 28,
+        "topic": "Clasificación de la materia",
+        "concept": "molecula_es_conjunto_de_atomos_enlazados",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es una molécula?",
+        "options": [
+          "Una capa de la atmósfera",
+          "Un tipo de fuerza",
+          "Un conjunto de átomos enlazados",
+          "Un grupo de órganos"
+        ],
+        "correctAnswer": "Un conjunto de átomos enlazados",
+        "explanation": "Una molécula está formada por dos o más átomos unidos químicamente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-029",
+        "number": 29,
+        "topic": "Sistema solar",
+        "concept": "rotacion_terrestre_produce_dia_y_noche",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué movimiento de la Tierra produce la alternancia entre día y noche?",
+        "options": [
+          "Traslación alrededor del Sol",
+          "Movimiento de las placas",
+          "Precesión del eje",
+          "Rotación sobre su eje"
+        ],
+        "correctAnswer": "Rotación sobre su eje",
+        "explanation": "Al rotar sobre su eje, distintas partes de la Tierra quedan iluminadas por el Sol.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-030",
+        "number": 30,
+        "topic": "Ecología",
+        "concept": "poblacion_reune_individuos_de_una_especie",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nombre recibe el conjunto de individuos de la misma especie que habita un lugar?",
+        "options": [
+          "Población",
+          "Comunidad",
+          "Ecosistema",
+          "Biosfera"
+        ],
+        "correctAnswer": "Población",
+        "explanation": "Una población reúne organismos de la misma especie que viven en un área y periodo determinados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-031",
+        "number": 31,
+        "topic": "Sangre",
+        "concept": "globulo_rojo_transporta_oxigeno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué componente de la sangre transporta gran parte del oxígeno?",
+        "options": [
+          "Plaqueta",
+          "Glóbulo rojo",
+          "Plasma solamente",
+          "Glóbulo blanco"
+        ],
+        "correctAnswer": "Glóbulo rojo",
+        "explanation": "La hemoglobina de los glóbulos rojos transporta la mayor parte del oxígeno en la sangre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-032",
+        "number": 32,
+        "topic": "Tabla periódica",
+        "concept": "numero_atomico_equivale_a_protones",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué información identifica principalmente el número atómico de un elemento?",
+        "options": [
+          "El número de enlaces que forma siempre",
+          "Su temperatura de ebullición",
+          "La cantidad de protones en el núcleo",
+          "El número de mezclas posibles"
+        ],
+        "correctAnswer": "La cantidad de protones en el núcleo",
+        "explanation": "El número atómico corresponde a la cantidad de protones del núcleo de un átomo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-033",
+        "number": 33,
+        "topic": "Verdadero o falso · Densidad",
+        "concept": "densidad_relaciona_masa_y_volumen",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La densidad relaciona la masa de una sustancia con el volumen que ocupa.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La densidad se calcula como masa dividida entre volumen.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-034",
+        "number": 34,
+        "topic": "Ecología",
+        "concept": "escasez_de_presa_compartida_aumenta_competencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En una red alimentaria, varios depredadores se alimentan de la misma especie. ¿Qué puede ocurrir si esa presa disminuye mucho?",
+        "options": [
+          "Todos los productores desaparecen de inmediato",
+          "La energía deja de transformarse",
+          "Los depredadores no se relacionan entre sí",
+          "Puede aumentar la competencia por el alimento"
+        ],
+        "correctAnswer": "Puede aumentar la competencia por el alimento",
+        "explanation": "Cuando escasea una presa compartida, los depredadores pueden competir por el recurso disponible.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-035",
+        "number": 35,
+        "topic": "Biodiversidad",
+        "concept": "pisos_termicos_crean_condiciones_ecologicas_distintas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una región montañosa tiene distintos pisos térmicos. ¿Por qué pueden encontrarse allí comunidades de seres vivos diferentes?",
+        "options": [
+          "Cambian condiciones como temperatura y humedad",
+          "Todas las especies viven en el mismo clima",
+          "La altitud detiene la evolución",
+          "El suelo deja de contener agua"
+        ],
+        "correctAnswer": "Cambian condiciones como temperatura y humedad",
+        "explanation": "La altitud puede modificar temperatura, humedad y otras condiciones que influyen en los organismos presentes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-036",
+        "number": 36,
+        "topic": "Transferencia de energía",
+        "concept": "radiacion_transfiere_energia_a_traves_del_vacio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "La energía del Sol llega a la Tierra a través del espacio. ¿Qué forma de transferencia lo permite?",
+        "options": [
+          "Conducción",
+          "Radiación",
+          "Fusión",
+          "Fricción"
+        ],
+        "correctAnswer": "Radiación",
+        "explanation": "La radiación puede transferir energía mediante ondas electromagnéticas y no requiere un medio material.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-037",
+        "number": 37,
+        "topic": "Sistema circulatorio",
+        "concept": "pulso_aumenta_para_atender_demanda_del_ejercicio",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué aumenta el pulso durante una carrera?",
+        "options": [
+          "Para reducir el flujo de sangre a los músculos",
+          "Porque el cuerpo deja de usar oxígeno",
+          "Para transportar más sangre y oxígeno por unidad de tiempo",
+          "Para disminuir la temperatura hasta cero"
+        ],
+        "correctAnswer": "Para transportar más sangre y oxígeno por unidad de tiempo",
+        "explanation": "Durante el ejercicio, el corazón suele latir más rápido para responder a la mayor demanda de los tejidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-038",
+        "number": 38,
+        "topic": "Verdadero o falso · Fuerzas",
+        "concept": "masa_y_peso_son_magnitudes_distintas",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La masa y el peso son la misma magnitud y se expresan siempre en kilogramos.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La masa se mide en kilogramos; el peso es una fuerza y se mide en newtons.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-039",
+        "number": 39,
+        "topic": "Tabla periódica",
+        "concept": "electrones_de_valencia_relacionan_propiedades_de_grupo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Los elementos de una misma columna de la tabla periódica suelen compartir propiedades porque tienen:",
+        "options": [
+          "El mismo número de neutrones en cada átomo",
+          "La misma masa exacta",
+          "El mismo estado físico en todo momento",
+          "Una organización semejante de electrones externos"
+        ],
+        "correctAnswer": "Una organización semejante de electrones externos",
+        "explanation": "Los elementos de un grupo tienen configuraciones semejantes de electrones de valencia, lo que se relaciona con propiedades parecidas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-040",
+        "number": 40,
+        "topic": "Sistema solar",
+        "concept": "estaciones_se_relacionan_con_inclinacion_del_eje",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué las estaciones no se explican principalmente por la distancia entre la Tierra y el Sol?",
+        "options": [
+          "Se relacionan con la inclinación del eje y la luz recibida",
+          "La Tierra no cambia su posición alrededor del Sol",
+          "El Sol se apaga durante el invierno",
+          "La Luna bloquea siempre la mitad de la luz"
+        ],
+        "correctAnswer": "Se relacionan con la inclinación del eje y la luz recibida",
+        "explanation": "La inclinación del eje terrestre cambia el ángulo y duración de la luz solar recibida en cada hemisferio.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-041",
+        "number": 41,
+        "topic": "Ecología y población",
+        "concept": "disponibilidad_de_alimento_limita_poblacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un bosque, la cantidad de alimento disponible disminuye durante una sequía. ¿Qué factor puede limitar el tamaño de una población herbívora?",
+        "options": [
+          "El número de estrellas",
+          "La disponibilidad de recursos",
+          "La forma de las nubes solamente",
+          "El color de los animales"
+        ],
+        "correctAnswer": "La disponibilidad de recursos",
+        "explanation": "El alimento es un recurso que puede limitar la supervivencia y reproducción de una población.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-042",
+        "number": 42,
+        "topic": "Circuitos eléctricos",
+        "concept": "ramas_paralelas_ofrecen_caminos_independientes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un circuito paralelo, ¿qué ocurre si se desconecta una de las ramas?",
+        "options": [
+          "Todo el circuito se convierte en una pila",
+          "La corriente deja de existir en cualquier rama",
+          "Las otras ramas pueden seguir cerradas",
+          "Los cables se vuelven aislantes"
+        ],
+        "correctAnswer": "Las otras ramas pueden seguir cerradas",
+        "explanation": "Cada rama ofrece un camino propio, por lo que una interrupción no necesariamente abre las demás.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-043",
+        "number": 43,
+        "topic": "Verdadero o falso · Redes alimentarias",
+        "concept": "flechas_alimentarias_indican_direccion_de_transferencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un diagrama de cadena alimentaria, las flechas suelen señalar el flujo de materia y energía desde el alimento hacia quien lo consume.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las flechas muestran la dirección de transferencia desde el organismo consumido hacia el consumidor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-044",
+        "number": 44,
+        "topic": "Geología",
+        "concept": "erosion_remueve_y_transporta_materiales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso desgasta y transporta fragmentos de roca por acción del agua o el viento?",
+        "options": [
+          "Cristalización",
+          "Condensación",
+          "Fotosíntesis",
+          "Erosión"
+        ],
+        "correctAnswer": "Erosión",
+        "explanation": "La erosión remueve y transporta materiales de la superficie mediante agentes como agua, viento o hielo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-045",
+        "number": 45,
+        "topic": "Sistema inmune",
+        "concept": "globulos_blancos_participan_en_defensa",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué función cumplen principalmente los glóbulos blancos?",
+        "options": [
+          "Participar en la defensa del organismo",
+          "Transportar la mayor parte del oxígeno",
+          "Formar impulsos eléctricos del corazón",
+          "Almacenar minerales en los huesos"
+        ],
+        "correctAnswer": "Participar en la defensa del organismo",
+        "explanation": "Distintos tipos de glóbulos blancos ayudan a reconocer y responder frente a agentes que pueden causar enfermedad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-046",
+        "number": 46,
+        "topic": "Conservación de agua",
+        "concept": "medir_humedad_ajusta_riego_y_reduce_desperdicio",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una escuela quiere reducir el uso de agua en sus jardines sin secar las plantas. ¿Qué estrategia es más razonable?",
+        "options": [
+          "Regar con más frecuencia durante las horas de mayor calor",
+          "Medir la humedad del suelo y regar cuando sea necesario",
+          "Cubrir las plantas con plástico oscuro todo el día",
+          "Dejar el grifo abierto de manera continua"
+        ],
+        "correctAnswer": "Medir la humedad del suelo y regar cuando sea necesario",
+        "explanation": "Medir la humedad permite ajustar el riego a las necesidades del suelo y evitar desperdiciar agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-047",
+        "number": 47,
+        "topic": "Movimiento y datos",
+        "concept": "distancia_constante_en_grafica_tiempo_indica_reposo",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una gráfica de distancia contra tiempo muestra una línea horizontal mientras transcurre el tiempo. ¿Qué indica sobre el objeto?",
+        "options": [
+          "Aumenta su distancia con rapidez constante",
+          "Cambia de dirección cada segundo",
+          "Permanece en la misma posición",
+          "Está acelerando sin moverse"
+        ],
+        "correctAnswer": "Permanece en la misma posición",
+        "explanation": "Si la distancia no cambia mientras pasa el tiempo, el objeto permanece en reposo respecto al punto de referencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-048",
+        "number": 48,
+        "topic": "Verdadero o falso · Experimentos",
+        "concept": "medicion_aislada_no_prueba_efecto_general",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si solo se mide una planta en un único momento, es suficiente para concluir que un fertilizante siempre mejora el crecimiento.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Una medición aislada no permite descartar variación natural ni otros factores; se necesitan comparaciones y datos suficientes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-049",
+        "number": 49,
+        "topic": "Separación de mezclas",
+        "concept": "destilacion_separa_liquidos_por_punto_de_ebullicion",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una mezcla contiene agua y alcohol, que se mezclan entre sí y tienen distintos puntos de ebullición. ¿Qué método puede separarlos parcialmente?",
+        "options": [
+          "Tamizado",
+          "Imantación",
+          "Sedimentación",
+          "Destilación"
+        ],
+        "correctAnswer": "Destilación",
+        "explanation": "La destilación aprovecha diferencias en puntos de ebullición para separar líquidos miscibles.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-050",
+        "number": 50,
+        "topic": "Verdadero o falso · Biodiversidad",
+        "concept": "diversidad_puede_apoyar_funcion_ante_cambios",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una comunidad con distintas especies puede tener más posibilidades de mantener algunas funciones ecológicas cuando cambian las condiciones ambientales.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La diversidad puede aportar distintas respuestas y funciones, aunque su efecto depende de las especies y del ecosistema.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-051",
+        "number": 51,
+        "topic": "Clima y tiempo",
+        "concept": "clima_resume_patrones_de_largo_plazo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe mejor el clima de una región?",
+        "options": [
+          "Patrones habituales de temperatura y lluvia durante largos periodos",
+          "La lluvia que cae durante una tarde",
+          "La temperatura de una hora específica",
+          "El viento observado en un día"
+        ],
+        "correctAnswer": "Patrones habituales de temperatura y lluvia durante largos periodos",
+        "explanation": "El clima resume patrones atmosféricos observados durante periodos prolongados.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-052",
+        "number": 52,
+        "topic": "Cambios químicos",
+        "concept": "reaccion_quimica_forma_sustancias_con_propiedades_nuevas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué indica que ocurrió una reacción química?",
+        "options": [
+          "El objeto cambió de lugar",
+          "Se formaron sustancias con propiedades nuevas",
+          "El sólido se cortó en trozos",
+          "El líquido cambió de recipiente"
+        ],
+        "correctAnswer": "Se formaron sustancias con propiedades nuevas",
+        "explanation": "En una reacción química, los átomos se reorganizan y pueden formarse sustancias distintas de las iniciales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-053",
+        "number": 53,
+        "topic": "Energía eléctrica",
+        "concept": "bateria_convierte_energia_quimica_en_electrica",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué transformación ocurre principalmente en una batería que alimenta una linterna encendida?",
+        "options": [
+          "Energía sonora a energía nuclear",
+          "Energía luminosa a energía química",
+          "Energía química a energía eléctrica",
+          "Energía térmica a energía gravitacional"
+        ],
+        "correctAnswer": "Energía química a energía eléctrica",
+        "explanation": "La batería convierte energía química en eléctrica, que luego puede transformarse en luz y calor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-054",
+        "number": 54,
+        "topic": "Fuerzas",
+        "concept": "dinamometro_mide_fuerza",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento mide la fuerza aplicada a un objeto?",
+        "options": [
+          "Probeta",
+          "Termómetro",
+          "Regla",
+          "Dinamómetro"
+        ],
+        "correctAnswer": "Dinamómetro",
+        "explanation": "Un dinamómetro mide fuerzas, normalmente mediante la deformación de un resorte calibrado.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-055",
+        "number": 55,
+        "topic": "Geología",
+        "concept": "colision_de_placas_puede_causar_subduccion_o_elevacion",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué puede ocurrir cuando dos placas tectónicas chocan?",
+        "options": [
+          "Una placa puede hundirse bajo otra o elevar el relieve",
+          "Se detiene la rotación terrestre",
+          "El océano desaparece de inmediato",
+          "La gravedad deja de actuar"
+        ],
+        "correctAnswer": "Una placa puede hundirse bajo otra o elevar el relieve",
+        "explanation": "En límites convergentes, las placas pueden subducirse o comprimir y elevar materiales de la corteza.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-056",
+        "number": 56,
+        "topic": "Sonido",
+        "concept": "frecuencia_se_relaciona_con_altura_del_sonido",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propiedad del sonido se relaciona principalmente con que un tono sea agudo o grave?",
+        "options": [
+          "Amplitud",
+          "Frecuencia",
+          "Distancia",
+          "Duración"
+        ],
+        "correctAnswer": "Frecuencia",
+        "explanation": "Una frecuencia mayor se percibe como un tono más agudo; una menor, como más grave.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-057",
+        "number": 57,
+        "topic": "Herencia",
+        "concept": "alelo_es_variante_de_un_gen",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué nombre recibe una versión específica de un gen?",
+        "options": [
+          "Tejido",
+          "Órgano",
+          "Alelo",
+          "Ecosistema"
+        ],
+        "correctAnswer": "Alelo",
+        "explanation": "Los alelos son variantes de un gen que pueden contribuir a diferencias heredables.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-058",
+        "number": 58,
+        "topic": "Verdadero o falso · Sonido",
+        "concept": "sonido_requiere_medio_material_para_propagarse",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "El sonido necesita un medio material para propagarse y no viaja en el vacío.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las ondas sonoras requieren partículas que transmitan la vibración entre una fuente y quien la recibe.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-059",
+        "number": 59,
+        "topic": "Disoluciones",
+        "concept": "mas_soluto_en_mismo_volumen_aumenta_concentracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Se disuelve más sal en la misma cantidad de agua. ¿Qué propiedad de la disolución aumenta?",
+        "options": [
+          "Su masa desaparece",
+          "El número de elementos químicos",
+          "Su estado pasa necesariamente a gas",
+          "La concentración de sal"
+        ],
+        "correctAnswer": "La concentración de sal",
+        "explanation": "Al aumentar la cantidad de soluto en el mismo volumen de disolución, aumenta su concentración.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-060",
+        "number": 60,
+        "topic": "Acidez",
+        "concept": "menor_ph_indica_mayor_acidez",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una solución tiene pH 3 y otra pH 6. ¿Cuál es más ácida?",
+        "options": [
+          "La de pH 3",
+          "La de pH 6",
+          "Ambas tienen igual acidez",
+          "Ninguna puede ser ácida"
+        ],
+        "correctAnswer": "La de pH 3",
+        "explanation": "En la escala habitual, un pH menor indica mayor acidez.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-061",
+        "number": 61,
+        "topic": "Acústica",
+        "concept": "materiales_absorbentes_reducen_eco_en_sala",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una sala vacía produce ecos largos durante una conversación. ¿Qué cambio puede reducirlos?",
+        "options": [
+          "Instalar más superficies duras y lisas",
+          "Añadir paneles o cortinas que absorban sonido",
+          "Aumentar el volumen de las voces",
+          "Retirar todos los objetos blandos"
+        ],
+        "correctAnswer": "Añadir paneles o cortinas que absorban sonido",
+        "explanation": "Algunos materiales porosos absorben parte del sonido y reducen las reflexiones que generan eco.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-062",
+        "number": 62,
+        "topic": "Movimiento y fuerzas",
+        "concept": "fuerza_neta_produce_aceleracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un carrito cambia su velocidad cuando una fuerza neta actúa sobre él. ¿Qué concepto describe ese cambio?",
+        "options": [
+          "Densidad",
+          "Temperatura",
+          "Aceleración",
+          "Presión atmosférica"
+        ],
+        "correctAnswer": "Aceleración",
+        "explanation": "La aceleración describe cambios en la velocidad y se relaciona con la fuerza neta aplicada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-063",
+        "number": 63,
+        "topic": "Verdadero o falso · Luz",
+        "concept": "refraccion_desvia_luz_al_cambiar_de_medio",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La refracción ocurre cuando la luz cambia de dirección al pasar de un medio a otro.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Al cambiar de medio, la velocidad de la luz puede cambiar y producir un cambio de dirección.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-064",
+        "number": 64,
+        "topic": "Sistema solar",
+        "concept": "fases_lunares_cambian_por_geometria_de_iluminacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué vemos distintas fases de la Luna durante el mes?",
+        "options": [
+          "La Luna cambia de tamaño",
+          "La sombra terrestre cubre la Luna cada noche",
+          "La Luna produce más o menos luz",
+          "Observamos distintas porciones de su lado iluminado"
+        ],
+        "correctAnswer": "Observamos distintas porciones de su lado iluminado",
+        "explanation": "La geometría entre Sol, Tierra y Luna cambia la porción iluminada que vemos desde la Tierra.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-065",
+        "number": 65,
+        "topic": "Adaptación",
+        "concept": "seleccion_natural_cambia_frecuencia_de_variantes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una población de insectos presenta variaciones en el color. Si cambia el entorno, ¿qué puede ocurrir a lo largo de generaciones?",
+        "options": [
+          "Las variantes que favorecen supervivencia pueden volverse más frecuentes",
+          "Todos los individuos cambian por decisión propia",
+          "El entorno modifica de inmediato cada gen",
+          "La población deja de reproducirse necesariamente"
+        ],
+        "correctAnswer": "Las variantes que favorecen supervivencia pueden volverse más frecuentes",
+        "explanation": "Si una variante heredable favorece la supervivencia o reproducción, puede aumentar su frecuencia en la población con el tiempo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-066",
+        "number": 66,
+        "topic": "Salud e inmunidad",
+        "concept": "vacuna_entrena_respuesta_inmunitaria",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué puede hacer una vacuna para ayudar a proteger contra una enfermedad?",
+        "options": [
+          "Eliminar todos los microorganismos del ambiente",
+          "Preparar al sistema inmune para reconocer un agente",
+          "Reemplazar todos los glóbulos rojos",
+          "Impedir cualquier infección futura"
+        ],
+        "correctAnswer": "Preparar al sistema inmune para reconocer un agente",
+        "explanation": "Las vacunas entrenan respuestas inmunitarias y reducen el riesgo de enfermedad grave, aunque la protección no es absoluta.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-067",
+        "number": 67,
+        "topic": "Ciclos de la materia",
+        "concept": "respiracion_celular_libera_dioxido_de_carbono",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso devuelve carbono a la atmósfera cuando los seres vivos obtienen energía de moléculas orgánicas?",
+        "options": [
+          "Congelación",
+          "Sedimentación",
+          "Respiración celular",
+          "Reflexión"
+        ],
+        "correctAnswer": "Respiración celular",
+        "explanation": "La respiración celular libera dióxido de carbono al transformar moléculas orgánicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-068",
+        "number": 68,
+        "topic": "Verdadero o falso · Herencia",
+        "concept": "habilidad_adquirida_no_se_hereda_directamente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una característica que una persona adquiere por practicar un deporte necesariamente se transmite a sus hijos mediante sus genes.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Los cambios adquiridos durante la vida no suelen alterar el ADN heredado por la descendencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-069",
+        "number": 69,
+        "topic": "Flotación",
+        "concept": "objeto_menos_denso_que_liquido_puede_flotar",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una pieza de madera flota en agua. ¿Qué comparación ayuda a explicar el resultado?",
+        "options": [
+          "Su temperatura supera siempre la del agua",
+          "Tiene más protones que el líquido",
+          "Su volumen es cero",
+          "Su densidad promedio es menor que la del agua"
+        ],
+        "correctAnswer": "Su densidad promedio es menor que la del agua",
+        "explanation": "Un objeto de densidad promedio menor que la del líquido puede flotar en él.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-070",
+        "number": 70,
+        "topic": "Energía y máquinas",
+        "concept": "friccion_convierte_energia_mecanica_en_termica",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una bicicleta frena y sus ruedas se calientan ligeramente. ¿Qué transformación ayuda a explicar el cambio?",
+        "options": [
+          "Parte de la energía del movimiento se transforma en energía térmica",
+          "El calor se convierte en masa",
+          "La energía desaparece completamente",
+          "La fricción produce materia nueva"
+        ],
+        "correctAnswer": "Parte de la energía del movimiento se transforma en energía térmica",
+        "explanation": "La fricción transforma parte de la energía mecánica en energía térmica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-071",
+        "number": 71,
+        "topic": "Relaciones ecológicas",
+        "concept": "especie_invasora_puede_alterar_recursos_y_poblaciones",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Después de introducir una especie invasora que consume los mismos recursos que un ave nativa, ¿qué efecto conviene vigilar?",
+        "options": [
+          "El color de las nubes",
+          "Cambios en alimento disponible y tamaño de ambas poblaciones",
+          "La duración del día",
+          "El número de montañas"
+        ],
+        "correctAnswer": "Cambios en alimento disponible y tamaño de ambas poblaciones",
+        "explanation": "La competencia por recursos puede afectar la disponibilidad de alimento y las poblaciones implicadas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-072",
+        "number": 72,
+        "topic": "Calidad del aire",
+        "concept": "trafico_y_viento_contextualizan_medicion_de_particulas",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos calles se miden a distintas horas y una muestra más partículas que la otra. ¿Qué dato ayudaría a interpretar mejor la comparación?",
+        "options": [
+          "El color de los edificios",
+          "La cantidad de tiendas",
+          "El tráfico y las condiciones del viento durante cada medición",
+          "El número de ventanas cerradas en una casa distante"
+        ],
+        "correctAnswer": "El tráfico y las condiciones del viento durante cada medición",
+        "explanation": "El tráfico y el viento pueden influir en la concentración de partículas y deben considerarse al comparar mediciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-073",
+        "number": 73,
+        "topic": "Verdadero o falso · Hipótesis",
+        "concept": "hipotesis_se_revisa_ante_evidencia_contraria",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Una hipótesis científica puede revisarse si nuevas observaciones confiables contradicen sus predicciones.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las explicaciones científicas se evalúan frente a evidencia y pueden modificarse cuando aparecen datos sólidos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-074",
+        "number": 74,
+        "topic": "Aislamiento térmico",
+        "concept": "aislamiento_reduce_transferencia_de_calor",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una botella mantiene caliente una bebida por más tiempo cuando está aislada. ¿Qué característica explica mejor este efecto?",
+        "options": [
+          "El aislamiento aumenta la masa de la bebida",
+          "El recipiente produce energía sin fuente",
+          "El líquido deja de transferir energía por completo",
+          "El aislamiento reduce la rapidez de transferencia de calor"
+        ],
+        "correctAnswer": "El aislamiento reduce la rapidez de transferencia de calor",
+        "explanation": "El aislamiento dificulta la transferencia de calor entre la bebida y el ambiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-075",
+        "number": 75,
+        "topic": "Verdadero o falso · Impacto ambiental",
+        "concept": "ciclo_de_vida_apoya_evaluacion_de_material",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Antes de elegir un material para un producto, es útil considerar tanto su función como los recursos y residuos asociados con su ciclo de vida.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Evaluar extracción, uso, duración y disposición permite considerar efectos ambientales del material.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-076",
+        "number": 76,
+        "topic": "Biología celular",
+        "concept": "celula_procariota_carece_de_nucleo_membranoso",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica distingue a una célula procariota?",
+        "options": [
+          "No tiene núcleo rodeado por membrana",
+          "No posee material genético",
+          "Siempre forma un organismo pluricelular",
+          "Tiene varios núcleos"
+        ],
+        "correctAnswer": "No tiene núcleo rodeado por membrana",
+        "explanation": "Las células procariotas carecen de un núcleo delimitado por membrana, aunque sí contienen material genético.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-077",
+        "number": 77,
+        "topic": "Acidez",
+        "concept": "ph_neutro_cercano_a_siete",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En la escala usual de pH, ¿qué valor se considera neutro aproximadamente a temperatura ambiente?",
+        "options": [
+          "1",
+          "7",
+          "10",
+          "14"
+        ],
+        "correctAnswer": "7",
+        "explanation": "El pH cercano a 7 se considera neutro en agua pura a temperatura ambiente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-078",
+        "number": 78,
+        "topic": "Química",
+        "concept": "electron_tiene_carga_negativa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué partícula tiene carga eléctrica negativa?",
+        "options": [
+          "Protón",
+          "Neutrón",
+          "Electrón",
+          "Núcleo"
+        ],
+        "correctAnswer": "Electrón",
+        "explanation": "Los electrones tienen carga negativa y se encuentran alrededor del núcleo atómico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-079",
+        "number": 79,
+        "topic": "Cambios de estado",
+        "concept": "condensacion_cambia_vapor_a_liquido",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Cuando el vapor de agua se convierte en gotas líquidas sobre una superficie fría, ocurre:",
+        "options": [
+          "Fusión",
+          "Sublimación",
+          "Solidificación",
+          "Condensación"
+        ],
+        "correctAnswer": "Condensación",
+        "explanation": "La condensación transforma un gas en líquido cuando pierde energía térmica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-080",
+        "number": 80,
+        "topic": "Sonido",
+        "concept": "amplitud_se_relaciona_con_intensidad_sonora",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué característica se relaciona principalmente con que un sonido se perciba fuerte o débil?",
+        "options": [
+          "Amplitud",
+          "Frecuencia",
+          "Longitud del instrumento",
+          "Velocidad de la luz"
+        ],
+        "correctAnswer": "Amplitud",
+        "explanation": "La amplitud de una onda sonora se relaciona con la intensidad percibida, aunque también influye la distancia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-081",
+        "number": 81,
+        "topic": "Geología",
+        "concept": "roca_sedimentaria_se_forma_de_sedimentos",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué tipo de roca puede formarse cuando sedimentos se compactan y cementan?",
+        "options": [
+          "Ígnea",
+          "Sedimentaria",
+          "Metamórfica",
+          "Artificial"
+        ],
+        "correctAnswer": "Sedimentaria",
+        "explanation": "Muchas rocas sedimentarias se originan por acumulación, compactación y cementación de sedimentos.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-082",
+        "number": 82,
+        "topic": "Meteorología",
+        "concept": "anemometro_mide_rapidez_del_viento",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento mide la rapidez del viento?",
+        "options": [
+          "Barómetro",
+          "Pluviómetro",
+          "Anemómetro",
+          "Termómetro"
+        ],
+        "correctAnswer": "Anemómetro",
+        "explanation": "El anemómetro mide la velocidad del viento; el pluviómetro registra lluvia y el barómetro, presión.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-083",
+        "number": 83,
+        "topic": "Verdadero o falso · Energía",
+        "concept": "aerogenerador_convierte_viento_en_electricidad",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La energía del viento puede convertirse en energía eléctrica mediante un aerogenerador.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El viento mueve las aspas y el generador transforma parte de esa energía mecánica en electricidad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-084",
+        "number": 84,
+        "topic": "Átomos",
+        "concept": "isotopos_difieren_en_numero_de_neutrones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos átomos son isótopos del mismo elemento. ¿En qué difieren necesariamente?",
+        "options": [
+          "En su número de protones",
+          "En su nombre de elemento",
+          "En su número de electrones siempre",
+          "En su cantidad de neutrones"
+        ],
+        "correctAnswer": "En su cantidad de neutrones",
+        "explanation": "Los isótopos de un elemento tienen igual número de protones y distinto número de neutrones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-085",
+        "number": 85,
+        "topic": "Salud",
+        "concept": "ventilacion_aumenta_para_intercambio_gaseoso_en_esfuerzo",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué una persona puede respirar más rápido durante una actividad física intensa?",
+        "options": [
+          "Para atender la mayor demanda de oxígeno y eliminar más dióxido de carbono",
+          "Para detener el movimiento de los músculos",
+          "Porque el cuerpo deja de intercambiar gases",
+          "Para bajar el número de células"
+        ],
+        "correctAnswer": "Para atender la mayor demanda de oxígeno y eliminar más dióxido de carbono",
+        "explanation": "El esfuerzo aumenta la demanda de oxígeno y la producción de dióxido de carbono, por lo que cambia la ventilación.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-086",
+        "number": 86,
+        "topic": "Electricidad",
+        "concept": "mayor_longitud_de_conductor_aumenta_resistencia",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un alambre más largo, del mismo material y grosor, suele oponer más resistencia. ¿Qué explica mejor ese cambio?",
+        "options": [
+          "El alambre crea electrones nuevos",
+          "Los electrones encuentran una trayectoria más extensa",
+          "El voltaje desaparece del circuito",
+          "El material deja de tener átomos"
+        ],
+        "correctAnswer": "Los electrones encuentran una trayectoria más extensa",
+        "explanation": "En condiciones comparables, aumentar la longitud del conductor tiende a aumentar su resistencia eléctrica.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-087",
+        "number": 87,
+        "topic": "Nutrición y energía",
+        "concept": "celulas_obtienen_energia_de_nutrientes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué las células necesitan nutrientes como la glucosa?",
+        "options": [
+          "Para reflejar la luz del Sol",
+          "Para reemplazar todo el ADN",
+          "Para obtener energía mediante procesos celulares",
+          "Para convertirse en agua"
+        ],
+        "correctAnswer": "Para obtener energía mediante procesos celulares",
+        "explanation": "Las células pueden degradar moléculas como la glucosa para obtener energía utilizable.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-088",
+        "number": 88,
+        "topic": "Verdadero o falso · Plantas",
+        "concept": "plantas_realizan_fotosintesis_y_respiracion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Las plantas realizan respiración celular además de fotosíntesis.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las plantas usan respiración celular para obtener energía; la fotosíntesis es otro proceso con funciones distintas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-089",
+        "number": 89,
+        "topic": "Sustancias",
+        "concept": "agua_es_compuesto_de_hidrogeno_y_oxigeno",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "El agua está formada por hidrógeno y oxígeno unidos químicamente. Por eso se clasifica como:",
+        "options": [
+          "Elemento",
+          "Mezcla heterogénea",
+          "Solución de metales",
+          "Compuesto"
+        ],
+        "correctAnswer": "Compuesto",
+        "explanation": "Un compuesto contiene elementos unidos químicamente en proporciones definidas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-090",
+        "number": 90,
+        "topic": "Transferencia de energía",
+        "concept": "conveccion_transfiere_energia_por_movimiento_de_fluido",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "El agua caliente en una olla se mueve y distribuye energía dentro del líquido. ¿Qué transferencia predomina en ese movimiento?",
+        "options": [
+          "Convección",
+          "Reflexión",
+          "Fisión",
+          "Fricción seca"
+        ],
+        "correctAnswer": "Convección",
+        "explanation": "La convección transfiere energía por el movimiento de un fluido, como el agua o el aire.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-091",
+        "number": 91,
+        "topic": "Ecosistemas",
+        "concept": "capacidad_de_carga_depende_de_recursos_disponibles",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué describe la capacidad de carga de un ambiente?",
+        "options": [
+          "La masa de una roca",
+          "La población que sus recursos pueden sostener a largo plazo",
+          "La rapidez de una reacción química",
+          "La cantidad de luz de una estrella"
+        ],
+        "correctAnswer": "La población que sus recursos pueden sostener a largo plazo",
+        "explanation": "La capacidad de carga depende de recursos y condiciones que limitan cuántos individuos pueden mantenerse.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-092",
+        "number": 92,
+        "topic": "Eclipses",
+        "concept": "eclipse_solar_ocurre_con_luna_entre_tierra_y_sol",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ocurre durante un eclipse solar?",
+        "options": [
+          "La Tierra queda entre la Luna y el Sol",
+          "El Sol deja de emitir luz",
+          "La Luna se ubica entre la Tierra y el Sol",
+          "La Luna aumenta de tamaño"
+        ],
+        "correctAnswer": "La Luna se ubica entre la Tierra y el Sol",
+        "explanation": "En un eclipse solar, la Luna pasa entre la Tierra y el Sol y bloquea parte de la luz para ciertos lugares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-093",
+        "number": 93,
+        "topic": "Verdadero o falso · Conservación de materia",
+        "concept": "masa_se_conserva_en_reaccion_de_sistema_cerrado",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "En un sistema cerrado, la masa total se conserva durante una reacción química.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Los átomos se reorganizan, pero en un sistema cerrado la masa total de reactivos y productos permanece igual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-094",
+        "number": 94,
+        "topic": "Química",
+        "concept": "acido_y_base_pueden_neutralizarse",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Al mezclar cantidades adecuadas de un ácido y una base, ¿qué tipo de reacción puede ocurrir?",
+        "options": [
+          "Combustión de un metal",
+          "Formación de una célula",
+          "Evaporación de la base",
+          "Neutralización"
+        ],
+        "correctAnswer": "Neutralización",
+        "explanation": "En una neutralización, un ácido y una base reaccionan; suelen formarse agua y una sal.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-095",
+        "number": 95,
+        "topic": "División celular",
+        "concept": "mitosis_produce_dos_celulas_hijas_similares",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué produce normalmente la mitosis en una célula eucariota?",
+        "options": [
+          "Dos células hijas con información genética muy similar",
+          "Cuatro células con la mitad de cromosomas",
+          "Una bacteria sin material genético",
+          "Un tejido sin células"
+        ],
+        "correctAnswer": "Dos células hijas con información genética muy similar",
+        "explanation": "La mitosis distribuye copias de los cromosomas y suele producir dos células hijas genéticamente muy similares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-096",
+        "number": 96,
+        "topic": "Ecosistemas y agua",
+        "concept": "humedal_puede_regular_flujo_de_agua",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Después de lluvias intensas, una zona de humedal almacena agua temporalmente y reduce el flujo hacia calles vecinas. ¿Qué función está realizando?",
+        "options": [
+          "Aumenta la erosión en todas partes",
+          "Retiene y libera agua gradualmente",
+          "Detiene el ciclo del agua",
+          "Convierte el agua en roca"
+        ],
+        "correctAnswer": "Retiene y libera agua gradualmente",
+        "explanation": "Los humedales pueden almacenar agua y moderar flujos, aunque su efecto depende del lugar y las condiciones.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-097",
+        "number": 97,
+        "topic": "Circuitos",
+        "concept": "mayor_resistencia_con_mismo_voltaje_reduce_corriente",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un circuito simple, se añade una resistencia mayor mientras la batería se mantiene igual. ¿Qué suele ocurrir con la corriente?",
+        "options": [
+          "Se hace infinita",
+          "No puede cambiar nunca",
+          "Disminuye",
+          "Se convierte en sonido"
+        ],
+        "correctAnswer": "Disminuye",
+        "explanation": "Con el mismo voltaje, una resistencia mayor suele producir una corriente menor, de acuerdo con la ley de Ohm.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-098",
+        "number": 98,
+        "topic": "Verdadero o falso · Sonido y salud",
+        "concept": "sonido_intenso_prolongado_puede_danar_audicion",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "La exposición prolongada a sonidos muy intensos puede dañar la audición.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El volumen elevado y el tiempo de exposición influyen en el riesgo para la audición.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-099",
+        "number": 99,
+        "topic": "Química y separación",
+        "concept": "evaporacion_recupera_soluto_disuelto",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Una muestra contiene agua con sal disuelta y se desea recuperar la sal sólida. ¿Qué método resulta útil?",
+        "options": [
+          "Imantación",
+          "Filtración directa",
+          "Tamizado",
+          "Evaporación del agua"
+        ],
+        "correctAnswer": "Evaporación del agua",
+        "explanation": "Al evaporarse el agua, la sal disuelta puede permanecer como sólido.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-100",
+        "number": 100,
+        "topic": "Verdadero o falso · Medición",
+        "concept": "mediciones_consistentes_no_descartan_error_sistematico",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si varias mediciones coinciden, eso garantiza que un instrumento no tenga un error sistemático.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "Un instrumento mal calibrado puede dar resultados consistentes pero desplazados del valor real.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-101",
+        "number": 101,
+        "topic": "Digestión",
+        "concept": "higado_produce_bilis",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué órgano produce bilis, que ayuda a digerir grasas?",
+        "options": [
+          "Hígado",
+          "Pulmón",
+          "Riñón",
+          "Corazón"
+        ],
+        "correctAnswer": "Hígado",
+        "explanation": "El hígado produce bilis, que se almacena en la vesícula y participa en la digestión de grasas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-102",
+        "number": 102,
+        "topic": "Geología",
+        "concept": "sedimentacion_asienta_particulas_transportadas",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué proceso ocurre cuando los sedimentos se depositan en un nuevo lugar?",
+        "options": [
+          "Sublimación",
+          "Sedimentación",
+          "Fecundación",
+          "Radiación"
+        ],
+        "correctAnswer": "Sedimentación",
+        "explanation": "La sedimentación es el asentamiento de partículas transportadas por agua, viento, hielo o gravedad.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-103",
+        "number": 103,
+        "topic": "Sonido",
+        "concept": "reflexion_de_sonido_produce_eco",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué fenómeno permite escuchar un eco en una montaña?",
+        "options": [
+          "Fusión",
+          "Evaporación",
+          "Reflexión del sonido",
+          "Fotosíntesis"
+        ],
+        "correctAnswer": "Reflexión del sonido",
+        "explanation": "El eco se produce cuando las ondas sonoras se reflejan y regresan al oyente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-104",
+        "number": 104,
+        "topic": "Células vegetales",
+        "concept": "pared_celular_da_soporte_a_celula_vegetal",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura rígida ayuda a dar soporte a muchas células vegetales?",
+        "options": [
+          "Mitocondria",
+          "Ribosoma",
+          "Núcleo",
+          "Pared celular"
+        ],
+        "correctAnswer": "Pared celular",
+        "explanation": "La pared celular brinda soporte y protección a las células vegetales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-105",
+        "number": 105,
+        "topic": "Movimiento",
+        "concept": "velocidad_describe_cambio_de_posicion_en_tiempo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué magnitud expresa qué tan rápido cambia la posición de un objeto con el tiempo?",
+        "options": [
+          "Velocidad",
+          "Volumen",
+          "Densidad",
+          "Temperatura"
+        ],
+        "correctAnswer": "Velocidad",
+        "explanation": "La velocidad describe el cambio de posición por unidad de tiempo e incluye dirección.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-106",
+        "number": 106,
+        "topic": "Energía",
+        "concept": "viento_es_fuente_renovable",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál fuente se repone naturalmente en escalas de tiempo relativamente cortas?",
+        "options": [
+          "Carbón mineral",
+          "Viento",
+          "Petróleo",
+          "Gas natural"
+        ],
+        "correctAnswer": "Viento",
+        "explanation": "El viento se renueva de forma natural y se considera una fuente renovable.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-107",
+        "number": 107,
+        "topic": "Plantas",
+        "concept": "estomas_regulan_intercambio_gaseoso",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué pequeños poros de las hojas permiten el intercambio de gases con el ambiente?",
+        "options": [
+          "Raíces",
+          "Vasos conductores",
+          "Estomas",
+          "Semillas"
+        ],
+        "correctAnswer": "Estomas",
+        "explanation": "Los estomas regulan el intercambio de gases y la pérdida de vapor de agua en muchas plantas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-108",
+        "number": 108,
+        "topic": "Verdadero o falso · Sistemas",
+        "concept": "sistema_abierto_y_cerrado_difieren_en_intercambio_de_materia",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "En un sistema abierto puede entrar o salir materia, mientras que en uno cerrado se limita ese intercambio.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La clasificación depende de si el sistema intercambia materia y energía con el entorno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-109",
+        "number": 109,
+        "topic": "Atmósfera",
+        "concept": "pluviometro_mide_precipitacion",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento mide la cantidad de lluvia acumulada en un lugar?",
+        "options": [
+          "Barómetro",
+          "Anemómetro",
+          "Termómetro",
+          "Pluviómetro"
+        ],
+        "correctAnswer": "Pluviómetro",
+        "explanation": "El pluviómetro recoge y mide la precipitación durante un periodo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-110",
+        "number": 110,
+        "topic": "Adaptación",
+        "concept": "ojos_adaptados_favorecen_vision_con_poca_luz",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un animal nocturno tiene ojos grandes que captan más luz. ¿Qué ventaja pueden ofrecerle?",
+        "options": [
+          "Mejorar la visión en condiciones de poca luz",
+          "Cambiar la temperatura del agua",
+          "Eliminar la necesidad de alimento",
+          "Aumentar la gravedad del entorno"
+        ],
+        "correctAnswer": "Mejorar la visión en condiciones de poca luz",
+        "explanation": "Algunas estructuras oculares favorecen la captación de luz, aunque las adaptaciones varían entre especies.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-111",
+        "number": 111,
+        "topic": "Cambios de la materia",
+        "concept": "disolucion_de_azucar_es_cambio_fisico",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "El azúcar se disuelve en agua y conserva su identidad química. ¿Qué tipo de cambio predomina?",
+        "options": [
+          "Reacción nuclear",
+          "Cambio físico",
+          "Formación de un elemento nuevo",
+          "Combustión"
+        ],
+        "correctAnswer": "Cambio físico",
+        "explanation": "Disolver azúcar dispersa sus moléculas en el agua sin convertirlas, por sí solo, en otra sustancia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-112",
+        "number": 112,
+        "topic": "Recursos energéticos",
+        "concept": "combustibles_fosiles_tardan_millones_de_anos_en_formarse",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué el petróleo se considera un recurso no renovable a escala humana?",
+        "options": [
+          "No contiene energía",
+          "Se produce en cualquier ciudad en pocos días",
+          "Su formación geológica tarda millones de años",
+          "No puede extraerse del subsuelo"
+        ],
+        "correctAnswer": "Su formación geológica tarda millones de años",
+        "explanation": "Los combustibles fósiles se forman durante periodos geológicos mucho más largos que su ritmo de consumo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-113",
+        "number": 113,
+        "topic": "Verdadero o falso · Agua",
+        "concept": "evaporacion_ocurre_sin_alcanzar_ebullicion",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "La evaporación puede ocurrir en la superficie de un líquido aunque este no haya alcanzado su punto de ebullición.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Algunas moléculas de la superficie pueden escapar al estado gaseoso a distintas temperaturas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-114",
+        "number": 114,
+        "topic": "Gravedad",
+        "concept": "gravedad_solar_participa_en_orbitas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué mantiene a los planetas en órbita alrededor del Sol?",
+        "options": [
+          "La fuerza magnética de la Luna",
+          "La presión del viento terrestre",
+          "La fricción con el espacio",
+          "La atracción gravitacional"
+        ],
+        "correctAnswer": "La atracción gravitacional",
+        "explanation": "La gravedad del Sol atrae a los planetas y participa en mantener sus órbitas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-115",
+        "number": 115,
+        "topic": "Células",
+        "concept": "informacion_genetica_guia_produccion_de_proteinas",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué relación existe entre la información genética y las proteínas?",
+        "options": [
+          "La información genética contiene instrucciones para fabricar proteínas",
+          "Las proteínas reemplazan todo el ADN",
+          "El ADN solo aparece fuera de las células",
+          "Ninguna célula produce proteínas"
+        ],
+        "correctAnswer": "La información genética contiene instrucciones para fabricar proteínas",
+        "explanation": "La expresión de la información genética guía la producción de proteínas, con participación de distintos procesos celulares.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-116",
+        "number": 116,
+        "topic": "Ecología",
+        "concept": "comunidad_ecologica_reune_poblaciones_de_especies",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué incluye una comunidad ecológica?",
+        "options": [
+          "Los minerales de una sola roca",
+          "Poblaciones de distintas especies que viven e interactúan en un lugar",
+          "Solo los factores físicos sin seres vivos",
+          "Una sola especie en cualquier planeta"
+        ],
+        "correctAnswer": "Poblaciones de distintas especies que viven e interactúan en un lugar",
+        "explanation": "Una comunidad reúne poblaciones de diferentes especies que coexisten e interactúan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-117",
+        "number": 117,
+        "topic": "Electricidad",
+        "concept": "resistencia_electrica_se_opone_a_corriente",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué propiedad describe la oposición de un material al paso de corriente eléctrica?",
+        "options": [
+          "Frecuencia",
+          "Aceleración",
+          "Resistencia eléctrica",
+          "Evaporación"
+        ],
+        "correctAnswer": "Resistencia eléctrica",
+        "explanation": "La resistencia eléctrica expresa cuánto se opone un componente al flujo de corriente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-118",
+        "number": 118,
+        "topic": "Verdadero o falso · Indicadores",
+        "concept": "acido_cambia_tornasol_azul_a_rojo",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "El papel tornasol azul puede cambiar a rojo al entrar en contacto con una solución ácida.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El tornasol es un indicador que cambia de color según la acidez o basicidad de una solución.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-119",
+        "number": 119,
+        "topic": "Ecosistemas",
+        "concept": "ausencia_de_depredador_puede_aumentar_presa",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué puede ocurrir si desaparece un depredador que controlaba una población de herbívoros?",
+        "options": [
+          "Los herbívoros dejan de reproducirse",
+          "Todas las plantas se convierten en depredadores",
+          "La energía desaparece",
+          "La población de herbívoros puede aumentar"
+        ],
+        "correctAnswer": "La población de herbívoros puede aumentar",
+        "explanation": "Al reducirse la depredación, la población presa puede crecer si otros factores no la limitan.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-120",
+        "number": 120,
+        "topic": "Geología",
+        "concept": "superposicion_ordena_capas_sedimentarias",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué evidencia se usa para reconstruir la secuencia de capas sedimentarias no deformadas?",
+        "options": [
+          "El principio de superposición",
+          "La escala de temperatura",
+          "La ley de reflexión",
+          "La velocidad del sonido"
+        ],
+        "correctAnswer": "El principio de superposición",
+        "explanation": "En capas no perturbadas, las inferiores suelen ser más antiguas que las superiores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-121",
+        "number": 121,
+        "topic": "Química ambiental",
+        "concept": "verificar_y_reportar_cambio_de_ph_ambiental",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Tras un derrame, un equipo mide el pH del agua y encuentra un valor mucho menor que el habitual. ¿Qué debería hacer primero?",
+        "options": [
+          "Concluir que todos los peces ya murieron",
+          "Repetir la medición con controles y reportar el posible cambio",
+          "Añadir cualquier sustancia básica al río",
+          "Ocultar los datos para evitar preocupación"
+        ],
+        "correctAnswer": "Repetir la medición con controles y reportar el posible cambio",
+        "explanation": "Confirmar la medición y comunicar el posible riesgo permite investigar sin intervenir de forma improvisada.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-122",
+        "number": 122,
+        "topic": "Observación astronómica",
+        "concept": "controlar_aumento_para_comparar_tamano_aparente",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un estudiante compara el tamaño aparente de la Luna en fotografías tomadas con zoom distinto. ¿Qué debe controlar para comparar las imágenes?",
+        "options": [
+          "El nombre del fotógrafo",
+          "La fase escolar",
+          "La escala o el aumento usado",
+          "El color de la carpeta"
+        ],
+        "correctAnswer": "La escala o el aumento usado",
+        "explanation": "Diferencias de aumento cambian el tamaño aparente y pueden confundir una comparación visual.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-123",
+        "number": 123,
+        "topic": "Verdadero o falso · Ecología",
+        "concept": "perdida_de_especie_puede_afectar_red_de_interacciones",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Si una especie desaparece de una red alimentaria, los efectos pueden alcanzar a otras poblaciones conectadas con ella.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Las especies interactúan; un cambio puede propagarse por relaciones de alimentación y competencia.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-124",
+        "number": 124,
+        "topic": "Interpretación de datos",
+        "concept": "factor_limitante_estabiliza_crecimiento_poblacional",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En un gráfico de una población, los valores suben durante varios años y luego se estabilizan cerca de un límite. ¿Qué explicación es razonable?",
+        "options": [
+          "La población dejó de existir",
+          "Todos los individuos tienen idéntica edad",
+          "El gráfico perdió su escala",
+          "Algún factor limitante puede estar equilibrando su crecimiento"
+        ],
+        "correctAnswer": "Algún factor limitante puede estar equilibrando su crecimiento",
+        "explanation": "Los recursos u otros factores pueden limitar el crecimiento y mantener la población alrededor de cierto nivel.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-125",
+        "number": 125,
+        "topic": "Verdadero o falso · Contaminación",
+        "concept": "observacion_espacial_no_identifica_causa_por_si_sola",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Encontrar menos peces aguas abajo de una descarga demuestra por sí solo cuál sustancia causó la disminución.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Falso",
+        "explanation": "La observación alerta sobre un posible problema, pero se necesitan datos adicionales para identificar causas y descartar otros factores.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-126",
+        "number": 126,
+        "topic": "Atmósfera",
+        "concept": "nitrogeno_es_gas_mayoritario_de_atmosfera",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Cuál gas constituye la mayor parte de la atmósfera terrestre?",
+        "options": [
+          "Nitrógeno",
+          "Oxígeno",
+          "Dióxido de carbono",
+          "Argón"
+        ],
+        "correctAnswer": "Nitrógeno",
+        "explanation": "El nitrógeno representa cerca del 78 % de la atmósfera seca terrestre.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-127",
+        "number": 127,
+        "topic": "Fósiles",
+        "concept": "fosil_preserva_evidencia_de_vida_antigua",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué es un fósil?",
+        "options": [
+          "Una roca fundida bajo la superficie",
+          "Un resto o huella preservada de vida antigua",
+          "Una nube de vapor de agua",
+          "Un mineral creado por una planta actual"
+        ],
+        "correctAnswer": "Un resto o huella preservada de vida antigua",
+        "explanation": "Los fósiles conservan restos o evidencias de organismos del pasado geológico.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-128",
+        "number": 128,
+        "topic": "Células vegetales",
+        "concept": "vacuola_almacena_sustancias_en_celula_vegetal",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué estructura puede almacenar agua y otras sustancias dentro de una célula vegetal?",
+        "options": [
+          "Centríolo",
+          "Cromosoma",
+          "Vacuola",
+          "Pared externa"
+        ],
+        "correctAnswer": "Vacuola",
+        "explanation": "La vacuola central almacena sustancias y contribuye al equilibrio interno de muchas células vegetales.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-129",
+        "number": 129,
+        "topic": "Sismos",
+        "concept": "sismografo_registra_vibraciones_del_suelo",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué instrumento registra las vibraciones producidas por un terremoto?",
+        "options": [
+          "Pluviómetro",
+          "Dinamómetro",
+          "Barómetro",
+          "Sismógrafo"
+        ],
+        "correctAnswer": "Sismógrafo",
+        "explanation": "Un sismógrafo registra movimientos del suelo causados por ondas sísmicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-130",
+        "number": 130,
+        "topic": "Gravedad",
+        "concept": "gravedad_atrae_cuerpos_con_masa",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué interacción atrae entre sí a objetos que tienen masa?",
+        "options": [
+          "Gravedad",
+          "Evaporación",
+          "Reflexión",
+          "Fotosíntesis"
+        ],
+        "correctAnswer": "Gravedad",
+        "explanation": "La gravedad es una interacción atractiva entre cuerpos con masa.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-131",
+        "number": 131,
+        "topic": "Disoluciones",
+        "concept": "agua_actua_como_solvente_de_azucar",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "En agua con azúcar disuelta, ¿cuál es el solvente?",
+        "options": [
+          "El azúcar",
+          "El agua",
+          "El vaso",
+          "El aire"
+        ],
+        "correctAnswer": "El agua",
+        "explanation": "El solvente es la sustancia que disuelve al soluto; en este caso es el agua.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-132",
+        "number": 132,
+        "topic": "Sistema endocrino",
+        "concept": "pancreas_produce_insulina",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué órgano produce insulina y ayuda a regular la glucosa en la sangre?",
+        "options": [
+          "Pulmón",
+          "Bazo",
+          "Páncreas",
+          "Esófago"
+        ],
+        "correctAnswer": "Páncreas",
+        "explanation": "El páncreas produce insulina, una hormona que participa en la regulación de la glucosa sanguínea.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-133",
+        "number": 133,
+        "topic": "Respiración",
+        "concept": "alveolos_realizan_intercambio_de_gases",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿En qué estructuras de los pulmones ocurre gran parte del intercambio de gases con la sangre?",
+        "options": [
+          "Tráquea",
+          "Laringe",
+          "Bronquios principales",
+          "Alvéolos"
+        ],
+        "correctAnswer": "Alvéolos",
+        "explanation": "Los alvéolos tienen paredes delgadas rodeadas de capilares donde se intercambian oxígeno y dióxido de carbono.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-134",
+        "number": 134,
+        "topic": "Tabla periódica",
+        "concept": "simbolo_o_representa_elemento_oxigeno",
+        "difficulty": "BASIC",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué representa el símbolo químico O?",
+        "options": [
+          "Oxígeno",
+          "Oro",
+          "Osmio",
+          "Ozono"
+        ],
+        "correctAnswer": "Oxígeno",
+        "explanation": "O es el símbolo del elemento oxígeno; el ozono es una molécula formada por átomos de oxígeno.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-135",
+        "number": 135,
+        "topic": "Verdadero o falso · Astronomía",
+        "concept": "luz_solar_tarda_ocho_minutos_en_llegar",
+        "difficulty": "BASIC",
+        "type": "TRUE_FALSE",
+        "text": "La luz del Sol tarda aproximadamente ocho minutos en llegar a la Tierra.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La distancia entre la Tierra y el Sol hace que su luz tarde poco más de ocho minutos en llegar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-136",
+        "number": 136,
+        "topic": "Geología",
+        "concept": "lava_es_magma_que_alcanza_superficie",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué diferencia distingue al magma de la lava?",
+        "options": [
+          "La lava siempre está bajo la corteza",
+          "El magma no contiene roca fundida",
+          "El magma es sólido y la lava gaseosa",
+          "La lava es roca fundida que llega a la superficie"
+        ],
+        "correctAnswer": "La lava es roca fundida que llega a la superficie",
+        "explanation": "Se llama magma a la roca fundida bajo la superficie y lava cuando emerge.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-137",
+        "number": 137,
+        "topic": "Atmósfera",
+        "concept": "presion_atmosferica_disminuye_con_altitud",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué suele disminuir la presión atmosférica al aumentar la altitud?",
+        "options": [
+          "Hay menos aire por encima ejerciendo presión",
+          "La gravedad desaparece",
+          "Las moléculas se convierten en agua",
+          "El Sol deja de calentar el suelo"
+        ],
+        "correctAnswer": "Hay menos aire por encima ejerciendo presión",
+        "explanation": "A mayor altura hay menos columna de aire por encima, por lo que la presión suele ser menor.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-138",
+        "number": 138,
+        "topic": "Ondas",
+        "concept": "frecuencia_y_longitud_de_onda_varian_en_sentido_inverso",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Si una onda se propaga en el mismo medio y aumenta su frecuencia, ¿qué sucede con su longitud de onda?",
+        "options": [
+          "Aumenta siempre",
+          "Disminuye",
+          "Permanece infinita",
+          "Se convierte en masa"
+        ],
+        "correctAnswer": "Disminuye",
+        "explanation": "En un mismo medio, la rapidez de propagación se mantiene aproximadamente constante, por lo que mayor frecuencia corresponde a menor longitud de onda.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-139",
+        "number": 139,
+        "topic": "Sistema nervioso",
+        "concept": "reflejo_es_respuesta_rapida_e_involuntaria",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Retirar rápidamente la mano ante un objeto muy caliente puede ocurrir antes de una decisión consciente. ¿Qué tipo de respuesta es?",
+        "options": [
+          "Digestión",
+          "Fotosíntesis",
+          "Reflejo",
+          "Fecundación"
+        ],
+        "correctAnswer": "Reflejo",
+        "explanation": "Un reflejo es una respuesta rápida e involuntaria ante un estímulo.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-140",
+        "number": 140,
+        "topic": "Verdadero o falso · Reacciones",
+        "concept": "catalizador_acelera_reaccion_sin_consumirse_permanentemente",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Un catalizador puede acelerar una reacción química sin consumirse de forma permanente en ella.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "Un catalizador facilita una reacción y se regenera al final del proceso, aunque puede participar temporalmente.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-141",
+        "number": 141,
+        "topic": "Propiedades de minerales",
+        "concept": "propiedades_fisicas_apoyan_identificacion_de_minerales",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué ayuda a distinguir un mineral de otro?",
+        "options": [
+          "El planeta donde se encontró",
+          "Su color visto en una sola fotografía",
+          "El nombre de quien lo observa",
+          "Propiedades como dureza, brillo y estructura"
+        ],
+        "correctAnswer": "Propiedades como dureza, brillo y estructura",
+        "explanation": "Los minerales se identifican mediante varias propiedades, como dureza, brillo, raya y forma cristalina.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-142",
+        "number": 142,
+        "topic": "Meteorología",
+        "concept": "aire_humedo_al_enfriarse_puede_formar_nubes",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Qué efecto puede tener el aire húmedo al ascender y enfriarse?",
+        "options": [
+          "El vapor puede condensarse y formar nubes",
+          "El agua deja de existir",
+          "La presión se vuelve siempre cero",
+          "El aire se convierte en roca"
+        ],
+        "correctAnswer": "El vapor puede condensarse y formar nubes",
+        "explanation": "Al enfriarse, el vapor puede condensarse en pequeñas gotas o cristales que forman nubes.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-143",
+        "number": 143,
+        "topic": "Ecología",
+        "concept": "especies_compiten_por_recurso_limitado",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Dos especies usan el mismo recurso limitado en un hábitat. ¿Qué relación puede establecerse entre ellas?",
+        "options": [
+          "Polinización obligatoria",
+          "Competencia",
+          "Fotosíntesis",
+          "Descomposición"
+        ],
+        "correctAnswer": "Competencia",
+        "explanation": "Cuando varias especies necesitan un recurso escaso, pueden competir por él.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-144",
+        "number": 144,
+        "topic": "Reacciones químicas",
+        "concept": "temperatura_mayor_puede_acelerar_reacciones",
+        "difficulty": "INTERMEDIATE",
+        "type": "MULTIPLE_CHOICE",
+        "text": "¿Por qué aumentar la temperatura puede acelerar muchas reacciones?",
+        "options": [
+          "Hace que los átomos desaparezcan",
+          "Elimina todos los enlaces",
+          "Aumenta la energía y frecuencia de colisiones entre partículas",
+          "Convierte cada reactivo en un elemento"
+        ],
+        "correctAnswer": "Aumenta la energía y frecuencia de colisiones entre partículas",
+        "explanation": "A mayor temperatura, las partículas suelen moverse más rápido y ocurren más colisiones con energía suficiente para reaccionar.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-145",
+        "number": 145,
+        "topic": "Verdadero o falso · Rocas",
+        "concept": "metamorfismo_transformacion_sin_fusion_completa",
+        "difficulty": "INTERMEDIATE",
+        "type": "TRUE_FALSE",
+        "text": "Una roca metamórfica puede formarse cuando otra roca cambia por calor y presión sin fundirse completamente.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "El calor y la presión transforman minerales y texturas; si la roca se funde y luego solidifica, ocurre otro proceso.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-146",
+        "number": 146,
+        "topic": "Ecosistemas acuáticos",
+        "concept": "comparar_temperatura_y_oxigeno_en_rio",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Tras una descarga de agua caliente, aparecen peces muertos en un tramo del río. ¿Qué medición ayudaría a investigar una posible causa?",
+        "options": [
+          "El número de árboles en una ciudad distante",
+          "Temperatura y oxígeno disuelto aguas arriba y abajo",
+          "El color de las casas cercanas",
+          "La velocidad de la luz a mediodía"
+        ],
+        "correctAnswer": "Temperatura y oxígeno disuelto aguas arriba y abajo",
+        "explanation": "Comparar temperatura y oxígeno disuelto en distintos puntos ayuda a evaluar cambios vinculados con la descarga.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-147",
+        "number": 147,
+        "topic": "Energía térmica",
+        "concept": "horno_solar_combina_absorcion_y_aislamiento",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un grupo diseña un horno solar para calentar agua. ¿Qué combinación probablemente ayuda a retener calor y permitir el paso de luz?",
+        "options": [
+          "Interior blanco y abierto por completo",
+          "Base de papel sin cubierta",
+          "Interior oscuro y cubierta transparente con aislamiento",
+          "Recipiente opaco sin superficie reflectante"
+        ],
+        "correctAnswer": "Interior oscuro y cubierta transparente con aislamiento",
+        "explanation": "Una superficie oscura absorbe radiación y una cubierta transparente con aislamiento puede reducir pérdidas térmicas.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-148",
+        "number": 148,
+        "topic": "Verdadero o falso · Luz y sombras",
+        "concept": "angulo_bajo_de_luz_produce_sombra_mas_larga",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Con la misma altura del Sol, un objeto vertical suele proyectar una sombra más larga cuando la luz llega con un ángulo más bajo.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La inclinación de los rayos determina la longitud de la sombra de un objeto.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-149",
+        "number": 149,
+        "topic": "Conservación de biodiversidad",
+        "concept": "corredor_de_vegetacion_conecta_fragmentos_de_habitat",
+        "difficulty": "APPLICATION",
+        "type": "MULTIPLE_CHOICE",
+        "text": "Un bosque quedó dividido en fragmentos y algunas especies no cruzan zonas abiertas. ¿Qué acción podría mejorar la conexión entre hábitats?",
+        "options": [
+          "Aislar aún más cada fragmento",
+          "Retirar toda la vegetación de los bordes",
+          "Construir barreras entre los parches",
+          "Restaurar corredores de vegetación entre fragmentos"
+        ],
+        "correctAnswer": "Restaurar corredores de vegetación entre fragmentos",
+        "explanation": "Los corredores pueden facilitar el movimiento entre hábitats, aunque su diseño debe considerar las especies y el paisaje.",
+        "stability": "STABLE",
+        "source": null
+      },
+      {
+        "id": "SCI8-150",
+        "number": 150,
+        "topic": "Verdadero o falso · Magnetismo",
+        "concept": "iman_cercano_desvia_aguja_de_brujula",
+        "difficulty": "APPLICATION",
+        "type": "TRUE_FALSE",
+        "text": "Un imán fuerte cerca de una brújula puede desviar su aguja y alterar la orientación indicada.",
+        "options": [
+          "Verdadero",
+          "Falso"
+        ],
+        "correctAnswer": "Verdadero",
+        "explanation": "La aguja responde a campos magnéticos; un imán cercano puede influir en su dirección.",
+        "stability": "STABLE",
+        "source": null
+      }
+    ]
   }
 ];
