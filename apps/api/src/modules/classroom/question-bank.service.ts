@@ -71,7 +71,7 @@ export class QuestionBankService {
     const [collections, targetActivities] = await Promise.all([this.prisma.questionBankCollection.findMany({
       where: { institutionId: actor.institutionId, gradeId: grade.id, isActive: true, OR: [{ isPublished: true }, { createdById: actor.userId }] },
       select: { id: true, officialCatalogId: true, title: true, subjectArea: true, category: true, isPublished: true, createdById: true, updatedAt: true, questions: {
-        where: { isActive: true }, select: { id: true, type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' },
+        where: { institutionId: actor.institutionId, isActive: true }, select: { id: true, type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' },
       } },
       orderBy: { updatedAt: 'desc' },
     }), this.prisma.classroomActivity.findMany({
@@ -138,7 +138,7 @@ export class QuestionBankService {
     const grade = await this.gradeContext(actor, classroomId);
     const collection = await this.prisma.questionBankCollection.findFirst({
       where: { id: collectionId, institutionId: actor.institutionId, gradeId: grade.id, isActive: true, OR: [{ isPublished: true }, { createdById: actor.userId }] },
-      select: { id: true, subjectArea: true, questions: { where: { isActive: true }, select: { type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' } } },
+      select: { id: true, subjectArea: true, questions: { where: { institutionId: actor.institutionId, isActive: true }, select: { type: true, text: true, options: true, correctAnswer: true, explanation: true }, orderBy: { createdAt: 'asc' } } },
     });
     if (!collection) throw new NotFoundException('Cuestionario no encontrado');
     if (collection.questions.length < 1 || collection.questions.length > 200) throw new BadRequestException('El cuestionario debe tener entre 1 y 200 preguntas');
