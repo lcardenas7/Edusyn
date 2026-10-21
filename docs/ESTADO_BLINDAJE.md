@@ -8,6 +8,8 @@ Suite general final: **2.738 pruebas aprobadas / una fallida**, 121 suites aprob
 
 Build Nest final aprobado después de reintentar un error de limpieza de `dist` en Windows. No hay migraciones nuevas ni cambios de frontend. Pendiente de publicación/verificación de servicios por acceso Railway; no se afirma despliegue confirmado.
 
+Enviado a `staging` en `e993d50f`; no se hizo push a main. Siguiente frente: 33 rutas de Eventos y posterior verificación/promoción selectiva del blindaje preparado. El trabajo local previo permanece conservado.
+
 Inventario actual del candidato: **1.204 rutas, 416 directas, 689 pendientes, 66 no institucionales y 33 incumplimientos**, todos de Eventos. Las cifras de 405/44 del bloque anterior son históricas. No se añaden excepciones para simular un contrato global aprobado. Permanecen PostgreSQL/RLS, concurrencia real y promoción selectiva a main; este lote no cierra Classroom ni el blindaje global.
 
 Publicación todavía sin acreditar: Railway CLI responde `Unauthorized`; no se pudo verificar el servicio activo. Main remoto avanzó a `49679653` con el fix móvil `649bf7c1`; conservarlo y adaptar el blindaje a esa base antes de una promoción, sin trasladar funciones exclusivas de staging. Los cortes anteriores de servicios activos son evidencia histórica, no una consulta actual.

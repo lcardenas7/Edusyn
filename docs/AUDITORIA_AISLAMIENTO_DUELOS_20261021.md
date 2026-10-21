@@ -51,4 +51,6 @@ El primer build Nest aprobó. Al repetirlo tras añadir el filtro del contador l
 
 **Resultado terminal del build:** el reintento terminó con código 0; build Nest final aprobado. El fallo anterior de limpieza queda documentado y no se atribuye a un error de compilación. Sin migraciones ni conexión a bases reales.
 
+**Envío confirmado:** commit `e993d50f` publicado en `staging` después de los checks. El despliegue no está verificado por la respuesta de autenticación de Railway; no se afirma que el código esté sirviendo a usuarios. No se hizo push a main. Las correcciones móviles de main no se mezclan con este lote API; quedan identificadas para reconciliación separada.
+
 Seguir con las 33 rutas de Eventos, manteniendo la separación de funciones exclusivas de staging. Antes de producción: verificar bancos/Duelos en staging, adaptar el lote a main actualizado, completar tipos API/web y comprobar Railway. Inclusión permanece pospuesta y se conserva la frontera EduLab. El blindaje global continúa parcial.
