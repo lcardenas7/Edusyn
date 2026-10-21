@@ -71,7 +71,8 @@ export class QuestionBankController {
 
   @Post('classrooms/:classroomId/collections/:collectionId/copy-to/:activityId')
   @Roles('DOCENTE')
-  copyToActivity(@Param('classroomId') classroomId: string, @Param('collectionId') collectionId: string, @Param('activityId') activityId: string, @Request() req: any) {
-    return this.actor(req).then((actor) => this.service.copyToActivity(actor, classroomId, collectionId, activityId));
+  async copyToActivity(@Param('classroomId') classroomId: string, @Param('collectionId') collectionId: string, @Param('activityId') activityId: string, @Request() req: any) {
+    const institutionId = await requireInstitutionId(this.prisma as any, req, req.query?.institutionId);
+    return this.service.copyToActivity(this.actor(req, institutionId), classroomId, collectionId, activityId);
   }
 }

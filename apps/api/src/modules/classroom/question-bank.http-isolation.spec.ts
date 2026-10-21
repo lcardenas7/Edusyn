@@ -247,6 +247,45 @@ describe('Question bank · HTTP isolation and assignment A/B', () => {
     expect(prisma.group.findFirst).not.toHaveBeenCalled();
   });
 
+  describe('staging-only copy endpoint (not promoted to main)', () => {
+    let activities: any[];
+    beforeEach(() => {
+      activities = ['A', 'B'].map(institutionId => ({ id: `activity-${institutionId}`, classroomId: `class-${institutionId}`, isPublished: false, type: 'QUIZ', classroom: classrooms.find(row => row.id === `class-${institutionId}`) }));
+      prisma.classroomActivity.findFirst = jest.fn(async ({ where }) => activities.find(row => matches(row, where)) || null);
+      prisma.classroomActivity.findUnique = jest.fn(async ({ where }) => activities.find(row => matches(row, where)) || null);
+      prisma.activityQuestion = { findFirst: jest.fn(async () => null), createMany: jest.fn(async ({ data }) => { writes.push(...data); return { count: data.length }; }) };
+    });
+    const endpoint = (classId: string, collectionId: string, activityId: string) => ['post', `/classrooms/${classId}/collections/${collectionId}/copy-to/${activityId}`, {}];
+    it.each([['A', 'B'], ['B', 'A']])('copies only coherent questions in %s and rejects a destination in %s', async (own, foreign) => {
+      await send(endpoint(`class-${own}`, `own-${own}`, `activity-${foreign}`), token(own)).expect(404);
+      expect(writes).toEqual([]);
+      const response = await send(endpoint(`class-${own}`, `own-${own}`, `activity-${own}`), token(own)).expect(201);
+      expect(response.body).toEqual({ copied: 1, activityId: `activity-${own}` });
+      expect(writes).toHaveLength(1);
+      expect(writes[0].activityId).toBe(`activity-${own}`);
+    });
+    it.each(['foreign-class', 'foreign-bank', 'private-bank', 'unassigned', 'broken-chain', 'personal'])('rejects %s without copying', async scenario => {
+      const classId = { 'foreign-class': 'class-B', unassigned: 'other-teacher-A', 'broken-chain': 'broken-A', personal: 'personal-A' }[scenario] || 'class-A';
+      const collectionId = scenario === 'foreign-bank' ? 'own-B' : scenario === 'private-bank' ? 'private-A' : 'own-A';
+      await send(endpoint(classId, collectionId, 'activity-A'), token('A')).expect(scenario === 'unassigned' ? 403 : 404);
+      expect(writes).toEqual([]);
+    });
+    it.each(['published', 'wrong-class', 'wrong-type'])('rejects %s activity', async scenario => {
+      if (scenario === 'published') activities[0].isPublished = true;
+      if (scenario === 'wrong-class') activities[0].classroomId = 'other-class-A';
+      if (scenario === 'wrong-type') activities[0].type = 'TASK';
+      await send(endpoint('class-A', 'own-A', 'activity-A'), token('A')).expect(400);
+      expect(writes).toEqual([]);
+    });
+    it('requires JWT, teacher role and valid explicit SuperAdmin target', async () => {
+      const route = endpoint('class-A', 'own-A', 'activity-A');
+      await send(route).expect(401);
+      await send(route, token('A', 'ESTUDIANTE')).expect(403);
+      await send(route, token(null, 'SUPERADMIN', 'shared-teacher', true)).expect(403);
+      expect(writes).toEqual([]);
+    });
+  });
+
   it('service copy also excludes a question whose institution disagrees with its collection', async () => {
     const activity = { id: 'activity-A', classroomId: 'class-A', isPublished: false, type: 'QUIZ', classroom: classrooms[0] };
     prisma.classroomActivity.findFirst = jest.fn(async ({ where }) => matches(activity, where) ? activity : null);

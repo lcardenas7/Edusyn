@@ -1,5 +1,11 @@
 # Estado del blindaje de aplicación
 
+## Banco de preguntas — candidato 2026-10-21
+
+Siete rutas de producción con resolución institucional directa y guardas HTTP A/B; staging conserva además su ruta de copia ya existente, adaptada y probada sin promoverla a main. Filtros institucionales añadidos a las preguntas anidadas en listado y copia para excluir relaciones incoherentes. Véase `AUDITORIA_AISLAMIENTO_BANCOS_20261021.md`.
+
+Candidato main: 78 suites/1.530 pruebas API, tipos API/web y build Nest aprobados. Staging: 116 pruebas focales aprobadas. El inventario pasa a **1.204 rutas, 405 directas, 689 pendientes, 66 no institucionales y 44 incumplimientos estructurales restantes**, sin excepciones nuevas. Publicación/servicio efectivo se registran después de verificar Railway. Duelos y Eventos continúan como siguiente frente; este lote no cierra Classroom, concurrencia PostgreSQL, RLS ni el blindaje global.
+
 ## Corte de publicación y continuidad — 2026-10-20
 
 Documentos, Staff Leave y Teacher Schedule ya están publicados en producción; Documentos y la sincronización de Eventos también están publicados en staging. Las referencias posteriores a «sin publicar» describen cortes históricos. El detalle verificable está en `RECONCILIACION_PRODUCCION_STAGING_20261020.md` y la bitácora.

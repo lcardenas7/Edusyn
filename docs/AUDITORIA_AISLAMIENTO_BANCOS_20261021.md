@@ -35,3 +35,11 @@ Siguiente lote: Duelos/Arena y después Eventos matemáticos, con HTTP entre ins
 ## Publicación
 
 Pendiente de completar suite general, build y verificación en staging antes de promover a producción. Registrar hashes y servicios efectivos en `REGISTRO_DESPLIEGUES.md`; el push no acredita por sí solo un despliegue.
+
+Checkpoint posterior: suite API completa de producción **78 suites / 1.530 pruebas aprobadas, cero fallos**, reporte `apps/api/coverage/question-bank-hardening.json`. Tipos API/web y build Nest aprobados. Se completaron las dependencias de prueba de staging desde su propio lockfile; no se usa el cliente Prisma de main contra su esquema distinto.
+
+La integración de staging conserva una octava ruta preexistente: `POST classrooms/:classroomId/collections/:collectionId/copy-to/:activityId`. Se adapta su actor/resolución directa y se añaden casos HTTP propios de staging. Esa ruta y la funcionalidad de copia desde interfaz no se promueven a producción en este lote. El servicio de copia existente en main sí recibe el filtro de preguntas y su caso de regresión.
+
+Staging: **116 pruebas focales aprobadas** (27 de servicio y 89 de integración, incluidas 88 HTTP). Las doce adicionales cubren copia válida A/B, destino ajeno, aula/colección privadas o ajenas, asignación, cadena institucional, publicación/tipo de actividad y autenticación/roles. Cliente Prisma generado localmente desde su esquema tras `npm ci --ignore-scripts`; no se ejecutó migración local.
+
+Inventario de staging recalculado: **1.204 rutas; 405 directas; 689 excepciones pendientes; 66 no institucionales; 44 incumplimientos estructurales**. Las ocho rutas del banco están resueltas; no se cambia `institution-route-exceptions.json`. Los incumplimientos restantes corresponden a los controladores de Duelos y Eventos. Se conserva el fallo global visible; no se presenta este conteo como una auditoría HTTP completa ni como 44 fugas confirmadas.
