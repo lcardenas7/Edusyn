@@ -22,6 +22,14 @@
 
 ## Historial (más reciente arriba)
 
+### Ranking móvil — producción · 2026-10-21
+
+Commit de código `649bf7c1`, promoción aislada sobre el `main` verificado `a403b4fe`. La fila del
+ranking deja de truncar nombres; puntos quedan junto al nombre y las reacciones compactas pasan
+a la línea del grado y curso. Sin migración. `tsc --noEmit` de API y web correctos. Promoción a
+`main` preparada; Railway confirmó que la pausa general de builds quedó resuelta. Verificación
+del despliegue pendiente.
+
 ### Aula rediseñada y CREA — producción · 2026-09-24
 
 [PR #49](https://github.com/lcardenas7/Edusyn/pull/49) fusionado en `main` como `aeef893e`, desde la base `08a4627a`. Promoción selectiva de Aula móvil, avisos de actividades, períodos, filtros y estado de entregas, mejoras de CREA y Classroom B1 **17/98 rutas**; Classroom y Edusyn no se declaran blindados por completo. Dos migraciones aditivas: columnas opcionales de aviso en `Message` y `ConstruyeProject.aiPromptEnabled` con valor por defecto `true`. Antes de fusionar: PostgreSQL 17 local con 98 migraciones, API 67 suites/1250 pruebas, web 35 archivos/500 pruebas, CREA Preview 119 pruebas, tipos y builds verdes. Staging verificó la publicación y retirada de un aviso en 8C, el contador 37/37, el preview CREA sin alerta falsa y el detalle de una entrega existente como «Entregada»; no se creó una entrega artificial.
