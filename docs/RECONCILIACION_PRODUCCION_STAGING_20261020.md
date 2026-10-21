@@ -1,5 +1,17 @@
 # Reconciliación de producción, staging y blindaje
 
+## Estado posterior verificado — 2026-10-20
+
+Producción ya publica `db4b2b07`: API `3cf2cadc` y web `1596d22e` SUCCESS, con hash confirmado por Railway. Node 22.14.0 en ambos builds; API health HTTP 200/ok y aula HTTP 200 con el bundle nuevo. Dependencias de ejecución pasan de 36 a 4 paquetes señalados, sin altos/críticos con `--omit=dev`; los avisos residuales y de desarrollo siguen abiertos. Véase `BLINDAJE_DEPENDENCIAS_20261020.md`.
+
+Bancos ya reconciliados: se conservan los 17 previos, se añaden dos de 8.º y se corrige el reconocimiento de grados y reutilización hasta dos grados inferiores. API completa: 77 suites/1.453 pruebas aprobadas, cero fallos; tipos API/web y builds aprobados. Los diez fallos de bancos descritos más abajo son históricos y quedaron resueltos en `8c887ff2`. Véase `RECONCILIACION_BANCOS_20261020.md`. Sin migraciones nuevas.
+
+Staging mantiene las correcciones de Eventos y Documentos, las dependencias parcheadas y la configuración de Node/build alineada. API `6af38325` y web `3bf1caa2` SUCCESS; antes también terminaron correctamente los autodeploys de `1be3786d`. No se igualaron las ramas completas ni sus bases; el trabajo local previo sigue conservado.
+
+Prioridad siguiente: pruebas y correcciones de aislamiento HTTP A/B y permisos de Duelos, bancos y Eventos. Después, promoción por módulos del blindaje restante de staging, revisando sus dependencias y migraciones de notas/reportes. Siguen los límites de PostgreSQL/RLS, cuota/almacenamiento de Documentos, avisos npm y un fallo visual previo de Arena. Inclusión permanece pospuesta y la frontera EduLab se conserva. El inventario de 1.204 rutas es el corte de staging documentado abajo, no una nueva auditoría global de producción.
+
+## Registro histórico de esta reconciliación
+
 Fecha: 2026-10-20. Comparación después de `git fetch origin main staging --prune`.
 Puntas de partida: `main` `010aa043`, `staging` `1e9ef9a9`.
 

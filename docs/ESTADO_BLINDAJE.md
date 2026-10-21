@@ -1,5 +1,17 @@
 # Estado del blindaje de aplicación
 
+## Corte de publicación y continuidad — 2026-10-20
+
+Documentos, Staff Leave y Teacher Schedule ya están publicados en producción; Documentos y la sincronización de Eventos también están publicados en staging. Las referencias posteriores a «sin publicar» describen cortes históricos. El detalle verificable está en `RECONCILIACION_PRODUCCION_STAGING_20261020.md` y la bitácora.
+
+Se verificó Node 22 efectivo en staging: API `6af38325` y web `3bf1caa2` SUCCESS; antes, ambos autodeploys de `1be3786d` también finalizaron correctamente. El override API de Railway se alineó con `.nvmrc`. El web usa la instalación inicial de Nixpacks y compila sin una segunda ejecución de `npm ci`.
+
+Dependencias y bancos se promovieron selectivamente a main en `db4b2b07`: API `3cf2cadc` y web `1596d22e` SUCCESS con hash confirmado; API health HTTP 200/ok y aula HTTP 200 con bundle nuevo. Los diez fallos API de bancos quedaron resueltos con el servicio/catálogo existente en staging: 77 suites y 1.453 pruebas API del candidato main aprobadas. El catálogo conserva los 17 bancos previos y añade dos de 8.º. No hay migraciones nuevas en ese lote.
+
+El siguiente frente de código es aislamiento HTTP A/B de Duelos, bancos y Eventos, incluyendo sus permisos por rol/asignación. La clasificación estructural pendiente (52 rutas en el inventario del corte) no equivale a 52 fugas demostradas. Después, promover por módulos el blindaje aún exclusivo de staging, revisando dependencias y las siete migraciones adicionales. Inclusión sigue pospuesta y se conserva la frontera EduLab.
+
+La auditoría de dependencias de ejecución pasa de 36 a 4 paquetes señalados por npm, sin altos ni críticos con `--omit=dev`; quedan dos moderados y dos bajos. La auditoría completa conserva seis altos en herramientas de desarrollo. Sigue pendiente un fallo visual previo de Arena. No se declara cierre global de seguridad, PostgreSQL/RLS ni autorización intrainstitucional.
+
 Sincronización posterior de 2026-10-20: incorporados los cinco commits de Eventos matemáticos procedentes de main y el lote Documentos. El inventario queda en **1.204 rutas, 397 directas, 689 pendientes, 66 no institucionales y 52 incumplimientos previos/importados del contrato**. Ver `RECONCILIACION_PRODUCCION_STAGING_20261020.md`; las cinco rutas adicionales de Eventos no se declaran auditadas por sincronizarlas. Pruebas focales: 171/171; tipos API/web aprobados.
 
 ## Corte local 2026-10-20

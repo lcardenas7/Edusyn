@@ -52,8 +52,24 @@ Fuentes primarias consultadas: [aviso jsPDF](https://github.com/parallax/jsPDF/s
 
 Los avisos residuales de bibliotecas y la deuda visual de Arena quedan identificados; no se mezclan con notas, RLS ni los cambios locales de CREA.
 
+### Verificación posterior y candidato final
+
+El autodeploy volvió a cargar correctamente Nixpacks y los archivos de configuración en `1be3786d`: API `f52d75a0` y web `8c20dc27` terminaron en SUCCESS. Esto acredita recuperación en ese intento, sin atribuir una causa no demostrada a los fallos anteriores.
+
+Se encontró `NIXPACKS_NODE_VERSION=20` en ambas API, con prioridad sobre `.nvmrc`. Se cambió a 22 únicamente en staging antes de probar: API `6af38325` SUCCESS; su log confirma `nodejs_22` y Node 22.14.0. La versión del repositorio por sí sola no acreditaba la versión efectiva. Web no tiene ese override. Staging API health y web aula respondieron HTTP 200 después de estas comprobaciones.
+
+El candidato final de producción conserva commits separados para dependencias y bancos, con la corrección del build antes de publicar. La reconciliación de bancos resuelve los diez fallos API previos: **77 suites y 1.453 pruebas aprobadas**, además de tipos API/web y build Nest. Véase `RECONCILIACION_BANCOS_20261020.md`. Se mantiene explícitamente el fallo visual previo de Arena y los avisos residuales de dependencias. No se añaden migraciones.
+
 ## Incidencias detectadas al verificar staging
 
 Los autodeploys `a0c890f0` (API) y `8a9aa792` (web), y el reintento de API `acaff7c5`, dejaron metadatos sin configFile y con Railpack sin comandos; el único log visible fue el arranque del builder. No se atribuye ese fallo a una compilación que no consta en los logs. La configuración del entorno conserva las rutas de archivos, y los intentos de edición por CLI respondieron «No changes to apply». El mecanismo de autodeploy queda pendiente de diagnóstico; la página general de Railway no mostraba incidencia abierta.
 
 Las subidas directas del mismo worktree recuperaron `/apps/api/railway.json` y `/apps/web/railway.json` con Nixpacks. API `3847c8a1` terminó en SUCCESS. El primer web directo `69eee579` llegó a ejecutar los comandos y falló por `EBUSY`: la segunda ejecución de `npm ci` intentaba borrar `/app/node_modules/.cache`, montado por Nixpacks. Ese segundo `npm ci` lo introducía este lote y se retira. Se conserva el `npm ci` inicial de Nixpacks y el build ejecuta solo el workspace web; verificar el siguiente despliegue antes de declarar publicado el lote.
+
+## Resultado terminal de publicación
+
+Producción `db4b2b07`: API `3cf2cadc-dd66-4c83-8e7f-c60f1aa694e2` y web `1596d22e-2bf3-44c3-a227-4a2c0ed58163` **SUCCESS**, ambos con ese `meta.commitHash`. Sus logs de build confirman Node 22.14.0. Se cambió el override API de producción de 20 a 22 después de validarlo en staging; no se modificaron otras variables. La API informó «No pending migrations to apply».
+
+La consulta pública posterior confirmó `/api/health` HTTP 200 y `status: ok`; `/aula` HTTP 200 sirve `/assets/index-C2vWFJ0k.js`, coincidente con el build nuevo. El web adicional de staging `3bf1caa2` también terminó en SUCCESS. No se inició sesión ni se modificaron datos académicos reales para comprobarlo.
+
+Tipos API/web revalidados sobre el candidato final; build Nest y build web con el comando final aprobados. La suite API queda verde con la reconciliación de bancos incluida. El siguiente lote de código corresponde al aislamiento HTTP de Duelos/bancos/Eventos; avisos residuales, fallo visual de Arena y tamaño del bundle siguen abiertos. La publicación de este lote no acredita blindaje global ni promueve las siete migraciones exclusivas de staging.
