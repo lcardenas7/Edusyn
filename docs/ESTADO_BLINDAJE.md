@@ -1,5 +1,15 @@
 # Estado del blindaje de aplicación
 
+Sincronización posterior de 2026-10-20: incorporados los cinco commits de Eventos matemáticos procedentes de main y el lote Documentos. El inventario queda en **1.204 rutas, 397 directas, 689 pendientes, 66 no institucionales y 52 incumplimientos previos/importados del contrato**. Ver `RECONCILIACION_PRODUCCION_STAGING_20261020.md`; las cinco rutas adicionales de Eventos no se declaran auditadas por sincronizarlas. Pruebas focales: 171/171; tipos API/web aprobados.
+
+## Corte local 2026-10-20
+
+Revisión actual en `REVISION_BLINDAJE_20261020.md`, base local `origin/staging` `1e9ef9a9`. Avance sin publicar: Documentos pasa de tres a ocho rutas con resolución directa y un catálogo estático; 42 pruebas HTTP aprobadas. Continúa parcial por limpieza, cuota concurrente, auditoría durable y PostgreSQL/storage reales. Ver `AUDITORIA_AISLAMIENTO_DOCUMENTOS.md`.
+
+Inventario recalculado con este avance: **1.199 rutas, 397 directas, 689 excepciones pendientes, 66 no institucionales y 47 sin clasificación**. El contrato global falla por esas 47 rutas previas de Duelos, bancos y Eventos matemáticos. Las cifras y la tabla que siguen son el corte histórico de septiembre y no deben usarse como inventario actual. B1 solo acredita sus 17 rutas originales; Classroom creció a 135 declaraciones. No se acredita cierre global ni publicación de este avance.
+
+## Corte histórico conservado
+
 Fecha de actualización: 2026-09-23. Classroom B1 se integró en staging hasta 17/98 rutas, en `e9d06320`. Las otras 81 rutas siguen pendientes; esto no cierra Classroom ni el blindaje global.
 
 Bloque 0, Taller, Matrículas, la parte declarada de Inclusión, Plantillas, Learning Route, Cortes preventivos y Attendance están publicados. Staff Leave y Teacher Schedule quedaron cerrados en aplicación en un lote anterior. Classroom B1 ya está integrado en staging con pruebas de servicio y HTTP A/B; quedan 81 rutas de Classroom y sus permisos finos. Inclusión permanece pospuesta. Ver `AUDITORIA_AISLAMIENTO_CLASSROOM_B1.md`. No constituye cierre global del aislamiento.

@@ -1464,40 +1464,10 @@
     "fingerprint": "c50bc63e1fd8411b50c404240afeef58f213e30339593d411a223169d99be799"
   },
   {
-    "key": "modules/documents/institutional-documents.controller.ts#InstitutionalDocumentsController.create @Post()",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en documents: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "a8c989dd2b1ef44047d57fba0059a99372f1a2c3ce8f98f90ad26928956b7461"
-  },
-  {
-    "key": "modules/documents/institutional-documents.controller.ts#InstitutionalDocumentsController.delete @Delete(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en documents: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "74ebf1013a6fee0555428de4c3f641de82b3e64e71ff07eb6b3848f18ca5f610"
-  },
-  {
-    "key": "modules/documents/institutional-documents.controller.ts#InstitutionalDocumentsController.findOne @Get(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en documents: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "f944044c21bf2bc354374411d39162dbb49a66832af56d1abfefabdc7d73b7d3"
-  },
-  {
     "key": "modules/documents/institutional-documents.controller.ts#InstitutionalDocumentsController.getCategories @Get('categories')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en documents: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "5fa0da89de5a7c6c67877e3bac5c508a760e9fc8e2e4cc6fe7abefa27d71eb0b"
-  },
-  {
-    "key": "modules/documents/institutional-documents.controller.ts#InstitutionalDocumentsController.getDownloadUrl @Get(':id/download-url')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en documents: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "9a85002047c00a14bc907b52beab12ba9da3d18323bd7e2cbf7536911e23ec9a"
-  },
-  {
-    "key": "modules/documents/institutional-documents.controller.ts#InstitutionalDocumentsController.update @Put(':id')",
-    "kind": "pending-audit",
-    "reason": "Deuda previa en documents: pendiente calibrar controlador, servicio y filtros Prisma; no acredita aislamiento. Ver docs/ESTADO_BLINDAJE.md.",
-    "fingerprint": "bb15c5bd6945bbd7c2999d0f6e22cda40a8c25e838628dfa7d6687d7e7abae5d"
+    "kind": "non-institutional",
+    "reason": "Catálogo estático de categorías sin registros ni archivos institucionales; revisado durante el blindaje de Documentos.",
+    "fingerprint": "ccc3fec282ca6e9344b0d13a6ccce07916b2a044906993207e358f7c3ca05cfa"
   },
   {
     "key": "modules/edusyn-play/controllers/auth-play.controller.ts#AuthPlayController.googlePlay @Post('google-play')",
