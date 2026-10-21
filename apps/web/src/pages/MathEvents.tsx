@@ -926,21 +926,21 @@ export default function MathEventsPage() {
             {ranking?.rows?.map((r: any, i: number) => (
               <div
                 key={r.id}
-                className={`mt-2 flex min-w-0 flex-nowrap items-center gap-2 rounded-xl p-2 sm:gap-3 sm:p-3 ${r.isMe ? "bg-blue-50 ring-1 ring-blue-200" : "bg-slate-50"}`}
+                className={`ranking-row mt-2 flex min-w-0 flex-nowrap items-center gap-2 rounded-xl p-2 sm:gap-3 sm:p-3 ${r.isMe ? "bg-blue-50 ring-1 ring-blue-200" : "bg-slate-50"}`}
               >
                 <strong className="w-7 shrink-0 text-center">
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : r.rank}
                 </strong>
-                <div className="min-w-0 flex-1">
-                  <strong className="block truncate">
+                <div className="ranking-person min-w-0 flex-1">
+                  <strong className="ranking-name block">
                     {r.firstName} {r.lastName}
                   </strong>
-                  <span className="text-xs text-slate-500">
-                    {r.grade}.º · {r.course}
-                  </span>
+                  <div className="ranking-meta">
+                    <span className="text-xs text-slate-500">{r.grade}.º · {r.course}</span>
+                    <Reactions compact counts={recognitions[r.id]?.reactions ?? r.reactions} selected={recognitions[r.id] ? recognitions[r.id].myReaction : r.myReaction} readOnly={r.isMe} disabled={reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
+                  </div>
                 </div>
                 <strong className="shrink-0 text-sm text-blue-800 sm:text-base">{r.points} pts</strong>
-                <Reactions compact counts={recognitions[r.id]?.reactions ?? r.reactions} selected={recognitions[r.id] ? recognitions[r.id].myReaction : r.myReaction} readOnly={r.isMe} disabled={reacting || !ranking?.myRank} onReact={kind => sendReaction(r.id, kind)} />
               </div>
             ))}
             {ranking?.total === 0 && (

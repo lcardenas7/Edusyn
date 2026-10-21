@@ -597,6 +597,20 @@ to {
 .ranking-reaction-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .ranking-reaction-tools > p { font-size: 11px; color: #62728b; flex: 1; }
 .ranking-reaction-tools > button { min-height: 36px; border-radius: 99px; background: #eff4ff; padding: 6px 10px; font-size: 11px; font-weight: 750; color: #30598d; }
+.ranking-person { display: flex; flex: 1 1 auto; min-width: 0; flex-direction: column; }
+.ranking-name { overflow-wrap: anywhere; }
+.ranking-meta { display: flex; min-width: 0; align-items: center; gap: 6px; }
+.ranking-meta > span { flex: 0 0 auto; }
+.ranking-meta > .duel-reactions { width: auto; min-width: 0; flex: 1 1 auto; }
+@media (max-width: 640px) {
+  .ranking-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 0; }
+  .ranking-row > strong:first-child { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+  .ranking-person { display: contents; }
+  .ranking-name { grid-column: 2; grid-row: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.2; }
+  .ranking-row > strong:nth-of-type(2) { grid-column: 3; grid-row: 1; align-self: start; }
+  .ranking-meta { grid-column: 2 / -1; grid-row: 2; }
+  .ranking-meta .duel-reactions--compact .reaction-counts { flex-wrap: wrap; }
+}
 .duel-result .recognition-summary > p { color: #53647f; }
 .duel-final-score { display: grid; grid-template-columns: 1fr 32px 1fr; align-items: center; background: #ffffff0c; border-radius: 20px; padding: 18px; margin-top: 20px; font-size: 18px; }
 .duel-final-score > span { color: #ffdf68; font-size: 13px; }
