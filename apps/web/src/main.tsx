@@ -19,7 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
        * dejar visible indefinidamente la ruta anterior. La navegación de
        * Edusyn debe confirmar URL y contenido como una sola actualización.
        */}
-      <BrowserRouter unstable_useTransitions={false}>
+      <BrowserRouter useTransitions={false}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>
