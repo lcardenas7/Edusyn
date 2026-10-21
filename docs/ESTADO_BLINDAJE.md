@@ -1,5 +1,17 @@
 # Estado del blindaje de aplicación
 
+## Duelos — candidato 2026-10-21
+
+Once rutas de Duelos con resolución institucional directa, guardas de aula/ambos participantes, filtros de preguntas/respuestas/ayudas y revalidación relacional dentro de transacciones. **122 pruebas focales de Duelos** (77 HTTP nuevas y 45 existentes), **238 con bancos**, aprobadas. Tipos API y build se registran al cerrar el lote. Ver `AUDITORIA_AISLAMIENTO_DUELOS_20261021.md`.
+
+Suite general final: **2.738 pruebas aprobadas / una fallida**, 121 suites aprobadas y una fallida. El único fallo es el contrato estructural global por Eventos; no se excluyeron pruebas. Tipos API finales aprobados. Se conserva el fallo visible y no se declara una suite global verde.
+
+Build Nest final aprobado después de reintentar un error de limpieza de `dist` en Windows. No hay migraciones nuevas ni cambios de frontend. Pendiente de publicación/verificación de servicios por acceso Railway; no se afirma despliegue confirmado.
+
+Inventario actual del candidato: **1.204 rutas, 416 directas, 689 pendientes, 66 no institucionales y 33 incumplimientos**, todos de Eventos. Las cifras de 405/44 del bloque anterior son históricas. No se añaden excepciones para simular un contrato global aprobado. Permanecen PostgreSQL/RLS, concurrencia real y promoción selectiva a main; este lote no cierra Classroom ni el blindaje global.
+
+Publicación todavía sin acreditar: Railway CLI responde `Unauthorized`; no se pudo verificar el servicio activo. Main remoto avanzó a `49679653` con el fix móvil `649bf7c1`; conservarlo y adaptar el blindaje a esa base antes de una promoción, sin trasladar funciones exclusivas de staging. Los cortes anteriores de servicios activos son evidencia histórica, no una consulta actual.
+
 ## Banco de preguntas — candidato 2026-10-21
 
 Siete rutas de producción con resolución institucional directa y guardas HTTP A/B; staging conserva además su ruta de copia ya existente, adaptada y probada sin promoverla a main. Filtros institucionales añadidos a las preguntas anidadas en listado y copia para excluir relaciones incoherentes. Véase `AUDITORIA_AISLAMIENTO_BANCOS_20261021.md`.

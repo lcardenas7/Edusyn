@@ -378,6 +378,8 @@ describe('DuelService ranking', () => {
 /** Duelo del perfil: `mine` marca ronda a ronda si el jugador acertó. */
 function jugado(categorias: string[], mine: boolean[], theirScore: number) {
   return {
+    inviterEnrollmentId: 'enroll-1',
+    inviteeEnrollmentId: 'enroll-9',
     questions: categorias.map((category, index) => ({ id: `q${index}`, category, text: '', options: [], correctAnswer: '', explanation: null })),
     answers: [
       ...mine.map((isCorrect, ordinal) => ({ enrollmentId: 'enroll-1', ordinal, isCorrect })),

@@ -10,6 +10,18 @@ type DuelQuestion = { id: string; text: string; options: string[]; correctAnswer
 const QUESTION_COUNT = 7;
 const sourceTypes = ['QUIZ', 'HOME_QUIZ', 'ICFES_SIMULATOR'] as const;
 
+// Historical/inactive participants remain readable, but every tenant FK must agree.
+const duelScope = (institutionId: string): Prisma.ClassroomDuelWhereInput => ({
+  institutionId,
+  classroom: { institutionId, isPersonal: false, teacherAssignment: {
+    institutionId, academicYear: { institutionId },
+    group: { campus: { institutionId }, grade: { institutionId } },
+    subject: { area: { institutionId } },
+  } },
+  inviter: { institutionId, student: { institutionId }, academicYear: { institutionId }, group: { campus: { institutionId }, grade: { institutionId } } },
+  invitee: { institutionId, student: { institutionId }, academicYear: { institutionId }, group: { campus: { institutionId }, grade: { institutionId } } },
+});
+
 /**
  * Puntos del ranking. Se ganan POR DUELO, no por pregunta acertada: responder
  * muchas preguntas no acumula posición. Los aciertos solo entran como
@@ -197,7 +209,7 @@ export class DuelService {
       select: { title: true, metadata: true, questions: { select: { id: true, text: true, options: true, correctAnswer: true, explanation: true, subjectArea: true, type: true, imageUrl: true, contextId: true } } },
     }), this.prisma.questionBankCollection.findMany({
       where: { institutionId, gradeId: classroom.teacherAssignment.group.gradeId, isPublished: true, isActive: true },
-      select: { title: true, category: true, subjectArea: true, questions: { where: { isActive: true, type: { in: ['MULTIPLE_CHOICE', 'TRUE_FALSE'] } }, select: { id: true, text: true, options: true, correctAnswer: true, explanation: true } } },
+      select: { title: true, category: true, subjectArea: true, questions: { where: { institutionId, isActive: true, type: { in: ['MULTIPLE_CHOICE', 'TRUE_FALSE'] } }, select: { id: true, text: true, options: true, correctAnswer: true, explanation: true } } },
     })]);
     const activityQuestions = activities.filter((activity) => isEligible(activity.metadata)).flatMap((activity) => activity.questions.map((question) => ({ ...question, category: (question.subjectArea?.trim() || activity.title.trim()).slice(0, 80) })))
       .filter((question) => question.type === 'MULTIPLE_CHOICE' || question.type === 'TRUE_FALSE')
@@ -261,10 +273,10 @@ export class DuelService {
       const now = new Date();
       const open = await this.prisma.classroomDuel.findMany({
         where: {
-          institutionId: actor.institutionId, classroomId, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { gt: now },
+          ...duelScope(actor.institutionId), classroomId, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { gt: now },
           OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }],
         },
-        select: { status: true, inviteeEnrollmentId: true, _count: { select: { answers: { where: { enrollmentId } } } } },
+        select: { status: true, inviteeEnrollmentId: true, _count: { select: { answers: { where: { institutionId: actor.institutionId, enrollmentId } } } } },
       });
       pendingInvites = open.filter((duel) => duel.status === 'INVITED' && duel.inviteeEnrollmentId === enrollmentId).length;
       myTurn = open.filter((duel) => duel.status === 'ACTIVE' && duel._count.answers < QUESTION_COUNT).length;
@@ -295,8 +307,8 @@ export class DuelService {
       orderBy: { student: { firstName: 'asc' } },
     }) : [];
     const duels = enrollmentId ? await this.prisma.classroomDuel.findMany({
-      where: { institutionId: actor.institutionId, classroomId, OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }] },
-      include: { inviter: { select: { student: { select: { firstName: true, lastName: true } } } }, invitee: { select: { student: { select: { firstName: true, lastName: true } } } }, answers: { select: { enrollmentId: true, isCorrect: true } } },
+      where: { ...duelScope(actor.institutionId), classroomId, OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }] },
+      include: { inviter: { select: { student: { select: { firstName: true, lastName: true } } } }, invitee: { select: { student: { select: { firstName: true, lastName: true } } } }, answers: { where: { institutionId: actor.institutionId }, select: { enrollmentId: true, isCorrect: true } } },
       orderBy: { createdAt: 'desc' }, take: 30,
     }) : [];
     return {
@@ -313,7 +325,7 @@ export class DuelService {
         opponent: displayName(duel.inviterEnrollmentId === enrollmentId ? duel.invitee : duel.inviter),
         isInvitee: duel.inviteeEnrollmentId === enrollmentId,
         myProgress: duel.answers.filter((answer) => answer.enrollmentId === enrollmentId).length,
-        opponentProgress: duel.answers.filter((answer) => answer.enrollmentId !== enrollmentId).length,
+        opponentProgress: duel.answers.filter((answer) => answer.enrollmentId === (duel.inviterEnrollmentId === enrollmentId ? duel.inviteeEnrollmentId : duel.inviterEnrollmentId)).length,
         createdAt: duel.createdAt,
       })),
     };
@@ -355,12 +367,12 @@ export class DuelService {
     }
 
     const duels = await this.prisma.classroomDuel.findMany({
-      where: { institutionId: actor.institutionId, classroomId: { in: classroomIds }, status: 'COMPLETED' },
+      where: { ...duelScope(actor.institutionId), classroomId: { in: classroomIds }, status: 'COMPLETED' },
       select: {
         inviterEnrollmentId: true, inviteeEnrollmentId: true,
         inviter: { select: { student: { select: { firstName: true, lastName: true } } } },
         invitee: { select: { student: { select: { firstName: true, lastName: true } } } },
-        answers: { select: { enrollmentId: true, isCorrect: true } },
+        answers: { where: { institutionId: actor.institutionId }, select: { enrollmentId: true, isCorrect: true } },
       },
       orderBy: { completedAt: 'desc' },
       take: RANKING_DUEL_LIMIT,
@@ -457,10 +469,10 @@ export class DuelService {
 
     const duels = await this.prisma.classroomDuel.findMany({
       where: {
-        institutionId: actor.institutionId, status: 'COMPLETED',
+        ...duelScope(actor.institutionId), status: 'COMPLETED',
         OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }],
       },
-      select: { questions: true, inviterEnrollmentId: true, completedAt: true, answers: { select: { enrollmentId: true, ordinal: true, isCorrect: true } }, powerUses: { where: { enrollmentId }, select: { options: true } } },
+      select: { questions: true, inviterEnrollmentId: true, inviteeEnrollmentId: true, completedAt: true, answers: { where: { institutionId: actor.institutionId }, select: { enrollmentId: true, ordinal: true, isCorrect: true } }, powerUses: { where: { institutionId: actor.institutionId, enrollmentId }, select: { options: true } } },
       orderBy: { completedAt: 'asc' },
       take: RANKING_DUEL_LIMIT,
     });
@@ -474,7 +486,7 @@ export class DuelService {
       // equivocada.
       const questions = this.applySwap(questionsFor(duel, enrollmentId), duel.powerUses?.[0] ?? null);
       const mine = duel.answers.filter((answer) => answer.enrollmentId === enrollmentId);
-      const theirs = duel.answers.filter((answer) => answer.enrollmentId !== enrollmentId);
+      const theirs = duel.answers.filter((answer) => answer.enrollmentId === (duel.inviterEnrollmentId === enrollmentId ? duel.inviteeEnrollmentId : duel.inviterEnrollmentId));
       const myScore = mine.filter((answer) => answer.isCorrect).length;
       const theirScore = theirs.filter((answer) => answer.isCorrect).length;
       played += 1;
@@ -533,7 +545,7 @@ export class DuelService {
     const activity = await this.access.activityInScope(actor, activityId);
     if (activity.classroomId !== classroomId || !activity.isPublished || !activity.isVisible || activity.isRestrictedToAssigned || activity.isRouteScoped || !sourceTypes.includes(activity.type as typeof sourceTypes[number])) throw new NotFoundException('Actividad no compatible con Arena');
     const metadata = activity.metadata && typeof activity.metadata === 'object' && !Array.isArray(activity.metadata) ? activity.metadata as Record<string, unknown> : {};
-    await this.prisma.classroomActivity.update({ where: { id: activityId }, data: { metadata: { ...metadata, duelEligible: enabled } as Prisma.InputJsonValue } });
+    await this.prisma.classroomActivity.update({ where: { id: activityId, classroomId, classroom: { institutionId: actor.institutionId } }, data: { metadata: { ...metadata, duelEligible: enabled } as Prisma.InputJsonValue } });
     return this.dashboard(actor, classroomId);
   }
 
@@ -549,7 +561,7 @@ export class DuelService {
         select: { id: true },
       }),
       this.prisma.classroomDuel.findMany({
-        where: { institutionId: actor.institutionId, classroomId, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { gte: new Date() }, OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }] },
+        where: { ...duelScope(actor.institutionId), classroomId, status: { in: ['INVITED', 'ACTIVE'] }, expiresAt: { gte: new Date() }, OR: [{ inviterEnrollmentId: enrollmentId }, { inviteeEnrollmentId: enrollmentId }] },
         select: { inviterEnrollmentId: true, inviteeEnrollmentId: true },
       }),
     ]);
@@ -658,7 +670,7 @@ export class DuelService {
 
   private async member(actor: ClassroomActor, duelId: string) {
     const duel = await this.prisma.classroomDuel.findFirst({
-      where: { id: duelId, institutionId: actor.institutionId },
+      where: { id: duelId, ...duelScope(actor.institutionId) },
       include: {
         inviter: { select: { student: { select: { firstName: true, lastName: true } } } },
         invitee: { select: { student: { select: { firstName: true, lastName: true } } } },
@@ -668,7 +680,7 @@ export class DuelService {
     const { enrollmentId } = await this.context(actor, duel.classroomId);
     if (!enrollmentId || (duel.inviterEnrollmentId !== enrollmentId && duel.inviteeEnrollmentId !== enrollmentId)) throw new NotFoundException('Duelo no encontrado');
     if (this.visibleStatus(duel.status, duel.expiresAt) === 'EXPIRED' && duel.status !== 'EXPIRED') {
-      await this.prisma.classroomDuel.updateMany({ where: { id: duelId, status: duel.status }, data: { status: 'EXPIRED' } });
+      await this.prisma.classroomDuel.updateMany({ where: { id: duelId, ...duelScope(actor.institutionId), status: duel.status }, data: { status: 'EXPIRED' } });
       duel.status = 'EXPIRED';
     }
     return { duel, enrollmentId };
@@ -677,7 +689,7 @@ export class DuelService {
   async respond(actor: ClassroomActor, duelId: string, accept: boolean) {
     const { duel, enrollmentId } = await this.member(actor, duelId);
     if (duel.inviteeEnrollmentId !== enrollmentId || duel.status !== 'INVITED') throw new ConflictException('La invitación ya no está pendiente');
-    const changed = await this.prisma.classroomDuel.updateMany({ where: { id: duelId, status: 'INVITED' }, data: { status: accept ? 'ACTIVE' : 'DECLINED', acceptedAt: accept ? new Date() : null, expiresAt: accept ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : duel.expiresAt } });
+    const changed = await this.prisma.classroomDuel.updateMany({ where: { id: duelId, ...duelScope(actor.institutionId), inviteeEnrollmentId: enrollmentId, status: 'INVITED' }, data: { status: accept ? 'ACTIVE' : 'DECLINED', acceptedAt: accept ? new Date() : null, expiresAt: accept ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : duel.expiresAt } });
     if (!changed.count) throw new ConflictException('La invitación ya fue respondida');
     return this.get(actor, duelId);
   }
@@ -685,11 +697,11 @@ export class DuelService {
   async get(actor: ClassroomActor, duelId: string) {
     const { duel, enrollmentId } = await this.member(actor, duelId);
     const [answers, powerUse] = await Promise.all([
-      this.prisma.classroomDuelAnswer.findMany({ where: { duelId, institutionId: actor.institutionId }, orderBy: { ordinal: 'asc' }, select: { enrollmentId: true, ordinal: true, isCorrect: true, answer: true } }),
-      this.prisma.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId } }, select: { ordinal: true, options: true } }),
+      this.prisma.classroomDuelAnswer.findMany({ where: { duelId, institutionId: actor.institutionId, enrollmentId: { in: [duel.inviterEnrollmentId, duel.inviteeEnrollmentId] } }, orderBy: { ordinal: 'asc' }, select: { enrollmentId: true, ordinal: true, isCorrect: true, answer: true } }),
+      this.prisma.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId }, institutionId: actor.institutionId }, select: { ordinal: true, options: true } }),
     ]);
     const mine = answers.filter((answer) => answer.enrollmentId === enrollmentId);
-    const theirs = answers.filter((answer) => answer.enrollmentId !== enrollmentId);
+    const theirs = answers.filter((answer) => answer.enrollmentId === (duel.inviterEnrollmentId === enrollmentId ? duel.inviteeEnrollmentId : duel.inviterEnrollmentId));
     // Cada participante responde su propia secuencia; el bono de tema, además,
     // reordena la de quien lo gastó.
     const questions = this.applySwap(questionsFor(duel, enrollmentId), powerUse);
@@ -757,11 +769,11 @@ export class DuelService {
     if (kind === 'CATEGORY' && (typeof category !== 'string' || !category.trim())) throw new BadRequestException('Elige un tema');
     try {
       await this.prisma.$transaction(async (tx) => {
-        const current = await tx.classroomDuel.findUnique({ where: { id: duelId }, select: { status: true } });
+        const current = await tx.classroomDuel.findUnique({ where: { ...duelScope(actor.institutionId), id: duelId }, select: { status: true } });
         if (current?.status !== 'ACTIVE') throw new ConflictException('El duelo no está activo');
-        const answered = await tx.classroomDuelAnswer.count({ where: { duelId, enrollmentId } });
+        const answered = await tx.classroomDuelAnswer.count({ where: { duelId, enrollmentId, institutionId: actor.institutionId } });
         if (answered !== ordinal) throw new ConflictException('El bono solo sirve en la pregunta actual');
-        const used = await tx.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId } }, select: { id: true } });
+        const used = await tx.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId }, institutionId: actor.institutionId }, select: { id: true } });
         if (used) throw new ConflictException('Ya usaste tu bono en este duelo');
 
         if (kind === 'CATEGORY') {
@@ -794,7 +806,7 @@ export class DuelService {
   async answer(actor: ClassroomActor, duelId: string, ordinal: number, answer: string) {
     const { duel, enrollmentId } = await this.member(actor, duelId);
     if (duel.status !== 'ACTIVE') throw new ConflictException('El duelo no está activo');
-    const power = await this.prisma.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId } }, select: { options: true } });
+    const power = await this.prisma.classroomDuelPowerUse.findUnique({ where: { duelId_enrollmentId: { duelId, enrollmentId }, institutionId: actor.institutionId }, select: { options: true } });
     // Se califica contra la secuencia de ESTE jugador: si gastó el bono de tema,
     // su ronda N es otra de las mismas siete preguntas.
     const questions = this.applySwap(questionsFor(duel, enrollmentId), power);
@@ -802,15 +814,15 @@ export class DuelService {
     if (!questions[ordinal].options.some((option) => norm(option) === norm(answer))) throw new BadRequestException('Selecciona una opción válida');
     try {
       await this.prisma.$transaction(async (tx) => {
-        const current = await tx.classroomDuel.findUnique({ where: { id: duelId }, select: { status: true } });
+        const current = await tx.classroomDuel.findUnique({ where: { ...duelScope(actor.institutionId), id: duelId }, select: { status: true } });
         if (current?.status !== 'ACTIVE') throw new ConflictException('El duelo no está activo');
-        const answered = await tx.classroomDuelAnswer.count({ where: { duelId, enrollmentId } });
+        const answered = await tx.classroomDuelAnswer.count({ where: { duelId, enrollmentId, institutionId: actor.institutionId } });
         if (answered !== ordinal) throw new ConflictException('Responde la pregunta actual');
         await tx.classroomDuelAnswer.create({ data: { institutionId: actor.institutionId, duelId, enrollmentId, ordinal, answer, isCorrect: norm(answer) === norm(questions[ordinal].correctAnswer) } });
-        const total = await tx.classroomDuelAnswer.count({ where: { duelId } });
+        const total = await tx.classroomDuelAnswer.count({ where: { duelId, institutionId: actor.institutionId, enrollmentId: { in: [duel.inviterEnrollmentId, duel.inviteeEnrollmentId] } } });
         // Termina cuando cada uno respondió toda SU secuencia.
         const both = sequences(duel.questions);
-        if (total === both.inviter.length + both.invitee.length) await tx.classroomDuel.update({ where: { id: duelId }, data: { status: 'COMPLETED', completedAt: new Date() } });
+        if (total === both.inviter.length + both.invitee.length) await tx.classroomDuel.update({ where: { ...duelScope(actor.institutionId), id: duelId }, data: { status: 'COMPLETED', completedAt: new Date() } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002' || (error as { code?: string }).code === 'P2034') throw new ConflictException('La respuesta ya se registró. Actualiza la partida.');
