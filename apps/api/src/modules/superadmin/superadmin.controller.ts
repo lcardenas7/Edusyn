@@ -14,6 +14,7 @@ import {
 import { SuperadminService } from './superadmin.service';
 import { CreateInstitutionDto, UpdateInstitutionDto, UpdateInstitutionModulesDto } from './dto/create-institution.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 
 @Controller('superadmin')
 @UseGuards(JwtAuthGuard)
@@ -151,7 +152,7 @@ export class SuperadminController {
   resetUserPassword(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { newPassword?: string; mustChangePassword?: boolean },
+    @Body() body: ResetUserPasswordDto,
   ) {
     return this.superadminService.resetUserPassword(req.user.id, id, body);
   }

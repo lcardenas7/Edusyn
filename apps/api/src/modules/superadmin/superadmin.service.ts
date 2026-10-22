@@ -1,8 +1,10 @@
 import { Injectable, ForbiddenException, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInstitutionDto, UpdateInstitutionDto, UpdateInstitutionModulesDto } from './dto/create-institution.dto';
 import * as bcrypt from 'bcryptjs';
 import { DEFAULT_PERFORMANCE_SCALE } from '../evaluation/performance-scale.util';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 
 @Injectable()
 export class SuperadminService {
@@ -726,9 +728,23 @@ export class SuperadminService {
   async resetUserPassword(
     superAdminId: string,
     userId: string,
-    opts?: { newPassword?: string; mustChangePassword?: boolean },
+    opts: ResetUserPasswordDto,
   ) {
     await this.verifySuperAdmin(superAdminId);
+
+    const membership = await this.prisma.institutionUser.findUnique({
+      where: { userId_institutionId: { userId, institutionId: opts.institutionId } },
+      include: { institutionUserRoles: { include: { role: { select: { name: true } } } } },
+    });
+    if (!membership) {
+      throw new NotFoundException('El usuario no pertenece a esta institución');
+    }
+    const isManager = membership.isAdmin || membership.institutionUserRoles.some(
+      assignment => ['ADMIN_INSTITUTIONAL', 'RECTOR'].includes(assignment.role.name),
+    );
+    if (!isManager) {
+      throw new ForbiddenException('Este restablecimiento está disponible para administradores y rectores');
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -736,16 +752,9 @@ export class SuperadminService {
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    let newPassword: string;
-    if (opts?.newPassword && opts.newPassword.length >= 6) {
-      newPassword = opts.newPassword;
-    } else if (user.documentNumber) {
-      newPassword = user.documentNumber;
-    } else {
-      newPassword = `Edu${Math.random().toString(36).substring(2, 8)}`;
-    }
-
-    const mustChange = opts?.mustChangePassword !== undefined ? opts.mustChangePassword : true;
+    // Cada restablecimiento genera una clave temporal aleatoria.
+    const newPassword = randomBytes(18).toString('base64url');
+    const mustChange = true;
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     await this.prisma.user.update({
