@@ -239,7 +239,7 @@ const AcademicYearWizard: React.FC = () => {
     setIsActivating(true)
     try {
       const validation = await academicYearLifecycleApi.validateActivation(yearToActivate.id)
-      if (!validation.data.isValid) {
+      if ((validation.data.errors?.length ?? 0) > 0) {
         setError(validation.data.errors?.join(', ') || 'El año no cumple los requisitos para ser activado.')
         return
       }
@@ -265,7 +265,7 @@ const AcademicYearWizard: React.FC = () => {
     setIsClosing(true)
     try {
       const validation = await academicYearLifecycleApi.validateClosure(activeYear.id)
-      if (!validation.data.isValid) {
+      if ((validation.data.errors?.length ?? 0) > 0) {
         setError(validation.data.errors?.join(', ') || 'El año no cumple los requisitos para ser cerrado.')
         return
       }
