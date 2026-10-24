@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  addDateOnlyDays,
+  colombiaTodayKey,
+  compareDateOnlyToColombiaToday,
+  formatDateOnlyInColombia,
+} from '../../common/utils/date-window.util';
 
 @Injectable()
 export class RecoveryPeriodConfigService {
@@ -14,7 +20,7 @@ export class RecoveryPeriodConfigService {
       orderBy: { order: 'asc' },
     });
 
-    return terms.map(term => ({
+    return terms.map((term) => ({
       id: term.id,
       name: term.name,
       order: term.order,
@@ -30,13 +36,16 @@ export class RecoveryPeriodConfigService {
     }));
   }
 
-  async upsertConfig(academicTermId: string, data: {
-    isOpen: boolean;
-    openDate?: Date | null;
-    closeDate?: Date | null;
-    allowLateEntry?: boolean;
-    lateEntryDays?: number;
-  }) {
+  async upsertConfig(
+    academicTermId: string,
+    data: {
+      isOpen: boolean;
+      openDate?: Date | null;
+      closeDate?: Date | null;
+      allowLateEntry?: boolean;
+      lateEntryDays?: number;
+    },
+  ) {
     return this.prisma.recoveryPeriodConfig.upsert({
       where: { academicTermId },
       update: {
@@ -57,37 +66,46 @@ export class RecoveryPeriodConfigService {
     });
   }
 
-  async isPeriodOpen(academicTermId: string): Promise<{ isOpen: boolean; reason?: string }> {
+  async isPeriodOpen(
+    academicTermId: string,
+  ): Promise<{ isOpen: boolean; reason?: string }> {
     const config = await this.prisma.recoveryPeriodConfig.findUnique({
       where: { academicTermId },
     });
 
     if (!config) {
-      return { isOpen: false, reason: 'Período de recuperación no configurado' };
+      return {
+        isOpen: false,
+        reason: 'Período de recuperación no configurado',
+      };
     }
 
     if (!config.isOpen) {
-      return { isOpen: false, reason: 'El período de recuperación está cerrado' };
+      return {
+        isOpen: false,
+        reason: 'El período de recuperación está cerrado',
+      };
     }
 
-    const now = new Date();
-
-    if (config.openDate && now < config.openDate) {
-      return { 
-        isOpen: false, 
-        reason: `El período de recuperación abre el ${config.openDate.toLocaleDateString('es-CO')}` 
+    if (
+      config.openDate &&
+      compareDateOnlyToColombiaToday(config.openDate) > 0
+    ) {
+      return {
+        isOpen: false,
+        reason: `El período de recuperación abre el ${formatDateOnlyInColombia(config.openDate)}`,
       };
     }
 
     if (config.closeDate) {
-      const closeDate = new Date(config.closeDate);
-      if (config.allowLateEntry && config.lateEntryDays > 0) {
-        closeDate.setDate(closeDate.getDate() + config.lateEntryDays);
-      }
-      if (now > closeDate) {
-        return { 
-          isOpen: false, 
-          reason: `El período de recuperación cerró el ${config.closeDate.toLocaleDateString('es-CO')}` 
+      const closeDateKey =
+        config.allowLateEntry && config.lateEntryDays > 0
+          ? addDateOnlyDays(config.closeDate, config.lateEntryDays)
+          : config.closeDate.toISOString().slice(0, 10);
+      if (closeDateKey < colombiaTodayKey()) {
+        return {
+          isOpen: false,
+          reason: `El período de recuperación cerró el ${formatDateOnlyInColombia(config.closeDate)}`,
         };
       }
     }
@@ -104,24 +122,28 @@ export class RecoveryPeriodConfigService {
       orderBy: { order: 'asc' },
     });
 
-    const now = new Date();
+    const today = colombiaTodayKey();
 
-    return terms.map(term => {
+    return terms.map((term) => {
       const config = term.recoveryPeriodConfig;
-      let status: 'open' | 'closed' | 'upcoming' | 'not_configured' = 'not_configured';
+      let status: 'open' | 'closed' | 'upcoming' | 'not_configured' =
+        'not_configured';
       let canEnterRecoveries = false;
 
       if (config) {
         if (!config.isOpen) {
           status = 'closed';
-        } else if (config.openDate && now < config.openDate) {
+        } else if (
+          config.openDate &&
+          compareDateOnlyToColombiaToday(config.openDate) > 0
+        ) {
           status = 'upcoming';
         } else if (config.closeDate) {
-          let effectiveCloseDate = new Date(config.closeDate);
-          if (config.allowLateEntry && config.lateEntryDays > 0) {
-            effectiveCloseDate.setDate(effectiveCloseDate.getDate() + config.lateEntryDays);
-          }
-          if (now > effectiveCloseDate) {
+          const effectiveCloseDate =
+            config.allowLateEntry && config.lateEntryDays > 0
+              ? addDateOnlyDays(config.closeDate, config.lateEntryDays)
+              : config.closeDate.toISOString().slice(0, 10);
+          if (today > effectiveCloseDate) {
             status = 'closed';
           } else {
             status = 'open';

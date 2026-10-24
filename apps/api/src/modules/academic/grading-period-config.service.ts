@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  addDateOnlyDays,
+  colombiaTodayKey,
+  compareDateOnlyToColombiaToday,
+  formatDateOnlyInColombia,
+} from '../../common/utils/date-window.util';
 
 @Injectable()
 export class GradingPeriodConfigService {
@@ -15,7 +21,7 @@ export class GradingPeriodConfigService {
       orderBy: { order: 'asc' },
     });
 
-    return terms.map(term => ({
+    return terms.map((term) => ({
       id: term.id,
       name: term.name,
       order: term.order,
@@ -32,13 +38,16 @@ export class GradingPeriodConfigService {
   }
 
   // Actualizar o crear configuración de un período
-  async upsertConfig(academicTermId: string, data: {
-    isOpen: boolean;
-    openDate?: Date | null;
-    closeDate?: Date | null;
-    allowLateEntry?: boolean;
-    lateEntryDays?: number;
-  }) {
+  async upsertConfig(
+    academicTermId: string,
+    data: {
+      isOpen: boolean;
+      openDate?: Date | null;
+      closeDate?: Date | null;
+      allowLateEntry?: boolean;
+      lateEntryDays?: number;
+    },
+  ) {
     return this.prisma.gradingPeriodConfig.upsert({
       where: { academicTermId },
       update: {
@@ -60,42 +69,50 @@ export class GradingPeriodConfigService {
   }
 
   // Verificar si un período está abierto para calificaciones
-  async isPeriodOpen(academicTermId: string): Promise<{ isOpen: boolean; reason?: string }> {
+  async isPeriodOpen(
+    academicTermId: string,
+  ): Promise<{ isOpen: boolean; reason?: string }> {
     const config = await this.prisma.gradingPeriodConfig.findUnique({
       where: { academicTermId },
     });
 
     if (!config) {
-      return { isOpen: false, reason: 'Período no configurado para calificaciones' };
+      return {
+        isOpen: false,
+        reason: 'Período no configurado para calificaciones',
+      };
     }
 
     if (!config.isOpen) {
-      return { isOpen: false, reason: 'El período está cerrado para calificaciones' };
+      return {
+        isOpen: false,
+        reason: 'El período está cerrado para calificaciones',
+      };
     }
 
-    const now = new Date();
-
     // Verificar fecha de apertura
-    if (config.openDate && now < config.openDate) {
-      return { 
-        isOpen: false, 
-        reason: `El período abre el ${config.openDate.toLocaleDateString('es-CO')}` 
+    if (
+      config.openDate &&
+      compareDateOnlyToColombiaToday(config.openDate) > 0
+    ) {
+      return {
+        isOpen: false,
+        reason: `El período abre el ${formatDateOnlyInColombia(config.openDate)}`,
       };
     }
 
     // Verificar fecha de cierre
     if (config.closeDate) {
-      const closeDate = new Date(config.closeDate);
-      
       // Si permite entrada tardía, agregar días adicionales
-      if (config.allowLateEntry && config.lateEntryDays > 0) {
-        closeDate.setDate(closeDate.getDate() + config.lateEntryDays);
-      }
+      const closeDateKey =
+        config.allowLateEntry && config.lateEntryDays > 0
+          ? addDateOnlyDays(config.closeDate, config.lateEntryDays)
+          : config.closeDate.toISOString().slice(0, 10);
 
-      if (now > closeDate) {
-        return { 
-          isOpen: false, 
-          reason: `El período cerró el ${config.closeDate.toLocaleDateString('es-CO')}` 
+      if (closeDateKey < colombiaTodayKey()) {
+        return {
+          isOpen: false,
+          reason: `El período cerró el ${formatDateOnlyInColombia(config.closeDate)}`,
         };
       }
     }
@@ -113,11 +130,12 @@ export class GradingPeriodConfigService {
       orderBy: { order: 'asc' },
     });
 
-    const now = new Date();
+    const today = colombiaTodayKey();
 
-    return terms.map(term => {
+    return terms.map((term) => {
       const config = term.gradingPeriodConfig;
-      let status: 'open' | 'closed' | 'upcoming' | 'not_configured' = 'not_configured';
+      let status: 'open' | 'closed' | 'upcoming' | 'not_configured' =
+        'not_configured';
       let canEnterGrades = false;
       // Por qué está cerrado: 'toggle' = deshabilitado manualmente,
       // 'date' = la ventana está habilitada pero su fecha de cierre ya pasó.
@@ -127,14 +145,17 @@ export class GradingPeriodConfigService {
         if (!config.isOpen) {
           status = 'closed';
           closedBy = 'toggle';
-        } else if (config.openDate && now < config.openDate) {
+        } else if (
+          config.openDate &&
+          compareDateOnlyToColombiaToday(config.openDate) > 0
+        ) {
           status = 'upcoming';
         } else if (config.closeDate) {
-          let effectiveCloseDate = new Date(config.closeDate);
-          if (config.allowLateEntry && config.lateEntryDays > 0) {
-            effectiveCloseDate.setDate(effectiveCloseDate.getDate() + config.lateEntryDays);
-          }
-          if (now > effectiveCloseDate) {
+          const effectiveCloseDate =
+            config.allowLateEntry && config.lateEntryDays > 0
+              ? addDateOnlyDays(config.closeDate, config.lateEntryDays)
+              : config.closeDate.toISOString().slice(0, 10);
+          if (today > effectiveCloseDate) {
             status = 'closed';
             closedBy = 'date';
           } else {

@@ -1,14 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import {
+  addDateOnlyDays,
+  colombiaTodayKey,
+  compareDateOnlyToColombiaToday,
+  formatDateOnlyInColombia,
+} from '../../common/utils/date-window.util';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RecoveryImpactType, RecoveryStatus, PromotionStatus } from '@prisma/client';
+import {
+  RecoveryImpactType,
+  RecoveryStatus,
+  PromotionStatus,
+} from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
 
 /**
  * RecoveryEngineService
- * 
+ *
  * Motor centralizado de cálculos para recuperaciones académicas.
  * Elimina duplicación de lógica entre PeriodRecoveryService y FinalRecoveryService.
- * 
+ *
  * Responsabilidades:
  * - Calcular nota final según tipo de impacto
  * - Validar intentos restantes
@@ -38,7 +48,13 @@ export class RecoveryEngineService {
     minPassingScore: number;
     impactType: RecoveryImpactType;
   }): { finalScore: number; status: RecoveryStatus } {
-    const { originalScore, recoveryScore, maxScore, minPassingScore, impactType } = params;
+    const {
+      originalScore,
+      recoveryScore,
+      maxScore,
+      minPassingScore,
+      impactType,
+    } = params;
 
     let finalScore: number;
 
@@ -74,7 +90,8 @@ export class RecoveryEngineService {
     // El tope limita el beneficio de recuperar; no recorta una nota ya obtenida.
     finalScore = Math.max(originalScore, Math.round(finalScore * 100) / 100);
 
-    const status: RecoveryStatus = finalScore >= minPassingScore ? 'APPROVED' : 'NOT_APPROVED';
+    const status: RecoveryStatus =
+      finalScore >= minPassingScore ? 'APPROVED' : 'NOT_APPROVED';
 
     return { finalScore, status };
   }
@@ -94,7 +111,11 @@ export class RecoveryEngineService {
     academicYearId?: string;
     maxAttempts: number;
     type: 'PERIOD' | 'FINAL';
-  }): Promise<{ canAttempt: boolean; currentAttempt: number; reason?: string }> {
+  }): Promise<{
+    canAttempt: boolean;
+    currentAttempt: number;
+    reason?: string;
+  }> {
     const { type, maxAttempts } = params;
 
     let currentAttempt: number;
@@ -160,11 +181,14 @@ export class RecoveryEngineService {
 
     // Contar áreas/asignaturas reprobadas en recuperación final
     const finalPlans = enrollment.finalRecoveryPlans;
-    const pendingFinals = finalPlans.filter(p => 
-      p.status === 'PENDING' || p.status === 'ASSIGNED' || p.status === 'IN_PROGRESS',
+    const pendingFinals = finalPlans.filter(
+      (p) =>
+        p.status === 'PENDING' ||
+        p.status === 'ASSIGNED' ||
+        p.status === 'IN_PROGRESS',
     );
-    const failedFinals = finalPlans.filter(p => p.status === 'NOT_APPROVED');
-    const approvedFinals = finalPlans.filter(p => p.status === 'APPROVED');
+    const failedFinals = finalPlans.filter((p) => p.status === 'NOT_APPROVED');
+    const approvedFinals = finalPlans.filter((p) => p.status === 'APPROVED');
 
     let newStatus: PromotionStatus;
 
@@ -173,11 +197,19 @@ export class RecoveryEngineService {
       newStatus = 'PENDING_RECOVERY';
     }
     // Si todas las recuperaciones fueron aprobadas
-    else if (finalPlans.length > 0 && failedFinals.length === 0 && pendingFinals.length === 0) {
-      newStatus = approvedFinals.length > 0 ? 'PROMOTED_AFTER_RECOVERY' : 'PROMOTED';
+    else if (
+      finalPlans.length > 0 &&
+      failedFinals.length === 0 &&
+      pendingFinals.length === 0
+    ) {
+      newStatus =
+        approvedFinals.length > 0 ? 'PROMOTED_AFTER_RECOVERY' : 'PROMOTED';
     }
     // Verificar umbrales de reprobación automática
-    else if (config.autoRetainAreas && failedFinals.length >= config.autoRetainAreas) {
+    else if (
+      config.autoRetainAreas &&
+      failedFinals.length >= config.autoRetainAreas
+    ) {
       newStatus = 'RETAINED';
     }
     // Si tiene áreas reprobadas pero dentro del límite recuperable
@@ -187,8 +219,7 @@ export class RecoveryEngineService {
     // Sin planes de recuperación final → en progreso o promovido
     else if (finalPlans.length === 0) {
       newStatus = 'IN_PROGRESS';
-    }
-    else {
+    } else {
       newStatus = 'IN_PROGRESS';
     }
 
@@ -226,7 +257,12 @@ export class RecoveryEngineService {
   private async getPeriodStats(academicTermId: string, institutionId: string) {
     const recoveries = await this.prisma.periodRecovery.findMany({
       where: { academicTermId, institutionId },
-      select: { status: true, recoveryScore: true, originalScore: true, finalScore: true },
+      select: {
+        status: true,
+        recoveryScore: true,
+        originalScore: true,
+        finalScore: true,
+      },
     });
 
     const total = recoveries.length;
@@ -240,7 +276,10 @@ export class RecoveryEngineService {
       recoveriesCreated: total,
       recoveriesApproved: approved,
       recoveriesRejected: notApproved,
-      pendingRecoveries: (byStatus['PENDING'] || 0) + (byStatus['ASSIGNED'] || 0) + (byStatus['IN_PROGRESS'] || 0),
+      pendingRecoveries:
+        (byStatus['PENDING'] || 0) +
+        (byStatus['ASSIGNED'] || 0) +
+        (byStatus['IN_PROGRESS'] || 0),
       reviewPending: byStatus['REVIEW_PENDING'] || 0,
       cancelled: byStatus['CANCELLED'] || 0,
       successRate: completed > 0 ? Math.round((approved / completed) * 100) : 0,
@@ -251,7 +290,12 @@ export class RecoveryEngineService {
   private async getFinalStats(academicYearId: string, institutionId: string) {
     const plans = await this.prisma.finalRecoveryPlan.findMany({
       where: { academicYearId, institutionId },
-      select: { status: true, recoveryScore: true, originalAreaScore: true, finalAreaScore: true },
+      select: {
+        status: true,
+        recoveryScore: true,
+        originalAreaScore: true,
+        finalAreaScore: true,
+      },
     });
 
     const total = plans.length;
@@ -270,17 +314,23 @@ export class RecoveryEngineService {
       _count: true,
     });
 
-    const promotionByStatus = promotionStats.reduce((acc, p) => {
-      acc[p.promotionStatus] = p._count;
-      return acc;
-    }, {} as Record<string, number>);
+    const promotionByStatus = promotionStats.reduce(
+      (acc, p) => {
+        acc[p.promotionStatus] = p._count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       studentsNeedingRecovery: total,
       recoveriesCreated: total,
       recoveriesApproved: approved,
       recoveriesRejected: notApproved,
-      pendingRecoveries: (byStatus['PENDING'] || 0) + (byStatus['ASSIGNED'] || 0) + (byStatus['IN_PROGRESS'] || 0),
+      pendingRecoveries:
+        (byStatus['PENDING'] || 0) +
+        (byStatus['ASSIGNED'] || 0) +
+        (byStatus['IN_PROGRESS'] || 0),
       reviewPending: byStatus['REVIEW_PENDING'] || 0,
       cancelled: byStatus['CANCELLED'] || 0,
       successRate: completed > 0 ? Math.round((approved / completed) * 100) : 0,
@@ -290,10 +340,13 @@ export class RecoveryEngineService {
   }
 
   private countByStatus(items: { status: string }[]): Record<string, number> {
-    return items.reduce((acc, item) => {
-      acc[item.status] = (acc[item.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return items.reduce(
+      (acc, item) => {
+        acc[item.status] = (acc[item.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -317,11 +370,19 @@ export class RecoveryEngineService {
     );
 
     if (params.type === 'PERIOD' && !config.periodRecoveryEnabled) {
-      return { allowed: false, reason: 'La recuperación por período está deshabilitada para esta institución' };
+      return {
+        allowed: false,
+        reason:
+          'La recuperación por período está deshabilitada para esta institución',
+      };
     }
 
     if (params.type === 'FINAL' && !config.finalRecoveryEnabled) {
-      return { allowed: false, reason: 'La recuperación final está deshabilitada para esta institución' };
+      return {
+        allowed: false,
+        reason:
+          'La recuperación final está deshabilitada para esta institución',
+      };
     }
 
     const now = new Date();
@@ -335,35 +396,65 @@ export class RecoveryEngineService {
         });
 
         if (!periodConfig) {
-          return { allowed: false, reason: 'Período de recuperación no configurado' };
+          return {
+            allowed: false,
+            reason: 'Período de recuperación no configurado',
+          };
         }
 
         if (!periodConfig.isOpen) {
-          return { allowed: false, reason: `La ventana de recuperación del ${periodConfig.academicTerm.name} está cerrada` };
+          return {
+            allowed: false,
+            reason: `La ventana de recuperación del ${periodConfig.academicTerm.name} está cerrada`,
+          };
         }
-        if (periodConfig.openDate && now < periodConfig.openDate) {
-          return { allowed: false, reason: `La ventana de recuperación de período abre el ${periodConfig.openDate.toLocaleDateString('es-CO')}` };
+        if (
+          periodConfig.openDate &&
+          compareDateOnlyToColombiaToday(periodConfig.openDate) > 0
+        ) {
+          return {
+            allowed: false,
+            reason: `La ventana de recuperación de período abre el ${formatDateOnlyInColombia(periodConfig.openDate)}`,
+          };
         }
         if (periodConfig.closeDate) {
-          const effectiveCloseDate = new Date(periodConfig.closeDate);
-          if (periodConfig.allowLateEntry && periodConfig.lateEntryDays > 0) {
-            effectiveCloseDate.setDate(effectiveCloseDate.getDate() + periodConfig.lateEntryDays);
-          }
-          if (now > effectiveCloseDate) {
-            return { allowed: false, reason: `La ventana de recuperación de período cerró el ${periodConfig.closeDate.toLocaleDateString('es-CO')}` };
+          const effectiveCloseDate =
+            periodConfig.allowLateEntry && periodConfig.lateEntryDays > 0
+              ? addDateOnlyDays(
+                  periodConfig.closeDate,
+                  periodConfig.lateEntryDays,
+                )
+              : periodConfig.closeDate.toISOString().slice(0, 10);
+          if (effectiveCloseDate < colombiaTodayKey()) {
+            return {
+              allowed: false,
+              reason: `La ventana de recuperación de período cerró el ${formatDateOnlyInColombia(periodConfig.closeDate)}`,
+            };
           }
         }
         return { allowed: true };
       }
 
-      return { allowed: false, reason: 'Período de recuperación no configurado' };
+      return {
+        allowed: false,
+        reason: 'Período de recuperación no configurado',
+      };
     } else {
       // Recuperación final usa configuración general
-      if (config.finalRecoveryStartDate && now < config.finalRecoveryStartDate) {
-        return { allowed: false, reason: `La ventana de recuperación final abre el ${config.finalRecoveryStartDate.toLocaleDateString('es-CO')}` };
+      if (
+        config.finalRecoveryStartDate &&
+        now < config.finalRecoveryStartDate
+      ) {
+        return {
+          allowed: false,
+          reason: `La ventana de recuperación final abre el ${config.finalRecoveryStartDate.toLocaleDateString('es-CO')}`,
+        };
       }
       if (config.finalRecoveryEndDate && now > config.finalRecoveryEndDate) {
-        return { allowed: false, reason: `La ventana de recuperación final cerró el ${config.finalRecoveryEndDate.toLocaleDateString('es-CO')}` };
+        return {
+          allowed: false,
+          reason: `La ventana de recuperación final cerró el ${config.finalRecoveryEndDate.toLocaleDateString('es-CO')}`,
+        };
       }
     }
 
