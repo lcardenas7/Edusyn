@@ -2312,20 +2312,22 @@ function InstitutionUsersModal({
   const handleReset = async () => {
     if (!resetTarget || resetting) return
     if (!isInstitutionManager(resetTarget)) return
+    const reactivatesAccount = resetTarget.isActive === false
     setResetting(true)
     try {
       const confirmed = await confirmDialog(
-        `Se restablecerá la contraseña de ${resetTarget.firstName} ${resetTarget.lastName} (${resetTarget.username || resetTarget.email}) en ${institution.name}. La contraseña anterior dejará de funcionar para iniciar sesión. Si usa otras instituciones con esta misma cuenta, también cambiará su acceso allí.`,
-        { title: 'Restablecer contraseña', confirmLabel: 'Restablecer' },
+        `Se restablecerá la contraseña de ${resetTarget.firstName} ${resetTarget.lastName} (${resetTarget.username || resetTarget.email}) en ${institution.name}. La contraseña anterior dejará de funcionar para iniciar sesión. Si usa otras instituciones con esta misma cuenta, también cambiará su acceso allí.${reactivatesAccount ? ' La cuenta está desactivada y quedará activa para iniciar sesión en todas las instituciones asociadas a esta cuenta.' : ''}`,
+        { title: reactivatesAccount ? 'Reactivar cuenta y restablecer contraseña' : 'Restablecer contraseña', confirmLabel: reactivatesAccount ? 'Reactivar y restablecer' : 'Restablecer' },
       )
       if (!confirmed) return
       const res = await superadminApi.resetUserPassword(resetTarget.id, {
         institutionId: institution.id,
+        reactivateAccount: reactivatesAccount,
       })
       setResetResult({ newPassword: res.data.newPassword })
       setUsers(previous => previous.map(user => user.id === resetTarget.id
-        ? { ...user, mustChangePassword: true } : user))
-      toast.success('Contraseña restablecida')
+        ? { ...user, mustChangePassword: true, isActive: reactivatesAccount || user.isActive } : user))
+      toast.success(reactivatesAccount ? 'Cuenta reactivada y contraseña restablecida' : 'Contraseña restablecida')
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Error al resetear contraseña')
     } finally {
@@ -2416,6 +2418,9 @@ function InstitutionUsersModal({
                         ))}
                         {u.isAdmin && <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700">Admin</span>}
                       </div>
+                      <span className={`inline-flex mt-1 px-2 py-0.5 rounded-full text-xs ${u.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                        {u.isActive ? 'Activo' : 'Desactivado'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       {isInstitutionManager(u) && <button
@@ -2457,7 +2462,7 @@ function InstitutionUsersModal({
             {resetResult ? (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <p className="text-sm text-green-800 font-medium">Contraseña restablecida</p>
-                <p className="text-xs text-green-800">Copia la contraseña temporal antes de cerrar. Deberá cambiarla en el próximo ingreso.</p>
+                <p className="text-xs text-green-800">{resetTarget.isActive === false ? 'La cuenta quedó activa. Copia la contraseña temporal antes de cerrar; deberá cambiarla al ingresar. La activación aplica a la cuenta en todas sus instituciones.' : 'Copia la contraseña temporal antes de cerrar. Deberá cambiarla en el próximo ingreso.'}</p>
                 <div className="flex items-center gap-2">
                   <code className="bg-white px-3 py-1.5 rounded border border-green-200 text-sm font-mono flex-1">
                     {resetResult.newPassword}
@@ -2494,7 +2499,7 @@ function InstitutionUsersModal({
                   disabled={resetting}
                   className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 text-sm"
                 >
-                  {resetting ? 'Restableciendo...' : 'Restablecer contraseña'}
+                  {resetting ? 'Restableciendo...' : resetTarget.isActive === false ? 'Reactivar y restablecer' : 'Restablecer contraseña'}
                 </button>
               )}
             </div>

@@ -1158,7 +1158,7 @@ export const superadminApi = {
     api.get(`/superadmin/institutions/${institutionId}/users`),
 
   // Reset de contraseña (como SuperAdmin)
-  resetUserPassword: (userId: string, data: { institutionId: string }) =>
+  resetUserPassword: (userId: string, data: { institutionId: string; reactivateAccount?: boolean }) =>
     api.post(`/superadmin/users/${userId}/reset-password`, data),
 }
 

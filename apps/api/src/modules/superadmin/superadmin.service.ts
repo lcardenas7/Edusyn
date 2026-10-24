@@ -748,9 +748,14 @@ export class SuperadminService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, email: true, documentNumber: true, firstName: true, lastName: true },
+      select: { id: true, username: true, email: true, documentNumber: true, firstName: true, lastName: true, isActive: true },
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const reactivateAccount = user.isActive === false && opts.reactivateAccount === true;
+    if (user.isActive === false && !reactivateAccount) {
+      throw new ConflictException('La cuenta está desactivada. Confirma la reactivación junto con el restablecimiento de contraseña.');
+    }
 
     // Cada restablecimiento genera una clave temporal aleatoria.
     const newPassword = randomBytes(18).toString('base64url');
@@ -759,7 +764,11 @@ export class SuperadminService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash, mustChangePassword: mustChange },
+      data: {
+        passwordHash,
+        mustChangePassword: mustChange,
+        ...(reactivateAccount ? { isActive: true } : {}),
+      },
     });
 
     return {
@@ -769,6 +778,7 @@ export class SuperadminService {
       name: `${user.firstName} ${user.lastName}`,
       newPassword,
       mustChangePassword: mustChange,
+      reactivated: reactivateAccount,
     };
   }
 }

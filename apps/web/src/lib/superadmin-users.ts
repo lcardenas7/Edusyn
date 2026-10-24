@@ -5,6 +5,7 @@ export interface InstitutionAccessUser {
   email: string
   username?: string | null
   documentNumber?: string | null
+  isActive: boolean
   isAdmin: boolean
   mustChangePassword: boolean
   roles: string[]
