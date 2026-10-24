@@ -57,16 +57,21 @@ export default function RecoveryWindows() {
       try {
         const response = await recoveryPeriodConfigApi.getByAcademicYear(selectedAcademicYear)
         const data = response.data || []
-        setRecoveryPeriods(data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          order: p.order,
-          isOpen: p.recoveryConfig?.isOpen || false,
-          openDate: p.recoveryConfig?.openDate ? new Date(p.recoveryConfig.openDate).toISOString().split('T')[0] : null,
-          closeDate: p.recoveryConfig?.closeDate ? new Date(p.recoveryConfig.closeDate).toISOString().split('T')[0] : null,
-          allowLateEntry: p.recoveryConfig?.allowLateEntry || false,
-          lateEntryDays: p.recoveryConfig?.lateEntryDays || 0,
-        })))
+        setRecoveryPeriods(data.map((p: any) => {
+          // The API returns the relation as `config`; keep the alias for older
+          // responses while honoring the current response contract.
+          const config = p.config ?? p.recoveryConfig
+          return {
+            id: p.id,
+            name: p.name,
+            order: p.order,
+            isOpen: config?.isOpen || false,
+            openDate: config?.openDate ? new Date(config.openDate).toISOString().split('T')[0] : null,
+            closeDate: config?.closeDate ? new Date(config.closeDate).toISOString().split('T')[0] : null,
+            allowLateEntry: config?.allowLateEntry || false,
+            lateEntryDays: config?.lateEntryDays || 0,
+          }
+        }))
       } catch (err) {
         console.error('Error loading recovery periods:', err)
       } finally {
@@ -234,7 +239,7 @@ export default function RecoveryWindows() {
                             const newPeriod = { ...period, openDate: e.target.value || null }
                             setRecoveryPeriods(prev => prev.map(p => p.id === period.id ? newPeriod : p))
                           }}
-                          onBlur={() => saveRecoveryPeriodConfig(period.id, period)}
+                          onBlur={(e) => saveRecoveryPeriodConfig(period.id, { ...period, openDate: e.currentTarget.value || null })}
                           className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                         />
                       </div>
@@ -247,7 +252,7 @@ export default function RecoveryWindows() {
                             const newPeriod = { ...period, closeDate: e.target.value || null }
                             setRecoveryPeriods(prev => prev.map(p => p.id === period.id ? newPeriod : p))
                           }}
-                          onBlur={() => saveRecoveryPeriodConfig(period.id, period)}
+                          onBlur={(e) => saveRecoveryPeriodConfig(period.id, { ...period, closeDate: e.currentTarget.value || null })}
                           className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                         />
                       </div>
