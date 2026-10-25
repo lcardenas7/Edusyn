@@ -6,6 +6,7 @@ import {
   FileDown, FileText, RefreshCw, Shield, Users,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatDateOnlyEs } from '../../lib/datetime'
 import { useReportsData } from '../../hooks/useReportsData'
 import api, { observerApi, reportsApi, institutionConfigApi, teacherAssignmentsApi, toPublicFileUrl } from '../../lib/api'
 
@@ -203,7 +204,7 @@ function buildActaHtml(
   if (cfg.includeSections.psico && psicoRef.length > 0) {
     body += secTitle('6', 'Remisiones a psicoorientaci\u00f3n')
     body += `<table style="width:100%;border-collapse:collapse;"><thead>${th(['Estudiante', 'Curso', 'Estado', 'Fecha'])}</thead><tbody>${
-      psicoRef.map((r: any, i: number) => tr([r.studentName, r.groupName, r.status || '-', r.date ? new Date(r.date).toLocaleDateString('es-CO') : '-'], i % 2 === 1)).join('')
+      psicoRef.map((r: any, i: number) => tr([r.studentName, r.groupName, r.status || '-', r.date ? formatDateOnlyEs(r.date) : '-'], i % 2 === 1)).join('')
     }</tbody></table>`
     body += `<hr style="border:none;border-top:0.5px solid #e2e8f0;margin:14px 0;">`
   }

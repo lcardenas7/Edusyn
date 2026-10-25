@@ -23,6 +23,7 @@ import {
   academicStudentsApi,
   pedagogicalSupportApi,
 } from '../lib/api'
+import { formatDateOnlyEs } from '../lib/datetime'
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; icon: any; label: string }> = {
   ACTIVE: { bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock, label: 'Activo' },
@@ -533,7 +534,7 @@ export default function PedagogicalSupport() {
                           {plan.followUpDate ? (
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3.5 h-3.5" />
-                              {new Date(plan.followUpDate).toLocaleDateString('es-CO')}
+                              {formatDateOnlyEs(plan.followUpDate)}
                             </div>
                           ) : (
                             <span className="text-slate-400">Sin fecha</span>

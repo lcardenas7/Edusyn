@@ -40,6 +40,18 @@ export function formatBogota(
   return date.toLocaleString('es-CO', { timeZone: BOGOTA_TZ, ...opts })
 }
 
+// Formatea campos de calendario (Date/ISO de medianoche UTC) sin aplicar UTC-5.
+// Una fecha como "2026-10-24T00:00:00.000Z" debe seguir siendo 24/10 en Colombia.
+export function formatDateOnlyEs(
+  d?: string | Date | null,
+  opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' },
+): string {
+  if (!d) return '—'
+  const date = typeof d === 'string' ? new Date(d) : d
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('es-CO', { ...opts, timeZone: 'UTC' })
+}
+
 // Fecha/ISO → valor para <input type="date"> ("YYYY-MM-DD") con la fecha de
 // pared de Colombia. Evita que un registro guardado a las 8pm aparezca con la
 // fecha del día siguiente en dispositivos con otra zona horaria.

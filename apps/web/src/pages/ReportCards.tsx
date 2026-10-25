@@ -21,6 +21,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi, storageApi, toPublicFileUrl } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { formatDateOnlyEs } from '../lib/datetime'
 import {
   TEMPLATE_CATALOG,
   buildPreescolarNarrativoHtml,
@@ -689,7 +690,7 @@ export default function ReportCards() {
     let obsHtml = ''
     if (config.showObservations && data.observations?.length > 0) {
       const items = data.observations.map((obs: any) => {
-        const d = obs.date ? new Date(obs.date).toLocaleDateString('es-CO') : ''
+        const d = obs.date ? formatDateOnlyEs(obs.date) : ''
         return `<p style="font-size:10px;color:#334155;margin:2px 0;"><strong>${d}</strong> - ${obs.description}${obs.author ? ` <span style="color:#94a3b8;">(${obs.author})</span>` : ''}</p>`
       }).join('')
       obsHtml = `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin-bottom:12px;">
@@ -1691,7 +1692,7 @@ export default function ReportCards() {
                       <h4 className="font-bold text-slate-900 mb-2 text-xs border-b pb-1">OBSERVACIONES</h4>
                       {previewData.observations.map((obs: any, i: number) => (
                         <p key={i} className="text-xs text-slate-700 mb-1">
-                          <span className="font-medium">{obs.date ? new Date(obs.date).toLocaleDateString('es-CO') : ''}</span> - {obs.description}
+                          <span className="font-medium">{obs.date ? formatDateOnlyEs(obs.date) : ''}</span> - {obs.description}
                           {obs.author && <span className="text-slate-400 ml-1">({obs.author})</span>}
                         </p>
                       ))}

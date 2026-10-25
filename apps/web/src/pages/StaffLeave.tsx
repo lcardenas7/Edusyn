@@ -15,6 +15,7 @@ import {
   Paperclip,
 } from 'lucide-react'
 import { staffLeaveApi, storageApi, toPublicFileUrl } from '../lib/api'
+import { formatDateOnlyEs, todayBogotaInput } from '../lib/datetime'
 
 type TabType = 'my-requests' | 'all-requests'
 
@@ -75,7 +76,7 @@ export default function StaffLeave() {
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({
     type: 'AUSENCIA' as string,
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: todayBogotaInput(),
     endDate: '',
     startTime: '',
     endTime: '',
@@ -166,7 +167,7 @@ export default function StaffLeave() {
 
       setMessage({ type: 'success', text: 'Solicitud creada correctamente' })
       setShowCreateModal(false)
-      setForm({ type: 'AUSENCIA', startDate: new Date().toISOString().split('T')[0], endDate: '', startTime: '', endTime: '', reason: '' })
+      setForm({ type: 'AUSENCIA', startDate: todayBogotaInput(), endDate: '', startTime: '', endTime: '', reason: '' })
       setAttachmentFile(null)
       loadData()
     } catch (err: any) {
@@ -229,7 +230,7 @@ export default function StaffLeave() {
     )
   }
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+  const formatDate = (d: string) => formatDateOnlyEs(d, { day: '2-digit', month: 'short', year: 'numeric' })
 
   const renderRequestRow = (req: LeaveRequest, showRequester = false) => (
     <tr key={req.id} className="hover:bg-slate-50">

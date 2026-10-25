@@ -13,6 +13,7 @@ import { compareFullNames } from '../utils/sortStudents'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import { observerApi, teacherAssignmentsApi, groupsApi, enrollmentsApi } from '../lib/api'
 import api from '../lib/api'
+import { formatDateOnlyEs, isoToBogotaDateInput, todayBogotaInput } from '../lib/datetime'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPOS Y CONFIGURACIÓN
@@ -117,7 +118,7 @@ export default function Observer() {
   // Form para nueva observación
   const [formData, setFormData] = useState({
     studentEnrollmentId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: todayBogotaInput(),
     type: 'POSITIVE',
     category: 'ACADEMIC',
     subcategory: '',
@@ -299,7 +300,7 @@ export default function Observer() {
       setStudentSearchTerm('')
       setFormData({
         studentEnrollmentId: '',
-        date: new Date().toISOString().split('T')[0],
+        date: todayBogotaInput(),
         type: 'POSITIVE',
         category: 'ACADEMIC',
         subcategory: '',
@@ -334,7 +335,7 @@ export default function Observer() {
       description: obs.description || '',
       actionTaken: obs.actionTaken || '',
       requiresFollowUp: obs.requiresFollowUp || false,
-      followUpDate: obs.followUpDate ? new Date(obs.followUpDate).toISOString().split('T')[0] : '',
+      followUpDate: isoToBogotaDateInput(obs.followUpDate),
       followUpNotes: obs.followUpNotes || '',
     })
     setEditingObs(true)
@@ -764,7 +765,7 @@ export default function Observer() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            {new Date(obs.date).toLocaleDateString('es-CO')}
+                            {formatDateOnlyEs(obs.date)}
                           </td>
                           <td className="px-4 py-3">
                             <p className="text-sm font-medium text-slate-900">{obsStudentName(obs)}</p>
@@ -1198,7 +1199,7 @@ export default function Observer() {
                       </div>
                       <div>
                         <p className="font-semibold text-slate-900">{obsStudentName(selectedObs)}</p>
-                        <p className="text-sm text-slate-500">{obsGroupName(selectedObs)} • {new Date(selectedObs.date).toLocaleDateString('es-CO')}</p>
+                        <p className="text-sm text-slate-500">{obsGroupName(selectedObs)} • {formatDateOnlyEs(selectedObs.date)}</p>
                       </div>
                     </div>
 
@@ -1327,7 +1328,7 @@ export default function Observer() {
                         {selectedObs.followUpDate && (
                           <div className="p-3 bg-purple-50 rounded-lg">
                             <p className="text-sm font-medium text-purple-700">Fecha de Seguimiento</p>
-                            <p className="text-sm text-purple-600">{new Date(selectedObs.followUpDate).toLocaleDateString('es-CO')}</p>
+                            <p className="text-sm text-purple-600">{formatDateOnlyEs(selectedObs.followUpDate)}</p>
                             {selectedObs.followUpNotes && (
                               <p className="text-sm text-purple-600 mt-1">{selectedObs.followUpNotes}</p>
                             )}

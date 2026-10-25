@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { toast, TOAST } from '../lib/toast'
 import { compareStudents, compareFullNames } from '../utils/sortStudents'
 import { DiagnosisBadge } from '../components/StudentBadges'
+import { formatDateOnlyEs } from '../lib/datetime'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
 type ViewMode = 'list' | 'detail'
@@ -2272,7 +2273,7 @@ export default function Students() {
                         <div key={o.id} className={`p-4 rounded-lg border-l-4 ${o.type === 'POSITIVE' ? 'bg-green-50 border-green-500' : o.type === 'NEGATIVE' ? 'bg-red-50 border-red-500' : 'bg-slate-50 border-slate-400'}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${o.type === 'POSITIVE' ? 'bg-green-100 text-green-700' : o.type === 'NEGATIVE' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700'}`}>{o.category}</span>
-                            <span className="text-xs text-slate-500">{new Date(o.date).toLocaleDateString('es-CO')}</span>
+                            <span className="text-xs text-slate-500">{formatDateOnlyEs(o.date)}</span>
                           </div>
                           <p className="text-sm text-slate-700">{o.description}</p>
                           <p className="text-xs text-slate-500 mt-2">Registrado por: {o.author?.firstName} {o.author?.lastName}</p>
