@@ -2044,13 +2044,19 @@ export class ReportsService {
     const rulesCtx = await this.institutionContext.getContext(institutionId);
     const passingGrade = rulesCtx.minPassingGrade;
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
+    const institutionRules = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { areaApprovalRule: true, areaFailIfAnyFails: true },
+    });
+    const areaApprovalRule = institutionRules?.areaApprovalRule ?? 'AREA_AVERAGE';
+    const areaFailIfAnyFails = institutionRules?.areaFailIfAnyFails ?? false;
     const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, reportMode });
 
     // Agrupar por estudiante → por asignatura → por período
     const studentMap = new Map<string, {
       name: string;
       group: string;
-      subjects: Map<string, { name: string; termGrades: Map<string, number> }>;
+      subjects: Map<string, { name: string; areaId: string | null; areaName: string | null; termGrades: Map<string, number> }>;
     }>();
 
     for (const g of grades) {
@@ -2064,7 +2070,12 @@ export class ReportsService {
       }
       const student = studentMap.get(sKey)!;
       if (!student.subjects.has(g.subjectId)) {
-        student.subjects.set(g.subjectId, { name: g.subjectName, termGrades: new Map() });
+        student.subjects.set(g.subjectId, {
+          name: g.subjectName,
+          areaId: g.areaId ?? null,
+          areaName: g.areaName ?? null,
+          termGrades: new Map(),
+        });
       }
       student.subjects.get(g.subjectId)!.termGrades.set(g.academicTermId, g.finalScore);
     }
@@ -2091,6 +2102,8 @@ export class ReportsService {
 
       const subjectDetails: Array<{
         subjectName: string;
+        areaId: string | null;
+        areaName: string | null;
         currentWeightedAvg: number | null;
         projectedAnnual: number | null;
         status: string;
@@ -2132,11 +2145,37 @@ export class ReportsService {
 
         subjectDetails.push({
           subjectName: subj.name,
+          areaId: subj.areaId,
+          areaName: subj.areaName,
           currentWeightedAvg: currentAvg !== null ? Math.round(currentAvg * 10) / 10 : null,
           projectedAnnual,
           status,
         });
       }
+
+      // La decisión institucional se expresa por área cuando la regla SIEE lo indica;
+      // contar cualquier asignatura perdida como no promoción contradice el máximo permitido.
+      const areas = new Map<string, { name: string; projectedGrades: number[]; hasFailedSubject: boolean }>();
+      for (const subject of subjectDetails) {
+        if (subject.projectedAnnual === null) continue;
+        const areaId = subject.areaId ?? `name:${subject.areaName || 'sin-area'}`;
+        if (!areas.has(areaId)) {
+          areas.set(areaId, { name: subject.areaName || 'Sin área', projectedGrades: [], hasFailedSubject: false });
+        }
+        const area = areas.get(areaId)!;
+        area.projectedGrades.push(subject.projectedAnnual);
+        if (subject.projectedAnnual < passingGrade) area.hasFailedSubject = true;
+      }
+      const projectedFailedAreas = Array.from(areas.values()).filter(area => {
+        const average = area.projectedGrades.reduce((sum, grade) => sum + grade, 0) / area.projectedGrades.length;
+        if (areaApprovalRule === 'ALL_SUBJECTS_PASS') return area.hasFailedSubject;
+        return average < passingGrade || (areaFailIfAnyFails && area.hasFailedSubject);
+      }).length;
+      const studentCompletedTerms = new Set(
+        Array.from(data.subjects.values()).flatMap(subject => Array.from(subject.termGrades.keys())),
+      );
+      const hasIncompleteTermCoverage = studentCompletedTerms.size < terms.length;
+      const maximumFailedAreas = rulesCtx.maxFailedSubjectsForPromotion;
 
       return {
         studentName: data.name,
@@ -2145,7 +2184,14 @@ export class ReportsService {
         projectedApproved,
         atRisk,
         projectedFailed,
-        overallProjection: projectedFailed > 0 ? 'NO_PROMUEVE' : atRisk > 0 ? 'EN_RIESGO' : 'PROMUEVE',
+        projectedFailedAreas,
+        completedTerms: studentCompletedTerms.size,
+        totalTerms: terms.length,
+        overallProjection: projectedFailedAreas > maximumFailedAreas
+          ? 'NO_PROMUEVE'
+          : projectedFailedAreas > 0 || atRisk > 0 || hasIncompleteTermCoverage
+            ? 'EN_RIESGO'
+            : 'PROMUEVE',
         subjects: subjectDetails,
       };
     });

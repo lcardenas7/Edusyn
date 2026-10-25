@@ -659,9 +659,9 @@ export default function AcademicReports() {
         csvContent += `"${r.studentName}","${r.subjectName}",${r.grade},"${r.termName}",${r.deficit}\n`
       })
     } else if (selectedReport === 'promotion-projection' && reportData?.results) {
-      csvContent = 'Estudiante,Grupo,Total Asig.,Promueve,En Riesgo,No Promueve,Proyección\n'
+      csvContent = 'Estudiante,Grupo,Total Asig.,Promueve,En Riesgo,Asignaturas bajo mínima,Áreas proyectadas reprobadas,Proyección\n'
       reportData.results.forEach((r: any) => {
-        csvContent += `"${r.studentName}","${r.group}",${r.totalSubjects},${r.projectedApproved},${r.atRisk},${r.projectedFailed},"${r.overallProjection}"\n`
+        csvContent += `"${r.studentName}","${r.group}",${r.totalSubjects},${r.projectedApproved},${r.atRisk},${r.projectedFailed},${r.projectedFailedAreas ?? 0},"${r.overallProjection}"\n`
       })
     } else if (selectedReport === 'teacher-performance' && reportData?.results) {
       csvContent = 'Docente,Asignatura,Grupo,Promedio,Aprobación %,Estudiantes\n'
@@ -976,9 +976,10 @@ export default function AcademicReports() {
         String(r.projectedApproved ?? 0),
         String(r.atRisk ?? 0),
         String(r.projectedFailed ?? 0),
+        String(r.projectedFailedAreas ?? 0),
         r.overallProjection,
       ])
-      addTable([['Estudiante', 'Grupo', 'Total Asig.', 'Promueve', 'En Riesgo', 'No Promueve', 'Proyección']], body, startY)
+      addTable([['Estudiante', 'Grupo', 'Total Asig.', 'Promueve', 'En Riesgo', 'Asig. bajo mínima', 'Áreas reprobadas', 'Proyección']], body, startY)
     } else if (selectedReport === 'teacher-performance' && reportData?.results) {
       const body = reportData.results.map((r: any) => [
         r.teacherName,
@@ -2467,6 +2468,10 @@ export default function AcademicReports() {
       ].filter(d => d.value > 0) : []
       return (
         <div className="space-y-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Proyección orientativa con notas registradas en {reportData.completedTerms ?? 0} de {reportData.totalTerms ?? 0} períodos.
+            Solo incluye estudiantes con al menos una nota; no reemplaza la decisión final del SIEE ni evalúa el criterio de asistencia.
+          </div>
           {reportData.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-green-50 rounded-lg p-3 text-center"><p className="text-xs text-green-500">Promueven</p><p className="text-lg font-bold text-green-700">{reportData.summary.promoted}</p></div>
@@ -2496,7 +2501,8 @@ export default function AcademicReports() {
                 <SortableHeader column="totalSubjects" label="Total Asig." align="center" sort={sortState} className="px-3 py-2" />
                 <SortableHeader column="projectedApproved" label="Promueve" align="center" sort={sortState} className="px-3 py-2" />
                 <SortableHeader column="atRisk" label="En Riesgo" align="center" sort={sortState} className="px-3 py-2" />
-                <SortableHeader column="projectedFailed" label="No Promueve" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="projectedFailed" label="Asig. bajo mínima" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="projectedFailedAreas" label="Áreas reprobadas" align="center" sort={sortState} className="px-3 py-2" />
                 <SortableHeader column="overallProjection" label="Proyección" align="center" sort={sortState} className="px-3 py-2" />
               </tr></thead>
               <tbody>
@@ -2507,6 +2513,7 @@ export default function AcademicReports() {
                     <td className="px-3 py-2 text-center text-green-600">{r.projectedApproved}</td>
                     <td className="px-3 py-2 text-center text-amber-600">{r.atRisk}</td>
                     <td className="px-3 py-2 text-center text-red-600">{r.projectedFailed}</td>
+                    <td className="px-3 py-2 text-center text-red-600">{r.projectedFailedAreas ?? 0}</td>
                     <td className="px-3 py-2 text-center"><span className={`px-2 py-1 rounded text-xs ${
                       r.overallProjection === 'PROMUEVE' ? 'bg-green-100 text-green-700' : r.overallProjection === 'EN_RIESGO' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                     }`}>{r.overallProjection === 'PROMUEVE' ? 'Promueve' : r.overallProjection === 'EN_RIESGO' ? 'En riesgo' : 'No promueve'}</span></td>
