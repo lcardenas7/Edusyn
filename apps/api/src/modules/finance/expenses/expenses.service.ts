@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { parseColombiaDate } from '../../../common/utils/datetime.util';
 
 @Injectable()
 export class ExpensesService {
@@ -71,9 +72,9 @@ export class ExpensesService {
     providerId?: string;
     description: string;
     amount: number;
-    expenseDate?: Date;
+    expenseDate?: Date | string;
     invoiceNumber?: string;
-    invoiceDate?: Date;
+    invoiceDate?: Date | string;
     paymentMethod?: string;
     transactionRef?: string;
     notes?: string;
@@ -85,9 +86,9 @@ export class ExpensesService {
         providerId: data.providerId,
         description: data.description,
         amount: new Prisma.Decimal(data.amount),
-        expenseDate: data.expenseDate || new Date(),
+        expenseDate: data.expenseDate ? parseColombiaDate(data.expenseDate) : new Date(),
         invoiceNumber: data.invoiceNumber,
-        invoiceDate: data.invoiceDate,
+        invoiceDate: data.invoiceDate ? parseColombiaDate(data.invoiceDate) : undefined,
         paymentMethod: data.paymentMethod as any,
         transactionRef: data.transactionRef,
         notes: data.notes,
