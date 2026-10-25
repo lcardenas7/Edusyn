@@ -30,6 +30,24 @@ export class TutoringAttendanceService {
     return valor === undefined || valor === null || valor === '' ? undefined : this.fecha(valor, campo);
   }
 
+  /**
+   * Los filtros del navegador envían fechas de calendario (YYYY-MM-DD). Trátalas
+   * como el día completo para que la hora implícita no excluya asistencias del día.
+   * Los valores con hora conservan el instante solicitado.
+   */
+  private fechaFiltroReporte(valor: string | undefined, campo: string, fin = false): Date | undefined {
+    if (valor === undefined || valor === null || valor === '') return undefined;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      const inicio = new Date(`${valor}T00:00:00.000Z`);
+      if (Number.isNaN(inicio.getTime()) || inicio.toISOString().slice(0, 10) !== valor) {
+        throw new BadRequestException(`La ${campo} no es válida`);
+      }
+      if (fin) inicio.setUTCHours(23, 59, 59, 999);
+      return inicio;
+    }
+    return this.fecha(valor, campo);
+  }
+
   /** El grupo, por su sede. 404 si no existe o es de otro colegio. */
   private async groupInScope(institutionId: string, groupId: string) {
     if (!groupId) throw new BadRequestException('Se requiere el grupo');
@@ -256,8 +274,8 @@ export class TutoringAttendanceService {
     await this.enrollmentInScope(institutionId, studentEnrollmentId);
     const whereClause: any = { studentEnrollmentId, institutionId };
 
-    const desde = this.fechaOpcional(startDate, 'fecha inicial');
-    const hasta = this.fechaOpcional(endDate, 'fecha final');
+    const desde = this.fechaFiltroReporte(startDate, 'fecha inicial');
+    const hasta = this.fechaFiltroReporte(endDate, 'fecha final', true);
     if (desde || hasta) {
       whereClause.date = {
         ...(desde && { gte: desde }),
@@ -334,8 +352,8 @@ export class TutoringAttendanceService {
     // Cada extremo del rango se aplica por separado: exigir ambos hacía que
     // "desde X" sin "hasta" se ignorara en silencio.
     const dateFilter: any = {};
-    const desdeR = this.fechaOpcional(params?.startDate, 'fecha inicial');
-    const hastaR = this.fechaOpcional(params?.endDate, 'fecha final');
+    const desdeR = this.fechaFiltroReporte(params?.startDate, 'fecha inicial');
+    const hastaR = this.fechaFiltroReporte(params?.endDate, 'fecha final', true);
     if (desdeR || hastaR) {
       dateFilter.date = {
         ...(desdeR && { gte: desdeR }),
@@ -366,7 +384,7 @@ export class TutoringAttendanceService {
       const absent = records.filter((r) => r.status === 'ABSENT').length;
       const late = records.filter((r) => r.status === 'LATE').length;
       const excused = records.filter((r) => r.status === 'EXCUSED').length;
-      const attendanceRate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 100;
+      const attendanceRate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 0;
 
       return {
         studentName: [enrollment.student.lastName, (enrollment.student as any).secondLastName, enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
@@ -377,7 +395,7 @@ export class TutoringAttendanceService {
         late,
         excused,
         attendanceRate,
-        status: attendanceRate < 70 ? 'Riesgo' : attendanceRate < 85 ? 'Alerta' : 'Normal',
+        status: total === 0 ? 'Sin registros' : attendanceRate < 70 ? 'Riesgo' : attendanceRate < 85 ? 'Alerta' : 'Normal',
         enrollmentStatus: enrollment.status,
         isWithdrawn: enrollment.status !== 'ACTIVE',
       };
@@ -426,8 +444,8 @@ export class TutoringAttendanceService {
       whereClause.status = params.status;
     }
 
-    const desdeD = this.fechaOpcional(params.startDate, 'fecha inicial');
-    const hastaD = this.fechaOpcional(params.endDate, 'fecha final');
+    const desdeD = this.fechaFiltroReporte(params.startDate, 'fecha inicial');
+    const hastaD = this.fechaFiltroReporte(params.endDate, 'fecha final', true);
     if (desdeD || hastaD) {
       whereClause.date = {
         ...(desdeD && { gte: desdeD }),

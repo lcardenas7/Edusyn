@@ -643,12 +643,14 @@ export default function AttendanceReports() {
 
   const tutoringKPIs = useMemo(() => {
     if (!tutoringData.length) return null
-    const avg = Math.round(tutoringData.reduce((s, r) => s + r.pct, 0) / tutoringData.length)
-    const alertC = tutoringData.filter(r => r.status === 'Alerta').length
-    const riskC = tutoringData.filter(r => r.status === 'Riesgo').length
+    const evaluated = tutoringData.filter(r => r.totalClasses > 0)
+    const avg = evaluated.length ? Math.round(evaluated.reduce((s, r) => s + r.pct, 0) / evaluated.length) : null
+    const alertC = evaluated.filter(r => r.status === 'Alerta').length
+    const riskC = evaluated.filter(r => r.status === 'Riesgo').length
+    const noData = tutoringData.length - evaluated.length
     const totalDays = tutoringData[0]?.totalClasses || 0
     return (<>
-      <KPICard label="Promedio tutoría" value={`${avg}%`} color={kpiColorFromPct(avg)} sub={`${tutoringData.length} estudiantes`} />
+      <KPICard label="Promedio tutoría" value={avg === null ? '—' : `${avg}%`} color={avg === null ? 'slate' : kpiColorFromPct(avg)} sub={`${evaluated.length} con registros${noData ? ` · ${noData} sin registros` : ''}`} />
       <KPICard label="En alerta" value={alertC} color={alertC > 0 ? 'amber' : 'green'} sub="estudiantes" />
       <KPICard label="En riesgo" value={riskC} color={riskC > 0 ? 'red' : 'green'} sub="estudiantes" />
       <KPICard label="Días registrados" value={totalDays} color="blue" sub="sesiones de tutoría" />
@@ -880,7 +882,7 @@ export default function AttendanceReports() {
           <td className={`${td} text-center text-emerald-600`}>{r.attended}</td>
           <td className={`${td} text-center text-red-600 font-medium`}>{r.absent}</td>
           {showLate && <><td className={`${td} text-center text-amber-600`}>{r.late || 0}</td><td className={`${td} text-center text-blue-600`}>{r.excused || 0}</td></>}
-          <td className={`${td} text-center font-bold ${getPctColor(r.pct)}`}>{r.pct}%</td>
+          <td className={`${td} text-center font-bold ${r.totalClasses === 0 ? 'text-slate-400' : getPctColor(r.pct)}`}>{r.totalClasses === 0 ? '—' : `${r.pct}%`}</td>
           <td className={`${td} text-center`}><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadge(r.status)}`}>{r.status}</span></td>
         </tr>))}
       </tbody></table>{tfoot(sorted.length)}
