@@ -181,7 +181,7 @@ const DEFAULT_TEMPLATES: ValueJudgmentTemplate[] = [
 
 export default function Achievements() {
   const { user, institution: authInstitution } = useAuth()
-  const { periods, selectedPeriod, setSelectedPeriod } = useAcademic()
+  const { periods, selectedPeriod, setSelectedPeriod, academicLevels } = useAcademic()
   
   // Usar el institution del AuthContext que tiene el id real de la BD
   const institutionId = authInstitution?.id
@@ -804,10 +804,29 @@ export default function Achievements() {
     }
   }
 
-  // Helper: get performance level from grade using institution scales
+  // Resolve the same configured SIEE thresholds used by the gradebook for this group.
   const getPerformanceLevelFromGrade = (grade: number): PerformanceLevel => {
-    // Simple mapping based on common Colombian scale
-    if (grade >= 4.6) return 'SUPERIOR'
+    const gradeName = groups.find(group => group.id === selectedGroupId)?.grade?.name
+    const normalize = (value?: string) => value?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+    const academicLevel = academicLevels.find(level =>
+      level.grades.some(name => normalize(name) === normalize(gradeName)),
+    )
+    const configuredLevels = academicLevel?.performanceLevels || []
+    if (configuredLevels.length > 0) {
+      const sortedLevels = [...configuredLevels].sort((a, b) => b.minScore - a.minScore)
+      const matchedLevel = sortedLevels.find(level => grade >= level.minScore && grade <= level.maxScore)
+      const code = (matchedLevel?.code || '').toUpperCase()
+      if (['BAJO', 'BASICO', 'ALTO', 'SUPERIOR'].includes(code)) return code as PerformanceLevel
+      const name = normalize(matchedLevel?.name)
+      if (name === 'bajo') return 'BAJO'
+      if (name === 'basico') return 'BASICO'
+      if (name === 'alto') return 'ALTO'
+      if (name === 'superior') return 'SUPERIOR'
+      return 'BAJO'
+    }
+
+    // Keep the gradebook's fallback scale when this academic level has no SIEE setup.
+    if (grade >= 4.5) return 'SUPERIOR'
     if (grade >= 4.0) return 'ALTO'
     if (grade >= 3.0) return 'BASICO'
     return 'BAJO'
@@ -820,7 +839,7 @@ export default function Achievements() {
       const grade = studentGrades[s.enrollmentId] || 0
       return getPerformanceLevelFromGrade(grade) === filterLevel
     })
-  }, [students, studentGrades, filterLevel])
+  }, [students, studentGrades, filterLevel, academicLevels, groups, selectedGroupId])
 
   // Toggle student selection
   const toggleStudentSelection = (enrollmentId: string) => {
