@@ -31,18 +31,18 @@ export class TutoringAttendanceService {
   }
 
   /**
-   * Los filtros del navegador envían fechas de calendario (YYYY-MM-DD). Trátalas
-   * como el día completo para que la hora implícita no excluya asistencias del día.
+   * Los filtros del navegador envían días del calendario colombiano (YYYY-MM-DD).
+   * Expándelos al día completo de Bogotá, cuya medianoche equivale a 05:00 UTC.
    * Los valores con hora conservan el instante solicitado.
    */
   private fechaFiltroReporte(valor: string | undefined, campo: string, fin = false): Date | undefined {
     if (valor === undefined || valor === null || valor === '') return undefined;
     if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
-      const inicio = new Date(`${valor}T00:00:00.000Z`);
+      const inicio = new Date(`${valor}T00:00:00.000-05:00`);
       if (Number.isNaN(inicio.getTime()) || inicio.toISOString().slice(0, 10) !== valor) {
         throw new BadRequestException(`La ${campo} no es válida`);
       }
-      if (fin) inicio.setUTCHours(23, 59, 59, 999);
+      if (fin) inicio.setTime(inicio.getTime() + 24 * 60 * 60 * 1000 - 1);
       return inicio;
     }
     return this.fecha(valor, campo);
