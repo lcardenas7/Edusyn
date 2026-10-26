@@ -380,9 +380,13 @@ export default function CommissionReports() {
   useEffect(() => { if (!selectedGradeId && gradeOptions.length > 0) setSelectedGradeId(gradeOptions[0].id) }, [gradeOptions, selectedGradeId])
   useEffect(() => { setLoadedData(null); setActaObs([]); setReferrals([]); setLoadError(null) }, [filterYear, filterPeriod, selectedGradeId])
   useEffect(() => {
-    if (selectedGradeName && selectedYearLabel && !actaConfig.actaNumber)
-      updateConfig('actaNumber', `CEP-${selectedGradeName.replace(/\s+/g, '')}-${selectedYearLabel}-001`)
-  }, [selectedGradeName, selectedYearLabel, actaConfig.actaNumber])
+    if (!selectedGradeName || !selectedYearLabel) return
+    const generatedNumber = `CEP-${selectedGradeName.replace(/\s+/g, '')}-${selectedYearLabel}-001`
+    setActaConfig(prev => {
+      const usesGeneratedNumber = !prev.actaNumber || /^CEP-.+-\d{4}-\d{3}$/.test(prev.actaNumber)
+      return usesGeneratedNumber ? { ...prev, actaNumber: generatedNumber } : prev
+    })
+  }, [selectedGradeName, selectedYearLabel])
 
   const lsKey = useMemo(
     () => selectedGradeId && filterYear ? `edusyn_acta_${selectedGradeId}_${filterYear}_${filterPeriod}` : null,
@@ -662,7 +666,7 @@ export default function CommissionReports() {
             <ClipboardList className="w-5 h-5 text-teal-600" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Acta de Comisi\u00f3n de Evaluaci\u00f3n y Promoci\u00f3n</h1>
+            <h1 className="text-xl font-bold text-slate-900">Acta de Comisión de Evaluación y Promoción</h1>
             <p className="text-sm text-slate-500">Configure y descargue el acta formal del grado en PDF o Word</p>
           </div>
         </div>
@@ -671,16 +675,16 @@ export default function CommissionReports() {
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">A\u00f1o acad\u00e9mico</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Año académico</label>
             <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
               <option value="">Seleccionar...</option>
               {academicYears.map(year => <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' \u00b7 Activo' : ''}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Per\u00edodo</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Período</label>
             <select value={filterPeriod} onChange={e => setFilterPeriod(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-              <option value="">Todos los per\u00edodos</option>
+              <option value="">Todos los períodos</option>
               {terms.map(term => <option key={term.id} value={term.id}>{term.name}</option>)}
             </select>
           </div>
@@ -729,14 +733,14 @@ export default function CommissionReports() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
               <ClipboardList className="w-4 h-4 text-blue-600" />
-              <h2 className="font-semibold text-slate-900 text-sm">Orden del d\u00eda</h2>
+              <h2 className="font-semibold text-slate-900 text-sm">Orden del día</h2>
             </div>
             <div className="p-4 space-y-2">
               {actaConfig.agenda.map((item, i) => (
                 <div key={i} className="flex gap-2">
                   <span className="text-xs text-slate-400 mt-2 w-5">{i + 1}.</span>
                   <input value={item} onChange={e => { const a = [...actaConfig.agenda]; a[i] = e.target.value; updateConfig('agenda', a) }} className="flex-1 px-2 py-1.5 border border-slate-300 rounded-md text-sm" />
-                  <button onClick={() => updateConfig('agenda', actaConfig.agenda.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">\u00d7</button>
+                  <button onClick={() => updateConfig('agenda', actaConfig.agenda.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">×</button>
                 </div>
               ))}
               <button onClick={() => updateConfig('agenda', [...actaConfig.agenda, ''])} className="text-xs text-teal-600 hover:underline mt-1">+ Agregar punto</button>
@@ -755,7 +759,7 @@ export default function CommissionReports() {
                   <input placeholder="Cargo" value={a.role} onChange={e => { const arr = [...actaConfig.assistants]; arr[i] = { ...arr[i], role: e.target.value }; updateConfig('assistants', arr) }} className="px-2 py-1.5 border border-slate-300 rounded-md text-xs" />
                   <div className="flex gap-1">
                     <input placeholder="Curso(s)" value={a.courses || ''} onChange={e => { const arr = [...actaConfig.assistants]; arr[i] = { ...arr[i], courses: e.target.value }; updateConfig('assistants', arr) }} className="flex-1 px-2 py-1.5 border border-slate-300 rounded-md text-xs" />
-                    <button onClick={() => updateConfig('assistants', actaConfig.assistants.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">\u00d7</button>
+                    <button onClick={() => updateConfig('assistants', actaConfig.assistants.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">×</button>
                   </div>
                 </div>
               ))}
@@ -814,7 +818,7 @@ export default function CommissionReports() {
                       {!loadedData ? (
                         <p className="text-xs text-slate-400 italic">Carga los datos del grado para seleccionar asignaturas.</p>
                       ) : !loadedData.subjectLevelData?.results?.length ? (
-                        <p className="text-xs text-amber-600">No hay datos de niveles por asignatura para este grado/per\u00edodo.</p>
+                        <p className="text-xs text-amber-600">No hay datos de niveles por asignatura para este grado/período.</p>
                       ) : (
                         <>
                           <div className="flex items-center justify-between mb-2">
@@ -860,7 +864,7 @@ export default function CommissionReports() {
           {actaConfig.includeSections.analysis && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                <div className="flex items-center gap-3"><FileText className="w-4 h-4 text-orange-600" /><h2 className="font-semibold text-slate-900 text-sm">An\u00e1lisis general</h2></div>
+                <div className="flex items-center gap-3"><FileText className="w-4 h-4 text-orange-600" /><h2 className="font-semibold text-slate-900 text-sm">Análisis general</h2></div>
                 {loadedData && (
                   <button onClick={() => updateConfig('analysisText', buildAnalysisText(loadedData, gradingScale.minPassingGrade))}
                     className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 transition-colors">
@@ -871,7 +875,7 @@ export default function CommissionReports() {
               <div className="p-4">
                 <textarea value={actaConfig.analysisText} onChange={e => updateConfig('analysisText', e.target.value)}
                   rows={5} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
-                  placeholder="Texto de an\u00e1lisis general del grado..." />
+                  placeholder="Texto de análisis general del grado..." />
               </div>
             </div>
           )}
@@ -889,7 +893,7 @@ export default function CommissionReports() {
             <div className="p-4">
               <textarea value={actaConfig.convivenciaSuggestion} onChange={e => updateConfig('convivenciaSuggestion', e.target.value)}
                 rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
-                placeholder="Plan de mejora acad\u00e9mico y convivencial..." />
+                placeholder="Plan de mejora académico y convivencial..." />
             </div>
           </div>
 
@@ -909,7 +913,7 @@ export default function CommissionReports() {
                   <div key={i} className="flex gap-2">
                     <span className="text-xs text-slate-400 mt-2 w-5">{i + 1}.</span>
                     <input value={c} onChange={e => { const arr = [...actaConfig.commitments]; arr[i] = e.target.value; updateConfig('commitments', arr) }} className="flex-1 px-2 py-1.5 border border-slate-300 rounded-md text-sm" />
-                    <button onClick={() => updateConfig('commitments', actaConfig.commitments.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">\u00d7</button>
+                    <button onClick={() => updateConfig('commitments', actaConfig.commitments.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">×</button>
                   </div>
                 ))}
                 <button onClick={() => updateConfig('commitments', [...actaConfig.commitments, ''])} className="text-xs text-teal-600 hover:underline mt-1">+ Agregar compromiso</button>
@@ -927,7 +931,7 @@ export default function CommissionReports() {
                 <div key={i} className="flex gap-2">
                   <input placeholder="Nombre" value={s.name || ''} onChange={e => { const arr = [...actaConfig.signatories]; arr[i] = { ...arr[i], name: e.target.value }; updateConfig('signatories', arr) }} className="flex-1 px-2 py-1.5 border border-slate-300 rounded-md text-sm" />
                   <input placeholder="Cargo" value={s.role} onChange={e => { const arr = [...actaConfig.signatories]; arr[i] = { ...arr[i], role: e.target.value }; updateConfig('signatories', arr) }} className="flex-1 px-2 py-1.5 border border-slate-300 rounded-md text-sm" />
-                  <button onClick={() => updateConfig('signatories', actaConfig.signatories.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">\u00d7</button>
+                  <button onClick={() => updateConfig('signatories', actaConfig.signatories.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500 px-1">×</button>
                 </div>
               ))}
               <button onClick={() => updateConfig('signatories', [...actaConfig.signatories, { name: '', role: '' }])} className="text-xs text-teal-600 hover:underline mt-1">+ Agregar firmante</button>
@@ -961,7 +965,7 @@ export default function CommissionReports() {
             <div className="p-4 text-xs text-slate-600 space-y-3 max-h-[70vh] overflow-y-auto">
               <div className="text-center border-b pb-3">
                 {logoBase64 && <img src={logoBase64} alt="Escudo" className="w-14 h-14 object-contain mx-auto mb-2 rounded-full border border-slate-200" />}
-                <p className="font-bold text-sm text-slate-800">ACTA DE COMISI\u00d3N DE EVALUACI\u00d3N Y PROMOCI\u00d3N</p>
+                <p className="font-bold text-sm text-slate-800">ACTA DE COMISIÓN DE EVALUACIÓN Y PROMOCIÓN</p>
                 <p className="text-slate-500">{institution?.name || '\u2014'}</p>
                 {loadedData && <p className="text-slate-500">Grado {loadedData.gradeName} \u00b7 {loadedData.termLabel} \u00b7 {loadedData.yearLabel}</p>}
               </div>
@@ -977,7 +981,7 @@ export default function CommissionReports() {
                 ))}
               </div>
               <div>
-                <p className="font-semibold text-slate-700 mb-1">1. Orden del d\u00eda</p>
+                <p className="font-semibold text-slate-700 mb-1">1. Orden del día</p>
                 {actaConfig.agenda.map((item, i) => <p key={i} className="text-slate-600">{i + 1}. {item || '...'}</p>)}
               </div>
               <div>
@@ -987,7 +991,7 @@ export default function CommissionReports() {
               </div>
               {loadedData && actaConfig.includeSections.academicLevels && (
                 <div>
-                  <p className="font-semibold text-slate-700 mb-1">3. Desempe\u00f1o acad\u00e9mico</p>
+                  <p className="font-semibold text-slate-700 mb-1">3. Desempeño académico</p>
                   {loadedData.performanceBuckets.map(b => <p key={b.label} className="text-slate-600">{b.label}: {b.count}</p>)}
                 </div>
               )}
@@ -1005,7 +1009,7 @@ export default function CommissionReports() {
               )}
               {actaConfig.includeSections.analysis && actaConfig.analysisText && (
                 <div>
-                  <p className="font-semibold text-slate-700 mb-1">7. An\u00e1lisis general</p>
+                  <p className="font-semibold text-slate-700 mb-1">7. Análisis general</p>
                   <p className="text-slate-600 line-clamp-3">{actaConfig.analysisText}</p>
                 </div>
               )}
