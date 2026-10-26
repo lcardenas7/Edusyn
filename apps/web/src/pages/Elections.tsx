@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { confirmDialog } from '../components/ui/confirm'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
+import { formatElectionDate, hasElectionStartDateArrived } from '../lib/election-dates'
 import { 
   Vote, Plus, Calendar, Users, CheckCircle, XCircle, 
   Clock, BarChart3, FileText, Loader2, AlertCircle,
@@ -404,6 +405,16 @@ export default function Elections() {
     )
   }
 
+  const registrationDateReached = selectedProcess
+    ? hasElectionStartDateArrived(selectedProcess.registrationStart)
+    : true
+  const campaignDateReached = selectedProcess
+    ? hasElectionStartDateArrived(selectedProcess.campaignStart)
+    : true
+  const votingDateReached = selectedProcess
+    ? hasElectionStartDateArrived(selectedProcess.votingStart)
+    : true
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -458,7 +469,11 @@ export default function Elections() {
             </div>
           ) : (
             processes.map((process) => {
-              const statusInfo = statusLabels[process.status] || statusLabels.DRAFT
+              const campaignIsScheduled = process.status === 'CAMPAIGN'
+                && !hasElectionStartDateArrived(process.campaignStart)
+              const statusInfo = campaignIsScheduled
+                ? { ...statusLabels.CAMPAIGN, label: 'Campaña programada' }
+                : statusLabels[process.status] || statusLabels.DRAFT
               const StatusIcon = statusInfo.icon
               return (
                 <button
@@ -505,8 +520,8 @@ export default function Elections() {
                   {selectedProcess.status === 'DRAFT' && (
                     <button
                       onClick={() => handleUpdateStatus(selectedProcess.id, 'REGISTRATION')}
-                      disabled={actionLoading}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                      disabled={actionLoading || !registrationDateReached}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Play className="w-4 h-4" />
                       Iniciar Inscripción
@@ -515,8 +530,8 @@ export default function Elections() {
                   {selectedProcess.status === 'REGISTRATION' && (
                     <button
                       onClick={() => handleUpdateStatus(selectedProcess.id, 'CAMPAIGN')}
-                      disabled={actionLoading}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700"
+                      disabled={actionLoading || !campaignDateReached}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Play className="w-4 h-4" />
                       Iniciar Campaña
@@ -525,8 +540,8 @@ export default function Elections() {
                   {selectedProcess.status === 'CAMPAIGN' && (
                     <button
                       onClick={() => handleUpdateStatus(selectedProcess.id, 'VOTING')}
-                      disabled={actionLoading}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                      disabled={actionLoading || !votingDateReached}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Vote className="w-4 h-4" />
                       Iniciar Votación
@@ -541,6 +556,21 @@ export default function Elections() {
                       <Square className="w-4 h-4" />
                       Cerrar y Calcular
                     </button>
+                  )}
+                  {selectedProcess.status === 'DRAFT' && !registrationDateReached && (
+                    <p className="basis-full text-right text-xs text-gray-500" role="status">
+                      Inscripción disponible desde el {formatElectionDate(selectedProcess.registrationStart)}.
+                    </p>
+                  )}
+                  {selectedProcess.status === 'REGISTRATION' && !campaignDateReached && (
+                    <p className="basis-full text-right text-xs text-gray-500" role="status">
+                      Campaña disponible desde el {formatElectionDate(selectedProcess.campaignStart)}.
+                    </p>
+                  )}
+                  {selectedProcess.status === 'CAMPAIGN' && !votingDateReached && (
+                    <p className="basis-full text-right text-xs text-gray-500" role="status">
+                      Votación disponible desde el {formatElectionDate(selectedProcess.votingStart)}.
+                    </p>
                   )}
                   {selectedProcess.status === 'CLOSED' && (
                     <>
@@ -600,18 +630,18 @@ export default function Elections() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 text-sm">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Inscripción</p>
-                  <p className="font-medium">{new Date(selectedProcess.registrationStart).toLocaleDateString()}</p>
-                  <p className="text-gray-400 text-xs">al {new Date(selectedProcess.registrationEnd).toLocaleDateString()}</p>
+                  <p className="font-medium">{formatElectionDate(selectedProcess.registrationStart)}</p>
+                  <p className="text-gray-400 text-xs">al {formatElectionDate(selectedProcess.registrationEnd)}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Campaña</p>
-                  <p className="font-medium">{new Date(selectedProcess.campaignStart).toLocaleDateString()}</p>
-                  <p className="text-gray-400 text-xs">al {new Date(selectedProcess.campaignEnd).toLocaleDateString()}</p>
+                  <p className="font-medium">{formatElectionDate(selectedProcess.campaignStart)}</p>
+                  <p className="text-gray-400 text-xs">al {formatElectionDate(selectedProcess.campaignEnd)}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Votación</p>
-                  <p className="font-medium">{new Date(selectedProcess.votingStart).toLocaleDateString()}</p>
-                  <p className="text-gray-400 text-xs">al {new Date(selectedProcess.votingEnd).toLocaleDateString()}</p>
+                  <p className="font-medium">{formatElectionDate(selectedProcess.votingStart)}</p>
+                  <p className="text-gray-400 text-xs">al {formatElectionDate(selectedProcess.votingEnd)}</p>
                 </div>
               </div>
 

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { ElectionAuditService } from './election-audit.service';
 import { createHash } from 'crypto';
+import { formatElectionDate, hasElectionStartDateArrived } from './election-date.helper';
 
 @Injectable()
 export class ElectionsService {
@@ -259,6 +260,23 @@ export class ElectionsService {
         );
       }
 
+      const phaseStartDates: Record<string, Date | null> = {
+        REGISTRATION: process.registrationStart,
+        CAMPAIGN: process.campaignStart,
+        VOTING: process.votingStart,
+      };
+      const configuredStartDate = phaseStartDates[status];
+      if (configuredStartDate && !hasElectionStartDateArrived(configuredStartDate)) {
+        const phaseLabels: Record<string, string> = {
+          REGISTRATION: 'inscripción',
+          CAMPAIGN: 'campaña',
+          VOTING: 'votación',
+        };
+        throw new BadRequestException(
+          `La fase de ${phaseLabels[status]} estará disponible desde el ${formatElectionDate(configuredStartDate)}.`,
+        );
+      }
+
       const allowedTransitions: Record<string, string> = {
         DRAFT: 'REGISTRATION',
         REGISTRATION: 'CAMPAIGN',
@@ -310,13 +328,6 @@ export class ElectionsService {
           );
         }
 
-        // Validar fecha de votación (si está configurada)
-        const now = new Date();
-        if (process.votingStart && now < process.votingStart) {
-          throw new BadRequestException(
-            `No se puede iniciar votación antes de la fecha configurada: ${process.votingStart.toLocaleDateString()}.`,
-          );
-        }
       }
 
       // Audit: cambio de estado
