@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
 import {
@@ -63,6 +64,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; icon: any }> = {
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendiente',
+  ASSIGNED: 'Asignada',
   IN_PROGRESS: 'En Proceso',
   REVIEW_PENDING: 'Pendiente Revisión',
   COMPLETED: 'Completada',
@@ -71,11 +73,11 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelada',
 }
 
-export default function Recoveries() {
+export default function Recoveries({ configurationOnly = false }: { configurationOnly?: boolean }) {
   const { user, institution: authInstitution } = useAuth()
   // institutionId viene de Auth (dato institucional), no de Academic
   const institutionId = authInstitution?.id
-  const [activeTab, setActiveTab] = useState<TabType>('period')
+  const [activeTab, setActiveTab] = useState<TabType>(configurationOnly ? 'config' : 'period')
   const [loading, setLoading] = useState(true)
   const [loadingGroups, setLoadingGroups] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -110,8 +112,8 @@ export default function Recoveries() {
   const [periodRecoveries, setPeriodRecoveries] = useState<any[]>([])
   const [finalRecoveries, setFinalRecoveries] = useState<any[]>([])
   const [acts, setActs] = useState<any[]>([])
-  const [periodStats, setPeriodStats] = useState<Record<string, number>>({})
-  const [finalStats, setFinalStats] = useState<Record<string, number>>({})
+  const [periodStats, setPeriodStats] = useState<{ byStatus?: Record<string, number> }>({})
+  const [finalStats, setFinalStats] = useState<{ byStatus?: Record<string, number> }>({})
   const [recoveryPeriodOpen, setRecoveryPeriodOpen] = useState(false)
   const [recoveryPeriodMessage, setRecoveryPeriodMessage] = useState('')
   
@@ -140,11 +142,11 @@ export default function Recoveries() {
   const [reviewingRecovery, setReviewingRecovery] = useState(false)
 
   const isAdmin = user?.roles?.some((r: any) => 
-    ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r.role?.name || r.name)
+    ['SUPERADMIN', 'SUPER_ADMIN', 'ADMIN_INSTITUTIONAL', 'RECTOR'].includes(typeof r === 'string' ? r : r.role?.name || r.name)
   )
   
   const isCoordinator = user?.roles?.some((r: any) => 
-    ['COORDINADOR'].includes(r.role?.name || r.name)
+    ['COORDINADOR'].includes(typeof r === 'string' ? r : r.role?.name || r.name)
   )
   
   const isTeacher = user?.roles?.some((r: any) => 
@@ -152,6 +154,10 @@ export default function Recoveries() {
   )
   
   const isAdminOrCoordinator = isAdmin || isCoordinator
+
+  useEffect(() => {
+    setActiveTab(configurationOnly ? 'config' : 'period')
+  }, [configurationOnly])
 
   useEffect(() => {
     loadAcademicYears()
@@ -587,11 +593,10 @@ export default function Recoveries() {
     { id: 'period' as TabType, label: 'Recuperación por Período', icon: Calendar },
     { id: 'final' as TabType, label: 'Recuperación Final', icon: BookOpen },
     { id: 'acts' as TabType, label: 'Actas', icon: FileText },
-    ...(isAdminOrCoordinator ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
   ]
 
   // Si no hay grupos (todos son DIMENSIONS), mostrar mensaje — solo después de que grupos hayan cargado
-  if (!loading && !loadingGroups && groups.length === 0) {
+  if (!configurationOnly && !loading && !loadingGroups && groups.length === 0) {
     return (
       <div className="max-w-2xl mx-auto mt-12">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
@@ -616,12 +621,17 @@ export default function Recoveries() {
     )
   }
 
+  if (configurationOnly && !isAdminOrCoordinator) {
+    return <div role="alert" className="p-6 text-slate-700">No tienes permiso para configurar recuperaciones.</div>
+  }
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Recuperaciones Académicas</h1>
-          <p className="text-sm sm:text-base text-slate-500 mt-1">Gestión de planes de recuperación y apoyo pedagógico</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{configurationOnly ? 'Políticas de recuperación' : 'Recuperaciones Académicas'}</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">{configurationOnly ? 'Configuración del SIEE para el año seleccionado' : 'Gestión de planes de recuperación y apoyo pedagógico'}</p>
+          {!configurationOnly && isAdminOrCoordinator && <Link to="/academic/config/recovery" className="text-sm text-blue-700 underline">Ir a políticas de recuperación en Configuración SIEE</Link>}
         </div>
       </div>
 
@@ -692,7 +702,7 @@ export default function Recoveries() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200 mb-6 overflow-x-auto">
+      {!configurationOnly && <div className="border-b border-slate-200 mb-6 overflow-x-auto">
         <nav className="flex gap-2 sm:gap-4 min-w-max">
           {tabs.map(tab => (
             <button
@@ -709,7 +719,7 @@ export default function Recoveries() {
             </button>
           ))}
         </nav>
-      </div>
+      </div>}
 
       {message && (
         <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
@@ -722,13 +732,14 @@ export default function Recoveries() {
 
       {activeTab === 'period' && (
         <div className="space-y-6">
+          <p className="text-sm text-slate-600">Resumen de recuperaciones registradas en todo el período, para todos los grupos y asignaturas. El bajo rendimiento se muestra por separado.</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-amber-50 rounded-xl p-3 sm:p-4 border border-amber-200">
               <div className="flex items-center gap-2 sm:gap-3">
                 <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
                 <div>
                   <p className="text-xl sm:text-2xl font-bold text-amber-700">
-                    {(periodStats.PENDING || 0) + failingStudents.reduce((acc, s) => acc + s.failingSubjects.length, 0)}
+                    {(periodStats.byStatus?.PENDING ?? 0) + (periodStats.byStatus?.ASSIGNED ?? 0)}
                   </p>
                   <p className="text-xs sm:text-sm text-amber-600">Pendientes</p>
                 </div>
@@ -738,8 +749,8 @@ export default function Recoveries() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <RefreshCw className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-700">{periodStats.IN_PROGRESS || 0}</p>
-                  <p className="text-xs sm:text-sm text-blue-600">En Proceso</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-700">{(periodStats.byStatus?.IN_PROGRESS ?? 0) + (periodStats.byStatus?.REVIEW_PENDING ?? 0) + (periodStats.byStatus?.COMPLETED ?? 0)}</p>
+                  <p className="text-xs sm:text-sm text-blue-600">En proceso o revisión</p>
                 </div>
               </div>
             </div>
@@ -747,7 +758,7 @@ export default function Recoveries() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-green-700">{periodStats.COMPLETED || periodStats.APPROVED || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-700">{periodStats.byStatus?.APPROVED ?? 0}</p>
                   <p className="text-xs sm:text-sm text-green-600">Aprobadas</p>
                 </div>
               </div>
@@ -756,7 +767,7 @@ export default function Recoveries() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <XCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-red-700">{periodStats.NOT_APPROVED || periodStats.FAILED || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-700">{periodStats.byStatus?.NOT_APPROVED ?? 0}</p>
                   <p className="text-xs sm:text-sm text-red-600">No Aprobadas</p>
                 </div>
               </div>
@@ -999,12 +1010,13 @@ export default function Recoveries() {
 
       {activeTab === 'final' && (
         <div className="space-y-6">
+          <p className="text-sm text-slate-600">Resumen de planes de apoyo final registrados en todo el año.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-3">
                 <Clock className="w-8 h-8 text-amber-600" />
                 <div>
-                  <p className="text-2xl font-bold text-amber-700">{finalStats.PENDING || 0}</p>
+                  <p className="text-2xl font-bold text-amber-700">{(finalStats.byStatus?.PENDING ?? 0) + (finalStats.byStatus?.ASSIGNED ?? 0)}</p>
                   <p className="text-sm text-amber-600">Pendientes</p>
                 </div>
               </div>
@@ -1013,8 +1025,8 @@ export default function Recoveries() {
               <div className="flex items-center gap-3">
                 <RefreshCw className="w-8 h-8 text-blue-600" />
                 <div>
-                  <p className="text-2xl font-bold text-blue-700">{finalStats.IN_PROGRESS || 0}</p>
-                  <p className="text-sm text-blue-600">En Proceso</p>
+                  <p className="text-2xl font-bold text-blue-700">{(finalStats.byStatus?.IN_PROGRESS ?? 0) + (finalStats.byStatus?.REVIEW_PENDING ?? 0) + (finalStats.byStatus?.COMPLETED ?? 0)}</p>
+                  <p className="text-sm text-blue-600">En proceso o revisión</p>
                 </div>
               </div>
             </div>
@@ -1022,7 +1034,7 @@ export default function Recoveries() {
               <div className="flex items-center gap-3">
                 <CheckCircle className="w-8 h-8 text-green-600" />
                 <div>
-                  <p className="text-2xl font-bold text-green-700">{finalStats.APPROVED || 0}</p>
+                  <p className="text-2xl font-bold text-green-700">{finalStats.byStatus?.APPROVED ?? 0}</p>
                   <p className="text-sm text-green-600">Aprobadas</p>
                 </div>
               </div>
@@ -1031,7 +1043,7 @@ export default function Recoveries() {
               <div className="flex items-center gap-3">
                 <XCircle className="w-8 h-8 text-red-600" />
                 <div>
-                  <p className="text-2xl font-bold text-red-700">{finalStats.NOT_APPROVED || 0}</p>
+                  <p className="text-2xl font-bold text-red-700">{finalStats.byStatus?.NOT_APPROVED ?? 0}</p>
                   <p className="text-sm text-red-600">No Aprobadas</p>
                 </div>
               </div>

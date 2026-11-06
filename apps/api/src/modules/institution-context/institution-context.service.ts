@@ -33,16 +33,17 @@ export class InstitutionContextService {
    * Obtiene el InstitutionRulesContext para una institución.
    * Lee de cache si existe y no ha expirado, sino carga desde BD.
    */
-  async getContext(institutionId: string): Promise<InstitutionRulesContext> {
+  async getContext(institutionId: string, academicYearId?: string): Promise<InstitutionRulesContext> {
+    const cacheKey = `${institutionId}\u0000${academicYearId ?? 'active'}`
     // Verificar cache
-    const cached = this.cache.get(institutionId)
+    const cached = this.cache.get(cacheKey)
     if (cached && Date.now() - cached.loadedAt < this.CACHE_TTL_MS) {
       return cached.ctx
     }
 
     // Cargar desde BD
-    const ctx = await this.loadFromDatabase(institutionId)
-    this.cache.set(institutionId, { ctx, loadedAt: Date.now() })
+    const ctx = await this.loadFromDatabase(institutionId, academicYearId)
+    this.cache.set(cacheKey, { ctx, loadedAt: Date.now() })
     return ctx
   }
 
@@ -50,7 +51,9 @@ export class InstitutionContextService {
    * Invalida el cache para una institución (útil al cambiar configuración).
    */
   invalidateCache(institutionId: string): void {
-    this.cache.delete(institutionId)
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(`${institutionId}\u0000`)) this.cache.delete(key)
+    }
   }
 
   /**
@@ -90,7 +93,7 @@ export class InstitutionContextService {
   // CARGA DESDE BASE DE DATOS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  private async loadFromDatabase(institutionId: string): Promise<InstitutionRulesContext> {
+  private async loadFromDatabase(institutionId: string, academicYearId?: string): Promise<InstitutionRulesContext> {
     try {
       // Query 1: Configuración de la institución
       const results = await this.prisma.$queryRaw<Array<{
@@ -110,16 +113,15 @@ export class InstitutionContextService {
       const academicLevels: any[] = row.academicLevelsConfig || []
 
       // Query 2: Recovery config (si existe)
-      const recoveryConfig = await this.prisma.$queryRaw<Array<{
-        minPassingScore: any
-        periodMaxScore: any
-        maxAreasRecoverable: number
-      }>>`
-        SELECT "minPassingScore", "periodMaxScore", "maxAreasRecoverable"
-        FROM "RecoveryConfig" 
-        WHERE "institutionId" = ${institutionId}
-        LIMIT 1
-      `.catch(() => [])
+      const selectedYearId = academicYearId ?? (await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: 'ACTIVE' },
+        orderBy: { year: 'desc' },
+        select: { id: true },
+      }))?.id
+      const recCfg = selectedYearId ? await this.prisma.recoveryConfig.findFirst({
+        where: { institutionId, academicYearId: selectedYearId, academicYear: { institutionId } },
+        select: { periodMaxScore: true, maxAreasRecoverable: true },
+      }) : null
 
       // Derivar escala desde academic levels o grading config
       let minGradeValue = DEFAULT_RULES_CONTEXT.minGradeValue
@@ -163,7 +165,6 @@ export class InstitutionContextService {
       }
 
       // Recovery config
-      const recCfg = recoveryConfig?.[0]
       const recoveryMaxScore = recCfg?.periodMaxScore != null
         ? Number(recCfg.periodMaxScore)
         : minPassingGrade // Default: nota mínima aprobatoria

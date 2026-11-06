@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecoveryImpactType } from '@prisma/client';
+import { InstitutionContextService } from '../institution-context/institution-context.service';
 
 @Injectable()
 export class RecoveryConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly institutionContext: InstitutionContextService) {}
 
   async getConfig(institutionId: string, academicYearId: string) {
     return this.prisma.recoveryConfig.findUnique({
@@ -64,7 +65,7 @@ export class RecoveryConfigService {
       if (key in rest) configData[key] = (rest as any)[key];
     }
 
-    return this.prisma.recoveryConfig.upsert({
+    const saved = await this.prisma.recoveryConfig.upsert({
       where: {
         institutionId_academicYearId: {
           institutionId,
@@ -78,6 +79,8 @@ export class RecoveryConfigService {
         ...configData,
       },
     });
+    this.institutionContext.invalidateCache(institutionId);
+    return saved;
   }
 
   async getOrCreateDefaultConfig(institutionId: string, academicYearId: string) {
@@ -89,7 +92,7 @@ export class RecoveryConfigService {
     
     if (existing) return existing;
 
-    return this.prisma.recoveryConfig.create({
+    const created = await this.prisma.recoveryConfig.create({
       data: {
         institutionId,
         academicYearId,
@@ -108,6 +111,8 @@ export class RecoveryConfigService {
         requiresPromotionAct: true,
       },
     });
+    this.institutionContext.invalidateCache(institutionId);
+    return created;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

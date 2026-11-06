@@ -165,7 +165,7 @@ describe('Actas académicas · rechazo cruzado', () => {
 describe('Reglas de recuperación · rechazo cruzado', () => {
   const svc = (dueno: string) => {
     const prisma = prismaCon(dueno);
-    return { svc: new RecoveryConfigService(prisma), prisma };
+    return { svc: new RecoveryConfigService(prisma, { invalidateCache: jest.fn() } as any), prisma };
   };
 
   it('no se listan las reglas de la configuración de otra institución', async () => {

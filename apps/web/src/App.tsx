@@ -360,6 +360,7 @@ function App() {
                   <Route path="/content-manager" element={<ContentManager />} />
                   <Route path="/period-final-grades" element={<PeriodFinalGrades />} />
                   <Route path="/recoveries" element={<Recoveries />} />
+                  <Route path="/academic/config/recovery" element={<Recoveries configurationOnly />} />
                   <Route path="/staff-leave" element={<StaffLeave />} />
                   <Route path="/observer-stats" element={<ObserverStats />} />
                   <Route path="/performances" element={<Performances />} />

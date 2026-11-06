@@ -107,7 +107,7 @@ export function evaluatePromotion(
   } else if (data.failedSubjectsCount > 0) {
     status = 'AT_RISK'
     reasons.push(
-      `Promueve con ${data.failedSubjectsCount} materia(s) pendiente(s): ${data.failedSubjectNames.join(', ')}`
+      `Promoción pendiente de decisión por ${data.failedSubjectsCount} materia(s): ${data.failedSubjectNames.join(', ')}`
     )
   } else {
     status = 'PROMOTED'
@@ -133,5 +133,5 @@ export function willPromote(
   ctx: InstitutionRulesContext,
 ): boolean {
   const result = evaluatePromotion(data, ctx)
-  return result.status === 'PROMOTED' || result.status === 'AT_RISK'
+  return result.status === 'PROMOTED'
 }

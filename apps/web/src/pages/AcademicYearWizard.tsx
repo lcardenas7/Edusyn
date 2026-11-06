@@ -78,8 +78,6 @@ const AcademicYearWizard: React.FC = () => {
   const [success, setSuccess] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [isActivating, setIsActivating] = useState(false)
-  const [isClosing, setIsClosing] = useState(false)
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   // ═══════════════════════════════════════════════════════════════
   // CARGA DE DATOS
@@ -256,27 +254,6 @@ const AcademicYearWizard: React.FC = () => {
       setError(err.response?.data?.message || 'Error al activar el año.')
     } finally {
       setIsActivating(false)
-    }
-  }
-
-  const handleCloseYear = async () => {
-    if (!activeYear?.id) return
-    setError('')
-    setIsClosing(true)
-    try {
-      const validation = await academicYearLifecycleApi.validateClosure(activeYear.id)
-      if ((validation.data.errors?.length ?? 0) > 0) {
-        setError(validation.data.errors?.join(', ') || 'El año no cumple los requisitos para ser cerrado.')
-        return
-      }
-      await academicYearLifecycleApi.close(activeYear.id, { calculatePromotions: true })
-      setSuccess('Año lectivo cerrado exitosamente.')
-      setShowCloseConfirm(false)
-      await loadData()
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cerrar el año.')
-    } finally {
-      setIsClosing(false)
     }
   }
 
@@ -597,35 +574,12 @@ const AcademicYearWizard: React.FC = () => {
                 )}
                 {activeYear && (
                   <>
-                    {!showCloseConfirm ? (
-                      <button
-                        onClick={() => setShowCloseConfirm(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                      >
-                        <Square className="w-4 h-4" /> Cerrar año lectivo
-                      </button>
-                    ) : (
-                      <div className="w-full bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-sm text-red-700 mb-3">
-                          <b>¿Estás seguro?</b> Cerrar el año calculará promociones y ya no se podrán registrar notas ni asistencia para este año.
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleCloseYear}
-                            disabled={isClosing}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm disabled:opacity-50"
-                          >
-                            {isClosing ? 'Cerrando...' : 'Sí, cerrar año'}
-                          </button>
-                          <button
-                            onClick={() => setShowCloseConfirm(false)}
-                            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <button
+                      onClick={() => navigate('/academic-year-closure')}
+                      className="flex items-center gap-2 px-4 py-2.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      <Square className="w-4 h-4" /> Revisar y cerrar año lectivo
+                    </button>
                     <button
                       onClick={() => { setError(''); setSuccess(''); setView('create') }}
                       className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"

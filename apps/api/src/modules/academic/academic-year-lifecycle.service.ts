@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { reportAssignmentsBySubject } from './report-assignment.util';
 import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType, GradeStage, RecoveryStatus } from '@prisma/client';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
 import { AttendanceService } from '../attendance/attendance.service';
@@ -57,6 +58,7 @@ export interface PromotionPreview {
   suggestedStatus: EnrollmentStatus;
   nextGradeId: string | null;
   nextGradeName: string | null;
+  reviewReasons?: string[];
 }
 
 export interface CloseYearResult {
@@ -413,6 +415,20 @@ export class AcademicYearLifecycleService {
     let reviewPendingCount = 0;
     let withdrawnCount = 0;
 
+    // El modo sin cálculo solo es seguro cuando no quedan matrículas activas
+    // esperando decisión. Permite cerrar años vacíos o ya resueltos manualmente.
+    if (!dto.calculatePromotions) {
+      const activeCount = await this.prisma.studentEnrollment.count({
+        where: { academicYearId: dto.yearId, institutionId: dto.institutionId, status: 'ACTIVE' },
+      });
+      if (activeCount > 0) {
+        throw new BadRequestException({
+          message: 'El año lectivo no puede ser cerrado',
+          errors: [`Hay ${activeCount} matrícula(s) activas sin decisión. Calcula o resuelve las promociones antes de cerrar el año.`],
+        });
+      }
+    }
+
     if (dto.calculatePromotions) {
       const computed = await this.computePromotions(dto.yearId, dto.institutionId);
       promotionWrites = computed.writes;
@@ -421,6 +437,18 @@ export class AcademicYearLifecycleService {
       graduatedCount = computed.graduatedCount;
       reviewPendingCount = computed.reviewPendingCount;
       withdrawnCount = computed.withdrawnCount;
+
+      // El cierre bloquea las calificaciones. Hasta que exista un flujo formal
+      // de aplazamiento posterior al cierre, no debe dejar matrículas sin decisión
+      // en un año cerrado, ni promoverlas automáticamente.
+      if (reviewPendingCount > 0) {
+        throw new BadRequestException({
+          message: 'El año lectivo no puede ser cerrado',
+          errors: [
+            `Hay ${reviewPendingCount} estudiante(s) con promoción pendiente de decisión o datos académicos insuficientes. Resuelve sus casos antes de cerrar el año.`,
+          ],
+        });
+      }
     }
 
     // FASE 2 — ESCRITURA (todo o nada, en una sola transacción explícita).
@@ -474,6 +502,9 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async validateYearForClosure(yearId: string, institutionId: string): Promise<string[]> {
+    // Este método también se expone directamente como prevalidación; no debe
+    // revelar planes de un año perteneciente a otra institución.
+    await this.getYearById(yearId, institutionId);
     const errors: string[] = [];
 
     // REGLA: No se puede cerrar el año si hay recuperaciones FINALES sin decidir.
@@ -494,6 +525,7 @@ export class AcademicYearLifecycleService {
     const pendingPlans = await this.prisma.finalRecoveryPlan.findMany({
       where: {
         academicYearId: yearId,
+        institutionId,
         status: { in: PENDING_FINAL_RECOVERY_STATUSES },
       },
       include: {
@@ -544,7 +576,7 @@ export class AcademicYearLifecycleService {
     let reviewPendingCount = 0;
 
     const year = await this.getYearById(yearId, institutionId);
-    const rulesCtx = await this.institutionContext.getContext(year.institutionId);
+    const rulesCtx = await this.institutionContext.getContext(year.institutionId, yearId);
 
     // YC-1: la secuencia de grados DEBE limitarse a la institución del año.
     // Sin este filtro, getNextGradeFromSequence podía devolver el grado de OTRA
@@ -578,20 +610,33 @@ export class AcademicYearLifecycleService {
       // notas (matrícula tardía, adopción del sistema a mitad de año) quedaría
       // REPEATED por AUSENCIA de datos, no por desempeño. Se mantiene ACTIVE y se
       // marca para decisión manual.
-      if (!assessment.hasAcademicData) {
+      if (!assessment.hasAcademicData || assessment.reviewReasons?.length) {
         writes.push({
           enrollmentId: enrollment.id,
           institutionId: enrollment.institutionId,
           newStatus: 'ACTIVE',
           eventType: 'STATUS_CHANGED',
-          reason:
-            'Cierre de año: sin datos académicos suficientes — requiere decisión manual de promoción (no se reprueba automáticamente).',
+          reason: `Cierre de año: requiere revisión manual — ${(assessment.reviewReasons || []).join('; ') || 'sin datos académicos suficientes'}.`,
         });
         reviewPendingCount++;
         continue;
       }
 
-      const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
+      // Un resultado en riesgo conserva áreas pendientes: no equivale a una
+      // decisión de promoción, ni autoriza graduar al estudiante.
+      if (assessment.result.status === 'AT_RISK') {
+        writes.push({
+          enrollmentId: enrollment.id,
+          institutionId: enrollment.institutionId,
+          newStatus: 'ACTIVE',
+          eventType: 'STATUS_CHANGED',
+          reason: `Cierre de año: promoción pendiente de decisión. ${assessment.result.reasons.join('; ')}`,
+        });
+        reviewPendingCount++;
+        continue;
+      }
+
+      const shouldPromote = assessment.result.status === 'PROMOTED';
 
       if (shouldPromote) {
         // YC-2: si aprueba y está en el ÚLTIMO grado de su institución → GRADUADO
@@ -651,6 +696,16 @@ export class AcademicYearLifecycleService {
       },
     });
 
+    // No se puede elegir automáticamente entre asignaciones históricas de la
+    // misma materia: pueden contener componentes finales distintos tras un traslado.
+    const subjectCounts = new Map<string, number>();
+    for (const assignment of teacherAssignments) {
+      subjectCounts.set(assignment.subjectId, (subjectCounts.get(assignment.subjectId) || 0) + 1);
+    }
+    const duplicateSubjects = [...new Set(teacherAssignments
+      .filter((assignment) => (subjectCounts.get(assignment.subjectId) || 0) > 1)
+      .map((assignment) => assignment.subject?.name || assignment.subjectId))];
+
     const annualGrades = await Promise.all(
       teacherAssignments.map(async (assignment) => {
         const result = await this.studentGradesService.calculateAnnualGrade(
@@ -663,11 +718,20 @@ export class AcademicYearLifecycleService {
           teacherAssignmentId: assignment.id,
           subjectName: assignment.subject?.name || 'Sin asignatura',
           annualGrade: result.annualGrade,
+          missingSources: result.sources.filter((source) => source.weight > 0 && source.grade === null).map((source) => source.name),
         };
       }),
     );
 
     const validGrades = annualGrades.filter((entry) => entry.annualGrade !== null);
+    const reviewReasons: string[] = [];
+    if (duplicateSubjects.length) reviewReasons.push(`Asignaturas con varias asignaciones docentes: ${duplicateSubjects.join(', ')}`);
+    for (const grade of annualGrades) {
+      if (grade.missingSources.length) reviewReasons.push(`${grade.subjectName}: faltan notas en ${grade.missingSources.join(', ')}`);
+    }
+    if (annualGrades.some((grade) => grade.annualGrade === null) && !reviewReasons.length) {
+      reviewReasons.push('Hay asignaturas sin nota anual calculable');
+    }
     const finalAverage = validGrades.length > 0
       ? Math.round((validGrades.reduce((sum, entry) => sum + entry.annualGrade!, 0) / validGrades.length) * 10) / 10
       : 0;
@@ -677,6 +741,9 @@ export class AcademicYearLifecycleService {
       .map((entry) => entry.subjectName);
 
     const attendance = await this.attendanceService.getStudentSummary(enrollment.id, institutionId);
+    if (attendance.total === 0) {
+      reviewReasons.push('No hay registros de asistencia para evaluar el año');
+    }
 
     const promotionData: StudentPromotionData = {
       studentId: enrollment.studentId,
@@ -694,6 +761,7 @@ export class AcademicYearLifecycleService {
       attendance,
       promotionData,
       hasAcademicData: teacherAssignments.length > 0 && validGrades.length > 0,
+      reviewReasons,
       result: evaluatePromotion(promotionData, rulesCtx),
     };
   }
@@ -727,10 +795,11 @@ export class AcademicYearLifecycleService {
     // Consulta acotada: expone la proyección académica de los estudiantes del año, así que
     // un año ajeno no debe resolver.
     const yearData = await this.prisma.academicYear.findFirst({ where: { id: yearId, institutionId }, select: { institutionId: true } });
-    const rulesCtx = await this.institutionContext.getContext(yearData?.institutionId || '');
+    if (!yearData) throw new NotFoundException('Año académico no encontrado');
+    const rulesCtx = await this.institutionContext.getContext(yearData.institutionId, yearId);
     // YC-1: limitar la secuencia de grados a la institución del año (nunca global).
     const gradeSequence = await this.prisma.grade.findMany({
-      where: { institutionId: yearData?.institutionId ?? '__none__' },
+      where: { institutionId: yearData.institutionId },
       select: {
         id: true,
         name: true,
@@ -761,7 +830,7 @@ export class AcademicYearLifecycleService {
 
       // YC-4: sin datos académicos → revisión manual (se sugiere mantener ACTIVE),
       // nunca promoción/repitencia automática.
-      if (!assessment.hasAcademicData) {
+      if (!assessment.hasAcademicData || assessment.reviewReasons?.length || assessment.result.status === 'AT_RISK') {
         previews.push({
           studentId: enrollment.studentId,
           studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
@@ -772,11 +841,12 @@ export class AcademicYearLifecycleService {
           suggestedStatus: 'ACTIVE',
           nextGradeId: null,
           nextGradeName: null,
+          reviewReasons: assessment.reviewReasons,
         });
         continue;
       }
 
-      const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
+      const shouldPromote = assessment.result.status === 'PROMOTED';
       const nextGrade = shouldPromote
         ? this.getNextGradeFromSequence(enrollment.group.grade, gradeSequence)
         : null;
@@ -1176,7 +1246,7 @@ export class AcademicYearLifecycleService {
       },
     });
 
-    return assignments.map(a => ({
+    return reportAssignmentsBySubject(assignments).map(a => ({
       id: a.id,
       subjectId: a.subjectId,
       subjectName: a.subject.name,
@@ -1211,7 +1281,7 @@ export class AcademicYearLifecycleService {
       },
     });
 
-    return assignments.map(a => ({
+    return reportAssignmentsBySubject(assignments).map(a => ({
       id: a.id,
       subjectId: a.subjectId,
       subjectName: a.subject.name,

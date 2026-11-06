@@ -107,6 +107,15 @@ export default function AcademicHub() {
   // Operación del período — recurrente, la gestiona coordinación cada período
   const periodOpsCards: ConfigCard[] = [
     {
+      title: 'Políticas de recuperación',
+      description: 'Reglas de recuperación, aprobación y actas del año',
+      icon: Settings,
+      href: '/academic/config/recovery',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200'
+    },
+    {
       title: 'Ventanas de Calificación',
       description: 'Abrir/cerrar las fechas en que los docentes digitan notas',
       icon: CalendarClock,

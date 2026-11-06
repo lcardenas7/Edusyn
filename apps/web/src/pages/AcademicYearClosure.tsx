@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, Users, AlertTriangle, CheckCircle, FileText, Eye, RefreshCw } from 'lucide-react'
 import { academicYearLifecycleApi } from '../lib/api'
@@ -15,6 +15,15 @@ interface AcademicYear {
   }
 }
 
+interface PromotionPreview {
+  studentId: string
+  studentName: string
+  currentGradeName: string
+  currentGroupName: string
+  suggestedStatus: string
+  reviewReasons?: string[]
+}
+
 const AcademicYearClosure: React.FC = () => {
   const navigate = useNavigate()
   const { institution } = useAuth()
@@ -26,6 +35,26 @@ const AcademicYearClosure: React.FC = () => {
   const [loadingClosure, setLoadingClosure] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [preview, setPreview] = useState<PromotionPreview[] | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [operationError, setOperationError] = useState('')
+  const previewRequest = useRef(0)
+
+  const loadPreview = async () => {
+    if (!selectedYear) return
+    const requestId = ++previewRequest.current
+    setPreviewLoading(true)
+    setPreview(null)
+    setOperationError('')
+    try {
+      const response = await academicYearLifecycleApi.previewPromotions(selectedYear.id)
+      if (requestId === previewRequest.current) setPreview(response.data)
+    } catch (err: any) {
+      if (requestId === previewRequest.current) setOperationError(err.response?.data?.message || 'No fue posible cargar la previsualización de promociones')
+    } finally {
+      if (requestId === previewRequest.current) setPreviewLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (institution?.id) {
@@ -70,7 +99,9 @@ const AcademicYearClosure: React.FC = () => {
       }, 3000)
     } catch (err: any) {
       console.error('Error closing academic year:', err)
-      setError(err.response?.data?.message || 'Error al cerrar año lectivo')
+      const details = err.response?.data?.errors
+      setOperationError(Array.isArray(details) && details.length ? details.join(' ') : err.response?.data?.message || 'Error al cerrar año lectivo')
+      setShowConfirmModal(false)
     } finally {
       setLoadingClosure(false)
     }
@@ -144,7 +175,7 @@ const AcademicYearClosure: React.FC = () => {
                 {academicYears.map((year: AcademicYear) => (
                   <div
                     key={year.id}
-                    onClick={() => setSelectedYear(year)}
+                    onClick={() => { previewRequest.current++; setPreviewLoading(false); setSelectedYear(year); setPreview(null); setOperationError('') }}
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
                       selectedYear?.id === year.id
                         ? 'border-blue-500 bg-blue-50'
@@ -209,6 +240,32 @@ const AcademicYearClosure: React.FC = () => {
                       </ul>
                     </div>
                   </div>
+                </div>
+
+                {operationError && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{operationError}</div>}
+
+                <div className="mb-6 rounded-lg border border-slate-200 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="font-semibold text-slate-900">Revisión de promociones</h4>
+                      <p className="text-sm text-slate-600">Consulta los casos que necesitan revisión antes de intentar el cierre.</p>
+                    </div>
+                    <button type="button" onClick={loadPreview} disabled={previewLoading} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50">
+                      {previewLoading ? 'Consultando…' : 'Consultar previsualización'}
+                    </button>
+                  </div>
+                  {preview && <div className="mt-4" aria-live="polite">
+                    <p className="text-sm text-slate-600">Proyección de {preview.length} estudiante(s). Revisa también recuperaciones, asistencia y configuración institucional antes del cierre.</p>
+                    {preview.filter((student) => student.suggestedStatus === 'ACTIVE').length === 0 ?
+                      <p className="mt-3 text-sm text-slate-700">La previsualización no encontró estudiantes pendientes de decisión.</p> :
+                      <ul className="mt-3 space-y-2">
+                        {preview.filter((student) => student.suggestedStatus === 'ACTIVE').map((student) =>
+                          <li key={student.studentId} className="rounded-md bg-amber-50 p-3 text-sm text-amber-950">
+                            <strong>{student.studentName}</strong> · {student.currentGradeName} {student.currentGroupName}
+                            <p>{student.reviewReasons?.length ? student.reviewReasons.join('; ') : 'Promoción pendiente o datos académicos insuficientes.'}</p>
+                          </li>)}
+                      </ul>}
+                  </div>}
                 </div>
 
                 <div className="space-y-4">

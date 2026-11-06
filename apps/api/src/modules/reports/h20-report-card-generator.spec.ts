@@ -259,6 +259,25 @@ async function imprescindiblesDelBoletin(svc: ReportsService, termId: string) {
   return { boletin, bloques, items: bloques[0]?.evidenceItems ?? [] };
 }
 
+describe('Boletín tras reemplazo docente', () => {
+  it('genera una sola asignatura y cuenta una sola aprobación al conservar la carga histórica', async () => {
+    const { svc, prisma } = harness({ academicStructure: 'AREAS_SUBJECTS' });
+    prisma.enrollmentArea.findMany.mockResolvedValue([]);
+    const [assignment] = await prisma.teacherAssignment.findMany();
+    prisma.teacherAssignment.findMany.mockResolvedValue([
+      { ...assignment, id: 'replacement', startDate: new Date('2026-10-01'), endDate: null },
+      { ...assignment, id: 'historical', startDate: new Date('2026-01-01'), endDate: new Date('2026-10-01') },
+    ]);
+    prisma.periodFinalGrade.findMany.mockResolvedValue([
+      { studentEnrollmentId: 'e1', subjectId: DIMENSION_ID, finalScore: 3.6 },
+    ]);
+    const result: any = await svc.buildGroupReportCards('g1', 't3');
+    expect(result.cards[0].subjectGrades).toHaveLength(1);
+    expect(result.cards[0].subjectGrades[0].grade).toBe(3.6);
+    expect(result.cards[0].areaGrades[0].subjects).toHaveLength(1);
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 1 · La regla de vigencia, medida en el documento que ve el acudiente
 // ═══════════════════════════════════════════════════════════════════════════

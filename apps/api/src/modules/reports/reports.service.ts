@@ -7,6 +7,7 @@ import { StudentGradesService } from '../evaluation/student-grades.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { StudentsService } from '../academic/students.service';
 import { AcademicYearLifecycleService } from '../academic/academic-year-lifecycle.service';
+import { reportAssignmentsBySubject } from '../academic/report-assignment.util';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
 import { getPerformanceLevel, isFailing, getGradeDistributionRanges } from '../../engines/academic-rules.engine';
 import { getReportCardMode, getDisplayConfig } from '../../engines/report-card.engine';
@@ -2962,7 +2963,7 @@ export class ReportsService {
 
     // Map<subjectId, TeacherAssignment>
     const taBySubjectId = new Map<string, (typeof teacherAssignments)[0]>();
-    for (const ta of teacherAssignments) {
+    for (const ta of reportAssignmentsBySubject(teacherAssignments)) {
       taBySubjectId.set(ta.subjectId, ta);
     }
     const teacherAssignmentIds = teacherAssignments.map(ta => ta.id);
@@ -3351,7 +3352,7 @@ export class ReportsService {
         // Fallback: construir desde TeacherAssignments
         structureSource = 'calculated';
         const areaMap = new Map<string, { name: string; code: string | null; subjects: typeof resolvedAreas[0]['subjects'] }>();
-        for (const ta of teacherAssignments) {
+        for (const ta of taBySubjectId.values()) {
           const areaId = ta.subject.areaId;
           if (!areaMap.has(areaId)) {
             areaMap.set(areaId, {
