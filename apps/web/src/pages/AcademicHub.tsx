@@ -107,6 +107,13 @@ export default function AcademicHub() {
   // Operación del período — recurrente, la gestiona coordinación cada período
   const periodOpsCards: ConfigCard[] = [
     {
+      title: 'Asistencia para promoción',
+      description: 'Elegir tutoría diaria o clases por asignatura para el cierre anual',
+      icon: Settings,
+      href: '/academic/config/promotion-attendance',
+      color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200'
+    },
+    {
       title: 'Políticas de recuperación',
       description: 'Reglas de recuperación, aprobación y actas del año',
       icon: Settings,

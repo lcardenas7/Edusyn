@@ -706,7 +706,7 @@ export class AcademicYearLifecycleService {
       .filter((assignment) => (subjectCounts.get(assignment.subjectId) || 0) > 1)
       .map((assignment) => assignment.subject?.name || assignment.subjectId))];
 
-    const annualGrades = await Promise.all(
+    const assignmentGrades = await Promise.all(
       teacherAssignments.map(async (assignment) => {
         const result = await this.studentGradesService.calculateAnnualGrade(
           enrollment.id,
@@ -715,6 +715,9 @@ export class AcademicYearLifecycleService {
         );
 
         return {
+          subjectId: assignment.subjectId,
+          ended: !!assignment.endDate,
+          sourceSignature: JSON.stringify(result.sources.map(s => [s.id, s.type, s.weight, s.grade]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))),
           teacherAssignmentId: assignment.id,
           subjectName: assignment.subject?.name || 'Sin asignatura',
           annualGrade: result.annualGrade,
@@ -723,9 +726,23 @@ export class AcademicYearLifecycleService {
       }),
     );
 
+    // Historical replacements are safe to collapse only when every canonical
+    // source agrees. Equal rounded averages alone do not prove equivalence.
+    const reconciledSubjects = new Set<string>();
+    const annualGrades = assignmentGrades.filter((entry, index, rows) => {
+      const siblings = rows.filter(row => row.subjectId === entry.subjectId);
+      const equivalent = siblings.length > 1 && siblings.filter(row => !row.ended).length <= 1
+        && siblings.every(row => row.sourceSignature === entry.sourceSignature && row.annualGrade === entry.annualGrade);
+      if (!equivalent) return true;
+      reconciledSubjects.add(entry.subjectId);
+      return rows.findIndex(row => row.subjectId === entry.subjectId) === index;
+    });
+
     const validGrades = annualGrades.filter((entry) => entry.annualGrade !== null);
     const reviewReasons: string[] = [];
-    if (duplicateSubjects.length) reviewReasons.push(`Asignaturas con varias asignaciones docentes: ${duplicateSubjects.join(', ')}`);
+    const unresolvedDuplicates = duplicateSubjects.filter(name => teacherAssignments.some(a =>
+      (a.subject?.name || a.subjectId) === name && !reconciledSubjects.has(a.subjectId)));
+    if (unresolvedDuplicates.length) reviewReasons.push(`Asignaturas con varias asignaciones docentes: ${unresolvedDuplicates.join(', ')}`);
     for (const grade of annualGrades) {
       if (grade.missingSources.length) reviewReasons.push(`${grade.subjectName}: faltan notas en ${grade.missingSources.join(', ')}`);
     }
@@ -740,7 +757,7 @@ export class AcademicYearLifecycleService {
       .filter((entry) => entry.annualGrade === null || entry.annualGrade < rulesCtx.minPassingGrade)
       .map((entry) => entry.subjectName);
 
-    const attendance = await this.attendanceService.getStudentSummary(enrollment.id, institutionId);
+    const attendance = await this.attendanceService.getStudentPromotionSummary(enrollment.id, institutionId);
     if (attendance.total === 0) {
       reviewReasons.push('No hay registros de asistencia para evaluar el año');
     }

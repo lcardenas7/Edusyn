@@ -115,6 +115,7 @@ interface AreaConfig {
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface GradingConfig {
+  promotionAttendanceSource?: 'SUBJECT' | 'TUTORING'
   evaluationProcesses: EvaluationProcess[]
   performanceLevels: PerformanceLevel[]
   minPassingGrade: number
@@ -419,7 +420,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
         // Actualizar configuración de calificaciones
         if (data.gradingConfig && typeof data.gradingConfig === 'object') {
           setGradingConfigState(prev => {
-            const newConfig = { ...prev, ...data.gradingConfig }
+            const newConfig = { ...prev, ...data.gradingConfig, promotionAttendanceSource: data.gradingConfig.promotionAttendanceSource ?? 'SUBJECT' }
             saveToStorage('edusyn_gradingConfig', newConfig)
             return newConfig
           })

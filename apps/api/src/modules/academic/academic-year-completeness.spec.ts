@@ -14,13 +14,13 @@ describe('year-end academic completeness', () => {
     studentEnrollment: { findMany: jest.fn().mockResolvedValue([enrollment]), count: jest.fn().mockResolvedValue(0) },
   };
   const grades = { calculateAnnualGrade: jest.fn() };
-  const attendance = { getStudentSummary: jest.fn().mockResolvedValue({ total: 10, attendanceRate: 100 }) };
+  const attendance = { getStudentPromotionSummary: jest.fn().mockResolvedValue({ total: 10, attendanceRate: 100 }) };
   const context = { getContext: jest.fn().mockResolvedValue(DEFAULT_RULES_CONTEXT) };
   let service: AcademicYearLifecycleService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    attendance.getStudentSummary.mockResolvedValue({ total: 10, attendanceRate: 100 });
+    attendance.getStudentPromotionSummary.mockResolvedValue({ total: 10, attendanceRate: 100 });
     service = new AcademicYearLifecycleService(prisma as any, context as any, attendance as any, grades as any);
     jest.spyOn(service, 'getYearById').mockResolvedValue({ institutionId: 'i1' } as any);
   });
@@ -52,6 +52,17 @@ describe('year-end academic completeness', () => {
     expect(result.reviewPendingCount).toBe(1);
   });
 
+  it('reconciles a historical replacement when all annual sources agree', async () => {
+    prisma.teacherAssignment.findMany.mockResolvedValue([
+      { id: 'old', subjectId: 'm', endDate: new Date(), subject: { name: 'Matemáticas' } },
+      { id: 'new', subjectId: 'm', endDate: null, subject: { name: 'Matemáticas' } },
+    ]);
+    grades.calculateAnnualGrade.mockResolvedValue({ annualGrade: 4, sources: [{ id: 'p1', type: 'period', name: 'P1', weight: 100, grade: 4 }] });
+    const preview = await service.previewPromotions('y1', 'i1');
+    expect(preview[0].suggestedStatus).toBe('GRADUATED');
+    expect(preview[0].finalAverage).toBe(4);
+  });
+
   it('allows a complete single assignment to produce a promotion decision', async () => {
     prisma.teacherAssignment.findMany.mockResolvedValue([{ id: 'a1', subjectId: 'm', subject: { name: 'Matemáticas' } }]);
     grades.calculateAnnualGrade.mockResolvedValue({ annualGrade: 4, sources: [{ name: 'P1', weight: 100, grade: 4 }] });
@@ -62,7 +73,7 @@ describe('year-end academic completeness', () => {
   it('does not treat missing attendance as a zero attendance rate and fail the student', async () => {
     prisma.teacherAssignment.findMany.mockResolvedValue([{ id: 'a1', subjectId: 'm', subject: { name: 'Matemáticas' } }]);
     grades.calculateAnnualGrade.mockResolvedValue({ annualGrade: 4, sources: [{ name: 'P1', weight: 100, grade: 4 }] });
-    attendance.getStudentSummary.mockResolvedValue({ total: 0, attendanceRate: 0 });
+    attendance.getStudentPromotionSummary.mockResolvedValue({ total: 0, attendanceRate: 0 });
     const preview = await service.previewPromotions('y1', 'i1');
     expect(preview[0].suggestedStatus).toBe('ACTIVE');
     expect(preview[0].reviewReasons).toContain('No hay registros de asistencia para evaluar el año');

@@ -25,6 +25,7 @@ export interface AreaConfigDto {
 }
 
 export interface GradingConfigDto {
+  promotionAttendanceSource?: 'SUBJECT' | 'TUTORING'
   evaluationProcesses: Array<{
     id: string
     name: string
@@ -250,6 +251,9 @@ export class InstitutionConfigService {
   }
 
   async updateGradingConfig(institutionId: string, config: GradingConfigDto) {
+    if (config.promotionAttendanceSource !== undefined && !['SUBJECT', 'TUTORING'].includes(config.promotionAttendanceSource)) {
+      throw new BadRequestException('Fuente de asistencia para promoción inválida')
+    }
     const exists = await this.prisma.institution.findUnique({ where: { id: institutionId } })
     if (!exists) {
       throw new NotFoundException('Institución no encontrada')

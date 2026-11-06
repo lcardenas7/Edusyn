@@ -362,6 +362,33 @@ export class AttendanceService {
     });
   }
 
+  async getStudentPromotionSummary(studentEnrollmentId: string, institutionId: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId }, select: { gradingConfig: true },
+    });
+    if (!institution) throw new NotFoundException('Institución no encontrada');
+    const configured = (institution.gradingConfig as any)?.promotionAttendanceSource ?? 'SUBJECT';
+    if (!['SUBJECT', 'TUTORING'].includes(configured)) {
+      throw new BadRequestException('Fuente de asistencia para promoción inválida');
+    }
+    if (configured === 'SUBJECT') {
+      return { ...await this.getStudentSummary(studentEnrollmentId, institutionId), source: 'SUBJECT' as const };
+    }
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { id: studentEnrollmentId, institutionId }, select: { id: true },
+    });
+    if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
+    const records = await this.prisma.tutoringAttendance.findMany({
+      where: { studentEnrollmentId, institutionId }, select: { status: true },
+    });
+    const total = records.length;
+    const count = (status: string) => records.filter(r => r.status === status).length;
+    const present = count('PRESENT'), late = count('LATE'), excused = count('EXCUSED');
+    return { total, present, late, excused, absent: count('ABSENT'),
+      attendanceRate: total ? Math.round((present + late + excused) / total * 100) : 0,
+      source: 'TUTORING' as const };
+  }
+
   async getStudentSummary(studentEnrollmentId: string, institutionId: string, academicTermId?: string) {
     if (!institutionId) throw new NotFoundException('Institución no encontrada');
     const enrollment = await this.prisma.studentEnrollment.findFirst({ where: { id: studentEnrollmentId, institutionId }, select: { id: true, academicYearId: true } });
