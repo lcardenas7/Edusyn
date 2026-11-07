@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Calendar, Users, AlertTriangle, CheckCircle, FileText, Eye, RefreshCw } from 'lucide-react'
 import { academicYearLifecycleApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import QualitativePromotionReview from '../components/QualitativePromotionReview'
 
 interface AcademicYear {
   id: string
@@ -16,6 +17,8 @@ interface AcademicYear {
 }
 
 interface PromotionPreview {
+  enrollmentId: string
+  qualitative: boolean
   studentId: string
   studentName: string
   currentGradeName: string
@@ -38,6 +41,8 @@ const AcademicYearClosure: React.FC = () => {
   const [preview, setPreview] = useState<PromotionPreview[] | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [operationError, setOperationError] = useState('')
+  const [reviewEnrollment, setReviewEnrollment] = useState<string | null>(null)
+  const [previewStale, setPreviewStale] = useState(false)
   const previewRequest = useRef(0)
 
   const loadPreview = async () => {
@@ -45,6 +50,8 @@ const AcademicYearClosure: React.FC = () => {
     const requestId = ++previewRequest.current
     setPreviewLoading(true)
     setPreview(null)
+    setReviewEnrollment(null)
+    setPreviewStale(false)
     setOperationError('')
     try {
       const response = await academicYearLifecycleApi.previewPromotions(selectedYear.id)
@@ -263,14 +270,22 @@ const AcademicYearClosure: React.FC = () => {
                           <li key={student.studentId} className="rounded-md bg-amber-50 p-3 text-sm text-amber-950">
                             <strong>{student.studentName}</strong> · {student.currentGradeName} {student.currentGroupName}
                             <p>{student.reviewReasons?.length ? student.reviewReasons.join('; ') : 'Promoción pendiente o datos académicos insuficientes.'}</p>
+                            {student.qualitative && student.enrollmentId && <>
+                              <button type="button" className="mt-2 underline text-blue-700" onClick={() => setReviewEnrollment(reviewEnrollment === student.enrollmentId ? null : student.enrollmentId)}>
+                                {reviewEnrollment === student.enrollmentId ? 'Ocultar revisión' : 'Revisar informe y continuidad'}
+                              </button>
+                              {reviewEnrollment === student.enrollmentId && <QualitativePromotionReview enrollmentId={student.enrollmentId} onSaved={() => setPreviewStale(true)} />}
+                            </>}
                           </li>)}
                       </ul>}
                   </div>}
                 </div>
 
                 <div className="space-y-4">
+                  {previewStale && <p role="status">Se guardaron decisiones. Consulta nuevamente la previsualización.</p>}
                   <button
                     onClick={() => setShowConfirmModal(true)}
+                    disabled={previewLoading || previewStale || !preview || preview.some(s => s.suggestedStatus === 'ACTIVE')}
                     className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" />

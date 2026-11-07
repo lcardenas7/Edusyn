@@ -107,6 +107,11 @@ export default function AcademicHub() {
   // Operación del período — recurrente, la gestiona coordinación cada período
   const periodOpsCards: ConfigCard[] = [
     {
+      title: 'Promoción cualitativa', description: 'Política anual por grado y requisitos de continuidad',
+      icon: Settings, href: '/academic/config/qualitative-promotion',
+      color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200'
+    },
+    {
       title: 'Asistencia para promoción',
       description: 'Elegir tutoría diaria o clases por asignatura para el cierre anual',
       icon: Settings,

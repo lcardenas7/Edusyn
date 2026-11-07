@@ -23,6 +23,8 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
   const [description, setDescription] = useState('')
   const [evidencesText, setEvidencesText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingSetup, setLoadingSetup] = useState(true)
+  const [setupFailed, setSetupFailed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [labels, setLabels] = useState({
@@ -40,6 +42,8 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
 
   useEffect(() => {
     const loadSetup = async () => {
+      setLoadingSetup(true)
+      setSetupFailed(false)
       try {
         const [gradesRes, subjectsRes, configRes] = await Promise.all([
           gradesConfigApi.getAll(),
@@ -61,8 +65,11 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
           })
         }
       } catch (error) {
+        setSetupFailed(true)
         console.error('Error loading preschool catalog setup:', error)
         setMessage('No se pudo cargar la estructura académica.')
+      } finally {
+        setLoadingSetup(false)
       }
     }
     loadSetup()
@@ -246,7 +253,8 @@ export default function PreschoolCatalog({ institutionId, academicYears, selecte
             <select value={termId} onChange={(event) => setTermId(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">Anual (todos los períodos)</option>{terms.map((term: any) => <option key={term.id} value={term.id}>{term.name}</option>)}</select>
           </label>
         </div>
-        {!dimensions.length && <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">No hay asignaturas marcadas como “Dimensión de preescolar”. Configúralas primero en el catálogo académico.</p>}
+        {loadingSetup && <p role="status" className="mt-4 text-sm text-slate-600">Cargando grados y dimensiones…</p>}
+        {!loadingSetup && !setupFailed && !dimensions.length && <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">No hay asignaturas marcadas como “Dimensión de preescolar”. Configúralas primero en el catálogo académico.</p>}
       </section>
 
       {message && <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{message}</p>}

@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { QualitativePromotionPolicyService } from './qualitative-promotion-policy.service';
+import { QualitativePromotionDecisionController } from './qualitative-promotion-decision.controller';
+import { QualitativeYearAssessmentService } from './qualitative-year-assessment.service';
+import { QualitativePromotionPolicyController } from './qualitative-promotion-policy.controller';
 
 import { AttendanceModule } from '../attendance/attendance.module';
 import { EvaluationModule } from '../evaluation/evaluation.module';
@@ -47,6 +51,8 @@ import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-
 @Module({
   imports: [EvaluationModule, AttendanceModule],
   controllers: [
+    QualitativePromotionDecisionController,
+    QualitativePromotionPolicyController,
     InstitutionsController,
     CampusesController,
     ShiftsController,
@@ -69,6 +75,8 @@ import { ValidateTenantContextGuard } from '../../common/guards/validate-tenant-
     AcademicStudentsController,
   ],
   providers: [
+    QualitativeYearAssessmentService,
+    QualitativePromotionPolicyService,
     InstitutionsService,
     CampusesService,
     ShiftsService,

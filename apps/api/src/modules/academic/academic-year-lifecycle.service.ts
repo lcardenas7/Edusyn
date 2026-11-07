@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
+import { QualitativeYearAssessmentService } from './qualitative-year-assessment.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { reportAssignmentsBySubject } from './report-assignment.util';
 import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType, GradeStage, RecoveryStatus } from '@prisma/client';
@@ -49,6 +50,8 @@ export interface PromoteStudentsDto {
 }
 
 export interface PromotionPreview {
+  enrollmentId: string;
+  qualitative: boolean;
   studentId: string;
   studentName: string;
   currentGradeId: string;
@@ -94,6 +97,7 @@ export class AcademicYearLifecycleService {
     private institutionContext: InstitutionContextService,
     private attendanceService: AttendanceService,
     private studentGradesService: StudentGradesService,
+    @Optional() private qualitativeAssessment?: QualitativeYearAssessmentService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -686,6 +690,14 @@ export class AcademicYearLifecycleService {
   }
 
   private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext, institutionId: string) {
+    if (enrollment.group.grade.academicStructure === 'DIMENSIONS') {
+      const qualitative = this.qualitativeAssessment ? await this.qualitativeAssessment.assess(enrollment.id, institutionId)
+        : { status: 'REVIEW_PENDING', reasons: ['El evaluador cualitativo no está disponible'] };
+      const continues = qualitative.status === 'CONTINUE';
+      return { annualGrades: [], finalAverage: null, failedSubjectNames: [],
+        hasAcademicData: continues, reviewReasons: qualitative.reasons,
+        result: { status: continues ? 'PROMOTED' as const : 'AT_RISK' as const, reasons: qualitative.reasons } };
+    }
     const teacherAssignments = await this.prisma.teacherAssignment.findMany({
       where: {
         groupId: enrollment.groupId,
@@ -849,6 +861,8 @@ export class AcademicYearLifecycleService {
       // nunca promoción/repitencia automática.
       if (!assessment.hasAcademicData || assessment.reviewReasons?.length || assessment.result.status === 'AT_RISK') {
         previews.push({
+          enrollmentId: enrollment.id,
+          qualitative: enrollment.group.grade.academicStructure === 'DIMENSIONS',
           studentId: enrollment.studentId,
           studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
           currentGradeId: enrollment.group.gradeId,
@@ -875,6 +889,8 @@ export class AcademicYearLifecycleService {
           : 'GRADUATED';
 
       previews.push({
+        enrollmentId: enrollment.id,
+        qualitative: enrollment.group.grade.academicStructure === 'DIMENSIONS',
         studentId: enrollment.studentId,
         studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
         currentGradeId: enrollment.group.gradeId,

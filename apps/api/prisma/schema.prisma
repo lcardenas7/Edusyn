@@ -1045,6 +1045,8 @@ model GroupSubjectException {
 }
 
 model AcademicYear {
+  qualitativePromotionDecisions Json @default("[]")
+  qualitativePromotionPolicies Json @default("[]")
   id            String             @id @default(cuid())
   institutionId String
   year          Int

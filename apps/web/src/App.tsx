@@ -82,6 +82,7 @@ const Arena = lazy(() => import('./pages/aula/Arena'))
 const QuestionBank = lazy(() => import('./pages/aula/QuestionBank'))
 const Scale = lazy(() => import('./pages/academic/config/Scale'))
 const PromotionAttendance = lazy(() => import('./pages/academic/config/PromotionAttendance'))
+const QualitativePromotion = lazy(() => import('./pages/academic/config/QualitativePromotion'))
 const Periods = lazy(() => import('./pages/academic/config/Periods'))
 const Levels = lazy(() => import('./pages/academic/config/Levels'))
 const GradingWindows = lazy(() => import('./pages/academic/config/windows/GradingWindows'))
@@ -387,6 +388,7 @@ function App() {
                   {/* Académico > Configuración SIEE */}
                   <Route path="/academic/config/scale" element={<Scale />} />
                   <Route path="/academic/config/promotion-attendance" element={<PromotionAttendance />} />
+                  <Route path="/academic/config/qualitative-promotion" element={<QualitativePromotion />} />
                   <Route path="/academic/config/periods" element={<Periods />} />
                   <Route path="/academic/config/levels" element={<Levels />} />
                   <Route path="/academic/config/windows/grading" element={<GradingWindows />} />
